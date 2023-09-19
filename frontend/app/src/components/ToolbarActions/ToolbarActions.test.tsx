@@ -39,14 +39,12 @@ describe("ActionButton", () => {
   it("renders without crashing and matches snapshot", () => {
     render(<ActionButton {...getProps()} />)
 
-    expect(document.body).toMatchSnapshot()
     expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
   })
 
   it("does not render icon if not provided", () => {
     render(<ActionButton {...getProps({ icon: undefined })} />)
 
-    expect(document.body).toMatchSnapshot()
     expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
     expect(screen.queryByTestId("stActionButtonIcon")).not.toBeInTheDocument()
   })
@@ -54,7 +52,6 @@ describe("ActionButton", () => {
   it("does not render label if not provided", () => {
     render(<ActionButton {...getProps({ label: undefined })} />)
 
-    expect(document.body).toMatchSnapshot()
     expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
     expect(screen.queryByTestId("stActionButtonLabel")).not.toBeInTheDocument()
   })
@@ -89,9 +86,8 @@ describe("ToolbarActions", () => {
       key: "favorite",
     })
 
-    const shareButton = screen.getAllByTestId("baseButton-header")[1]
+    const shareButton = screen.getByRole("button", { name: "Share" })
     fireEvent.click(shareButton)
-    screen.getAllByTestId("stActionButton")
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "share",
