@@ -80,7 +80,7 @@ describe("withMapboxToken", () => {
       )
     })
 
-    it("should inject mapbox token to the wrapped component when available in the config", () => {
+    it("should inject mapbox token to the wrapped component when available in the config.toml", () => {
       axios.get = jest.fn().mockImplementation(() => ({
         data: { userMapboxToken: mockMapboxToken },
       }))

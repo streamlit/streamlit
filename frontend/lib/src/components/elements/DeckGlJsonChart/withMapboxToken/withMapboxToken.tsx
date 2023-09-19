@@ -21,7 +21,6 @@ import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
 import MapboxTokenError from "./MapboxTokenError"
 import axios from "axios"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { DeckGlJsonChart } from "@streamlit/lib/src/proto"
 
 interface InjectedProps {
@@ -57,8 +56,7 @@ const MAPBOX = "mapbox"
 /**
  * A higher-order component that fetches our mapbox token and passes
  * it through to the wrapped component.
- * This component uses tokens from config.toml or host config (LibContext) first when available.
- * config.toml takes priority over host config.
+ * This component uses tokens from config.toml first when available.
  * If the token fetch fails, an error will be rendered in place of the wrapped component.
  * This component is necessary as it's good practice to separate data collection
  * (mapbox token retrieval) and the actual rendering of a component.
@@ -76,8 +74,6 @@ const withMapboxToken =
       public static readonly displayName = `withMapboxToken(${
         WrappedComponent.displayName || WrappedComponent.name
       })`
-
-      static contextType = LibContext
 
       public constructor(props: WrappedMapboxProps<P>) {
         super(props)
