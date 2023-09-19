@@ -50,7 +50,7 @@ describe("VirtualDropdown element", () => {
     ).toBeInTheDocument()
   })
 
-  it("renders a FixedSizeList when it has children", async () => {
+  it("renders a FixedSizeList when it has children", () => {
     render(
       <VirtualDropdown>
         <Option item={{ value: "abc" }} />
@@ -58,6 +58,6 @@ describe("VirtualDropdown element", () => {
     )
 
     // each option will have a tooltip attached to it
-    expect(screen.getAllByTestId("tooltipHoverTarget").length).toBe(1)
+    expect(screen.getAllByTestId("tooltipHoverTarget")).toHaveLength(1)
   })
 })
