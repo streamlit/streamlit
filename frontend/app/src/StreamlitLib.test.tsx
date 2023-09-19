@@ -141,7 +141,6 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       installationId: "",
       installationIdV3: "",
       commandLine: "",
-      userMapboxToken: "",
     })
 
     // Initialize React state

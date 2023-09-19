@@ -36,14 +36,6 @@ export interface Props {
   readonly installationIdV3: string
   readonly maxCachedMessageAge: number
   readonly commandLine: string
-
-  /**
-   * The user-supplied mapbox token. By default, this will be the empty string,
-   * which indicates that we should fetch Streamlit's mapbox token and use
-   * that instead. Do not use this value directly; use `MapboxToken.get()`
-   * instead.
-   */
-  readonly userMapboxToken: string
 }
 
 export class SessionInfo {
@@ -110,7 +102,6 @@ export class SessionInfo {
       installationIdV3: userInfo.installationIdV3,
       maxCachedMessageAge: config.maxCachedMessageAge,
       commandLine: initialize.commandLine,
-      userMapboxToken: config.mapboxToken,
     }
   }
 }
