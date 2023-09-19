@@ -53,6 +53,8 @@ describe("VirtualDropdown element", () => {
       </VirtualDropdown>
     )
 
+    expect(screen.getByTestId("stVirtualDropdown")).toBeInTheDocument()
+
     // each option will have a tooltip attached to it
     expect(screen.getAllByTestId("tooltipHoverTarget")).toHaveLength(1)
   })
