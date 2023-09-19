@@ -1,0 +1,23 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Tooltip component should render and match snapshots when it fits onscreen 1`] = `
+<body>
+  <div>
+    <div
+      data-testid="tooltipHoverTarget"
+      id="1__anchor"
+      style="display: flex; flex-direction: row;"
+    >
+      <div
+        class="css-5mp5n6-StyledWrapper e1gc5fo22"
+      >
+        <div
+          class="css-1av0x41-StyledEllipsizedDiv e1gc5fo21"
+        >
+          the child
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+`;

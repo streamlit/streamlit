@@ -54,6 +54,7 @@ describe("Tooltip component", () => {
     expect(screen.queryByText("the content")).not.toBeInTheDocument()
 
     expect(useRefSpy).toHaveBeenCalledWith(null)
+    expect(document.body).toMatchSnapshot()
   })
 
   it("should render and match snapshots when ellipsized", async () => {
