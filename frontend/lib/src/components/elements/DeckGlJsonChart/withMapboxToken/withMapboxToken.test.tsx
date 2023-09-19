@@ -80,7 +80,7 @@ describe("withMapboxToken", () => {
       )
     })
 
-    it("should inject mapbox token to the wrapped component when available in the config", async () => {
+    it("should inject mapbox token to the wrapped component when available in the config", () => {
       axios.get = jest.fn().mockImplementation(() => ({
         data: { userMapboxToken: mockMapboxToken },
       }))
@@ -99,7 +99,7 @@ describe("withMapboxToken", () => {
       expect(loadingTextElement).toBeInTheDocument()
     })
 
-    it("should fetch the token if userMapboxToken is not present in host config or config.toml", async () => {
+    it("should fetch the token if userMapboxToken is not present in config.toml", async () => {
       axios.get = jest
         .fn()
         .mockResolvedValue({ data: { mapbox: mockMapboxToken } })
