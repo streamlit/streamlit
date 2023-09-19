@@ -33,9 +33,7 @@ describe("VirtualDropdown element", () => {
   it("renders a StyledEmptyState when it has no children", () => {
     render(<VirtualDropdown />)
 
-    expect(
-      screen.getByTestId("stVirtualDropdownEmptyStyledEmptyState")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stVirtualDropdownEmpty")).toBeInTheDocument()
   })
 
   it("renders a StyledEmptyState when it has children with no item", () => {
@@ -45,9 +43,7 @@ describe("VirtualDropdown element", () => {
       </VirtualDropdown>
     )
 
-    expect(
-      screen.getByTestId("stVirtualDropdownEmptyStyledEmptyState")
-    ).toBeInTheDocument()
+    expect(screen.getByTestId("stVirtualDropdownEmpty")).toBeInTheDocument()
   })
 
   it("renders a FixedSizeList when it has children", () => {
