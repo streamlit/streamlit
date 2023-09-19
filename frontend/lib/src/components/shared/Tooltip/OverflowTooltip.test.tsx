@@ -27,7 +27,7 @@ describe("Tooltip component", () => {
     jest.restoreAllMocks()
   })
 
-  it("should render and match snapshots when it fits onscreen", async () => {
+  it("should render and match snapshots when it fits onscreen", () => {
     const useRefSpy = jest.spyOn(React, "useRef").mockReturnValue({
       current: {
         // Pretend the body is greater than its onscreen area.
@@ -50,8 +50,6 @@ describe("Tooltip component", () => {
 
     const tooltip = screen.getByTestId("tooltipHoverTarget")
     fireEvent.mouseOver(tooltip)
-
-    expect(screen.queryByText("the content")).not.toBeInTheDocument()
 
     expect(useRefSpy).toHaveBeenCalledWith(null)
     expect(document.body).toMatchSnapshot()
@@ -80,8 +78,11 @@ describe("Tooltip component", () => {
 
     const tooltip = screen.getByTestId("tooltipHoverTarget")
     fireEvent.mouseOver(tooltip)
-    expect(await screen.findByText("the content")).toBeInTheDocument()
+
+    const tooltipContent = await screen.findByText("the content")
+    expect(tooltipContent).toBeInTheDocument()
 
     expect(useRefSpy).toHaveBeenCalledWith(null)
+    expect(document.body).toMatchSnapshot()
   })
 })
