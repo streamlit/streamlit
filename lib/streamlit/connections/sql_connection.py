@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 import pandas as pd
 
-from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections import BaseConnection
 from streamlit.connections.util import extract_from_dict
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
@@ -42,7 +42,7 @@ _ALL_CONNECTION_PARAMS = {
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
-class SQLConnection(ExperimentalBaseConnection["Engine"]):
+class SQLConnection(BaseConnection["Engine"]):
     """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.experimental_connection("<name>", type="sql")``.
 
     SQLConnection provides the ``query()`` convenience method, which can be used to
@@ -250,7 +250,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         return Session(self._instance)
 
     # NOTE: This more or less duplicates the default implementation in
-    # ExperimentalBaseConnection so that we can add another bullet point between the
+    # BaseConnection so that we can add another bullet point between the
     # "Configured from" and "Learn more" items :/
     def _repr_html_(self) -> str:
         module_name = getattr(self, "__module__", None)

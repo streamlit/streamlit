@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
 
 import pandas as pd
 
-from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections import BaseConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -67,7 +67,7 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
     return conn_params
 
 
-class SnowparkConnection(ExperimentalBaseConnection["Session"]):
+class SnowparkConnection(BaseConnection["Session"]):
     """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
     ``st.experimental_connection("<name>", type="snowpark")``.
 
