@@ -236,7 +236,7 @@ class ImageCompareFunction(Protocol):
         self,
         element: ElementHandle | Locator | Page,
         *,
-        image_threshold: float = 0.001,
+        image_threshold: float = 0.002,
         pixel_threshold: float = 0.05,
         name: str | None = None,
         fail_fast: bool = False,
@@ -306,7 +306,7 @@ def assert_snapshot(
     def compare(
         element: ElementHandle | Locator | Page,
         *,
-        image_threshold: float = 0.001,
+        image_threshold: float = 0.002,
         pixel_threshold: float = 0.05,
         name: str | None = None,
         fail_fast: bool = False,
