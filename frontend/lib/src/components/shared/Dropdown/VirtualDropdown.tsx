@@ -64,10 +64,10 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
       <StyledList
         $style={{ height: `${EMPTY_LIST_HEIGHT}px` }}
         ref={ref}
-        data-testid="stVirtualDropdown"
+        data-testid="stVirtualDropdownEmpty"
       >
         <StyledEmptyState
-          data-testid="stVirtualDropdownStyledEmptyState"
+          data-testid="stVirtualDropdownEmptyStyledEmptyState"
           {...childrenProps}
         />
       </StyledList>

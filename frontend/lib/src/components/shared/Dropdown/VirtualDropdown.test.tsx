@@ -34,7 +34,7 @@ describe("VirtualDropdown element", () => {
     render(<VirtualDropdown />)
 
     expect(
-      screen.getByTestId("stVirtualDropdownStyledEmptyState")
+      screen.getByTestId("stVirtualDropdownEmptyStyledEmptyState")
     ).toBeInTheDocument()
   })
 
@@ -46,7 +46,7 @@ describe("VirtualDropdown element", () => {
     )
 
     expect(
-      screen.getByTestId("stVirtualDropdownStyledEmptyState")
+      screen.getByTestId("stVirtualDropdownEmptyStyledEmptyState")
     ).toBeInTheDocument()
   })
 
