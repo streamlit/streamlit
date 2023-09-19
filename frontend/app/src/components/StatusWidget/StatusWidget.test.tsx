@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import {
   render,
   ScriptRunState,
@@ -122,7 +122,7 @@ describe("StatusWidget element", () => {
     const stopScript = jest.fn()
     render(<StatusWidget {...getProps({ stopScript })} />)
 
-    screen.getByTestId("baseButton-header").click()
+    fireEvent.click(screen.getByTestId("baseButton-header"))
 
     expect(stopScript).toHaveBeenCalled()
   })
@@ -156,7 +156,8 @@ describe("StatusWidget element", () => {
     expect(buttons[1]).toHaveTextContent("Always rerun")
 
     // Click "Rerun" button
-    buttons[0].click()
+    fireEvent.click(buttons[0])
+
     expect(rerunScript).toHaveBeenCalledWith(false)
   })
 
@@ -189,7 +190,8 @@ describe("StatusWidget element", () => {
     expect(buttons[1]).toHaveTextContent("Always rerun")
 
     // Click "Always Rerun" button
-    buttons[1].click()
+    fireEvent.click(buttons[1])
+
     expect(rerunScript).toHaveBeenCalledWith(true)
   })
 
