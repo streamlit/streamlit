@@ -132,7 +132,7 @@ describe("Metric element", () => {
     )
   })
 
-  it("should render TooltipIcon if help text provided", async () => {
+  it("should render TooltipIcon if help text provided", () => {
     const props = getProps({ help: "help text" })
     render(<Metric {...props} />)
     const tooltip = screen.getByTestId("stTooltipIcon")
