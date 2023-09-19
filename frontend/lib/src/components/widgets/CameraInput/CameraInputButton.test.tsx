@@ -20,14 +20,11 @@ import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
 
-let mockOnClick: any
-
 const getProps = (
   props: Partial<CameraInputButtonProps> = {}
 ): CameraInputButtonProps => {
-  mockOnClick = jest.fn(() => props.progress)
   return {
-    onClick: mockOnClick,
+    onClick: jest.fn(),
     disabled: false,
     children: jest.fn(),
     progress: 0,
