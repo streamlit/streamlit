@@ -60,7 +60,6 @@ const Icon = ({
   testid,
 }: IconProps): ReactElement => (
   <StyledIcon
-    data-testid="stIcon"
     as={content}
     color={color || "inherit"}
     aria-hidden="true"
