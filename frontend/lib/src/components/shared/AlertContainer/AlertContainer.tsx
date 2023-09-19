@@ -27,7 +27,7 @@ export enum Kind {
   WARNING = "warning",
 }
 
-function getNotificationKind(
+export function getNotificationKind(
   kind: Kind
 ):
   | typeof KIND.negative
