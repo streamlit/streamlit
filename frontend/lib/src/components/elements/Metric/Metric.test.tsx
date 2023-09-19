@@ -79,7 +79,7 @@ describe("Metric element", () => {
   it("renders direction icon based on props - red/up", () => {
     const props = getProps()
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stIcon")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon")).toBeInTheDocument()
   })
 
   it("renders direction icon based on props - green/down", () => {
@@ -88,7 +88,7 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stIcon")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon")).toBeInTheDocument()
   })
 
   it("renders no text and icon based on props", () => {
@@ -98,7 +98,7 @@ describe("Metric element", () => {
       delta: "",
     })
     render(<Metric {...props} />)
-    expect(screen.queryByTestId("stIcon")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stMetricDeltaIcon")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stMetricDelta")).not.toBeInTheDocument()
   })
 

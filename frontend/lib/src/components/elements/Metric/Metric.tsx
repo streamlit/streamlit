@@ -102,7 +102,12 @@ export default function Metric({ element }: MetricProps): ReactElement {
       </StyledMetricValueText>
       {deltaExists && (
         <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
-          <Icon content={direction} size="lg" margin={arrowMargin} />
+          <Icon
+            testid="stMetricDeltaIcon"
+            content={direction}
+            size="lg"
+            margin={arrowMargin}
+          />
           <StyledTruncateText> {element.delta} </StyledTruncateText>
         </StyledMetricDeltaText>
       )}
