@@ -15,8 +15,10 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import Clipboard from "clipboard"
-import { shallow, mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 
 import CopyButton from "./CopyButton"
 
@@ -27,43 +29,40 @@ describe("CopyButton Element", () => {
     jest.clearAllMocks()
   })
 
-  const wrapper = shallow(<CopyButton text="test" />)
-
   it("renders without crashing", () => {
-    expect(wrapper.find("StyledCopyButton").length).toBe(1)
+    render(<CopyButton text="test" />)
+    expect(screen.getByTestId("stCopyButton")).toBeInTheDocument()
   })
 
   describe("attributes", () => {
     it("should have title", () => {
-      expect(wrapper.find("StyledCopyButton").prop("title")).toBe(
+      render(<CopyButton text="test" />)
+      expect(screen.getByTestId("stCopyButton")).toHaveAttribute(
+        "title",
         "Copy to clipboard"
       )
     })
 
     it("should have clipboard text", () => {
-      expect(
-        wrapper.find("StyledCopyButton").prop("data-clipboard-text")
-      ).toBe("test")
+      render(<CopyButton text="test" />)
+      expect(screen.getByTestId("stCopyButton")).toHaveAttribute(
+        "data-clipboard-text",
+        "test"
+      )
     })
-  })
-
-  it("should unmount", () => {
-    wrapper.unmount()
-
-    expect(wrapper.html()).toBeNull()
   })
 
   describe("calling clipboard", () => {
     it("should be called on did mount", () => {
-      mount(<CopyButton text="test" />)
+      render(<CopyButton text="test" />)
 
       expect(Clipboard).toHaveBeenCalled()
     })
 
     it("should be called on unmount", () => {
-      const wrapper = mount(<CopyButton text="test" />)
+      const { unmount } = render(<CopyButton text="test" />)
 
-      wrapper.unmount()
+      unmount()
 
       // @ts-expect-error
       const mockClipboard = Clipboard.mock.instances[0]
