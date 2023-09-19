@@ -58,6 +58,6 @@ describe("FileDropzoneInstructions widget", () => {
       acceptedExtensions: ["jpg"],
     })
     render(<FileDropzoneInstructions {...props} />)
-    expect(screen.getByText(/•/)).toBeInTheDocument()
+    expect(screen.getByText(/• JPG/)).toBeInTheDocument()
   })
 })
