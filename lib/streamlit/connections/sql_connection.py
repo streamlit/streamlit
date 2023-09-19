@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from collections import ChainMap
 from copy import deepcopy
@@ -121,6 +122,7 @@ class SQLConnection(BaseConnection["Engine"]):
         self,
         sql: str,
         *,  # keyword-only arguments:
+        show_spinner: bool | str = "Running `sql.query(...)`.",
         ttl: Optional[Union[float, int, timedelta]] = None,
         index_col: Optional[Union[str, List[str]]] = None,
         chunksize: Optional[int] = None,
@@ -143,6 +145,10 @@ class SQLConnection(BaseConnection["Engine"]):
         ----------
         sql : str
             The read-only SQL query to execute.
+        show_spinner : boolean or string
+            Enable the spinner. The default is to show a spinner when there is a
+            "cache miss" and the cached resource is being created. If a string, the value
+            of the show_spinner param will be used for the spinner text.
         ttl : float, int, timedelta or None
             The maximum number of seconds to keep results in the cache, or
             None if cached results should not expire. The default is None.
@@ -194,7 +200,7 @@ class SQLConnection(BaseConnection["Engine"]):
             wait=wait_fixed(1),
         )
         @cache_data(
-            show_spinner="Running `sql.query(...)`.",
+            show_spinner=show_spinner,
             ttl=ttl,
         )
         def _query(
