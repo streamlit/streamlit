@@ -56,7 +56,6 @@ describe("Alert element", () => {
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
     expect(screen.getByRole("alert")).toBeInTheDocument()
-    console.log(screen.getByText("test").style.backgroundColor)
     expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
     expect(screen.getByText("test")).toBeInTheDocument()
   })
