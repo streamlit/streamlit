@@ -18,7 +18,7 @@ import React from "react"
 
 import { render } from "@streamlit/lib"
 import "@testing-library/jest-dom"
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 
 import ToolbarActions, {
   ActionButton,
@@ -78,7 +78,7 @@ describe("ToolbarActions", () => {
     expect(document.body).toMatchSnapshot()
   })
 
-  it("calls sendMessageToHost with correct args when clicked", async () => {
+  it("calls sendMessageToHost with correct args when clicked", () => {
     const props = getProps()
     render(<ToolbarActions {...props} />)
 
