@@ -38,7 +38,7 @@ import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
-import withMapboxToken from "@streamlit/lib/src/hocs/withMapboxToken"
+import withMapboxToken from "./withMapboxToken"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import {

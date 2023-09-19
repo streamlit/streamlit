@@ -1,4 +1,4 @@
-/**!
+/**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,20 +14,4 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
-
-message DeckGlJsonChart {
-  // The json of the pydeck object (https://deckgl.readthedocs.io/en/latest/deck.html)
-  string json = 1;
-
-  string tooltip = 2;
-
-  // If True, will overwrite the chart width spec to fit to container.
-  bool use_container_width = 4;
-
-  // the hash of the json so the the frontend doesn't always have to parse the pydeck json object
-  string id = 5;
-
-  // The user-configured Mapbox token. If empty, the token id fetched from https://data.streamlit.io/tokens.json
-  string mapbox_token = 6;
-}
+export { default } from "./withMapboxToken"
