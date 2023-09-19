@@ -58,5 +58,17 @@ describe("CopyButton Element", () => {
 
       expect(Clipboard).toHaveBeenCalled()
     })
+
+    it("should be called on unmount", () => {
+      const { unmount } = render(<CopyButton text="test" />)
+
+      unmount()
+
+      // @ts-expect-error
+      const mockClipboard = Clipboard.mock.instances[0]
+      const mockDestroy = mockClipboard.destroy
+
+      expect(mockDestroy).toHaveBeenCalled()
+    })
   })
 })
