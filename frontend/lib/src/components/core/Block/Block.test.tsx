@@ -16,11 +16,20 @@
 
 import React from "react"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
 import { BlockNode } from "@streamlit/lib/src/AppNode"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
 
 import VerticalBlock from "./Block"
+
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
 
 function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
@@ -43,9 +52,10 @@ function makeVerticalBlock(children: BlockNode[] = []): BlockNode {
 }
 
 describe("Vertical Block Component", () => {
+  window.ResizeObserver = ResizeObserver
   it("should render a horizontal block with empty columns", () => {
     const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)])
-    const wrapper = mount(
+    render(
       <VerticalBlock
         node={block}
         scriptRunId={""}
@@ -62,6 +72,6 @@ describe("Vertical Block Component", () => {
       />
     )
 
-    expect(wrapper.find("StyledColumn")).toHaveLength(4)
+    expect(screen.getAllByTestId("column")).toHaveLength(4)
   })
 })

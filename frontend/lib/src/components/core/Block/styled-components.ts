@@ -119,12 +119,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
   }
 )
 
-export const styledVerticalBlockWrapperStyles: any = {
-  display: "flex",
-  flexDirection: "column",
-  flex: 1,
-}
-
 export interface StyledVerticalBlockProps {
   ref?: React.RefObject<any>
   width?: number
@@ -140,4 +134,12 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     flexDirection: "column",
     gap: theme.spacing.lg,
   })
+)
+
+export const StyledVerticalBlockWrapper = styled.div<StyledVerticalBlockProps>(
+  {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+  }
 )

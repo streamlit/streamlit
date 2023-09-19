@@ -146,6 +146,16 @@ jest.mock("moment", () =>
   }))
 )
 
+// Mock needed for Block.tsx
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserver
+
 describe("App", () => {
   beforeEach(() => {
     // @ts-expect-error

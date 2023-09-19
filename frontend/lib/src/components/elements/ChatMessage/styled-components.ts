@@ -60,6 +60,7 @@ export const StyledAvatarBackground = styled.div(({ theme }) => {
     color: lightTheme ? theme.colors.gray90 : theme.colors.white,
     lineHeight: "1",
     fontSize: theme.fontSizes.md,
+    padding: "1rem",
     width: "2rem",
     height: "2rem",
     borderRadius: theme.radii.lg,

@@ -223,3 +223,14 @@ Cypress.Commands.add("waitForRerun", () => {
     "not.exist"
   )
 })
+
+// https://github.com/quasarframework/quasar/issues/2233
+// This error means that ResizeObserver was not able to deliver all observations within a single animation frame
+// It is benign (your site will not break).
+const resizeObserverLoopErrRe = /^[^(ResizeObserver loop limit exceeded)]/
+Cypress.on("uncaught:exception", err => {
+  /* returning false here prevents Cypress from failing the test */
+  if (resizeObserverLoopErrRe.test(err.message)) {
+    return false
+  }
+})
