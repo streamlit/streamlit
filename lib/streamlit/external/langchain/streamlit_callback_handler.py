@@ -352,8 +352,8 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         self._require_current_thought().on_llm_end(response, **kwargs)
 
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], *args: Any, **kwargs: Any
+    def on_llm_error(  # type: ignore[override]
+        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         self._require_current_thought().on_llm_error(error, **kwargs)
 
