@@ -36,7 +36,7 @@ describe("ActionButton", () => {
     ...extended,
   })
 
-  it("renders without crashing and matches snapshot", () => {
+  it("renders without crashing", () => {
     render(<ActionButton {...getProps()} />)
 
     expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
