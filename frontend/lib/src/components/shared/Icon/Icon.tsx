@@ -48,6 +48,7 @@ interface IconProps {
   color?: ThemeColor
   margin?: string
   padding?: string
+  testid?: string
 }
 
 const Icon = ({
@@ -56,12 +57,14 @@ const Icon = ({
   size,
   margin,
   padding,
+  testid,
 }: IconProps): ReactElement => (
   <StyledIcon
     data-testid="stIcon"
     as={content}
     color={color || "inherit"}
     aria-hidden="true"
+    data-testid={testid}
     {...getDefaultProps({ size, margin, padding })}
   />
 )
