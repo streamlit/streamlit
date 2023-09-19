@@ -95,6 +95,7 @@ const SidebarNav = ({
         hasSidebarElements={hasSidebarElements}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
+        data-testid="stSidebarNavItems"
       >
         {appPages.map((page: IAppPage, pageIndex: number) => {
           const pageUrl = endpoints.buildAppPageURL(
@@ -111,6 +112,7 @@ const SidebarNav = ({
             <li key={pageName}>
               <StyledSidebarNavLinkContainer>
                 <StyledSidebarNavLink
+                  data-testid="stSidebarNavLink"
                   isActive={isActive}
                   href={pageUrl}
                   onClick={e => {
@@ -136,14 +138,25 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer
+          data-testid="stSidebarNavSeparator"
           isExpanded={expanded}
           isOverflowing={isOverflowing}
           onClick={toggleExpanded}
         >
           {isOverflowing && !expanded && (
-            <Icon content={ExpandMore} size="md" />
+            <Icon
+              content={ExpandMore}
+              size="md"
+              testid="stSidebarNavExpandIcon"
+            />
           )}
-          {expanded && <Icon content={ExpandLess} size="md" />}
+          {expanded && (
+            <Icon
+              content={ExpandLess}
+              size="md"
+              testid="stSidebarNavCollapseIcon"
+            />
+          )}
         </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>
