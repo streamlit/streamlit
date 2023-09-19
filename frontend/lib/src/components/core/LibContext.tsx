@@ -72,12 +72,6 @@ export interface LibContextProps {
   /** The configuration from the apps host which is requested via the
    * _stcore/host-config endpoint. */
   hostConfig: HostConfig
-
-  /**
-   * Set the configuration from the app's host.
-   * @see App.setHostConfig
-   */
-  setHostConfig: (hostConfig: HostConfig) => void
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -91,5 +85,4 @@ export const LibContext = React.createContext<LibContextProps>({
   addThemes: () => {},
   hideFullScreenButtons: false,
   hostConfig: {},
-  setHostConfig: () => {},
 })
