@@ -29,8 +29,7 @@ from tests.streamlit.external.langchain.capturing_callback_handler import (
 class StreamlitCallbackHandlerAPITest(unittest.TestCase):
     def test_import_path(self):
         """StreamlitCallbackHandler is imported by LangChain itself, and so it
-        must always be importable from the same location.
-        """
+        must always be importable from the same location."""
 
         # We exec a string here to prevent the import path from being updated
         # by an IDE during a refactor.
