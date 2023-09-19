@@ -16,9 +16,10 @@
 
 import React from "react"
 
-import { shallow } from "@streamlit/lib"
+import { render } from "@streamlit/lib"
+import "@testing-library/jest-dom"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 
-import { StyledActionButtonIcon } from "./styled-components"
 import ToolbarActions, {
   ActionButton,
   ActionButtonProps,
@@ -36,31 +37,26 @@ describe("ActionButton", () => {
   })
 
   it("renders without crashing and matches snapshot", () => {
-    const wrapper = shallow(<ActionButton {...getProps()} />)
+    render(<ActionButton {...getProps()} />)
 
-    expect(wrapper).toMatchSnapshot()
-    expect(wrapper.find(StyledActionButtonIcon)).toHaveLength(1)
-    expect(wrapper.find("span")).toHaveLength(1)
+    expect(document.body).toMatchSnapshot()
+    expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
   })
 
   it("does not render icon if not provided", () => {
-    const wrapper = shallow(
-      <ActionButton {...getProps({ icon: undefined })} />
-    )
+    render(<ActionButton {...getProps({ icon: undefined })} />)
 
-    expect(wrapper).toMatchSnapshot()
-    expect(wrapper.find(StyledActionButtonIcon).exists()).toBe(false)
-    expect(wrapper.find("span")).toHaveLength(1)
+    expect(document.body).toMatchSnapshot()
+    expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
+    expect(screen.queryByTestId("stActionButtonIcon")).not.toBeInTheDocument()
   })
 
   it("does not render label if not provided", () => {
-    const wrapper = shallow(
-      <ActionButton {...getProps({ label: undefined })} />
-    )
+    render(<ActionButton {...getProps({ label: undefined })} />)
 
-    expect(wrapper).toMatchSnapshot()
-    expect(wrapper.find(StyledActionButtonIcon)).toHaveLength(1)
-    expect(wrapper.find("span").exists()).toBe(false)
+    expect(document.body).toMatchSnapshot()
+    expect(screen.getByTestId("stActionButton")).toBeInTheDocument()
+    expect(screen.queryByTestId("stActionButtonLabel")).not.toBeInTheDocument()
   })
 })
 
@@ -77,21 +73,25 @@ describe("ToolbarActions", () => {
   })
 
   it("renders without crashing", () => {
-    const wrapper = shallow(<ToolbarActions {...getProps()} />)
-    expect(wrapper).toMatchSnapshot()
+    render(<ToolbarActions {...getProps()} />)
+    expect(screen.getByTestId("stToolbarActions")).toBeInTheDocument()
+    expect(document.body).toMatchSnapshot()
   })
 
-  it("calls sendMessageToHost with correct args when clicked", () => {
+  it("calls sendMessageToHost with correct args when clicked", async () => {
     const props = getProps()
-    const wrapper = shallow(<ToolbarActions {...props} />)
+    render(<ToolbarActions {...props} />)
 
-    wrapper.find(ActionButton).at(0).simulate("click")
+    const favoriteButton = screen.getAllByTestId("baseButton-header")[0]
+    fireEvent.click(favoriteButton)
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "favorite",
     })
 
-    wrapper.find(ActionButton).at(1).simulate("click")
+    const shareButton = screen.getAllByTestId("baseButton-header")[1]
+    fireEvent.click(shareButton)
+    screen.getAllByTestId("stActionButton")
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
       key: "share",
