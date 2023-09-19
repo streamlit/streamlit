@@ -183,7 +183,7 @@ class LLMThought:
         self._reset_llm_token_stream()
 
     def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
+        self, error: Union[Exception, KeyboardInterrupt], *args: Any, **kwargs: Any
     ) -> None:
         self._container.markdown("**LLM encountered an error...**")
         self._container.exception(error)
@@ -213,7 +213,7 @@ class LLMThought:
         self._container.markdown(output)
 
     def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
+        self, error: Union[Exception, KeyboardInterrupt], *args: Any, **kwargs: Any
     ) -> None:
         self._container.markdown("**Tool encountered an error...**")
         self._container.exception(error)
@@ -353,7 +353,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._require_current_thought().on_llm_end(response, **kwargs)
 
     def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
+        self, error: Union[Exception, KeyboardInterrupt], *args: Any, **kwargs: Any
     ) -> None:
         self._require_current_thought().on_llm_error(error, **kwargs)
 
@@ -376,7 +376,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._complete_current_thought()
 
     def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
+        self, error: Union[Exception, KeyboardInterrupt], *args: Any, **kwargs: Any
     ) -> None:
         self._require_current_thought().on_tool_error(error, **kwargs)
 
