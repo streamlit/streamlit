@@ -26,6 +26,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection as SQLAlchemyConnection
     from sqlalchemy.engine.base import Engine
     from sqlalchemy.orm import Session
 
@@ -227,6 +228,33 @@ class SQLConnection(BaseConnection["Engine"]):
             params=params,
             **kwargs,
         )
+
+    def connect(self) -> "SQLAlchemyConnection":
+        """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new
+        sqlalchemy.engine.Connection object.
+
+        Calling this method is equivalent to calling ``self._instance.connect()``.
+
+        NOTE: This method should not be confused with the internal _connect method used
+        to implement a Streamlit Connection.
+        """
+        return self._instance.connect()
+
+    @property
+    def engine(self) -> "Engine":
+        """The underlying SQLAlchemy Engine.
+
+        This is equivalent to accessing ``self._instance``.
+        """
+        return self._instance
+
+    @property
+    def driver(self) -> str:
+        """The name of the driver used by the underlying SQLAlchemy Engine.
+
+        This is equivalent to accessing ``self._instance.driver``.
+        """
+        return self._instance.driver
 
     @property
     def session(self) -> "Session":
