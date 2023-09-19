@@ -97,6 +97,7 @@ describe("Alert element", () => {
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
     expect(screen.getByRole("alert")).toBeInTheDocument()
     expect(screen.getByTestId("stAlertEmojiIcon")).toBeInTheDocument()
+    expect(screen.getByText("👉🏻")).toBeInTheDocument()
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
 })
