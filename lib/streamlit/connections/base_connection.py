@@ -26,8 +26,8 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
     """The abstract base class that all Streamlit Connections must inherit from.
 
     This base class provides connection authors with a standardized way to hook into the
-    ``st.experimental_connection()`` factory function: connection authors are required to
-    provide an implementation for the abstract method ``_connect`` in their subclasses.
+    ``st.connection()`` factory function: connection authors are required to provide an
+    implementation for the abstract method ``_connect`` in their subclasses.
 
     Additionally, it also provides a few methods/properties designed to make
     implementation of connections more convenient. See the docstrings for each of the
@@ -45,7 +45,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         """Create a BaseConnection.
 
         This constructor is called by the connection factory machinery when a user
-        script calls ``st.experimental_connection()``.
+        script calls ``st.connection()``.
 
         Subclasses of BaseConnection that want to overwrite this method should take care
         to also call the base class' implementation.
@@ -156,7 +156,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("my_conn")
+        >>> conn = st.connection("my_conn")
         >>>
         >>> # Reset the connection before using it if it isn't healthy
         >>> # Note: is_healthy() isn't a real method and is just shown for example here.

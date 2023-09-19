@@ -52,7 +52,7 @@ MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
 ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
 
 
-@gather_metrics("experimental_connection")
+@gather_metrics("connection")
 def _create_connection(
     name: str,
     connection_class: Type[ConnectionClass],
@@ -65,12 +65,12 @@ def _create_connection(
     The weird implementation of this function with the @cache_resource annotated
     function defined internally is done to:
       * Always @gather_metrics on the call even if the return value is a cached one.
-      * Allow the user to specify ttl and max_entries when calling st.experimental_connection.
+      * Allow the user to specify ttl and max_entries when calling st.connection.
     """
 
     @cache_resource(
         max_entries=max_entries,
-        show_spinner="Running `st.experimental_connection(...)`.",
+        show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
     )
     def __create_connection(
@@ -211,29 +211,29 @@ def connection_factory(
     default names and define corresponding sections in your ``secrets.toml`` file.
 
     >>> import streamlit as st
-    >>> conn = st.experimental_connection("sql") # Config section defined in [connections.sql] in secrets.toml.
+    >>> conn = st.connection("sql") # Config section defined in [connections.sql] in secrets.toml.
 
     Creating a SQLConnection with a custom name requires you to explicitly specify the
     type. If type is not passed as a kwarg, it must be set in the appropriate section of
     ``secrets.toml``.
 
     >>> import streamlit as st
-    >>> conn1 = st.experimental_connection("my_sql_connection", type="sql") # Config section defined in [connections.my_sql_connection].
-    >>> conn2 = st.experimental_connection("my_other_sql_connection") # type must be set in [connections.my_other_sql_connection].
+    >>> conn1 = st.connection("my_sql_connection", type="sql") # Config section defined in [connections.my_sql_connection].
+    >>> conn2 = st.connection("my_other_sql_connection") # type must be set in [connections.my_other_sql_connection].
 
     Passing the full module path to the connection class that you want to use can be
     useful, especially when working with a custom connection:
 
     >>> import streamlit as st
-    >>> conn = st.experimental_connection("my_sql_connection", type="streamlit.connections.SQLConnection")
+    >>> conn = st.connection("my_sql_connection", type="streamlit.connections.SQLConnection")
 
     Finally, you can pass the connection class to use directly to this function. Doing
     so allows static type checking tools such as ``mypy`` to infer the exact return
-    type of ``st.experimental_connection``.
+    type of ``st.connection``.
 
     >>> import streamlit as st
     >>> from streamlit.connections import SQLConnection
-    >>> conn = st.experimental_connection("my_sql_connection", type=SQLConnection)
+    >>> conn = st.connection("my_sql_connection", type=SQLConnection)
     """
     USE_ENV_PREFIX = "env:"
 
@@ -245,8 +245,8 @@ def connection_factory(
 
     if type is None:
         if name in FIRST_PARTY_CONNECTIONS:
-            # We allow users to simply write `st.experimental_connection("sql")`
-            # instead of `st.experimental_connection("sql", type="sql")`.
+            # We allow users to simply write `st.connection("sql")` instead of
+            # `st.connection("sql", type="sql")`.
             type = _get_first_party_connection(name)
         else:
             # The user didn't specify a type, so we try to pull it out from their
@@ -257,9 +257,9 @@ def connection_factory(
             secrets_singleton.load_if_toml_exists()
             type = secrets_singleton["connections"][name]["type"]
 
-    # type is a nice kwarg name for the st.experimental_connection user but is annoying
-    # to work with since it conflicts with the builtin function name and thus gets
-    # syntax highlighted.
+    # type is a nice kwarg name for the st.connection user but is annoying to work with
+    # since it conflicts with the builtin function name and thus gets syntax
+    # highlighted.
     connection_class = type
 
     if isinstance(connection_class, str):

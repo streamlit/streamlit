@@ -69,12 +69,12 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 class SnowparkConnection(BaseConnection["Session"]):
     """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
-    ``st.experimental_connection("<name>", type="snowpark")``.
+    ``st.connection("<name>", type="snowpark")``.
 
     In addition to accessing the Snowpark Session, SnowparkConnection supports direct SQL querying using
     ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
     below for more information. SnowparkConnections should always be created using
-    ``st.experimental_connection()``, **not** initialized directly.
+    ``st.connection()``, **not** initialized directly.
 
     .. note::
         We don't expect this iteration of SnowparkConnection to be able to scale
@@ -111,7 +111,7 @@ class SnowparkConnection(BaseConnection["Session"]):
             raise StreamlitAPIException(
                 "Missing Snowpark connection configuration. "
                 f"Did you forget to set this in `secrets.toml`, `{_DEFAULT_CONNECTION_FILE}`, "
-                "or as kwargs to `st.experimental_connection`?"
+                "or as kwargs to `st.connection`?"
             )
 
         for p in _REQUIRED_CONNECTION_PARAMS:
@@ -150,7 +150,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("snowpark")
+        >>> conn = st.connection("snowpark")
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
@@ -198,7 +198,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         -------
         >>> import streamlit as st
         >>>
-        >>> session = st.experimental_connection("snowpark").session
+        >>> session = st.connection("snowpark").session
         >>> df = session.table("mytable").limit(10).to_pandas()
         >>> st.dataframe(df)
         """
@@ -221,7 +221,7 @@ class SnowparkConnection(BaseConnection["Session"]):
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("snowpark")
+        >>> conn = st.connection("snowpark")
         >>> with conn.safe_session() as session:
         ...     df = session.table("mytable").limit(10).to_pandas()
         ...

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Explicitly re-export public symbols.
 from streamlit.connections.base_connection import BaseConnection as BaseConnection
 from streamlit.connections.snowpark_connection import (
