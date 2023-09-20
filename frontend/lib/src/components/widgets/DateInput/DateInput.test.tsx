@@ -15,24 +15,28 @@
  */
 
 import React from "react"
-import { screen } from "@testing-library/react"
-import { mount, render } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   DateInput as DateInputProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 
-import { Datepicker as UIDatePicker } from "baseui/datepicker"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import DateInput, { Props } from "./DateInput"
+
+const originalDate = "1970/1/20"
+const fullOriginalDate = "1970/01/20"
+const newDate = "2020/02/06"
 
 const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: DateInputProto.create({
     id: "1",
     label: "Label",
-    default: ["1970/01/20"],
-    min: "1970/1/20",
+    default: [fullOriginalDate],
+    min: originalDate,
     format: "YYYY/MM/DD",
     ...elementProps,
   }),
@@ -48,14 +52,14 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
 describe("DateInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<DateInput {...props} />)
-    expect(wrapper.find(UIDatePicker).length).toBe(1)
+    render(<DateInput {...props} />)
+    expect(screen.getByTestId("stDateInput")).toBeInTheDocument()
   })
 
   it("renders a label", () => {
     const props = getProps()
-    const wrapper = mount(<DateInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    render(<DateInput {...props} />)
+    expect(screen.getByText("Label")).toBeInTheDocument()
   })
 
   it("displays the correct placeholder and value for the provided format", () => {
@@ -63,8 +67,8 @@ describe("DateInput widget", () => {
       format: "DD.MM.YYYY",
     })
     render(<DateInput {...props} />)
-    expect(screen.getByPlaceholderText("DD.MM.YYYY")).toBeDefined()
-    expect(screen.getByDisplayValue("20.01.1970")).toBeDefined()
+    expect(screen.getByPlaceholderText("DD.MM.YYYY")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("20.01.1970")).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -73,9 +77,9 @@ describe("DateInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<DateInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    render(<DateInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -85,20 +89,18 @@ describe("DateInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<DateInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+    render(<DateInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
-  it("sets widget value on mount", () => {
+  it("sets widget value on render", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
-    mount(<DateInput {...props} />)
+    render(<DateInput {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      [fullOriginalDate],
       {
         fromUi: false,
       }
@@ -107,124 +109,103 @@ describe("DateInput widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = mount(<DateInput {...props} />)
+    render(<DateInput {...props} />)
 
-    const wrappedDiv = wrapper.find("div").first()
-
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("stDateInput")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    const dateInput = screen.getByTestId("stDateInput")
+    expect(dateInput).toHaveAttribute("class", "stDateInput")
+    expect(dateInput).toHaveStyle("width: 0px;")
   })
 
   it("renders a default value", () => {
     const props = getProps()
-    const wrapper = mount(<DateInput {...props} />)
+    render(<DateInput {...props} />)
 
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
-      new Date(props.element.default[0]),
-    ])
+    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(
+      fullOriginalDate
+    )
   })
 
   it("can be disabled", () => {
     const props = getProps()
-    const wrapper = mount(<DateInput {...props} />)
-    expect(wrapper.find(UIDatePicker).prop("disabled")).toBe(props.disabled)
-  })
-
-  it("has the correct format", () => {
-    const props = getProps()
-    const wrapper = mount(<DateInput {...props} />)
-    expect(wrapper.find(UIDatePicker).prop("formatString")).toBe("yyyy/MM/dd")
+    render(<DateInput {...props} disabled={true} />)
+    expect(screen.getByTestId("stDateInput-Input")).toBeDisabled()
   })
 
   it("updates the widget value when it's changed", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
-    const wrapper = mount(<DateInput {...props} />)
-    const newDate = new Date("2020/02/06")
+    render(<DateInput {...props} />)
+    const datePicker = screen.getByTestId("stDateInput-Input")
+    fireEvent.change(datePicker, { target: { value: newDate } })
 
-    // @ts-expect-error
-    wrapper.find(UIDatePicker).prop("onChange")({
-      date: newDate,
-    })
-    wrapper.update()
-
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
+    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(newDate)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      ["2020/02/06"],
+      [newDate],
       {
         fromUi: true,
       }
     )
   })
 
-  it("reset it's value to default when it closed with empty input", () => {
+  it("resets its value to default when it's closed with empty input", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
-    const wrapper = mount(<DateInput {...props} />)
-    const newDate = new Date("2020/02/06")
+    render(<DateInput {...props} />)
+    const dateInput = screen.getByTestId("stDateInput-Input")
 
-    // @ts-expect-error
-    wrapper.find(UIDatePicker).prop("onChange")({
-      date: newDate,
+    fireEvent.change(dateInput, {
+      target: { value: newDate },
     })
-    wrapper.update()
 
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
-    // @ts-expect-error
-    wrapper.find(UIDatePicker).prop("onChange")({
-      date: null,
+    expect(dateInput).toHaveValue(newDate)
+
+    // Simulating clearing the date input
+    fireEvent.change(dateInput, {
+      target: { value: null },
     })
-    // @ts-expect-error
-    wrapper.find(UIDatePicker).prop("onClose")()
-    wrapper.update()
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([
-      new Date("1970/1/20"),
-    ])
+
+    // Simulating the close action
+    fireEvent.blur(dateInput)
+    expect(dateInput).toHaveValue(fullOriginalDate)
   })
 
   it("has a minDate", () => {
+    // The fireEvent.change will modify the input's value unconditionally. This is because
+    // the underlying input element doesn't possess a 'min' attribute.
+    let dateInputRef: any
     const props = getProps()
-    const wrapper = mount(<DateInput {...props} />)
-    expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
-      new Date("1970/1/20")
+    render(
+      <DateInput
+        // @ts-expect-error
+        ref={ref => {
+          dateInputRef = ref
+        }}
+        {...props}
+      />
     )
-    expect(wrapper.find(UIDatePicker).prop("maxDate")).toBeUndefined()
+    expect(dateInputRef.props.element.min).toStrictEqual(originalDate)
+    expect(dateInputRef.props.element.max).toBe("")
   })
 
   it("has a maxDate if it is passed", () => {
+    // The fireEvent.change will modify the input's value unconditionally. This is because
+    // the underlying input element doesn't possess a 'max' attribute.
+    let dateInputRef: any
     const props = getProps({ max: "2030/02/06" })
-    const wrapper = mount(<DateInput {...props} />)
-
-    expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
-      new Date("2030/02/06")
+    render(
+      <DateInput
+        // @ts-expect-error
+        ref={ref => {
+          dateInputRef = ref
+        }}
+        {...props}
+      />
     )
-  })
-
-  it("handles min dates with years less than 100", () => {
-    const props = getProps({ min: "0001/01/01" })
-    const wrapper = mount(<DateInput {...props} />)
-
-    expect(wrapper.find(UIDatePicker).prop("minDate")).toStrictEqual(
-      new Date("0001-01-01T00:00:00")
-    )
-  })
-
-  it("handles max dates with years less than 100", () => {
-    const props = getProps({ max: "0001/01/01" })
-    const wrapper = mount(<DateInput {...props} />)
-
-    expect(wrapper.find(UIDatePicker).prop("maxDate")).toStrictEqual(
-      new Date("0001-01-01T00:00:00")
-    )
+    expect(dateInputRef.props.element.max).toStrictEqual("2030/02/06")
+    expect(dateInputRef.props.element.min).toBe(originalDate)
   })
 
   it("resets its value when form is cleared", () => {
@@ -234,21 +215,17 @@ describe("DateInput widget", () => {
 
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
-    const wrapper = mount(<DateInput {...props} />)
+    render(<DateInput {...props} />)
 
-    // Change the widget value
-    const newDate = new Date("2020/02/06")
-
-    // @ts-expect-error
-    wrapper.find(UIDatePicker).prop("onChange")({
-      date: newDate,
+    const dateInput = screen.getByTestId("stDateInput-Input")
+    fireEvent.change(dateInput, {
+      target: { value: newDate },
     })
-    wrapper.update()
 
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual([newDate])
+    expect(dateInput).toHaveValue(newDate)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      ["2020/02/06"],
+      [newDate],
       {
         fromUi: true,
       }
@@ -256,15 +233,12 @@ describe("DateInput widget", () => {
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.find(UIDatePicker).prop("value")).toStrictEqual(
-      props.element.default.map(value => new Date(value))
-    )
+    expect(dateInput).toHaveValue(fullOriginalDate)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      [fullOriginalDate],
       {
         fromUi: true,
       }

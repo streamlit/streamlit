@@ -265,7 +265,6 @@ class DateInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UIDatePicker
-          data-testid="stDateInputPicker"
           density={DENSITY.high}
           formatString={dateFormat}
           mask={isRange ? `${dateMask} – ${dateMask}` : dateMask}
@@ -407,6 +406,9 @@ class DateInput extends React.PureComponent<Props, State> {
                       paddingLeft: ".5rem",
                       paddingBottom: ".5rem",
                       paddingTop: ".5rem",
+                    },
+                    props: {
+                      "data-testid": "stDateInput-Input",
                     },
                   },
                 },
