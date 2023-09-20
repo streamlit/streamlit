@@ -135,67 +135,67 @@ class Widget(ABC, Element):
         return self
 
     @property
-    def is_button(self) -> Button:
+    def as_button(self) -> Button:
         assert isinstance(self, Button)
         return self
 
     @property
-    def is_checkbox(self) -> Checkbox:
+    def as_checkbox(self) -> Checkbox:
         assert isinstance(self, Checkbox)
         return self
 
     @property
-    def is_color_picker(self) -> ColorPicker:
+    def as_color_picker(self) -> ColorPicker:
         assert isinstance(self, ColorPicker)
         return self
 
     @property
-    def is_date_input(self) -> DateInput:
+    def as_date_input(self) -> DateInput:
         assert isinstance(self, DateInput)
         return self
 
     @property
-    def is_multiselect(self) -> Multiselect[Any]:
+    def as_multiselect(self) -> Multiselect[Any]:
         assert isinstance(self, Multiselect)
         return self
 
     @property
-    def is_number_input(self) -> NumberInput:
+    def as_number_input(self) -> NumberInput:
         assert isinstance(self, NumberInput)
         return self
 
     @property
-    def is_radio(self) -> Radio[Any]:
+    def as_radio(self) -> Radio[Any]:
         assert isinstance(self, Radio)
         return self
 
     @property
-    def is_select_slider(self) -> SelectSlider[Any]:
+    def as_select_slider(self) -> SelectSlider[Any]:
         assert isinstance(self, SelectSlider)
         return self
 
     @property
-    def is_selectbox(self) -> Selectbox[Any]:
+    def as_selectbox(self) -> Selectbox[Any]:
         assert isinstance(self, Selectbox)
         return self
 
     @property
-    def is_slider(self) -> Slider[Any]:
+    def as_slider(self) -> Slider[Any]:
         assert isinstance(self, Slider)
         return self
 
     @property
-    def is_text_area(self) -> TextArea:
+    def as_text_area(self) -> TextArea:
         assert isinstance(self, TextArea)
         return self
 
     @property
-    def is_text_input(self) -> TextInput:
+    def as_text_input(self) -> TextInput:
         assert isinstance(self, TextInput)
         return self
 
     @property
-    def is_time_input(self) -> TimeInput:
+    def as_time_input(self) -> TimeInput:
         assert isinstance(self, TimeInput)
         return self
 
