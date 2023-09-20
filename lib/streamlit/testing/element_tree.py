@@ -134,6 +134,106 @@ class Widget(ABC, Element):
         self._value = v
         return self
 
+    @property
+    def as_button(self) -> Button:
+        assert isinstance(self, Button)
+        return self
+
+    @property
+    def as_checkbox(self) -> Checkbox:
+        assert isinstance(self, Checkbox)
+        return self
+
+    @property
+    def as_color_picker(self) -> ColorPicker:
+        assert isinstance(self, ColorPicker)
+        return self
+
+    @property
+    def as_date_input(self) -> DateInput:
+        assert isinstance(self, DateInput)
+        return self
+
+    @property
+    def as_multiselect(self) -> Multiselect[Any]:
+        assert isinstance(self, Multiselect)
+        return self
+
+    @property
+    def as_number_input(self) -> NumberInput:
+        assert isinstance(self, NumberInput)
+        return self
+
+    @property
+    def as_radio(self) -> Radio[Any]:
+        assert isinstance(self, Radio)
+        return self
+
+    @property
+    def as_select_slider(self) -> SelectSlider[Any]:
+        assert isinstance(self, SelectSlider)
+        return self
+
+    @property
+    def as_selectbox(self) -> Selectbox[Any]:
+        assert isinstance(self, Selectbox)
+        return self
+
+    @property
+    def as_slider(self) -> Slider[Any]:
+        assert isinstance(self, Slider)
+        return self
+
+    @property
+    def as_text_area(self) -> TextArea:
+        assert isinstance(self, TextArea)
+        return self
+
+    @property
+    def as_text_input(self) -> TextInput:
+        assert isinstance(self, TextInput)
+        return self
+
+    @property
+    def as_time_input(self) -> TimeInput:
+        assert isinstance(self, TimeInput)
+        return self
+
+
+El = TypeVar("El", bound=Element, covariant=True)
+
+
+class ElementList(Generic[El]):
+    def __init__(self, els: Sequence[El]):
+        self._list: Sequence[El] = els
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    def len(self) -> int:
+        return len(self)
+
+    def __getitem__(self, idx: int) -> El:
+        return self._list[idx]
+
+    def __iter__(self):
+        yield from self._list
+
+    def values(self) -> Sequence[Any]:
+        return [e.value for e in self]
+
+
+W = TypeVar("W", bound=Widget, covariant=True)
+
+
+class WidgetList(Generic[W], ElementList[W]):
+    def get_widget(self, key: str) -> W:
+        for e in self._list:
+            if e.key == key:
+                return e
+
+        raise KeyError(key)
+
 
 @dataclass(repr=False)
 class Button(Widget):
@@ -1056,96 +1156,96 @@ class Block:
     # We could implement these using __getattr__ but that would have
     # much worse type information.
     @property
-    def button(self) -> Sequence[Button]:
-        return self.get("button")
+    def button(self) -> WidgetList[Button]:
+        return WidgetList(self.get("button"))
 
     @property
-    def caption(self) -> Sequence[Caption]:
-        return self.get("caption")
+    def caption(self) -> ElementList[Caption]:
+        return ElementList(self.get("caption"))
 
     @property
-    def checkbox(self) -> Sequence[Checkbox]:
-        return self.get("checkbox")
+    def checkbox(self) -> WidgetList[Checkbox]:
+        return WidgetList(self.get("checkbox"))
 
     @property
-    def code(self) -> Sequence[Code]:
-        return self.get("code")
+    def code(self) -> ElementList[Code]:
+        return ElementList(self.get("code"))
 
     @property
-    def color_picker(self) -> Sequence[ColorPicker]:
-        return self.get("color_picker")
+    def color_picker(self) -> WidgetList[ColorPicker]:
+        return WidgetList(self.get("color_picker"))
 
     @property
-    def date_input(self) -> Sequence[DateInput]:
-        return self.get("date_input")
+    def date_input(self) -> WidgetList[DateInput]:
+        return WidgetList(self.get("date_input"))
 
     @property
-    def divider(self) -> Sequence[Divider]:
-        return self.get("divider")
+    def divider(self) -> ElementList[Divider]:
+        return ElementList(self.get("divider"))
 
     @property
-    def exception(self) -> Sequence[Exception]:
-        return self.get("exception")
+    def exception(self) -> ElementList[Exception]:
+        return ElementList(self.get("exception"))
 
     @property
-    def header(self) -> Sequence[Header]:
-        return self.get("header")
+    def header(self) -> ElementList[Header]:
+        return ElementList(self.get("header"))
 
     @property
-    def latex(self) -> Sequence[Latex]:
-        return self.get("latex")
+    def latex(self) -> ElementList[Latex]:
+        return ElementList(self.get("latex"))
 
     @property
-    def markdown(self) -> Sequence[Markdown]:
-        return self.get("markdown")
+    def markdown(self) -> ElementList[Markdown]:
+        return ElementList(self.get("markdown"))
 
     @property
-    def multiselect(self) -> Sequence[Multiselect[Any]]:
-        return self.get("multiselect")
+    def multiselect(self) -> WidgetList[Multiselect[Any]]:
+        return WidgetList(self.get("multiselect"))
 
     @property
-    def number_input(self) -> Sequence[NumberInput]:
-        return self.get("number_input")
+    def number_input(self) -> WidgetList[NumberInput]:
+        return WidgetList(self.get("number_input"))
 
     @property
-    def radio(self) -> Sequence[Radio[Any]]:
-        return self.get("radio")
+    def radio(self) -> WidgetList[Radio[Any]]:
+        return WidgetList(self.get("radio"))
 
     @property
-    def select_slider(self) -> Sequence[SelectSlider[Any]]:
-        return self.get("select_slider")
+    def select_slider(self) -> WidgetList[SelectSlider[Any]]:
+        return WidgetList(self.get("select_slider"))
 
     @property
-    def selectbox(self) -> Sequence[Selectbox[Any]]:
-        return self.get("selectbox")
+    def selectbox(self) -> WidgetList[Selectbox[Any]]:
+        return WidgetList(self.get("selectbox"))
 
     @property
-    def slider(self) -> Sequence[Slider[Any]]:
-        return self.get("slider")
+    def slider(self) -> WidgetList[Slider[Any]]:
+        return WidgetList(self.get("slider"))
 
     @property
-    def subheader(self) -> Sequence[Subheader]:
-        return self.get("subheader")
+    def subheader(self) -> ElementList[Subheader]:
+        return ElementList(self.get("subheader"))
 
     @property
-    def text(self) -> Sequence[Text]:
-        return self.get("text")
+    def text(self) -> ElementList[Text]:
+        return ElementList(self.get("text"))
 
     @property
-    def text_area(self) -> Sequence[TextArea]:
-        return self.get("text_area")
+    def text_area(self) -> WidgetList[TextArea]:
+        return WidgetList(self.get("text_area"))
 
     @property
-    def text_input(self) -> Sequence[TextInput]:
-        return self.get("text_input")
+    def text_input(self) -> WidgetList[TextInput]:
+        return WidgetList(self.get("text_input"))
 
     @property
-    def time_input(self) -> Sequence[TimeInput]:
-        return self.get("time_input")
+    def time_input(self) -> WidgetList[TimeInput]:
+        return WidgetList(self.get("time_input"))
 
     @property
-    def title(self) -> Sequence[Title]:
-        return self.get("title")
+    def title(self) -> ElementList[Title]:
+        return ElementList(self.get("title"))
 
     # These overloads improve type information for code calling `get`
     @overload
@@ -1245,12 +1345,13 @@ class Block:
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
-    def get_widget(self, key: str) -> Widget | None:
+    def get_widget(self, key: str) -> Widget:
         for e in self:
             if e.key == key:
                 assert isinstance(e, Widget)
                 return e
-        return None
+
+        raise KeyError(key)
 
     def widget_state(self) -> WidgetState | None:
         return None
