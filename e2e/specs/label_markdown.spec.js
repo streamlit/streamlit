@@ -246,10 +246,10 @@ describe("label markdown", () => {
             ["valid", "link"],
         ]
 
-        cy.get('[data-testid="metric-container"]').should("have.length", 4);
+        cy.get('[data-testid="stMetric"]').should("have.length", 4);
 
         cases.forEach(([type, name], index) => {
-            cy.getIndexed('[data-testid="metric-container"]', index).matchThemedSnapshots(`metric-${type}-${name}`);
+            cy.getIndexed('[data-testid="stMetric"]', index).matchThemedSnapshots(`metric-${type}-${name}`);
         })
     });
 
