@@ -15,10 +15,12 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 
 import { DocString as DocStringProto } from "@streamlit/lib/src/proto"
 import DocString, { DocStringProps, Member } from "./DocString"
+import { render } from "@streamlit/lib/src/test_util"
 
 const getProps = (
   elementProps: Partial<DocStringProto> = {}
@@ -26,8 +28,7 @@ const getProps = (
   element: DocStringProto.create({
     name: "st.balloons",
     value: "streamlit.balloons()",
-    docString:
-      "Draw celebratory balloons.\n\nExample\n-------\n>>> st.balloons()\n\n...then watch your app and get ready for a celebration!",
+    docString: "docstring",
     type: "method",
     ...elementProps,
   }),
@@ -36,40 +37,45 @@ const getProps = (
 
 describe("DocString Element", () => {
   const props = getProps()
-  const wrapper = shallow(<DocString {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper).toBeDefined()
+    render(<DocString {...props} />)
+    expect(screen.getAllByTestId("stDocstring")).toHaveLength(2)
   })
 
   it("should render a doc-string", () => {
-    expect(wrapper.find("StyledDocString").text()).toBe(
-      props.element.docString
-    )
+    render(<DocString {...props} />)
+    expect(screen.getByText(props.element.docString)).toBeInTheDocument()
+    expect(screen.getByTestId("stDocstringDocstring")).toBeInTheDocument()
   })
 
   it("should render 'no docs' text when empty", () => {
     const props = getProps({
       docString: undefined,
     })
-    const wrapper = shallow(<DocString {...props} />)
-
-    expect(wrapper.find("StyledDocString").text()).toBe("No docs available")
+    render(<DocString {...props} />)
+    expect(screen.getAllByTestId("stDocstring")).toHaveLength(1)
+    expect(screen.getByTestId("stDocstringDocstring")).toBeInTheDocument()
+    expect(screen.getByText("No docs available")).toBeInTheDocument()
   })
 
   describe("doc-header", () => {
     it("should render a name", () => {
-      expect(wrapper.find("StyledDocName").text()).toBe("st.balloons")
+      render(<DocString {...props} />)
+      expect(screen.getByTestId("stDocstringDocName")).toBeInTheDocument()
+      expect(screen.getByText("st.balloons")).toBeInTheDocument()
     })
 
     it("should render value", () => {
-      expect(wrapper.find("StyledDocValue").text()).toBe(
-        "streamlit.balloons()"
-      )
+      render(<DocString {...props} />)
+      expect(screen.getByTestId("stDocstringDocValue")).toBeInTheDocument()
+      expect(screen.getByText("streamlit.balloons()")).toBeInTheDocument()
     })
 
     it("should render a type", () => {
-      expect(wrapper.find("StyledDocType").text()).toBe("method")
+      render(<DocString {...props} />)
+      expect(screen.getByTestId("stDocstringDocType")).toBeInTheDocument()
+      expect(screen.getByText("method")).toBeInTheDocument()
     })
 
     describe("should render empty when", () => {
@@ -78,18 +84,27 @@ describe("DocString Element", () => {
         value: undefined,
         type: undefined,
       })
-      const wrapper = shallow(<DocString {...props} />)
+      render(<DocString {...props} />)
 
       it("there's no name", () => {
-        expect(wrapper.find("StyledDocName").length).toBeFalsy()
+        expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId("stDocstringDocName")
+        ).not.toBeInTheDocument()
       })
 
       it("there's no value", () => {
-        expect(wrapper.find("StyledDocValue").length).toBeFalsy()
+        expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId("stDocstringDocValue")
+        ).not.toBeInTheDocument()
       })
 
       it("there's no type", () => {
-        expect(wrapper.find("StyledDocType").length).toBeFalsy()
+        expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId("stDocstringDocType")
+        ).not.toBeInTheDocument()
       })
     })
 
@@ -98,13 +113,17 @@ describe("DocString Element", () => {
       const props = getProps({
         name: undefined,
       })
-      const wrapper = shallow(<DocString {...props} />)
+      render(<DocString {...props} />)
 
-      expect(wrapper.find("StyledDocName").length).toBeFalsy()
-      expect(wrapper.find("StyledDocValue").text()).toBe(
-        "streamlit.balloons()"
-      )
-      expect(wrapper.find("StyledDocType").text()).toBe("method")
+      expect(
+        screen.queryByTestId("stDocstringDocName")
+      ).not.toBeInTheDocument()
+
+      expect(screen.getByTestId("stDocstringDocType")).toBeInTheDocument()
+      expect(screen.getByText("method")).toBeInTheDocument()
+
+      expect(screen.getByTestId("stDocstringDocValue")).toBeInTheDocument()
+      expect(screen.getByText("streamlit.balloons()")).toBeInTheDocument()
     })
 
     // Testing cases that we expect to happen (won't test every combination)
@@ -112,17 +131,26 @@ describe("DocString Element", () => {
       const props = getProps({
         value: undefined,
       })
-      const wrapper = shallow(<DocString {...props} />)
+      render(<DocString {...props} />)
 
-      expect(wrapper.find("StyledDocName").text()).toBe("st.balloons")
-      expect(wrapper.find("StyledDocValue").length).toBeFalsy()
-      expect(wrapper.find("StyledDocType").text()).toBe("method")
+      expect(
+        screen.queryByTestId("stDocstringDocValue")
+      ).not.toBeInTheDocument()
+
+      expect(screen.getByTestId("stDocstringDocName")).toBeInTheDocument()
+      expect(screen.getByText("st.balloons")).toBeInTheDocument()
+
+      expect(screen.getByTestId("stDocstringDocType")).toBeInTheDocument()
+      expect(screen.getByText("method")).toBeInTheDocument()
     })
   })
 
   describe("members table", () => {
     it("should render no members when there are none", () => {
-      expect(wrapper.find("StyledMembersRow").length).toBe(0)
+      render(<DocString {...props} />)
+      expect(
+        screen.queryByTestId("stDocstringMembersTable")
+      ).not.toBeInTheDocument()
     })
 
     it("should render members", () => {
@@ -140,9 +168,10 @@ describe("DocString Element", () => {
           },
         ],
       })
-      const wrapper = shallow(<DocString {...props} />)
+      render(<DocString {...props} />)
 
-      expect(wrapper.find("Member").length).toBe(2)
+      expect(screen.getByTestId("stDocstringMembersTable")).toBeInTheDocument()
+      expect(screen.getAllByTestId("stMember")).toHaveLength(2)
     })
   })
 })
@@ -157,11 +186,16 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("value1")
+    expect(screen.getByTestId("stMemberDocValue")).toBeInTheDocument()
+    expect(screen.getByText("value1")).toBeInTheDocument()
+
+    expect(screen.getByTestId("stMemberDocName")).toBeInTheDocument()
+    expect(screen.getByText("member1")).toBeInTheDocument()
+
+    expect(screen.getByTestId("stMemberDocType")).toBeInTheDocument()
+    expect(screen.getByText("type1")).toBeInTheDocument()
   })
 
   it("should render doc-oriented members", () => {
@@ -173,11 +207,16 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("docstring1")
+    expect(screen.getByTestId("stMemberDocName")).toBeInTheDocument()
+    expect(screen.getByText("member1")).toBeInTheDocument()
+
+    expect(screen.getByTestId("stMemberDocType")).toBeInTheDocument()
+    expect(screen.getByText("type1")).toBeInTheDocument()
+
+    expect(screen.getByTestId("stMemberDocString")).toBeInTheDocument()
+    expect(screen.getByText("docstring1")).toBeInTheDocument()
   })
 
   it("should prefer value over doc", () => {
@@ -190,11 +229,19 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("value1")
+    expect(screen.getByTestId("stMemberDocValue")).toBeInTheDocument()
+    expect(screen.getByText("value1")).toBeInTheDocument()
+
+    expect(screen.getByTestId("stMemberDocName")).toBeInTheDocument()
+    expect(screen.getByText("member1")).toBeInTheDocument()
+
+    expect(screen.getByTestId("stMemberDocType")).toBeInTheDocument()
+    expect(screen.getByText("type1")).toBeInTheDocument()
+
+    expect(screen.queryByTestId("stMemberDocString")).not.toBeInTheDocument()
+    expect(screen.queryByText("docstring1")).not.toBeInTheDocument()
   })
 
   it("should tell you when there are no docs", () => {
@@ -205,11 +252,10 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("No docs available")
+    expect(screen.getByTestId("stMemberDocString")).toBeInTheDocument()
+    expect(screen.getByText("No docs available")).toBeInTheDocument()
   })
 
   it("should only show type if present", () => {
@@ -219,9 +265,8 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").length).toBe(0)
+    expect(screen.queryByTestId("stMemberDocType")).not.toBeInTheDocument()
   })
 })
