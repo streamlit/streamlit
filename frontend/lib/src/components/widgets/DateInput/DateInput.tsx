@@ -408,7 +408,7 @@ class DateInput extends React.PureComponent<Props, State> {
                       paddingTop: ".5rem",
                     },
                     props: {
-                      "data-testid": "stDateInputInput",
+                      "data-testid": "stDateInput-Input",
                     },
                   },
                 },

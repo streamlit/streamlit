@@ -35,7 +35,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: DateInputProto.create({
     id: "1",
     label: "Label",
-    default: [originalDate],
+    default: [fullOriginalDate],
     min: originalDate,
     format: "YYYY/MM/DD",
     ...elementProps,
@@ -120,7 +120,7 @@ describe("DateInput widget", () => {
     const props = getProps()
     render(<DateInput {...props} />)
 
-    expect(screen.getByTestId("stDateInputInput")).toHaveValue(
+    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(
       fullOriginalDate
     )
   })
@@ -128,7 +128,7 @@ describe("DateInput widget", () => {
   it("can be disabled", () => {
     const props = getProps()
     render(<DateInput {...props} disabled={true} />)
-    expect(screen.getByTestId("stDateInputInput")).toBeDisabled()
+    expect(screen.getByTestId("stDateInput-Input")).toBeDisabled()
   })
 
   it("updates the widget value when it's changed", () => {
@@ -136,10 +136,10 @@ describe("DateInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
-    const datePicker = screen.getByTestId("stDateInputInput")
+    const datePicker = screen.getByTestId("stDateInput-Input")
     fireEvent.change(datePicker, { target: { value: newDate } })
 
-    expect(screen.getByTestId("stDateInputInput")).toHaveValue(newDate)
+    expect(screen.getByTestId("stDateInput-Input")).toHaveValue(newDate)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
       [newDate],
@@ -154,7 +154,7 @@ describe("DateInput widget", () => {
     jest.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<DateInput {...props} />)
-    const dateInput = screen.getByTestId("stDateInputInput")
+    const dateInput = screen.getByTestId("stDateInput-Input")
 
     fireEvent.change(dateInput, {
       target: { value: newDate },
@@ -217,7 +217,7 @@ describe("DateInput widget", () => {
 
     render(<DateInput {...props} />)
 
-    const dateInput = screen.getByTestId("stDateInputInput")
+    const dateInput = screen.getByTestId("stDateInput-Input")
     fireEvent.change(dateInput, {
       target: { value: newDate },
     })
