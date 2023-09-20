@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import ErrorElement, { ErrorElementProps } from "./ErrorElement"
 
@@ -32,24 +34,24 @@ const getProps = (
 describe("ErrorElement element", () => {
   it("renders an AlertElement without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<ErrorElement {...props} />)
+    render(<ErrorElement {...props} />)
 
-    expect(wrapper).toBeDefined()
-    expect(wrapper.find("AlertElement")).toBeDefined()
+    expect(screen.getByTestId("stNotification")).toBeInTheDocument()
   })
 
   it("renders stack without first line and trimmed lines", () => {
     const props = getProps()
-    const wrapper = shallow(<ErrorElement {...props} />)
+    render(<ErrorElement {...props} />)
 
-    expect(wrapper.find("code").exists()).toBe(true)
-    expect(wrapper.find("code").text()).toEqual("Line 1\nLine 2\n")
+    expect(screen.getByTestId("stErrorElementStack")).toHaveTextContent(
+      "Line 1 Line 2"
+    )
   })
 
   it("does not render the stack when not defined", () => {
     const props = getProps({ stack: undefined })
-    const wrapper = shallow(<ErrorElement {...props} />)
+    render(<ErrorElement {...props} />)
 
-    expect(wrapper.find("code").exists()).toBe(false)
+    expect(screen.queryByTestId("stErrorElementStack")).not.toBeInTheDocument()
   })
 })

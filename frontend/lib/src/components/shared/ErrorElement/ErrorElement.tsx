@@ -47,7 +47,7 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
       <strong>{name}: </strong>
       {message}
       {stack ? (
-        <StyledPreError>
+        <StyledPreError data-testid="stErrorElementStack">
           <code>{cleanedStack}</code>
         </StyledPreError>
       ) : null}
