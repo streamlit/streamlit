@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { RenderResult, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 
 import { DocString as DocStringProto } from "@streamlit/lib/src/proto"
 import DocString, { DocStringProps, Member } from "./DocString"
