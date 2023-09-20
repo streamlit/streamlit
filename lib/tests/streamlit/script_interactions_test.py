@@ -134,9 +134,10 @@ class InteractiveScriptTest(InteractiveScriptTests):
             """,
         )
         sr = script.run()
-        assert sr.get_widget("r")
+        assert sr.get_widget("r").as_radio
         assert sr.get_widget("r") == sr.radio[1]
-        assert sr.get_widget("s") is None
+        with pytest.raises(KeyError):
+            sr.get_widget("s")
 
     def test_widget_added_removed(self):
         """
@@ -154,23 +155,25 @@ class InteractiveScriptTest(InteractiveScriptTests):
         )
         sr = script.run()
         assert len(sr.radio) == 1
-        assert sr.get_widget("conditional") == None
+        with pytest.raises(KeyError):
+            sr.get_widget("conditional")
 
-        sr2 = sr.get_widget("cb").set_value("on").run()
+        sr2 = sr.get_widget("cb").as_radio.set_value("on").run()
         assert len(sr2.radio) == 2
-        assert sr2.get_widget("conditional").value == "a"
+        assert sr2.get_widget("conditional").as_radio.value == "a"
 
-        sr3 = sr2.get_widget("conditional").set_value("c").run()
+        sr3 = sr2.get_widget("conditional").as_radio.set_value("c").run()
         assert len(sr3.radio) == 2
-        assert sr3.get_widget("conditional").value == "c"
+        assert sr3.get_widget("conditional").as_radio.value == "c"
 
-        sr4 = sr3.get_widget("cb").set_value("off").run()
+        sr4 = sr3.get_widget("cb").as_radio.set_value("off").run()
         assert len(sr4.radio) == 1
-        assert sr4.get_widget("conditional") == None
+        with pytest.raises(KeyError):
+            sr4.get_widget("conditional")
 
-        sr5 = sr4.get_widget("cb").set_value("on").run()
+        sr5 = sr4.get_widget("cb").as_radio.set_value("on").run()
         assert len(sr5.radio) == 2
-        assert sr5.get_widget("conditional").value == "a"
+        assert sr5.get_widget("conditional").as_radio.value == "a"
 
     def test_query_narrowing(self):
         script = self.script_from_string(
