@@ -227,5 +227,5 @@ experimental_set_query_params = _set_query_params
 experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(
-    connection, "experimental_connection", "connection", "2024-01-01"
+    connection, "experimental_connection", "2024-01-01", name_override="connection"
 )
