@@ -85,7 +85,7 @@
     "react-responsive-carousel": "^3.2.23",
     "react-syntax-highlighter": "^15.5.0",
     "react-virtualized": "^9.21.2",
-    "react-webcam": "^7.0.1",
+    "react-webcam": "7.1.1",
     "react-window": "^1.8.8",
     "rehype-katex": "^6.0.2",
     "rehype-raw": "^6.1.1",
