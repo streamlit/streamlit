@@ -400,8 +400,6 @@ class DateInput extends React.PureComponent<Props, State> {
                     },
                   },
                   Input: {
-                    max: maxDate?.toISOString().split("T")[0],
-                    min: minDate?.toISOString().split("T")[0],
                     style: {
                       // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                       paddingRight: ".5rem",

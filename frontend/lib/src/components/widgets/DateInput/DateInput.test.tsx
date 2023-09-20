@@ -29,6 +29,7 @@ import DateInput, { Props } from "./DateInput"
 
 const originalDate = "1970/1/20"
 const fullOriginalDate = "1970/01/20"
+const newDate = "2020/02/06"
 
 const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
   element: DateInputProto.create({
@@ -49,8 +50,6 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
 })
 
 describe("DateInput widget", () => {
-  const newDate = "2020/02/06"
-
   it("renders without crashing", () => {
     const props = getProps()
     render(<DateInput {...props} />)
@@ -206,7 +205,7 @@ describe("DateInput widget", () => {
       />
     )
     expect(dateInputRef.props.element.max).toStrictEqual("2030/02/06")
-    expect(dateInputRef.props.element.min).toBe("1970/1/20")
+    expect(dateInputRef.props.element.min).toBe(originalDate)
   })
 
   it("resets its value when form is cleared", () => {
