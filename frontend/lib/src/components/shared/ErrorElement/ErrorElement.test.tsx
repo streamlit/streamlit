@@ -43,9 +43,9 @@ describe("ErrorElement element", () => {
     const props = getProps()
     render(<ErrorElement {...props} />)
 
-    const stack = screen.getByTestId("stErrorElementStack")
-    expect(stack).toBeInTheDocument()
-    expect(stack).toHaveTextContent("Line 1 Line 2")
+    expect(screen.getByTestId("stErrorElementStack")).toHaveTextContent(
+      "Line 1 Line 2"
+    )
   })
 
   it("does not render the stack when not defined", () => {
