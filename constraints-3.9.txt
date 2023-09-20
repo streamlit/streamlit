@@ -125,7 +125,7 @@ types-click==7.1.8
 types-protobuf==4.24.0.2
 types-python-dateutil==2.8.19.14
 types-pytz==2023.3.1.0
-types-requests==2.31.0.2
+types-requests==2.31.0.3
 types-setuptools==68.2.0.0
 types-toml==0.10.8.7
 types-typed-ast==1.5.8.7
@@ -134,7 +134,7 @@ typing-inspect==0.9.0
 typing_extensions==4.8.0
 tzdata==2023.3
 tzlocal==5.0.1
-urllib3==2.0.4
+urllib3==2.0.5
 validators==0.22.0
 virtualenv==20.24.5
 watchdog==3.0.0
