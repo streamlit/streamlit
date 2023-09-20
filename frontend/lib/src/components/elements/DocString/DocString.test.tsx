@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen } from "@testing-library/react"
+import { RenderResult, screen } from "@testing-library/react"
 
 import { DocString as DocStringProto } from "@streamlit/lib/src/proto"
 import DocString, { DocStringProps, Member } from "./DocString"
@@ -45,8 +45,9 @@ describe("DocString Element", () => {
 
   it("should render a doc-string", () => {
     render(<DocString {...props} />)
-    expect(screen.getByText(props.element.docString)).toBeInTheDocument()
-    expect(screen.getByTestId("stDocstringDocstring")).toBeInTheDocument()
+    expect(screen.getByTestId("stDocstringDocstring")).toHaveTextContent(
+      props.element.docString
+    )
   })
 
   it("should render 'no docs' text when empty", () => {
@@ -54,28 +55,33 @@ describe("DocString Element", () => {
       docString: undefined,
     })
     render(<DocString {...props} />)
+
     expect(screen.getAllByTestId("stDocstring")).toHaveLength(1)
-    expect(screen.getByTestId("stDocstringDocstring")).toBeInTheDocument()
-    expect(screen.getByText("No docs available")).toBeInTheDocument()
+    expect(screen.getByTestId("stDocstringDocstring")).toHaveTextContent(
+      "No docs available"
+    )
   })
 
   describe("doc-header", () => {
     it("should render a name", () => {
       render(<DocString {...props} />)
-      expect(screen.getByTestId("stDocstringDocName")).toBeInTheDocument()
-      expect(screen.getByText("st.balloons")).toBeInTheDocument()
+      expect(screen.getByTestId("stDocstringDocName")).toHaveTextContent(
+        "st.balloons"
+      )
     })
 
     it("should render value", () => {
       render(<DocString {...props} />)
-      expect(screen.getByTestId("stDocstringDocValue")).toBeInTheDocument()
-      expect(screen.getByText("streamlit.balloons()")).toBeInTheDocument()
+      expect(screen.getByTestId("stDocstringDocValue")).toHaveTextContent(
+        "streamlit.balloons()"
+      )
     })
 
     it("should render a type", () => {
       render(<DocString {...props} />)
-      expect(screen.getByTestId("stDocstringDocType")).toBeInTheDocument()
-      expect(screen.getByText("method")).toBeInTheDocument()
+      expect(screen.getByTestId("stDocstringDocType")).toHaveTextContent(
+        "method"
+      )
     })
 
     describe("should render empty when", () => {
@@ -119,11 +125,12 @@ describe("DocString Element", () => {
         screen.queryByTestId("stDocstringDocName")
       ).not.toBeInTheDocument()
 
-      expect(screen.getByTestId("stDocstringDocType")).toBeInTheDocument()
-      expect(screen.getByText("method")).toBeInTheDocument()
-
-      expect(screen.getByTestId("stDocstringDocValue")).toBeInTheDocument()
-      expect(screen.getByText("streamlit.balloons()")).toBeInTheDocument()
+      expect(screen.getByTestId("stDocstringDocType")).toHaveTextContent(
+        "method"
+      )
+      expect(screen.getByTestId("stDocstringDocValue")).toHaveTextContent(
+        "streamlit.balloons()"
+      )
     })
 
     // Testing cases that we expect to happen (won't test every combination)
@@ -137,11 +144,12 @@ describe("DocString Element", () => {
         screen.queryByTestId("stDocstringDocValue")
       ).not.toBeInTheDocument()
 
-      expect(screen.getByTestId("stDocstringDocName")).toBeInTheDocument()
-      expect(screen.getByText("st.balloons")).toBeInTheDocument()
-
-      expect(screen.getByTestId("stDocstringDocType")).toBeInTheDocument()
-      expect(screen.getByText("method")).toBeInTheDocument()
+      expect(screen.getByTestId("stDocstringDocName")).toHaveTextContent(
+        "st.balloons"
+      )
+      expect(screen.getByTestId("stDocstringDocType")).toHaveTextContent(
+        "method"
+      )
     })
   })
 
@@ -188,14 +196,9 @@ describe("Member Element", () => {
 
     render(<Member {...props} />)
 
-    expect(screen.getByTestId("stMemberDocValue")).toBeInTheDocument()
-    expect(screen.getByText("value1")).toBeInTheDocument()
-
-    expect(screen.getByTestId("stMemberDocName")).toBeInTheDocument()
-    expect(screen.getByText("member1")).toBeInTheDocument()
-
-    expect(screen.getByTestId("stMemberDocType")).toBeInTheDocument()
-    expect(screen.getByText("type1")).toBeInTheDocument()
+    expect(screen.getByTestId("stMemberDocValue")).toHaveTextContent("value1")
+    expect(screen.getByTestId("stMemberDocName")).toHaveTextContent("member1")
+    expect(screen.getByTestId("stMemberDocType")).toHaveTextContent("type1")
   })
 
   it("should render doc-oriented members", () => {
@@ -209,14 +212,11 @@ describe("Member Element", () => {
 
     render(<Member {...props} />)
 
-    expect(screen.getByTestId("stMemberDocName")).toBeInTheDocument()
-    expect(screen.getByText("member1")).toBeInTheDocument()
-
-    expect(screen.getByTestId("stMemberDocType")).toBeInTheDocument()
-    expect(screen.getByText("type1")).toBeInTheDocument()
-
-    expect(screen.getByTestId("stMemberDocString")).toBeInTheDocument()
-    expect(screen.getByText("docstring1")).toBeInTheDocument()
+    expect(screen.getByTestId("stMemberDocName")).toHaveTextContent("member1")
+    expect(screen.getByTestId("stMemberDocType")).toHaveTextContent("type1")
+    expect(screen.getByTestId("stMemberDocString")).toHaveTextContent(
+      "docstring1"
+    )
   })
 
   it("should prefer value over doc", () => {
@@ -231,15 +231,9 @@ describe("Member Element", () => {
 
     render(<Member {...props} />)
 
-    expect(screen.getByTestId("stMemberDocValue")).toBeInTheDocument()
-    expect(screen.getByText("value1")).toBeInTheDocument()
-
-    expect(screen.getByTestId("stMemberDocName")).toBeInTheDocument()
-    expect(screen.getByText("member1")).toBeInTheDocument()
-
-    expect(screen.getByTestId("stMemberDocType")).toBeInTheDocument()
-    expect(screen.getByText("type1")).toBeInTheDocument()
-
+    expect(screen.getByTestId("stMemberDocValue")).toHaveTextContent("value1")
+    expect(screen.getByTestId("stMemberDocName")).toHaveTextContent("member1")
+    expect(screen.getByTestId("stMemberDocType")).toHaveTextContent("type1")
     expect(screen.queryByTestId("stMemberDocString")).not.toBeInTheDocument()
     expect(screen.queryByText("docstring1")).not.toBeInTheDocument()
   })
@@ -254,8 +248,9 @@ describe("Member Element", () => {
 
     render(<Member {...props} />)
 
-    expect(screen.getByTestId("stMemberDocString")).toBeInTheDocument()
-    expect(screen.getByText("No docs available")).toBeInTheDocument()
+    expect(screen.getByTestId("stMemberDocString")).toHaveTextContent(
+      "No docs available"
+    )
   })
 
   it("should only show type if present", () => {
