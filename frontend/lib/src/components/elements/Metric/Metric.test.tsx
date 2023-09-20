@@ -45,9 +45,9 @@ describe("Metric element", () => {
     const props = getProps()
     render(<Metric {...props} />)
 
-    const labelText = screen.getByTestId("stMetricLabel")
-    expect(labelText).toBeInTheDocument()
-    expect(labelText).toHaveTextContent(props.element.label)
+    expect(screen.getByTestId("stMetricLabel")).toHaveTextContent(
+      props.element.label
+    )
   })
 
   it("pass labelVisibility prop to StyledMetricLabelText correctly when hidden", () => {
@@ -79,7 +79,7 @@ describe("Metric element", () => {
   it("renders direction icon based on props - red/up", () => {
     const props = getProps()
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetricDeltaIcon")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon-Up")).toBeInTheDocument()
   })
 
   it("renders direction icon based on props - green/down", () => {
@@ -88,7 +88,7 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
-    expect(screen.getByTestId("stMetricDeltaIcon")).toBeInTheDocument()
+    expect(screen.getByTestId("stMetricDeltaIcon-Down")).toBeInTheDocument()
   })
 
   it("renders no text and icon based on props", () => {

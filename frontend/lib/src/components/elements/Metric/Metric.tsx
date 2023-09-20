@@ -103,7 +103,12 @@ export default function Metric({ element }: MetricProps): ReactElement {
       {deltaExists && (
         <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
           <Icon
-            testid="stMetricDeltaIcon"
+            testid={
+              // if direction is null, icon will be null
+              direction === ArrowUpward
+                ? "stMetricDeltaIcon-Up"
+                : "stMetricDeltaIcon-Down"
+            }
             content={direction}
             size="lg"
             margin={arrowMargin}
