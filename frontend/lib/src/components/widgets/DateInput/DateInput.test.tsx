@@ -168,7 +168,7 @@ describe("DateInput widget", () => {
       target: { value: null },
     })
 
-    // Simulating the close action on UIDatePicker (assuming there is a close action you want to simulate)
+    // Simulating the close action
     fireEvent.blur(dateInput)
     expect(dateInput).toHaveValue(fullOriginalDate)
   })
