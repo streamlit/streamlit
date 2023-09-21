@@ -1369,7 +1369,7 @@ class Block:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float | None = None) -> ElementTree:
+    def run(self, timeout: float | None = None) -> TestRunner:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
@@ -1410,9 +1410,7 @@ class ElementTree(Block):
     the rerun.
     """
 
-    script_path: str | None = field(repr=False, default=None)
     _session_state: SessionState | None = field(repr=False, default=None)
-    _default_timeout: float = field(repr=False, default=3)
     _runner: TestRunner | None = field(repr=False, default=None)
 
     def __init__(self):
@@ -1451,7 +1449,6 @@ class ElementTree(Block):
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
-        assert self.script_path is not None
         assert self._runner is not None
 
         widget_states = self.get_widget_states()

@@ -35,18 +35,11 @@ class LocalScriptRunner(ScriptRunner):
         self,
         script_path: str,
         prev_session_state: SessionState | None = None,
-        default_timeout: float = 3,
     ):
-        """Initializes the ScriptRunner for the given script_path.
-
-        `default_timeout` sets the time in seconds before a script run is
-        timed out. It can be temporarily overridden by passing an argument to
-        `.run()`
-        """
+        """Initializes the ScriptRunner for the given script_path."""
 
         assert os.path.isfile(script_path), f"File not found at {script_path}"
 
-        self.default_timeout = default_timeout
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
         if prev_session_state is not None:
@@ -102,16 +95,13 @@ class LocalScriptRunner(ScriptRunner):
     def run(
         self,
         widget_state: WidgetStates | None = None,
-        timeout: float | None = None,
+        timeout: float = 3,
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction.
 
-        Timeout is in seconds, or None to use the default timeout of the runner.
+        Timeout is in seconds.
         """
-        if timeout is None:
-            timeout = self.default_timeout
-
         rerun_data = RerunData(widget_states=widget_state)
         self.request_rerun(rerun_data)
         if not self._script_thread:
@@ -119,9 +109,7 @@ class LocalScriptRunner(ScriptRunner):
         require_widgets_deltas(self, timeout)
 
         tree = parse_tree_from_messages(self.forward_msgs())
-        tree.script_path = self.script_path
         tree._session_state = self.session_state
-        tree._default_timeout = self.default_timeout
         return tree
 
     def script_stopped(self) -> bool:

@@ -36,7 +36,7 @@ TMP_DIR = tempfile.TemporaryDirectory()
 class TestRunner:
     def __init__(self, script_path: str, default_timeout: float):
         self._script_path = script_path
-        self._default_timeout = default_timeout
+        self.default_timeout = default_timeout
         self.session_state = SessionState()
 
     @classmethod
@@ -78,9 +78,9 @@ class TestRunner:
         Timeout is in seconds, or None to use the default timeout of the runner.
         """
         if timeout is None:
-            timeout = self._default_timeout
+            timeout = self.default_timeout
 
-        local_runner = LocalScriptRunner(self._script_path, self.session_state, timeout)
+        local_runner = LocalScriptRunner(self._script_path, self.session_state)
 
         # setup
         mock_runtime = MagicMock(spec=Runtime)
