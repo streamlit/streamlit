@@ -26,6 +26,14 @@ export interface VideoProps {
   element: VideoProto
 }
 
+export const getYoutubeSrc = (element: VideoProto, url: string): string => {
+  const { startTime } = element
+  if (startTime) {
+    return `${url}?start=${startTime}`
+  }
+  return url
+}
+
 export default function Video({
   element,
   width,
@@ -65,14 +73,6 @@ export default function Video({
     }
   }, [element])
 
-  const getYoutubeSrc = (url: string): string => {
-    const { startTime } = element
-    if (startTime) {
-      return `${url}?start=${startTime}`
-    }
-    return url
-  }
-
   /* Is this a YouTube link? If so we need a fancier tag.
        NOTE: This part assumes the URL is already an "embed" link.
     */
@@ -87,8 +87,9 @@ export default function Video({
 
     return (
       <iframe
+        data-testid="stVideo"
         title={url}
-        src={getYoutubeSrc(url)}
+        src={getYoutubeSrc(element, url)}
         width={width}
         height={height}
         frameBorder="0"
@@ -100,6 +101,7 @@ export default function Video({
 
   return (
     <video
+      data-testid="stVideo"
       ref={videoRef}
       controls
       src={endpoints.buildMediaURL(url)}
