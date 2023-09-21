@@ -56,10 +56,14 @@ export default function AlertElement({
   width,
 }: AlertElementProps): ReactElement {
   return (
-    <div className="stAlert">
+    <div className="stAlert" data-testid="stAlert">
       <AlertContainer width={width} kind={kind}>
         <StyledIconAlertContent>
-          {icon && <EmojiIcon size="lg">{icon}</EmojiIcon>}
+          {icon && (
+            <EmojiIcon testid="stAlertEmojiIcon" size="lg">
+              {icon}
+            </EmojiIcon>
+          )}
           <StreamlitMarkdown source={body} allowHTML={false} />
         </StyledIconAlertContent>
       </AlertContainer>

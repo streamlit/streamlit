@@ -73,6 +73,7 @@ interface EmojiIconProps {
   margin?: string
   padding?: string
   children: ReactNode
+  testid?: string
 }
 
 export const EmojiIcon = ({
@@ -80,8 +81,10 @@ export const EmojiIcon = ({
   margin,
   padding,
   children,
+  testid,
 }: EmojiIconProps): ReactElement => (
   <StyledEmojiIcon
+    data-testid={testid}
     aria-hidden="true"
     {...getDefaultProps({ size, margin, padding })}
   >
