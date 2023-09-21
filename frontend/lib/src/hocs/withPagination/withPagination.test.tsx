@@ -15,8 +15,9 @@
  */
 
 import React from "react"
-import { shallow, mount } from "@streamlit/lib/src/test_util"
-import Pagination from "./Pagination"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import withPagination, { Props as HocProps } from "./withPagination"
 
@@ -38,9 +39,10 @@ describe("withPagination HOC", () => {
   it("renders without crashing", () => {
     const props = getProps()
     const WithHoc = withPagination(TestComponent)
-    const wrapper = shallow(<WithHoc {...props} />)
+    render(<WithHoc {...props} />)
 
-    expect(wrapper).toBeDefined()
+    expect(screen.getByText("test")).toBeInTheDocument()
+    expect(screen.getByTestId("stPagination")).toBeInTheDocument()
   })
 
   it("should render a paginated component", () => {
@@ -49,14 +51,10 @@ describe("withPagination HOC", () => {
       items: [{}, {}, {}, {}],
     })
     const WithHoc = withPagination(TestComponent)
-    const wrapper = mount(<WithHoc {...props} />)
-    const pagination = wrapper.find(Pagination)
-    const paginatedComponent = wrapper.find(TestComponent)
-
-    // @ts-expect-error
-    expect(paginatedComponent.props().items.length).toBe(props.pageSize)
-    expect(pagination.length).toBe(1)
-    expect(pagination.props().totalPages).toBe(2)
+    render(<WithHoc {...props} />)
+    expect(screen.getByText("test")).toBeInTheDocument()
+    expect(screen.getByTestId("stPagination")).toBeInTheDocument()
+    expect(screen.getByText("Showing page 1 of 2")).toBeInTheDocument()
   })
 
   it("should render component without pagination", () => {
@@ -65,22 +63,18 @@ describe("withPagination HOC", () => {
       items: [{}, {}, {}, {}],
     })
     const WithHoc = withPagination(TestComponent)
-    const wrapper = mount(<WithHoc {...props} />)
-    const pagination = wrapper.find(Pagination)
-    const paginatedComponent = wrapper.find(TestComponent)
-
-    expect(pagination.length).toBe(0)
-    // @ts-expect-error
-    expect(paginatedComponent.props().items.length).toBe(props.items.length)
+    render(<WithHoc {...props} />)
+    expect(screen.getByText("test")).toBeInTheDocument()
+    expect(screen.queryByTestId("stPagination")).not.toBeInTheDocument()
   })
 
   it("should reset on add", () => {
     const props = getProps()
     const WithHoc = withPagination(TestComponent)
-    const wrapper = mount(<WithHoc {...props} />)
-    wrapper.setProps(getProps({ items: props.items.concat([{}]) }))
+    const { rerender } = render(<WithHoc {...props} />)
+    const newProps = getProps({ items: props.items.concat([{}]) })
+    rerender(<WithHoc {...newProps} />)
 
-    const pagination = wrapper.find(Pagination)
-    expect(pagination.props().currentPage).toBe(1)
+    expect(screen.getByText("Showing page 1 of 3")).toBeInTheDocument()
   })
 })
