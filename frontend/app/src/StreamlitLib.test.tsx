@@ -215,7 +215,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 }
 
 describe("StreamlitLibExample", () => {
-  it("can be mounted", () => {
+  it("can be rendered without crashing", () => {
     render(<StreamlitLibExample />)
 
     // Before any Elements are explicitly added, our example class

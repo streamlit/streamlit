@@ -38,7 +38,7 @@ const FileDropzoneInstructions = ({
   acceptedExtensions,
   maxSizeBytes,
 }: Props): React.ReactElement => (
-  <StyledFileDropzoneInstructions>
+  <StyledFileDropzoneInstructions data-testid="stFileDropzoneInstructions">
     <StyledFileDropzoneInstructionsFileUploaderIcon>
       <Icon content={CloudUpload} size="threeXL" />
     </StyledFileDropzoneInstructionsFileUploaderIcon>

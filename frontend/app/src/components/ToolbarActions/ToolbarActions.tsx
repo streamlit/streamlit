@@ -39,11 +39,16 @@ export function ActionButton({
   onClick,
 }: ActionButtonProps): ReactElement {
   return (
-    <div className="stActionButton">
+    <div className="stActionButton" data-testid="stActionButton">
       <BaseButton onClick={onClick} kind={BaseButtonKind.HEADER_BUTTON}>
         <StyledActionButtonContainer>
-          {icon && <StyledActionButtonIcon icon={icon} />}
-          {label && <span>{label}</span>}
+          {icon && (
+            <StyledActionButtonIcon
+              data-testid={"stActionButtonIcon"}
+              icon={icon}
+            />
+          )}
+          {label && <span data-testid="stActionButtonLabel">{label}</span>}
         </StyledActionButtonContainer>
       </BaseButton>
     </div>
@@ -60,7 +65,7 @@ function ToolbarActions({
   hostToolbarItems,
 }: ToolbarActionsProps): ReactElement {
   return (
-    <>
+    <div data-testid="stToolbarActions">
       {hostToolbarItems.map(({ key, label, icon }) => (
         <ActionButton
           key={key}
@@ -74,7 +79,7 @@ function ToolbarActions({
           }
         />
       ))}
-    </>
+    </div>
   )
 }
 
