@@ -32,6 +32,10 @@ export interface JsonProps {
   element: JsonProto
 }
 
+export const getJsonTheme = (theme: EmotionTheme): string => {
+  return hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
+}
+
 /**
  * Functional element representing JSON structured text.
  */
@@ -57,7 +61,7 @@ export default function Json({ width, element }: JsonProps): ReactElement {
 
   // Try to pick a reasonable ReactJson theme based on whether the streamlit
   // theme's background is light or dark.
-  const jsonTheme = hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
+  const jsonTheme = getJsonTheme(theme)
 
   return (
     <div data-testid="stJson" style={styleProp}>
