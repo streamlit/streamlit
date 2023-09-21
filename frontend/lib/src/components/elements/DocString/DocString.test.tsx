@@ -15,10 +15,12 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 
 import { DocString as DocStringProto } from "@streamlit/lib/src/proto"
 import DocString, { DocStringProps, Member } from "./DocString"
+import { render } from "@streamlit/lib/src/test_util"
 
 const getProps = (
   elementProps: Partial<DocStringProto> = {}
@@ -26,8 +28,7 @@ const getProps = (
   element: DocStringProto.create({
     name: "st.balloons",
     value: "streamlit.balloons()",
-    docString:
-      "Draw celebratory balloons.\n\nExample\n-------\n>>> st.balloons()\n\n...then watch your app and get ready for a celebration!",
+    docString: "docstring",
     type: "method",
     ...elementProps,
   }),
@@ -36,14 +37,15 @@ const getProps = (
 
 describe("DocString Element", () => {
   const props = getProps()
-  const wrapper = shallow(<DocString {...props} />)
 
   it("renders without crashing", () => {
-    expect(wrapper).toBeDefined()
+    render(<DocString {...props} />)
+    expect(screen.getByTestId("stDocstring")).toBeInTheDocument()
   })
 
   it("should render a doc-string", () => {
-    expect(wrapper.find("StyledDocString").text()).toBe(
+    render(<DocString {...props} />)
+    expect(screen.getByTestId("stDocstring-Doc")).toHaveTextContent(
       props.element.docString
     )
   })
@@ -52,24 +54,31 @@ describe("DocString Element", () => {
     const props = getProps({
       docString: undefined,
     })
-    const wrapper = shallow(<DocString {...props} />)
+    render(<DocString {...props} />)
 
-    expect(wrapper.find("StyledDocString").text()).toBe("No docs available")
+    expect(screen.getByTestId("stDocstring-Doc")).toHaveTextContent(
+      "No docs available"
+    )
   })
 
   describe("doc-header", () => {
     it("should render a name", () => {
-      expect(wrapper.find("StyledDocName").text()).toBe("st.balloons")
+      render(<DocString {...props} />)
+      expect(screen.getByTestId("stDocstringName")).toHaveTextContent(
+        "st.balloons"
+      )
     })
 
     it("should render value", () => {
-      expect(wrapper.find("StyledDocValue").text()).toBe(
+      render(<DocString {...props} />)
+      expect(screen.getByTestId("stDocstringValue")).toHaveTextContent(
         "streamlit.balloons()"
       )
     })
 
     it("should render a type", () => {
-      expect(wrapper.find("StyledDocType").text()).toBe("method")
+      render(<DocString {...props} />)
+      expect(screen.getByTestId("stDocstringType")).toHaveTextContent("method")
     })
 
     describe("should render empty when", () => {
@@ -78,18 +87,22 @@ describe("DocString Element", () => {
         value: undefined,
         type: undefined,
       })
-      const wrapper = shallow(<DocString {...props} />)
 
       it("there's no name", () => {
-        expect(wrapper.find("StyledDocName").length).toBeFalsy()
+        render(<DocString {...props} />)
+        expect(screen.queryByTestId("stDocstringName")).not.toBeInTheDocument()
       })
 
       it("there's no value", () => {
-        expect(wrapper.find("StyledDocValue").length).toBeFalsy()
+        render(<DocString {...props} />)
+        expect(
+          screen.queryByTestId("stDocstringValue")
+        ).not.toBeInTheDocument()
       })
 
       it("there's no type", () => {
-        expect(wrapper.find("StyledDocType").length).toBeFalsy()
+        render(<DocString {...props} />)
+        expect(screen.queryByTestId("stDocstringType")).not.toBeInTheDocument()
       })
     })
 
@@ -98,13 +111,14 @@ describe("DocString Element", () => {
       const props = getProps({
         name: undefined,
       })
-      const wrapper = shallow(<DocString {...props} />)
+      render(<DocString {...props} />)
 
-      expect(wrapper.find("StyledDocName").length).toBeFalsy()
-      expect(wrapper.find("StyledDocValue").text()).toBe(
+      expect(screen.queryByTestId("stDocstringName")).not.toBeInTheDocument()
+
+      expect(screen.getByTestId("stDocstringType")).toHaveTextContent("method")
+      expect(screen.getByTestId("stDocstringValue")).toHaveTextContent(
         "streamlit.balloons()"
       )
-      expect(wrapper.find("StyledDocType").text()).toBe("method")
     })
 
     // Testing cases that we expect to happen (won't test every combination)
@@ -112,17 +126,23 @@ describe("DocString Element", () => {
       const props = getProps({
         value: undefined,
       })
-      const wrapper = shallow(<DocString {...props} />)
+      render(<DocString {...props} />)
 
-      expect(wrapper.find("StyledDocName").text()).toBe("st.balloons")
-      expect(wrapper.find("StyledDocValue").length).toBeFalsy()
-      expect(wrapper.find("StyledDocType").text()).toBe("method")
+      expect(screen.queryByTestId("stDocstringValue")).not.toBeInTheDocument()
+
+      expect(screen.getByTestId("stDocstringName")).toHaveTextContent(
+        "st.balloons"
+      )
+      expect(screen.getByTestId("stDocstringType")).toHaveTextContent("method")
     })
   })
 
   describe("members table", () => {
     it("should render no members when there are none", () => {
-      expect(wrapper.find("StyledMembersRow").length).toBe(0)
+      render(<DocString {...props} />)
+      expect(
+        screen.queryByTestId("stDocstringMembersTable")
+      ).not.toBeInTheDocument()
     })
 
     it("should render members", () => {
@@ -140,9 +160,10 @@ describe("DocString Element", () => {
           },
         ],
       })
-      const wrapper = shallow(<DocString {...props} />)
+      render(<DocString {...props} />)
 
-      expect(wrapper.find("Member").length).toBe(2)
+      expect(screen.getByTestId("stDocstringMembersTable")).toBeInTheDocument()
+      expect(screen.getAllByTestId("stMember")).toHaveLength(2)
     })
   })
 })
@@ -157,11 +178,11 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("value1")
+    expect(screen.getByTestId("stMemberDocValue")).toHaveTextContent("value1")
+    expect(screen.getByTestId("stMemberDocName")).toHaveTextContent("member1")
+    expect(screen.getByTestId("stMemberDocType")).toHaveTextContent("type1")
   })
 
   it("should render doc-oriented members", () => {
@@ -173,11 +194,13 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("docstring1")
+    expect(screen.getByTestId("stMemberDocName")).toHaveTextContent("member1")
+    expect(screen.getByTestId("stMemberDocType")).toHaveTextContent("type1")
+    expect(screen.getByTestId("stMemberDocString")).toHaveTextContent(
+      "docstring1"
+    )
   })
 
   it("should prefer value over doc", () => {
@@ -190,11 +213,13 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("value1")
+    expect(screen.getByTestId("stMemberDocValue")).toHaveTextContent("value1")
+    expect(screen.getByTestId("stMemberDocName")).toHaveTextContent("member1")
+    expect(screen.getByTestId("stMemberDocType")).toHaveTextContent("type1")
+    expect(screen.queryByTestId("stMemberDocString")).not.toBeInTheDocument()
+    expect(screen.queryByText("docstring1")).not.toBeInTheDocument()
   })
 
   it("should tell you when there are no docs", () => {
@@ -205,11 +230,11 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").text()).toBe("type1")
-    expect(wrapper.find("StyledDocValue").text()).toBe("No docs available")
+    expect(screen.getByTestId("stMemberDocString")).toHaveTextContent(
+      "No docs available"
+    )
   })
 
   it("should only show type if present", () => {
@@ -219,9 +244,8 @@ describe("Member Element", () => {
       },
     }
 
-    const wrapper = shallow(<Member {...props} />)
+    render(<Member {...props} />)
 
-    expect(wrapper.find("StyledDocName").text()).toBe("member1")
-    expect(wrapper.find("StyledDocType").length).toBe(0)
+    expect(screen.queryByTestId("stMemberDocType")).not.toBeInTheDocument()
   })
 })
