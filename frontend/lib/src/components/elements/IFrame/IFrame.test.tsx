@@ -126,7 +126,7 @@ describe("st.iframe", () => {
   })
 
   describe("Render iframe with scrolling", () => {
-    it("should set style to {}", () => {
+    it("should set scrolling to auto", () => {
       const props = getProps({
         scrolling: true,
       })
@@ -135,12 +135,16 @@ describe("st.iframe", () => {
         "scrolling",
         "auto"
       )
+      expect(screen.getByTestId("stIFrame")).not.toHaveStyle(
+        "overflow: hidden"
+      )
     })
 
     it("should set `overflow` to hidden", () => {
       const props = getProps({})
       render(<IFrame {...props} />)
       expect(screen.getByTestId("stIFrame")).toHaveStyle("overflow: hidden")
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute("scrolling", "no")
     })
   })
 })
