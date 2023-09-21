@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import * as themeUtils from "@streamlit/lib/src/theme/utils"
 import Json, { JsonProps } from "./Json"
@@ -38,14 +40,14 @@ describe("JSON element", () => {
 
   it("renders json as expected", () => {
     const props = getProps()
-    const wrapper = mount(<Json {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<Json {...props} />)
+    expect(screen.getByTestId("stJson")).toBeInTheDocument()
   })
 
   it("should show an error with invalid JSON", () => {
     const props = getProps({ body: "invalid JSON" })
-    const wrapper = mount(<Json {...props} />)
-    expect(wrapper.find("AlertElement")).toBeDefined()
+    render(<Json {...props} />)
+    expect(screen.getByTestId("stNotification")).toBeInTheDocument()
   })
 
   it("renders json with NaN and infinity values", () => {
@@ -54,31 +56,27 @@ describe("JSON element", () => {
       "numbers":[ -1e27, NaN, Infinity, -Infinity, 2.2822022,-2.2702775],
     }`,
     })
-    const wrapper = mount(<Json {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<Json {...props} />)
+    expect(screen.getByTestId("stJson")).toBeInTheDocument()
   })
 
-  it("picks a reasonable theme when the background is light", () => {
-    // <Json> uses `hasLightBackgroundColor` to test whether our theme
-    // is "light" or "dark". Mock the return value for the test.
-    jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(true)
+  describe("getJsonTheme", () => {
+    it("picks a reasonable theme when the background is light", () => {
+      // <Json> uses `hasLightBackgroundColor` to test whether our theme
+      // is "light" or "dark". Mock the return value for the test.
+      jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(true)
 
-    const props = getProps()
-    const wrapper = mount(<Json {...props} />)
+      render(<Json {...getProps()} />)
+      // checks resulting json coloration based on theme passed
+      expect(screen.getByText("}")).toHaveStyle("color: rgb(0, 43, 54)")
+    })
 
-    expect(wrapper.find('[theme="rjv-default"]').exists()).toBeTruthy()
-    expect(wrapper.find('[theme="monokai"]').exists()).toBeFalsy()
-  })
-
-  it("picks a reasonable theme when the background is dark", () => {
-    // <Json> uses `hasLightBackgroundColor` to test whether our theme
-    // is "light" or "dark". Mock the return value for the test.
-    jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(false)
-
-    const props = getProps()
-    const wrapper = mount(<Json {...props} />)
-
-    expect(wrapper.find('[theme="rjv-default"]').exists()).toBeFalsy()
-    expect(wrapper.find('[theme="monokai"]').exists()).toBeTruthy()
+    it("picks a reasonable theme when the background is dark", () => {
+      // <Json> uses `hasLightBackgroundColor` to test whether our theme
+      // is "light" or "dark". Mock the return value for the test.
+      jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(false)
+      render(<Json {...getProps()} />)
+      expect(screen.getByText("}")).toHaveStyle("color: rgb(249, 248, 245)")
+    })
   })
 })
