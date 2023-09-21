@@ -21,7 +21,7 @@ import { render } from "@streamlit/lib/src/test_util"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 
-import Video, { VideoProps, getYoutubeSrc } from "./Video"
+import Video, { VideoProps } from "./Video"
 
 describe("Video Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
