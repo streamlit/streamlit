@@ -79,6 +79,16 @@ interface State {
   scriptRunId: string
 }
 
+// Mock needed for Block.tsx
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserver
+
 /** An example root component for an app that uses StreamlitLib. */
 class StreamlitLibExample extends PureComponent<Props, State> {
   private readonly sessionInfo = new SessionInfo()
@@ -205,7 +215,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 }
 
 describe("StreamlitLibExample", () => {
-  it("can be mounted", () => {
+  it("can be rendered without crashing", () => {
     render(<StreamlitLibExample />)
 
     // Before any Elements are explicitly added, our example class

@@ -15,10 +15,12 @@
  */
 
 import React from "react"
-import { shallow } from "enzyme"
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
+import { render } from "@streamlit/lib/src/test_util"
 
 describe("Tooltip component", () => {
   afterEach(() => {
@@ -36,7 +38,7 @@ describe("Tooltip component", () => {
 
     jest.spyOn(React, "useEffect").mockImplementation(f => f())
 
-    const wrapper = shallow(
+    render(
       <OverflowTooltip
         content="the content"
         placement={Placement.AUTO}
@@ -46,13 +48,14 @@ describe("Tooltip component", () => {
       </OverflowTooltip>
     )
 
-    expect(wrapper.props().content).toBe("")
+    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    fireEvent.mouseOver(tooltip)
 
     expect(useRefSpy).toHaveBeenCalledWith(null)
-    expect(wrapper).toMatchSnapshot()
+    expect(document.body).toMatchSnapshot()
   })
 
-  it("should render and match snapshots when ellipsized", () => {
+  it("should render and match snapshots when ellipsized", async () => {
     const useRefSpy = jest.spyOn(React, "useRef").mockReturnValue({
       current: {
         // Pretend the body is smaller than its onscreen area.
@@ -63,7 +66,7 @@ describe("Tooltip component", () => {
 
     jest.spyOn(React, "useEffect").mockImplementation(f => f())
 
-    const wrapper = shallow(
+    render(
       <OverflowTooltip
         content="the content"
         placement={Placement.AUTO}
@@ -73,9 +76,13 @@ describe("Tooltip component", () => {
       </OverflowTooltip>
     )
 
-    expect(wrapper.props().content).toBe("the content")
+    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    fireEvent.mouseOver(tooltip)
+
+    const tooltipContent = await screen.findByText("the content")
+    expect(tooltipContent).toBeInTheDocument()
 
     expect(useRefSpy).toHaveBeenCalledWith(null)
-    expect(wrapper).toMatchSnapshot()
+    expect(document.body).toMatchSnapshot()
   })
 })
