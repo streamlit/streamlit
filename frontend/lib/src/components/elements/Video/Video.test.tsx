@@ -104,6 +104,7 @@ describe("Video Element", () => {
     it("updates the current time when startTime is changed", () => {
       const { rerender } = render(<Video {...props} />)
       const videoElement = screen.getByTestId("stVideo") as HTMLMediaElement
+      expect(videoElement.currentTime).toBe(0)
 
       rerender(<Video {...getProps({ startTime: 10 })} />)
       expect(videoElement.currentTime).toBe(10)
