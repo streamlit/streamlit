@@ -20,8 +20,7 @@ import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
 import * as themeUtils from "@streamlit/lib/src/theme/utils"
-import Json, { JsonProps, getJsonTheme } from "./Json"
-import { baseTheme } from "src/theme"
+import Json, { JsonProps } from "./Json"
 
 const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
   element: JsonProto.create({
@@ -66,14 +65,18 @@ describe("JSON element", () => {
       // <Json> uses `hasLightBackgroundColor` to test whether our theme
       // is "light" or "dark". Mock the return value for the test.
       jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(true)
-      expect(getJsonTheme(baseTheme.emotion)).toBe("rjv-default")
+
+      render(<Json {...getProps()} />)
+      // checks resulting json coloration based on theme passed
+      expect(screen.getByText("}")).toHaveStyle("color: rgb(0, 43, 54)")
     })
 
     it("picks a reasonable theme when the background is dark", () => {
       // <Json> uses `hasLightBackgroundColor` to test whether our theme
       // is "light" or "dark". Mock the return value for the test.
       jest.spyOn(themeUtils, "hasLightBackgroundColor").mockReturnValue(false)
-      expect(getJsonTheme(baseTheme.emotion)).toBe("monokai")
+      render(<Json {...getProps()} />)
+      expect(screen.getByText("}")).toHaveStyle("color: rgb(249, 248, 245)")
     })
   })
 })
