@@ -66,21 +66,41 @@ describe("GraphVizChart Element", () => {
     expect(graphviz).toHaveBeenCalled()
   })
 
-  it("should call updateChart and log error when crashes", () => {
+  it("should update chart and log error when crashes", () => {
+    // Mock graphviz().renderDot() to throw an error for the "crash" spec
+    const mockRenderDot = jest.fn().mockImplementation(spec => {
+      if (spec === "crash") {
+        throw new Error("Simulated GraphViz crash")
+      }
+      return {
+        on: jest.fn(),
+      }
+    })
+
+    // Modify the graphviz mock to use the mockRenderDot
+    ;(graphviz as jest.Mock).mockReturnValue({
+      zoom: () => ({
+        fit: () => ({
+          scale: () => ({
+            renderDot: mockRenderDot,
+          }),
+        }),
+      }),
+    })
+
     const props = getProps({
       spec: "crash",
     })
-    const wrapper = mount(<GraphVizChart {...props} />)
 
-    // @ts-expect-error
-    logError.mockClear()
+    // Set width and height to trigger useEffect
+    props.width = 400
+    props.height = 500
 
-    wrapper.setProps({
-      width: 400,
-      height: 500,
-    })
+    // Attempt to mount the component; this should trigger the error
+    mount(<GraphVizChart {...props} />)
 
     expect(logError).toHaveBeenCalledTimes(1)
+    expect(mockRenderDot).toHaveBeenCalledWith("crash")
   })
 
   it("should render with height and width", () => {
