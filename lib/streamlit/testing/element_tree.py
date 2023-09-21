@@ -16,7 +16,17 @@ from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
-from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    List,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import Literal, TypeAlias
 
@@ -58,6 +68,9 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.session_state import SessionState
+
+if TYPE_CHECKING:
+    from streamlit.testing.test_runner import TestRunner
 
 T = TypeVar("T")
 
@@ -1400,6 +1413,7 @@ class ElementTree(Block):
     script_path: str | None = field(repr=False, default=None)
     _session_state: SessionState | None = field(repr=False, default=None)
     _default_timeout: float = field(repr=False, default=3)
+    _runner: TestRunner | None = field(repr=False, default=None)
 
     def __init__(self):
         # Expect script_path and session_state to be filled in afterwards
@@ -1433,18 +1447,15 @@ class ElementTree(Block):
 
         return ws
 
-    def run(self, timeout: float | None = None) -> ElementTree:
+    def run(self, timeout: float | None = None) -> TestRunner:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
         assert self.script_path is not None
-        from streamlit.testing.local_script_runner import LocalScriptRunner
+        assert self._runner is not None
 
         widget_states = self.get_widget_states()
-        runner = LocalScriptRunner(
-            self.script_path, self.session_state, default_timeout=self._default_timeout
-        )
-        return runner.run(widget_states, timeout=timeout)
+        return self._runner.run(widget_states, timeout=timeout)
 
 
 def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
