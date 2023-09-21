@@ -14509,10 +14509,10 @@ react-virtualized@^9.21.1, react-virtualized@^9.21.2:
     prop-types "^15.7.2"
     react-lifecycles-compat "^3.0.4"
 
-react-webcam@^7.0.1:
-  version "7.0.1"
-  resolved "https://registry.yarnpkg.com/react-webcam/-/react-webcam-7.0.1.tgz#8249e1d621eb4bba7e3f52135f562439d0528df3"
-  integrity sha512-8E/Eb/7ksKwn5QdLn67tOR7+TdP9BZdu6E5/DSt20v8yfW/s0VGBigE6VA7R4278mBuBUowovAB3DkCfVmSPvA==
+react-webcam@7.1.1:
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/react-webcam/-/react-webcam-7.1.1.tgz#e6290b192cde0d2a1039051a019a18e998d7fb39"
+  integrity sha512-2W5WN8wmEv8ZlxvyAlOxVuw6new8Bi7+KSPqoq5oa7z1KSKZ72ucaKqCFRtHSuFjZ5sh5ioS9lp4BGwnaZ6lDg==
 
 react-window@^1.8.5, react-window@^1.8.8:
   version "1.8.8"
