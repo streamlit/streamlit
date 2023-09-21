@@ -40,7 +40,7 @@ describe("DocString Element", () => {
 
   it("renders without crashing", () => {
     render(<DocString {...props} />)
-    expect(screen.getAllByTestId("stDocstring")).toHaveLength(2)
+    expect(screen.getByTestId("stDocstring")).toBeInTheDocument()
   })
 
   it("should render a doc-string", () => {
@@ -56,7 +56,6 @@ describe("DocString Element", () => {
     })
     render(<DocString {...props} />)
 
-    expect(screen.getAllByTestId("stDocstring")).toHaveLength(1)
     expect(screen.getByTestId("stDocstring-Doc")).toHaveTextContent(
       "No docs available"
     )
@@ -88,22 +87,21 @@ describe("DocString Element", () => {
         value: undefined,
         type: undefined,
       })
-      render(<DocString {...props} />)
 
       it("there's no name", () => {
-        expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
+        render(<DocString {...props} />)
         expect(screen.queryByTestId("stDocstringName")).not.toBeInTheDocument()
       })
 
       it("there's no value", () => {
-        expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
+        render(<DocString {...props} />)
         expect(
           screen.queryByTestId("stDocstringValue")
         ).not.toBeInTheDocument()
       })
 
       it("there's no type", () => {
-        expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
+        render(<DocString {...props} />)
         expect(screen.queryByTestId("stDocstringType")).not.toBeInTheDocument()
       })
     })
