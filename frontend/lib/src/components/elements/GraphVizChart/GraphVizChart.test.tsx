@@ -92,12 +92,14 @@ describe("GraphVizChart Element", () => {
       spec: "crash",
     })
 
-    // Set width and height to trigger useEffect
-    props.width = 400
-    props.height = 500
+    const wrapper = mount(<GraphVizChart {...props} />)
+    // @ts-expect-error
+    logError.mockClear()
 
-    // Attempt to mount the component; this should trigger the error
-    mount(<GraphVizChart {...props} />)
+    wrapper.setProps({
+      width: 400,
+      height: 500,
+    })
 
     expect(logError).toHaveBeenCalledTimes(1)
     expect(mockRenderDot).toHaveBeenCalledWith("crash")
