@@ -45,7 +45,7 @@ describe("DocString Element", () => {
 
   it("should render a doc-string", () => {
     render(<DocString {...props} />)
-    expect(screen.getByTestId("stDocstringDocstring")).toHaveTextContent(
+    expect(screen.getByTestId("stDocstring-Doc")).toHaveTextContent(
       props.element.docString
     )
   })
@@ -57,7 +57,7 @@ describe("DocString Element", () => {
     render(<DocString {...props} />)
 
     expect(screen.getAllByTestId("stDocstring")).toHaveLength(1)
-    expect(screen.getByTestId("stDocstringDocstring")).toHaveTextContent(
+    expect(screen.getByTestId("stDocstring-Doc")).toHaveTextContent(
       "No docs available"
     )
   })
@@ -65,23 +65,21 @@ describe("DocString Element", () => {
   describe("doc-header", () => {
     it("should render a name", () => {
       render(<DocString {...props} />)
-      expect(screen.getByTestId("stDocstringDocName")).toHaveTextContent(
+      expect(screen.getByTestId("stDocstringName")).toHaveTextContent(
         "st.balloons"
       )
     })
 
     it("should render value", () => {
       render(<DocString {...props} />)
-      expect(screen.getByTestId("stDocstringDocValue")).toHaveTextContent(
+      expect(screen.getByTestId("stDocstringValue")).toHaveTextContent(
         "streamlit.balloons()"
       )
     })
 
     it("should render a type", () => {
       render(<DocString {...props} />)
-      expect(screen.getByTestId("stDocstringDocType")).toHaveTextContent(
-        "method"
-      )
+      expect(screen.getByTestId("stDocstringType")).toHaveTextContent("method")
     })
 
     describe("should render empty when", () => {
@@ -94,23 +92,19 @@ describe("DocString Element", () => {
 
       it("there's no name", () => {
         expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
-        expect(
-          screen.queryByTestId("stDocstringDocName")
-        ).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stDocstringName")).not.toBeInTheDocument()
       })
 
       it("there's no value", () => {
         expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
         expect(
-          screen.queryByTestId("stDocstringDocValue")
+          screen.queryByTestId("stDocstringValue")
         ).not.toBeInTheDocument()
       })
 
       it("there's no type", () => {
         expect(screen.queryByTestId("stDocstring")).not.toBeInTheDocument()
-        expect(
-          screen.queryByTestId("stDocstringDocType")
-        ).not.toBeInTheDocument()
+        expect(screen.queryByTestId("stDocstringType")).not.toBeInTheDocument()
       })
     })
 
@@ -121,14 +115,10 @@ describe("DocString Element", () => {
       })
       render(<DocString {...props} />)
 
-      expect(
-        screen.queryByTestId("stDocstringDocName")
-      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stDocstringName")).not.toBeInTheDocument()
 
-      expect(screen.getByTestId("stDocstringDocType")).toHaveTextContent(
-        "method"
-      )
-      expect(screen.getByTestId("stDocstringDocValue")).toHaveTextContent(
+      expect(screen.getByTestId("stDocstringType")).toHaveTextContent("method")
+      expect(screen.getByTestId("stDocstringValue")).toHaveTextContent(
         "streamlit.balloons()"
       )
     })
@@ -140,16 +130,12 @@ describe("DocString Element", () => {
       })
       render(<DocString {...props} />)
 
-      expect(
-        screen.queryByTestId("stDocstringDocValue")
-      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId("stDocstringValue")).not.toBeInTheDocument()
 
-      expect(screen.getByTestId("stDocstringDocName")).toHaveTextContent(
+      expect(screen.getByTestId("stDocstringName")).toHaveTextContent(
         "st.balloons"
       )
-      expect(screen.getByTestId("stDocstringDocType")).toHaveTextContent(
-        "method"
-      )
+      expect(screen.getByTestId("stDocstringType")).toHaveTextContent("method")
     })
   })
 

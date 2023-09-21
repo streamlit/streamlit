@@ -50,23 +50,19 @@ export default function DocString({
       <StyledDocHeader>
         <StyledDocSummary>
           {name ? (
-            <StyledDocName data-testid="stDocstringDocName">
-              {name}
-            </StyledDocName>
+            <StyledDocName data-testid="stDocstringName">{name}</StyledDocName>
           ) : null}
           {type ? (
-            <StyledDocType data-testid="stDocstringDocType">
-              {type}
-            </StyledDocType>
+            <StyledDocType data-testid="stDocstringType">{type}</StyledDocType>
           ) : null}
           {value ? (
-            <StyledDocValue data-testid="stDocstringDocValue">
+            <StyledDocValue data-testid="stDocstringValue">
               {value}
             </StyledDocValue>
           ) : null}
         </StyledDocSummary>
       </StyledDocHeader>
-      <StyledDocString data-testid="stDocstringDocstring">
+      <StyledDocString data-testid="stDocstring-Doc">
         {docString || "No docs available"}
       </StyledDocString>
       {members.length > 0 ? (
