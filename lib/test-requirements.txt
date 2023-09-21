@@ -46,3 +46,6 @@ sqlalchemy[mypy]>=1.4.25, <2.0
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.
 pydantic>=1.0, <2.0
+
+# semver 3 renames VersionInfo so temporarily pin until we deal with it
+semver<3
