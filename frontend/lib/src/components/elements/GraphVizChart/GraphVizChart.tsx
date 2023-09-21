@@ -38,7 +38,7 @@ interface Dimensions {
 const dummyGraphviz = graphviz
 dummyGraphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
 
-const isFullScreen = (height: number = 0): boolean => Boolean(height)
+const isFullScreen = (height = 0): boolean => Boolean(height)
 
 export function GraphVizChart({
   width: propWidth,
@@ -53,15 +53,15 @@ export function GraphVizChart({
 
   const getChartDimensions = (): Dimensions => {
     const chartWidth = isFull
-      ? width
+      ? propWidth
       : element.useContainerWidth
-      ? width
+      ? propWidth
       : originalWidth
-    const chartHeight = isFull ? height || originalHeight : originalHeight
+    const chartHeight = isFull ? propHeight || originalHeight : originalHeight
     return { chartWidth, chartHeight }
   }
 
-  const setSvgDimensions = (node: SVGGraphicsElement) => {
+  const setSvgDimensions = (node: SVGGraphicsElement): void => {
     originalHeight = Math.round(node.getBBox().height)
     originalWidth = Math.round(node.getBBox().width)
 
@@ -82,6 +82,8 @@ export function GraphVizChart({
     } catch (error) {
       logError(error)
     }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propWidth, element.spec])
 
   const elementDimensions = getChartDimensions()
