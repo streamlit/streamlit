@@ -43,7 +43,9 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByRole("alert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationAlertContentError")
+    ).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
     expect(screen.getByText("#what in the world?")).toBeInTheDocument()
   })
@@ -55,7 +57,9 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByRole("alert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationAlertContentWarning")
+    ).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
     expect(screen.getByText("test")).toBeInTheDocument()
   })
@@ -67,7 +71,9 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByRole("alert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationAlertContentSuccess")
+    ).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
     expect(
       screen.getByText("But our princess was in another castle!")
@@ -81,7 +87,9 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByRole("alert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationAlertContentInfo")
+    ).toBeInTheDocument()
     expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
@@ -94,7 +102,9 @@ describe("Alert element", () => {
     })
     render(<AlertElement {...props} />)
     expect(screen.getByTestId("stAlert")).toBeInTheDocument()
-    expect(screen.getByRole("alert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationAlertContentInfo")
+    ).toBeInTheDocument()
     expect(screen.getByTestId("stAlertEmojiIcon")).toBeInTheDocument()
     expect(screen.getByText("👉🏻")).toBeInTheDocument()
     expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
