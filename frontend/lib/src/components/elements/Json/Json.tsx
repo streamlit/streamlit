@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 import { useTheme } from "@emotion/react"
 import JSON5 from "json5"
-import ReactJson from "react-json-view"
+import ReactJson, { ThemeKeys, ThemeObject } from "react-json-view"
 import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 
 import { Json as JsonProto } from "@streamlit/lib/src/proto"
@@ -32,7 +32,9 @@ export interface JsonProps {
   element: JsonProto
 }
 
-export const getJsonTheme = (theme: EmotionTheme): string => {
+export const getJsonTheme = (
+  theme: EmotionTheme
+): ThemeKeys | ThemeObject | undefined => {
   return hasLightBackgroundColor(theme) ? "rjv-default" : "monokai"
 }
 
