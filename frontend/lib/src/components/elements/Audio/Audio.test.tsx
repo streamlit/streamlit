@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
@@ -35,36 +37,36 @@ describe("Audio Element", () => {
   })
 
   it("renders without crashing", () => {
-    const wrapper = shallow(<Audio {...getProps()} />)
-    const audioElement = wrapper.find("audio")
-
-    expect(audioElement.length).toBe(1)
+    render(<Audio {...getProps()} />)
+    expect(screen.getByTestId("stAudio")).toBeInTheDocument()
   })
 
   it("has controls", () => {
-    const wrapper = shallow(<Audio {...getProps()} />)
-    const audioElement = wrapper.find("audio")
-
-    expect(audioElement.prop("controls")).toBeDefined()
+    render(<Audio {...getProps()} />)
+    expect(screen.getByTestId("stAudio")).toHaveAttribute("controls")
   })
 
   it("creates its `src` attribute using buildMediaURL", () => {
-    const wrapper = shallow(<Audio {...getProps()} />)
-    const audioElement = wrapper.find("audio")
+    render(<Audio {...getProps()} />)
+    const audioElement = screen.getByTestId("stAudio")
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockAudioFile.wav")
-    expect(audioElement.prop("src")).toBe("https://mock.media.url")
+    expect(audioElement).toHaveAttribute("src", "https://mock.media.url")
   })
 
   it("updates time when the prop is changed", () => {
     const props = getProps({
       url: "http://localhost:80/media/sound.wav",
     })
-    const wrapper = mount(<Audio {...props} />)
 
-    const audioElement: HTMLAudioElement = wrapper.find("audio").getDOMNode()
+    const { rerender } = render(<Audio {...props} />)
+    let audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
+
     expect(audioElement.currentTime).toBe(0)
 
-    wrapper.setProps(getProps({ startTime: 10 }))
+    const newProps = getProps({ startTime: 10 })
+    rerender(<Audio {...newProps} />)
+
+    audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
 
     expect(audioElement.currentTime).toBe(10)
   })
