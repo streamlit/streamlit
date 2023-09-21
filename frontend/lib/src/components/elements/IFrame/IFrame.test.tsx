@@ -15,8 +15,9 @@
  */
 
 import React from "react"
-import { ShallowWrapper } from "enzyme"
-import { shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -35,109 +36,115 @@ const getProps = (elementProps: Partial<IFrameProto> = {}): IFrameProps => ({
 describe("st.iframe", () => {
   it("should render an iframe", () => {
     const props = getProps({})
-    const wrapper = shallow(<IFrame {...props} />)
-    expect(wrapper.find("iframe").length).toBe(1)
+    render(<IFrame {...props} />)
+    expect(screen.getByTestId("stIFrame")).toBeInTheDocument()
   })
 
   it("should set iframe height", () => {
     const props = getProps({
       height: 400,
     })
-    const wrapper = shallow(<IFrame {...props} />)
-    expect(wrapper.find("iframe").prop("height")).toBe(400)
+    render(<IFrame {...props} />)
+    expect(screen.getByTestId("stIFrame")).toHaveAttribute("height", "400")
   })
 
   describe("Render iframe with `src` parameter", () => {
-    let wrapper: ShallowWrapper
-
-    beforeAll(() => {
-      const props = getProps({
-        src: "foo",
-        srcdoc: "bar",
-      })
-      wrapper = shallow(<IFrame {...props} />)
+    const props = getProps({
+      src: "foo",
+      srcdoc: "bar",
     })
 
-    it("should set `srcDoc` to undefined", () => {
-      expect(wrapper.find("iframe").prop("srcDoc")).toBe(undefined)
+    it("should set `srcDoc` to undefined if src is defined", () => {
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).not.toHaveAttribute("srcdoc")
     })
 
     it("should set `src`", () => {
-      expect(wrapper.find("iframe").prop("src")).toBe("foo")
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute("src", "foo")
     })
 
     it("should use our default feature policy", () => {
-      expect(wrapper.find("iframe").prop("allow")).toBe(
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "allow",
         DEFAULT_IFRAME_FEATURE_POLICY
       )
     })
 
     it("should use our default sandbox policy", () => {
-      expect(wrapper.find("iframe").prop("sandbox")).toBe(
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "sandbox",
         DEFAULT_IFRAME_SANDBOX_POLICY
       )
     })
   })
 
   describe("Render iframe with `srcDoc` parameter", () => {
-    let wrapper: ShallowWrapper
-
-    beforeAll(() => {
-      const props = getProps({
-        srcdoc: "bar",
-      })
-      wrapper = shallow(<IFrame {...props} />)
+    const props = getProps({
+      srcdoc: "bar",
     })
 
     it("should set `srcDoc`", () => {
-      expect(wrapper.find("iframe").prop("srcDoc")).toBe("bar")
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute("srcdoc", "bar")
     })
 
     it("should use our default feature policy", () => {
-      expect(wrapper.find("iframe").prop("allow")).toBe(
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "allow",
         DEFAULT_IFRAME_FEATURE_POLICY
       )
     })
 
     it("should use our default sandbox policy", () => {
-      expect(wrapper.find("iframe").prop("sandbox")).toBe(
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "sandbox",
         DEFAULT_IFRAME_SANDBOX_POLICY
       )
     })
   })
 
   describe("Render iframe with specified width", () => {
+    const props = getProps({
+      hasWidth: true,
+      width: 200,
+    })
     it("should set element width", () => {
-      const props = getProps({
-        hasWidth: true,
-        width: 200,
-      })
-      const wrapper = shallow(<IFrame {...props} />)
-      expect(wrapper.find("iframe").prop("width")).toBe(200)
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute("width", "200")
     })
 
     it("should set app width", () => {
       const props = getProps({})
-      const wrapper = shallow(<IFrame {...props} />)
-      expect(wrapper.find("iframe").prop("width")).toBe(100)
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute("width", "100")
     })
   })
 
   describe("Render iframe with scrolling", () => {
-    it("should set style to {}", () => {
+    it("should set scrolling to auto", () => {
       const props = getProps({
         scrolling: true,
       })
-      const wrapper = shallow(<IFrame {...props} />)
-      expect(wrapper.find("iframe").prop("style")).toEqual({})
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute(
+        "scrolling",
+        "auto"
+      )
+      expect(screen.getByTestId("stIFrame")).not.toHaveStyle(
+        "overflow: hidden"
+      )
     })
 
     it("should set `overflow` to hidden", () => {
       const props = getProps({})
-      const wrapper = shallow(<IFrame {...props} />)
-      expect(wrapper.find("iframe").prop("style")).toEqual({
-        overflow: "hidden",
-      })
+      render(<IFrame {...props} />)
+      expect(screen.getByTestId("stIFrame")).toHaveStyle("overflow: hidden")
+      expect(screen.getByTestId("stIFrame")).toHaveAttribute("scrolling", "no")
     })
   })
 })
