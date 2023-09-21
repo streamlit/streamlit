@@ -58,13 +58,13 @@ describe("Audio Element", () => {
       url: "http://localhost:80/media/sound.wav",
     })
 
-    render(<Audio {...props} />)
+    const { rerender } = render(<Audio {...props} />)
     let audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
 
     expect(audioElement.currentTime).toBe(0)
 
     const newProps = getProps({ startTime: 10 })
-    render(<Audio {...newProps} />)
+    rerender(<Audio {...newProps} />)
 
     audioElement = screen.getByTestId("stAudio") as HTMLAudioElement
 
