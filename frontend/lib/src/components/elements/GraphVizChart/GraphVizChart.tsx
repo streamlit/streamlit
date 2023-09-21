@@ -38,75 +38,56 @@ interface Dimensions {
 const dummyGraphviz = graphviz
 dummyGraphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
 
+const isFullScreen = (height: number = 0): boolean => Boolean(height)
+
 export function GraphVizChart({
   width: propWidth,
   element,
   height: propHeight,
 }: GraphVizChartProps): ReactElement {
   const chartId = `graphviz-chart-${element.elementId}`
+  const isFull = isFullScreen(propHeight)
 
   let originalHeight = 0
   let originalWidth = 0
 
-  const getChartData = (): string => {
-    return element.spec
-  }
-
   const getChartDimensions = (): Dimensions => {
-    let chartWidth = originalWidth
-    let chartHeight = originalHeight
-
-    if (propHeight) {
-      // fullscreen
-      chartWidth = propWidth
-      chartHeight = propHeight
-    } else if (element.useContainerWidth) {
-      chartWidth = propWidth
-    }
+    const chartWidth = isFull
+      ? width
+      : element.useContainerWidth
+      ? width
+      : originalWidth
+    const chartHeight = isFull ? height || originalHeight : originalHeight
     return { chartWidth, chartHeight }
   }
 
-  const updateChart = (): void => {
-    try {
-      // Layout and render the graph
-      const graph = graphviz(`#${chartId}`)
-        .zoom(false)
-        .fit(true)
-        .scale(1)
-        .renderDot(getChartData())
-        .on("end", () => {
-          const node = select(`#${chartId} > svg`).node() as SVGGraphicsElement
-          if (node) {
-            originalHeight = node.getBBox().height
-            originalWidth = node.getBBox().width
-          }
-        })
+  const setSvgDimensions = (node: SVGGraphicsElement) => {
+    originalHeight = Math.round(node.getBBox().height)
+    originalWidth = Math.round(node.getBBox().width)
 
-      const { chartHeight, chartWidth } = getChartDimensions()
-      if (chartHeight > 0) {
-        // Override or reset the graph height
-        graph.height(chartHeight)
-      }
-      if (chartWidth > 0) {
-        // Override or reset the graph width
-        graph.width(chartWidth)
-      }
-    } catch (error) {
-      logError(error)
-    }
+    select(node)
+      .attr("width", isFull ? `${originalWidth}pt` : "100%")
+      .attr("height", isFull ? `${originalHeight}pt` : "100%")
   }
 
   useEffect(() => {
-    updateChart()
-  })
+    try {
+      // Layout and render the graph
+      const graph = graphviz(`#${chartId}`).zoom(false).fit(true).scale(1)
+
+      graph.renderDot(element.spec).on("end", () => {
+        const node = select(`#${chartId} > svg`).node()
+        setSvgDimensions(node as SVGGraphicsElement)
+      })
+    } catch (error) {
+      logError(error)
+    }
+  }, [propWidth, element.spec])
 
   const elementDimensions = getChartDimensions()
-  const width: number = elementDimensions.chartWidth
-    ? elementDimensions.chartWidth
-    : propWidth
-  const height: number | undefined = elementDimensions.chartHeight
-    ? elementDimensions.chartHeight
-    : propHeight
+  const width: number = elementDimensions.chartWidth || propWidth
+  const height: number | undefined =
+    elementDimensions.chartHeight || propHeight
 
   return (
     <StyledGraphVizChart
