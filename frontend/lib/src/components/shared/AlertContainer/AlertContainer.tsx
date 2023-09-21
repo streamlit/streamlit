@@ -99,7 +99,7 @@ export default function AlertContainer({
         },
       }}
     >
-      <StyledAlertContent data-testid={`stNotificationAlertContent${testid}`}>
+      <StyledAlertContent data-testid={`stNotificationContent${testid}`}>
         {children}
       </StyledAlertContent>
     </Notification>
