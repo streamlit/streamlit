@@ -43,9 +43,9 @@ describe("Progress component", () => {
     render(<Progress {...getProps({ width: 100 })} />)
 
     expect(screen.getByTestId("stProgress")).toBeInTheDocument()
-
-    const progressBar = screen.getByRole("progressbar")
-    expect(progressBar).toBeInTheDocument()
-    expect(progressBar).toHaveAttribute("aria-valuenow", "50")
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "50"
+    )
   })
 })
