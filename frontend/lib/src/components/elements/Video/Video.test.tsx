@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 
@@ -41,37 +43,34 @@ describe("Video Element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Video {...props} />)
+    render(<Video {...props} />)
 
-    expect(wrapper.find("video").length).toBe(1)
+    expect(screen.getByTestId("stVideo")).toBeInTheDocument()
   })
 
   it("has correct style", () => {
     const props = getProps()
-    const wrapper = mount(<Video {...props} />)
-    const videoWrapper = wrapper.find("video")
+    render(<Video {...props} />)
+    const video = screen.getByTestId("stVideo")
 
-    expect(videoWrapper.prop("className")).toContain("stVideo")
-    expect(videoWrapper.prop("style")).toStrictEqual({
-      width: props.width,
-      height: 528,
-    })
+    expect(video).toHaveAttribute("class", "stVideo")
+    expect(video).toHaveStyle("width: 0px; height: 528px;")
   })
 
   it("has controls", () => {
     const props = getProps()
-    const wrapper = mount(<Video {...props} />)
+    render(<Video {...props} />)
 
-    expect(wrapper.find("video").prop("controls")).toBeDefined()
+    expect(screen.getByTestId("stVideo")).toHaveAttribute("controls")
   })
 
   it("creates its `src` attribute using buildMediaURL", () => {
-    const wrapper = shallow(
-      <Video {...getProps({ url: "/media/mockVideoFile.mp4" })} />
-    )
-    const videoElement = wrapper.find("video")
+    render(<Video {...getProps({ url: "/media/mockVideoFile.mp4" })} />)
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockVideoFile.mp4")
-    expect(videoElement.prop("src")).toBe("https://mock.media.url")
+    expect(screen.getByTestId("stVideo")).toHaveAttribute(
+      "src",
+      "https://mock.media.url"
+    )
   })
 
   describe("YouTube", () => {
@@ -79,10 +78,8 @@ describe("Video Element", () => {
       const props = getProps({
         type: VideoProto.Type.YOUTUBE_IFRAME,
       })
-      const wrapper = mount(<Video {...props} />)
-      const iframeWrapper = wrapper.find("iframe")
-
-      expect(iframeWrapper.props()).toMatchSnapshot()
+      render(<Video {...props} />)
+      expect(document.body).toMatchSnapshot()
     })
 
     it("renders a youtube iframe with an starting time", () => {
@@ -90,26 +87,26 @@ describe("Video Element", () => {
         type: VideoProto.Type.YOUTUBE_IFRAME,
         startTime: 10,
       })
-      const wrapper = mount(<Video {...props} />)
-      const iframeWrapper = wrapper.find("iframe")
-
-      expect(iframeWrapper.props()).toMatchSnapshot()
+      render(<Video {...props} />)
+      expect(document.body).toMatchSnapshot()
     })
   })
 
   describe("updateTime", () => {
     const props = getProps()
-    const wrapper = mount(<Video {...props} />)
-    const videoElement: HTMLVideoElement = wrapper.find("video").getDOMNode()
 
-    it("sets the current time to startTime on mount", () => {
-      videoElement.dispatchEvent(new Event("loadedmetadata"))
+    it("sets the current time to startTime on render", () => {
+      render(<Video {...props} />)
+      const videoElement = screen.getByTestId("stVideo") as HTMLMediaElement
       expect(videoElement.currentTime).toBe(0)
     })
 
     it("updates the current time when startTime is changed", () => {
-      wrapper.setProps(getProps({ startTime: 10 }))
-      videoElement.dispatchEvent(new Event("loadedmetadata"))
+      const { rerender } = render(<Video {...props} />)
+      const videoElement = screen.getByTestId("stVideo") as HTMLMediaElement
+      expect(videoElement.currentTime).toBe(0)
+
+      rerender(<Video {...getProps({ startTime: 10 })} />)
       expect(videoElement.currentTime).toBe(10)
     })
   })
