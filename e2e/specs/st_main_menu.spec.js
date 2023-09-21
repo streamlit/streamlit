@@ -29,7 +29,7 @@ describe("main menu", () => {
 
     // Cypress cuts the popover off due to the transform property, so we move
     // the main menu to a location to show it clearly for snapshots.
-    cy.get('[data-testid="main-menu-popover"]').invoke(
+    cy.get('[data-testid="stMainMenuPopover"]').invoke(
       "attr",
       "style",
       "transform: translate3d(20px, 20px, 0px)"
@@ -57,7 +57,7 @@ describe("main menu", () => {
 
     // Cypress cuts the popover off due to the transform property, so we move
     // the main menu to a location to show it clearly for snapshots.
-    cy.get('[data-testid="main-menu-popover"]').invoke(
+    cy.get('[data-testid="stMainMenuPopover"]').invoke(
       "attr",
       "style",
       "transform: translate3d(20px, 20px, 0px)"

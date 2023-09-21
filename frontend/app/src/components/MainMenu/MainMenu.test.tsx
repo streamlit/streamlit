@@ -18,18 +18,13 @@ import React from "react"
 import "@testing-library/jest-dom"
 import {
   screen,
+  within,
   waitFor,
   fireEvent,
   RenderResult,
   Screen,
 } from "@testing-library/react"
-import {
-  mount,
-  render,
-  IMenuItem,
-  mockSessionInfo,
-  Config,
-} from "@streamlit/lib"
+import { render, IMenuItem, mockSessionInfo, Config } from "@streamlit/lib"
 
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
@@ -81,9 +76,9 @@ function getMenuStructure(
 describe("MainMenu", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<MainMenu {...props} />)
+    render(<MainMenu {...props} />)
 
-    expect(wrapper).toBeDefined()
+    expect(screen.getByTestId("stMainMenu")).toBeInTheDocument()
   })
 
   it("should render host menu items", async () => {
@@ -152,31 +147,32 @@ describe("MainMenu", () => {
     })
   })
 
-  it("should not render set of configurable elements", () => {
+  it("should not render set of configurable elements", async () => {
     const menuItems = {
       hideGetHelp: true,
       hideReportABug: true,
       aboutSectionMd: "",
     }
     const props = getProps({ menuItems })
-    const wrapper = mount(<MainMenu {...props} />)
-    const popoverContent = wrapper.find("StatefulPopover").prop("content")
-    // @ts-expect-error
-    const menuWrapper = mount(popoverContent(() => {}))
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
 
-    // @ts-expect-error
-    const menuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      .at(0)
-      .prop("items")
-      .map(item => item.label)
-    expect(menuLabels).toEqual([
+    // first SubMenu (menu items, not dev menu items)
+    const coreMenu = screen.getAllByTestId("main-menu-list")[0]
+
+    const coreMenuOptions = within(coreMenu).getAllByRole("option")
+    expect(coreMenuOptions).toHaveLength(5)
+
+    const expectedLabels = [
       "Rerun",
       "Settings",
       "Print",
       "Record a screencast",
       "About",
-    ])
+    ]
+    coreMenuOptions.forEach((option, index) => {
+      expect(option).toHaveTextContent(expectedLabels[index])
+    })
   })
 
   it("should not render report a bug in core menu", async () => {
@@ -212,26 +208,28 @@ describe("MainMenu", () => {
     expect(reportOption).toBeDefined()
   })
 
-  it("should not render dev menu when developmentMode is false", () => {
+  it("should not render dev menu when developmentMode is false", async () => {
     const props = getProps({ developmentMode: false })
-    const wrapper = mount(<MainMenu {...props} />)
-    const popoverContent = wrapper.find("StatefulPopover").prop("content")
-    // @ts-expect-error
-    const menuWrapper = mount(popoverContent(() => {}))
+    render(<MainMenu {...props} />)
+    await openMenu(screen)
 
-    // @ts-expect-error
-    const menuLabels = menuWrapper
-      .find("MenuStatefulContainer")
-      // make sure that we only have one menu otherwise prop will fail
-      .prop("items")
-      .map(item => item.label)
-    expect(menuLabels).toEqual([
+    const subMenus = screen.getAllByTestId("main-menu-list")
+    // Make sure there is only one SubMenu (no dev menu)
+    expect(subMenus).toHaveLength(1)
+
+    const coreMenuOptions = within(subMenus[0]).getAllByRole("option")
+    expect(coreMenuOptions).toHaveLength(5)
+
+    const expectedLabels = [
       "Rerun",
       "Settings",
       "Print",
       "Record a screencast",
       "About",
-    ])
+    ]
+    coreMenuOptions.forEach((option, index) => {
+      expect(option).toHaveTextContent(expectedLabels[index])
+    })
   })
 
   it.each([
