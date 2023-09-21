@@ -473,12 +473,12 @@ function MainMenu(props: Props): ReactElement {
       overrides={{
         Body: {
           props: {
-            "data-testid": "main-menu-popover",
+            "data-testid": "stMainMenuPopover",
           },
         },
       }}
     >
-      <StyledMainMenuContainer id="MainMenu">
+      <StyledMainMenuContainer id="MainMenu" data-testid="stMainMenu">
         <BaseButton kind={BaseButtonKind.HEADER_NO_PADDING}>
           <Icon content={MoreVert} size="lg" />
         </BaseButton>
