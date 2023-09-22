@@ -52,7 +52,7 @@ INSTALL_REQUIRES = [
     # upper bound on it.
     "pyarrow>=6.0",
     "python-dateutil>=2.7.3, <3",
-    "requests>=2.18, <3",
+    "requests>=2.27, <3",
     "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",
