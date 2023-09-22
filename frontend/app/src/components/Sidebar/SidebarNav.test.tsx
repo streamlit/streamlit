@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
-import { matchers } from "@emotion/jest"
-
 import React from "react"
 import "@testing-library/jest-dom"
 
@@ -32,8 +28,6 @@ import {
 } from "@streamlit/lib"
 
 import SidebarNav, { Props } from "./SidebarNav"
-
-expect.extend(matchers)
 
 jest.mock("@streamlit/lib/src/util/Hooks", () => ({
   __esModule: true,
@@ -202,7 +196,7 @@ describe("SidebarNav", () => {
     render(<SidebarNav {...getProps({ hasSidebarElements: true })} />)
     const separator = screen.getByTestId("stSidebarNavSeparator")
     expect(separator).toBeInTheDocument()
-    expect(separator).toHaveStyleRule("cursor", "pointer")
+    expect(separator).toHaveStyle("cursor: pointer")
   })
 
   it("is unexpanded by default", () => {
@@ -210,7 +204,7 @@ describe("SidebarNav", () => {
 
     const sidebarNavItems = screen.getByTestId("stSidebarNavItems")
     expect(sidebarNavItems).toBeInTheDocument()
-    expect(sidebarNavItems).toHaveStyleRule("max-height", "33vh")
+    expect(sidebarNavItems).toHaveStyle("max-height: 33vh")
   })
 
   it("does not expand when you click on the separator if there is no overflow", async () => {
@@ -221,7 +215,7 @@ describe("SidebarNav", () => {
 
     const sidebarNavItems = await screen.findByTestId("stSidebarNavItems")
     expect(sidebarNavItems).toBeInTheDocument()
-    expect(sidebarNavItems).toHaveStyleRule("max-height", "33vh")
+    expect(sidebarNavItems).toHaveStyle("max-height: 33vh")
   })
 
   it("toggles to expanded and back when the separator is clicked", async () => {
@@ -235,14 +229,14 @@ describe("SidebarNav", () => {
 
     const sidebarNavItems = await screen.findByTestId("stSidebarNavItems")
     expect(sidebarNavItems).toBeInTheDocument()
-    expect(sidebarNavItems).toHaveStyleRule("max-height", "75vh")
+    expect(sidebarNavItems).toHaveStyle("max-height: 75vh")
 
     fireEvent.click(separator)
 
     const sidebarNavItemsUpdate = await screen.findByTestId(
       "stSidebarNavItems"
     )
-    expect(sidebarNavItemsUpdate).toHaveStyleRule("max-height", "33vh")
+    expect(sidebarNavItemsUpdate).toHaveStyle("max-height: 33vh")
   })
 
   it("passes the pageScriptHash to onPageChange if a link is clicked", () => {
@@ -324,20 +318,14 @@ describe("SidebarNav", () => {
     expect(links).toHaveLength(2)
 
     // isActive prop used to style background color, so check that
-    expect(links[0]).toHaveStyleRule("background-color", "transparent")
-    expect(links[1]).toHaveStyleRule(
-      "background-color",
-      "rgba(151, 166, 195, 0.15)"
-    )
+    expect(links[0]).toHaveStyle("background-color: transparent")
+    expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.15)")
   })
 
   it("changes the text color when the page is active", () => {
     const props = getProps({ currentPageScriptHash: "other_page_hash" })
     render(<SidebarNav {...props} />)
 
-    expect(screen.getByText("my other page")).toHaveStyleRule(
-      "color",
-      "#31333F"
-    )
+    expect(screen.getByText("my other page")).toHaveStyle("color: #31333F")
   })
 })
