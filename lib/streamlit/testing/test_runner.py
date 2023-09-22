@@ -39,6 +39,7 @@ from streamlit.testing.element_tree import (
     WidgetList,
 )
 from streamlit.testing.local_script_runner import LocalScriptRunner
+from streamlit.testing.util import patch_config_options
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -108,9 +109,10 @@ class TestRunner:
             self.saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
 
-        script_runner = LocalScriptRunner(self._script_path, self.session_state)
-        self._tree = script_runner.run(widget_state, timeout)
-        self._tree._runner = self
+        with patch_config_options({"runner.postScriptGC": False}):
+            script_runner = LocalScriptRunner(self._script_path, self.session_state)
+            self._tree = script_runner.run(widget_state, timeout)
+            self._tree._runner = self
 
         # teardown
         with source_util._pages_cache_lock:
