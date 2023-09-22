@@ -23,6 +23,7 @@ hypothesis>=6.17.4
 parameterized
 pytest
 pytest-cov
+requests>=2.27, <3
 requests-mock
 testfixtures
 pytest-playwright>=0.1.2
