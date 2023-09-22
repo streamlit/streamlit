@@ -1368,6 +1368,10 @@ class Block:
     def get(self, element_type: Literal["title"]) -> Sequence[Title]:
         ...
 
+    @overload
+    def get(self, element_type: str) -> Sequence[Node]:
+        ...
+
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
