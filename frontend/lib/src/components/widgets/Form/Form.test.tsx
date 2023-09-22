@@ -15,9 +15,10 @@
  */
 
 import React from "react"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { shallow } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { Form, Props } from "./Form"
 
@@ -36,34 +37,38 @@ describe("Form", () => {
       ...props,
     }
   }
+  it("renders without crashing", () => {
+    render(<Form {...getProps()} />)
+    expect(screen.getByTestId("stForm")).toBeInTheDocument()
+  })
 
   it("shows error if !hasSubmitButton && scriptRunState==NOT_RUNNING", () => {
     const props = getProps({
       hasSubmitButton: false,
       scriptRunState: ScriptRunState.RUNNING,
     })
-    const wrapper = shallow(<Form {...props} />)
+    const { rerender } = render(<Form {...props} />)
 
     // We have no Submit Button, but the app is still running
-    expect(wrapper.find("BaseButton").exists()).toBeFalsy()
+    expect(screen.queryByTestId("stFormSubmitButton")).not.toBeInTheDocument()
 
     // When the app stops running, we show an error if the submit button
     // is still missing.
-    wrapper.setProps({ scriptRunState: ScriptRunState.NOT_RUNNING })
-
-    expect(wrapper.find("AlertElement").exists()).toBeTruthy()
-    expect(wrapper.find("AlertElement").prop("kind")).toBe(Kind.ERROR)
-    expect(wrapper.find("AlertElement").prop("body")).toContain(
-      "Missing Submit Button"
+    rerender(
+      <Form {...getProps({ scriptRunState: ScriptRunState.NOT_RUNNING })} />
     )
+    expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
 
     // If the app restarts, we continue to show the error...
-    wrapper.setProps({ scriptRunState: ScriptRunState.RUNNING })
-    expect(wrapper.find("AlertElement").exists()).toBeTruthy()
+    rerender(
+      <Form {...getProps({ scriptRunState: ScriptRunState.RUNNING })} />
+    )
+    expect(screen.getByText("Missing Submit Button")).toBeInTheDocument()
 
     // Until we get a submit button, and the error is removed immediately,
     // regardless of ScriptRunState.
-    wrapper.setProps({ hasSubmitButton: true })
-    expect(wrapper.find("AlertElement").exists()).toBeFalsy()
+    rerender(<Form {...getProps({ hasSubmitButton: true })} />)
+    expect(screen.getByTestId("stForm")).toBeInTheDocument()
+    expect(screen.queryByText("Missing Submit Button")).not.toBeInTheDocument()
   })
 })

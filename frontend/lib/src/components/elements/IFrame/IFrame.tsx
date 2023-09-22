@@ -52,6 +52,7 @@ export default function IFrame({
 
   return (
     <iframe
+      data-testid="stIFrame"
       allow={DEFAULT_IFRAME_FEATURE_POLICY}
       style={style}
       src={src}
