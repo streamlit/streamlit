@@ -17,7 +17,7 @@ import hashlib
 import pathlib
 import tempfile
 import textwrap
-from typing import Sequence
+from typing import Any, Sequence, overload
 from unittest.mock import MagicMock
 
 from streamlit import source_util
@@ -29,7 +29,14 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.testing.element_tree import Block, ElementTree, Node
+from streamlit.testing.element_tree import (
+    Block,
+    Checkbox,
+    ElementTree,
+    Node,
+    Radio,
+    WidgetList,
+)
 from streamlit.testing.local_script_runner import LocalScriptRunner
 
 TMP_DIR = tempfile.TemporaryDirectory()
@@ -120,13 +127,27 @@ class TestRunner:
     def main(self) -> Block:
         return self._tree.main
 
-    @property
-    def checkbox(self):
-        return self._tree.checkbox
+    @overload
+    def checkbox(self, key: None) -> WidgetList[Checkbox]:
+        ...
 
-    @property
-    def radio(self):
-        return self._tree.radio
+    @overload
+    def checkbox(self, key: str) -> Checkbox:
+        ...
+
+    def checkbox(self, key: str | None = None):
+        return self._tree.checkbox(key)
+
+    @overload
+    def radio(self, key: None) -> WidgetList[Radio[Any]]:
+        ...
+
+    @overload
+    def radio(self, key: str) -> Radio[Any]:
+        ...
+
+    def radio(self, key: str | None = None):
+        return self._tree.radio(key)
 
     def __len__(self) -> int:
         return len(self._tree)

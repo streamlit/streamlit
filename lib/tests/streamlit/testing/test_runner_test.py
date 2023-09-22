@@ -20,21 +20,25 @@ def test_smoke():
         """
         import streamlit as st
 
-        st.radio("radio", options=["a", "b", "c"])
+        st.radio("radio", options=["a", "b", "c"], key="r")
         st.radio("default index", options=["a", "b", "c"], index=2)
         """
     ).run()
-    assert sr.radio
-    assert sr.radio[0].value == "a"
-    assert sr.radio[1].value == "c"
-    assert sr.radio.values == ["a", "c"]
+    assert sr.radio()
 
-    r = sr.radio[0].set_value("b")
+    assert sr.radio()[0].value == "a"
+    assert sr.radio(key="r").value == "a"
+    assert sr.radio().get_widget("r") == "a"
+
+    assert sr.radio()[1].value == "c"
+    assert sr.radio().values == ["a", "c"]
+
+    r = sr.radio()[0].set_value("b")
     assert r.index == 1
     assert r.value == "b"
     sr2 = r.run()
-    assert sr2.radio[0].value == "b"
-    assert [s.value for s in sr2.radio] == ["b", "c"]
+    assert sr2.radio()[0].value == "b"
+    assert [s.value for s in sr2.radio()] == ["b", "c"]
 
 
 def test_checkbox():
@@ -47,14 +51,13 @@ def test_checkbox():
         """,
     )
     sr = script.run()
-    assert sr.checkbox
-    assert sr.checkbox[0].value == False
-    assert sr.checkbox[1].value == True
+    assert sr.checkbox()
+    assert sr.checkbox().values == [False, True]
 
-    sr.checkbox[0].check().run()
-    assert sr.checkbox[0].value == True
-    assert sr.checkbox[1].value == True
+    sr.checkbox()[0].check().run()
+    assert sr.checkbox()[0].value == True
+    assert sr.checkbox()[1].value == True
 
-    sr.checkbox[1].uncheck().run()
-    assert sr.checkbox[0].value == True
-    assert sr.checkbox[1].value == False
+    sr.checkbox()[1].uncheck().run()
+    assert sr.checkbox()[0].value == True
+    assert sr.checkbox()[1].value == False
