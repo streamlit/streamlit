@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from collections import ChainMap
 from copy import deepcopy
@@ -25,6 +26,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection as SQLAlchemyConnection
     from sqlalchemy.engine.base import Engine
     from sqlalchemy.orm import Session
 
@@ -121,6 +123,7 @@ class SQLConnection(BaseConnection["Engine"]):
         self,
         sql: str,
         *,  # keyword-only arguments:
+        show_spinner: bool | str = "Running `sql.query(...)`.",
         ttl: Optional[Union[float, int, timedelta]] = None,
         index_col: Optional[Union[str, List[str]]] = None,
         chunksize: Optional[int] = None,
@@ -143,6 +146,10 @@ class SQLConnection(BaseConnection["Engine"]):
         ----------
         sql : str
             The read-only SQL query to execute.
+        show_spinner : boolean or string
+            Enable the spinner. The default is to show a spinner when there is a
+            "cache miss" and the cached resource is being created. If a string, the value
+            of the show_spinner param will be used for the spinner text.
         ttl : float, int, timedelta or None
             The maximum number of seconds to keep results in the cache, or
             None if cached results should not expire. The default is None.
@@ -194,7 +201,7 @@ class SQLConnection(BaseConnection["Engine"]):
             wait=wait_fixed(1),
         )
         @cache_data(
-            show_spinner="Running `sql.query(...)`.",
+            show_spinner=show_spinner,
             ttl=ttl,
         )
         def _query(
@@ -221,6 +228,33 @@ class SQLConnection(BaseConnection["Engine"]):
             params=params,
             **kwargs,
         )
+
+    def connect(self) -> "SQLAlchemyConnection":
+        """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new
+        sqlalchemy.engine.Connection object.
+
+        Calling this method is equivalent to calling ``self._instance.connect()``.
+
+        NOTE: This method should not be confused with the internal _connect method used
+        to implement a Streamlit Connection.
+        """
+        return self._instance.connect()
+
+    @property
+    def engine(self) -> "Engine":
+        """The underlying SQLAlchemy Engine.
+
+        This is equivalent to accessing ``self._instance``.
+        """
+        return self._instance
+
+    @property
+    def driver(self) -> str:
+        """The name of the driver used by the underlying SQLAlchemy Engine.
+
+        This is equivalent to accessing ``self._instance.driver``.
+        """
+        return self._instance.driver
 
     @property
     def session(self) -> "Session":
