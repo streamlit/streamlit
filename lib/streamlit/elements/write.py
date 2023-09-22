@@ -22,6 +22,7 @@ import numpy as np
 from typing_extensions import Final
 
 from streamlit import type_util
+from streamlit.connections import SnowparkConnection, SQLConnection
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
@@ -249,9 +250,12 @@ class WriteMixin:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
             elif hasattr(arg, "_repr_html_"):
+                unsafe_allow_html = not isinstance(
+                    arg, (SnowparkConnection, SQLConnection)
+                )
                 self.dg.markdown(
                     arg._repr_html_(),
-                    unsafe_allow_html=True,
+                    unsafe_allow_html=unsafe_allow_html,
                 )
             else:
                 stringified_arg = str(arg)
