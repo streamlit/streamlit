@@ -17,7 +17,6 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-import langchain
 import pytest
 import semver
 from google.protobuf.json_format import MessageToDict
@@ -77,8 +76,10 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
 
 
 class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
+    from langchain import __version__ as langchain_version
+
     @pytest.mark.skipif(
-        semver.VersionInfo.parse(langchain.__version__) >= "0.0.296",
+        semver.VersionInfo.parse(langchain_version) >= "0.0.296",
         reason="Skip version verification when `SKIP_VERSION_CHECK` env var is set",
     )
     def test_agent_run(self):
