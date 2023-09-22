@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 import time
 from typing import Any
+from urllib import parse
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -88,6 +89,7 @@ class LocalScriptRunner(ScriptRunner):
     def run(
         self,
         widget_state: WidgetStates | None = None,
+        query_params=None,
         timeout: float = 3,
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
@@ -95,7 +97,11 @@ class LocalScriptRunner(ScriptRunner):
 
         Timeout is in seconds.
         """
-        rerun_data = RerunData(widget_states=widget_state)
+        query_string = ""
+        if query_params:
+            query_string = parse.urlencode(query_params, doseq=True)
+
+        rerun_data = RerunData(widget_states=widget_state, query_string=query_string)
         self.request_rerun(rerun_data)
         if not self._script_thread:
             self.start()

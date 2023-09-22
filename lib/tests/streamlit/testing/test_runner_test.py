@@ -67,3 +67,18 @@ def test_checkbox():
 def test_from_file():
     script = TestRunner.from_file("../test_data/widgets_script.py")
     script.run()
+
+
+def test_query_params():
+    sr = TestRunner.from_string(
+        """
+        import streamlit as st
+
+        st.write(st.experimental_get_query_params())
+        """
+    ).run()
+    assert sr.get("json")[0].proto.json.body == "{}"
+    sr.query_params["foo"] = 5
+    sr.query_params["bar"] = "baz"
+    sr.run()
+    assert sr.get("json")[0].proto.json.body == '{"foo": ["5"], "bar": ["baz"]}'

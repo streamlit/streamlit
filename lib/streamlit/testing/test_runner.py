@@ -49,6 +49,7 @@ class TestRunner:
         self._script_path = script_path
         self.default_timeout = default_timeout
         self.session_state = SessionState()
+        self.query_params = {}
 
         tree = ElementTree()
         tree._runner = self
@@ -111,7 +112,7 @@ class TestRunner:
 
         with patch_config_options({"runner.postScriptGC": False}):
             script_runner = LocalScriptRunner(self._script_path, self.session_state)
-            self._tree = script_runner.run(widget_state, timeout)
+            self._tree = script_runner.run(widget_state, self.query_params, timeout)
             self._tree._runner = self
 
         # teardown
