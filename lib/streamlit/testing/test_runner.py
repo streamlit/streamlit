@@ -17,6 +17,7 @@ import hashlib
 import pathlib
 import tempfile
 import textwrap
+import traceback
 from typing import Any, Sequence
 from unittest.mock import MagicMock
 
@@ -78,7 +79,10 @@ class TestRunner:
         `default_timeout` is the default time in seconds before a script is
         timed out, if not overridden for an individual `.run()` call.
         """
-        return TestRunner(script_path, default_timeout=default_timeout)
+        stack = traceback.StackSummary.extract(traceback.walk_stack(None))
+        filepath = pathlib.Path(stack[1].filename)
+        full_path = filepath.parent / script_path
+        return TestRunner(str(full_path), default_timeout=default_timeout)
 
     def _run(
         self,

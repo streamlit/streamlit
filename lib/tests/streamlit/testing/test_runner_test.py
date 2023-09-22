@@ -62,3 +62,8 @@ def test_checkbox():
     sr.checkbox[1].uncheck().run()
     assert sr.checkbox[0].value == True
     assert sr.checkbox[1].value == False
+
+
+def test_from_file():
+    script = TestRunner.from_file("test_data/widgets_script.py")
+    script.run()
