@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import os
 import time
-from copy import deepcopy
 from typing import Any
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -34,7 +33,7 @@ class LocalScriptRunner(ScriptRunner):
     def __init__(
         self,
         script_path: str,
-        prev_session_state: SessionState | None = None,
+        session_state: SessionState,
     ):
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -42,10 +41,7 @@ class LocalScriptRunner(ScriptRunner):
 
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
-        if prev_session_state is not None:
-            self.session_state = deepcopy(prev_session_state)
-        else:
-            self.session_state = SessionState()
+        self.session_state = session_state
 
         super().__init__(
             session_id="test session id",
@@ -109,7 +105,6 @@ class LocalScriptRunner(ScriptRunner):
         require_widgets_deltas(self, timeout)
 
         tree = parse_tree_from_messages(self.forward_msgs())
-        tree._session_state = self.session_state
         return tree
 
     def script_stopped(self) -> bool:

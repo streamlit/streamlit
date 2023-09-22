@@ -17,6 +17,7 @@ import hashlib
 import pathlib
 import tempfile
 import textwrap
+from typing import Sequence
 from unittest.mock import MagicMock
 
 from streamlit import source_util
@@ -28,6 +29,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.state.session_state import SessionState
+from streamlit.testing.element_tree import Block, ElementTree, Node
 from streamlit.testing.local_script_runner import LocalScriptRunner
 
 TMP_DIR = tempfile.TemporaryDirectory()
@@ -38,6 +40,10 @@ class TestRunner:
         self._script_path = script_path
         self.default_timeout = default_timeout
         self.session_state = SessionState()
+
+        tree = ElementTree()
+        tree._runner = self
+        self._tree = tree
 
     @classmethod
     def from_string(cls, script: str, default_timeout: float = 3) -> TestRunner:
@@ -67,7 +73,7 @@ class TestRunner:
         """
         return TestRunner(script_path, default_timeout=default_timeout)
 
-    def run(
+    def _run(
         self,
         widget_state: WidgetStates | None = None,
         timeout: float | None = None,
@@ -80,8 +86,6 @@ class TestRunner:
         if timeout is None:
             timeout = self.default_timeout
 
-        local_runner = LocalScriptRunner(self._script_path, self.session_state)
-
         # setup
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.media_file_mgr = MediaFileManager(
@@ -93,7 +97,8 @@ class TestRunner:
             self.saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
 
-        self._tree = local_runner.run(widget_state, timeout)
+        script_runner = LocalScriptRunner(self._script_path, self.session_state)
+        self._tree = script_runner.run(widget_state, timeout)
         self._tree._runner = self
 
         # teardown
@@ -103,6 +108,30 @@ class TestRunner:
 
         return self
 
+    def run(self, timeout: float | None = None) -> TestRunner:
+        """Run the script, and parse the output messages for querying
+        and interaction.
+
+        Timeout is in seconds, or None to use the default timeout of the runner.
+        """
+        return self._tree.run(timeout)
+
+    @property
+    def main(self) -> Block:
+        return self._tree.main
+
     @property
     def radio(self):
         return self._tree.radio
+
+    def __len__(self) -> int:
+        return len(self._tree)
+
+    def __iter__(self):
+        yield from self._tree
+
+    def __getitem__(self, idx: int) -> Node:
+        return self._tree[idx]
+
+    def get(self, element_type: str) -> Sequence[Node]:
+        return self._tree.get(element_type)

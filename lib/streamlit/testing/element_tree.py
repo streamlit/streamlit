@@ -123,7 +123,7 @@ class Element:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float | None = None) -> ElementTree:
+    def run(self, timeout: float | None = None) -> TestRunner:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
@@ -231,6 +231,9 @@ class ElementList(Generic[El]):
 
     def __iter__(self):
         yield from self._list
+
+    def __repr__(self):
+        return util.repr_(self)
 
     def values(self) -> Sequence[Any]:
         return [e.value for e in self]
@@ -710,7 +713,7 @@ class NumberInput(Widget):
 class Radio(Widget, Generic[T]):
     _value: T | None | InitialValue
 
-    proto: RadioProto
+    proto: RadioProto = field(repr=False)
     options: list[str]
     horizontal: bool
 
@@ -1410,7 +1413,6 @@ class ElementTree(Block):
     the rerun.
     """
 
-    _session_state: SessionState | None = field(repr=False, default=None)
     _runner: TestRunner | None = field(repr=False, default=None)
 
     def __init__(self):
@@ -1433,8 +1435,8 @@ class ElementTree(Block):
 
     @property
     def session_state(self) -> SessionState:
-        assert self._session_state is not None
-        return self._session_state
+        assert self._runner is not None
+        return self._runner.session_state
 
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
@@ -1452,7 +1454,7 @@ class ElementTree(Block):
         assert self._runner is not None
 
         widget_states = self.get_widget_states()
-        return self._runner.run(widget_states, timeout=timeout)
+        return self._runner._run(widget_states, timeout=timeout)
 
 
 def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
