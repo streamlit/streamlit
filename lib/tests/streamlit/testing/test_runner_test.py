@@ -65,5 +65,5 @@ def test_checkbox():
 
 
 def test_from_file():
-    script = TestRunner.from_file("test_data/widgets_script.py")
+    script = TestRunner.from_file("../test_data/widgets_script.py")
     script.run()
