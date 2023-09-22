@@ -51,7 +51,11 @@ def make_deprecated_name_warning(
 
 
 def deprecate_func_name(
-    func: TFunc, old_name: str, removal_date: str, extra_message: str | None = None
+    func: TFunc,
+    old_name: str,
+    removal_date: str,
+    extra_message: str | None = None,
+    name_override: str | None = None,
 ) -> TFunc:
     """Wrap an `st` function whose name has changed.
 
@@ -81,7 +85,7 @@ def deprecate_func_name(
         result = func(*args, **kwargs)
         show_deprecation_warning(
             make_deprecated_name_warning(
-                old_name, func.__name__, removal_date, extra_message
+                old_name, name_override or func.__name__, removal_date, extra_message
             )
         )
         return result
