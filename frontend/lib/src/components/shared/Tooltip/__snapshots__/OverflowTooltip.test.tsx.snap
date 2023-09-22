@@ -35,6 +35,7 @@ exports[`Tooltip component should render and match snapshots when ellipsized 1`]
         >
           <div
             class="stTooltipContent css-2bnxxn-StyledTooltipContentWrapper e1gc5fo20"
+            data-testid="stTooltipContent"
           >
             the content
           </div>

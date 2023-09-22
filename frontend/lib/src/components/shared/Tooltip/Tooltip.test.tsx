@@ -15,8 +15,10 @@
  */
 
 import React from "react"
-import { PLACEMENT } from "baseui/tooltip"
-import { mount } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
+import { BaseProvider, LightTheme } from "baseui"
+import { render } from "@streamlit/lib/src/test_util"
 
 import Tooltip, { Placement, TooltipProps } from "./Tooltip"
 
@@ -24,45 +26,52 @@ const getProps = (
   propOverrides: Partial<TooltipProps> = {}
 ): TooltipProps => ({
   placement: Placement.AUTO,
-  content: () => {},
+  content: <div>Tooltip content text.</div>,
   children: null,
   ...propOverrides,
 })
 
-describe("Tooltip element", () => {
-  it("renders a Tooltip", () => {
-    const wrapper = mount(<Tooltip {...getProps()}></Tooltip>)
+// Wrap in BaseProvider to avoid warnings
+const renderTooltip = (props: Partial<TooltipProps> = {}): any => {
+  return render(
+    <BaseProvider theme={LightTheme}>
+      <Tooltip {...getProps(props)} />
+    </BaseProvider>
+  )
+}
 
-    expect(wrapper.find("StatefulTooltip").exists()).toBeTruthy()
+describe("Tooltip element", () => {
+  it("renders a Tooltip", async () => {
+    renderTooltip()
+
+    const tooltipTarget = screen.getByTestId("tooltipHoverTarget")
+    expect(tooltipTarget).toBeInTheDocument()
+
+    // Hover to see tooltip content
+    fireEvent.mouseOver(tooltipTarget)
+
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("Tooltip content text.")
   })
 
   it("renders its children", () => {
-    const wrapper = mount(
-      <Tooltip {...getProps()}>
-        <div className="foo" />
-      </Tooltip>
-    )
+    renderTooltip({ children: <div>Child Element</div> })
 
-    expect(wrapper.find(".foo").exists()).toBeTruthy()
+    expect(screen.getByTestId("tooltipHoverTarget")).toBeInTheDocument()
+    expect(screen.getByText("Child Element")).toBeInTheDocument()
   })
 
-  it("sets its placement", () => {
-    const wrapper = mount(
-      <Tooltip {...getProps({ placement: Placement.BOTTOM })} />
-    )
+  it("sets the same content", async () => {
+    const content = <span>Help Text</span>
+    renderTooltip({ content })
 
-    expect(wrapper.find("StatefulTooltip").prop("placement")).toEqual(
-      PLACEMENT.bottom
-    )
-  })
+    const tooltipTarget = screen.getByTestId("tooltipHoverTarget")
+    expect(tooltipTarget).toBeInTheDocument()
 
-  it("sets the same content", () => {
-    const content = <span className="foo" />
-    const wrapper = mount(<Tooltip {...getProps({ content })} />)
+    // Hover to see tooltip content
+    fireEvent.mouseOver(tooltipTarget)
 
-    expect(
-      // @ts-expect-error
-      wrapper.find("StatefulTooltip").props().content.props.children
-    ).toEqual(content)
+    const tooltipContent = await screen.findByTestId("stTooltipContent")
+    expect(tooltipContent).toHaveTextContent("Help Text")
   })
 })
