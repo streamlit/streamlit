@@ -14,24 +14,36 @@
  * limitations under the License.
  */
 
-import { matchers } from "@emotion/jest"
 import React from "react"
-import { ReactWrapper } from "enzyme"
+import "@testing-library/jest-dom"
+import {
+  screen,
+  fireEvent,
+  within,
+  RenderResult,
+} from "@testing-library/react"
 
 import {
-  mount,
+  render,
   mockEndpoints,
-  spacing,
+  useIsOverflowing,
   emotionLightTheme,
   PageConfig,
 } from "@streamlit/lib"
 import Sidebar, { SidebarProps } from "./Sidebar"
-import SidebarNav from "./SidebarNav"
 
-expect.extend(matchers)
+jest.mock("@streamlit/lib/src/util/Hooks", () => ({
+  __esModule: true,
+  ...jest.requireActual("@streamlit/lib/src/util/Hooks"),
+  useIsOverflowing: jest.fn(),
+}))
 
-function mountSidebar(props: Partial<SidebarProps> = {}): ReactWrapper {
-  return mount(
+const mockUseIsOverflowing = useIsOverflowing as jest.MockedFunction<
+  typeof useIsOverflowing
+>
+
+function renderSidebar(props: Partial<SidebarProps> = {}): RenderResult {
+  return render(
     <Sidebar
       endpoints={mockEndpoints()}
       chevronDownshift={0}
@@ -48,137 +60,156 @@ function mountSidebar(props: Partial<SidebarProps> = {}): ReactWrapper {
 
 describe("Sidebar Component", () => {
   it("should render without crashing", () => {
-    const wrapper = mountSidebar({})
+    renderSidebar({})
 
-    expect(wrapper.find("StyledSidebar").exists()).toBe(true)
+    expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
   it("should render expanded", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
-    expect(wrapper.find("Resizable").prop("isCollapsed")).toBe(false)
+    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
   })
 
   it("should render collapsed", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(wrapper.find("Resizable").prop("isCollapsed")).toBe(true)
+    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    )
   })
 
   it("should collapse on toggle if expanded", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
-    wrapper.find("StyledSidebarCloseButton").find("button").simulate("click")
-    expect(wrapper.find("Resizable").prop("isCollapsed")).toBe(true)
+    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
+
+    // Click the close sidebar X
+    fireEvent.click(screen.getByRole("button"))
+
+    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    )
   })
 
   it("should expand on toggle if collapsed", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    wrapper
-      .find("StyledSidebarCollapsedControl")
-      .find("button")
-      .simulate("click")
-    expect(wrapper.find("Resizable").prop("isCollapsed")).toBe(false)
+    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    )
+
+    // Click the expand sidebar > button
+    const expandButton = within(
+      screen.getByTestId("collapsedControl")
+    ).getByRole("button")
+    fireEvent.click(expandButton)
+
+    expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
   })
 
   it("chevron does not render if sidebar expanded", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       initialSidebarState: PageConfig.SidebarState.EXPANDED,
     })
 
-    expect(wrapper.find("StyledSidebarCollapsedControl").exists()).toBe(false)
+    expect(screen.queryByTestId("collapsedControl")).not.toBeInTheDocument()
   })
 
   it("hides scrollbar when hideScrollbar is called", () => {
-    const wrapper = mountSidebar({})
+    const appPages = [
+      { pageName: "first_page", pageScriptHash: "page_hash" },
+      { pageName: "second_page", pageScriptHash: "page_hash2" },
+    ]
+    // Need isOverflowing in SidebarNav to be true to test scrollbar behavior
+    mockUseIsOverflowing.mockReturnValueOnce(true)
+    renderSidebar({ appPages })
 
-    expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
-      "overflow",
-      "overlay"
+    expect(screen.getByTestId("stSidebarContent")).toHaveStyle(
+      "overflow: overlay"
     )
 
-    wrapper.find(SidebarNav).prop("hideParentScrollbar")(true)
-    wrapper.update()
+    fireEvent.mouseOver(screen.getByTestId("stSidebarNavItems"))
 
-    expect(wrapper.find("StyledSidebarContent")).toHaveStyleRule(
-      "overflow",
-      "hidden"
+    expect(screen.getByTestId("stSidebarContent")).toHaveStyle(
+      "overflow: hidden"
     )
   })
 
-  it("has extra top and bottom padding if no SidebarNav is displayed", () => {
-    const wrapper = mountSidebar({
+  it("has extra top padding if no SidebarNav is displayed", () => {
+    renderSidebar({
       appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     })
 
-    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
-      "padding-top",
-      "6rem"
+    expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
+      "padding-top: 6rem"
     )
   })
 
   it("has less padding if the SidebarNav is displayed", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       appPages: [
         { pageName: "streamlit_app", pageScriptHash: "page_hash" },
         { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
       ],
     })
 
-    expect(wrapper.find("StyledSidebarUserContent")).toHaveStyleRule(
-      "padding-top",
-      spacing.lg
+    expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
+      "padding-top: 1rem"
     )
   })
 
   it("uses the default chevron spacing if chevronDownshift is zero", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       chevronDownshift: 0,
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(wrapper.find("StyledSidebarCollapsedControl")).toHaveStyleRule(
-      "top",
-      spacing.sm
-    )
+    expect(screen.getByTestId("collapsedControl")).toHaveStyle("top: 0.5rem")
   })
 
   it("uses the given chevron spacing if chevronDownshift is nonzero", () => {
-    const wrapper = mountSidebar({
+    renderSidebar({
       chevronDownshift: 50,
       initialSidebarState: PageConfig.SidebarState.COLLAPSED,
     })
 
-    expect(wrapper.find("StyledSidebarCollapsedControl")).toHaveStyleRule(
-      "top",
-      "50px"
-    )
+    expect(screen.getByTestId("collapsedControl")).toHaveStyle("top: 50px")
   })
 
   it("renders SidebarNav component", () => {
     const appPages = [
-      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
-      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+      { pageName: "first_page", pageScriptHash: "page_hash" },
+      { pageName: "second_page", pageScriptHash: "page_hash2" },
     ]
-    const wrapper = mountSidebar({ appPages })
+    renderSidebar({ appPages })
 
-    expect(wrapper.find(SidebarNav).exists()).toBe(true)
-    expect(wrapper.find(SidebarNav).prop("appPages")).toEqual(appPages)
-    expect(typeof wrapper.find(SidebarNav).prop("onPageChange")).toBe(
-      "function"
-    )
-    expect(
-      wrapper.find("StyledSidebarUserContent").prop("hasPageNavAbove")
-    ).toBe(true)
+    expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
+
+    const sidebarAppPages = screen.getAllByRole("listitem")
+    expect(sidebarAppPages).toHaveLength(2)
+    expect(sidebarAppPages[0]).toHaveTextContent("first page")
+    expect(sidebarAppPages[1]).toHaveTextContent("second page")
   })
 
   it("can hide SidebarNav with the hideSidebarNav option", () => {
@@ -186,11 +217,11 @@ describe("Sidebar Component", () => {
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
-    const wrapper = mountSidebar({ appPages, hideSidebarNav: true })
+    renderSidebar({ appPages, hideSidebarNav: true })
 
-    expect(wrapper.find(SidebarNav).exists()).toBe(false)
-    expect(
-      wrapper.find("StyledSidebarUserContent").prop("hasPageNavAbove")
-    ).toBe(false)
+    expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
+      "padding-top: 6rem"
+    )
   })
 })

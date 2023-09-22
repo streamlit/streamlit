@@ -279,6 +279,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           sidebarWidth={sidebarWidth}
         >
           <StyledSidebarContent
+            data-testid="stSidebarContent"
             hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
