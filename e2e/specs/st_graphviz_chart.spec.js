@@ -41,4 +41,36 @@ describe("st.graphviz_chart", () => {
       "Right"
     );
   });
+
+  it("shows first graph with correct width and height", () => {
+    cy.getIndexed(".stGraphVizChart > svg", 0)
+      .should("have.attr", "width")
+      .should("eq", "79pt");
+
+    cy.getIndexed(".stGraphVizChart > svg", 0)
+      .should("have.attr", "height")
+      .should("eq", "116pt");
+  });
+
+  it("shows first graph in fullscreen", () => {
+    cy.getIndexed("[data-testid='StyledFullScreenButton']", 0).click();
+    cy.getIndexed(".stGraphVizChart > svg", 0)
+      .should("have.attr", "width")
+      .should("eq", "100%");
+    cy.getIndexed(".stGraphVizChart > svg", 0)
+      .should("have.attr", "height")
+      .should("eq", "100%");
+  });
+
+  it("shows first graph with correct size after exiting fullscreen", () => {
+    cy.getIndexed("[data-testid='StyledFullScreenButton']", 0).click();
+    cy.getIndexed(".stGraphVizChart > svg", 0)
+      .should("have.attr", "width")
+      .should("eq", "79pt");
+
+    cy.getIndexed(".stGraphVizChart > svg", 0)
+      .should("have.attr", "height")
+      .should("eq", "116pt");
+  });
+
 });
