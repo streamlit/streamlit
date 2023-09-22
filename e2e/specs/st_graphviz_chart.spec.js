@@ -23,7 +23,12 @@ describe("st.graphviz_chart", () => {
     // Add timeout until charts are no longer loading
     cy.get('.stAlert', { timeout: 15000 }).should('not.exist');
     cy.prepForElementSnapshots();
-    cy.get(".stGraphVizChart > svg > g > title").should("have.length", 5);
+  });
+
+  beforeEach(() => {
+    return cy
+      .get(".stGraphVizChart > svg > g > title")
+      .should("have.length", 5);
   });
 
   it("shows left and right graph", () => {
@@ -39,7 +44,8 @@ describe("st.graphviz_chart", () => {
   it("shows first graph in fullscreen", () => {
     cy.get('div[class*="StyledFullScreenFrame"]').eq(0).trigger('mouseover');
     cy.getIndexed("[data-testid='StyledFullScreenButton']", 0).click({ force: true });
-    getFirstGraphSVG().should("have.attr", "width", "100%")
+    cy.getIndexed(".stGraphVizChart > svg", 0)
+      .should("have.attr", "width", "100%")
       .and("have.attr", "height", "100%")
       .matchThemedSnapshots("graphviz-chart-fullscreen");
   });
