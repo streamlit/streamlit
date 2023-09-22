@@ -45,29 +45,6 @@ class ButtonTest(InteractiveScriptTests):
         assert sr3.button[1].value == False
 
 
-def test_checkbox():
-    script = TestRunner.from_string(
-        """
-        import streamlit as st
-
-        st.checkbox("defaults")
-        st.checkbox("defaulted on", True)
-        """,
-    )
-    sr = script.run()
-    assert sr.checkbox
-    assert sr.checkbox[0].value == False
-    assert sr.checkbox[1].value == True
-
-    sr.checkbox[0].check().run()
-    assert sr.checkbox[0].value == True
-    assert sr.checkbox[1].value == True
-
-    sr.checkbox[1].uncheck().run()
-    assert sr.checkbox[0].value == True
-    assert sr.checkbox[1].value == False
-
-
 class ColorPickerTest(InteractiveScriptTests):
     def test_value(self):
         script = self.script_from_string(

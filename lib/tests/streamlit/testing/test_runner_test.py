@@ -35,3 +35,26 @@ def test_smoke():
     sr2 = r.run()
     assert sr2.radio[0].value == "b"
     assert [s.value for s in sr2.radio] == ["b", "c"]
+
+
+def test_checkbox():
+    script = TestRunner.from_string(
+        """
+        import streamlit as st
+
+        st.checkbox("defaults")
+        st.checkbox("defaulted on", True)
+        """,
+    )
+    sr = script.run()
+    assert sr.checkbox
+    assert sr.checkbox[0].value == False
+    assert sr.checkbox[1].value == True
+
+    sr.checkbox[0].check().run()
+    assert sr.checkbox[0].value == True
+    assert sr.checkbox[1].value == True
+
+    sr.checkbox[1].uncheck().run()
+    assert sr.checkbox[0].value == True
+    assert sr.checkbox[1].value == False
