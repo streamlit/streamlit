@@ -19,7 +19,7 @@ from unittest.mock import PropertyMock, mock_open, patch
 import pytest
 
 import streamlit as st
-from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections import BaseConnection
 from streamlit.runtime.secrets import AttrDict
 
 MOCK_TOML = """
@@ -33,7 +33,7 @@ class MockRawConnection:
         return "some raw connection method"
 
 
-class MockConnection(ExperimentalBaseConnection[str]):
+class MockConnection(BaseConnection[str]):
     def _connect(self, **kwargs) -> str:
         return MockRawConnection()
 
@@ -41,7 +41,7 @@ class MockConnection(ExperimentalBaseConnection[str]):
         return "some method"
 
 
-class ExperimentalBaseConnectionDefaultMethodTests(unittest.TestCase):
+class BaseConnectionDefaultMethodTests(unittest.TestCase):
     def setUp(self) -> None:
         # st.secrets modifies os.environ, so we save it here and
         # restore in tearDown.
@@ -114,7 +114,7 @@ class ExperimentalBaseConnectionDefaultMethodTests(unittest.TestCase):
         # conn.reset() shouldn't be called because secrets haven't changed since conn
         # was constructed.
         with patch(
-            "streamlit.connections.base_connection.ExperimentalBaseConnection.reset"
+            "streamlit.connections.base_connection.BaseConnection.reset"
         ) as patched_reset:
             conn._on_secrets_changed("unused_arg")
             patched_reset.assert_not_called()
@@ -123,9 +123,9 @@ class ExperimentalBaseConnectionDefaultMethodTests(unittest.TestCase):
         conn = MockConnection("my_mock_connection")
 
         with patch(
-            "streamlit.connections.base_connection.ExperimentalBaseConnection.reset"
+            "streamlit.connections.base_connection.BaseConnection.reset"
         ) as patched_reset, patch(
-            "streamlit.connections.base_connection.ExperimentalBaseConnection._secrets",
+            "streamlit.connections.base_connection.BaseConnection._secrets",
             PropertyMock(return_value=AttrDict({"mock_connection": {"new": "secret"}})),
         ):
             conn._on_secrets_changed("unused_arg")

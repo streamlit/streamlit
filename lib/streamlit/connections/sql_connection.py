@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 import pandas as pd
 
-from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections import BaseConnection
 from streamlit.connections.util import extract_from_dict
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
@@ -42,18 +42,17 @@ _ALL_CONNECTION_PARAMS = {
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
-class SQLConnection(ExperimentalBaseConnection["Engine"]):
-    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.experimental_connection("<name>", type="sql")``.
+class SQLConnection(BaseConnection["Engine"]):
+    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.connection("<name>", type="sql")``.
 
     SQLConnection provides the ``query()`` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
     More complex DB interactions can be performed by using the ``.session`` property
     to receive a regular SQLAlchemy Session.
 
-    SQLConnections should always be created using ``st.experimental_connection()``,
-    **not** initialized directly. Connection parameters for a SQLConnection can be
-    specified using either ``st.secrets`` or ``**kwargs``. Some frequently used
-    parameters include:
+    SQLConnections should always be created using ``st.connection()``, **not**
+    initialized directly. Connection parameters for a SQLConnection can be specified
+    using either ``st.secrets`` or ``**kwargs``. Some frequently used parameters include:
 
     - **url** or arguments for `sqlalchemy.engine.URL.create()
       <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
@@ -62,7 +61,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
     - **create_engine_kwargs** can be passed via ``st.secrets``, such as for
       `snowflake-sqlalchemy <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_
       or `Google BigQuery <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_.
-      These can also be passed directly as ``**kwargs`` to experimental_connection().
+      These can also be passed directly as ``**kwargs`` to connection().
 
     - **autocommit=True** to run with isolation level ``AUTOCOMMIT``. Default is False.
 
@@ -70,7 +69,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
     -------
     >>> import streamlit as st
     >>>
-    >>> conn = st.experimental_connection("sql")
+    >>> conn = st.connection("sql")
     >>> df = conn.query("select * from pet_owners")
     >>> st.dataframe(df)
     """
@@ -85,7 +84,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         if not len(conn_params):
             raise StreamlitAPIException(
                 "Missing SQL DB connection configuration. "
-                "Did you forget to set this in `secrets.toml` or as kwargs to `st.experimental_connection`?"
+                "Did you forget to set this in `secrets.toml` or as kwargs to `st.connection`?"
             )
 
         if "url" in conn_params:
@@ -171,7 +170,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("sql")
+        >>> conn = st.connection("sql")
         >>> df = conn.query("select * from pet_owners where owner = :owner", ttl=3600, params={"owner":"barbara"})
         >>> st.dataframe(df)
         """
@@ -238,7 +237,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         Example
         -------
         >>> import streamlit as st
-        >>> conn = st.experimental_connection("sql")
+        >>> conn = st.connection("sql")
         >>> n = st.slider("Pick a number")
         >>> if st.button("Add the number!"):
         ...     with conn.session as session:
@@ -250,7 +249,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         return Session(self._instance)
 
     # NOTE: This more or less duplicates the default implementation in
-    # ExperimentalBaseConnection so that we can add another bullet point between the
+    # BaseConnection so that we can add another bullet point between the
     # "Configured from" and "Learn more" items :/
     def _repr_html_(self) -> str:
         module_name = getattr(self, "__module__", None)

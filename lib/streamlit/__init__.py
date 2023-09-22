@@ -47,6 +47,7 @@ For more detailed info, see https://docs.streamlit.io.
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
+from streamlit.deprecation_util import deprecate_func_name as _deprecate_func_name
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
 
 # Give the package a version.
@@ -61,7 +62,7 @@ from streamlit.runtime.caching import (
     experimental_memo as _experimental_memo,
 )
 from streamlit.runtime.connection_factory import (
-    connection_factory as _connection_factory,
+    connection_factory as connection,
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
@@ -206,4 +207,6 @@ experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
 experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
-experimental_connection = _connection_factory
+experimental_connection = _deprecate_func_name(
+    connection, "experimental_connection", "2024-01-01", name_override="connection"
+)
