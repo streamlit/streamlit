@@ -226,14 +226,31 @@ class ElementList(Generic[El]):
     def len(self) -> int:
         return len(self)
 
+    @overload
     def __getitem__(self, idx: int) -> El:
-        return self._list[idx]
+        ...
+
+    @overload
+    def __getitem__(self, idx: slice) -> ElementList[El]:
+        ...
+
+    def __getitem__(self, idx: int | slice) -> El | ElementList[El]:
+        if isinstance(idx, slice):
+            return ElementList(self._list[idx])
+        else:
+            return self._list[idx]
 
     def __iter__(self):
         yield from self._list
 
     def __repr__(self):
         return util.repr_(self)
+
+    def __eq__(self, other: ElementList[El] | Sequence[El]) -> bool:
+        if isinstance(other, ElementList):
+            return self._list == other._list
+        else:
+            return self._list == other
 
     @property
     def values(self) -> Sequence[Any]:
