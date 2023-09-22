@@ -15,11 +15,11 @@
  */
 
 import React, { ReactElement } from "react"
-import { useTheme } from "@emotion/react"
-import { EmotionTheme, isPresetTheme } from "@streamlit/lib/src/theme"
+import { isPresetTheme } from "@streamlit/lib/src/theme"
 import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+
 import {
   StyledSpinnerContainer,
   ThemedStyledSpinner,
@@ -31,7 +31,6 @@ export interface SpinnerProps {
 }
 
 function Spinner({ width, element }: SpinnerProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
   const { activeTheme } = React.useContext(LibContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
   const styleProp = { width }
@@ -39,10 +38,7 @@ function Spinner({ width, element }: SpinnerProps): ReactElement {
   return (
     <div className="stSpinner" data-testid="stSpinner" style={styleProp}>
       <StyledSpinnerContainer>
-        <ThemedStyledSpinner
-          $size={theme.iconSizes.twoXL}
-          $usingCustomTheme={usingCustomTheme}
-        />
+        <ThemedStyledSpinner usingCustomTheme={usingCustomTheme} />
         <StreamlitMarkdown source={element.text} allowHTML={false} />
       </StyledSpinnerContainer>
     </div>

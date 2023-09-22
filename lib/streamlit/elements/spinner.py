@@ -57,7 +57,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
 
     # Set the message 0.1 seconds in the future to avoid annoying
     # flickering if this spinner runs too quickly.
-    DELAY_SECS = 0.1
+    DELAY_SECS = 0.5
     display_message = True
     display_message_lock = threading.Lock()
 
