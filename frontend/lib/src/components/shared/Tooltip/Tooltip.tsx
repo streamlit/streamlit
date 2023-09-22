@@ -61,7 +61,10 @@ function Tooltip({
     <StatefulTooltip
       content={
         content ? (
-          <StyledTooltipContentWrapper className="stTooltipContent">
+          <StyledTooltipContentWrapper
+            className="stTooltipContent"
+            data-testid="stTooltipContent"
+          >
             {content}
           </StyledTooltipContentWrapper>
         ) : null
