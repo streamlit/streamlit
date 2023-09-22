@@ -53,9 +53,6 @@ class LocalScriptRunner(ScriptRunner):
             user_info={"email": "test@test.com"},
         )
 
-        # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: list[BaseException] = []
-
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []
         self.event_data: list[Any] = []
