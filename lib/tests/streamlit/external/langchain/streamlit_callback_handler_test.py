@@ -79,7 +79,8 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
 class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
     @pytest.mark.skipif(
         semver.VersionInfo.parse(langchain.__version__) >= "0.0.296",
-        reason="Skip version verification when `SKIP_VERSION_CHECK` env var is set",
+        reason="Skip test if langchain version > 0.0.296, "
+        "because the marshalling format for alanis.pickle changed.",
     )
     def test_agent_run(self):
         """Test a complete LangChain Agent run using StreamlitCallbackHandler."""
