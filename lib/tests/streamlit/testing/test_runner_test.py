@@ -28,6 +28,7 @@ def test_smoke():
 
     assert sr.radio[0].value == "a"
     assert sr.radio(key="r").value == "a"
+    assert sr.radio["r"].value == "a"
     assert sr.radio.get_widget("r").value == "a"
 
     assert sr.radio[1].value == "c"

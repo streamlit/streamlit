@@ -254,6 +254,12 @@ class WidgetList(Generic[W], ElementList[W]):
     def __call__(self, key: str) -> W:
         return self.get_widget(key)
 
+    def __getitem__(self, k: int | str) -> W:
+        if isinstance(k, int):
+            return self._list[k]
+        else:
+            return self.get_widget(k)
+
 
 @dataclass(repr=False)
 class Button(Widget):
