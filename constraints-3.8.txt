@@ -31,7 +31,7 @@ filelock==3.12.4
 fonttools==4.42.1
 frozenlist==1.4.0
 gitdb==4.0.10
-GitPython==3.1.37
+GitPython==3.1.36
 graphviz==0.20.1
 greenlet==2.0.2
 hypothesis==6.86.2
@@ -49,7 +49,7 @@ jsonschema==4.19.1
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.5
-langchain==0.0.300
+langchain==0.0.299
 langsmith==0.0.40
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
