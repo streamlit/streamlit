@@ -27,6 +27,7 @@ def test_smoke():
     assert sr.radio
     assert sr.radio[0].value == "a"
     assert sr.radio[1].value == "c"
+    assert sr.radio.values == ["a", "c"]
 
     r = sr.radio[0].set_value("b")
     assert r.index == 1

@@ -121,6 +121,10 @@ class TestRunner:
         return self._tree.main
 
     @property
+    def checkbox(self):
+        return self._tree.checkbox
+
+    @property
     def radio(self):
         return self._tree.radio
 

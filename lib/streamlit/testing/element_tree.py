@@ -235,6 +235,7 @@ class ElementList(Generic[El]):
     def __repr__(self):
         return util.repr_(self)
 
+    @property
     def values(self) -> Sequence[Any]:
         return [e.value for e in self]
 
