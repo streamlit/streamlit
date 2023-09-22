@@ -14,7 +14,7 @@
 
 import json
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
@@ -72,6 +72,16 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
 
     def __del__(self) -> None:
         secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)
+
+    def __getattribute__(self, name: str) -> Any:
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError as e:
+            if hasattr(self._instance, name):
+                raise AttributeError(
+                    f"`{name}` doesn't exist here, but you can call `._instance.{name}` instead"
+                )
+            raise e
 
     def _repr_html_(self) -> str:
         """Return a human-friendly markdown string describing this connection.
