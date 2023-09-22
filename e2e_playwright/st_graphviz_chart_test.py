@@ -24,26 +24,21 @@ def get_first_graph_svg(app: Page):
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
 
-    title_count = len(
-        app.evaluate("document.querySelectorAll('.stGraphVizChart > svg > g > title')")
-    )
+    title_count = len(app.locator(".stGraphVizChart > svg > g > title").all())
     assert title_count == 5
 
 
 def test_shows_left_and_right_graph(app: Page):
     """Test if it shows left and right graph."""
-    left_text = app.evaluate(
-        "document.querySelectorAll('.stGraphVizChart > svg > g > title')[3].textContent"
-    )
 
-    right_text = app.evaluate(
-        "document.querySelectorAll('.stGraphVizChart > svg > g > title')[4].textContent"
-    )
+    left_text = app.locator(".stGraphVizChart > svg > g > title").nth(3).text_content()
+    right_text = app.locator(".stGraphVizChart > svg > g > title").nth(4).text_content()
     assert "Left" in left_text and "Right" in right_text
 
 
 def test_first_graph_dimensions(app: Page):
     """Test the dimensions of the first graph."""
+
     first_graph_svg = get_first_graph_svg(app)
     assert first_graph_svg.get_attribute("width") == "79pt"
     assert first_graph_svg.get_attribute("height") == "116pt"
@@ -51,6 +46,7 @@ def test_first_graph_dimensions(app: Page):
 
 def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
     """Test if the first graph shows in fullscreen."""
+
     # Hover over the parent div
     app.locator(".stGraphVizChart").nth(0).hover()
 
@@ -67,11 +63,14 @@ def test_first_graph_after_exit_fullscreen(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test if the first graph has correct size after exiting fullscreen."""
+
     # Hover over the parent div
     app.locator(".stGraphVizChart").nth(0).hover()
 
     # Enter and exit fullscreen
     app.locator("[data-testid='StyledFullScreenButton']").nth(0).click()
+    # Wait for the animation to finish
+    app.wait_for_timeout(1000)
     app.locator("[data-testid='StyledFullScreenButton']").nth(0).click()
 
     first_graph_svg = get_first_graph_svg(app)
