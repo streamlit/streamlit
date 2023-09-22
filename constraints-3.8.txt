@@ -1,6 +1,7 @@
 aiohttp==3.8.5
 aiosignal==1.3.1
 altair==5.1.1
+anyio==3.7.1
 asn1crypto==1.5.1
 async-timeout==4.0.3
 attrs==23.1.0
@@ -42,11 +43,13 @@ iniconfig==2.0.0
 jaraco.classes==3.3.0
 jeepney==0.8.0
 Jinja2==3.1.2
+jsonpatch==1.33
+jsonpointer==2.4
 jsonschema==4.19.1
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.5
-langchain==0.0.298
+langchain==0.0.299
 langsmith==0.0.40
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
@@ -118,6 +121,7 @@ SecretStorage==3.3.3
 semver==2.13.0
 six==1.16.0
 smmap==5.0.1
+sniffio==1.3.0
 snowflake-connector-python==3.0.4
 snowflake-snowpark-python==1.7.0
 sortedcontainers==2.4.0
