@@ -35,7 +35,7 @@ class UnsupportedBrowserDialog extends PureComponent<Props> {
       <Modal isOpen onClose={onClose}>
         <ModalHeader>Record a screencast</ModalHeader>
         <ModalBody>
-          <StyledScreenCastWarningDialog>
+          <StyledScreenCastWarningDialog data-testid="stUnsupportedBrowserDialog">
             <StyledUnsupportedScreenCastIcon>
               <span role="img" aria-label="Alien Monster">
                 👾
