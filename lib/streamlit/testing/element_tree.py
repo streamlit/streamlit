@@ -251,6 +251,9 @@ class WidgetList(Generic[W], ElementList[W]):
 
         raise KeyError(key)
 
+    def __call__(self, key: str) -> W:
+        return self.get_widget(key)
+
 
 @dataclass(repr=False)
 class Button(Widget):
@@ -1180,20 +1183,9 @@ class Block:
     def caption(self) -> ElementList[Caption]:
         return ElementList(self.get("caption"))
 
-    @overload
-    def checkbox(self, key: None) -> WidgetList[Checkbox]:
-        ...
-
-    @overload
-    def checkbox(self, key: str) -> Checkbox:
-        ...
-
-    def checkbox(self, key: str | None = None):
-        c = WidgetList(self.get("checkbox"))
-        if key is None:
-            return c
-        else:
-            return c.get_widget(key)
+    @property
+    def checkbox(self) -> WidgetList[Checkbox]:
+        return WidgetList(self.get("checkbox"))
 
     @property
     def code(self) -> ElementList[Code]:
@@ -1235,20 +1227,9 @@ class Block:
     def number_input(self) -> WidgetList[NumberInput]:
         return WidgetList(self.get("number_input"))
 
-    @overload
-    def radio(self, key: None) -> WidgetList[Radio[Any]]:
-        ...
-
-    @overload
-    def radio(self, key: str) -> Radio[Any]:
-        ...
-
-    def radio(self, key: str | None = None):
-        r = WidgetList(self.get("radio"))
-        if key is None:
-            return r
-        else:
-            return r.get_widget(key)
+    @property
+    def radio(self) -> WidgetList[Radio[Any]]:
+        return WidgetList(self.get("radio"))
 
     @property
     def select_slider(self) -> WidgetList[SelectSlider[Any]]:

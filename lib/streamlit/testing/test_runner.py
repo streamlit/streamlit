@@ -17,7 +17,7 @@ import hashlib
 import pathlib
 import tempfile
 import textwrap
-from typing import Any, Sequence, overload
+from typing import Sequence
 from unittest.mock import MagicMock
 
 from streamlit import source_util
@@ -127,27 +127,13 @@ class TestRunner:
     def main(self) -> Block:
         return self._tree.main
 
-    @overload
-    def checkbox(self, key: None) -> WidgetList[Checkbox]:
-        ...
+    @property
+    def checkbox(self):
+        return self._tree.checkbox
 
-    @overload
-    def checkbox(self, key: str) -> Checkbox:
-        ...
-
-    def checkbox(self, key: str | None = None):
-        return self._tree.checkbox(key)
-
-    @overload
-    def radio(self, key: None) -> WidgetList[Radio[Any]]:
-        ...
-
-    @overload
-    def radio(self, key: str) -> Radio[Any]:
-        ...
-
-    def radio(self, key: str | None = None):
-        return self._tree.radio(key)
+    @property
+    def radio(self):
+        return self._tree.radio
 
     def __len__(self) -> int:
         return len(self._tree)
