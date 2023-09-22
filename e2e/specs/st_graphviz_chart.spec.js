@@ -42,8 +42,7 @@ describe("st.graphviz_chart", () => {
   });
 
   it("shows first graph in fullscreen", () => {
-    cy.get('div[class*="StyledFullScreenFrame"]').eq(0).trigger('mouseover');
-    cy.getIndexed("[data-testid='StyledFullScreenButton']", 0).click({ force: true });
+    cy.get('div[class*="StyledFullScreenFrame"] > [data-testid="StyledFullScreenButton"]').click({ force: true });
     cy.getIndexed(".stGraphVizChart > svg", 0)
       .should("have.attr", "width", "100%")
       .and("have.attr", "height", "100%")
