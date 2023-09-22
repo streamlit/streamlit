@@ -27,7 +27,7 @@ export interface ProgressProps {
 
 function Progress({ element, width }: ProgressProps): ReactElement {
   return (
-    <div className="stProgress">
+    <div className="stProgress" data-testid="stProgress">
       <StyledCaptionText>
         <StreamlitMarkdown source={element.text} allowHTML={false} isLabel />
       </StyledCaptionText>

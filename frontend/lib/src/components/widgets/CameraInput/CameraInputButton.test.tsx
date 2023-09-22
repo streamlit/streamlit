@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { shallow } from "@streamlit/lib/src/test_util"
 import React from "react"
-import { StyledCameraInputBaseButton } from "./styled-components"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
 
 const getProps = (
@@ -34,16 +35,16 @@ const getProps = (
 describe("Testing Camera Input Button", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<CameraInputButton {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<CameraInputButton {...props} />)
+    expect(screen.getByTestId("stCameraInputButton")).toBeInTheDocument()
   })
 
   it("plumbs progress properly", () => {
     const props = getProps({ progress: 50 })
-    const wrapper = shallow(<CameraInputButton {...props} />)
-    const styledCameraInputBaseButton = wrapper.find(
-      StyledCameraInputBaseButton
-    )
-    expect(styledCameraInputBaseButton.props().progress).toEqual(50)
+
+    render(<CameraInputButton {...props} />)
+
+    const progress = screen.getByRole("progressbar")
+    expect(progress).toHaveAttribute("aria-valuenow", "50")
   })
 })
