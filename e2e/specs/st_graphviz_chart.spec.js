@@ -15,62 +15,39 @@
  */
 
 describe("st.graphviz_chart", () => {
+  const getFirstGraphSVG = () => cy.getIndexed(".stGraphVizChart > svg", 0);
+
   before(() => {
     cy.loadApp("http://localhost:3000/");
-
     // Running status widget often concludes before charts loaded
     // Add timeout until charts are no longer loading
     cy.get('.stAlert', { timeout: 15000 }).should('not.exist');
-
     cy.prepForElementSnapshots();
-  });
-
-  beforeEach(() => {
-    return cy
-      .get(".stGraphVizChart > svg > g > title")
-      .should("have.length", 5);
+    cy.get(".stGraphVizChart > svg > g > title").should("have.length", 5);
   });
 
   it("shows left and right graph", () => {
-    cy.getIndexed(".stGraphVizChart > svg > g > title", 3).should(
-      "contain",
-      "Left"
-    );
-    cy.getIndexed(".stGraphVizChart > svg > g > title", 4).should(
-      "contain",
-      "Right"
-    );
+    cy.getIndexed(".stGraphVizChart > svg > g > title", 3).should("contain", "Left");
+    cy.getIndexed(".stGraphVizChart > svg > g > title", 4).should("contain", "Right");
   });
 
   it("shows first graph with correct width and height", () => {
-    cy.getIndexed(".stGraphVizChart > svg", 0)
-      .should("have.attr", "width")
-      .should("eq", "79pt");
-
-    cy.getIndexed(".stGraphVizChart > svg", 0)
-      .should("have.attr", "height")
-      .should("eq", "116pt");
+    getFirstGraphSVG().should("have.attr", "width", "79pt")
+      .and("have.attr", "height", "116pt");
   });
 
   it("shows first graph in fullscreen", () => {
     cy.get('div[class*="StyledFullScreenFrame"]').eq(0).trigger('mouseover');
     cy.getIndexed("[data-testid='StyledFullScreenButton']", 0).click({ force: true });
-    cy.getIndexed(".stGraphVizChart > svg", 0)
-      .should("have.attr", "width")
-      .should("eq", "100%");
-    cy.getIndexed(".stGraphVizChart > svg", 0)
-      .should("have.attr", "height")
-      .should("eq", "100%");
+    getFirstGraphSVG().should("have.attr", "width", "100%")
+      .and("have.attr", "height", "100%")
+      .matchThemedSnapshots("graphviz-chart-fullscreen");
   });
 
   it("shows first graph with correct size after exiting fullscreen", () => {
     cy.getIndexed("[data-testid='StyledFullScreenButton']", 0).click();
-    cy.getIndexed(".stGraphVizChart > svg", 0)
-      .should("have.attr", "width")
-      .should("eq", "79pt");
-    cy.getIndexed(".stGraphVizChart > svg", 0)
-      .should("have.attr", "height")
-      .should("eq", "116pt");
+    getFirstGraphSVG().should("have.attr", "width", "79pt")
+      .and("have.attr", "height", "116pt")
+      .matchThemedSnapshots("graphviz-chart");
   });
-
 });
