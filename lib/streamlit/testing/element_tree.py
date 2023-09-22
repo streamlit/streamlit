@@ -251,6 +251,9 @@ class WidgetList(Generic[W], ElementList[W]):
 
         raise KeyError(key)
 
+    def __call__(self, key: str) -> W:
+        return self.get_widget(key)
+
 
 @dataclass(repr=False)
 class Button(Widget):

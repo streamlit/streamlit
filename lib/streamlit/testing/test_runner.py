@@ -29,7 +29,14 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.testing.element_tree import Block, ElementTree, Node
+from streamlit.testing.element_tree import (
+    Block,
+    Checkbox,
+    ElementTree,
+    Node,
+    Radio,
+    WidgetList,
+)
 from streamlit.testing.local_script_runner import LocalScriptRunner
 
 TMP_DIR = tempfile.TemporaryDirectory()
