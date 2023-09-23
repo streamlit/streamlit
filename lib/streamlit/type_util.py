@@ -20,7 +20,7 @@ import contextlib
 import copy
 import re
 import types
-from enum import Enum, EnumType, auto
+from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1085,16 +1085,16 @@ ALLOWED_ENUM_COERCION_CONFIG_SETTINGS = ("off", "nameOnly", "nameAndValue")
 
 
 def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
-    """Attempt to coerce an Enum value to another EnumType.
+    """Attempt to coerce an Enum value to another EnumMeta.
 
-    An Enum value of EnumType E1 is considered coercable to EnumType E2
-    if the EnumType __qualname__ match and the names of their members
+    An Enum value of EnumMeta E1 is considered coercable to EnumType E2
+    if the EnumMeta __qualname__ match and the names of their members
     match as well. (This is configurable in streamlist configs)
     """
     if not isinstance(from_enum_value, Enum):
         raise ValueError("Expected an Enum")
-    if not isinstance(to_enum_class, EnumType):
-        raise ValueError("Expected an EnumType (i.e. the class of an Enum)")
+    if not isinstance(to_enum_class, EnumMeta):
+        raise ValueError("Expected an EnumMeta (i.e. the class of an Enum)")
     if isinstance(from_enum_value, to_enum_class):
         return from_enum_value  # Enum is already a member, no coersion necessary
 

@@ -47,7 +47,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -333,7 +333,9 @@ class SelectSliderMixin:
             ctx=ctx,
         )
         if isinstance(widget_state.value, tuple):
-            widget_state = maybe_coerce_enum_sequence(widget_state, options)
+            widget_state = maybe_coerce_enum_sequence(
+                cast(RegisterWidgetResult[Tuple[T, T]], widget_state), options
+            )
         else:
             widget_state = maybe_coerce_enum(widget_state, options)
 
