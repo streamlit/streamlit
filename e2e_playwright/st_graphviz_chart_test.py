@@ -21,6 +21,12 @@ def get_first_graph_svg(app: Page):
     return app.locator(".stGraphVizChart > svg").nth(0)
 
 
+def click_fullscreen(app: Page):
+    app.locator('[data-testid="StyledFullScreenButton"]').nth(0).click()
+    # Wait for the animation to finish
+    app.wait_for_timeout(1000)
+
+
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
 
@@ -51,9 +57,7 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     app.locator(".stGraphVizChart").nth(0).hover()
 
     # Enter fullscreen
-    app.locator('[data-testid="StyledFullScreenButton"]').nth(0).click()
-    # Wait for the animation to finish
-    app.wait_for_timeout(1000)
+    click_fullscreen(app)
 
     first_graph_svg = get_first_graph_svg(app)
     assert first_graph_svg.get_attribute("width") == "100%"
@@ -70,10 +74,8 @@ def test_first_graph_after_exit_fullscreen(
     app.locator(".stGraphVizChart").nth(0).hover()
 
     # Enter and exit fullscreen
-    app.locator("[data-testid='StyledFullScreenButton']").nth(0).click()
-    # Wait for the animation to finish
-    app.wait_for_timeout(1000)
-    app.locator("[data-testid='StyledFullScreenButton']").nth(0).click()
+    click_fullscreen(app)
+    click_fullscreen(app)
 
     first_graph_svg = get_first_graph_svg(app)
     assert first_graph_svg.get_attribute("width") == "79pt"
