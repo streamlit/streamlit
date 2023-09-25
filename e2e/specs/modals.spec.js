@@ -97,6 +97,37 @@ describe("modals", () => {
     );
   });
 
+  it("renders the light video recorded dialog correctly", () => {
+    cy.get("#MainMenu").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
+
+    cy.get('.ModalBody button').click({ force: true });
+
+    cy.wait(5000);
+    cy.get("#MainMenu").type("{esc}");
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "video-recorded"
+    );
+  });
+
+  it("renders the dark video recorded dialog correctly", () => {
+    cy.changeTheme("Dark");
+    cy.get("#MainMenu").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
+
+    cy.get('.ModalBody button').click({ force: true });
+
+    cy.wait(5000);
+    cy.get("#MainMenu").type("{esc}");
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "video-recorded"
+    );
+  });
+
   it("renders the light about dialog correctly", () => {
     cy.get("#MainMenu").click();
 

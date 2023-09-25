@@ -80,15 +80,4 @@ describe("VideoRecordedDialog", () => {
     fireEvent.click(downloadButton)
     expect(props.onClose).toHaveBeenCalled()
   })
-
-  // it("should render a Modal with overridden width", () => {
-  //   render(
-  //     <BaseProvider theme={LightTheme}>
-  //       <VideoRecordedDialog {...props} />
-  //     </BaseProvider>
-  //   )
-
-  //   expect(screen.getByTestId("stModal")).toBeInTheDocument()
-  //   expect(screen.getByTestId("stModal")).toHaveStyle("width: 80vw")
-  // })
 })
