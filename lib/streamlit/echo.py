@@ -17,7 +17,7 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import Iterable, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -58,7 +58,7 @@ def echo(code_location="above"):
         # Get stack frame *before* running the echoed code. The frame's
         # line number will point to the `st.echo` statement we're running.
         frame = traceback.extract_stack()[-3]
-        filename, start_line = frame.filename, frame.lineno
+        filename, start_line = frame.filename, frame.lineno or 0
 
         # Read the file containing the source code of the echoed statement.
         with source_util.open_python_file(filename) as source_file:
@@ -66,14 +66,16 @@ def echo(code_location="above"):
 
         # Use ast to parse the Python file and find the code block to display
         root_node = ast.parse("".join(source_lines))
-        line_to_node_map = {}
+        line_to_node_map: Dict[int, Any] = {}
 
-        def collect_body_statements(node):
+        def collect_body_statements(node: ast.AST) -> None:
             if not hasattr(node, "body"):
                 return
-            for child in node.body:
-                line_to_node_map[child.lineno] = child
-                collect_body_statements(child)
+            for child in ast.iter_child_nodes(node):
+                # If child doesn't have "lineno", it is not something we could display
+                if hasattr(child, "lineno"):
+                    line_to_node_map[child.lineno] = child
+                    collect_body_statements(child)
 
         collect_body_statements(root_node)
 
