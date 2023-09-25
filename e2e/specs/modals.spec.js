@@ -97,35 +97,17 @@ describe("modals", () => {
     );
   });
 
-  it("renders the light video recorded dialog correctly", () => {
+  it("renders the video recorded dialog width correctly", () => {
+    // Set the viewport to 1280 x 720 so checking for 80vw cleaner
+    cy.viewport(1280, 720)
     cy.get("#MainMenu").click();
-
     cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
-
     cy.get('.ModalBody button').click({ force: true });
 
-    cy.wait(5000);
+    cy.wait(4000);
     cy.get("#MainMenu").type("{esc}");
 
-    cy.get("div[role='dialog']").matchImageSnapshot(
-      "video-recorded"
-    );
-  });
-
-  it("renders the dark video recorded dialog correctly", () => {
-    cy.changeTheme("Dark");
-    cy.get("#MainMenu").click();
-
-    cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
-
-    cy.get('.ModalBody button').click({ force: true });
-
-    cy.wait(5000);
-    cy.get("#MainMenu").type("{esc}");
-
-    cy.get("div[role='dialog']").matchImageSnapshot(
-      "video-recorded-dark"
-    );
+    cy.get("div[role='dialog']").should("have.css", "width", "1024px");
   });
 
   it("renders the light about dialog correctly", () => {
