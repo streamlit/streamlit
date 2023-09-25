@@ -45,9 +45,7 @@ describe("ThemedSidebar Component", () => {
   it("should switch bgColor and secondaryBgColor", () => {
     render(<ThemedSidebar {...getProps()} />)
 
-    const sidebar = screen.getByTestId("stSidebar")
-    expect(sidebar).toBeInTheDocument()
-    expect(sidebar).toHaveStyle({
+    expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: emotionLightTheme.colors.secondaryBg,
     })
   })
