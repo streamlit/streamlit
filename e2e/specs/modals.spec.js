@@ -98,7 +98,7 @@ describe("modals", () => {
   });
 
   it("renders the video recorded dialog width correctly", () => {
-    // Set the viewport to 1280 x 720 so checking for 80vw cleaner
+    // Set viewport to 1280 x 720 so checking dialog width of 80vw (80% * 1280 = 1024px) round number
     cy.viewport(1280, 720)
     cy.get("#MainMenu").click();
     cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
