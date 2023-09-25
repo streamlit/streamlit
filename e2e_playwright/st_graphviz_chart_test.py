@@ -52,6 +52,8 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
 
     # Enter fullscreen
     app.locator('[data-testid="StyledFullScreenButton"]').nth(0).click()
+    # Wait for the animation to finish
+    app.wait_for_timeout(1000)
 
     first_graph_svg = get_first_graph_svg(app)
     assert first_graph_svg.get_attribute("width") == "100%"
