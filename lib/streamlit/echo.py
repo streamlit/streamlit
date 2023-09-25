@@ -72,7 +72,7 @@ def echo(code_location="above"):
             if not hasattr(node, "body"):
                 return
             for child in ast.iter_child_nodes(node):
-                # If child doesn't have "lineno", it is not something we could print
+                # If child doesn't have "lineno", it is not something we could display
                 if hasattr(child, "lineno"):
                     line_to_node_map[child.lineno] = child
                     collect_body_statements(child)
