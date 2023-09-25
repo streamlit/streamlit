@@ -52,11 +52,8 @@ export function GraphVizChart({
   let originalWidth = 0
 
   const getChartDimensions = (): Dimensions => {
-    const chartWidth = isFull
-      ? propWidth
-      : element.useContainerWidth
-      ? propWidth
-      : originalWidth
+    const chartWidth =
+      isFull || element.useContainerWidth ? propWidth : originalWidth
     const chartHeight = isFull ? propHeight || originalHeight : originalHeight
     return { chartWidth, chartHeight }
   }
