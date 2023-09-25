@@ -122,6 +122,28 @@ class MyClass(object):
         self.assertEqual("Hello", element.markdown.body)
         self.clear_queue()
 
+    def test_if_elif_else(self):
+        page = "Dual"
+
+        if page == "Single":
+            with st.echo():
+                st.write("Single")
+
+        elif page == "Dual":
+            with st.echo():
+                st.write("Dual")
+
+        else:
+            with st.echo():
+                st.write("ELSE")
+
+        echo_str = 'st.write("Dual")'
+        element = self.get_delta_from_queue(0).new_element
+        self.assertEqual(echo_str, element.code.code_text)
+        element = self.get_delta_from_queue(1).new_element
+        self.assertEqual("Dual", element.markdown.body)
+        self.clear_queue()
+
     def test_root_level_echo(self):
         import tests.streamlit.echo_test_data.root_level_echo
 
