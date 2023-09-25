@@ -124,7 +124,7 @@ describe("modals", () => {
     cy.get("#MainMenu").type("{esc}");
 
     cy.get("div[role='dialog']").matchImageSnapshot(
-      "video-recorded"
+      "video-recorded-dark"
     );
   });
 
