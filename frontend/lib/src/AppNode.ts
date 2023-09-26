@@ -26,14 +26,12 @@ import {
   ForwardMsgMetadata,
   IArrow,
   IArrowNamedDataSet,
-  NamedDataSet,
 } from "./proto"
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
 } from "./components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "./dataframes/Quiver"
-import { addRows } from "./dataframes/dataFrameProto"
 import { ensureError } from "./util/ErrorHandling"
 import { toImmutableProto } from "./util/immutableProto"
 import {
@@ -233,18 +231,6 @@ export class ElementNode implements AppNode {
     }
     elements.add(this.element)
     return elements
-  }
-
-  public addRows(
-    namedDataSet: NamedDataSet,
-    scriptRunId: string
-  ): ElementNode {
-    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
-    newNode.lazyImmutableElement = addRows(
-      this.immutableElement,
-      toImmutableProto(NamedDataSet, namedDataSet)
-    )
-    return newNode
   }
 
   public arrowAddRows(
@@ -532,14 +518,6 @@ export class AppRoot {
         )
       }
 
-      case "addRows": {
-        return this.addRows(
-          deltaPath,
-          delta.addRows as NamedDataSet,
-          scriptRunId
-        )
-      }
-
       case "arrowAddRows": {
         try {
           return this.arrowAddRows(
@@ -617,20 +595,6 @@ export class AppRoot {
 
     const blockNode = new BlockNode(children, block, scriptRunId)
     return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
-  }
-
-  private addRows(
-    deltaPath: number[],
-    namedDataSet: NamedDataSet,
-    scriptRunId: string
-  ): AppRoot {
-    const existingNode = this.root.getIn(deltaPath) as ElementNode
-    if (existingNode == null) {
-      throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
-    }
-
-    const elementNode = existingNode.addRows(namedDataSet, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private arrowAddRows(

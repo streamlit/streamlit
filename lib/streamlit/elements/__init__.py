@@ -58,9 +58,6 @@ NONWIDGET_ELEMENTS = [
     "iframe",
     "imgs",
     "json",
-    "legacy_altair",
-    "legacy_data_frame",
-    "legacy_vega_lite",
     "line_chart",
     # link_button unlike button and download_button is not a widget. It only sends a
     # forward messages to the frontend, and not sends trigger value back.

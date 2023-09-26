@@ -38,16 +38,12 @@ from streamlit import config, cursor, env_util, logger, runtime, type_util, util
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.altair_utils import AddRowsMetadata
-
-# DataFrame elements come in two flavors: "Legacy" and "Arrow".
-# We select between them with the DataFrameElementSelectorMixin.
 from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.arrow_altair import ArrowAltairMixin, prep_data
 from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
-from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
@@ -59,9 +55,6 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.legacy_altair import ArrowNotSupportedError, LegacyAltairMixin
-from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
-from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
@@ -200,10 +193,6 @@ class DeltaGenerator(
     ArrowAltairMixin,
     ArrowVegaLiteMixin,
     DataEditorMixin,
-    LegacyDataFrameMixin,
-    LegacyAltairMixin,
-    LegacyVegaLiteMixin,
-    DataFrameSelectorMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -662,130 +651,6 @@ class DeltaGenerator(
 
         return block_dg
 
-    def _legacy_add_rows(
-        self: DG,
-        data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
-    ) -> DG | None:
-        """Concatenate a dataframe to the bottom of the current one.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-        or None
-            Table to concat. Optional.
-
-        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
-            The named dataset to concat. Optional. You can only pass in 1
-            dataset (including the one in the data parameter).
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df1 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> my_table = st._legacy_table(df1)
-        >>>
-        >>> df2 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> my_table._legacy_add_rows(df2)
-        >>> # Now the table shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        You can do the same thing with plots. For example, if you want to add
-        more data to a line chart:
-
-        >>> # Assuming df1 and df2 from the example above still exist...
-        >>> my_chart = st._legacy_line_chart(df1)
-        >>> my_chart._legacy_add_rows(df2)
-        >>> # Now the chart shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        And for plots whose datasets are named, you can pass the data with a
-        keyword argument where the key is the name:
-
-        >>> my_chart = st._legacy_vega_lite_chart({
-        ...     'mark': 'line',
-        ...     'encoding': {'x': 'a', 'y': 'b'},
-        ...     'datasets': {
-        ...       'some_fancy_name': df1,  # <-- named dataset
-        ...      },
-        ...     'data': {'name': 'some_fancy_name'},
-        ... }),
-        >>> my_chart._legacy_add_rows(some_fancy_name=df2)  # <-- name used as keyword
-
-        """
-        if self._root_container is None or self._cursor is None:
-            return self
-
-        if not self._cursor.is_locked:
-            raise StreamlitAPIException("Only existing elements can `add_rows`.")
-
-        # Accept syntax st._legacy_add_rows(df).
-        if data is not None and len(kwargs) == 0:
-            name = ""
-        # Accept syntax st._legacy_add_rows(foo=df).
-        elif len(kwargs) == 1:
-            name, data = kwargs.popitem()
-        # Raise error otherwise.
-        else:
-            raise StreamlitAPIException(
-                "Wrong number of arguments to add_rows()."
-                "Command requires exactly one dataset"
-            )
-
-        # The legacy add_rows does not support Arrow tables.
-        if type_util.is_type(data, "pyarrow.lib.Table"):
-            raise ArrowNotSupportedError()
-
-        # When doing _legacy_add_rows on an element that does not already have data
-        # (for example, st._legacy_line_chart() without any args), call the original
-        # st._legacy_foo() element with new data instead of doing a _legacy_add_rows().
-        if (
-            self._cursor.props["delta_type"] in DELTA_TYPES_THAT_MELT_DATAFRAMES
-            and self._cursor.props["add_rows_metadata"].last_index is None
-        ):
-            # IMPORTANT: This assumes delta types and st method names always
-            # match!
-            # delta_type doesn't have any prefix, but st_method_name starts with "_legacy_".
-            st_method_name = "_legacy_" + self._cursor.props["delta_type"]
-            st_method = getattr(self, st_method_name)
-            st_method(data, **kwargs)
-            return None
-
-        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
-            data,
-            self._cursor.props["delta_type"],
-            self._cursor.props["add_rows_metadata"],
-            is_legacy=True,
-        )
-
-        msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.delta_path[:] = self._cursor.delta_path
-
-        import streamlit.elements.legacy_data_frame as data_frame
-
-        data_frame.marshall_data_frame(new_data, msg.delta.add_rows.data)
-
-        if name:
-            msg.delta.add_rows.name = name
-            msg.delta.add_rows.has_name = True
-
-        _enqueue_message(msg)
-
-        return self
-
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
@@ -887,7 +752,6 @@ class DeltaGenerator(
             data,
             self._cursor.props["delta_type"],
             self._cursor.props["add_rows_metadata"],
-            is_legacy=False,
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
@@ -911,7 +775,6 @@ def _prep_data_for_add_rows(
     data: Data,
     delta_type: str,
     add_rows_metadata: AddRowsMetadata,
-    is_legacy: bool,
 ) -> tuple[Data, AddRowsMetadata]:
     out_data: Data
 
@@ -946,14 +809,7 @@ def _prep_data_for_add_rows(
             df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
             add_rows_metadata.last_index = stop - 1
 
-        if is_legacy:
-            index_name = df.index.name
-            if index_name is None:
-                index_name = "index"
-
-            out_data = pd.melt(df.reset_index(), id_vars=[index_name])
-        else:
-            out_data, *_ = prep_data(df, **add_rows_metadata.columns)
+        out_data, *_ = prep_data(df, **add_rows_metadata.columns)
 
     else:
         # When calling add_rows on st.table or st.dataframe we want styles to pass through.
