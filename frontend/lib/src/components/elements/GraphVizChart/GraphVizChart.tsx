@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect } from "react"
+import React, { ReactElement, useEffect, useRef, useCallback } from "react"
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "@streamlit/lib/src/util/log"
@@ -46,25 +46,36 @@ export function GraphVizChart({
   height: propHeight,
 }: GraphVizChartProps): ReactElement {
   const chartId = `graphviz-chart-${element.elementId}`
+
   const isFull = isFullScreen(propHeight)
+  const isFullRef = useRef(isFull)
+  // Update isFull state whenever propHeight changes
+  useEffect(() => {
+    isFullRef.current = isFull
+  }, [isFull])
+
+  const setSvgDimensions = useCallback((node: SVGGraphicsElement): void => {
+    const bbox = node.getBBox()
+    originalHeight = Math.round(bbox.height)
+    originalWidth = Math.round(bbox.width)
+
+    select(node)
+      .attr("width", isFullRef.current ? "100%" : `${originalWidth}pt`)
+      .attr("height", isFullRef.current ? "100%" : `${originalHeight}pt`)
+  }, [])
 
   let originalHeight = 0
   let originalWidth = 0
 
   const getChartDimensions = (): Dimensions => {
     const chartWidth =
-      isFull || element.useContainerWidth ? propWidth : originalWidth
-    const chartHeight = isFull ? propHeight || originalHeight : originalHeight
+      isFullRef.current || element.useContainerWidth
+        ? propWidth
+        : originalWidth
+    const chartHeight = isFullRef.current
+      ? propHeight || originalHeight
+      : originalHeight
     return { chartWidth, chartHeight }
-  }
-
-  const setSvgDimensions = (node: SVGGraphicsElement): void => {
-    originalHeight = Math.round(node.getBBox().height)
-    originalWidth = Math.round(node.getBBox().width)
-
-    select(node)
-      .attr("width", isFull ? `${originalWidth}pt` : "100%")
-      .attr("height", isFull ? `${originalHeight}pt` : "100%")
   }
 
   useEffect(() => {
@@ -79,9 +90,7 @@ export function GraphVizChart({
     } catch (error) {
       logError(error)
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propWidth, element.spec])
+  }, [propHeight, propWidth, element.spec, chartId, setSvgDimensions])
 
   const elementDimensions = getChartDimensions()
   const width: number = elementDimensions.chartWidth || propWidth
