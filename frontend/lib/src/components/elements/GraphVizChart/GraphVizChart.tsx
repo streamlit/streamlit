@@ -60,7 +60,9 @@ export function GraphVizChart({
   const setSvgDimensions = useMemo(() => {
     return (node: SVGGraphicsElement): void => {
       const bbox = node.getBBox()
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       originalHeight = Math.round(bbox.height)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       originalWidth = Math.round(bbox.width)
 
       select(node)
