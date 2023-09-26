@@ -20,7 +20,6 @@ import pyarrow as pa
 from typing_extensions import TypeAlias
 
 from streamlit import type_util
-from streamlit.deprecation_util import deprecate_func_name
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
