@@ -70,7 +70,7 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
     >
       <ModalHeader>Next steps</ModalHeader>
       <ModalBody>
-        <StyledDialogContainer>
+        <StyledDialogContainer data-testid="stVideoRecordedDialog">
           <StyledRow>
             <StyledFirstColumn>Step 1</StyledFirstColumn>
             <StyledSecondColumn>

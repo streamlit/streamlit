@@ -16,9 +16,9 @@
 
 import React from "react"
 import { BaseProvider, LightTheme } from "baseui"
-import { ReactWrapper } from "enzyme"
-
-import { Modal, ModalHeader, ModalBody, mount } from "@streamlit/lib"
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
+import { render } from "@streamlit/lib"
 import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = jest.fn()
@@ -32,48 +32,52 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 
 describe("VideoRecordedDialog", () => {
   const props = getProps()
-  let wrapper: ReactWrapper
 
-  beforeEach(() => {
-    wrapper = mount(
+  it("renders without crashing", () => {
+    render(
       <BaseProvider theme={LightTheme}>
         <VideoRecordedDialog {...props} />
       </BaseProvider>
     )
-  })
-
-  afterEach(() => {
-    wrapper.unmount()
-  })
-
-  it("renders without crashing", () => {
-    expect(wrapper.html()).not.toBeNull()
+    expect(screen.getByTestId("stModal")).toBeInTheDocument()
+    expect(screen.getByTestId("stVideoRecordedDialog")).toBeInTheDocument()
   })
 
   it("should render a header", () => {
-    const headerWrapper = wrapper.find(ModalHeader)
-    expect(headerWrapper.props().children).toBe("Next steps")
+    render(
+      <BaseProvider theme={LightTheme}>
+        <VideoRecordedDialog {...props} />
+      </BaseProvider>
+    )
+    expect(screen.getByText("Next steps")).toHaveStyle("font-weight: 600")
   })
 
   it("should render a video", () => {
-    const bodyWrapper = wrapper.find(ModalBody)
-
-    expect(bodyWrapper.find("StyledVideo").length).toBe(1)
+    render(
+      <BaseProvider theme={LightTheme}>
+        <VideoRecordedDialog {...props} />
+      </BaseProvider>
+    )
+    expect(screen.getByTestId("stVideoRecordedDialog")).toBeInTheDocument()
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "https://www.webmproject.org/"
+    )
     expect(URL.createObjectURL).toHaveBeenCalled()
   })
 
   it("should render a download button", () => {
-    const buttonWrapper = wrapper.find(ModalBody).find("button")
+    render(
+      <BaseProvider theme={LightTheme}>
+        <VideoRecordedDialog {...props} />
+      </BaseProvider>
+    )
+    const downloadButton = screen.getByRole("button", {
+      name: "Save video to disk",
+    })
 
-    buttonWrapper.simulate("click")
-
-    expect(buttonWrapper.length).toBe(1)
+    expect(downloadButton).toBeInTheDocument()
+    fireEvent.click(downloadButton)
     expect(props.onClose).toHaveBeenCalled()
-  })
-
-  it("should render a Modal with overridden width", () => {
-    const overrides = wrapper.find(Modal).prop("overrides")
-    // @ts-expect-error
-    expect(overrides.Dialog.style.width).toEqual("80vw")
   })
 })
