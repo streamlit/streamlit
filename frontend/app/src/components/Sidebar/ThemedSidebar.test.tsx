@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { emotionLightTheme, mount, mockEndpoints } from "@streamlit/lib"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { emotionLightTheme, render, mockEndpoints } from "@streamlit/lib"
 import { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
 
@@ -35,36 +37,32 @@ function getProps(
 
 describe("ThemedSidebar Component", () => {
   it("should render without crashing", () => {
-    const wrapper = mount(<ThemedSidebar {...getProps()} />)
+    render(<ThemedSidebar {...getProps()} />)
 
-    expect(wrapper.find("Sidebar").exists()).toBe(true)
+    expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
   it("should switch bgColor and secondaryBgColor", () => {
-    const wrapper = mount(<ThemedSidebar {...getProps()} />)
+    render(<ThemedSidebar {...getProps()} />)
 
-    const updatedTheme = wrapper.find("Sidebar").prop("theme")
-
-    // @ts-expect-error
-    expect(updatedTheme.colors.bgColor).toBe(
-      emotionLightTheme.colors.secondaryBg
-    )
-    // @ts-expect-error
-    expect(updatedTheme.inSidebar).toBe(true)
+    expect(screen.getByTestId("stSidebar")).toHaveStyle({
+      backgroundColor: emotionLightTheme.colors.secondaryBg,
+    })
   })
 
-  it("plumbs appPages, currentPageName, and onPageChange to main Sidebar component", () => {
+  it("plumbs appPages to main Sidebar component", () => {
     const appPages = [
       { pageName: "streamlit_app", scriptPath: "streamlit_app.py" },
+      { pageName: "other_app_page", scriptPath: "other_app_page.py" },
     ]
-    const wrapper = mount(<ThemedSidebar {...getProps({ appPages })} />)
+    render(<ThemedSidebar {...getProps({ appPages })} />)
 
-    expect(wrapper.find("Sidebar").prop("appPages")).toEqual(appPages)
-    expect(wrapper.find("Sidebar").prop("currentPageScriptHash")).toBe(
-      "page_hash"
-    )
-    expect(typeof wrapper.find("Sidebar").prop("onPageChange")).toBe(
-      "function"
-    )
+    // Check Sidebar & SidebarNav render
+    expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
+    expect(screen.getByTestId("stSidebarNav")).toBeInTheDocument()
+
+    // Check the app pages passed
+    expect(screen.getByText("streamlit app")).toBeInTheDocument()
+    expect(screen.getByText("other app page")).toBeInTheDocument()
   })
 })
