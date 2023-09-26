@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef, useCallback } from "react"
+import React, { ReactElement, useEffect, useRef } from "react"
 import { select } from "d3"
 import { graphviz } from "d3-graphviz"
 import { logError } from "@streamlit/lib/src/util/log"
@@ -54,7 +54,10 @@ export function GraphVizChart({
     isFullRef.current = isFull
   }, [isFull])
 
-  const setSvgDimensions = useCallback((node: SVGGraphicsElement): void => {
+  let originalHeight = 0
+  let originalWidth = 0
+
+  const setSvgDimensions = (node: SVGGraphicsElement): void => {
     const bbox = node.getBBox()
     originalHeight = Math.round(bbox.height)
     originalWidth = Math.round(bbox.width)
@@ -62,10 +65,7 @@ export function GraphVizChart({
     select(node)
       .attr("width", isFullRef.current ? "100%" : `${originalWidth}pt`)
       .attr("height", isFullRef.current ? "100%" : `${originalHeight}pt`)
-  }, [])
-
-  let originalHeight = 0
-  let originalWidth = 0
+  }
 
   const getChartDimensions = (): Dimensions => {
     const chartWidth =
@@ -90,7 +90,8 @@ export function GraphVizChart({
     } catch (error) {
       logError(error)
     }
-  }, [propHeight, propWidth, element.spec, chartId, setSvgDimensions])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propHeight, propWidth, element.spec, chartId])
 
   const elementDimensions = getChartDimensions()
   const width: number = elementDimensions.chartWidth || propWidth
