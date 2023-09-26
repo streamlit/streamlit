@@ -292,10 +292,6 @@ class ArrowMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
             Table to concat. Optional.
-            Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with ``config.dataFrameSerialization = "legacy"``).
-            To use pyarrow tables, please enable pyarrow by changing the config setting,
-            ``config.dataFrameSerialization = "arrow"``.
 
         **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
             The named dataset to concat. Optional. You can only pass in 1

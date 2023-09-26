@@ -131,10 +131,6 @@ class ArrowAltairMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
-            Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with ``config.dataFrameSerialization = "legacy"``).
-            To use pyarrow tables, please enable pyarrow by changing the config setting,
-            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
@@ -298,10 +294,6 @@ class ArrowAltairMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
-            Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with ``config.dataFrameSerialization = "legacy"``).
-            To use pyarrow tables, please enable pyarrow by changing the config setting,
-            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
@@ -466,10 +458,6 @@ class ArrowAltairMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, or dict
             Data to be plotted.
-            Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with ``config.dataFrameSerialization = "legacy"``).
-            To use pyarrow tables, please enable pyarrow by changing the config setting,
-            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
@@ -637,10 +625,6 @@ class ArrowAltairMixin:
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict or None
             Data to be plotted.
-            Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with ``config.dataFrameSerialization = "legacy"``).
-            To use pyarrow tables, please enable pyarrow by changing the config setting,
-            ``config.dataFrameSerialization = "arrow"``.
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.

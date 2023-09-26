@@ -695,7 +695,7 @@ class DeltaGenerator(
         more data to a line chart:
 
         >>> # Assuming df1 and df2 from the example above still exist...
-        >>> my_chart = st._arrow_line_chart(df1)
+        >>> my_chart = st.line_chart(df1)
         >>> my_chart._arrow_add_rows(df2)
         >>> # Now the chart shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
@@ -734,7 +734,7 @@ class DeltaGenerator(
             )
 
         # When doing _arrow_add_rows on an element that does not already have data
-        # (for example, st._arrow_line_chart() without any args), call the original
+        # (for example, st.line_chart() without any args), call the original
         # st._arrow_foo() element with new data instead of doing a _arrow_add_rows().
         if (
             self._cursor.props["delta_type"] in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
@@ -742,8 +742,8 @@ class DeltaGenerator(
         ):
             # IMPORTANT: This assumes delta types and st method names always
             # match!
-            # delta_type starts with "arrow_", but st_method_name starts with "_arrow_".
-            st_method_name = "_" + self._cursor.props["delta_type"]
+            # delta_type starts with "arrow_", but st_method_name doesn't use this prefix.
+            st_method_name = self._cursor.props["delta_type"].replace("arrow_", "")
             st_method = getattr(self, st_method_name)
             st_method(data, **kwargs)
             return None

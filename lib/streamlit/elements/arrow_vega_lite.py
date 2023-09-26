@@ -54,10 +54,6 @@ class ArrowVegaLiteMixin:
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
-            Pyarrow tables are not supported by Streamlit's legacy DataFrame serialization
-            (i.e. with ``config.dataFrameSerialization = "legacy"``).
-            To use pyarrow tables, please enable pyarrow by changing the config setting,
-            ``config.dataFrameSerialization = "arrow"``.
 
         spec : dict or None
             The Vega-Lite spec for the chart. If the spec was already passed in
