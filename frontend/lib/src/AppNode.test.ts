@@ -25,7 +25,6 @@ import {
 import { IndexTypeName } from "./dataframes/Quiver"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
-import { toImmutableProto } from "./util/immutableProto"
 import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
 
@@ -87,21 +86,6 @@ describe("AppNode.setIn", () => {
     expect(() => BLOCK.setIn([1, 2], text("new"), NO_SCRIPT_RUN_ID)).toThrow(
       "Bad 'setIn' index 2 (should be between [0, 1])"
     )
-  })
-})
-
-describe("ElementNode.immutableElement", () => {
-  it("returns an immutableJS element", () => {
-    const node = text("ahoy!")
-    expect(node.immutableElement).toEqual(
-      toImmutableProto(Element, new Element({ text: { body: "ahoy!" } }))
-    )
-  })
-
-  it("does not recompute its value", () => {
-    // accessing `immutableElement` twice should return the same instance.
-    const node = text("ahoy!")
-    expect(node.immutableElement).toStrictEqual(node.immutableElement)
   })
 })
 

@@ -15,7 +15,6 @@
  */
 
 import { produce } from "immer"
-import { Map as ImmutableMap } from "immutable"
 import {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
@@ -33,7 +32,6 @@ import {
 } from "./components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
-import { toImmutableProto } from "./util/immutableProto"
 import {
   makeElementWithInfoText,
   makeElementWithErrorText,
@@ -125,19 +123,6 @@ export class ElementNode implements AppNode {
 
   public readonly scriptRunId: string
 
-  /**
-   * A lazily-created immutableJS version of our element.
-   *
-   * This is temporary! `immutableElement` is currently needed for
-   * dataframe-consuming elements because our dataframe API is
-   * immutableJS-based. It'll go away when we've converted to an ArrowJS-based
-   * dataframe API.
-   *
-   * Because most elements do *not* use the Dataframe API, and therefore
-   * do not need to access `immutableElement`, it is calculated lazily.
-   */
-  private lazyImmutableElement?: ImmutableMap<string, any>
-
   private lazyQuiverElement?: Quiver
 
   private lazyVegaLiteChartElement?: VegaLiteChartElement
@@ -151,16 +136,6 @@ export class ElementNode implements AppNode {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
-  }
-
-  public get immutableElement(): ImmutableMap<string, any> {
-    if (this.lazyImmutableElement !== undefined) {
-      return this.lazyImmutableElement
-    }
-
-    const toReturn = toImmutableProto(Element, this.element)
-    this.lazyImmutableElement = toReturn
-    return toReturn
   }
 
   public get quiverElement(): Quiver {

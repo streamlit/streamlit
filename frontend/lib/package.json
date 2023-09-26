@@ -57,7 +57,6 @@
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
     "immer": "^9.0.19",
-    "immutable": "^4.2.3",
     "json5": "^2.2.3",
     "katex": "^0.16.4",
     "lodash": "^4.17.21",
