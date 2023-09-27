@@ -19,7 +19,7 @@ coverage==7.3.1
 cryptography==41.0.4
 cx-Oracle==7.3.0
 cycler==0.11.0
-dataclasses-json==0.6.0
+dataclasses-json==0.6.1
 distlib==0.3.7
 docutils==0.20.1
 execnet==2.0.2
@@ -44,7 +44,7 @@ jsonschema==4.19.1
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.5
-langchain==0.0.301
+langchain==0.0.302
 langsmith==0.0.40
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
@@ -59,7 +59,7 @@ mypy-protobuf==3.3.0
 mysqlclient==2.2.0
 nh3==0.2.14
 nodeenv==1.8.0
-numexpr==2.8.6
+numexpr==2.8.7
 numpy==1.26.0
 opencv-python==4.8.0.76
 packaging==23.1
@@ -86,7 +86,7 @@ pyee==9.0.4
 Pygments==2.16.1
 pyodbc==4.0.39
 pyparsing==3.1.1
-pyspark==3.4.1
+pyspark==3.5.0
 pytest==7.4.2
 pytest-base-url==2.0.0
 pytest-cov==4.1.0
