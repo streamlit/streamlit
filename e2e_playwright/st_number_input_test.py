@@ -15,7 +15,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_number_input_widget_display(
@@ -96,6 +96,7 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
     for i, button in enumerate(number_input_up_buttons.all()):
         if i not in [5, 9]:
             button.click()
+            wait_for_app_run(app)
 
     markdown_elements = app.get_by_test_id("stMarkdown")
 
