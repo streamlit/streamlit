@@ -1,11 +1,11 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.27.0",
+  "version": "1.26.0",
   "private": true,
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
+  "sideEffects": ["**/vendor/bokeh/**"],
   "files": [
     "dist"
   ],
@@ -31,7 +31,6 @@
     "@emotion-icons/material-outlined": "^3.14.0",
     "@emotion-icons/material-rounded": "^3.14.0",
     "@emotion-icons/open-iconic": "^3.14.0",
-    "@emotion/cache": "^11.10.5",
     "@emotion/is-prop-valid": "^1.2.0",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
@@ -85,7 +84,7 @@
     "react-responsive-carousel": "^3.2.23",
     "react-syntax-highlighter": "^15.5.0",
     "react-virtualized": "^9.21.2",
-    "react-webcam": "7.1.1",
+    "react-webcam": "^7.0.1",
     "react-window": "^1.8.8",
     "rehype-katex": "^6.0.2",
     "rehype-raw": "^6.1.1",

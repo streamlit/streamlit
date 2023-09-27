@@ -20,11 +20,15 @@ describe("st.bokeh_chart", () => {
   });
 
   beforeEach(() => {
-    return cy.get(".stBokehChart").should("have.length", 3);
+    return cy.get(".stBokehChart").should("have.length", 4);
   });
 
   it("shows left and right graph", () => {
     cy.getIndexed(".stBokehChart", 1).find("canvas");
     cy.getIndexed(".stBokehChart", 2).find("canvas");
   });
+
+  it("shows a bokeh slider", () => {
+    cy.getIndexed(".stBokehChart", 3).find("canvas");
+  })
 });
