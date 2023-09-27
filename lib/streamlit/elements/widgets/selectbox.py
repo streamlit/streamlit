@@ -118,9 +118,9 @@ class SelectboxMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
+        options : Iterable
             Labels for the select options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
+            by default. For pandas.DataFrame, the first column is used.
         index : int
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.

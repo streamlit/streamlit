@@ -124,11 +124,11 @@ class SelectSliderMixin:
         Display a slider widget to select items from a list.
 
         This also allows you to render a range slider by passing a two-element
-        tuple or list as the `value`.
+        tuple or list as the ``value``.
 
-        The difference between `st.select_slider` and `st.slider` is that
-        `select_slider` accepts any datatype and takes an iterable set of
-        options, while `slider` only accepts numerical or date/time data and
+        The difference between ``st.select_slider`` and ``st.slider`` is that
+        ``select_slider`` accepts any datatype and takes an iterable set of
+        options, while ``st.slider`` only accepts numerical or date/time data and
         takes a range as input.
 
         Parameters
@@ -159,7 +159,7 @@ class SelectSliderMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
+        options : Iterable
             Labels for the slider options. All options will be cast to str
             internally by default. For pandas.DataFrame, the first column is
             selected.

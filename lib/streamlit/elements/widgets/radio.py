@@ -126,11 +126,11 @@ class RadioMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
+        options : Iterable
             Labels for the radio options. Labels can include markdown as
             described in the ``label`` parameter and will be cast to str
             internally by default. For pandas.DataFrame, the first column is
-            selected.
+            used.
         index : int or None
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.

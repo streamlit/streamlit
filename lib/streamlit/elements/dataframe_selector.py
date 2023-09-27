@@ -87,7 +87,7 @@ class DataFrameSelectorMixin:
             Whether to hide the index column(s). If None (default), the visibility of
             index columns is automatically determined based on the data.
 
-        column_order : iterable of str or None
+        column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If
@@ -258,13 +258,13 @@ class DataFrameSelectorMixin:
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
             This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
             the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different lines in this chart. This argument
             can only be supplied by keyword.
 
@@ -297,7 +297,7 @@ class DataFrameSelectorMixin:
               colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
 
             For a line chart with multiple lines, where the dataframe is in
-            wide format (that is, y is a sequence of columns), this can be:
+            wide format (that is, y is a Sequence of columns), this can be:
 
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
@@ -426,13 +426,13 @@ class DataFrameSelectorMixin:
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
             This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
             the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart. This argument
             can only be supplied by keyword.
 
@@ -465,7 +465,7 @@ class DataFrameSelectorMixin:
               colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
 
             For an area chart with multiple series, where the dataframe is in
-            wide format (that is, y is a sequence of columns), this can be:
+            wide format (that is, y is a Sequence of columns), this can be:
 
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
@@ -594,13 +594,13 @@ class DataFrameSelectorMixin:
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
             This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
             the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color to use for different series in this chart. This argument
             can only be supplied by keyword.
 
@@ -633,7 +633,7 @@ class DataFrameSelectorMixin:
               colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
 
             For a bar chart with multiple series, where the dataframe is in
-            wide format (that is, y is a sequence of columns), this can be:
+            wide format (that is, y is a Sequence of columns), this can be:
 
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
@@ -766,13 +766,13 @@ class DataFrameSelectorMixin:
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
             This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings, draws several series
             on the same chart by melting your wide-format table into a long-format table behind
             the scenes. If None, draws the data of all remaining columns as data series.
             This argument can only be supplied by keyword.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
             The color of the circles representing each datapoint. This argument
             can only be supplied by keyword.
 
@@ -804,7 +804,7 @@ class DataFrameSelectorMixin:
               "#f0f", "#0000ff", then then each of those 1000 datapoints will
               be assigned "#ffaa00", "#f0f", or "#0000ff" as appropriate.
 
-            If the dataframe is in wide format (that is, y is a sequence of
+            If the dataframe is in wide format (that is, y is a Sequence of
             columns), this can also be:
 
             * A list of string colors or color tuples to be used for each of
