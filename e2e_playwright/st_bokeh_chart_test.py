@@ -23,8 +23,8 @@ def test_bokeh_chart(themed_app: Page):
     expect(bokeh_chart_elements).to_have_count(4)
 
     # shows left and right graph
-    expect(bokeh_chart_elements.nth(1).locator("canvas")).to_be_truthy()
-    expect(bokeh_chart_elements.nth(2).locator("canvas")).to_be_truthy()
+    expect(bokeh_chart_elements.nth(1).locator("canvas")).to_be_visible()
+    expect(bokeh_chart_elements.nth(2).locator("canvas")).to_be_visible()
 
     # shows a bokeh slider
-    expect(bokeh_chart_elements.nth(3).locator("canvas")).to_be_truthy()
+    expect(bokeh_chart_elements.nth(3).locator("canvas")).to_be_visible()
