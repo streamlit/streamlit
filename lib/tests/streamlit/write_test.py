@@ -56,6 +56,20 @@ class StreamlitWriteTest(unittest.TestCase):
                 "<strong>hello world</strong>", unsafe_allow_html=True
             )
 
+    def test_repr_html_no_html_tags_in_string(self):
+        """Test st.write with an object that defines _repr_html_ but does not have any
+        html tags in the returned string.
+        """
+
+        class FakeHTMLable(object):
+            def _repr_html_(self):
+                return "hello **world**"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
+            st.write(FakeHTMLable())
+
+            p.assert_called_once_with("hello **world**", unsafe_allow_html=False)
+
     def test_string(self):
         """Test st.write with a string."""
         with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:

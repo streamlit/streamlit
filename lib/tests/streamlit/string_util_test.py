@@ -78,3 +78,19 @@ class StringUtilTest(unittest.TestCase):
         self.assertEqual(string_util.simplify_number(1000000000), "1b")
 
         self.assertEqual(string_util.simplify_number(1000000000000), "1t")
+
+    @parameterized.expand(
+        [
+            # Correctly identified as containing HTML tags.
+            ("<br/>", True),
+            ("<p>foo</p>", True),
+            ("bar <div>baz</div>", True),
+            # Correctly identified as not containing HTML tags.
+            ("Hello, World", False),  # No HTML tags
+            ("<a>", False),  # No closing tag
+            ("<<a>>", False),  # Malformatted tag
+            ("a < 3 && b > 3", False),  # Easily mistaken for a tag by more naive regex
+        ]
+    )
+    def test_probably_contains_html_tags(self, text, expected):
+        self.assertEqual(string_util.probably_contains_html_tags(text), expected)
