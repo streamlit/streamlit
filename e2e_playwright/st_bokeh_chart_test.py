@@ -14,17 +14,17 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-
 
 def test_bokeh_chart(themed_app: Page):
     """Test that st.bokeh_chart renders correctly."""
     bokeh_chart_elements = themed_app.locator("[data-testid=stBokehChart]")
     expect(bokeh_chart_elements).to_have_count(4)
 
-    # shows left and right graph
-    expect(bokeh_chart_elements.nth(1).locator("canvas").first()).to_be_visible()
-    expect(bokeh_chart_elements.nth(2).locator("canvas").first()).to_be_visible()
+    # Check the visibility of each canvas by index
+    expect(bokeh_chart_elements.nth(1).locator("canvas").nth(0)).to_be_visible()
+    expect(bokeh_chart_elements.nth(1).locator("canvas").nth(1)).to_be_visible()
 
-    # shows a bokeh slider
-    expect(bokeh_chart_elements.nth(3).locator("canvas").first()).to_be_visible()
+    expect(bokeh_chart_elements.nth(2).locator("canvas")).to_be_visible()
+
+    # show a bokeh slider
+    expect(bokeh_chart_elements.nth(3).locator("canvas")).to_be_visible()
