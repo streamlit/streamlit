@@ -68,7 +68,7 @@ packaging==23.1
 pandas==2.1.1
 parameterized==0.9.0
 pathspec==0.11.2
-Pillow==9.5.0
+Pillow==10.0.1
 pixelmatch==0.3.0
 pkginfo==1.9.6
 platformdirs==3.10.0
