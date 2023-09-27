@@ -59,7 +59,14 @@ function renderIFrame({
   height: propHeight,
 }: PlotlyIFrameProps): ReactElement {
   const height = propHeight || DEFAULT_HEIGHT
-  return <iframe title="Plotly" src={url} style={{ width, height }} />
+  return (
+    <iframe
+      data-testid="stPlotlyChart"
+      title="Plotly"
+      src={url}
+      style={{ width, height }}
+    />
+  )
 }
 
 /** Render a Plotly chart from a FigureProto */
@@ -118,15 +125,53 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
+  try {
+    // console.log(`stPlotlyChart-${element.id}`)
+    const myPlot = document.getElementById(`stPlotlyChart-${element.id}`)
+    console.log(myPlot)
+    console.log(Object.getOwnPropertyNames(myPlot))
+
+    // @ts-expect-error
+    myPlot.on("plotly_click", function (data) {
+      let pts = ""
+      for (let i = 0; i < data.points.length; i++) {
+        pts =
+          "x = " +
+          data.points[i].x +
+          "\ny = " +
+          data.points[i].y.toPrecision(4) +
+          "\n\n"
+      }
+      alert("Closest point clicked:\n\n" + pts)
+    })
+  } catch (e) {
+    console.log(e)
+  }
+
   return (
-    <Plot
-      key={isFullScreen(height) ? "fullscreen" : "original"}
-      className="stPlotlyChart"
-      data={data}
-      layout={layout}
-      config={config}
-      frames={frames}
-    />
+    <div data-testid="stPlotlyChart">
+      <Plot
+        divId={`stPlotlyChart-${element.id}`}
+        key={isFullScreen(height) ? "fullscreen" : "original"}
+        className="stPlotlyChart"
+        data={data}
+        layout={layout}
+        config={config}
+        frames={frames}
+        // onClick={e => {
+
+        //   console.log(e)
+        //   console.log(e.points[0])
+        //   console.log(e.points[0].data)
+        //   console.log(e.points[0].customdata)
+        //   console.log(Object.hasOwn(e.points[0], "marker.size"))
+        //   console.log(
+        //     // @ts-expect-error
+        //     `You have clicked: x: ${e.points[0].x}, y: ${e.points[0].y}, marker.size: ${e.points[0]["marker.size"]}, hoverText: ${e.points[0].hovertext}`
+        //   )
+        // }}
+      />
+    </div>
   )
 }
 
