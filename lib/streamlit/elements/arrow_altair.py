@@ -26,6 +26,7 @@ from typing import (
     Any,
     Collection,
     Dict,
+    Hashable,
     List,
     Optional,
     Sequence,
@@ -49,7 +50,6 @@ from streamlit.color_util import (
 )
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
-from streamlit.elements.utils import last_index_for_melted_dataframes
 from streamlit.errors import Error, StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -988,7 +988,7 @@ def _generate_chart(
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
         # The last index of df so we can adjust the input df in add_rows:
-        last_index=last_index_for_melted_dataframes(df),
+        last_index=cast(Hashable, df.index[-1]) if df.index.size > 0 else None,
         # This is the input to prep_data (except for the df):
         columns=dict(
             x_column=x_column,

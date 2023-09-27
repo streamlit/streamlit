@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, Hashable, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional
 
 import streamlit
 from streamlit import config, runtime, type_util
@@ -23,19 +23,6 @@ from streamlit.runtime.state import WidgetCallback, get_session_state
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import DataFrameCompatible
-
-
-def last_index_for_melted_dataframes(
-    data: Union["DataFrameCompatible", Any]
-) -> Optional[Hashable]:
-    if type_util.is_dataframe_compatible(data):
-        data = type_util.convert_anything_to_df(data)
-
-        if data.index.size > 0:
-            return cast(Hashable, data.index[-1])
-
-    return None
 
 
 def check_callback_rules(
