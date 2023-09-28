@@ -59,6 +59,11 @@ describe("GraphVizChart Element", () => {
     logError.mockClear()
   })
 
+  afterEach(() => {
+    // @ts-expect-error
+    graphviz.mockClear()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<GraphVizChart {...props} />)
@@ -81,6 +86,7 @@ describe("GraphVizChart Element", () => {
     rerender(<GraphVizChart {...newProps} />)
 
     expect(logError).toHaveBeenCalledTimes(1)
+    expect(graphviz).toHaveBeenCalledTimes(2)
   })
 
   it("should render with height and width", () => {
