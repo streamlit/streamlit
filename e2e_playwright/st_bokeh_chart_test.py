@@ -22,7 +22,7 @@ def test_bokeh_chart(themed_app: Page):
 
     # Check the visibility of each canvas by index
     expect(bokeh_chart_elements.nth(1).locator("canvas").nth(0)).to_be_visible()
-    expect(bokeh_chart_elements.nth(1).locator("canvas").nth(2)).to_be_visible()
+    expect(bokeh_chart_elements.nth(1).locator("canvas").nth(1)).to_be_visible()
 
     expect(bokeh_chart_elements.nth(2).locator("canvas").nth(0)).to_be_visible()
 
