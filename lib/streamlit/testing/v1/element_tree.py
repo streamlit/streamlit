@@ -114,7 +114,7 @@ class Element:
         p = getattr(self.proto, self.type)
         try:
             state = self.root.session_state
-            assert state
+            assert state is not None
             return state[p.id]
         except ValueError:
             # No id field, not a widget
