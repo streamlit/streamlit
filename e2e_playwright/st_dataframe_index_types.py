@@ -33,39 +33,37 @@ st.set_page_config(layout="wide")
 st.header("Index types")
 
 st.subheader("String Index (pd.Index)")
-st._arrow_dataframe(BASE_TYPES_DF.set_index("string"), use_container_width=True)
+st.dataframe(BASE_TYPES_DF.set_index("string"), use_container_width=True)
 
 st.subheader("Float64 Index (pd.Float64Index)")
-st._arrow_dataframe(NUMBER_TYPES_DF.set_index("float64"), use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF.set_index("float64"), use_container_width=True)
 
 st.subheader("Int64 Index (pd.Int64Index)")
-st._arrow_dataframe(NUMBER_TYPES_DF.set_index("int64"), use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF.set_index("int64"), use_container_width=True)
 
 st.subheader("Uint64 Index (pd.UInt64Index)")
-st._arrow_dataframe(NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True)
 
 st.subheader("Datetime Index (pd.DatetimeIndex)")
-st._arrow_dataframe(DATETIME_TYPES_DF.set_index("datetime"), use_container_width=True)
+st.dataframe(DATETIME_TYPES_DF.set_index("datetime"), use_container_width=True)
 
 st.subheader("Date Index (pd.Index)")
-st._arrow_dataframe(DATETIME_TYPES_DF.set_index("date"), use_container_width=True)
+st.dataframe(DATETIME_TYPES_DF.set_index("date"), use_container_width=True)
 
 st.subheader("Time Index (pd.Index)")
-st._arrow_dataframe(DATETIME_TYPES_DF.set_index("time"), use_container_width=True)
+st.dataframe(DATETIME_TYPES_DF.set_index("time"), use_container_width=True)
 
 st.subheader("Interval Index (pd.IntervalIndex)")
-st._arrow_dataframe(INTERVAL_TYPES_DF.set_index("int64_both"), use_container_width=True)
+st.dataframe(INTERVAL_TYPES_DF.set_index("int64_both"), use_container_width=True)
 
 st.subheader("List Index (pd.Index)")
-st._arrow_dataframe(LIST_TYPES_DF.set_index("string_list"), use_container_width=True)
+st.dataframe(LIST_TYPES_DF.set_index("string_list"), use_container_width=True)
 
 st.subheader("Multi Index (pd.MultiIndex)")
-st._arrow_dataframe(
-    BASE_TYPES_DF.set_index(["string", "int64"]), use_container_width=True
-)
+st.dataframe(BASE_TYPES_DF.set_index(["string", "int64"]), use_container_width=True)
 
 # TODO(lukasmasuch): Add timedelta index once the type is supported
 # TODO(lukasmasuch): Add period index once the type is supported
 # TODO(lukasmasuch): Fix support for categorical index:
 # st.subheader("Categorical Index (pd.CategoricalIndex)")
-# st._arrow_dataframe(SPECIAL_TYPES_DF.set_index("categorical"), use_container_width=True)
+# st.dataframe(SPECIAL_TYPES_DF.set_index("categorical"), use_container_width=True)

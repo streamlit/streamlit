@@ -15,7 +15,6 @@
  */
 
 import { produce } from "immer"
-import { Map as ImmutableMap } from "immutable"
 import {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
@@ -26,16 +25,13 @@ import {
   ForwardMsgMetadata,
   IArrow,
   IArrowNamedDataSet,
-  NamedDataSet,
 } from "./proto"
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
 } from "./components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "./dataframes/Quiver"
-import { addRows } from "./dataframes/dataFrameProto"
 import { ensureError } from "./util/ErrorHandling"
-import { toImmutableProto } from "./util/immutableProto"
 import {
   makeElementWithInfoText,
   makeElementWithErrorText,
@@ -127,19 +123,6 @@ export class ElementNode implements AppNode {
 
   public readonly scriptRunId: string
 
-  /**
-   * A lazily-created immutableJS version of our element.
-   *
-   * This is temporary! `immutableElement` is currently needed for
-   * dataframe-consuming elements because our dataframe API is
-   * immutableJS-based. It'll go away when we've converted to an ArrowJS-based
-   * dataframe API.
-   *
-   * Because most elements do *not* use the Dataframe API, and therefore
-   * do not need to access `immutableElement`, it is calculated lazily.
-   */
-  private lazyImmutableElement?: ImmutableMap<string, any>
-
   private lazyQuiverElement?: Quiver
 
   private lazyVegaLiteChartElement?: VegaLiteChartElement
@@ -153,16 +136,6 @@ export class ElementNode implements AppNode {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
-  }
-
-  public get immutableElement(): ImmutableMap<string, any> {
-    if (this.lazyImmutableElement !== undefined) {
-      return this.lazyImmutableElement
-    }
-
-    const toReturn = toImmutableProto(Element, this.element)
-    this.lazyImmutableElement = toReturn
-    return toReturn
   }
 
   public get quiverElement(): Quiver {
@@ -233,18 +206,6 @@ export class ElementNode implements AppNode {
     }
     elements.add(this.element)
     return elements
-  }
-
-  public addRows(
-    namedDataSet: NamedDataSet,
-    scriptRunId: string
-  ): ElementNode {
-    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
-    newNode.lazyImmutableElement = addRows(
-      this.immutableElement,
-      toImmutableProto(NamedDataSet, namedDataSet)
-    )
-    return newNode
   }
 
   public arrowAddRows(
@@ -532,14 +493,6 @@ export class AppRoot {
         )
       }
 
-      case "addRows": {
-        return this.addRows(
-          deltaPath,
-          delta.addRows as NamedDataSet,
-          scriptRunId
-        )
-      }
-
       case "arrowAddRows": {
         try {
           return this.arrowAddRows(
@@ -617,20 +570,6 @@ export class AppRoot {
 
     const blockNode = new BlockNode(children, block, scriptRunId)
     return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
-  }
-
-  private addRows(
-    deltaPath: number[],
-    namedDataSet: NamedDataSet,
-    scriptRunId: string
-  ): AppRoot {
-    const existingNode = this.root.getIn(deltaPath) as ElementNode
-    if (existingNode == null) {
-      throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
-    }
-
-    const elementNode = existingNode.addRows(namedDataSet, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private arrowAddRows(

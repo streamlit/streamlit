@@ -76,11 +76,11 @@ interactive_spec = {
     "config": {"scale": {"bandPaddingInner": 0.2}},
 }
 
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
-st._arrow_vega_lite_chart(df, spec, use_container_width=True)
-st._arrow_vega_lite_chart(df, spec)
-st._arrow_vega_lite_chart(df, spec_with_width)
-st._arrow_vega_lite_chart(interactive_spec, None)
+st.vega_lite_chart(df, spec, use_container_width=True)
+st.vega_lite_chart(df, spec, use_container_width=True)
+st.vega_lite_chart(df, spec)
+st.vega_lite_chart(df, spec_with_width)
+st.vega_lite_chart(interactive_spec, None)
 
 # Screenshot comparison
 
@@ -90,7 +90,7 @@ df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 
 st.write("Using a top-level `df` and a `spec` dict:")
 
-st._arrow_vega_lite_chart(
+st.vega_lite_chart(
     df,
     {
         "mark": "bar",
@@ -104,7 +104,7 @@ st._arrow_vega_lite_chart(
 
 st.write("Using a top-level `df` and keywords as a spec:")
 
-st._arrow_vega_lite_chart(
+st.vega_lite_chart(
     df,
     mark="bar",
     x_field="a",
@@ -116,7 +116,7 @@ st._arrow_vega_lite_chart(
 
 st.write("Putting the `df` inside the spec, as a `dataset`:")
 
-st._arrow_vega_lite_chart(
+st.vega_lite_chart(
     {
         "datasets": {"foo": df},
         "data": {"name": "foo"},
@@ -131,7 +131,7 @@ st._arrow_vega_lite_chart(
 
 st.write("Putting the `df` inside the spec, as inline `data`:")
 
-st._arrow_vega_lite_chart(
+st.vega_lite_chart(
     {
         "data": df,
         "mark": "bar",
@@ -145,7 +145,7 @@ st._arrow_vega_lite_chart(
 
 st.write("Putting the `df` inside the spec, as inline `data` (different notation):")
 
-st._arrow_vega_lite_chart(
+st.vega_lite_chart(
     {
         "data": {"values": df},
         "mark": "bar",
@@ -159,7 +159,7 @@ st._arrow_vega_lite_chart(
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 
 st.write("Show streamlit theme:")
-st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
+st.vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
 
 st.write("Show default theme:")
-st._arrow_vega_lite_chart(df, spec, use_container_width=True, theme=None)
+st.vega_lite_chart(df, spec, use_container_width=True, theme=None)
