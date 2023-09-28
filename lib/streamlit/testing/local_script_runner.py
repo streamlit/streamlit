@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import os
 import time
+from copy import deepcopy
 from typing import Any
-from urllib import parse
 
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
@@ -34,15 +35,25 @@ class LocalScriptRunner(ScriptRunner):
     def __init__(
         self,
         script_path: str,
-        session_state: SessionState,
+        prev_session_state: SessionState | None = None,
+        default_timeout: float = 3,
     ):
-        """Initializes the ScriptRunner for the given script_path."""
+        """Initializes the ScriptRunner for the given script_path.
+
+        `default_timeout` sets the time in seconds before a script run is
+        timed out. It can be temporarily overridden by passing an argument to
+        `.run()`
+        """
 
         assert os.path.isfile(script_path), f"File not found at {script_path}"
 
+        self.default_timeout = default_timeout
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
-        self.session_state = session_state
+        if prev_session_state is not None:
+            self.session_state = deepcopy(prev_session_state)
+        else:
+            self.session_state = SessionState()
 
         super().__init__(
             session_id="test session id",
@@ -53,6 +64,9 @@ class LocalScriptRunner(ScriptRunner):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
         )
+
+        # Accumulates uncaught exceptions thrown by our run thread.
+        self.script_thread_exceptions: list[BaseException] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []
@@ -89,25 +103,26 @@ class LocalScriptRunner(ScriptRunner):
     def run(
         self,
         widget_state: WidgetStates | None = None,
-        query_params=None,
-        timeout: float = 3,
+        timeout: float | None = None,
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction.
 
-        Timeout is in seconds.
+        Timeout is in seconds, or None to use the default timeout of the runner.
         """
-        query_string = ""
-        if query_params:
-            query_string = parse.urlencode(query_params, doseq=True)
+        if timeout is None:
+            timeout = self.default_timeout
 
-        rerun_data = RerunData(widget_states=widget_state, query_string=query_string)
+        rerun_data = RerunData(widget_states=widget_state)
         self.request_rerun(rerun_data)
         if not self._script_thread:
             self.start()
         require_widgets_deltas(self, timeout)
 
         tree = parse_tree_from_messages(self.forward_msgs())
+        tree.script_path = self.script_path
+        tree._session_state = self.session_state
+        tree._default_timeout = self.default_timeout
         return tree
 
     def script_stopped(self) -> bool:

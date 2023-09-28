@@ -16,17 +16,7 @@ from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    List,
-    Sequence,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, Generic, List, Sequence, TypeVar, Union, cast, overload
 
 from typing_extensions import Literal, TypeAlias
 
@@ -68,9 +58,6 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.session_state import SessionState
-
-if TYPE_CHECKING:
-    from streamlit.testing.test_runner import TestRunner
 
 T = TypeVar("T")
 
@@ -123,7 +110,7 @@ class Element:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float | None = None) -> TestRunner:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
@@ -226,33 +213,12 @@ class ElementList(Generic[El]):
     def len(self) -> int:
         return len(self)
 
-    @overload
     def __getitem__(self, idx: int) -> El:
-        ...
-
-    @overload
-    def __getitem__(self, idx: slice) -> ElementList[El]:
-        ...
-
-    def __getitem__(self, idx: int | slice) -> El | ElementList[El]:
-        if isinstance(idx, slice):
-            return ElementList(self._list[idx])
-        else:
-            return self._list[idx]
+        return self._list[idx]
 
     def __iter__(self):
         yield from self._list
 
-    def __repr__(self):
-        return util.repr_(self)
-
-    def __eq__(self, other: ElementList[El] | Sequence[El]) -> bool:
-        if isinstance(other, ElementList):
-            return self._list == other._list
-        else:
-            return self._list == other
-
-    @property
     def values(self) -> Sequence[Any]:
         return [e.value for e in self]
 
@@ -267,15 +233,6 @@ class WidgetList(Generic[W], ElementList[W]):
                 return e
 
         raise KeyError(key)
-
-    def __call__(self, key: str) -> W:
-        return self.get_widget(key)
-
-    def __getitem__(self, k: int | str) -> W:
-        if isinstance(k, int):
-            return self._list[k]
-        else:
-            return self.get_widget(k)
 
 
 @dataclass(repr=False)
@@ -740,7 +697,7 @@ class NumberInput(Widget):
 class Radio(Widget, Generic[T]):
     _value: T | None | InitialValue
 
-    proto: RadioProto = field(repr=False)
+    proto: RadioProto
     options: list[str]
     horizontal: bool
 
@@ -1385,10 +1342,6 @@ class Block:
     def get(self, element_type: Literal["title"]) -> Sequence[Title]:
         ...
 
-    @overload
-    def get(self, element_type: str) -> Sequence[Node]:
-        ...
-
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
@@ -1403,7 +1356,7 @@ class Block:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float | None = None) -> TestRunner:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
@@ -1444,7 +1397,9 @@ class ElementTree(Block):
     the rerun.
     """
 
-    _runner: TestRunner | None = field(repr=False, default=None)
+    script_path: str | None = field(repr=False, default=None)
+    _session_state: SessionState | None = field(repr=False, default=None)
+    _default_timeout: float = field(repr=False, default=3)
 
     def __init__(self):
         # Expect script_path and session_state to be filled in afterwards
@@ -1466,8 +1421,8 @@ class ElementTree(Block):
 
     @property
     def session_state(self) -> SessionState:
-        assert self._runner is not None
-        return self._runner.session_state
+        assert self._session_state is not None
+        return self._session_state
 
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
@@ -1478,14 +1433,18 @@ class ElementTree(Block):
 
         return ws
 
-    def run(self, timeout: float | None = None) -> TestRunner:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
         """
-        assert self._runner is not None
+        assert self.script_path is not None
+        from streamlit.testing.local_script_runner import LocalScriptRunner
 
         widget_states = self.get_widget_states()
-        return self._runner._run(widget_states, timeout=timeout)
+        runner = LocalScriptRunner(
+            self.script_path, self.session_state, default_timeout=self._default_timeout
+        )
+        return runner.run(widget_states, timeout=timeout)
 
 
 def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
