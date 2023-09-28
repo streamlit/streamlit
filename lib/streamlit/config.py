@@ -383,8 +383,10 @@ _create_option(
         - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
     default_val="arrow",
     type_=str,
+    deprecated=True,
+    deprecation_text="Legacy serialization has been removed. All dataframes will be serialized using Apache Arrow.",
+    expiration_date="2023-11-01",
 )
-
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")

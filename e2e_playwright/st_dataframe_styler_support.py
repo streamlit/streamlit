@@ -26,7 +26,7 @@ random.seed(0)
 
 st.header("Pandas Styler: Value formatting")
 df = pd.DataFrame({"test": [3.1423424, 3.1]})
-st._arrow_dataframe(df.style.format({"test": "{:.2f}"}))
+st.dataframe(df.style.format({"test": "{:.2f}"}))
 
 st.header("Pandas Styler: Background color")
 
@@ -36,7 +36,7 @@ def highlight_first(value):
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st._arrow_dataframe(df.style.applymap(highlight_first))
+st.dataframe(df.style.applymap(highlight_first))
 
 st.header("Pandas Styler: Background and font styling")
 
@@ -64,7 +64,7 @@ styled_df.apply(
     highlight_max, props="color:white;background-color:hsl(273, 98%, 60%);", axis=1
 ).apply(highlight_max, props="color:white;background-color:purple", axis=None)
 
-st._arrow_dataframe(styled_df)
+st.dataframe(styled_df)
 
 st.header("Pandas Styler: Gradient Styling")
 
@@ -92,4 +92,4 @@ def make_pretty(styler):
 
 styled_df = weather_df.style.pipe(make_pretty)
 
-st._arrow_dataframe(styled_df)
+st.dataframe(styled_df)

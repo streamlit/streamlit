@@ -14,8 +14,7 @@
 
 """Useful classes for our native Altair-based charts.
 
-These classes are used in both Arrow-based and legacy-based charting code to pass some
-important info to add_rows.
+These classes are used to pass some important info to add_rows.
 """
 
 from dataclasses import dataclass

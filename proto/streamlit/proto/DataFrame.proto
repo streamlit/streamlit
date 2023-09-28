@@ -18,6 +18,7 @@ syntax = "proto3";
 
 import "streamlit/proto/Common.proto";
 
+// DEPRECATED: This proto message is deprecated and unsused. Use Arrow.proto instead.
 // Represents a pandas DataFrame.
 message DataFrame {
   // The data in the array.

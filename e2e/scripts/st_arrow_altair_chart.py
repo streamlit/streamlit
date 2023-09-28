@@ -23,13 +23,13 @@ np.random.seed(0)
 data = np.random.randn(200, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
-st._arrow_altair_chart(chart, theme=None)
+st.altair_chart(chart, theme=None)
 
 st.write("Show default vega lite theme:")
-st._arrow_altair_chart(chart, theme=None)
+st.altair_chart(chart, theme=None)
 
 st.write("Show streamlit theme:")
-st._arrow_altair_chart(chart, theme="streamlit")
+st.altair_chart(chart, theme="streamlit")
 
 st.write("Overwrite theme config:")
 chart = (
@@ -37,7 +37,7 @@ chart = (
     .mark_circle()
     .encode(x="a", y="b", size="c", color="c")
 )
-st._arrow_altair_chart(chart, theme="streamlit")
+st.altair_chart(chart, theme="streamlit")
 
 data = pd.DataFrame(
     {
@@ -49,13 +49,12 @@ data = pd.DataFrame(
 chart = alt.Chart(data).mark_bar().encode(x="a", y="b")
 
 st.write("Bar chart with overwritten theme props:")
-st._arrow_altair_chart(chart.configure_mark(color="black"), theme="streamlit")
+st.altair_chart(chart.configure_mark(color="black"), theme="streamlit")
 
 # mark_arc was added in 4.2, but we have to support altair 4.0-4.1, so we
 # have to skip this part of the test when testing min versions.
 major, minor, patch = alt.__version__.split(".")
 if not (major == "4" and minor < "2"):
-
     source = pd.DataFrame(
         {"category": [1, 2, 3, 4, 5, 6], "value": [4, 6, 10, 3, 7, 8]}
     )
@@ -70,7 +69,7 @@ if not (major == "4" and minor < "2"):
     )
 
     st.write("Pie Chart with more than 4 Legend items")
-    st._arrow_altair_chart(chart, theme="streamlit")
+    st.altair_chart(chart, theme="streamlit")
 
 # taken from vega_datasets barley example
 barley = alt.UrlData(

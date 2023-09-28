@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st._arrow_altair_chart", () => {
+describe("st.altair_chart", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 

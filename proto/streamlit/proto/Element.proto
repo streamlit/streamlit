@@ -82,7 +82,9 @@ message Element {
     Checkbox checkbox = 20;
     ColorPicker color_picker = 35;
     ComponentInstance component_instance = 37;
+    // DEPRECATED: This element is deprecated and unused:
     DataFrame data_frame = 3;
+    // DEPRECATED: This element is deprecated and unused:
     DataFrame table = 11;
     DateInput date_input = 27;
     DeckGlJsonChart deck_gl_json_chart = 34;
@@ -112,6 +114,7 @@ message Element {
     TextInput text_input = 24;
     TimeInput time_input = 26;
     Toast toast = 50;
+    // DEPRECATED: This element is deprecated and unused:
     VegaLiteChart vega_lite_chart = 10;
     Video video = 14;
     Heading heading = 47;

@@ -18,6 +18,7 @@ syntax = "proto3";
 
 import "streamlit/proto/DataFrame.proto";
 
+// DEPRECATED: This proto message is deprecated and unsused.
 // A dataset that can be referenced by name.
 message NamedDataSet {
   // The dataset name.

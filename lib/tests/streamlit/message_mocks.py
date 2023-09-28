@@ -15,7 +15,7 @@
 """Shared protobuf message mocking utilities."""
 
 from streamlit.cursor import make_delta_path
-from streamlit.elements import legacy_data_frame
+from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -25,7 +25,7 @@ def create_dataframe_msg(df: Data, id: int = 1) -> ForwardMsg:
     """Create a mock legacy_data_frame ForwardMsg."""
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
-    legacy_data_frame.marshall_data_frame(df, msg.delta.new_element.data_frame)
+    arrow.marshall(msg.delta.new_element.arrow_data_frame, df)
     return msg
 
 

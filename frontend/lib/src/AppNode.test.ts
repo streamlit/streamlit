@@ -21,14 +21,10 @@ import {
   Element,
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
-  NamedDataSet,
 } from "./proto"
 import { IndexTypeName } from "./dataframes/Quiver"
-import { mockDataFrame as mockDataFrameData } from "./components/elements/DataFrame/mock"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
-import { addRows } from "./dataframes/dataFrameProto"
-import { toImmutableProto } from "./util/immutableProto"
 import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { UNICODE } from "./mocks/arrow"
 
@@ -90,21 +86,6 @@ describe("AppNode.setIn", () => {
     expect(() => BLOCK.setIn([1, 2], text("new"), NO_SCRIPT_RUN_ID)).toThrow(
       "Bad 'setIn' index 2 (should be between [0, 1])"
     )
-  })
-})
-
-describe("ElementNode.immutableElement", () => {
-  it("returns an immutableJS element", () => {
-    const node = text("ahoy!")
-    expect(node.immutableElement).toEqual(
-      toImmutableProto(Element, new Element({ text: { body: "ahoy!" } }))
-    )
-  })
-
-  it("does not recompute its value", () => {
-    // accessing `immutableElement` twice should return the same instance.
-    const node = text("ahoy!")
-    expect(node.immutableElement).toStrictEqual(node.immutableElement)
   })
 })
 
@@ -870,42 +851,6 @@ describe("AppRoot.applyDelta", () => {
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
-  })
-
-  const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
-  it.each(addRowsTypes)("handles 'addRows' for %s", elementType => {
-    // Create an app with a dataframe node
-    const root = AppRoot.empty().applyDelta(
-      "preAddRows",
-      makeProto(DeltaProto, {
-        newElement: { [elementType]: mockDataFrameData },
-      }),
-      forwardMsgMetadata([0, 0])
-    )
-
-    // Add rows
-    const newRoot = root.applyDelta(
-      "postAddRows",
-      makeProto(DeltaProto, { addRows: { data: mockDataFrameData } }),
-      forwardMsgMetadata([0, 0])
-    )
-
-    // Our new element should look like the result of calling `addRows`
-    // with the same dataframe data twice.
-    const expectedData = addRows(
-      toImmutableProto(
-        Element,
-        makeProto(Element, { [elementType]: mockDataFrameData })
-      ),
-      toImmutableProto(
-        NamedDataSet,
-        makeProto(NamedDataSet, { data: mockDataFrameData })
-      )
-    )
-
-    const addRowsElement = newRoot.main.getIn([0]) as ElementNode
-    expect(addRowsElement.scriptRunId).toBe("postAddRows")
-    expect(addRowsElement.immutableElement).toEqual(expectedData)
   })
 })
 
