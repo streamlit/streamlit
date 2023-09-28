@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("multipage apps", () => {
+describe("multipage apps",  { retries: { runMode: 1 } }, () => {
   beforeEach(() => {
     cy.loadApp("http://localhost:3000/");
   });
@@ -42,7 +42,7 @@ describe("multipage apps", () => {
     cy.get(".element-container .stMarkdown h2").should("contain", "Page 2");
   });
 
-  it("can switch between pages and edit widgets", { retries: { runMode: 1 } }, () => {
+  it("can switch between pages and edit widgets", () => {
     cy.get('.stSlider [role="slider"]')
       .click()
       .type("{rightarrow}", { force: true });

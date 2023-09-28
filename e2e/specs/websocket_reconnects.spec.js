@@ -17,7 +17,7 @@
 const INCREMENTS_PER_DISCONNECT = 5;
 const NUM_DISCONNECTS = 20;
 
-describe("websocket reconnects", () => {
+describe("websocket reconnects", { retries: { runMode: 1 } }, () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
       preserve: ["_xsrf"],
@@ -110,7 +110,7 @@ describe("websocket reconnects", () => {
     });
   });
 
-  it("retains captured pictures when the websocket connection is dropped and reconnects", { retries: { runMode: 1 } }, () => {
+  it("retains captured pictures when the websocket connection is dropped and reconnects", () => {
     // Be generous with some of the timeouts in this test as uploading and
     // rendering images can be quite slow.
     const timeout = 30000;

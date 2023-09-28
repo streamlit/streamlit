@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st.camera_input", () => {
+describe("st.camera_input",  { retries: { runMode: 1 } }, () => {
   before(() => {
     // Increasing timeout since uploading and rendering images can be slow.
     Cypress.config("defaultCommandTimeout", 30000);
@@ -29,9 +29,7 @@ describe("st.camera_input", () => {
     cy.get("[data-testid='stCameraInput']").should("have.length.at.least", 2);
   });
 
-  it("capture photo when 'Take photo' button clicked", {
-    retries: {runMode: 1}
-  }, () => {
+  it("capture photo when 'Take photo' button clicked", () => {
     // Be generous with some of the timeouts in this test as uploading and
     // rendering images can be quite slow.
     const timeout = 30000;
@@ -61,7 +59,7 @@ describe("st.camera_input", () => {
     cy.get("[data-testid='stImage']").should("not.exist");
   });
 
-  it("shows disabled widget correctly", {retries: {runMode: 1}}, () => {
+  it("shows disabled widget correctly", () => {
     cy.get("[data-testid='stCameraInput']").should("have.length.at.least", 2);
 
     cy.getIndexed("[data-testid='stCameraInput']", 1).matchThemedSnapshots("disabled-camera-input");

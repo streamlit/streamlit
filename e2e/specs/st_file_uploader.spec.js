@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st.file_uploader", () => {
+describe("st.file_uploader", { retries: { runMode: 1 } }, () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
       preserve: ["_xsrf"],
@@ -177,7 +177,7 @@ describe("st.file_uploader", () => {
     });
   });
 
-  it("uploads and deletes multiple files quickly", { retries: { runMode: 1 } }, () => {
+  it("uploads and deletes multiple files quickly", () => {
     const fileName1 = "file1.txt";
     const fileName2 = "file2.txt";
     const uploaderIndex = 2;
@@ -396,7 +396,7 @@ describe("st.file_uploader", () => {
   });
 
   // regression test for https://github.com/streamlit/streamlit/issues/4256 bug
-  it("does not call a callback when not changed", { retries: { runMode: 1 } }, () => {
+  it("does not call a callback when not changed", () => {
     const fileName1 = "file1.txt";
     const uploaderIndex = 6;
 
