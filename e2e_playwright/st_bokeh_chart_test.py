@@ -20,7 +20,7 @@ def test_bokeh_chart(themed_app: Page):
     bokeh_chart_elements = themed_app.locator("[data-testid=stBokehChart]")
     expect(bokeh_chart_elements).to_have_count(4)
 
-    # Check the visibility of each canvas by index
+    # left and right canvas
     expect(bokeh_chart_elements.nth(1).locator("canvas").nth(0)).to_be_visible()
     expect(bokeh_chart_elements.nth(1).locator("canvas").nth(1)).to_be_visible()
 
