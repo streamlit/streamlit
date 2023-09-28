@@ -14,6 +14,7 @@
 
 """Streamlit support for Plotly charts."""
 
+import hashlib
 import json
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
@@ -160,15 +161,23 @@ class PlotlyMixin:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
+        id = ""
+        if figure_or_data is not None:
+            spec = figure_or_data.to_json()
+            json_string = json.dumps(spec)
+            json_bytes = json_string.encode("utf-8")
+            id = hashlib.md5(json_bytes).hexdigest()
+
         marshall(
             plotly_chart_proto,
             figure_or_data,
             use_container_width,
             sharing,
             theme,
+            id,
             **kwargs,
         )
-        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
+        self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":
@@ -182,6 +191,7 @@ def marshall(
     use_container_width: bool,
     sharing: SharingMode,
     theme: Union[None, Literal["streamlit"]],
+    id: str,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -224,6 +234,7 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
+    proto.id = id
 
 
 @caching.cache
@@ -238,7 +249,7 @@ def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> "go.Figure":
         import chart_studio.plotly as ply
     except ImportError:
         import plotly.plotly as ply
-
+    print("_plot_to_url_or_load_cached_url")
     return ply.plot(*args, **kwargs)
 
 
