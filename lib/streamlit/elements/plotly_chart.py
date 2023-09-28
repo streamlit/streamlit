@@ -177,7 +177,7 @@ class PlotlyMixin:
             id,
             **kwargs,
         )
-        self.dg._enqueue("plotly_chart", plotly_chart_proto)
+        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
     def dg(self) -> "DeltaGenerator":
@@ -249,7 +249,6 @@ def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> "go.Figure":
         import chart_studio.plotly as ply
     except ImportError:
         import plotly.plotly as ply
-    print("_plot_to_url_or_load_cached_url")
     return ply.plot(*args, **kwargs)
 
 
