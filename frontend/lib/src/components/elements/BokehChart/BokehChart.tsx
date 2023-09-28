@@ -21,13 +21,13 @@ import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 // We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)
 // Importing these files will cause global Bokeh to be mutated
 // Consumers of this component will have to provide these js files
-// bokeh.esm is renamed from bokeh-2.4.3.esm.min.js because addon bokeh scripts have hardcoded path to bokeh main script ("import main from “./bokeh.esm.js")
-import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-api-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-gl-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-mathjax-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-tables-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-widgets-2.4.3.esm.min"
+// bokeh.esm is renamed from bokeh-3.0.3.esm.min.js because addon bokeh scripts have hardcoded path to bokeh main script ("import main from “./bokeh.esm.js")
+import * as Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
+import "@streamlit/lib/src/vendor/bokeh/bokeh-api.esm.min"
+import "@streamlit/lib/src/vendor/bokeh/bokeh-gl.esm.min"
+import "@streamlit/lib/src/vendor/bokeh/bokeh-mathjax.esm.min"
+import "@streamlit/lib/src/vendor/bokeh/bokeh-tables.esm.min"
+import "@streamlit/lib/src/vendor/bokeh/bokeh-widgets.esm.min"
 
 export interface BokehChartProps {
   width: number
@@ -108,7 +108,7 @@ export function BokehChart({
       // embed_item is actually an async function call, so a race condition
       // can occur if updateChart is called twice, leading to two Bokeh charts
       // to be embedded at the same time.
-      Bokeh.embed.embed_item(data, chartId)
+      Bokeh.default.embed.embed_item(data, chartId)
     }
   }
 

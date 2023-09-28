@@ -23,14 +23,14 @@
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
     <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.png" />
-    <link rel="preload" href="%PUBLIC_URL%/static/media/SourceSansPro-Regular.0d69e5ff5e92ac64a0c9.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="%PUBLIC_URL%/static/media/SourceSerifPro-SemiBold.5c1d378dd5990ef334ca.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="%PUBLIC_URL%/static/media/SourceSansPro-Bold.118dea98980e20a81ced.woff2" as="font" type="font/woff2" crossorigin>
 
     <title>Streamlit</title>
 
     <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
     <script> window.prerenderReady = false; </script>
+    <!-- TODO(willhuang1997): This should likely be lazy loaded as this is only a requirement for bokeh. In addition the version is wrong-->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

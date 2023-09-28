@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-ST_BOKEH_VERSION: Final = "2.4.3"
+ST_BOKEH_VERSION: Final = "3.2.2"
 
 
 class BokehMixin:
@@ -83,8 +83,9 @@ class BokehMixin:
 
         if bokeh.__version__ != ST_BOKEH_VERSION:
             raise StreamlitAPIException(
-                f"Streamlit only supports Bokeh version {ST_BOKEH_VERSION}, "
-                f"but you have version {bokeh.__version__} installed. Please "
+                f"Streamlit only supports Bokeh version {ST_BOKEH_VERSION} "
+                f"because Bokeh needs the js and python versions to be the same (https://discourse.bokeh.org/t/version-libary-issues-between-python-and-bokeh/4555). "
+                f"You have version {bokeh.__version__} installed. Please "
                 f"run `pip install --force-reinstall --no-deps bokeh=="
                 f"{ST_BOKEH_VERSION}` to install the correct version."
             )
