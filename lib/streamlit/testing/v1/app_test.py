@@ -32,10 +32,31 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
+    Caption,
     Checkbox,
+    Code,
+    ColorPicker,
+    DateInput,
+    Divider,
+    ElementList,
     ElementTree,
+    Exception,
+    Header,
+    Latex,
+    Markdown,
+    Multiselect,
     Node,
+    NumberInput,
     Radio,
+    Selectbox,
+    SelectSlider,
+    Slider,
+    Subheader,
+    Text,
+    TextArea,
+    TextInput,
+    TimeInput,
+    Title,
     WidgetList,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
@@ -135,12 +156,92 @@ class AppTest:
         return self._tree.main
 
     @property
+    def caption(self) -> ElementList[Caption]:
+        return self._tree.caption
+
+    @property
     def checkbox(self) -> WidgetList[Checkbox]:
         return self._tree.checkbox
 
     @property
+    def code(self) -> ElementList[Code]:
+        return self._tree.code
+
+    @property
+    def color_picker(self) -> WidgetList[ColorPicker]:
+        return self._tree.color_picker
+
+    @property
+    def date_input(self) -> WidgetList[DateInput]:
+        return self._tree.date_input
+
+    @property
+    def divider(self) -> ElementList[Divider]:
+        return self._tree.divider
+
+    @property
+    def exception(self) -> ElementList[Exception]:
+        return self._tree.exception
+
+    @property
+    def header(self) -> ElementList[Header]:
+        return self._tree.header
+
+    @property
+    def latex(self) -> ElementList[Latex]:
+        return self._tree.latex
+
+    @property
+    def markdown(self) -> ElementList[Markdown]:
+        return self._tree.markdown
+
+    @property
+    def multiselect(self) -> WidgetList[Multiselect[Any]]:
+        return self._tree.multiselect
+
+    @property
+    def number_input(self) -> WidgetList[NumberInput]:
+        return self._tree.number_input
+
+    @property
     def radio(self) -> WidgetList[Radio[Any]]:
         return self._tree.radio
+
+    @property
+    def select_slider(self) -> WidgetList[SelectSlider[Any]]:
+        return self._tree.select_slider
+
+    @property
+    def selectbox(self) -> WidgetList[Selectbox[Any]]:
+        return self._tree.selectbox
+
+    @property
+    def slider(self) -> WidgetList[Slider[Any]]:
+        return self._tree.slider
+
+    @property
+    def subheader(self) -> ElementList[Subheader]:
+        return self._tree.subheader
+
+    @property
+    def text(self) -> ElementList[Text]:
+        return self._tree.text
+
+    @property
+    def text_area(self) -> WidgetList[TextArea]:
+        return self._tree.text_area
+
+    @property
+    def text_input(self) -> WidgetList[TextInput]:
+        return self._tree.text_input
+
+    @property
+    def time_input(self) -> WidgetList[TimeInput]:
+        return self._tree.time_input
+
+    @property
+    def title(self) -> ElementList[Title]:
+        return self._tree.title
 
     def __len__(self) -> int:
         return len(self._tree)

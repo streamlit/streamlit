@@ -18,7 +18,6 @@ import pytest
 
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.script_interactions import InteractiveScriptTests
-from streamlit.testing.test_runner import TestRunner
 
 
 @pytest.mark.xfail(reason="button does not work correctly with session state")
