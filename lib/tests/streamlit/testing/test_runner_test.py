@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.testing.test_runner import TestRunner
+from streamlit.testing.v1 import AppTest
 
 
 def test_smoke():
-    sr = TestRunner.from_string(
+    sr = AppTest.from_string(
         """
         import streamlit as st
 
@@ -43,7 +43,7 @@ def test_smoke():
 
 
 def test_checkbox():
-    script = TestRunner.from_string(
+    script = AppTest.from_string(
         """
         import streamlit as st
 
@@ -65,12 +65,12 @@ def test_checkbox():
 
 
 def test_from_file():
-    script = TestRunner.from_file("../test_data/widgets_script.py")
+    script = AppTest.from_file("../test_data/widgets_script.py")
     script.run()
 
 
 def test_query_params():
-    sr = TestRunner.from_string(
+    sr = AppTest.from_string(
         """
         import streamlit as st
 
