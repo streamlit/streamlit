@@ -163,7 +163,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(ST_CHART_ARGS)
-    def testchart_with_implicit_x_and_y(
+    def test_chart_with_implicit_x_and_y(
         self, chart_command: Callable, altair_type: str
     ):
         """Test st.line_chart with implicit x and y."""
@@ -487,7 +487,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             )
 
     @parameterized.expand(ST_CHART_ARGS)
-    def testchart_with_explicit_x_plus_y_and_color_sequence(
+    def test_chart_with_explicit_x_plus_y_and_color_sequence(
         self, chart_command: Callable, altair_type: str
     ):
         """Test color support for built-in charts with wide-format table."""
