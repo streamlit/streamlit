@@ -26,7 +26,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import SessionStateProxy
-from streamlit.string_util import is_mem_address_str
+from streamlit.string_util import is_mem_address_str, probably_contains_html_tags
 from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
@@ -249,10 +249,12 @@ class WriteMixin:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
             elif hasattr(arg, "_repr_html_"):
-                self.dg.markdown(
-                    arg._repr_html_(),
-                    unsafe_allow_html=True,
+                repr_html = arg._repr_html_()
+                unsafe_allow_html = unsafe_allow_html or probably_contains_html_tags(
+                    repr_html
                 )
+
+                self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
             else:
                 stringified_arg = str(arg)
 
