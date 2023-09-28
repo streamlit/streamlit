@@ -37,10 +37,10 @@ def marshall(proto, data, default_uuid=None):
     if type_util.is_pandas_styler(data):
         _marshall_styler(proto, data, default_uuid)
 
-    df = type_util.convert_anything_to_df(data)
+    df = type_util.convert_anything_to_pandas(data)
     _marshall_index(proto, df.index)
     _marshall_columns(proto, df.columns)
-    _marshall_data(proto, df.to_numpy())
+    _marshall_data(proto, df)
 
 
 def _marshall_styler(proto, styler, default_uuid):
@@ -333,7 +333,7 @@ def _marshall_columns(proto, columns):
     proto.columns = _dataframe_to_pybytes(columns_df)
 
 
-def _marshall_data(proto, data):
+def _marshall_data(proto, df):
     """Marshall pandas.DataFrame data into an ArrowTable proto.
 
     Parameters
@@ -345,8 +345,7 @@ def _marshall_data(proto, data):
         A dataframe to marshall.
 
     """
-    df = pd.DataFrame(data)
-    proto.data = _dataframe_to_pybytes(df)
+    proto.data = type_util.serialize_anything_to_arrow_ipc(df)
 
 
 def arrow_proto_to_dataframe(proto):

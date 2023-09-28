@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
 from typing_extensions import Final, Literal
 
 import streamlit.elements.lib.dicttools as dicttools
+from streamlit import type_util
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.errors import StreamlitAPIException
@@ -193,7 +194,7 @@ def marshall(
     proto.theme = theme or ""
 
     if data is not None:
-        arrow.marshall(proto.data, data)
+        proto.data.data = type_util.serialize_anything_to_arrow_ipc(data)
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html

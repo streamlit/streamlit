@@ -270,7 +270,7 @@ def to_deckgl_json(
     if hasattr(data, "empty") and data.empty:
         return json.dumps(_DEFAULT_MAP)
 
-    df = type_util.convert_anything_to_df(data)
+    df = type_util.convert_anything_to_pandas(data)
 
     lat_col_name = _get_lat_or_lon_col_name(df, "latitude", lat, _DEFAULT_LAT_COL_NAMES)
     lon_col_name = _get_lat_or_lon_col_name(

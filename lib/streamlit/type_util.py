@@ -54,7 +54,6 @@ if TYPE_CHECKING:
     import sympy
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
-    from pandas.io.formats.style_renderer import StyleRenderer
     from plotly.graph_objs import Figure
     from pydeck import Deck
 
@@ -482,31 +481,11 @@ def is_sequence(seq: Any) -> bool:
     return True
 
 
-@overload
-def convert_anything_to_df(
+def convert_anything_to_pandas(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
 ) -> DataFrame:
-    ...
-
-
-@overload
-def convert_anything_to_df(
-    data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
-    ensure_copy: bool = False,
-    allow_styler: bool = False,
-) -> Union[DataFrame, "Styler"]:
-    ...
-
-
-def convert_anything_to_df(
-    data: Any,
-    max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
-    ensure_copy: bool = False,
-    allow_styler: bool = False,
-) -> Union[DataFrame, "Styler"]:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
@@ -521,38 +500,19 @@ def convert_anything_to_df(
         If True, make sure to always return a copy of the data. If False, it depends on the
         type of the data. For example, a Pandas DataFrame will be returned as-is.
 
-    allow_styler: bool
-        If True, allows this to return a Pandas Styler object as well. If False, returns
-        a plain Pandas DataFrame (which, of course, won't contain the Styler's styles).
-
     Returns
     -------
-    pandas.DataFrame or pandas.Styler
+    pandas.DataFrame
 
     """
     if is_type(data, _PANDAS_DF_TYPE_STR):
         return data.copy() if ensure_copy else cast(DataFrame, data)
 
     if is_pandas_styler(data):
-        # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
-        # correct Styler becayse MyPy doesn't like when we cast to Styler. It complains .data
-        # doesn't exist, when it does in fact exist in the parent class StyleRenderer!
-        sr = cast("StyleRenderer", data)
-
-        if allow_styler:
-            if ensure_copy:
-                out = copy.deepcopy(sr)
-                out.data = sr.data.copy()
-                return cast("Styler", out)
-            else:
-                return data
-        else:
-            return cast("Styler", sr.data.copy() if ensure_copy else sr.data)
+        return data.data.copy() if ensure_copy else data.data
 
     if is_type(data, "numpy.ndarray"):
-        if len(data.shape) == 0:
-            return DataFrame([])
-        return DataFrame(data)
+        return DataFrame([]) if len(data.shape) == 0 else DataFrame(data)
 
     if (
         is_type(data, _SNOWPARK_DF_TYPE_STR)
@@ -596,6 +556,14 @@ Offending object:
         ) from ex
 
 
+def serialize_anything_to_arrow_ipc(data: Any) -> bytes:
+    if isinstance(data, pa.Table):
+        return pyarrow_table_to_bytes(data)
+
+    df = convert_anything_to_pandas(data)
+    return data_frame_to_bytes(df)
+
+
 @overload
 def ensure_iterable(obj: Iterable[V_co]) -> Iterable[V_co]:
     ...
@@ -623,7 +591,7 @@ def ensure_iterable(obj: Union[OptionSequence[V_co], Iterable[V_co]]) -> Iterabl
     """
 
     if is_snowpark_or_pyspark_data_object(obj):
-        obj = convert_anything_to_df(obj)
+        obj = convert_anything_to_pandas(obj)
 
     if is_dataframe(obj):
         # Return first column as a pd.Series
@@ -1027,6 +995,7 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # The code below is copied from Altair, and slightly modified.
 # We copy this code here so we don't depend on private Altair functions.
 # Source: https://github.com/altair-viz/altair/blob/62ca5e37776f5cecb27e83c1fbd5d685a173095d/altair/utils/core.py#L193
+
 
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does

@@ -29,7 +29,7 @@ from parameterized import parameterized
 from streamlit import type_util
 from streamlit.type_util import (
     DataFormat,
-    convert_anything_to_df,
+    convert_anything_to_pandas,
     data_frame_to_bytes,
     fix_arrow_incompatible_column_types,
     is_bytes_like,
@@ -141,7 +141,7 @@ class TypeUtilTest(unittest.TestCase):
         """Test that `convert_anything_to_df` correctly converts
         a variety of types to a DataFrame.
         """
-        converted_df = type_util.convert_anything_to_df(input_data)
+        converted_df = type_util.convert_anything_to_pandas(input_data)
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
@@ -158,13 +158,13 @@ class TypeUtilTest(unittest.TestCase):
             index=[1.0, "foo", 3],
         )
 
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
+        converted_df = convert_anything_to_pandas(orginal_df, ensure_copy=True)
         # Apply a change
         converted_df["integer"] = [4, 5, 6]
         # Ensure that the original dataframe is not changed
         self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
 
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
+        converted_df = convert_anything_to_pandas(orginal_df, ensure_copy=False)
         # Apply a change
         converted_df["integer"] = [4, 5, 6]
         # The original dataframe should be changed here since ensure_copy is False
@@ -175,7 +175,7 @@ class TypeUtilTest(unittest.TestCase):
         key-value dicts to a dataframe.
         """
         data = {"a": 1, "b": 2}
-        df = convert_anything_to_df(data)
+        df = convert_anything_to_pandas(data)
         pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
 
     def test_convert_anything_to_df_passes_styler_through(self):
@@ -191,7 +191,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(original_styler, allow_styler=True)
+        out = convert_anything_to_pandas(original_styler, allow_styler=True)
         self.assertEqual(original_styler, out)
         self.assertEqual(id(original_df), id(out.data))
 
@@ -208,7 +208,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(
+        out = convert_anything_to_pandas(
             original_styler, allow_styler=True, ensure_copy=True
         )
         self.assertNotEqual(original_styler, out)
@@ -230,7 +230,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(original_styler, allow_styler=False)
+        out = convert_anything_to_pandas(original_styler, allow_styler=False)
         self.assertNotEqual(id(original_styler), id(out))
         self.assertEqual(id(original_df), id(out))
         pd.testing.assert_frame_equal(original_df, out)
@@ -248,7 +248,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(
+        out = convert_anything_to_pandas(
             original_styler, allow_styler=False, ensure_copy=True
         )
         self.assertNotEqual(id(original_styler), id(out))
@@ -260,7 +260,7 @@ class TypeUtilTest(unittest.TestCase):
             def to_pandas(self):
                 return pd.DataFrame([])
 
-        converted = convert_anything_to_df(DataFrameIsh())
+        converted = convert_anything_to_pandas(DataFrameIsh())
         assert isinstance(converted, pd.DataFrame)
         assert converted.empty
 
@@ -573,7 +573,7 @@ dtype: object""",
         """Test that `convert_df_to_data_format` correctly converts a
         DataFrame to the specified data format.
         """
-        converted_df = type_util.convert_anything_to_df(input_data)
+        converted_df = type_util.convert_anything_to_pandas(input_data)
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
@@ -606,7 +606,8 @@ dtype: object""",
                 if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
                     self.assertEqual(str(converted_data), str(input_data))
                     pd.testing.assert_frame_equal(
-                        converted_df, type_util.convert_anything_to_df(converted_data)
+                        converted_df,
+                        type_util.convert_anything_to_pandas(converted_data),
                     )
 
     def test_convert_df_to_data_format_with_unknown_data_format(self):

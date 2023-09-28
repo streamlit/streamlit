@@ -220,7 +220,7 @@ class ArrowMixin:
                 marshall_styler(proto, data, default_uuid)
 
             # Convert the input data into a pandas.DataFrame
-            data_df = type_util.convert_anything_to_df(data, ensure_copy=False)
+            data_df = type_util.convert_anything_to_pandas(data, ensure_copy=False)
             apply_data_specific_configs(
                 column_config_mapping,
                 data_df,
@@ -271,7 +271,7 @@ class ArrowMixin:
         if type_util.is_snowpark_data_object(data) or type_util.is_type(
             data, type_util._PYSPARK_DF_TYPE_STR
         ):
-            data = type_util.convert_anything_to_df(data, max_unevaluated_rows=100)
+            data = type_util.convert_anything_to_pandas(data, max_unevaluated_rows=100)
 
         # If pandas.Styler uuid is not provided, a hash of the position
         # of the element will be used. This will cause a rerender of the table
@@ -368,8 +368,4 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
         ), "Default UUID must be a string for Styler data."
         marshall_styler(proto, data, default_uuid)
 
-    if isinstance(data, pa.Table):
-        proto.data = type_util.pyarrow_table_to_bytes(data)
-    else:
-        df = type_util.convert_anything_to_df(data)
-        proto.data = type_util.data_frame_to_bytes(df)
+    proto.data = type_util.serialize_anything_to_arrow_ipc(data)

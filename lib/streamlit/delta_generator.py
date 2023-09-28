@@ -776,8 +776,6 @@ def _prep_data_for_add_rows(
     delta_type: str,
     add_rows_metadata: AddRowsMetadata,
 ) -> tuple[Data, AddRowsMetadata]:
-    out_data: Data
-
     # For some delta types we have to reshape the data structure
     # otherwise the input data and the actual data used
     # by vega_lite will be different, and it will throw an error.
@@ -787,7 +785,7 @@ def _prep_data_for_add_rows(
     ):
         import pandas as pd
 
-        df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
+        df = type_util.convert_anything_to_pandas(data, ensure_copy=True)
 
         # Make range indices start at last_index.
         if isinstance(df.index, pd.RangeIndex):
@@ -810,12 +808,8 @@ def _prep_data_for_add_rows(
             add_rows_metadata.last_index = stop - 1
 
         out_data, *_ = prep_data(df, **add_rows_metadata.columns)
-
-    else:
-        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
-        out_data = type_util.convert_anything_to_df(data, allow_styler=True)
-
-    return out_data, add_rows_metadata
+        return out_data, add_rows_metadata
+    return data, add_rows_metadata
 
 
 def _get_pandas_index_attr(
