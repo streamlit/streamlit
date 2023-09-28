@@ -147,71 +147,6 @@ class Widget(ABC, Element):
         self._value = v
         return self
 
-    @property
-    def as_button(self) -> Button:
-        assert isinstance(self, Button)
-        return self
-
-    @property
-    def as_checkbox(self) -> Checkbox:
-        assert isinstance(self, Checkbox)
-        return self
-
-    @property
-    def as_color_picker(self) -> ColorPicker:
-        assert isinstance(self, ColorPicker)
-        return self
-
-    @property
-    def as_date_input(self) -> DateInput:
-        assert isinstance(self, DateInput)
-        return self
-
-    @property
-    def as_multiselect(self) -> Multiselect[Any]:
-        assert isinstance(self, Multiselect)
-        return self
-
-    @property
-    def as_number_input(self) -> NumberInput:
-        assert isinstance(self, NumberInput)
-        return self
-
-    @property
-    def as_radio(self) -> Radio[Any]:
-        assert isinstance(self, Radio)
-        return self
-
-    @property
-    def as_select_slider(self) -> SelectSlider[Any]:
-        assert isinstance(self, SelectSlider)
-        return self
-
-    @property
-    def as_selectbox(self) -> Selectbox[Any]:
-        assert isinstance(self, Selectbox)
-        return self
-
-    @property
-    def as_slider(self) -> Slider[Any]:
-        assert isinstance(self, Slider)
-        return self
-
-    @property
-    def as_text_area(self) -> TextArea:
-        assert isinstance(self, TextArea)
-        return self
-
-    @property
-    def as_text_input(self) -> TextInput:
-        assert isinstance(self, TextInput)
-        return self
-
-    @property
-    def as_time_input(self) -> TimeInput:
-        assert isinstance(self, TimeInput)
-        return self
-
 
 El = TypeVar("El", bound=Element, covariant=True)
 
@@ -261,7 +196,7 @@ W = TypeVar("W", bound=Widget, covariant=True)
 
 
 class WidgetList(Generic[W], ElementList[W]):
-    def get_widget(self, key: str) -> W:
+    def _get_widget(self, key: str) -> W:
         for e in self._list:
             if e.key == key:
                 return e
@@ -269,13 +204,10 @@ class WidgetList(Generic[W], ElementList[W]):
         raise KeyError(key)
 
     def __call__(self, key: str) -> W:
-        return self.get_widget(key)
+        return self._get_widget(key)
 
-    def __getitem__(self, k: int | str) -> W:
-        if isinstance(k, int):
-            return self._list[k]
-        else:
-            return self.get_widget(k)
+    def __getitem__(self, k: int) -> W:
+        return self._list[k]
 
 
 @dataclass(repr=False)
