@@ -102,8 +102,7 @@ LOGGER: Final = get_logger(__name__)
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
 # List of Streamlit commands that perform a Pandas "melt" operation on
-# input dataframes.
-DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = ("line_chart", "area_chart", "bar_chart")
+# input dataframes:
 ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
     "arrow_line_chart",
     "arrow_area_chart",
@@ -511,10 +510,7 @@ class DeltaGenerator(
         # since add_rows() relies on method.__name__ == delta_type
         # TODO: Fix for all elements (or the cache warning above will be wrong)
         proto_type = delta_type
-        if proto_type in DELTA_TYPES_THAT_MELT_DATAFRAMES:
-            proto_type = "vega_lite_chart"
 
-        # Mirror the logic for arrow_ elements.
         if proto_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
             proto_type = "arrow_vega_lite_chart"
 
@@ -781,10 +777,7 @@ def _prep_data_for_add_rows(
     # For some delta types we have to reshape the data structure
     # otherwise the input data and the actual data used
     # by vega_lite will be different, and it will throw an error.
-    if (
-        delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
-        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
-    ):
+    if delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
         import pandas as pd
 
         df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
