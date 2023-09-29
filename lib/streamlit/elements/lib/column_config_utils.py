@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Mapping, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
@@ -382,8 +382,8 @@ def determine_dataframe_schema(
 
 
 # A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
-ColumnConfigMappingInput: TypeAlias = Dict[
+ColumnConfigMapping: TypeAlias = Mapping[Union[IndexIdentifierType, str], ColumnConfig]
+ColumnConfigMappingInput: TypeAlias = Mapping[
     Union[IndexIdentifierType, str],
     Union[ColumnConfig, None, str],
 ]
