@@ -249,6 +249,7 @@ def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> "go.Figure":
         import chart_studio.plotly as ply
     except ImportError:
         import plotly.plotly as ply
+
     return ply.plot(*args, **kwargs)
 
 
