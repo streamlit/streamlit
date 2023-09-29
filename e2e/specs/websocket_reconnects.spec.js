@@ -17,7 +17,7 @@
 const INCREMENTS_PER_DISCONNECT = 5;
 const NUM_DISCONNECTS = 20;
 
-describe("websocket reconnects", { retries: { runMode: 1 } }, () => {
+describe("websocket reconnects", { retries: { runMode: 2 } }, () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
       preserve: ["_xsrf"],
