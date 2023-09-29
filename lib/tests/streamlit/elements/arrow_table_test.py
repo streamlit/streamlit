@@ -48,7 +48,7 @@ class ArrowTest(DeltaGeneratorTestCase):
 
     def test_dataframe_data(self):
         df = mock_data_frame()
-        st._arrow_table(df)
+        st.table(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
@@ -56,7 +56,7 @@ class ArrowTest(DeltaGeneratorTestCase):
     def test_pyarrow_table_data(self):
         df = mock_data_frame()
         table = pa.Table.from_pandas(df)
-        st._arrow_table(table)
+        st.table(table)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
@@ -65,7 +65,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style
         styler.set_uuid("FAKE_UUID")
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.styler.uuid, "FAKE_UUID")
@@ -74,7 +74,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style
         styler.set_caption("FAKE_CAPTION")
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.styler.caption, "FAKE_CAPTION")
@@ -87,7 +87,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         styler.set_table_styles(
             [{"selector": ".blank", "props": [("background-color", "red")]}]
         )
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(
@@ -100,7 +100,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         # NOTE: If UUID is not set - a random UUID will be generated.
         styler.set_uuid("FAKE_UUID")
         styler.highlight_max(axis=None)
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(
@@ -112,7 +112,7 @@ class ArrowTest(DeltaGeneratorTestCase):
             [[1, 2, 3], [4, 5, 6]],
         )
         styler = df.style.format("{:.2%}")
-        st._arrow_table(styler)
+        st.table(styler)
 
         expected = pd.DataFrame(
             [["100.00%", "200.00%", "300.00%"], ["400.00%", "500.00%", "600.00%"]],
@@ -133,7 +133,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")
 
-        st._arrow_table(styler)
+        st.table(styler)
         mock_styler_translate.assert_called_once_with()
 
     @patch(
@@ -146,5 +146,5 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")
 
-        st._arrow_table(styler)
+        st.table(styler)
         mock_styler_translate.assert_called_once_with(False, False)

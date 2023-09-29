@@ -74,12 +74,17 @@ class InteractiveScriptTests(unittest.TestCase):
         # set unconditionally for whole process, since we are just running tests
         config.set_option("runner.postScriptGC", False)
 
-    def script_from_string(self, script: str) -> LocalScriptRunner:
+    def script_from_string(
+        self, script: str, default_timeout: float = 3
+    ) -> LocalScriptRunner:
         """Create a runner for a script with the contents from a string.
 
         Useful for testing short scripts that fit comfortably as an inline
         string in the test itself, without having to create a separate file
         for it.
+
+        `default_timeout` is the default time in seconds before a script is
+        timed out, if not overridden for an individual `.run()` call.
         """
         hasher = hashlib.md5(bytes(script, "utf-8"))
         script_name = hasher.hexdigest()
@@ -87,8 +92,16 @@ class InteractiveScriptTests(unittest.TestCase):
         path = pathlib.Path(self.tmp_script_dir.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
-        return LocalScriptRunner(str(path))
+        return LocalScriptRunner(str(path), default_timeout=default_timeout)
 
-    def script_from_filename(self, script_path: str) -> LocalScriptRunner:
-        """Create a runner for the script with the given name, for testing."""
-        return LocalScriptRunner(str(self.dir_path / script_path))
+    def script_from_filename(
+        self, script_path: str, default_timeout: float = 3
+    ) -> LocalScriptRunner:
+        """Create a runner for the script with the given name, for testing.
+
+        `default_timeout` is the default time in seconds before a script is
+        timed out, if not overridden for an individual `.run()` call.
+        """
+        return LocalScriptRunner(
+            str(self.dir_path / script_path), default_timeout=default_timeout
+        )
