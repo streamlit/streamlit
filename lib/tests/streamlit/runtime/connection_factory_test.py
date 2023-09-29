@@ -21,7 +21,12 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from parameterized import parameterized
 
-from streamlit.connections import BaseConnection, SnowparkConnection, SQLConnection
+from streamlit.connections import (
+    BaseConnection,
+    SnowflakeConnection,
+    SnowparkConnection,
+    SQLConnection,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_resource_api import _resource_caches
 from streamlit.runtime.connection_factory import (
@@ -72,6 +77,7 @@ class ConnectionFactoryTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            ("snowflake", SnowflakeConnection),
             ("snowpark", SnowparkConnection),
             ("sql", SQLConnection),
         ]
