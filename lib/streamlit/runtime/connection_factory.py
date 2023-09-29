@@ -43,7 +43,8 @@ MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
     "MySQLdb": "mysqlclient",
     "psycopg2": "psycopg2-binary",
     "sqlalchemy": "sqlalchemy",
-    "snowflake": "snowflake-snowpark-python",
+    "snowflake": "snowflake-connector-python",
+    "snowflake.connector": "snowflake-connector-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
 
