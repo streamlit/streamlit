@@ -41,11 +41,19 @@ def show_deprecation_warning(message: str) -> None:
 
 
 def make_deprecated_name_warning(
-    old_name: str, new_name: str, removal_date: str, extra_message: str | None = None
+    old_name: str,
+    new_name: str,
+    removal_date: str,
+    extra_message: str | None = None,
+    include_st_prefix: bool = True,
 ) -> str:
+    if include_st_prefix:
+        old_name = f"st.{old_name}"
+        new_name = f"st.{new_name}"
+
     return (
-        f"Please replace `st.{old_name}` with `st.{new_name}`.\n\n"
-        f"`st.{old_name}` will be removed after {removal_date}."
+        f"Please replace `{old_name}` with `{new_name}`.\n\n"
+        f"`{old_name}` will be removed after {removal_date}."
         + (f"\n\n{extra_message}" if extra_message else "")
     )
 
@@ -78,6 +86,9 @@ def deprecate_func_name(
 
     extra_message
         An optional extra message to show in the deprecation warning.
+
+    name_override
+        An optional name to use in place of func.__name__.
     """
 
     @functools.wraps(func)
@@ -97,7 +108,11 @@ def deprecate_func_name(
 
 
 def deprecate_obj_name(
-    obj: TObj, old_name: str, new_name: str, removal_date: str
+    obj: TObj,
+    old_name: str,
+    new_name: str,
+    removal_date: str,
+    include_st_prefix: bool = True,
 ) -> TObj:
     """Wrap an `st` object whose name has changed.
 
@@ -120,12 +135,18 @@ def deprecate_obj_name(
     removal_date
         A date like "2020-01-01", indicating the last day we'll guarantee
         support for the deprecated name.
+
+    include_st_prefix
+        If False, does not prefix each of the object names in the deprecation
+        essage with `st.*`. Defaults to True.
     """
 
     return _create_deprecated_obj_wrapper(
         obj,
         lambda: show_deprecation_warning(
-            make_deprecated_name_warning(old_name, new_name, removal_date)
+            make_deprecated_name_warning(
+                old_name, new_name, removal_date, include_st_prefix=include_st_prefix
+            )
         ),
     )
 
