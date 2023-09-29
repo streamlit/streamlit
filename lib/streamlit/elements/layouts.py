@@ -42,7 +42,7 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        spec : bool or None
+        border : bool or None
             Whether to show a border around the container.
 
 
