@@ -21,10 +21,10 @@ import "streamlit/proto/LabelVisibilityMessage.proto";
 message TimeInput {
   string id = 1;
   string label = 2;
-  string default = 3;
+  optional string default = 3;
   string help = 4;
   string form_id = 5;
-  string value = 6;
+  optional string value = 6;
   bool set_value = 7;
   bool disabled = 8;
   LabelVisibilityMessage label_visibility = 9;

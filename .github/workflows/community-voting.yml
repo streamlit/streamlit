@@ -1,0 +1,51 @@
+# This workflow automatically comments on issues labeled with 'type:enhancement' or 'type:bug'
+# and adds a thumbs-up reaction to the issue to encourage community voting.
+
+name: Community voting
+on:
+  issues:
+    types:
+      - labeled
+jobs:
+  add-enhancement-comment:
+    if: github.event.label.name == 'type:enhancement'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add comment to issue
+        run: gh issue comment ${{ github.event.issue.html_url }} --body "$ISSUE_BODY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_BODY: |
+            **To help Streamlit prioritize this feature, react with a 👍 (thumbs up emoji) to the initial post.**
+
+            Your vote helps us identify which enhancements matter most to our users.
+
+            ![Visits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fstreamlit%2Fstreamlit%2Fissues%2F${{ github.event.issue.number }}&title=visits&edge_flat=false)
+      - name: Upvote issue
+        uses: aidan-mundy/react-to-issue@b2a9194cf1ea483d633bc2834ed6c4c41c2a45f0
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          reactions: "+1"
+  add-bug-comment:
+    if: github.event.label.name == 'type:bug'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add comment to issue
+        run: gh issue comment ${{ github.event.issue.html_url }} --body "$ISSUE_BODY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_BODY: |
+            **If this issue affects you, please react with a 👍 (thumbs up emoji) to the initial post.**
+
+            Your feedback helps us prioritize which bugs to investigate and address first.
+
+            ![Visits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fstreamlit%2Fstreamlit%2Fissues%2F${{ github.event.issue.number }}&title=visits&edge_flat=false)
+      - name: Upvote issue
+        uses: aidan-mundy/react-to-issue@b2a9194cf1ea483d633bc2834ed6c4c41c2a45f0
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          reactions: "+1"

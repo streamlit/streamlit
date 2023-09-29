@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -64,7 +64,7 @@ jobs:
       PYTHON_VERSIONS: ${{ steps.build_info.outputs.PYTHON_VERSIONS }}
       PYTHON_MIN_VERSION: ${{ steps.build_info.outputs.PYTHON_MIN_VERSION }}
       PYTHON_MAX_VERSION: ${{ steps.build_info.outputs.PYTHON_MAX_VERSION }}
-      USE_CONSTRAINT_FILE: ${{ steps.build_info.outputs.USE_CONSTRAINT_FILE }}
+      USE_CONSTRAINTS_FILE: ${{ steps.build_info.outputs.USE_CONSTRAINTS_FILE }}
 
   py_version:
     needs:
@@ -88,12 +88,12 @@ jobs:
             (matrix.python_version == 'max' && needs.build_info.outputs.PYTHON_MAX_VERSION || matrix.python_version)
           )
         }}
-      USE_CONSTRAINT_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINT_FILE )}}"
+      USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
       CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -160,7 +160,7 @@ jobs:
 
     steps:
       - name: Checkout branch "${{ env.TARGET_BRANCH }}"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}
           # Save the access token to the local git config, so
@@ -212,7 +212,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false

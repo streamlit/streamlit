@@ -383,8 +383,10 @@ _create_option(
         - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
     default_val="arrow",
     type_=str,
+    deprecated=True,
+    deprecation_text="Legacy serialization has been removed. All dataframes will be serialized using Apache Arrow.",
+    expiration_date="2023-11-01",
 )
-
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -442,7 +444,9 @@ _create_section("client", "Settings for scripts that use Streamlit.")
 
 _create_option(
     "client.caching",
-    description="Whether to enable st.cache.",
+    description="""
+        Whether to enable st.cache. This does not affect st.cache_data or
+        st.cache_resource.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -465,9 +469,11 @@ _create_option(
         Streamlit displays app exceptions and associated tracebacks, and
         deprecation warnings, in the browser.
 
-        If set to False, an exception or deprecation warning will result in
-        a generic message being shown in the browser, and exceptions, tracebacks,
-        and deprecation warnings will be printed to the console only.""",
+        If set to False, deprecation warnings and full exception messages
+        will print to the console only. Exceptions will still display in the
+        browser with a generic error message. For now, the exception type and
+        traceback show in the browser also, but they will be removed in the
+        future.""",
     default_val=True,
     type_=bool,
     scriptable=True,
@@ -481,7 +487,8 @@ _create_option(
 
         Allowed values:
         * "auto"      : Show the developer options if the app is accessed through
-                        localhost and hide them otherwise.
+                        localhost or through Streamlit Community Cloud as a developer.
+                        Hide them otherwise.
         * "developer" : Show the developer options.
         * "viewer"    : Hide the developer options.
         * "minimal"   : Show only options set externally (e.g. through
@@ -832,10 +839,6 @@ _create_option(
 
 # Config Section: UI #
 
-# NOTE: We currently hide the ui config section in the `streamlit config show`
-# output as all of its options are hidden. If a non-hidden option is eventually
-# added, the section should be unhidden by removing it from the `SKIP_SECTIONS`
-# set in config_util.show_config.
 _create_section("ui", "Configuration of UI elements displayed in the browser.")
 
 _create_option(
@@ -843,7 +846,7 @@ _create_option(
     description="""
     Flag to hide most of the UI elements found at the top of a Streamlit app.
 
-    NOTE: This does *not* hide the hamburger menu in the top-right of an app.
+    NOTE: This does *not* hide the main menu in the top-right of an app.
     """,
     default_val=False,
     type_=bool,
@@ -871,6 +874,36 @@ _create_option(
                 https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
     sensitive=True,
+)
+
+
+# Config Section: Magic #
+
+_create_section("magic", "Settings for how Streamlit pre-processes your script")
+
+_create_option(
+    "magic.displayRootDocString",
+    description="""
+        Streamlit's "magic" parser typically skips strings that appear to be
+        docstrings. When this flag is set to True, Streamlit will instead display
+        the root-level docstring in the app, just like any other magic string.
+        This is useful for things like notebooks.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "magic.displayLastExprIfNoSemicolon",
+    description="""
+        Make Streamlit's "magic" parser always display the last expression in the
+        root file if it has no semicolon at the end. This matches the behavior of
+        Jupyter notebooks, for example.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
 )
 
 

@@ -14,7 +14,7 @@
 
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Tuple, cast
+from typing import TYPE_CHECKING, Any, Optional, Tuple, cast
 
 from streamlit.emojis import ALL_EMOJIS
 from streamlit.errors import StreamlitAPIException
@@ -43,6 +43,17 @@ def clean_text(text: "SupportsStr") -> str:
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
     return text.replace("\U0000FE0F", "") in ALL_EMOJIS
+
+
+def validate_emoji(maybe_emoji: Optional[str]) -> str:
+    if maybe_emoji is None:
+        return ""
+    elif is_emoji(maybe_emoji):
+        return maybe_emoji
+    else:
+        raise StreamlitAPIException(
+            f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
+        )
 
 
 def extract_leading_emoji(text: str) -> Tuple[str, str]:
@@ -115,3 +126,14 @@ def is_mem_address_str(string):
         return True
 
     return False
+
+
+_RE_CONTAINS_HTML = re.compile(r"(?:</[^<]+>)|(?:<[^<]+/>)")
+
+
+def probably_contains_html_tags(s: str) -> bool:
+    """Returns True if the given string contains what seem to be HTML tags.
+
+    Note that false positives/negatives are possible, so this function should not be
+    used in contexts where complete correctness is required."""
+    return bool(_RE_CONTAINS_HTML.search(s))

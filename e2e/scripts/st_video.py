@@ -19,3 +19,7 @@ import streamlit as st
 url = "https://www.w3schools.com/html/mov_bbb.mp4"
 file = requests.get(url).content
 st.video(file)
+
+# Test start time with widget
+timestamp = st.number_input("Start Time (in seconds)", min_value=0, value=6)
+st.video(url, start_time=int(timestamp))

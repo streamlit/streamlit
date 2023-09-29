@@ -24,6 +24,7 @@ from typing import (
     Hashable,
     Iterable,
     NoReturn,
+    Optional,
     Type,
     TypeVar,
     cast,
@@ -36,27 +37,17 @@ from typing_extensions import Final, Literal
 from streamlit import config, cursor, env_util, logger, runtime, type_util, util
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
-
-# DataFrame elements come in two flavors: "Legacy" and "Arrow".
-# We select between them with the DataFrameElementSelectorMixin.
+from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import ArrowMixin
-from streamlit.elements.arrow_altair import ArrowAltairMixin
+from streamlit.elements.arrow_altair import ArrowAltairMixin, prep_data
 from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
-from streamlit.elements.button import ButtonMixin
-from streamlit.elements.camera_input import CameraInputMixin
-from streamlit.elements.chat import ChatMixin
-from streamlit.elements.checkbox import CheckboxMixin
 from streamlit.elements.code import CodeMixin
-from streamlit.elements.color_picker import ColorPickerMixin
-from streamlit.elements.data_editor import DataEditorMixin
-from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
-from streamlit.elements.file_uploader import FileUploaderMixin
 from streamlit.elements.form import FormData, FormMixin, current_form_id
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
@@ -64,26 +55,31 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.legacy_altair import LegacyAltairMixin
-from streamlit.elements.legacy_data_frame import LegacyDataFrameMixin
-from streamlit.elements.legacy_vega_lite import LegacyVegaLiteMixin
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.metric import MetricMixin
-from streamlit.elements.multiselect import MultiSelectMixin
-from streamlit.elements.number_input import NumberInputMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
-from streamlit.elements.radio import RadioMixin
-from streamlit.elements.select_slider import SelectSliderMixin
-from streamlit.elements.selectbox import SelectboxMixin
-from streamlit.elements.slider import SliderMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.text import TextMixin
-from streamlit.elements.text_widgets import TextWidgetsMixin
-from streamlit.elements.time_widgets import TimeWidgetsMixin
+from streamlit.elements.toast import ToastMixin
+from streamlit.elements.widgets.button import ButtonMixin
+from streamlit.elements.widgets.camera_input import CameraInputMixin
+from streamlit.elements.widgets.chat import ChatMixin
+from streamlit.elements.widgets.checkbox import CheckboxMixin
+from streamlit.elements.widgets.color_picker import ColorPickerMixin
+from streamlit.elements.widgets.data_editor import DataEditorMixin
+from streamlit.elements.widgets.file_uploader import FileUploaderMixin
+from streamlit.elements.widgets.multiselect import MultiSelectMixin
+from streamlit.elements.widgets.number_input import NumberInputMixin
+from streamlit.elements.widgets.radio import RadioMixin
+from streamlit.elements.widgets.select_slider import SelectSliderMixin
+from streamlit.elements.widgets.selectbox import SelectboxMixin
+from streamlit.elements.widgets.slider import SliderMixin
+from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
+from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.logger import get_logger
@@ -106,12 +102,12 @@ LOGGER: Final = get_logger(__name__)
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
 # List of Streamlit commands that perform a Pandas "melt" operation on
-# input dataframes.
-DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = ("line_chart", "area_chart", "bar_chart")
+# input dataframes:
 ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
     "arrow_line_chart",
     "arrow_area_chart",
     "arrow_bar_chart",
+    "arrow_scatter_chart",
 )
 
 Value = TypeVar("Value")
@@ -190,15 +186,12 @@ class DeltaGenerator(
     TextMixin,
     TextWidgetsMixin,
     TimeWidgetsMixin,
+    ToastMixin,
     WriteMixin,
     ArrowMixin,
     ArrowAltairMixin,
     ArrowVegaLiteMixin,
     DataEditorMixin,
-    LegacyDataFrameMixin,
-    LegacyAltairMixin,
-    LegacyVegaLiteMixin,
-    DataFrameSelectorMixin,
 ):
     """Creator of Delta protobuf messages.
 
@@ -415,7 +408,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -427,7 +420,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue],
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> None:
@@ -439,7 +432,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Value,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> Value:
@@ -451,7 +444,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None = None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -463,7 +456,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -474,7 +467,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
-        last_index: Hashable | None = None,
+        add_rows_metadata: Optional[AddRowsMetadata] = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -517,10 +510,7 @@ class DeltaGenerator(
         # since add_rows() relies on method.__name__ == delta_type
         # TODO: Fix for all elements (or the cache warning above will be wrong)
         proto_type = delta_type
-        if proto_type in DELTA_TYPES_THAT_MELT_DATAFRAMES:
-            proto_type = "vega_lite_chart"
 
-        # Mirror the logic for arrow_ elements.
         if proto_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
             proto_type = "arrow_vega_lite_chart"
 
@@ -547,7 +537,7 @@ class DeltaGenerator(
             # position.
             new_cursor = (
                 dg._cursor.get_locked_cursor(
-                    delta_type=delta_type, last_index=last_index
+                    delta_type=delta_type, add_rows_metadata=add_rows_metadata
                 )
                 if dg._cursor is not None
                 else None
@@ -577,6 +567,7 @@ class DeltaGenerator(
     def _block(
         self,
         block_proto: Block_pb2.Block = Block_pb2.Block(),
+        dg_type: type | None = None,
     ) -> DeltaGenerator:
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
@@ -624,18 +615,27 @@ class DeltaGenerator(
             root_container=dg._root_container,
             parent_path=dg._cursor.parent_path + (dg._cursor.index,),
         )
-        block_dg = DeltaGenerator(
-            root_container=dg._root_container,
-            cursor=block_cursor,
-            parent=dg,
-            block_type=block_type,
+
+        # `dg_type` param added for st.status container. It allows us to
+        # instantiate DeltaGenerator subclasses from the function.
+        if dg_type is None:
+            dg_type = DeltaGenerator
+
+        block_dg = cast(
+            DeltaGenerator,
+            dg_type(
+                root_container=dg._root_container,
+                cursor=block_cursor,
+                parent=dg,
+                block_type=block_type,
+            ),
         )
         # Blocks inherit their parent form ids.
         # NOTE: Container form ids aren't set in proto.
         block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor(last_index=None)
+        dg._cursor.get_locked_cursor(add_rows_metadata=None)
         _enqueue_message(msg)
 
         caching.save_block_message(
@@ -646,123 +646,6 @@ class DeltaGenerator(
         )
 
         return block_dg
-
-    def _legacy_add_rows(
-        self: DG,
-        data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
-    ) -> DG | None:
-        """Concatenate a dataframe to the bottom of the current one.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict,
-        or None
-            Table to concat. Optional.
-
-        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
-            The named dataset to concat. Optional. You can only pass in 1
-            dataset (including the one in the data parameter).
-
-        Example
-        -------
-        >>> import streamlit as st
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>>
-        >>> df1 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> my_table = st._legacy_table(df1)
-        >>>
-        >>> df2 = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> my_table._legacy_add_rows(df2)
-        >>> # Now the table shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        You can do the same thing with plots. For example, if you want to add
-        more data to a line chart:
-
-        >>> # Assuming df1 and df2 from the example above still exist...
-        >>> my_chart = st._legacy_line_chart(df1)
-        >>> my_chart._legacy_add_rows(df2)
-        >>> # Now the chart shown in the Streamlit app contains the data for
-        >>> # df1 followed by the data for df2.
-
-        And for plots whose datasets are named, you can pass the data with a
-        keyword argument where the key is the name:
-
-        >>> my_chart = st._legacy_vega_lite_chart({
-        ...     'mark': 'line',
-        ...     'encoding': {'x': 'a', 'y': 'b'},
-        ...     'datasets': {
-        ...       'some_fancy_name': df1,  # <-- named dataset
-        ...      },
-        ...     'data': {'name': 'some_fancy_name'},
-        ... }),
-        >>> my_chart._legacy_add_rows(some_fancy_name=df2)  # <-- name used as keyword
-
-        """
-        if self._root_container is None or self._cursor is None:
-            return self
-
-        if not self._cursor.is_locked:
-            raise StreamlitAPIException("Only existing elements can `add_rows`.")
-
-        # Accept syntax st._legacy_add_rows(df).
-        if data is not None and len(kwargs) == 0:
-            name = ""
-        # Accept syntax st._legacy_add_rows(foo=df).
-        elif len(kwargs) == 1:
-            name, data = kwargs.popitem()
-        # Raise error otherwise.
-        else:
-            raise StreamlitAPIException(
-                "Wrong number of arguments to add_rows()."
-                "Command requires exactly one dataset"
-            )
-
-        # When doing _legacy_add_rows on an element that does not already have data
-        # (for example, st._legacy_line_chart() without any args), call the original
-        # st._legacy_foo() element with new data instead of doing a _legacy_add_rows().
-        if (
-            self._cursor.props["delta_type"] in DELTA_TYPES_THAT_MELT_DATAFRAMES
-            and self._cursor.props["last_index"] is None
-        ):
-            # IMPORTANT: This assumes delta types and st method names always
-            # match!
-            # delta_type doesn't have any prefix, but st_method_name starts with "_legacy_".
-            st_method_name = "_legacy_" + self._cursor.props["delta_type"]
-            st_method = getattr(self, st_method_name)
-            st_method(data, **kwargs)
-            return None
-
-        data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
-            data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
-        )
-
-        msg = ForwardMsg_pb2.ForwardMsg()
-        msg.metadata.delta_path[:] = self._cursor.delta_path
-
-        import streamlit.elements.legacy_data_frame as data_frame
-
-        data_frame.marshall_data_frame(data, msg.delta.add_rows.data)
-
-        if name:
-            msg.delta.add_rows.name = name
-            msg.delta.add_rows.has_name = True
-
-        _enqueue_message(msg)
-
-        return self
 
     def _arrow_add_rows(
         self: DG,
@@ -794,7 +677,7 @@ class DeltaGenerator(
         ...    np.random.randn(50, 20),
         ...    columns=('col %d' % i for i in range(20)))
         ...
-        >>> my_table = st._arrow_table(df1)
+        >>> my_table = st.table(df1)
         >>>
         >>> df2 = pd.DataFrame(
         ...    np.random.randn(50, 20),
@@ -808,7 +691,7 @@ class DeltaGenerator(
         more data to a line chart:
 
         >>> # Assuming df1 and df2 from the example above still exist...
-        >>> my_chart = st._arrow_line_chart(df1)
+        >>> my_chart = st.line_chart(df1)
         >>> my_chart._arrow_add_rows(df2)
         >>> # Now the chart shown in the Streamlit app contains the data for
         >>> # df1 followed by the data for df2.
@@ -847,22 +730,24 @@ class DeltaGenerator(
             )
 
         # When doing _arrow_add_rows on an element that does not already have data
-        # (for example, st._arrow_line_chart() without any args), call the original
+        # (for example, st.line_chart() without any args), call the original
         # st._arrow_foo() element with new data instead of doing a _arrow_add_rows().
         if (
             self._cursor.props["delta_type"] in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
-            and self._cursor.props["last_index"] is None
+            and self._cursor.props["add_rows_metadata"].last_index is None
         ):
             # IMPORTANT: This assumes delta types and st method names always
             # match!
-            # delta_type starts with "arrow_", but st_method_name starts with "_arrow_".
-            st_method_name = "_" + self._cursor.props["delta_type"]
+            # delta_type starts with "arrow_", but st_method_name doesn't use this prefix.
+            st_method_name = self._cursor.props["delta_type"].replace("arrow_", "")
             st_method = getattr(self, st_method_name)
             st_method(data, **kwargs)
             return None
 
-        data, self._cursor.props["last_index"] = _maybe_melt_data_for_add_rows(
-            data, self._cursor.props["delta_type"], self._cursor.props["last_index"]
+        new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
+            data,
+            self._cursor.props["delta_type"],
+            self._cursor.props["add_rows_metadata"],
         )
 
         msg = ForwardMsg_pb2.ForwardMsg()
@@ -871,7 +756,7 @@ class DeltaGenerator(
         import streamlit.elements.arrow as arrow_proto
 
         default_uuid = str(hash(self._get_delta_path_str()))
-        arrow_proto.marshall(msg.delta.arrow_add_rows.data, data, default_uuid)
+        arrow_proto.marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
 
         if name:
             msg.delta.arrow_add_rows.name = name
@@ -882,17 +767,22 @@ class DeltaGenerator(
         return self
 
 
-DFT = TypeVar("DFT", bound=type_util.DataFrameCompatible)
-
-
-def _maybe_melt_data_for_add_rows(
-    data: DFT,
+def _prep_data_for_add_rows(
+    data: Data,
     delta_type: str,
-    last_index: Any,
-) -> tuple[DFT | DataFrame, int | Any]:
-    import pandas as pd
+    add_rows_metadata: AddRowsMetadata,
+) -> tuple[Data, AddRowsMetadata]:
+    out_data: Data
 
-    def _melt_data(df: DataFrame, last_index: Any) -> tuple[DataFrame, int | Any]:
+    # For some delta types we have to reshape the data structure
+    # otherwise the input data and the actual data used
+    # by vega_lite will be different, and it will throw an error.
+    if delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
+        import pandas as pd
+
+        df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
+
+        # Make range indices start at last_index.
         if isinstance(df.index, pd.RangeIndex):
             old_step = _get_pandas_index_attr(df, "step")
 
@@ -906,35 +796,19 @@ def _maybe_melt_data_for_add_rows(
                     "'RangeIndex' object has no attribute 'step'"
                 )
 
-            start = last_index + old_step
-            stop = last_index + old_step + old_stop
+            start = add_rows_metadata.last_index + old_step
+            stop = add_rows_metadata.last_index + old_step + old_stop
 
             df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            last_index = stop - 1
+            add_rows_metadata.last_index = stop - 1
 
-        index_name = df.index.name
-        if index_name is None:
-            index_name = "index"
+        out_data, *_ = prep_data(df, **add_rows_metadata.columns)
 
-        df = pd.melt(df.reset_index(), id_vars=[index_name])
-        return df, last_index
+    else:
+        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
+        out_data = type_util.convert_anything_to_df(data, allow_styler=True)
 
-    # For some delta types we have to reshape the data structure
-    # otherwise the input data and the actual data used
-    # by vega_lite will be different, and it will throw an error.
-    if (
-        delta_type in DELTA_TYPES_THAT_MELT_DATAFRAMES
-        or delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
-    ):
-        if not isinstance(data, pd.DataFrame):
-            return _melt_data(
-                df=type_util.convert_anything_to_df(data),
-                last_index=last_index,
-            )
-        else:
-            return _melt_data(df=data, last_index=last_index)
-
-    return data, last_index
+    return out_data, add_rows_metadata
 
 
 def _get_pandas_index_attr(

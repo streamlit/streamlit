@@ -39,20 +39,27 @@ describe("st.slider", () => {
     );
   });
 
+  it("looks right when labels overlapping", () => {
+    cy.getIndexed(".stSlider", 10).matchThemedSnapshots(
+      "labels-overlap-slider"
+    );
+  });
+
   it("shows labels", () => {
     cy.get(".stSlider label").should(
       "have.text",
       "Label A" +
-        "Range A" +
-        "Label B" +
-        "Range B" +
-        "Label 1" +
-        "Label 2" +
-        "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
-        "Label 4" +
-        "Label 5" +
-        "Label 6" +
-        "Label 7"
+      "Range A" +
+      "Label B" +
+      "Range B" +
+      "Label 1" +
+      "Label 2" +
+      "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
+      "Label 4" +
+      "Label 5" +
+      "Label 6" +
+      "Label 7" +
+      "Label 8"
     );
   });
 
@@ -82,21 +89,34 @@ describe("st.slider", () => {
     );
   });
 
+  it("realigns label values when expander re-opened", () => {
+    // Closes the expander
+    cy.get(".streamlit-expanderHeader").click();
+
+    // Reopens the expander
+    cy.get(".streamlit-expanderHeader").click();
+
+    // Positioning error occurs on overflow of expander container
+    // which occurs when position left set to 0px
+    cy.getIndexed(".StyledThumbValue", 5).should("not.have.css", "left", "0px")
+  });
+
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "Value A: 12345678" +
-        "Range Value A: (10000, 25000)" +
-        "Value B: 10000" +
-        "Range Value B: (10000, 25000)" +
-        "Value 1: 25" +
-        "Value 2: (25.0, 75.0)" +
-        "Value 3: 1" +
-        "Value 4: 10000" +
-        "Value 5: 25" +
-        "Value 6: 36" +
-        "Value 7: 25" +
-        "Slider changed: False"
+      "Range Value A: (10000, 25000)" +
+      "Value B: 10000" +
+      "Range Value B: (10000, 25000)" +
+      "Value 1: 25" +
+      "Value 2: (25.0, 75.0)" +
+      "Value 3: 1" +
+      "Value 4: 10000" +
+      "Value 5: 25" +
+      "Value 6: 36" +
+      "Value 7: 2019-08-01 2019-09-01" +
+      "Value 8: 25" +
+      "Slider changed: False"
     );
   });
 
@@ -136,7 +156,7 @@ describe("st.slider", () => {
   it("calls callback if one is registered", () => {
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 7: 25" + "Slider changed: False"
+      "Value 8: 25" + "Slider changed: False"
     );
 
     cy.get('.stSlider [role="slider"]')
@@ -146,7 +166,7 @@ describe("st.slider", () => {
 
     cy.get(".stMarkdown").should(
       "contain.text",
-      "Value 7: 26" + "Slider changed: True"
+      "Value 8: 26" + "Slider changed: True"
     );
   });
 });

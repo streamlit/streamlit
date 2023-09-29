@@ -30,6 +30,11 @@ jobs:
     with:
       ref: ${{ github.ref_name }}
 
+  run-playwright-tests:
+    uses: ./.github/workflows/playwright.yml
+    with:
+      ref: ${{ github.ref_name }}
+
   build-release:
     runs-on: ubuntu-latest
 
@@ -38,6 +43,7 @@ jobs:
       - run-javascript-tests
       - run-py-prod-deps-smoke-test
       - run-cypress-tests
+      - run-playwright-tests
 
     defaults:
       run:
@@ -59,11 +65,11 @@ jobs:
       # for the current release
       CONSTRAINTS_TAG: constraints/${{ github.ref_name }}
       # We don't want to use constraints files because they might not exist yet.
-      USE_CONSTRAINT_FILE: "false"
+      USE_CONSTRAINTS_FILE: "false"
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
           # Save the access token to the local git config, so
@@ -146,7 +152,7 @@ jobs:
           python scripts/create_release.py
 
       - name: Checkout branch "${{ env.CONSTRAINTS_BRANCH }}"
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ env.CONSTRAINTS_BRANCH }}
           # Save the access token to the local git config, so

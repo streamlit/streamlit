@@ -36,6 +36,7 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
@@ -50,7 +51,6 @@ from streamlit.runtime.scriptrunner.script_requests import (
     ScriptRequestType,
 )
 from streamlit.runtime.state.session_state import SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from tests import testutil
 
 text_utf = "complete! 👨‍🎤"
@@ -760,39 +760,6 @@ class ScriptRunnerTest(AsyncTestCase):
                 ],
             )
 
-    def test_rerun_caching(self):
-        """Test that st.caches are maintained across script runs."""
-        # Make sure there are no caches from other tests.
-        caching._mem_caches.clear()
-
-        # Run st_cache_script.
-        runner = TestScriptRunner("st_cache_script.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The script has 5 cached functions, each of which writes out
-        # some text.
-        self._assert_text_deltas(
-            runner,
-            [
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached function called",
-                "cached_depending_on_not_yet_defined called",
-            ],
-        )
-
-        # Re-run the script on a second runner.
-        runner = TestScriptRunner("st_cache_script.py")
-        runner.request_rerun(RerunData())
-        runner.start()
-        runner.join()
-
-        # The cached functions should not have been called on this second run
-        self._assert_text_deltas(runner, [])
-
     def test_invalidating_cache(self):
         """Test that st.caches are cleared when a dependency changes."""
         # Make sure there are no caches from other tests.
@@ -835,42 +802,6 @@ class ScriptRunnerTest(AsyncTestCase):
             [
                 "cached_depending_on_not_yet_defined called",
             ],
-        )
-
-    @patch(
-        "streamlit.source_util.get_pages",
-        MagicMock(
-            return_value={
-                "hash2": {
-                    "page_script_hash": "hash2",
-                    "script_path": os.path.join(
-                        os.path.dirname(__file__), "test_data", "good_script2.py"
-                    ),
-                },
-            },
-        ),
-    )
-    def test_page_script_hash_to_script_path(self):
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(page_script_hash="hash2"))
-        scriptrunner.start()
-        scriptrunner.join()
-
-        self._assert_no_exceptions(scriptrunner)
-        self._assert_events(
-            scriptrunner,
-            [
-                ScriptRunnerEvent.SCRIPT_STARTED,
-                ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                ScriptRunnerEvent.SHUTDOWN,
-            ],
-        )
-        self._assert_text_deltas(scriptrunner, [text_utf2])
-        self.assertEqual(
-            os.path.join(os.path.dirname(__file__), "test_data", "good_script2.py"),
-            sys.modules["__main__"].__file__,
-            (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
 
     @patch(
@@ -1067,9 +998,8 @@ class TestScriptRunner(ScriptRunner):
         super().__init__(
             session_id="test session id",
             main_script_path=main_script_path,
-            client_state=ClientState(),
             session_state=SessionState(),
-            uploaded_file_mgr=UploadedFileManager(),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},

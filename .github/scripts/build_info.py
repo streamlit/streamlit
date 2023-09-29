@@ -267,18 +267,23 @@ def get_output_variables() -> Dict[str, str]:
         )
         else [ALL_PYTHON_VERSIONS[0], ALL_PYTHON_VERSIONS[-1]]
     )
-    use_constraint_file = not (
+    use_constraints_file = not (
         canary_build
         or check_if_pr_has_label(
             LABEL_UPGRADE_DEPENDENCIES, "Latest dependencies will be used"
         )
     )
-    return {
+    variables = {
         "PYTHON_MIN_VERSION": PYTHON_MIN_VERSION,
         "PYTHON_MAX_VERSION": PYTHON_MAX_VERSION,
         "PYTHON_VERSIONS": json.dumps(python_versions),
-        "USE_CONSTRAINT_FILE": str(use_constraint_file).lower(),
+        "USE_CONSTRAINTS_FILE": str(use_constraints_file).lower(),
     }
+    # Environment variables can be overridden at job level and we don't want
+    # to change them then.
+    for key, value in variables.copy().items():
+        variables[key] = os.environ.get(key, value)
+    return variables
 
 
 def save_output_variables(variables: Dict[str, str]) -> None:

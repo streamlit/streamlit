@@ -82,7 +82,8 @@ from streamlit.elements.spinner import spinner as spinner
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
-    rerun as _rerun,
+    rerun as rerun,
+    experimental_rerun as _experimental_rerun,
 )
 
 # We add the metrics tracking for caching here,
@@ -104,6 +105,7 @@ _config.on_config_parsed(_update_logger, True)
 
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
+event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
 
 secrets = _secrets_singleton
 
@@ -146,6 +148,7 @@ info = _main.info
 json = _main.json
 latex = _main.latex
 line_chart = _main.line_chart
+link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown
 metric = _main.metric
@@ -155,6 +158,7 @@ plotly_chart = _main.plotly_chart
 progress = _main.progress
 pyplot = _main.pyplot
 radio = _main.radio
+scatter_chart = _main.scatter_chart
 selectbox = _main.selectbox
 select_slider = _main.select_slider
 slider = _main.slider
@@ -165,6 +169,7 @@ table = _main.table
 text = _main.text
 text_area = _main.text_area
 text_input = _main.text_input
+toggle = _main.toggle
 time_input = _main.time_input
 title = _main.title
 vega_lite_chart = _main.vega_lite_chart
@@ -172,24 +177,10 @@ video = _main.video
 warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
+status = _main.status
 
-# Legacy
-_legacy_dataframe = _main._legacy_dataframe
-_legacy_table = _main._legacy_table
-_legacy_altair_chart = _main._legacy_altair_chart
-_legacy_area_chart = _main._legacy_area_chart
-_legacy_bar_chart = _main._legacy_bar_chart
-_legacy_line_chart = _main._legacy_line_chart
-_legacy_vega_lite_chart = _main._legacy_vega_lite_chart
-
-# Apache Arrow
-_arrow_dataframe = _main._arrow_dataframe
-_arrow_table = _main._arrow_table
-_arrow_altair_chart = _main._arrow_altair_chart
-_arrow_area_chart = _main._arrow_area_chart
-_arrow_bar_chart = _main._arrow_bar_chart
-_arrow_line_chart = _main._arrow_line_chart
-_arrow_vega_lite_chart = _main._arrow_vega_lite_chart
+# Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
+toast = event.toast
 
 # Config
 get_option = _config.get_option
@@ -213,6 +204,6 @@ experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
 experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
-experimental_rerun = _rerun
+experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _connection_factory

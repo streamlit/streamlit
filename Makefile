@@ -18,7 +18,7 @@ SHELL=/bin/bash
 
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
-USE_CONSTRAINT_FILE ?= true
+USE_CONSTRAINTS_FILE ?= true
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 GITHUB_REPOSITORY ?= streamlit/streamlit
 CONSTRAINTS_BRANCH ?= constraints-develop
@@ -95,10 +95,15 @@ python-init-dev-only:
 python-init-test-only: lib/test-requirements.txt
 	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true make python-init
 
+.PHONY: python-init-test-min-deps
+# Install Streamlit and test requirements, with minimum dependency versions
+python-init-test-min-deps:
+	INSTALL_DEV_REQS=false INSTALL_TEST_REQS=true USE_CONSTRAINTS_FILE=true CONSTRAINTS_URL="lib/min-constraints-gen.txt" make python-init
+
 .PHONY: python-init
 python-init:
-	pip_args=("install" "--editable" "lib[snowflake]");\
-	if [ "${USE_CONSTRAINT_FILE}" = "true" ] ; then\
+	pip_args=("--editable" "lib[snowflake]");\
+	if [ "${USE_CONSTRAINTS_FILE}" = "true" ] ; then\
 		pip_args+=(--constraint "${CONSTRAINTS_URL}"); \
 	fi;\
 	if [ "${INSTALL_DEV_REQS}" = "true" ] ; then\
@@ -191,8 +196,14 @@ conda-distribution:
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
-# Build lib and frontend, and then run 'conda-distribution'
-conda-package: build-deps frontend conda-distribution
+# Build lib and (maybe) frontend assets, and then run 'conda-distribution'
+conda-package: build-deps
+	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
+		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
+	else \
+		make frontend; \
+	fi
+	make conda-distribution;
 
 .PHONY: clean
 # Remove all generated files.
@@ -206,13 +217,17 @@ clean:
 	rm -f lib/streamlit/proto/*_pb2.py*
 	rm -rf lib/streamlit/static
 	rm -f lib/Pipfile.lock
-	rm -rf frontend/build
+	rm -rf frontend/app/build
 	rm -rf frontend/node_modules
+	rm -rf frontend/app/node_modules
+	rm -rf frontend/lib/node_modules
 	rm -rf frontend/test_results
-	rm -f frontend/src/lib/proto.js
-	rm -f frontend/src/lib/proto.d.ts
+	rm -f frontend/lib/src/proto.js
+	rm -f frontend/lib/src/proto.d.ts
 	rm -rf frontend/public/reports
+	rm -rf frontend/lib/dist
 	rm -rf ~/.cache/pre-commit
+	rm -rf e2e_playwright/test-results
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
@@ -252,14 +267,14 @@ protobuf: check-protoc
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
 			-t static-module --wrap es6 \
-	) > ./src/lib/proto.js
+	) > ./lib/src/proto.js
 
 	@# Typescript type declarations for our generated protobufs
 	cd frontend/ ; ( \
 		echo "/* eslint-disable */" ; \
 		echo ; \
-		yarn --silent pbts ./src/lib/proto.js \
-	) > ./src/lib/proto.d.ts
+		yarn --silent pbts ./lib/src/proto.js \
+	) > ./lib/src/proto.d.ts
 
 .PHONY: react-init
 react-init:
@@ -269,26 +284,35 @@ react-init:
 react-build:
 	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
-		frontend/build/ lib/streamlit/static/
+		frontend/app/build/ lib/streamlit/static/
 
 .PHONY: frontend-fast
 # Build frontend into static files faster by setting BUILD_AS_FAST_AS_POSSIBLE=true flag, which disables eslint and typechecking.
 frontend-fast:
 	cd frontend/ ; yarn run buildFast
 	rsync -av --delete --delete-excluded --exclude=reports \
-		frontend/build/ lib/streamlit/static/
+		frontend/app/build/ lib/streamlit/static/
+
+.PHONY: frontend-lib
+# Build the frontend library
+frontend-lib:
+	cd frontend/ ; yarn run buildLib;
+
+.PHONY: frontend-app
+# Build the frontend app. One must build the frontend lib first before building the app.
+frontend-app:
+	cd frontend/ ; yarn run buildApp
 
 .PHONY: jslint
 # Lint the JS code
 jslint:
-	./scripts/validate_frontend_lib_imports.py frontend/src/lib
 	cd frontend; \
 		yarn lint;
 
 .PHONY: tstypecheck
 # Type check the JS/TS code
 tstypecheck:
-	pre-commit run typecheck --all-files --hook-stage manual
+	pre-commit run typecheck-lib --all-files --hook-stage manual && pre-commit run typecheck-app --all-files --hook-stage manual
 
 .PHONY: jsformat
 # Fix formatting issues in our JavaScript & TypeScript files.
@@ -310,6 +334,14 @@ jscoverage:
 e2etest:
 	./scripts/run_e2e_tests.py
 
+.PHONY: playwright
+# Run playwright E2E tests.
+playwright:
+	python -m playwright install --with-deps; \
+	cd e2e_playwright; \
+	rm -rf ./test-results; \
+	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto -v
+
 .PHONY: loc
 # Count the number of lines of code in the project.
 loc:
@@ -330,15 +362,22 @@ notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --silent --production --ignore-platform > ../NOTICES
 
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Material-Icons.LICENSE
-	./scripts/append_license.sh frontend/src/assets/img/Open-Iconic.LICENSE
-	./scripts/append_license.sh frontend/src/lib/vendor/bokeh/bokeh-LICENSE.txt
-	./scripts/append_license.sh frontend/src/lib/vendor/twemoji-LICENSE.txt
-	./scripts/append_license.sh frontend/src/app/vendor/Segment-LICENSE.txt
-	./scripts/append_license.sh frontend/src/lib/vendor/react-bootstrap-LICENSE.txt
+	@# When `yarn licenses` is run in a yarn workspace, it misnames the project as
+	@# "WORKSPACE AGGREGATOR 2B7C80A7 6734 4A68 BB93 8CC72B9A5DEA". We fix that here.
+	@# There also isn't a portable way to invoke `sed` to edit files in-place, so we have
+	@# sed create a NOTICES.bak backup file that we immediately delete afterwards.
+	sed -i'.bak' 's/PORTIONS OF THE .*PRODUCT/PORTIONS OF THE STREAMLIT PRODUCT/' NOTICES
+	rm -f NOTICES.bak
+
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code_Pro/Source-Code-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans_Pro/Source-Sans-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif_Pro/Source-Serif-Pro.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
+	./scripts/append_license.sh frontend/lib/src/vendor/bokeh/bokeh-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/twemoji-LICENSE.txt
+	./scripts/append_license.sh frontend/app/src/vendor/Segment-LICENSE.txt
+	./scripts/append_license.sh frontend/lib/src/vendor/react-bootstrap-LICENSE.txt
 	./scripts/append_license.sh lib/streamlit/vendor/ipython/IPython-LICENSE.txt
 
 .PHONY: headers
@@ -346,6 +385,12 @@ notices:
 headers:
 	pre-commit run insert-license --all-files --hook-stage manual
 	pre-commit run license-headers --all-files --hook-stage manual
+
+.PHONY: gen-min-dep-constraints
+# Write the minimum versions of our dependencies to a constraints file.
+gen-min-dep-constraints:
+	make develop >/dev/null
+	python scripts/get_min_versions.py >lib/min-constraints-gen.txt
 
 .PHONY: build-test-env
 # Build docker image that mirrors circleci
@@ -380,3 +425,21 @@ connect-test-env:
 .PHONY: pre-commit-install
 pre-commit-install:
 	pre-commit install
+
+.PHONY: ensure-relative-imports
+# ensure relative imports exist within the lib/dist folder when doing yarn buildLibProd
+ensure-relative-imports:
+	./scripts/ensure_relative_imports.sh
+
+.PHONY frontend-lib-prod:
+# build the production version for @streamlit/lib
+frontend-lib-prod:
+	cd frontend/ ; yarn run buildLibProd;
+
+.PHONY streamlit-lib-prod:
+# build the production version for @streamlit/lib
+# while also doing a make init so it's a single command
+streamlit-lib-prod:
+	make mini-init;
+	make frontend-lib-prod;
+
