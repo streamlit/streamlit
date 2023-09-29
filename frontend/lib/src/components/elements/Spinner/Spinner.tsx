@@ -33,13 +33,29 @@ export interface SpinnerProps {
 function Spinner({ width, element }: SpinnerProps): ReactElement {
   const { activeTheme } = React.useContext(LibContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
-  const styleProp = { width }
+  const { cache } = element
+  const styleProp = cache
+    ? {
+        width,
+        background:
+          "linear-gradient(to bottom, #FFFFFF 0%, #FFFFFF 80%, transparent 100%)",
+        padding: "16px 0px",
+      }
+    : { width }
 
   return (
-    <div className="stSpinner" data-testid="stSpinner" style={styleProp}>
+    <div
+      className={`stSpinner ${cache ? "cacheSpinner" : ""}`}
+      data-testid="stSpinner"
+      style={styleProp}
+    >
       <StyledSpinnerContainer>
         <ThemedStyledSpinner usingCustomTheme={usingCustomTheme} />
-        <StreamlitMarkdown source={element.text} allowHTML={false} />
+        <StreamlitMarkdown
+          source={element.text}
+          allowHTML={false}
+          smallerFont={cache}
+        />
       </StyledSpinnerContainer>
     </div>
   )

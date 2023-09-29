@@ -130,6 +130,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
             source={expanded ? fullMessage : displayMessage}
             allowHTML={false}
             isToast
+            smallerFont
           />
         </StyledToastMessage>
         {shortened && (
