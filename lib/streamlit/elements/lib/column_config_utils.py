@@ -382,7 +382,7 @@ def determine_dataframe_schema(
 
 
 # A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = Mapping[Union[IndexIdentifierType, str], ColumnConfig]
+ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
 ColumnConfigMappingInput: TypeAlias = Mapping[
     Union[IndexIdentifierType, str],
     Union[ColumnConfig, None, str],
