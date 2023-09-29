@@ -493,6 +493,8 @@ class ScriptRunner:
         # is interrupted by a RerunException.
         rerun_exception_data: Optional[RerunData] = None
 
+        premature_stop: bool = False
+
         try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
@@ -532,16 +534,18 @@ class ScriptRunner:
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
             rerun_exception_data = e.rerun_data
+            premature_stop = True
 
         except StopException:
             # This is thrown when the script executes `st.stop()`.
             # We don't have to do anything here.
-            pass
+            premature_stop = True
 
         except Exception as ex:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             uncaught_exception = ex
             handle_uncaught_app_exception(uncaught_exception)
+            premature_stop = True
 
         finally:
             if rerun_exception_data:
@@ -572,7 +576,7 @@ class ScriptRunner:
                     # Always capture all exceptions since we want to make sure that
                     # the telemetry never causes any issues.
                     _LOGGER.debug("Failed to create page profile", exc_info=ex)
-            self._on_script_finished(ctx, finished_event)
+            self._on_script_finished(ctx, finished_event, premature_stop)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.
@@ -582,13 +586,14 @@ class ScriptRunner:
             self._run_script(rerun_exception_data)
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent
+        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
         # Tell session_state to update itself in response
-        self._session_state.on_script_finished(ctx.widget_ids_this_run)
+        if not premature_stop:
+            self._session_state.on_script_finished(ctx.widget_ids_this_run)
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
