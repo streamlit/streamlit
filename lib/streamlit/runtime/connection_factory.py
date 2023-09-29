@@ -182,13 +182,13 @@ def connection_factory(
     ----------
     name : str
         The connection name used for secrets lookup in ``[connections.<name>]``.
-        Type will be inferred from passing ``"sql"`` or ``"snowpark"``.
+        Type will be inferred from passing ``"sql"``, ``"snowflake"``, or ``"snowpark"``.
     type : str, connection class, or None
-        The type of connection to create. It can be a keyword (``"sql"`` or ``"snowpark"``),
-        a path to an importable class, or an imported class reference. All classes
-        must extend ``st.connections.BaseConnection`` and implement the ``_connect()``
-        method. If the type kwarg is None, a ``type`` field must be set in the
-        connection's section in ``secrets.toml``.
+        The type of connection to create. It can be a keyword (``"sql"``, ``"snowflake"``,
+        or ``"snowpark"``), a path to an importable class, or an imported class reference.
+        All classes must extend ``st.connections.BaseConnection`` and implement the
+        ``_connect()`` method. If the type kwarg is None, a ``type`` field must be set in
+        the connection's section in ``secrets.toml``.
     max_entries : int or None
         The maximum number of connections to keep in the cache, or None
         for an unbounded cache. (When a new entry is added to a full cache,
@@ -207,8 +207,9 @@ def connection_factory(
 
     Examples
     --------
-    The easiest way to create a first-party (SQL or Snowpark) connection is to use their
-    default names and define corresponding sections in your ``secrets.toml`` file.
+    The easiest way to create a first-party (SQL, Snowflake, or Snowpark) connection is
+    to use their default names and define corresponding sections in your ``secrets.toml``
+    file.
 
     >>> import streamlit as st
     >>> conn = st.connection("sql") # Config section defined in [connections.sql] in secrets.toml.
