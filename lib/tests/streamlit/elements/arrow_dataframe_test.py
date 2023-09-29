@@ -215,7 +215,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 class StArrowTableAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
-    def test_sttable(self):
+    def test_table(self):
         """Test st.table."""
         from streamlit.type_util import bytes_to_data_frame
 

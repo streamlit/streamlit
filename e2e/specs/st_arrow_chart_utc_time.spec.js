@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st._arrow_area_chart, st._arrow_bar_chart, st._arrow_line_chart", () => {
+describe("st.area_chart, st.bar_chart, st.line_chart", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 

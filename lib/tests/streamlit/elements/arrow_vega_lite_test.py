@@ -139,7 +139,7 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
         self.assertEqual(proto.HasField("data"), True)
         self.assertEqual(proto.data.data, pyarrow_table_to_bytes(table))
 
-    def testadd_rows(self):
+    def test_add_rows(self):
         """Test that you can call add_rows on arrow_vega_lite_chart (with data)."""
         chart = st.vega_lite_chart(df1, {"mark": "rect"})
 
