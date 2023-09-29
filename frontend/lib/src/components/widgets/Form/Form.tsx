@@ -29,6 +29,7 @@ export interface Props {
   scriptRunState: ScriptRunState
   children?: ReactNode
   widgetMgr: WidgetStateManager
+  border: boolean
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
@@ -48,6 +49,7 @@ export function Form(props: Props): ReactElement {
     width,
     scriptRunState,
     clearOnSubmit,
+    border,
   } = props
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` so that it can
@@ -88,7 +90,7 @@ export function Form(props: Props): ReactElement {
   }
 
   return (
-    <StyledForm data-testid="stForm">
+    <StyledForm border={border} data-testid="stForm">
       {children}
       {submitWarning}
     </StyledForm>

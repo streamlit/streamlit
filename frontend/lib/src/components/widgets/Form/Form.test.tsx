@@ -34,6 +34,7 @@ describe("Form", () => {
         sendRerunBackMsg: jest.fn(),
         formsDataChanged: jest.fn(),
       }),
+      border: false,
       ...props,
     }
   }
