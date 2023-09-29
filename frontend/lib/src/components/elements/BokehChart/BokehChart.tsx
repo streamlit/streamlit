@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useCallback } from "react"
+import React, { ReactElement, useEffect, useCallback, useState } from "react"
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 
@@ -22,12 +22,14 @@ import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 // Importing these files will cause global Bokeh to be mutated
 // Consumers of this component will have to provide these js files
 // bokeh.esm is renamed from bokeh-2.4.3.esm.min.js because addon bokeh scripts have hardcoded path to bokeh main script ("import main from “./bokeh.esm.js")
-import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-api-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-gl-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-mathjax-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-tables-2.4.3.esm.min"
-import "@streamlit/lib/src/vendor/bokeh/bokeh-widgets-2.4.3.esm.min"
+// import Bokeh from "@streamlit/lib/src/vendor/bokeh/bokeh.esm"
+// import "@streamlit/lib/src/vendor/bokeh/bokeh-api-2.4.3.esm.min"
+// import "@streamlit/lib/src/vendor/bokeh/bokeh-gl-2.4.3.esm.min"
+// import "@streamlit/lib/src/vendor/bokeh/bokeh-mathjax-2.4.3.esm.min"
+// import "@streamlit/lib/src/vendor/bokeh/bokeh-tables-2.4.3.esm.min"
+// import "@streamlit/lib/src/vendor/bokeh/bokeh-widgets-2.4.3.esm.min"
+// import getFiles from "./BokehFileFetcher"
+import axios from "axios"
 
 export interface BokehChartProps {
   width: number
@@ -46,6 +48,7 @@ export function BokehChart({
   height,
 }: BokehChartProps): ReactElement {
   const chartId = `bokeh-chart-${element.elementId}`
+  const [isFetching, setIsFetching] = useState(true)
 
   const memoizedGetChartData = useCallback(() => {
     return JSON.parse(element.figure)
@@ -70,6 +73,42 @@ export function BokehChart({
     },
     [element.useContainerWidth, height, width]
   )
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(
+          "https://api.cdnjs.com/libraries/bokeh/3.2.2"
+        )
+        const esmMinJsFiles = response.data.files.filter((file: string) =>
+          /.*esm\.min\.js$/.test(file)
+        )
+        // console.log(esmMinJsFiles)
+        const baseUrl = "https://cdnjs.cloudflare.com/ajax/libs/bokeh/3.2.2/"
+        const prefixedFiles = esmMinJsFiles.map(
+          (file: string) => `${baseUrl}${file}`
+        )
+        if (response.status !== 200) {
+          throw Error(response.statusText)
+        }
+        prefixedFiles.forEach((file: string) => {
+          const script = document.createElement("script")
+          script.src = file
+          script.type = "module" // Set type to module for esm files
+          document.head.appendChild(script)
+
+          // Cleanup on component unmount
+          return () => {
+            document.head.removeChild(script)
+          }
+        })
+      } catch (error) {
+        console.error("Error during fetch operation: ", error)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const removeAllChildNodes = (element: Node): void => {
     while (element.lastChild) {
@@ -108,7 +147,9 @@ export function BokehChart({
       // embed_item is actually an async function call, so a race condition
       // can occur if updateChart is called twice, leading to two Bokeh charts
       // to be embedded at the same time.
-      Bokeh.embed.embed_item(data, chartId)
+      console.log(window)
+      // @ts-expect-error
+      window.bokeh.embed.embed_item(data, chartId)
     }
   }
 
@@ -123,6 +164,8 @@ export function BokehChart({
   useEffect(() => {
     memoizedUpdateChart(memoizedGetChartData())
   }, [width, height, element, memoizedGetChartData, memoizedUpdateChart])
+
+  console.log(document.head)
 
   return (
     <div id={chartId} className="stBokehChart" data-testid="stBokehChart" />
