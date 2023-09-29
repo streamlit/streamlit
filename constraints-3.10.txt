@@ -9,7 +9,7 @@ blinker==1.6.2
 bokeh==2.4.3
 cachetools==5.3.1
 certifi==2023.7.22
-cffi==1.15.1
+cffi==1.16.0
 cfgv==3.4.0
 charset-normalizer==3.2.0
 chart-studio==1.1.0
@@ -18,7 +18,7 @@ contourpy==1.1.1
 coverage==7.3.1
 cryptography==41.0.4
 cx-Oracle==7.3.0
-cycler==0.11.0
+cycler==0.12.0
 dataclasses-json==0.6.1
 distlib==0.3.7
 docutils==0.20.1
