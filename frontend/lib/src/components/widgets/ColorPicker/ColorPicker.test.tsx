@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactWrapper } from "enzyme"
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
-import { StatefulPopover as UIPopover } from "baseui/popover"
+import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
+
 import { ColorPicker as ColorPickerProto } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { ChromePicker } from "react-color"
-import { StyledChromePicker } from "@streamlit/lib/src/components/shared/BaseColorPicker/styled-components"
 
 import ColorPicker, { Props } from "./ColorPicker"
 
@@ -40,46 +39,19 @@ const getProps = (elementProps: Partial<ColorPickerProto> = {}): Props => ({
   }),
 })
 
-/** Return the ColorPicker's popover (where the color picking happens). */
-function getPopoverWrapper(wrapper: ReactWrapper<ColorPicker>): any {
-  return (
-    wrapper
-      .find(UIPopover)
-      // @ts-expect-error
-      .renderProp("content")(null)
-      .find(StyledChromePicker)
-  )
-}
-
-/** Return the ColorPicker's currently-selected color as a hex string. */
-function getPickedColor(wrapper: ReactWrapper<ColorPicker>): string {
-  return getPopoverWrapper(wrapper).prop("children").props.color
-}
-
-/** Simulate selecting a new color with the ColorPicker's UI. */
-function selectColor(wrapper: ReactWrapper<ColorPicker>, color: string): void {
-  // Open the popover, select the new color, close the popover.
-  wrapper.find(UIPopover).simulate("click")
-  getPopoverWrapper(wrapper).find(ChromePicker).prop("onChange")({
-    hex: color,
-  })
-  wrapper.find(UIPopover).simulate("click")
-}
-
 describe("ColorPicker widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<ColorPicker {...props} />)
-
-    expect(wrapper.find(UIPopover).length).toBe(1)
-    expect(getPopoverWrapper(wrapper).find(ChromePicker).length).toBe(1)
+    render(<ColorPicker {...props} />)
+    const colorPicker = screen.getByTestId("stColorPicker")
+    expect(colorPicker).toBeInTheDocument()
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
 
-    mount(<ColorPicker {...props} />)
+    render(<ColorPicker {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
@@ -90,29 +62,31 @@ describe("ColorPicker widget", () => {
 
   it("renders a default color in the preview and the color picker", () => {
     const props = getProps()
-    const wrapper = mount(<ColorPicker {...props} />)
+    render(<ColorPicker {...props} />)
 
-    wrapper.find(UIPopover).simulate("click")
+    const colorBlock = screen.getByTestId("stColorBlock")
+    fireEvent.click(colorBlock)
+    expect(colorBlock).toHaveStyle("background-color: #000000")
 
-    expect(wrapper.find("StyledColorBlock").prop("style")).toEqual({
-      backgroundColor: "#000000",
-      opacity: "",
-    })
-
-    expect(getPickedColor(wrapper)).toEqual("#000000")
+    const colorInput = screen.getByRole("textbox")
+    expect(colorInput).toHaveValue("#000000")
   })
 
   it("updates its widget value when it's changed", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setStringValue")
 
-    const wrapper = mount(<ColorPicker {...props} />)
+    render(<ColorPicker {...props} />)
 
-    const newColor = "#E91E63"
-    selectColor(wrapper, newColor)
+    const newColor = "#e91e63"
+    const colorBlock = screen.getByTestId("stColorBlock")
+    fireEvent.click(colorBlock)
 
     // Our widget should be updated.
-    expect(getPickedColor(wrapper)).toEqual(newColor)
+    const colorInput = screen.getByRole("textbox")
+    fireEvent.change(colorInput, { target: { value: newColor } })
+    // Close out of the popover
+    fireEvent.click(colorBlock)
 
     // And the WidgetMgr should also be updated.
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
@@ -128,13 +102,21 @@ describe("ColorPicker widget", () => {
     jest.spyOn(props.widgetMgr, "setStringValue")
     props.widgetMgr.setFormClearOnSubmit("form", true)
 
-    const wrapper = mount(<ColorPicker {...props} />)
+    render(<ColorPicker {...props} />)
 
     // Choose a new color
-    const newColor = "#E91E63"
-    selectColor(wrapper, newColor)
+    const newColor = "#e91e63"
+    const colorBlock = screen.getByTestId("stColorBlock")
+    fireEvent.click(colorBlock)
 
-    expect(getPickedColor(wrapper)).toEqual(newColor)
+    // Update the color
+    const colorInput = screen.getByRole("textbox")
+    fireEvent.change(colorInput, { target: { value: newColor } })
+    // Close out of the popover
+    fireEvent.click(colorBlock)
+
+    expect(colorInput).toHaveValue(newColor)
+    expect(colorBlock).toHaveStyle(`background-color: ${newColor}`)
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       newColor,
@@ -143,10 +125,9 @@ describe("ColorPicker widget", () => {
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(getPickedColor(wrapper)).toEqual(props.element.default)
+    expect(colorBlock).toHaveStyle("background-color: #000000")
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,

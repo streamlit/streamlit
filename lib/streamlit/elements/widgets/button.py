@@ -25,6 +25,7 @@ from streamlit.elements.utils import check_callback_rules, check_session_state_r
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
+from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -38,7 +39,6 @@ from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 FORM_DOCS_INFO: Final = """
 
@@ -94,7 +94,7 @@ class ButtonMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -133,6 +133,7 @@ class ButtonMixin:
         -------
         >>> import streamlit as st
         >>>
+        >>> st.button("Reset", type="primary")
         >>> if st.button('Say hello'):
         ...     st.write('Why hello there')
         ... else:
@@ -180,6 +181,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
     ) -> bool:
@@ -211,7 +213,7 @@ class ButtonMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -242,6 +244,10 @@ class ButtonMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
         disabled : bool
             An optional boolean, which disables the download button if set to
             True. The default is False. This argument can only be supplied by
@@ -309,6 +315,13 @@ class ButtonMixin:
 
         """
         ctx = get_script_run_ctx()
+
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.button must be "primary" or "secondary". \n'
+                f'The argument passed was "{type}".'
+            )
+
         return self._download_button(
             label=label,
             data=data,
@@ -320,8 +333,91 @@ class ButtonMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            type=type,
             use_container_width=use_container_width,
             ctx=ctx,
+        )
+
+    @gather_metrics("link_button")
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        help: Optional[str] = None,
+        type: Literal["primary", "secondary"] = "secondary",
+        disabled: bool = False,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
+        r"""Display a link button element.
+
+        When clicked, a new tab will be opened to the specified URL. This will
+        create a new session for the user if directed within the app.
+
+        Parameters
+        ----------
+        label : str
+            A short label explaining to the user what this button is for.
+            The label can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+        url : str
+            The url to be opened on user click
+        help : str
+            An optional tooltip that gets displayed when the button is
+            hovered over.
+        type : "secondary" or "primary"
+            An optional string that specifies the button type. Can be "primary" for a
+            button with additional emphasis or "secondary" for a normal button. This
+            argument can only be supplied by keyword. Defaults to "secondary".
+        disabled : bool
+            An optional boolean, which disables the link button if set to
+            True. The default is False.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the parent container.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
+
+        .. output::
+           https://doc-link-button.streamlit.app/
+           height: 200px
+
+        """
+        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
+        if type not in ["primary", "secondary"]:
+            raise StreamlitAPIException(
+                'The type argument to st.link_button must be "primary" or "secondary". '
+                f'\nThe argument passed was "{type}".'
+            )
+
+        return self._link_button(
+            label=label,
+            url=url,
+            help=help,
+            disabled=disabled,
+            type=type,
+            use_container_width=use_container_width,
         )
 
     def _download_button(
@@ -336,6 +432,7 @@ class ButtonMixin:
         args: Optional[WidgetArgs] = None,
         kwargs: Optional[WidgetKwargs] = None,
         *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
         ctx: Optional[ScriptRunContext] = None,
@@ -347,12 +444,13 @@ class ButtonMixin:
             "download_button",
             user_key=key,
             label=label,
-            data=str(data),
             file_name=file_name,
             mime=mime,
             key=key,
             help=help,
+            type=type,
             use_container_width=use_container_width,
+            page=ctx.page_script_hash if ctx else None,
         )
 
         if is_in_form(self.dg):
@@ -365,9 +463,11 @@ class ButtonMixin:
         download_button_proto.use_container_width = use_container_width
         download_button_proto.label = label
         download_button_proto.default = False
+        download_button_proto.type = type
         marshall_file(
             self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
         )
+        download_button_proto.disabled = disabled
 
         if help is not None:
             download_button_proto.help = dedent(help)
@@ -386,12 +486,30 @@ class ButtonMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        download_button_proto.disabled = disabled
-
         self.dg._enqueue("download_button", download_button_proto)
         return button_state.value
+
+    def _link_button(
+        self,
+        label: str,
+        url: str,
+        help: Optional[str],
+        *,  # keyword-only arguments:
+        type: Literal["primary", "secondary"] = "secondary",
+        disabled: bool = False,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
+        link_button_proto = LinkButtonProto()
+        link_button_proto.label = label
+        link_button_proto.url = url
+        link_button_proto.type = type
+        link_button_proto.use_container_width = use_container_width
+        link_button_proto.disabled = disabled
+
+        if help is not None:
+            link_button_proto.help = dedent(help)
+
+        return self.dg._enqueue("link_button", link_button_proto)
 
     def _button(
         self,
@@ -421,6 +539,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
+            page=ctx.page_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a button inside a form (except
@@ -446,6 +565,8 @@ class ButtonMixin:
         button_proto.form_id = current_form_id(self.dg)
         button_proto.type = type
         button_proto.use_container_width = use_container_width
+        button_proto.disabled = disabled
+
         if help is not None:
             button_proto.help = dedent(help)
 
@@ -462,10 +583,6 @@ class ButtonMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        button_proto.disabled = disabled
 
         self.dg._enqueue("button", button_proto)
 

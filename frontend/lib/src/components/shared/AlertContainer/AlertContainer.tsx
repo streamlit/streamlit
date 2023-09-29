@@ -69,6 +69,7 @@ export default function AlertContainer({
   width,
   children,
 }: AlertContainerProps): ReactElement {
+  const testid = kind.charAt(0).toUpperCase() + kind.slice(1)
   return (
     <Notification
       kind={getNotificationKind(kind)}
@@ -86,6 +87,9 @@ export default function AlertContainer({
             borderTopLeftRadius: radii.lg,
             borderBottomLeftRadius: radii.lg,
           },
+          props: {
+            "data-testid": "stNotification",
+          },
         },
         InnerContainer: {
           style: {
@@ -95,7 +99,9 @@ export default function AlertContainer({
         },
       }}
     >
-      <StyledAlertContent>{children}</StyledAlertContent>
+      <StyledAlertContent data-testid={`stNotificationContent${testid}`}>
+        {children}
+      </StyledAlertContent>
     </Notification>
   )
 }

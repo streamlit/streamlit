@@ -20,7 +20,8 @@ import { shallow, mount } from "@streamlit/lib/src/test_util"
 
 import { Select as UISelect } from "baseui/select"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
-import Selectbox, { Props, fuzzyFilterSelectOptions } from "./Selectbox"
+import { Selectbox, Props, fuzzyFilterSelectOptions } from "./Selectbox"
+import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 jest.mock("@streamlit/lib/src/WidgetStateManager")
 
@@ -31,6 +32,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   width: 0,
   disabled: false,
   onChange: jest.fn(),
+  theme: mockTheme.emotion,
   placeholder: "Select...",
   ...props,
 })

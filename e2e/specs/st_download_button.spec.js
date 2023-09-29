@@ -15,7 +15,7 @@
  */
 
 const path = require("path");
-const NO_OF_BUTTONS = 5
+const NO_OF_BUTTONS = 7
 
 describe("st.download_button", () => {
   beforeEach(() => {
@@ -66,5 +66,23 @@ describe("st.download_button", () => {
   it("renders useContainerWidth + help st.download_button correctly", () => {
     cy.getIndexed(".stDownloadButton button", 4)
       .trigger('mouseover').matchThemedSnapshots("container-width-help-button", { padding: [60, 0, 0, 0] });
+  });
+
+  it("shows primary button correctly", () => {
+    cy.get(".stDownloadButton").should("have.length", NO_OF_BUTTONS);
+
+    cy.getIndexed(".stDownloadButton", 5).matchThemedSnapshots(
+      "primary-download-button"
+    );
+  });
+
+  it("sets value correctly when user clicks", () => {
+    cy.get(".stMarkdown").contains("value: False");
+
+    cy.get(".stDownloadButton button")
+      .last()
+      .click();
+
+    cy.get(".stMarkdown").contains("value: True");
   });
 });

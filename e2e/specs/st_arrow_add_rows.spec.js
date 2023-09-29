@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st._arrow_add_rows", () => {
+describe("st.add_rows", () => {
   // Doesn't have to run before each, since these tests are stateless.
   before(() => {
     // Increasing timeout since we're waiting for

@@ -35,15 +35,16 @@ message NumberInput {
   bool has_max = 12;
 
   DataType data_type = 13;
-  double default = 14;
+  optional double default = 14;
   double step = 15;
   double min = 16;
   double max = 17;
   string help = 18;
-  double value = 19;
+  optional double value = 19;
   bool set_value = 20;
   bool disabled = 21;
   LabelVisibilityMessage label_visibility = 22;
+  string placeholder = 23;
 
   reserved 4, 5, 6, 7, 9, 10;
 }

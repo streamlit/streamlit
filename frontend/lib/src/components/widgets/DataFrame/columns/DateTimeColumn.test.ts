@@ -18,7 +18,7 @@
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
 
-import { DateTimeCell } from "./cells/DateTimeCell"
+import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { BaseColumnProps, isErrorCell } from "./utils"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 
@@ -89,7 +89,7 @@ describe("DateTimeColumn", () => {
 
     const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as DateTimeCell).data.date).toEqual(EXAMPLE_DATE)
+    expect((mockCell as DatePickerType).data.date).toEqual(EXAMPLE_DATE)
   })
 
   it.each([
@@ -220,7 +220,7 @@ describe("DateTimeColumn", () => {
 
     const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_WITH_STEP)
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((newCell as DateTimeCell).data.step).toBe("60")
+    expect((newCell as DatePickerType).data.step).toBe("60")
   })
 
   it("formats according to the provided format config option", () => {
@@ -233,7 +233,7 @@ describe("DateTimeColumn", () => {
 
     const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_CUSTOM_FORMAT)
     const cell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((cell as DateTimeCell).data.displayDate).toEqual(
+    expect((cell as DatePickerType).data.displayDate).toEqual(
       "Apr 25th, 2023 - 10:30"
     )
   })
@@ -251,11 +251,11 @@ describe("DateTimeColumn", () => {
       MOCK_DATETIME_COLUMN_TEMPLATE_WITH_TIMEZONE
     )
     const mockCell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((mockCell as DateTimeCell).data.date).toEqual(EXAMPLE_DATE)
-    expect((mockCell as DateTimeCell).data.displayDate).toEqual(
+    expect((mockCell as DatePickerType).data.date).toEqual(EXAMPLE_DATE)
+    expect((mockCell as DatePickerType).data.displayDate).toEqual(
       "2023-04-25 15:30:00+05:00"
     )
-    expect((mockCell as DateTimeCell).data.timezoneOffset).toEqual(300)
+    expect((mockCell as DatePickerType).data.timezoneOffset).toEqual(300)
   })
 })
 
@@ -269,7 +269,7 @@ describe("DateColumn", () => {
 
     const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as DateTimeCell).copyData).toEqual("2023-04-25")
+    expect((mockCell as DatePickerType).copyData).toEqual("2023-04-25")
   })
 
   it.each([
@@ -396,7 +396,7 @@ describe("DateColumn", () => {
 
     const mockColumn = DateColumn(MOCK_DATE_COLUMN_WITH_STEP)
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((newCell as DateTimeCell).data.step).toBe("2")
+    expect((newCell as DatePickerType).data.step).toBe("2")
   })
 
   it("formats according to the provided format config option", () => {
@@ -409,7 +409,7 @@ describe("DateColumn", () => {
 
     const mockColumn = DateColumn(MOCK_DATE_COLUMN_CUSTOM_FORMAT)
     const cell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((cell as DateTimeCell).data.displayDate).toEqual("Apr 25th, 2023")
+    expect((cell as DatePickerType).data.displayDate).toEqual("Apr 25th, 2023")
   })
 })
 
@@ -423,7 +423,7 @@ describe("TimeColumn", () => {
 
     const mockCell = mockColumn.getCell(EXAMPLE_DATE)
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as DateTimeCell).copyData).toEqual("10:30:00")
+    expect((mockCell as DatePickerType).copyData).toEqual("10:30:00")
   })
 
   it.each([
@@ -546,7 +546,7 @@ describe("TimeColumn", () => {
 
     const mockColumn = TimeColumn(MOCK_TIME_COLUMN_WITH_STEP)
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((newCell as DateTimeCell).data.step).toBe("60")
+    expect((newCell as DatePickerType).data.step).toBe("60")
   })
 
   it("formats according to the provided format config option", () => {
@@ -559,7 +559,7 @@ describe("TimeColumn", () => {
 
     const mockColumn = DateColumn(MOCK_TIME_COLUMN_CUSTOM_FORMAT)
     const cell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((cell as DateTimeCell).data.displayDate).toEqual("10:30")
+    expect((cell as DatePickerType).data.displayDate).toEqual("10:30")
   })
 
   it("adapts default format based on step size", () => {
@@ -572,6 +572,6 @@ describe("TimeColumn", () => {
 
     const mockColumn = TimeColumn(MOCK_TIME_COLUMN_WITH_STEP)
     const newCell = mockColumn.getCell(EXAMPLE_DATE)
-    expect((newCell as DateTimeCell).data.displayDate).toBe("10:30")
+    expect((newCell as DatePickerType).data.displayDate).toBe("10:30")
   })
 })

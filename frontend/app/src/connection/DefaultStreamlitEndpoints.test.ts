@@ -95,12 +95,26 @@ describe("DefaultStreamlitEndpoints", () => {
       const uri = endpoints.buildMediaURL("http://example/blah.png")
       expect(uri).toBe("http://example/blah.png")
     })
+  })
 
-    it("sanitizes SVG uris", () => {
-      const url = endpoints.buildMediaURL(
-        `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
+  describe("buildFileUploadURL", () => {
+    const endpoints = new DefaultStreamlitEndpoints({
+      getServerUri: () => MOCK_SERVER_URI,
+      csrfEnabled: false,
+    })
+
+    it("builds URL correctly for files being uploaded to the tornado server", () => {
+      const url = endpoints.buildFileUploadURL("/_stcore/upload_file/file_1")
+      expect(url).toBe(
+        "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
       )
-      expect(url).toBe(`data:image/svg+xml,<svg></svg>`)
+    })
+
+    it("passes through other file upload URLs unchanged", () => {
+      const uri = endpoints.buildFileUploadURL(
+        "http://example.com/upload_file/file_2"
+      )
+      expect(uri).toBe("http://example.com/upload_file/file_2")
     })
   })
 
@@ -156,9 +170,11 @@ describe("DefaultStreamlitEndpoints", () => {
       axiosMock.restore()
     })
 
-    it("calls the appropriate endpoint", async () => {
+    it("properly constructs the correct endpoint when given a relative URL", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
+        .onPut(
+          "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"
+        )
         .reply(() => [200, 1])
 
       const mockOnUploadProgress = (_: any): void => {}
@@ -166,22 +182,21 @@ describe("DefaultStreamlitEndpoints", () => {
 
       await expect(
         endpoints.uploadFileUploaderFile(
+          "/_stcore/upload_file/file_1",
           MOCK_FILE,
-          "mockWidgetId",
           "mockSessionId",
           mockOnUploadProgress,
           mockCancelToken
         )
-      ).resolves.toBeDefined()
+      ).resolves.toBeUndefined()
 
       const expectedData = new FormData()
       expectedData.append("sessionId", "mockSessionId")
-      expectedData.append("widgetId", "mockWidgetId")
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
-        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file",
-        method: "POST",
+        url: "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1",
+        method: "PUT",
         responseType: "text",
         data: expectedData,
         cancelToken: mockCancelToken,
@@ -189,34 +204,47 @@ describe("DefaultStreamlitEndpoints", () => {
       })
     })
 
-    it("errors on unexpected return value", async () => {
-      // If our endpoint returns a non-number, we'll return a failed promise.
+    it("Uses the endpoint unchanged when given an absolute url", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
-        .reply(() => [200, "invalidFileId"])
+        .onPut("http://example.com/upload_file/file_2")
+        .reply(() => [200, 1])
+
+      const mockOnUploadProgress = (_: any): void => {}
+      const mockCancelToken = axios.CancelToken.source().token
 
       await expect(
         endpoints.uploadFileUploaderFile(
+          "http://example.com/upload_file/file_2",
           MOCK_FILE,
-          "mockWidgetId",
-          "mockSessionId"
+          "mockSessionId",
+          mockOnUploadProgress,
+          mockCancelToken
         )
-      ).rejects.toEqual(
-        new Error(
-          "Bad uploadFile response: expected a number but got 'invalidFileId'"
-        )
-      )
+      ).resolves.toBeUndefined()
+
+      const expectedData = new FormData()
+      expectedData.append("sessionId", "mockSessionId")
+      expectedData.append(MOCK_FILE.name, MOCK_FILE)
+
+      expect(spyRequest).toHaveBeenCalledWith({
+        url: "http://example.com/upload_file/file_2",
+        method: "PUT",
+        responseType: "text",
+        data: expectedData,
+        cancelToken: mockCancelToken,
+        onUploadProgress: mockOnUploadProgress,
+      })
     })
 
     it("errors on bad status", async () => {
       axiosMock
-        .onPost("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
+        .onPut("http://streamlit.mock:80/mock/base/path/_stcore/upload_file")
         .reply(() => [400])
 
       await expect(
         endpoints.uploadFileUploaderFile(
+          "/_stcore/upload_file",
           MOCK_FILE,
-          "mockWidgetId",
           "mockSessionId"
         )
       ).rejects.toEqual(new Error("Request failed with status code 400"))
@@ -291,13 +319,14 @@ describe("DefaultStreamlitEndpoints", () => {
         csrfEnabled: true,
       })
 
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest("mockUrl", {})
+      endpoints.csrfRequest(url, {})
 
       expect(spyRequest).toHaveBeenCalledWith({
         headers: { "X-Xsrftoken": "mockXsrfCookie" },
         withCredentials: true,
-        url: buildHttpUri(MOCK_SERVER_URI, "mockUrl"),
+        url,
       })
     })
 
@@ -307,10 +336,12 @@ describe("DefaultStreamlitEndpoints", () => {
         csrfEnabled: false,
       })
 
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
       // @ts-expect-error
-      endpoints.csrfRequest("mockUrl", {})
+      endpoints.csrfRequest(url, {})
+
       expect(spyRequest).toHaveBeenCalledWith({
-        url: buildHttpUri(MOCK_SERVER_URI, "mockUrl"),
+        url,
       })
     })
   })

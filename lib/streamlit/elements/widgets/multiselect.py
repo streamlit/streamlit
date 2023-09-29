@@ -183,7 +183,7 @@ class MultiSelectMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -307,6 +307,7 @@ class MultiSelectMixin:
             max_selections=max_selections,
             placeholder=placeholder,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         default_value: List[int] = [] if indices is None else indices
@@ -319,6 +320,11 @@ class MultiSelectMixin:
         multiselect_proto.form_id = current_form_id(self.dg)
         multiselect_proto.max_selections = max_selections or 0
         multiselect_proto.placeholder = placeholder
+        multiselect_proto.disabled = disabled
+        multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             multiselect_proto.help = dedent(help)
 
@@ -341,12 +347,6 @@ class MultiSelectMixin:
                 _get_over_max_options_message(default_count, max_selections)
             )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        multiselect_proto.disabled = disabled
-        multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)
             multiselect_proto.set_value = True

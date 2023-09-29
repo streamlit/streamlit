@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import numbers
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional, Union, cast
+from typing import Literal, Union, cast, overload
 
 import streamlit
 from streamlit.elements.form import current_form_id
@@ -30,7 +32,6 @@ from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
-    NoValue,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -44,44 +45,85 @@ Number = Union[int, float]
 
 @dataclass
 class NumberInputSerde:
-    value: Union[int, float]
+    value: Number | None
     data_type: int
 
-    def serialize(self, v: Number) -> Number:
+    def serialize(self, v: Number | None) -> Number | None:
         return v
 
-    def deserialize(self, ui_value: Optional[Number], widget_id: str = "") -> Number:
-        if ui_value is not None:
-            val = ui_value
-        else:
-            # Widget has not been used; fallback to the original value,
-            val = self.value
+    def deserialize(
+        self, ui_value: Number | None, widget_id: str = ""
+    ) -> Number | None:
+        val: Number | None = ui_value if ui_value is not None else self.value
 
-        if self.data_type == NumberInputProto.INT:
+        if val is not None and self.data_type == NumberInputProto.INT:
             val = int(val)
 
         return val
 
 
 class NumberInputMixin:
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: Number | None = None,
+        max_value: Number | None = None,
+        value: Number | Literal["min"] = "min",
+        step: Number | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> Number:
+        pass
+
+    @overload
+    def number_input(
+        self,
+        label: str,
+        min_value: Number | None = None,
+        max_value: Number | None = None,
+        value: None = None,
+        step: Number | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        placeholder: str | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+    ) -> Number | None:
+        pass
+
     @gather_metrics("number_input")
     def number_input(
         self,
         label: str,
-        min_value: Optional[Number] = None,
-        max_value: Optional[Number] = None,
-        value: Union[NoValue, Number, None] = NoValue(),
-        step: Optional[Number] = None,
-        format: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        min_value: Number | None = None,
+        max_value: Number | None = None,
+        value: Number | Literal["min"] | None = "min",
+        step: Number | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Number:
+    ) -> Number | None:
         r"""Display a numeric input widget.
 
         .. note::
@@ -109,7 +151,7 @@ class NumberInputMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -124,9 +166,11 @@ class NumberInputMixin:
         max_value : int, float, or None
             The maximum permitted value.
             If None, there will be no maximum.
-        value : int, float, or None
-            The value of this widget when it first renders.
-            Defaults to min_value, or 0.0 if min_value is None
+        value : int, float, "min" or None
+            The value of this widget when it first renders. If ``None``, will initialize
+            empty and return ``None`` until the user provides input.
+            If "min" (default), will initialize with min_value, or 0.0 if
+            min_value is None.
         step : int, float, or None
             The stepping interval.
             Defaults to 1 if the value is an int, 0.01 otherwise.
@@ -148,6 +192,9 @@ class NumberInputMixin:
             An optional tuple of args to pass to the callback.
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
+        placeholder : str or None
+            An optional string displayed when the number input is empty.
+            If None, no placeholder is displayed.
         disabled : bool
             An optional boolean, which disables the number input if set to
             True. The default is False. This argument can only be supplied by
@@ -160,9 +207,9 @@ class NumberInputMixin:
 
         Returns
         -------
-        int or float
-            The current value of the numeric input widget. The return type
-            will match the data type of the value parameter.
+        int or float or None
+            The current value of the numeric input widget or ``None`` if the widget
+            is empty. The return type will match the data type of the value parameter.
 
         Example
         -------
@@ -173,6 +220,17 @@ class NumberInputMixin:
 
         .. output::
            https://doc-number-input.streamlit.app/
+           height: 260px
+
+        To initialize an empty number input, use ``None`` as the value:
+
+        >>> import streamlit as st
+        >>>
+        >>> number = st.number_input("Insert a number", value=None, placeholder="Type a number...")
+        >>> st.write('The current number is ', number)
+
+        .. output::
+           https://doc-number-input-empty.streamlit.app/
            height: 260px
 
         """
@@ -189,6 +247,7 @@ class NumberInputMixin:
             on_change=on_change,
             args=args,
             kwargs=kwargs,
+            placeholder=placeholder,
             disabled=disabled,
             label_visibility=label_visibility,
             ctx=ctx,
@@ -197,25 +256,26 @@ class NumberInputMixin:
     def _number_input(
         self,
         label: str,
-        min_value: Optional[Number] = None,
-        max_value: Optional[Number] = None,
-        value: Union[NoValue, Number, None] = NoValue(),
-        step: Optional[Number] = None,
-        format: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        min_value: Number | None = None,
+        max_value: Number | None = None,
+        value: Number | Literal["min"] | None = "min",
+        step: Number | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
+        placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> Number:
+        ctx: ScriptRunContext | None = None,
+    ) -> Number | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=None if isinstance(value, NoValue) else value, key=key
+            default_value=value if value != "min" else None, key=key
         )
         maybe_raise_label_warnings(label, label_visibility)
 
@@ -230,19 +290,21 @@ class NumberInputMixin:
             format=format,
             key=key,
             help=help,
+            placeholder=None if placeholder is None else str(placeholder),
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         # Ensure that all arguments are of the same type.
         number_input_args = [min_value, max_value, value, step]
 
         int_args = all(
-            isinstance(a, (numbers.Integral, type(None), NoValue))
+            isinstance(a, (numbers.Integral, type(None), str))
             for a in number_input_args
         )
 
         float_args = all(
-            isinstance(a, (float, type(None), NoValue)) for a in number_input_args
+            isinstance(a, (float, type(None), str)) for a in number_input_args
         )
 
         if not int_args and not float_args:
@@ -254,7 +316,7 @@ class NumberInputMixin:
                 f"\n`step` has {type(step).__name__} type."
             )
 
-        if isinstance(value, NoValue):
+        if value == "min":
             if min_value is not None:
                 value = min_value
             elif int_args and float_args:
@@ -268,28 +330,31 @@ class NumberInputMixin:
         float_value = isinstance(value, float)
 
         if value is None:
-            raise StreamlitAPIException(
-                "Default value for number_input should be an int or a float."
+            if int_args and not float_args:
+                # Select int type if all relevant args are ints:
+                int_value = True
+            else:
+                # Otherwise, defaults to float:
+                float_value = True
+
+        if format is None:
+            format = "%d" if int_value else "%0.2f"
+
+        # Warn user if they format an int type as a float or vice versa.
+        if format in ["%d", "%u", "%i"] and float_value:
+            import streamlit as st
+
+            st.warning(
+                "Warning: NumberInput value below has type float,"
+                f" but format {format} displays as integer."
             )
-        else:
-            if format is None:
-                format = "%d" if int_value else "%0.2f"
+        elif format[-1] == "f" and int_value:
+            import streamlit as st
 
-            # Warn user if they format an int type as a float or vice versa.
-            if format in ["%d", "%u", "%i"] and float_value:
-                import streamlit as st
-
-                st.warning(
-                    "Warning: NumberInput value below has type float,"
-                    f" but format {format} displays as integer."
-                )
-            elif format[-1] == "f" and int_value:
-                import streamlit as st
-
-                st.warning(
-                    "Warning: NumberInput value below has type int so is"
-                    f" displayed as int despite format string {format}."
-                )
+            st.warning(
+                "Warning: NumberInput value below has type int so is"
+                f" displayed as int despite format string {format}."
+            )
 
         if step is None:
             step = 1 if int_value else 0.01
@@ -309,11 +374,10 @@ class NumberInputMixin:
             raise StreamlitAPIException(
                 f"The default `value` {value} must be greater than or equal to the `min_value` {min_value}"
             )
-        if max_value is not None and value is not None:
-            if max_value < value:
-                raise StreamlitAPIException(
-                    f"The default `value` {value} must be less than or equal to the `max_value` {max_value}"
-                )
+        if max_value is not None and value is not None and max_value < value:
+            raise StreamlitAPIException(
+                f"The default `value` {value} must be less than or equal to the `max_value` {max_value}"
+            )
 
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we simply re-package as StreamlitAPIExceptions.
@@ -329,7 +393,8 @@ class NumberInputMixin:
                     )
                 if step is not None:
                     JSNumber.validate_int_bounds(step, "`step`")  # type: ignore
-                JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
+                if value is not None:
+                    JSNumber.validate_int_bounds(value, "`value`")  # type: ignore
             else:
                 if min_value is not None:
                     JSNumber.validate_float_bounds(min_value, "`min_value`")
@@ -337,7 +402,8 @@ class NumberInputMixin:
                     JSNumber.validate_float_bounds(max_value, "`max_value`")
                 if step is not None:
                     JSNumber.validate_float_bounds(step, "`step`")
-                JSNumber.validate_float_bounds(value, "`value`")
+                if value is not None:
+                    JSNumber.validate_float_bounds(value, "`value`")
         except JSNumberBoundsException as e:
             raise StreamlitAPIException(str(e))
 
@@ -347,8 +413,16 @@ class NumberInputMixin:
         number_input_proto.id = id
         number_input_proto.data_type = data_type
         number_input_proto.label = label
-        number_input_proto.default = value
+        if value is not None:
+            number_input_proto.default = value
+        if placeholder is not None:
+            number_input_proto.placeholder = str(placeholder)
         number_input_proto.form_id = current_form_id(self.dg)
+        number_input_proto.disabled = disabled
+        number_input_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             number_input_proto.help = dedent(help)
 
@@ -379,15 +453,9 @@ class NumberInputMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        number_input_proto.disabled = disabled
-        number_input_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
-
         if widget_state.value_changed:
-            number_input_proto.value = widget_state.value
+            if widget_state.value is not None:
+                number_input_proto.value = widget_state.value
             number_input_proto.set_value = True
 
         self.dg._enqueue("number_input", number_input_proto)

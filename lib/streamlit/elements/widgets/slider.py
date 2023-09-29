@@ -230,7 +230,7 @@ class SliderMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -382,12 +382,14 @@ class SliderMixin:
             user_key=key,
             label=label,
             min_value=min_value,
+            max_value=max_value,
             value=value,
             step=step,
             format=format,
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         SUPPORTED_TYPES = {
@@ -641,6 +643,11 @@ class SliderMixin:
         slider_proto.data_type = data_type
         slider_proto.options[:] = []
         slider_proto.form_id = current_form_id(self.dg)
+        slider_proto.disabled = disabled
+        slider_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             slider_proto.help = dedent(help)
 
@@ -656,13 +663,6 @@ class SliderMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-        )
-
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        slider_proto.disabled = disabled
-        slider_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
         )
 
         if widget_state.value_changed:

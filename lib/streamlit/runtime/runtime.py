@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -90,6 +89,9 @@ class RuntimeConfig:
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
+
+    # The upload file manager
+    uploaded_file_manager: UploadedFileManager
 
     # The cache storage backend for Streamlit's st.cache_data.
     cache_storage_manager: CacheStorageManager = field(
@@ -187,8 +189,7 @@ class Runtime:
 
         # Initialize managers
         self._message_cache = ForwardMsgCache()
-        self._uploaded_file_mgr = UploadedFileManager()
-        self._uploaded_file_mgr.on_files_updated.connect(self._on_files_updated)
+        self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
@@ -237,8 +238,8 @@ class Runtime:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._get_async_objs().stopped
 
-    # NOTE: A few Runtime methods listed as threadsafe (get_client, _on_files_updated,
-    # and is_active_session) currently rely on the implementation detail that
+    # NOTE: A few Runtime methods listed as threadsafe (get_client and
+    # is_active_session) currently rely on the implementation detail that
     # WebsocketSessionManager's get_active_session_info and is_active_session methods
     # happen to be threadsafe. This may change with future SessionManager implementations,
     # at which point we'll need to formalize our thread safety rules for each
@@ -255,19 +256,6 @@ class Runtime:
         if session_info is None:
             return None
         return session_info.client
-
-    def _on_files_updated(self, session_id: str) -> None:
-        """Event handler for UploadedFileManager.on_file_added.
-        Ensures that uploaded files from stale sessions get deleted.
-
-        Notes
-        -----
-        Threading: SAFE. May be called on any thread.
-        """
-        if not self._session_mgr.is_active_session(session_id):
-            # If an uploaded file doesn't belong to an active session,
-            # remove it so it doesn't stick around forever.
-            self._uploaded_file_mgr.remove_session_files(session_id)
 
     async def start(self) -> None:
         """Start the runtime. This must be called only once, before
@@ -292,14 +280,9 @@ class Runtime:
         )
         self._async_objs = async_objs
 
-        if sys.version_info >= (3, 8, 0):
-            # Python 3.8+ supports a create_task `name` parameter, which can
-            # make debugging a bit easier.
-            self._loop_coroutine_task = asyncio.create_task(
-                self._loop_coroutine(), name="Runtime.loop_coroutine"
-            )
-        else:
-            self._loop_coroutine_task = asyncio.create_task(self._loop_coroutine())
+        self._loop_coroutine_task = asyncio.create_task(
+            self._loop_coroutine(), name="Runtime.loop_coroutine"
+        )
 
         await async_objs.started
 

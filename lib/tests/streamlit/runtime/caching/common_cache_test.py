@@ -42,6 +42,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -256,7 +257,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 _enqueue=forward_msg_queue.enqueue,
                 query_string="",
                 session_state=SafeSessionState(SessionState()),
-                uploaded_file_mgr=UploadedFileManager(),
+                uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
             ),
@@ -993,19 +994,19 @@ class WidgetReplayInteractionTest(InteractiveScriptTests):
         script = self.script_from_filename("test_data/cached_widget_replay_dynamic.py")
 
         sr = script.run()
-        assert len(sr.get("checkbox")) == 1
-        assert sr.get("text")[0].value == "['foo']"
+        assert len(sr.checkbox) == 1
+        assert sr.text[0].value == "['foo']"
 
-        sr2 = sr.get("checkbox")[0].check().run()
-        assert len(sr2.get("multiselect")) == 1
-        assert sr2.get("text")[0].value == "[]"
+        sr2 = sr.checkbox[0].check().run()
+        assert len(sr2.multiselect) == 1
+        assert sr2.text[0].value == "[]"
 
-        sr3 = sr2.get("multiselect")[0].select("baz").run()
-        assert sr3.get("text")[0].value == "['baz']"
+        sr3 = sr2.multiselect[0].select("baz").run()
+        assert sr3.text[0].value == "['baz']"
 
-        sr4 = sr3.get("checkbox")[0].uncheck().run()
-        sr5 = sr4.get("button")[0].click().run()
-        assert sr5.get("text")[0].value == "['foo']"
+        sr4 = sr3.checkbox[0].uncheck().run()
+        sr5 = sr4.button[0].click().run()
+        assert sr5.text[0].value == "['foo']"
 
 
 class WidgetReplayTest(InteractiveScriptTests):
@@ -1014,4 +1015,4 @@ class WidgetReplayTest(InteractiveScriptTests):
         script = self.script_from_filename("test_data/arrow_replay.py")
 
         sr = script.run()
-        assert len(sr.get("exception")) == 0
+        assert len(sr.exception) == 0

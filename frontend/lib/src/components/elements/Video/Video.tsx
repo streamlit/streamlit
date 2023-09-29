@@ -35,7 +35,14 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
 
-  const { type, url } = element
+  const { type, url, startTime } = element
+
+  // Handle startTime changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = startTime
+    }
+  }, [startTime])
 
   useEffect(() => {
     const videoNode = videoRef.current
@@ -80,6 +87,7 @@ export default function Video({
 
     return (
       <iframe
+        data-testid="stVideo"
         title={url}
         src={getYoutubeSrc(url)}
         width={width}
@@ -93,6 +101,7 @@ export default function Video({
 
   return (
     <video
+      data-testid="stVideo"
       ref={videoRef}
       controls
       src={endpoints.buildMediaURL(url)}

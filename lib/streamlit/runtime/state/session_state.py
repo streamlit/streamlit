@@ -28,7 +28,6 @@ from typing import (
     cast,
 )
 
-from pympler.asizeof import asizeof
 from typing_extensions import Final, TypeAlias
 
 import streamlit as st
@@ -45,6 +44,7 @@ from streamlit.runtime.state.common import (
 )
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
+from streamlit.vendor.pympler.asizeof import asizeof
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -112,7 +112,11 @@ class WStates(MutableMapping[str, Any]):
             ValueFieldName,
             wstate.value.WhichOneof("value"),
         )
-        value = wstate.value.__getattribute__(value_field_name)
+        value = (
+            wstate.value.__getattribute__(value_field_name)
+            if value_field_name  # Field name is None if the widget value was cleared
+            else None
+        )
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
@@ -179,6 +183,8 @@ class WStates(MutableMapping[str, Any]):
 
     def remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
+        # TODO(vdonato / kajarenc): Remove files corresponding to an inactive file
+        # uploader.
         self.states = {k: v for k, v in self.states.items() if k in active_widget_ids}
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:
@@ -208,6 +214,7 @@ class WStates(MutableMapping[str, Any]):
 
         field = metadata.value_type
         serialized = metadata.serializer(item.value)
+
         if is_array_value_field_name(field):
             arr = getattr(widget, field)
             arr.data.extend(serialized)
@@ -217,7 +224,11 @@ class WStates(MutableMapping[str, Any]):
             widget.file_uploader_state_value.CopyFrom(serialized)
         elif field == "string_trigger_value":
             widget.string_trigger_value.CopyFrom(serialized)
-        else:
+        elif field is not None and serialized is not None:
+            # If the field is None, the widget value was cleared
+            # by the user and therefore is None. But we cannot
+            # set it to None here, since the proto properties are
+            # not nullable. So we just don't set it.
             setattr(widget, field, serialized)
 
         return widget
@@ -297,7 +308,12 @@ class SessionState:
         widget_state.
         """
         for key_or_wid in self:
-            self._old_state[key_or_wid] = self[key_or_wid]
+            try:
+                self._old_state[key_or_wid] = self[key_or_wid]
+            except KeyError:
+                # handle key errors from widget state not having metadata gracefully
+                # https://github.com/streamlit/streamlit/issues/7206
+                pass
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
@@ -477,8 +493,8 @@ class SessionState:
         Update widget data and call callbacks on widgets whose value changed
         between the previous and current script runs.
         """
-        # Update ourselves with the new widget_states. The old widget states,
-        # used to skip callbacks if values haven't changed, are also preserved.
+        # Clear any triggers that weren't reset because the script was disconnected
+        self._reset_triggers()
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
         self._call_callbacks()
@@ -496,9 +512,7 @@ class SessionState:
             try:
                 self._new_widget_state.call_callback(wid)
             except RerunException:
-                st.warning(
-                    "Calling st.experimental_rerun() within a callback is a no-op."
-                )
+                st.warning("Calling st.rerun() within a callback is a no-op.")
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous

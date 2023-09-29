@@ -85,7 +85,7 @@ class ColorPickerMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -179,6 +179,7 @@ class ColorPickerMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         # set value default
@@ -212,6 +213,11 @@ class ColorPickerMixin:
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)
+        color_picker_proto.disabled = disabled
+        color_picker_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
         if help is not None:
             color_picker_proto.help = dedent(help)
 
@@ -229,12 +235,6 @@ class ColorPickerMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        color_picker_proto.disabled = disabled
-        color_picker_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
         if widget_state.value_changed:
             color_picker_proto.value = widget_state.value
             color_picker_proto.set_value = True

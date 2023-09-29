@@ -34,6 +34,7 @@ import {
   isInForm,
   labelVisibilityProtoValueToEnum,
 } from "@streamlit/lib/src/util/utils"
+import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { StyledTextAreaContainer } from "./styled-components"
 
 export interface Props {
@@ -53,7 +54,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: string
+  value: string | null
 }
 
 class TextArea extends React.PureComponent<Props, State> {
@@ -64,11 +65,11 @@ class TextArea extends React.PureComponent<Props, State> {
     value: this.initialValue,
   }
 
-  get initialValue(): string {
+  get initialValue(): string | null {
     // If WidgetStateManager knew a value for this widget, initialize to that.
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
-    return storedValue !== undefined ? storedValue : this.props.element.default
+    return storedValue ?? this.props.element.default ?? null
   }
 
   public componentDidMount(): void {
@@ -97,7 +98,7 @@ class TextArea extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value } = this.props.element
     this.props.element.setValue = false
-    this.setState({ value }, () => {
+    this.setState({ value: value ?? null }, () => {
       this.commitWidgetValue({ fromUi: false })
     })
   }
@@ -119,7 +120,7 @@ class TextArea extends React.PureComponent<Props, State> {
   private onFormCleared = (): void => {
     this.setState(
       (_, prevProps) => {
-        return { value: prevProps.element.default }
+        return { value: prevProps.element.default ?? null }
       },
       () => this.commitWidgetValue({ fromUi: true })
     )
@@ -188,7 +189,7 @@ class TextArea extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="stTextArea" style={style}>
+      <div className="stTextArea" data-testid="stTextArea" style={style}>
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -207,8 +208,7 @@ class TextArea extends React.PureComponent<Props, State> {
         </WidgetLabel>
         <StyledTextAreaContainer>
           <UITextArea
-            data-testid="stTextArea"
-            value={value}
+            value={value ?? ""}
             placeholder={placeholder}
             onBlur={this.onBlur}
             onChange={this.onChange}
@@ -235,13 +235,16 @@ class TextArea extends React.PureComponent<Props, State> {
             }}
           />
         </StyledTextAreaContainer>
-        <InputInstructions
-          dirty={dirty}
-          value={value}
-          maxLength={element.maxChars}
-          type={"multiline"}
-          inForm={isInForm({ formId: element.formId })}
-        />
+        {/* Hide the "Please enter to apply" text in small widget sizes */}
+        {width > breakpoints.hideWidgetDetails && (
+          <InputInstructions
+            dirty={dirty}
+            value={value ?? ""}
+            maxLength={element.maxChars}
+            type={"multiline"}
+            inForm={isInForm({ formId: element.formId })}
+          />
+        )}
       </div>
     )
   }

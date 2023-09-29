@@ -18,11 +18,15 @@ import React from "react"
 import { isMobile } from "react-device-detect"
 import { ChevronDown } from "baseui/icon"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
-import { logWarning } from "@streamlit/lib/src/util/log"
-import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
+import { withTheme } from "@emotion/react"
 import { hasMatch, score } from "fzy.js"
 import _ from "lodash"
-import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
+
+import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
+import {
+  LabelVisibilityOptions,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import TooltipIcon from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
@@ -30,17 +34,22 @@ import {
   StyledWidgetLabelHelp,
 } from "@streamlit/lib/src/components/widgets/BaseWidget"
 import { iconSizes } from "@streamlit/lib/src/theme/primitives"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
+
+const NO_OPTIONS_MSG = "No options to select."
 
 export interface Props {
   disabled: boolean
   width?: number
-  value: number
-  onChange: (value: number) => void
+  value: number | null
+  onChange: (value: number | null) => void
   options: any[]
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
   placeholder?: string
+  clearable?: boolean
+  theme: EmotionTheme
 }
 
 interface State {
@@ -50,7 +59,7 @@ interface State {
    * The value specified by the user via the UI. If the user didn't touch this
    * widget's UI, the default value is used.
    */
-  value: number
+  value: number | null
 }
 
 interface SelectOption {
@@ -78,7 +87,7 @@ export function fuzzyFilterSelectOptions(
     .value()
 }
 
-class Selectbox extends React.PureComponent<Props, State> {
+export class Selectbox extends React.PureComponent<Props, State> {
   public state: State = {
     isEmpty: false,
     value: this.props.value,
@@ -97,7 +106,7 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   private onChange = (params: OnChangeParams): void => {
     if (params.value.length === 0) {
-      logWarning("No value selected!")
+      this.setState({ value: null }, () => this.props.onChange(null))
       return
     }
 
@@ -138,25 +147,24 @@ class Selectbox extends React.PureComponent<Props, State> {
 
   public render(): React.ReactNode {
     const style = { width: this.props.width }
-    const { label, labelVisibility, help, placeholder } = this.props
+    const { label, labelVisibility, help, placeholder, theme, clearable } =
+      this.props
     let { disabled, options } = this.props
 
-    let value = [
-      {
-        label:
-          options.length > 0
-            ? options[this.state.value]
-            : "No options to select.",
-        value: this.state.value.toString(),
-      },
-    ]
+    let value: Option[] = []
 
-    if (this.state.isEmpty) {
-      value = []
+    if (!isNullOrUndefined(this.state.value) && !this.state.isEmpty) {
+      value = [
+        {
+          label:
+            options.length > 0 ? options[this.state.value] : NO_OPTIONS_MSG,
+          value: this.state.value.toString(),
+        },
+      ]
     }
 
     if (options.length === 0) {
-      options = ["No options to select."]
+      options = [NO_OPTIONS_MSG]
       disabled = true
     }
 
@@ -172,7 +180,11 @@ class Selectbox extends React.PureComponent<Props, State> {
     const showKeyboardOnMobile = options.length > 10
 
     return (
-      <div className="row-widget stSelectbox" style={style}>
+      <div
+        className="row-widget stSelectbox"
+        data-testid="stSelectbox"
+        style={style}
+      >
         <WidgetLabel
           label={label}
           labelVisibility={labelVisibility}
@@ -185,7 +197,6 @@ class Selectbox extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UISelect
-          clearable={false}
           disabled={disabled}
           labelKey="label"
           aria-label={label || ""}
@@ -194,6 +205,8 @@ class Selectbox extends React.PureComponent<Props, State> {
           onClose={this.onClose}
           options={selectOptions}
           filterOptions={this.filterOptions}
+          clearable={clearable || false}
+          escapeClearsValue={clearable || false}
           value={value}
           valueKey="value"
           placeholder={placeholder}
@@ -204,7 +217,25 @@ class Selectbox extends React.PureComponent<Props, State> {
               }),
             },
             Dropdown: { component: VirtualDropdown },
-
+            ClearIcon: {
+              props: {
+                overrides: {
+                  Svg: {
+                    style: {
+                      color: theme.colors.darkGray,
+                      // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                      // Let's use a scale transform effect to make it bigger.
+                      // The width property only enlarges its bounding box, so it's easier to click.
+                      transform: "scale(1.25)",
+                      width: theme.spacing.twoXL,
+                      ":hover": {
+                        fill: theme.colors.bodyText,
+                      },
+                    },
+                  },
+                },
+              },
+            },
             ControlContainer: {
               style: () => ({
                 // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
@@ -278,4 +309,4 @@ class Selectbox extends React.PureComponent<Props, State> {
   }
 }
 
-export default Selectbox
+export default withTheme(Selectbox)

@@ -45,6 +45,7 @@ import {
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
+  LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
   Metric as MetricProto,
   PlotlyChart as PlotlyChartProto,
@@ -69,7 +70,6 @@ import ExceptionElement from "@streamlit/lib/src/components/elements/ExceptionEl
 import Json from "@streamlit/lib/src/components/elements/Json"
 import Markdown from "@streamlit/lib/src/components/elements/Markdown"
 import Metric from "@streamlit/lib/src/components/elements/Metric"
-import Table from "@streamlit/lib/src/components/elements/Table"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
@@ -120,9 +120,6 @@ const BokehChart = React.lazy(
 // eslint-disable-next-line testing-library/render-result-naming-convention
 const DebouncedBokehChart = debounceRender(BokehChart, 100)
 
-const DataFrame = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/DataFrame")
-)
 const DeckGlJsonChart = React.lazy(
   () => import("@streamlit/lib/src/components/elements/DeckGlJsonChart")
 )
@@ -135,11 +132,13 @@ const IFrame = React.lazy(
 const ImageList = React.lazy(
   () => import("@streamlit/lib/src/components/elements/ImageList")
 )
+
+const LinkButton = React.lazy(
+  () => import("@streamlit/lib/src/components/elements/LinkButton")
+)
+
 const PlotlyChart = React.lazy(
   () => import("@streamlit/lib/src/components/elements/PlotlyChart")
-)
-const VegaLiteChart = React.lazy(
-  () => import("@streamlit/lib/src/components/elements/VegaLiteChart")
 )
 const Video = React.lazy(
   () => import("@streamlit/lib/src/components/elements/Video")
@@ -306,15 +305,6 @@ const RawElementNodeRenderer = (
         />
       )
 
-    case "dataFrame":
-      return (
-        <DataFrame
-          element={node.immutableElement.get("dataFrame")}
-          width={width}
-          height={height}
-        />
-      )
-
     case "deckGlJsonChart":
       return (
         <DeckGlJsonChart
@@ -409,11 +399,6 @@ const RawElementNodeRenderer = (
         />
       )
 
-    case "table":
-      return (
-        <Table element={node.immutableElement.get("table")} width={width} />
-      )
-
     case "text":
       return (
         <TextElement width={width} element={node.element.text as TextProto} />
@@ -421,14 +406,6 @@ const RawElementNodeRenderer = (
 
     case "metric":
       return <Metric element={node.element.metric as MetricProto} />
-
-    case "vegaLiteChart":
-      return (
-        <VegaLiteChart
-          element={node.immutableElement.get("vegaLiteChart")}
-          width={width}
-        />
-      )
 
     case "video":
       return (
@@ -494,6 +471,13 @@ const RawElementNodeRenderer = (
           width={width}
           {...widgetProps}
         />
+      )
+    }
+    case "linkButton": {
+      const linkButtonProto = node.element.linkButton as LinkButtonProto
+      widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
+      return (
+        <LinkButton element={linkButtonProto} width={width} {...widgetProps} />
       )
     }
     case "cameraInput": {

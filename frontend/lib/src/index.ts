@@ -18,7 +18,6 @@
 export {
   IS_DEV_ENV,
   RERUN_PROMPT_MODAL_DIALOG,
-  SHOW_DEPLOY_BUTTON,
   WEBSOCKET_PORT_DEV,
 } from "./baseconsts"
 export { default as VerticalBlock } from "./components/core/Block"
@@ -34,7 +33,6 @@ export { FileUploadClient } from "./FileUploadClient"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { BlockNode, AppRoot, ElementNode } from "./AppNode"
 export { Quiver } from "./dataframes/Quiver"
-export { default as VegaLiteChartElement } from "./components/elements/VegaLiteChart"
 export type {
   DeployedAppMetadata,
   IGuestToHostMessage,
@@ -74,13 +72,7 @@ export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
 export { mount, shallow, mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
-export {
-  getPossibleBaseUris,
-  buildHttpUri,
-  SVG_PREFIX,
-  xssSanitizeSvg,
-  buildWsUri,
-} from "./util/UriUtil"
+export { getPossibleBaseUris, buildHttpUri, buildWsUri } from "./util/UriUtil"
 export type { BaseUriParts } from "./util/UriUtil"
 export { ensureError } from "./util/ErrorHandling"
 export {
@@ -113,7 +105,6 @@ export {
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
-  isTesting,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
@@ -136,4 +127,5 @@ export { mockTheme } from "./mocks/mockTheme"
 export { default as AlertElement } from "./components/elements/AlertElement"
 export { default as TextElement } from "./components/elements/TextElement"
 export { default as useScrollToBottom } from "./hooks/useScrollToBottom"
+export { RootStyleProvider } from "./RootStyleProvider"
 export * from "./proto"

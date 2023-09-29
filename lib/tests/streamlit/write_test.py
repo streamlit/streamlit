@@ -30,7 +30,6 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import SessionStateProxy
-from tests.testutil import should_skip_pyspark_tests
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -56,6 +55,20 @@ class StreamlitWriteTest(unittest.TestCase):
             p.assert_called_once_with(
                 "<strong>hello world</strong>", unsafe_allow_html=True
             )
+
+    def test_repr_html_no_html_tags_in_string(self):
+        """Test st.write with an object that defines _repr_html_ but does not have any
+        html tags in the returned string.
+        """
+
+        class FakeHTMLable(object):
+            def _repr_html_(self):
+                return "hello **world**"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
+            st.write(FakeHTMLable())
+
+            p.assert_called_once_with("hello **world**", unsafe_allow_html=False)
 
     def test_string(self):
         """Test st.write with a string."""
@@ -198,9 +211,6 @@ class StreamlitWriteTest(unittest.TestCase):
             )
             p.assert_called_once()
 
-    @pytest.mark.skipif(
-        should_skip_pyspark_tests(), reason="pyspark is incompatible with Python3.11"
-    )
     def test_pyspark_dataframe_write(self):
         """Test st.write with pyspark.sql.DataFrame."""
         # Import package inside the test so the test suite still runs even if you don't

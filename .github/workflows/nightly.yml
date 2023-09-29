@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: "recursive"
           # Save the access token to the local git config, so
@@ -95,6 +95,11 @@ jobs:
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
 
+  run-playwright-tests:
+    uses: ./.github/workflows/playwright.yml
+    with:
+      ref: ${{needs.create-nightly-tag.outputs.tag}}
+
   test-status-notification:
     runs-on: ubuntu-latest
 
@@ -107,6 +112,7 @@ jobs:
       - run-javascript-tests
       - run-py-prod-deps-smoke-test
       - run-cypress-tests
+      - run-playwright-tests
 
     env:
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -114,7 +120,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           persist-credentials: false
@@ -127,6 +133,8 @@ jobs:
         run: python scripts/slack_notifications.py nightly py_prod
       - if: ${{ needs.run-cypress-tests.result == 'failure' }}
         run: python scripts/slack_notifications.py nightly cypress
+      - if: ${{ needs.run-playwright-tests.result == 'failure' }}
+        run: python scripts/slack_notifications.py nightly playwright
 
   create-nightly-build:
     runs-on: ubuntu-latest
@@ -138,6 +146,7 @@ jobs:
       - run-javascript-tests
       - run-py-prod-deps-smoke-test
       - run-cypress-tests
+      - run-playwright-tests
 
     defaults:
       run:
@@ -149,7 +158,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.create-nightly-tag.outputs.tag }}
           # Save the access token to the local git config, so
@@ -228,7 +237,7 @@ jobs:
 
     steps:
       - name: Checkout Core Previews Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: streamlit/core-previews
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.

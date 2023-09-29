@@ -383,8 +383,10 @@ _create_option(
         - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
     default_val="arrow",
     type_=str,
+    deprecated=True,
+    deprecation_text="Legacy serialization has been removed. All dataframes will be serialized using Apache Arrow.",
+    expiration_date="2023-11-01",
 )
-
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -837,10 +839,6 @@ _create_option(
 
 # Config Section: UI #
 
-# NOTE: We currently hide the ui config section in the `streamlit config show`
-# output as all of its options are hidden. If a non-hidden option is eventually
-# added, the section should be unhidden by removing it from the `SKIP_SECTIONS`
-# set in config_util.show_config.
 _create_section("ui", "Configuration of UI elements displayed in the browser.")
 
 _create_option(
@@ -876,6 +874,36 @@ _create_option(
                 https://mapbox.com. It's free (for moderate usage levels)!""",
     default_val="",
     sensitive=True,
+)
+
+
+# Config Section: Magic #
+
+_create_section("magic", "Settings for how Streamlit pre-processes your script")
+
+_create_option(
+    "magic.displayRootDocString",
+    description="""
+        Streamlit's "magic" parser typically skips strings that appear to be
+        docstrings. When this flag is set to True, Streamlit will instead display
+        the root-level docstring in the app, just like any other magic string.
+        This is useful for things like notebooks.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "magic.displayLastExprIfNoSemicolon",
+    description="""
+        Make Streamlit's "magic" parser always display the last expression in the
+        root file if it has no semicolon at the end. This matches the behavior of
+        Jupyter notebooks, for example.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
 )
 
 

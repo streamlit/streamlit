@@ -28,11 +28,7 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
-from tests.testutil import (
-    create_snowpark_session,
-    patch_config_options,
-    should_skip_pyspark_tests,
-)
+from tests.testutil import create_snowpark_session, patch_config_options
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -368,9 +364,6 @@ class StMapTest(DeltaGeneratorTestCase):
         """Check if map data have 4 rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 4)
 
-    @pytest.mark.skipif(
-        should_skip_pyspark_tests(), reason="pyspark is incompatible with Python3.11"
-    )
     def test_pyspark_dataframe(self):
         """Test st.map with pyspark.sql.DataFrame"""
         pyspark_map_dataframe = (
@@ -389,3 +382,14 @@ class StMapTest(DeltaGeneratorTestCase):
 
         """Check if map data has 5 rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 5)
+
+    def test_id_changes_when_data_changes(self):
+        st.map()
+
+        orig_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        np.random.seed(0)
+
+        df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
+        st.map(df)
+        new_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        self.assertNotEquals(orig_id, new_id)

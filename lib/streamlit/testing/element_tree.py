@@ -62,6 +62,13 @@ from streamlit.runtime.state.session_state import SessionState
 T = TypeVar("T")
 
 
+@dataclass
+class InitialValue:
+    """This class is used to represent the initial value of a widget."""
+
+    pass
+
+
 # TODO This class serves as a fallback option for elements that have not
 # been implemented yet, as well as providing implementations of some
 # trivial methods. It may have significantly reduced scope, or be removed
@@ -103,9 +110,9 @@ class Element:
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float = 3) -> ElementTree:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
-        Timeout is a number of seconds.
+        Timeout is a number of seconds, or None to use the default.
         """
         return self.root.run(timeout=timeout)
 
@@ -126,6 +133,106 @@ class Widget(ABC, Element):
     def set_value(self, v: Any):
         self._value = v
         return self
+
+    @property
+    def as_button(self) -> Button:
+        assert isinstance(self, Button)
+        return self
+
+    @property
+    def as_checkbox(self) -> Checkbox:
+        assert isinstance(self, Checkbox)
+        return self
+
+    @property
+    def as_color_picker(self) -> ColorPicker:
+        assert isinstance(self, ColorPicker)
+        return self
+
+    @property
+    def as_date_input(self) -> DateInput:
+        assert isinstance(self, DateInput)
+        return self
+
+    @property
+    def as_multiselect(self) -> Multiselect[Any]:
+        assert isinstance(self, Multiselect)
+        return self
+
+    @property
+    def as_number_input(self) -> NumberInput:
+        assert isinstance(self, NumberInput)
+        return self
+
+    @property
+    def as_radio(self) -> Radio[Any]:
+        assert isinstance(self, Radio)
+        return self
+
+    @property
+    def as_select_slider(self) -> SelectSlider[Any]:
+        assert isinstance(self, SelectSlider)
+        return self
+
+    @property
+    def as_selectbox(self) -> Selectbox[Any]:
+        assert isinstance(self, Selectbox)
+        return self
+
+    @property
+    def as_slider(self) -> Slider[Any]:
+        assert isinstance(self, Slider)
+        return self
+
+    @property
+    def as_text_area(self) -> TextArea:
+        assert isinstance(self, TextArea)
+        return self
+
+    @property
+    def as_text_input(self) -> TextInput:
+        assert isinstance(self, TextInput)
+        return self
+
+    @property
+    def as_time_input(self) -> TimeInput:
+        assert isinstance(self, TimeInput)
+        return self
+
+
+El = TypeVar("El", bound=Element, covariant=True)
+
+
+class ElementList(Generic[El]):
+    def __init__(self, els: Sequence[El]):
+        self._list: Sequence[El] = els
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    def len(self) -> int:
+        return len(self)
+
+    def __getitem__(self, idx: int) -> El:
+        return self._list[idx]
+
+    def __iter__(self):
+        yield from self._list
+
+    def values(self) -> Sequence[Any]:
+        return [e.value for e in self]
+
+
+W = TypeVar("W", bound=Widget, covariant=True)
+
+
+class WidgetList(Generic[W], ElementList[W]):
+    def get_widget(self, key: str) -> W:
+        for e in self._list:
+            if e.key == key:
+                return e
+
+        raise KeyError(key)
 
 
 @dataclass(repr=False)
@@ -286,12 +393,12 @@ class ColorPicker(Widget):
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
-DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
+DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
 
 
 @dataclass(repr=False)
 class DateInput(Widget):
-    _value: DateValue | None
+    _value: DateValue | None | InitialValue
     proto: DateInputProto
     min: date
     max: date
@@ -300,7 +407,7 @@ class DateInput(Widget):
     def __init__(self, proto: DateInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "date_input"
         self.id = proto.id
@@ -327,9 +434,9 @@ class DateInput(Widget):
 
     @property
     def value(self) -> DateWidgetReturn:
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             parsed, _ = _parse_date_value(self._value)
-            return tuple(parsed)  # type: ignore
+            return tuple(parsed) if parsed is not None else None  # type: ignore
         else:
             state = self.root.session_state
             assert state
@@ -527,60 +634,68 @@ Number = Union[int, float]
 
 @dataclass(repr=False)
 class NumberInput(Widget):
-    _value: Number | None
+    _value: Number | None | InitialValue
     proto: NumberInputProto
-    min_value: Number
-    max_value: Number
+    min_value: Number | None
+    max_value: Number | None
     step: Number
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "number_input"
         self.id = proto.id
         self.label = proto.label
-        self.min_value = proto.min
-        self.max_value = proto.max
+        self.min_value = proto.min if proto.has_min else None
+        self.max_value = proto.max if proto.has_max else None
         self.step = proto.step
         self.help = proto.help
         self.form_id = proto.form_id
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: Number) -> NumberInput:
+    def set_value(self, v: Number | None) -> NumberInput:
         self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.double_value = self.value
+        if self.value is not None:
+            ws.double_value = self.value
         return ws
 
     @property
-    def value(self) -> Number:
-        if self._value is not None:
+    def value(self) -> Number | None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
             assert state
+
             # Awkward to do this with `cast`
             return state[self.id]  # type: ignore
 
     def increment(self) -> NumberInput:
-        v = min(self.value + self.step, self.max_value)
+        if self.value is None:
+            return self
+
+        v = min(self.value + self.step, self.max_value or float("inf"))
         return self.set_value(v)
 
     def decrement(self) -> NumberInput:
-        v = max(self.value - self.step, self.min_value)
+        if self.value is None:
+            return self
+
+        v = max(self.value - self.step, self.min_value or float("-inf"))
         return self.set_value(v)
 
 
 @dataclass(repr=False)
 class Radio(Widget, Generic[T]):
-    _value: T | None
+    _value: T | None | InitialValue
 
     proto: RadioProto
     options: list[str]
@@ -589,7 +704,7 @@ class Radio(Widget, Generic[T]):
     def __init__(self, proto: RadioProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "radio"
         self.id = proto.id
@@ -602,20 +717,22 @@ class Radio(Widget, Generic[T]):
         self.key = user_key_from_widget_id(self.id)
 
     @property
-    def index(self) -> int:
+    def index(self) -> int | None:
+        if self.value is None:
+            return None
         return self.options.index(str(self.value))
 
     @property
-    def value(self) -> T:
+    def value(self) -> T | None:
         """The currently selected value from the options."""
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
             assert state
             return cast(T, state[self.id])
 
-    def set_value(self, v: T) -> Radio[T]:
+    def set_value(self, v: T | None) -> Radio[T]:
         self._value = v
         return self
 
@@ -626,13 +743,14 @@ class Radio(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        ws.int_value = self.index
+        if self.index is not None:
+            ws.int_value = self.index
         return ws
 
 
 @dataclass(repr=False)
 class Selectbox(Widget, Generic[T]):
-    _value: T | None
+    _value: T | None | InitialValue
 
     proto: SelectboxProto = field(repr=False)
     options: list[str]
@@ -640,7 +758,7 @@ class Selectbox(Widget, Generic[T]):
     def __init__(self, proto: SelectboxProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "selectbox"
         self.id = proto.id
@@ -652,22 +770,25 @@ class Selectbox(Widget, Generic[T]):
         self.key = user_key_from_widget_id(self.id)
 
     @property
-    def index(self) -> int:
+    def index(self) -> int | None:
+        if self.value is None:
+            return None
+
         if len(self.options) == 0:
             return 0
         return self.options.index(str(self.value))
 
     @property
-    def value(self) -> T:
+    def value(self) -> T | None:
         """The currently selected value from the options."""
-        if self._value is not None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
             assert state
             return cast(T, state[self.id])
 
-    def set_value(self, v: T) -> Selectbox[T]:
+    def set_value(self, v: T | None) -> Selectbox[T]:
         """
         Set the value of the selectbox.
         Implementation note: set_value not work correctly if `format_func` is also
@@ -677,10 +798,12 @@ class Selectbox(Widget, Generic[T]):
         self._value = v
         return self
 
-    def select(self, v: T) -> Selectbox[T]:
+    def select(self, v: T | None) -> Selectbox[T]:
         return self.set_value(v)
 
-    def select_index(self, index: int) -> Selectbox[T]:
+    def select_index(self, index: int | None) -> Selectbox[T]:
+        if index is None:
+            return self.set_value(None)
         return self.set_value(cast(T, self.options[index]))
 
     def widget_state(self) -> WidgetState:
@@ -690,7 +813,8 @@ class Selectbox(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        ws.int_value = self.index
+        if self.index is not None:
+            ws.int_value = self.index
         return ws
 
 
@@ -823,7 +947,7 @@ class Text(Element):
 
 @dataclass(repr=False)
 class TextArea(Widget):
-    _value: str | None
+    _value: str | None | InitialValue
 
     proto: TextAreaProto
     max_chars: int
@@ -832,7 +956,7 @@ class TextArea(Widget):
     def __init__(self, proto: TextAreaProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "text_area"
         self.id = proto.id
@@ -844,19 +968,20 @@ class TextArea(Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: str) -> TextArea:
+    def set_value(self, v: str | None) -> TextArea:
         self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.string_value = self.value
+        if self.value is not None:
+            ws.string_value = self.value
         return ws
 
     @property
-    def value(self) -> str:
-        if self._value is not None:
+    def value(self) -> str | None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
@@ -873,7 +998,7 @@ class TextArea(Widget):
 
 @dataclass(repr=False)
 class TextInput(Widget):
-    _value: str | None
+    _value: str | None | InitialValue
     proto: TextInputProto
     max_chars: int
     autocomplete: str
@@ -882,7 +1007,7 @@ class TextInput(Widget):
     def __init__(self, proto: TextInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "text_input"
         self.id = proto.id
@@ -895,19 +1020,20 @@ class TextInput(Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: str) -> TextInput:
+    def set_value(self, v: str | None) -> TextInput:
         self._value = v
         return self
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.string_value = self.value
+        if self.value is not None:
+            ws.string_value = self.value
         return ws
 
     @property
-    def value(self) -> str:
-        if self._value is not None:
+    def value(self) -> str | None:
+        if not isinstance(self._value, InitialValue):
             return self._value
         else:
             state = self.root.session_state
@@ -927,14 +1053,14 @@ TimeValue: TypeAlias = Union[time, datetime]
 
 @dataclass(repr=False)
 class TimeInput(Widget):
-    _value: TimeValue | None
+    _value: TimeValue | None | InitialValue
     proto: TimeInputProto
     step: int
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
         self.proto = proto
         self.root = root
-        self._value = None
+        self._value = InitialValue()
 
         self.type = "time_input"
         self.id = proto.id
@@ -945,7 +1071,7 @@ class TimeInput(Widget):
         self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
 
-    def set_value(self, v: TimeValue) -> TimeInput:
+    def set_value(self, v: TimeValue | None) -> TimeInput:
         self._value = v
         return self
 
@@ -953,13 +1079,15 @@ class TimeInput(Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        serde = TimeInputSerde(None)  # type: ignore
-        ws.string_value = serde.serialize(self.value)
+        serde = TimeInputSerde(None)
+        serialized_value = serde.serialize(self.value)
+        if serialized_value is not None:
+            ws.string_value = serialized_value
         return ws
 
     @property
-    def value(self) -> time:
-        if self._value is not None:
+    def value(self) -> time | None:
+        if not isinstance(self._value, InitialValue):
             v = self._value
             v = v.time() if isinstance(v, datetime) else v
             return v
@@ -970,11 +1098,15 @@ class TimeInput(Widget):
 
     def increment(self) -> TimeInput:
         """Select the next available time."""
+        if self.value is None:
+            return self
         dt = datetime.combine(date.today(), self.value) + timedelta(seconds=self.step)
         return self.set_value(dt.time())
 
     def decrement(self) -> TimeInput:
         """Select the previous available time."""
+        if self.value is None:
+            return self
         dt = datetime.combine(date.today(), self.value) - timedelta(seconds=self.step)
         return self.set_value(dt.time())
 
@@ -1024,96 +1156,96 @@ class Block:
     # We could implement these using __getattr__ but that would have
     # much worse type information.
     @property
-    def button(self) -> Sequence[Button]:
-        return self.get("button")
+    def button(self) -> WidgetList[Button]:
+        return WidgetList(self.get("button"))
 
     @property
-    def caption(self) -> Sequence[Caption]:
-        return self.get("caption")
+    def caption(self) -> ElementList[Caption]:
+        return ElementList(self.get("caption"))
 
     @property
-    def checkbox(self) -> Sequence[Checkbox]:
-        return self.get("checkbox")
+    def checkbox(self) -> WidgetList[Checkbox]:
+        return WidgetList(self.get("checkbox"))
 
     @property
-    def code(self) -> Sequence[Code]:
-        return self.get("code")
+    def code(self) -> ElementList[Code]:
+        return ElementList(self.get("code"))
 
     @property
-    def color_picker(self) -> Sequence[ColorPicker]:
-        return self.get("color_picker")
+    def color_picker(self) -> WidgetList[ColorPicker]:
+        return WidgetList(self.get("color_picker"))
 
     @property
-    def date_input(self) -> Sequence[DateInput]:
-        return self.get("date_input")
+    def date_input(self) -> WidgetList[DateInput]:
+        return WidgetList(self.get("date_input"))
 
     @property
-    def divider(self) -> Sequence[Divider]:
-        return self.get("divider")
+    def divider(self) -> ElementList[Divider]:
+        return ElementList(self.get("divider"))
 
     @property
-    def exception(self) -> Sequence[Exception]:
-        return self.get("exception")
+    def exception(self) -> ElementList[Exception]:
+        return ElementList(self.get("exception"))
 
     @property
-    def header(self) -> Sequence[Header]:
-        return self.get("header")
+    def header(self) -> ElementList[Header]:
+        return ElementList(self.get("header"))
 
     @property
-    def latex(self) -> Sequence[Latex]:
-        return self.get("latex")
+    def latex(self) -> ElementList[Latex]:
+        return ElementList(self.get("latex"))
 
     @property
-    def markdown(self) -> Sequence[Markdown]:
-        return self.get("markdown")
+    def markdown(self) -> ElementList[Markdown]:
+        return ElementList(self.get("markdown"))
 
     @property
-    def multiselect(self) -> Sequence[Multiselect[Any]]:
-        return self.get("multiselect")
+    def multiselect(self) -> WidgetList[Multiselect[Any]]:
+        return WidgetList(self.get("multiselect"))
 
     @property
-    def number_input(self) -> Sequence[NumberInput]:
-        return self.get("number_input")
+    def number_input(self) -> WidgetList[NumberInput]:
+        return WidgetList(self.get("number_input"))
 
     @property
-    def radio(self) -> Sequence[Radio[Any]]:
-        return self.get("radio")
+    def radio(self) -> WidgetList[Radio[Any]]:
+        return WidgetList(self.get("radio"))
 
     @property
-    def select_slider(self) -> Sequence[SelectSlider[Any]]:
-        return self.get("select_slider")
+    def select_slider(self) -> WidgetList[SelectSlider[Any]]:
+        return WidgetList(self.get("select_slider"))
 
     @property
-    def selectbox(self) -> Sequence[Selectbox[Any]]:
-        return self.get("selectbox")
+    def selectbox(self) -> WidgetList[Selectbox[Any]]:
+        return WidgetList(self.get("selectbox"))
 
     @property
-    def slider(self) -> Sequence[Slider[Any]]:
-        return self.get("slider")
+    def slider(self) -> WidgetList[Slider[Any]]:
+        return WidgetList(self.get("slider"))
 
     @property
-    def subheader(self) -> Sequence[Subheader]:
-        return self.get("subheader")
+    def subheader(self) -> ElementList[Subheader]:
+        return ElementList(self.get("subheader"))
 
     @property
-    def text(self) -> Sequence[Text]:
-        return self.get("text")
+    def text(self) -> ElementList[Text]:
+        return ElementList(self.get("text"))
 
     @property
-    def text_area(self) -> Sequence[TextArea]:
-        return self.get("text_area")
+    def text_area(self) -> WidgetList[TextArea]:
+        return WidgetList(self.get("text_area"))
 
     @property
-    def text_input(self) -> Sequence[TextInput]:
-        return self.get("text_input")
+    def text_input(self) -> WidgetList[TextInput]:
+        return WidgetList(self.get("text_input"))
 
     @property
-    def time_input(self) -> Sequence[TimeInput]:
-        return self.get("time_input")
+    def time_input(self) -> WidgetList[TimeInput]:
+        return WidgetList(self.get("time_input"))
 
     @property
-    def title(self) -> Sequence[Title]:
-        return self.get("title")
+    def title(self) -> ElementList[Title]:
+        return ElementList(self.get("title"))
 
     # These overloads improve type information for code calling `get`
     @overload
@@ -1213,19 +1345,20 @@ class Block:
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
-    def get_widget(self, key: str) -> Widget | None:
+    def get_widget(self, key: str) -> Widget:
         for e in self:
             if e.key == key:
                 assert isinstance(e, Widget)
                 return e
-        return None
+
+        raise KeyError(key)
 
     def widget_state(self) -> WidgetState | None:
         return None
 
-    def run(self, timeout: float = 3) -> ElementTree:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
-        Timeout is a number of seconds.
+        Timeout is a number of seconds, or None to use the default.
         """
         return self.root.run(timeout=timeout)
 
@@ -1266,6 +1399,7 @@ class ElementTree(Block):
 
     script_path: str | None = field(repr=False, default=None)
     _session_state: SessionState | None = field(repr=False, default=None)
+    _default_timeout: float = field(repr=False, default=3)
 
     def __init__(self):
         # Expect script_path and session_state to be filled in afterwards
@@ -1299,15 +1433,17 @@ class ElementTree(Block):
 
         return ws
 
-    def run(self, timeout: float = 3) -> ElementTree:
+    def run(self, timeout: float | None = None) -> ElementTree:
         """Run the script with updated widget values.
-        Timeout is a number of seconds.
+        Timeout is a number of seconds, or None to use the default.
         """
         assert self.script_path is not None
         from streamlit.testing.local_script_runner import LocalScriptRunner
 
         widget_states = self.get_widget_states()
-        runner = LocalScriptRunner(self.script_path, self.session_state)
+        runner = LocalScriptRunner(
+            self.script_path, self.session_state, default_timeout=self._default_timeout
+        )
         return runner.run(widget_states, timeout=timeout)
 
 

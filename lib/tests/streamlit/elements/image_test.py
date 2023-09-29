@@ -209,6 +209,10 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             (IMAGES["gif_64_64"]["gif"], "/media/"),
             ("https://streamlit.io/test.png", "https://streamlit.io/test.png"),
             ("https://streamlit.io/test.svg", "https://streamlit.io/test.svg"),
+            (
+                "<svg fake></svg>",
+                "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciICBmYWtlPjwvc3ZnPg==",
+            ),
         ]
     )
     def test_image_to_url_prefix(self, img, expected_prefix):
@@ -289,20 +293,29 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("<svg fake></svg>", "data:image/svg+xml,<svg fake></svg>"),
-            ("<svg\nfake></svg>", "data:image/svg+xml,<svg\nfake></svg>"),
-            ("\n<svg fake></svg>", "data:image/svg+xml,\n<svg fake></svg>"),
+            (
+                "<svg fake></svg>",
+                "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciICBmYWtlPjwvc3ZnPg==",
+            ),
+            (
+                "<svg\nfake></svg>",
+                "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIApmYWtlPjwvc3ZnPg==",
+            ),
+            (
+                "\n<svg fake></svg>",
+                "data:image/svg+xml;base64,CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiAgZmFrZT48L3N2Zz4=",
+            ),
             (
                 '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
-                'data:image/svg+xml,<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!-- Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n fake></svg>',
+                "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIAogZmFrZT48L3N2Zz4=",
             ),
             (
                 '<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
-                'data:image/svg+xml,<?xml version="1.0" encoding="utf-8"?><!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  --><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg fake></svg>',
+                "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48IS0tIEdlbmVyYXRvcjogQWRvYmUgSWxsdXN0cmF0b3IgMTcuMS4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogNi4wMCBCdWlsZCAwKSAgLS0+PCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj48c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgIGZha2U+PC9zdmc+",
             ),
             (
                 '\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
-                'data:image/svg+xml,\n<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 17.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg fake></svg>',
+                "data:image/svg+xml;base64,Cjw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9InV0Zi04Ij8+CjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNy4xLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4KPCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIj4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciICBmYWtlPjwvc3ZnPg==",
             ),
         ]
     )
@@ -316,8 +329,9 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             image_list_proto,
             False,
         )
+
         img = image_list_proto.imgs[0]
-        self.assertTrue(img.markup.startswith(expected_prefix))
+        self.assertTrue(img.url.startswith(expected_prefix))
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""

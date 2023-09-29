@@ -309,7 +309,11 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
+  public setIntValue(
+    widget: WidgetInfo,
+    value: number | null,
+    source: Source
+  ): void {
     this.createWidgetState(widget, source).intValue = value
     this.onWidgetValueChanged(widget.formId, source)
   }
@@ -325,7 +329,7 @@ export class WidgetStateManager {
 
   public setDoubleValue(
     widget: WidgetInfo,
-    value: number,
+    value: number | null,
     source: Source
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
@@ -343,7 +347,7 @@ export class WidgetStateManager {
 
   public setStringValue(
     widget: WidgetInfo,
-    value: string,
+    value: string | null,
     source: Source
   ): void {
     this.createWidgetState(widget, source).stringValue = value

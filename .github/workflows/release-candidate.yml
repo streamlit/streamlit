@@ -27,6 +27,11 @@ jobs:
     with:
       ref: ${{ github.ref_name }}
 
+  run-playwright-tests:
+    uses: ./.github/workflows/playwright.yml
+    with:
+      ref: ${{ github.ref_name }}
+
   build-release-candidate:
     runs-on: ubuntu-latest
 
@@ -35,6 +40,7 @@ jobs:
       - run-javascript-tests
       - run-py-prod-deps-smoke-test
       - run-cypress-tests
+      - run-playwright-tests
 
     defaults:
       run:
@@ -46,7 +52,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
           persist-credentials: false

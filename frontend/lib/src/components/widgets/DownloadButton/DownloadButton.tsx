@@ -37,6 +37,11 @@ function DownloadButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, width, endpoints } = props
   const style = { width }
 
+  const kind =
+    element.type === "primary"
+      ? BaseButtonKind.PRIMARY
+      : BaseButtonKind.SECONDARY
+
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
@@ -44,7 +49,8 @@ function DownloadButton(props: Props): ReactElement {
     const link = document.createElement("a")
     const uri = endpoints.buildMediaURL(element.url)
     link.setAttribute("href", uri)
-    link.setAttribute("target", "_blank")
+    link.setAttribute("target", "_self")
+    link.setAttribute("download", "")
     link.click()
   }
 
@@ -60,7 +66,7 @@ function DownloadButton(props: Props): ReactElement {
     >
       <BaseButtonTooltip help={element.help}>
         <BaseButton
-          kind={BaseButtonKind.SECONDARY}
+          kind={kind}
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           onClick={handleDownloadClick}
@@ -70,7 +76,8 @@ function DownloadButton(props: Props): ReactElement {
             source={element.label}
             allowHTML={false}
             isLabel
-            isButton
+            largerLabel
+            disableLinks
           />
         </BaseButton>
       </BaseButtonTooltip>

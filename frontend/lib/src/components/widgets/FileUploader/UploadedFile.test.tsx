@@ -31,7 +31,11 @@ const getProps = (fileStatus: FileStatus): Props => ({
 
 describe("FileStatus widget", () => {
   it("renders without crashing", () => {
-    const props = getProps({ type: "uploaded", serverFileId: 1 })
+    const props = getProps({
+      type: "uploaded",
+      fileId: "fileId",
+      fileUrls: {},
+    })
     const wrapper = shallow(<UploadedFileStatus {...props} />)
 
     expect(wrapper).toBeDefined()
@@ -60,7 +64,11 @@ describe("FileStatus widget", () => {
   })
 
   it("show file size when uploaded", () => {
-    const props = getProps({ type: "uploaded", serverFileId: 1 })
+    const props = getProps({
+      type: "uploaded",
+      fileId: "fileId",
+      fileUrls: {},
+    })
 
     const wrapper = shallow(<UploadedFileStatus {...props} />)
     const statusWrapper = wrapper.find(Small)
@@ -70,15 +78,11 @@ describe("FileStatus widget", () => {
 
 describe("UploadedFile widget", () => {
   it("renders without crashing", () => {
-    const props = getProps({ type: "uploaded", serverFileId: 1 })
-    const wrapper = shallow(<UploadedFile {...props} />)
-
-    expect(wrapper).toBeDefined()
-    expect(wrapper.text()).toContain("filename.txt")
-  })
-
-  it("calls delete callback", () => {
-    const props = getProps({ type: "uploaded", serverFileId: 1 })
+    const props = getProps({
+      type: "uploaded",
+      fileId: "fileId",
+      fileUrls: {},
+    })
     const wrapper = mount(<UploadedFile {...props} />)
     const deleteBtn = wrapper.find("button")
     deleteBtn.simulate("click")

@@ -15,16 +15,17 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+
+import { screen, fireEvent } from "@testing-library/react"
+import "@testing-library/jest-dom"
+
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-
-import { Checkbox as UICheckbox } from "baseui/checkbox"
+import { render } from "@streamlit/lib/src/test_util"
 import {
   Checkbox as CheckboxProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
+
 import Checkbox, { OwnProps } from "./Checkbox"
 
 const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
@@ -32,6 +33,7 @@ const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
     id: "1",
     label: "Label",
     default: false,
+    type: CheckboxProto.StyleType.DEFAULT,
     ...elementProps,
   }),
   width: 0,
@@ -45,16 +47,16 @@ const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
 describe("Checkbox widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<Checkbox {...props} />)
+    render(<Checkbox {...props} />)
 
-    expect(wrapper.find(UICheckbox).length).toBe(1)
+    expect(screen.getByRole("checkbox")).toBeInTheDocument()
   })
 
   it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setBoolValue")
 
-    mount(<Checkbox {...props} />)
+    render(<Checkbox {...props} />)
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element,
@@ -65,28 +67,18 @@ describe("Checkbox widget", () => {
 
   it("has correct className and style", () => {
     const props = getProps()
-    const wrapper = mount(<Checkbox {...props} />)
+    render(<Checkbox {...props} />)
+    const checkboxElement = screen.getByTestId("stCheckbox")
 
-    const wrappedDiv = wrapper.find("div").first()
-
-    const { className, style } = wrappedDiv.props()
-    // @ts-expect-error
-    const splittedClassName = className.split(" ")
-
-    expect(splittedClassName).toContain("row-widget")
-    expect(splittedClassName).toContain("stCheckbox")
-
-    // @ts-expect-error
-    expect(style.width).toBe(getProps().width)
+    expect(checkboxElement).toHaveClass("row-widget")
+    expect(checkboxElement).toHaveClass("stCheckbox")
+    expect(checkboxElement).toHaveStyle(`width: ${props.width}px`)
   })
 
   it("renders a label", () => {
     const props = getProps()
-    const wrapper = mount(<Checkbox {...props} />)
-    expect(wrapper.find(StreamlitMarkdown).props().source).toBe(
-      props.element.label
-    )
-    expect(wrapper.find(StreamlitMarkdown).props().isLabel).toBe(true)
+    render(<Checkbox {...props} />)
+    expect(screen.getByText(props.element.label)).toBeInTheDocument()
   })
 
   it("pass labelVisibility prop to StyledContent correctly when hidden", () => {
@@ -95,9 +87,10 @@ describe("Checkbox widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<Checkbox {...props} />)
-    expect(wrapper.find("StyledContent").prop("visibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+
+    render(<Checkbox {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -107,46 +100,40 @@ describe("Checkbox widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<Checkbox {...props} />)
-    expect(wrapper.find("StyledContent").prop("visibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+
+    render(<Checkbox {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
   it("is unchecked by default", () => {
     const props = getProps()
-    const wrapper = mount(<Checkbox {...props} />)
+    render(<Checkbox {...props} />)
 
-    expect(wrapper.find(UICheckbox).prop("checked")).toBe(
-      props.element.default
-    )
+    expect(screen.getByRole("checkbox")).not.toBeChecked()
   })
 
   it("is not disabled by default", () => {
     const props = getProps()
-    const wrapper = mount(<Checkbox {...props} />)
+    render(<Checkbox {...props} />)
 
-    expect(wrapper.find(UICheckbox).prop("disabled")).toBe(props.disabled)
+    expect(screen.getByRole("checkbox")).not.toBeDisabled()
   })
 
   it("handles the onChange event", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setBoolValue")
 
-    const wrapper = mount(<Checkbox {...props} />)
+    render(<Checkbox {...props} />)
 
-    // @ts-expect-error
-    wrapper.find(UICheckbox).prop("onChange")({
-      target: { checked: true },
-    } as EventTarget)
-    wrapper.update()
+    fireEvent.click(screen.getByRole("checkbox"))
 
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element,
       true,
       { fromUi: true }
     )
-    expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
+    expect(screen.getByRole("checkbox")).toBeChecked()
   })
 
   it("resets its value when form is cleared", () => {
@@ -156,16 +143,12 @@ describe("Checkbox widget", () => {
 
     jest.spyOn(props.widgetMgr, "setBoolValue")
 
-    const wrapper = mount(<Checkbox {...props} />)
+    render(<Checkbox {...props} />)
 
     // Change the widget value
-    // @ts-expect-error
-    wrapper.find(UICheckbox).prop("onChange")({
-      target: { checked: true },
-    } as EventTarget)
-    wrapper.update()
+    fireEvent.click(screen.getByRole("checkbox"))
 
-    expect(wrapper.find(UICheckbox).prop("checked")).toBe(true)
+    expect(screen.getByRole("checkbox")).toBeChecked()
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
       props.element,
       true,
@@ -174,12 +157,9 @@ describe("Checkbox widget", () => {
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.find(UICheckbox).prop("checked")).toEqual(
-      props.element.default
-    )
+    expect(screen.getByRole("checkbox")).not.toBeChecked()
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,

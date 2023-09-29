@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -51,23 +53,26 @@ if TYPE_CHECKING:
 @dataclass
 class RadioSerde(Generic[T]):
     options: Sequence[T]
-    index: int
+    index: int | None
 
-    def serialize(self, v: object) -> int:
-        if len(self.options) == 0:
-            return 0
-        return index_(self.options, v)
+    def serialize(self, v: object) -> int | None:
+        if v is None:
+            return None
+
+        return 0 if len(self.options) == 0 else index_(self.options, v)
 
     def deserialize(
         self,
-        ui_value: Optional[int],
+        ui_value: int | None,
         widget_id: str = "",
-    ) -> Optional[T]:
+    ) -> T | None:
         idx = ui_value if ui_value is not None else self.index
 
         return (
             self.options[idx]
-            if len(self.options) > 0 and self.options[idx] is not None
+            if idx is not None
+            and len(self.options) > 0
+            and self.options[idx] is not None
             else None
         )
 
@@ -78,18 +83,19 @@ class RadioMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        index: int = 0,
+        index: int | None = 0,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
+        captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[T]:
+    ) -> T | None:
         r"""Display a radio button widget.
 
         Parameters
@@ -111,7 +117,7 @@ class RadioMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -121,10 +127,14 @@ class RadioMixin:
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
         options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
-            Labels for the radio options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
-        index : int
-            The index of the preselected option on first render.
+            Labels for the radio options. Labels can include markdown as
+            described in the ``label`` parameter and will be cast to str
+            internally by default. For pandas.DataFrame, the first column is
+            selected.
+        index : int or None
+            The index of the preselected option on first render. If ``None``,
+            will initialize empty and return ``None`` until the user selects an option.
+            Defaults to 0 (the first option).
         format_func : function
             Function to modify the display of radio options. It receives
             the raw option as an argument and should output the label to be
@@ -151,7 +161,9 @@ class RadioMixin:
             An optional boolean, which orients the radio group horizontally.
             The default is false (vertical buttons). This argument can only
             be supplied by keyword.
-
+        captions : iterable of str or None
+            A list of captions to show below each radio button. If None (default),
+            no captions are shown.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
@@ -161,24 +173,41 @@ class RadioMixin:
         Returns
         -------
         any
-            The selected option.
+            The selected option or ``None`` if no option is selected.
 
         Example
         -------
         >>> import streamlit as st
         >>>
         >>> genre = st.radio(
-        ...     "What\'s your favorite movie genre",
-        ...     ('Comedy', 'Drama', 'Documentary'))
+        ...     "What's your favorite movie genre",
+        ...     [":rainbow[Comedy]", "***Drama***", "Documentary :movie_camera:"],
+        ...     captions = ["Laugh out loud.", "Get the popcorn.", "Never stop learning."])
         >>>
-        >>> if genre == 'Comedy':
+        >>> if genre == ':rainbow[Comedy]':
         ...     st.write('You selected comedy.')
         ... else:
         ...     st.write("You didn\'t select comedy.")
 
         .. output::
            https://doc-radio.streamlit.app/
-           height: 260px
+           height: 300px
+
+        To initialize an empty radio widget, use ``None`` as the index value:
+
+        >>> import streamlit as st
+        >>>
+        >>> genre = st.radio(
+        ...     "What's your favorite movie genre",
+        ...     [":rainbow[Comedy]", "***Drama***", "Documentary :movie_camera:"],
+        ...     index=None,
+        ... )
+        >>>
+        >>> st.write("You selected:", genre)
+
+        .. output::
+           https://doc-radio-empty.streamlit.app/
+           height: 300px
 
         """
         ctx = get_script_run_ctx()
@@ -194,27 +223,29 @@ class RadioMixin:
             kwargs=kwargs,
             disabled=disabled,
             horizontal=horizontal,
-            ctx=ctx,
+            captions=captions,
             label_visibility=label_visibility,
+            ctx=ctx,
         )
 
     def _radio(
         self,
         label: str,
         options: OptionSequence[T],
-        index: int = 0,
+        index: int | None = 0,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
         disabled: bool = False,
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext],
-    ) -> Optional[T]:
+        captions: Sequence[str] | None = None,
+        ctx: ScriptRunContext | None,
+    ) -> T | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
@@ -230,26 +261,47 @@ class RadioMixin:
             key=key,
             help=help,
             horizontal=horizontal,
+            captions=captions,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
-        if not isinstance(index, int):
+        if not isinstance(index, int) and index is not None:
             raise StreamlitAPIException(
                 "Radio Value has invalid type: %s" % type(index).__name__
             )
 
-        if len(opt) > 0 and not 0 <= index < len(opt):
+        if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
             raise StreamlitAPIException(
                 "Radio index must be between 0 and length of options"
             )
 
+        def handle_captions(caption: str | None) -> str:
+            if caption is None:
+                return ""
+            elif isinstance(caption, str):
+                return caption
+            else:
+                raise StreamlitAPIException(
+                    f"Radio captions must be strings. Passed type: {type(caption).__name__}"
+                )
+
         radio_proto = RadioProto()
         radio_proto.id = id
         radio_proto.label = label
-        radio_proto.default = index
+        if index is not None:
+            radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in opt]
         radio_proto.form_id = current_form_id(self.dg)
         radio_proto.horizontal = horizontal
+        radio_proto.disabled = disabled
+        radio_proto.label_visibility.value = get_label_visibility_proto_value(
+            label_visibility
+        )
+
+        if captions is not None:
+            radio_proto.captions[:] = map(handle_captions, captions)
+
         if help is not None:
             radio_proto.help = dedent(help)
 
@@ -267,15 +319,11 @@ class RadioMixin:
             ctx=ctx,
         )
 
-        # This needs to be done after register_widget because we don't want
-        # the following proto fields to affect a widget's ID.
-        radio_proto.disabled = disabled
-        radio_proto.label_visibility.value = get_label_visibility_proto_value(
-            label_visibility
-        )
-
         if widget_state.value_changed:
-            radio_proto.value = serde.serialize(widget_state.value)
+            if widget_state.value is not None:
+                serialized_value = serde.serialize(widget_state.value)
+                if serialized_value is not None:
+                    radio_proto.value = serialized_value
             radio_proto.set_value = True
 
         self.dg._enqueue("radio", radio_proto)

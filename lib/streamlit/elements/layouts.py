@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Literal, Optional, Sequence, Union, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -19,6 +22,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType = Union[int, Sequence[Union[int, float]]]
 
@@ -236,7 +240,7 @@ class LayoutsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -346,7 +350,7 @@ class LayoutsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -402,10 +406,132 @@ class LayoutsMixin:
         expandable_proto.label = label
 
         block_proto = BlockProto()
-        block_proto.allow_empty = True
+        block_proto.allow_empty = False
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self.dg._block(block_proto=block_proto)
+
+    @gather_metrics("status")
+    def status(
+        self,
+        label: str,
+        *,
+        expanded: bool = False,
+        state: Literal["running", "complete", "error"] = "running",
+    ) -> "StatusContainer":
+        """Insert a status container to display output from long-running tasks.
+
+        Inserts a container into your app that is typically used to show the status and
+        details of a process or task. The container can hold multiple elements and can
+        be expanded or collapsed by the user similar to ``st.expander``.
+        When collapsed, all that is visible is the status icon and label.
+
+        The label, state, and expanded state can all be updated by calling ``.update()``
+        on the returned object. To add elements to the returned container, you can
+        use "with" notation (preferred) or just call methods directly on the returned
+        object.
+
+        By default, ``st.status()`` initializes in the "running" state. When called using
+        "with" notation, it automatically updates to the "complete" state at the end
+        of the "with" block. See examples below for more details.
+
+        Parameters
+        ----------
+
+        label : str
+            The initial label of the status container. The label can optionally
+            contain Markdown and supports the following elements: Bold,
+            Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+
+            Unsupported elements are unwrapped so only their children (text contents)
+            render. Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
+        expanded : bool
+            If True, initializes the status container in "expanded" state. Defaults to
+            False (collapsed).
+
+        state : "running", "complete", or "error"
+            The initial state of the status container which determines which icon is
+            shown:
+
+            * ``running`` (default): A spinner icon is shown.
+
+            * ``complete``: A checkmark icon is shown.
+
+            * ``error``: An error icon is shown.
+
+        Returns
+        -------
+
+        StatusContainer
+            A mutable status container that can hold multiple elements. The label, state,
+            and expanded state can be updated after creation via ``.update()``.
+
+        Examples
+        --------
+
+        You can use `with` notation to insert any element into an status container:
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> with st.status("Downloading data..."):
+        ...     st.write("Searching for data...")
+        ...     time.sleep(2)
+        ...     st.write("Found URL.")
+        ...     time.sleep(1)
+        ...     st.write("Downloading data...")
+        ...     time.sleep(1)
+        >>>
+        >>> st.button('Rerun')
+
+        .. output ::
+            https://doc-status.streamlit.app/
+            height: 300px
+
+        You can also use `.update()` on the container to change the label, state,
+        or expanded state:
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> with st.status("Downloading data...", expanded=True) as status:
+        ...     st.write("Searching for data...")
+        ...     time.sleep(2)
+        ...     st.write("Found URL.")
+        ...     time.sleep(1)
+        ...     st.write("Downloading data...")
+        ...     time.sleep(1)
+        ...     status.update(label="Download complete!", state="complete", expanded=False)
+        >>>
+        >>> st.button('Rerun')
+
+        .. output ::
+            https://doc-status-update.streamlit.app/
+            height: 300px
+
+        """
+        # We need to import StatusContainer here to avoid a circular import
+        from streamlit.elements.lib.mutable_status_container import StatusContainer
+
+        return StatusContainer._create(
+            self.dg, label=label, expanded=expanded, state=state
+        )
 
     @property
     def dg(self) -> "DeltaGenerator":
