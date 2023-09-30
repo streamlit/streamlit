@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_handles_date_selection(app: Page):
@@ -29,10 +29,14 @@ def test_handles_date_selection(app: Page):
 
     with app.expect_file_chooser() as fc_info:
         app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
+
+    wait_for_app_run(app)
+    app.wait_for_timeout(250)
 
     expect(app.locator(".uploadedFileName")).to_have_text(
         file_name1, use_inner_text=True
@@ -54,6 +58,9 @@ def test_handles_date_selection(app: Page):
     file_chooser.set_files(
         files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
     )
+
+    wait_for_app_run(app)
+    app.wait_for_timeout(250)
 
     expect(app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
