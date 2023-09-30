@@ -106,7 +106,7 @@ rfc3986==2.0.0
 rich==13.5.3
 rpds-py==0.10.3
 scipy==1.11.3
-seaborn==0.12.2
+seaborn==0.13.0
 SecretStorage==3.3.3
 semver==2.13.0
 six==1.16.0
