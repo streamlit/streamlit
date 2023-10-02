@@ -21,9 +21,6 @@ import {
   GridSelection,
   CompactSelection,
   GridMouseEventArgs,
-  CellClickedEventArgs,
-  GridKeyEventArgs,
-  Item,
   GridCell,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
