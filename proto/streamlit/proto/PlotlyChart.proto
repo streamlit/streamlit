@@ -34,8 +34,6 @@ message PlotlyChart {
   string theme = 6;
 
   reserved 3, 4;
-
-  string id = 7;
 }
 
 message Figure {

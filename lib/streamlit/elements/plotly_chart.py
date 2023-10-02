@@ -234,7 +234,6 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
-    proto.id = id
 
 
 @caching.cache
