@@ -30,8 +30,45 @@ def test_file_uploader_render_correctly(
     assert_snapshot(file_uploaders.nth(5), name="st_collapsed-label-file-uploader")
 
 
+def test_file_uploader_error_message_disallowed_files(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that shows error message for disallowed files"""
+    file_name1 = "example.json"
+    file_content1 = b"{}"
+
+    uploader_index = 0
+
+    with themed_app.expect_file_chooser() as fc_info:
+        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            {
+                "name": file_name1,
+                "mimeType": "application/json",
+                "buffer": file_content1,
+            }
+        ]
+    )
+
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(250)
+
+    expect(
+        themed_app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
+    ).to_have_text("application/json files are not allowed.", use_inner_text=True)
+
+    file_uploader_in_error_state = themed_app.get_by_test_id("stFileUploader").nth(
+        uploader_index
+    )
+
+    assert_snapshot(file_uploader_in_error_state, name="st_file_uploader-error")
+
+
 def test_handles_date_selection(app: Page):
-    """Test that selection of a date on the calendar works as expected."""
+    """Test that uploading a file for single file uploader works as expected."""
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
 
