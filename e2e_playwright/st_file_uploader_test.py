@@ -110,7 +110,7 @@ def test_uploads_and_deletes_single_file_only(
         themed_app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
     ).to_have_text("True", use_inner_text=True)
 
-    # Upload a second file.This one will replace the first.
+    # Upload a second file. This one will replace the first.
     with themed_app.expect_file_chooser() as fc_info:
         themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
 
