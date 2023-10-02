@@ -149,3 +149,53 @@ def test_uploads_and_deletes_single_file_only(
     expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
     )
+
+
+def test_uploads_and_deletes_multiple_files_quickly(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+
+    file_name2 = "file2.txt"
+    file_content2 = b"file2content"
+
+    files = [
+        {"name": file_name1, "mimeType": "text/plain", "buffer": file_content1},
+        {"name": file_name2, "mimeType": "text/plain", "buffer": file_content2},
+    ]
+
+    uploader_index = 2
+
+    with themed_app.expect_file_chooser() as fc_info:
+        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(files=files)
+
+    wait_for_app_run(themed_app)
+
+    uploaded_file_names = themed_app.locator(".uploadedFileName")
+
+    # The widget should show the names of the uploaded files in reverse order
+    file_names = [files[1]["name"], files[0]["name"]]
+
+    for i, element in enumerate(uploaded_file_names.all()):
+        expect(element).to_have_text(file_names[i], use_inner_text=True)
+
+    # The script should have printed the contents of the two files
+    # into an st.text. (This tests that the upload actually went
+    # through.)
+    content = "\n".join(
+        [
+            files[0]["buffer"].decode("utf-8"),
+            files[1]["buffer"].decode("utf-8"),
+        ]
+    )
+    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        content, use_inner_text=True
+    )
+
+    file_uploader = themed_app.get_by_test_id("stFileUploader").nth(uploader_index)
+
+    assert_snapshot(file_uploader, name="st_multi_file_uploader-uploaded")
