@@ -80,7 +80,10 @@ if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
 EXTRA_REQUIRES = {
-    "snowflake": ["snowflake-snowpark-python>0.8.0; python_version=='3.8'"]
+    "snowflake": [
+        "snowflake-snowpark-python; python_version=='3.8'",
+        "snowflake-connector-python>=2.8.0; python_version=='3.8'",
+    ]
 }
 
 
