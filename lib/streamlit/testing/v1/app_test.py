@@ -156,6 +156,10 @@ class AppTest:
         return self._tree.main
 
     @property
+    def sidebar(self) -> Block:
+        return self._tree.sidebar
+
+    @property
     def caption(self) -> ElementList[Caption]:
         return self._tree.caption
 
@@ -242,14 +246,6 @@ class AppTest:
     @property
     def title(self) -> ElementList[Title]:
         return self._tree.title
-
-    @property
-    def main(self) -> Block:
-        return self._tree.main
-
-    @property
-    def sidebar(self) -> Block:
-        return self._tree.sidebar
 
     def __len__(self) -> int:
         return len(self._tree)
