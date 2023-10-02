@@ -74,6 +74,11 @@ describe("ToolbarActions", () => {
     expect(screen.getByTestId("stToolbarActions")).toBeInTheDocument()
   })
 
+  it("renders toolbar actions and renders action buttons horizontally", () => {
+    render(<ToolbarActions {...getProps()} />)
+    expect(screen.getByTestId("stToolbarActions")).toHaveStyle("display: flex")
+  })
+
   it("calls sendMessageToHost with correct args when clicked", () => {
     const props = getProps()
     render(<ToolbarActions {...props} />)
