@@ -122,7 +122,9 @@ function DataFrame({
     []
   )
 
-  const isWebkitBrowser = React.useMemo<boolean>(
+  // Determine if it uses customized scrollbars (webkit browsers):
+  // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
+  const hasCustomScrollbars = React.useMemo<boolean>(
     () =>
       (window.navigator.userAgent.includes("Mac OS") &&
         window.navigator.userAgent.includes("Safari")) ||
@@ -350,6 +352,7 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, widgetMgr])
 
+  // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
     if (dataEditorRef.current && resizableContainerRef.current) {
       const boundsFirstCell = dataEditorRef.current.getBounds(0, -1)
@@ -381,7 +384,8 @@ function DataFrame({
       className="stDataFrame"
       ref={resizableContainerRef}
       onMouseDown={e => {
-        if (resizableContainerRef.current && isWebkitBrowser) {
+        if (resizableContainerRef.current && hasCustomScrollbars) {
+          // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
             resizableContainerRef.current.getBoundingClientRect()
 
@@ -524,9 +528,9 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
+            // Prevent the cell border from being cut off at the bottom and right:
             scrollbarWidthOverride: 1,
-            ...(isWebkitBrowser && {
+            ...(hasCustomScrollbars && {
               // Add negative padding to the right and bottom to allow the scrollbars in webkit to
               // overlay the table:
               paddingBottom: hasHorizontalScroll
