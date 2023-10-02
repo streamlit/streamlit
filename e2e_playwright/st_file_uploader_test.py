@@ -154,7 +154,7 @@ def test_uploads_and_deletes_single_file_only(
 def test_uploads_and_deletes_multiple_files(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that uploading multiple files at once works correctly"""
+    """Test that uploading multiple files at once works correctly."""
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
 
