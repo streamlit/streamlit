@@ -243,6 +243,14 @@ class AppTest:
     def title(self) -> ElementList[Title]:
         return self._tree.title
 
+    @property
+    def main(self) -> Block:
+        return self._tree.main
+
+    @property
+    def sidebar(self) -> Block:
+        return self._tree.sidebar
+
     def __len__(self) -> int:
         return len(self._tree)
 
