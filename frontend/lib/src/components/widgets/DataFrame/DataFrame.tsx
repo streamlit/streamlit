@@ -113,6 +113,10 @@ function DataFrame({
   const theme = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
+  const [hasVerticalScroll, setHasVerticalScroll] =
+    React.useState<boolean>(false)
+  const [hasHorizontalScroll, setHasHorizontalScroll] =
+    React.useState<boolean>(false)
 
   // Determine if the device is primary using touch as input:
   const isTouchDevice = React.useMemo<boolean>(
@@ -348,40 +352,35 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, widgetMgr])
 
-  let hasVerticalScroll = false
-  let hasHorizontalScroll = false
-  // TODO(lukasmasuch): Remove this!
-  if (dataEditorRef.current) {
-    console.log("maxWidth", maxWidth)
-    console.log("maxHeight", maxHeight)
-    const boundsFirstCell = dataEditorRef.current.getBounds(0, -1)
-    const boundsLastCell = dataEditorRef.current.getBounds(
-      glideColumns.length - 1,
-      numRows - 1
-    )
+  React.useEffect(() => {
+    if (dataEditorRef.current && resizableContainerRef.current) {
+      const boundsFirstCell = dataEditorRef.current.getBounds(0, -1)
+      const boundsLastCell = dataEditorRef.current.getBounds(
+        glideColumns.length - 1,
+        numRows - 1
+      )
 
-    if (
-      notNullOrUndefined(boundsLastCell) &&
-      notNullOrUndefined(boundsFirstCell)
-    ) {
-      if (resizableContainerRef.current?.clientHeight) {
-        hasVerticalScroll =
+      if (
+        notNullOrUndefined(boundsLastCell) &&
+        notNullOrUndefined(boundsFirstCell)
+      ) {
+        setHasVerticalScroll(
           boundsLastCell.y - boundsFirstCell.y + boundsFirstCell.height >
-          resizableContainerRef.current?.clientHeight
-      }
+            resizableContainerRef.current?.clientHeight
+        )
 
-      if (resizableContainerRef.current?.clientWidth) {
-        hasHorizontalScroll =
+        setHasHorizontalScroll(
           boundsLastCell.x - boundsFirstCell.x + boundsFirstCell.width >
-          resizableContainerRef.current?.clientWidth
+            resizableContainerRef.current?.clientWidth
+        )
       }
+      // console.log("hasVerticalScroll", hasVerticalScroll)
+      // console.log("hasHorizontalScroll", hasHorizontalScroll)
+      // console.log("bounds first cell", boundsFirstCell)
+      // console.log("bounds last cell", boundsLastCell)
+      // console.log("resizableSize", resizableSize)
     }
-    console.log("hasVerticalScroll", hasVerticalScroll)
-    console.log("hasHorizontalScroll", hasHorizontalScroll)
-    console.log("bounds first cell", boundsFirstCell)
-    console.log("bounds last cell", boundsLastCell)
-    console.log("resizableSize", resizableSize)
-  }
+  }, [resizableSize, glideColumns, numRows])
 
   return (
     <StyledResizableContainer
@@ -457,9 +456,6 @@ function DataFrame({
       >
         <GlideDataEditor
           className="glideDataEditor"
-          onVisibleRegionChanged={visibleRegion => {
-            console.log("visibleRegion", visibleRegion)
-          }}
           ref={dataEditorRef}
           columns={glideColumns}
           rows={isEmptyTable ? 1 : numRows}
