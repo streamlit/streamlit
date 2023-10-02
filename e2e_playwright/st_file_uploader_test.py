@@ -17,6 +17,19 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
+def test_file_uploader_render_correctly(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the file uploader render as expected via screenshot matching."""
+    file_uploaders = themed_app.get_by_test_id("stFileUploader")
+
+    assert_snapshot(file_uploaders.nth(0), name="st_single-file-uploader")
+    assert_snapshot(file_uploaders.nth(1), name="st_disabled-file-uploader")
+    assert_snapshot(file_uploaders.nth(2), name="st_multi-file-uploader")
+    assert_snapshot(file_uploaders.nth(4), name="st_hidden-label-file-uploader")
+    assert_snapshot(file_uploaders.nth(5), name="st_collapsed-label-file-uploader")
+
+
 def test_handles_date_selection(app: Page):
     """Test that selection of a date on the calendar works as expected."""
     file_name1 = "file1.txt"
