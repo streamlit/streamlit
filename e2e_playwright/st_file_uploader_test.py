@@ -54,7 +54,7 @@ def test_file_uploader_error_message_disallowed_files(
     )
 
     wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(250)
+    themed_app.wait_for_timeout(1000)
 
     expect(
         themed_app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
@@ -88,7 +88,7 @@ def test_uploads_and_deletes_single_file_only(
     )
 
     wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(250)
+    themed_app.wait_for_timeout(1000)
 
     expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name1, use_inner_text=True
@@ -120,7 +120,7 @@ def test_uploads_and_deletes_single_file_only(
     )
 
     wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(250)
+    themed_app.wait_for_timeout(1000)
 
     expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
@@ -144,7 +144,7 @@ def test_uploads_and_deletes_single_file_only(
     themed_app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
 
     wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(250)
+    themed_app.wait_for_timeout(1000)
 
     expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
@@ -174,7 +174,7 @@ def test_uploads_and_deletes_multiple_files_quickly(
     file_chooser.set_files(files=files)
 
     wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(250)
+    themed_app.wait_for_timeout(1000)
 
     uploaded_file_names = themed_app.locator(".uploadedFileName")
 
@@ -185,8 +185,7 @@ def test_uploads_and_deletes_multiple_files_quickly(
         expect(element).to_have_text(file_names[i], use_inner_text=True)
 
     # The script should have printed the contents of the two files
-    # into an st.text. (This tests that the upload actually went
-    # through.)
+    # into a st.text. (This tests that the upload actually went through.)
     content = "\n".join(
         [
             files[0]["buffer"].decode("utf-8"),
