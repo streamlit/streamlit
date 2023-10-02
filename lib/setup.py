@@ -56,7 +56,7 @@ INSTALL_REQUIRES = [
     "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",
-    "typing-extensions>=4.1.0, <5",
+    "typing-extensions>=4.3.0, <5",
     "tzlocal>=1.1, <6",
     "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
@@ -79,7 +79,12 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
-EXTRA_REQUIRES = {"snowflake": ["snowflake-snowpark-python; python_version=='3.8'"]}
+EXTRA_REQUIRES = {
+    "snowflake": [
+        "snowflake-snowpark-python>=0.9.0; python_version=='3.8'",
+        "snowflake-connector-python>=2.8.0; python_version=='3.8'",
+    ]
+}
 
 
 class VerifyVersionCommand(install):
