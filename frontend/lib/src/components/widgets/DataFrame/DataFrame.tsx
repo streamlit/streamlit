@@ -108,6 +108,7 @@ function DataFrame({
 }: DataFrameProps): ReactElement {
   const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
+  const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
   const theme = useCustomTheme()
 
@@ -121,7 +122,8 @@ function DataFrame({
 
   const isWebkitBrowser = React.useMemo<boolean>(
     () =>
-      window.navigator.userAgent.includes("Safari") ||
+      (window.navigator.userAgent.includes("Mac OS") &&
+        window.navigator.userAgent.includes("Safari")) ||
       window.navigator.userAgent.includes("Chrome"),
     []
   )
@@ -362,16 +364,16 @@ function DataFrame({
       notNullOrUndefined(boundsLastCell) &&
       notNullOrUndefined(boundsFirstCell)
     ) {
-      if (!Number.isNaN(resizableSize.height)) {
+      if (resizableContainerRef.current?.clientHeight) {
         hasVerticalScroll =
           boundsLastCell.y - boundsFirstCell.y + boundsFirstCell.height >
-          (resizableSize.height as number)
+          resizableContainerRef.current?.clientHeight
       }
 
-      if (!Number.isNaN(resizableSize.width)) {
+      if (resizableContainerRef.current?.clientWidth) {
         hasHorizontalScroll =
           boundsLastCell.x - boundsFirstCell.x + boundsFirstCell.width >
-          (resizableSize.width as number)
+          resizableContainerRef.current?.clientWidth
       }
     }
     console.log("hasVerticalScroll", hasVerticalScroll)
@@ -385,6 +387,26 @@ function DataFrame({
     <StyledResizableContainer
       data-testid="stDataFrame"
       className="stDataFrame"
+      ref={resizableContainerRef}
+      onMouseDown={e => {
+        if (resizableContainerRef.current && isWebkitBrowser) {
+          const boundingClient =
+            resizableContainerRef.current.getBoundingClientRect()
+
+          if (
+            hasHorizontalScroll &&
+            boundingClient.height - 6 < e.clientY - boundingClient.top
+          ) {
+            e.stopPropagation()
+          }
+          if (
+            hasVerticalScroll &&
+            boundingClient.width - 6 < e.clientX - boundingClient.left
+          ) {
+            e.stopPropagation()
+          }
+        }
+      }}
       onBlur={() => {
         // If the container loses focus, clear the current selection.
         // Touch screen devices have issues with this, so we don't clear
