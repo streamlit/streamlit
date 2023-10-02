@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime
 import json
 import unittest
+from decimal import Decimal
 from typing import Any, Dict, List, Mapping
 from unittest.mock import MagicMock, patch
 
@@ -148,6 +149,11 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
+                "col5": [
+                    Decimal("1.1"),
+                    Decimal("-12.3456"),
+                    Decimal("123456"),
+                ],
             }
         )
 
@@ -157,6 +163,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col2": "foo",
                 "col3": False,
                 "col4": "2020-03-20T14:28:23",
+                "col5": "2.3",
             },
             1: {"col2": None},
         }
@@ -170,6 +177,7 @@ class DataEditorUtilTest(unittest.TestCase):
         self.assertEqual(df.iat[1, 1], None)
         self.assertEqual(df.iat[0, 2], False)
         self.assertEqual(df.iat[0, 3], pd.Timestamp("2020-03-20T14:28:23"))
+        self.assertEqual(df.iat[0, 4], Decimal("2.3"))
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
