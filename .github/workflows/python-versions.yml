@@ -210,6 +210,9 @@ jobs:
     name: >
       Python 3.8: Python tests for Snowflake
 
+    env:
+      USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
+      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v4
