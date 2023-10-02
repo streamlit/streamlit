@@ -21,6 +21,9 @@ import {
   GridSelection,
   CompactSelection,
   GridMouseEventArgs,
+  CellClickedEventArgs,
+  GridKeyEventArgs,
+  Item,
   GridCell,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
@@ -119,8 +122,10 @@ function DataFrame({
     []
   )
 
-  const isFirefox = React.useMemo<boolean>(
-    () => window.navigator.userAgent.includes("Firefox"),
+  const isWebkitBrowser = React.useMemo<boolean>(
+    () =>
+      window.navigator.userAgent.includes("Safari") ||
+      window.navigator.userAgent.includes("Chrome"),
     []
   )
 
@@ -509,7 +514,7 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            ...(!isFirefox && {
+            ...(isWebkitBrowser && {
               // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
               scrollbarWidthOverride: 1,
               // Add negative padding to the right and bottom to allow the scrollbars in webkit to
