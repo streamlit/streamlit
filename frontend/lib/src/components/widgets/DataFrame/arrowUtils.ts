@@ -344,8 +344,8 @@ export function getCellFromArrow(
   arrowCell: DataFrameCell,
   cssStyles: string | undefined = undefined
 ): GridCell {
-  const typeName = arrowCell.contentType
-    ? Quiver.getTypeName(arrowCell.contentType)
+  const typeName = column.arrowType
+    ? Quiver.getTypeName(column.arrowType)
     : null
 
   let cellTemplate

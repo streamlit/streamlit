@@ -452,11 +452,11 @@ describe("getCellFromArrow", () => {
     })
   })
 
-  it("uses quiver formatting for object cells", () => {
-    const objectColumn = ObjectColumn({
+  it("handles decimal types correctly", () => {
+    const decimalColumn = NumberColumn({
       id: "1",
-      name: "object_column",
-      title: "Object column",
+      name: "decimal_column",
+      title: "Decimal column",
       indexNumber: 0,
       isEditable: false,
       isHidden: false,
@@ -473,15 +473,17 @@ describe("getCellFromArrow", () => {
       data: DECIMAL, // should be interpreted as object
     })
     const data = new Quiver(element)
-    const cell = getCellFromArrow(objectColumn, data.getCell(1, 1))
+    const cell = getCellFromArrow(decimalColumn, data.getCell(1, 1))
 
     expect(cell).toEqual({
+      allowNegative: true,
       allowOverlay: true,
-      contentAlignment: undefined,
-      data: "1.1",
+      contentAlign: "right",
+      data: 1.1,
       displayData: "1.1",
       isMissingValue: false,
-      kind: "text",
+      fixedDecimals: undefined,
+      kind: "number",
       readonly: true,
       style: "normal",
     })
@@ -790,7 +792,7 @@ describe("getColumnTypeFromArrow", () => {
         pandas_type: "decimal",
         numpy_type: "object",
       },
-      ObjectColumn,
+      NumberColumn,
     ],
     [
       {
