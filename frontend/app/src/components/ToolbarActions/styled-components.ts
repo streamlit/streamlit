@@ -39,3 +39,9 @@ export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
     height: "1rem",
   })
 )
+
+export const StyledToolbarActions = styled.div(({}) => ({
+  display: "flex",
+  alignItems: "center",
+  flexDirection: "row",
+}))
