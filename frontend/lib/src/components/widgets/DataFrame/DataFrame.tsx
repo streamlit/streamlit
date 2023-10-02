@@ -33,11 +33,7 @@ import {
   WidgetInfo,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import {
-  debounce,
-  isNullOrUndefined,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import EditingState from "./EditingState"
 import {
@@ -75,6 +71,8 @@ const DEBOUNCE_TIME_MS = 100
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
+// The size in px of the customized webkit scrollbar (defined in globalStyles)
+const WEBKIT_SCROLLBAR_SIZE = 6
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -361,8 +359,8 @@ function DataFrame({
       )
 
       if (
-        notNullOrUndefined(boundsLastCell) &&
-        notNullOrUndefined(boundsFirstCell)
+        !isNullOrUndefined(boundsLastCell) &&
+        !isNullOrUndefined(boundsFirstCell)
       ) {
         setHasVerticalScroll(
           boundsLastCell.y - boundsFirstCell.y + boundsFirstCell.height >
@@ -374,11 +372,6 @@ function DataFrame({
             resizableContainerRef.current?.clientWidth
         )
       }
-      // console.log("hasVerticalScroll", hasVerticalScroll)
-      // console.log("hasHorizontalScroll", hasHorizontalScroll)
-      // console.log("bounds first cell", boundsFirstCell)
-      // console.log("bounds last cell", boundsLastCell)
-      // console.log("resizableSize", resizableSize)
     }
   }, [resizableSize, glideColumns, numRows])
 
@@ -394,13 +387,15 @@ function DataFrame({
 
           if (
             hasHorizontalScroll &&
-            boundingClient.height - 6 < e.clientY - boundingClient.top
+            boundingClient.height - WEBKIT_SCROLLBAR_SIZE <
+              e.clientY - boundingClient.top
           ) {
             e.stopPropagation()
           }
           if (
             hasVerticalScroll &&
-            boundingClient.width - 6 < e.clientX - boundingClient.left
+            boundingClient.width - WEBKIT_SCROLLBAR_SIZE <
+              e.clientX - boundingClient.left
           ) {
             e.stopPropagation()
           }
@@ -534,8 +529,12 @@ function DataFrame({
             ...(isWebkitBrowser && {
               // Add negative padding to the right and bottom to allow the scrollbars in webkit to
               // overlay the table:
-              paddingBottom: hasHorizontalScroll ? -6 : undefined,
-              paddingRight: hasVerticalScroll ? -6 : undefined,
+              paddingBottom: hasHorizontalScroll
+                ? -WEBKIT_SCROLLBAR_SIZE
+                : undefined,
+              paddingRight: hasVerticalScroll
+                ? -WEBKIT_SCROLLBAR_SIZE
+                : undefined,
             }),
           }}
           // Apply custom rendering (e.g. for missing or required cells):
