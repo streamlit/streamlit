@@ -33,7 +33,11 @@ import {
   WidgetInfo,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import {
+  debounce,
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import EditingState from "./EditingState"
 import {
@@ -112,6 +116,11 @@ function DataFrame({
   // Determine if the device is primary using touch as input:
   const isTouchDevice = React.useMemo<boolean>(
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
+    []
+  )
+
+  const isFirefox = React.useMemo<boolean>(
+    () => window.navigator.userAgent.includes("Firefox"),
     []
   )
 
@@ -335,19 +344,38 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, widgetMgr])
 
+  let hasVerticalScroll = false
+  let hasHorizontalScroll = false
   // TODO(lukasmasuch): Remove this!
   if (dataEditorRef.current) {
     console.log("maxWidth", maxWidth)
     console.log("maxHeight", maxHeight)
-    console.log("bounds first cell", dataEditorRef.current.getBounds(0, 0))
-    console.log(
-      "bounds last cell",
-      dataEditorRef.current.getBounds(glideColumns.length - 1, numRows - 1)
+    const boundsFirstCell = dataEditorRef.current.getBounds(0, -1)
+    const boundsLastCell = dataEditorRef.current.getBounds(
+      glideColumns.length - 1,
+      numRows - 1
     )
-    console.log(
-      "bounds last cell",
-      dataEditorRef.current.getBounds(glideColumns.length - 1, numRows - 1)
-    )
+
+    if (
+      notNullOrUndefined(boundsLastCell) &&
+      notNullOrUndefined(boundsFirstCell)
+    ) {
+      if (!Number.isNaN(resizableSize.height)) {
+        hasVerticalScroll =
+          boundsLastCell.y - boundsFirstCell.y + boundsFirstCell.height >
+          (resizableSize.height as number)
+      }
+
+      if (!Number.isNaN(resizableSize.width)) {
+        hasHorizontalScroll =
+          boundsLastCell.x - boundsFirstCell.x + boundsFirstCell.width >
+          (resizableSize.width as number)
+      }
+    }
+    console.log("hasVerticalScroll", hasVerticalScroll)
+    console.log("hasHorizontalScroll", hasHorizontalScroll)
+    console.log("bounds first cell", boundsFirstCell)
+    console.log("bounds last cell", boundsLastCell)
     console.log("resizableSize", resizableSize)
   }
 
@@ -481,12 +509,14 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
-            scrollbarWidthOverride: 1,
-            // Add negative padding to the right and bottom to allow the scrollbars in webkit to
-            // overlay the table:
-            paddingBottom: -6,
-            paddingRight: -6,
+            ...(!isFirefox && {
+              // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
+              scrollbarWidthOverride: 1,
+              // Add negative padding to the right and bottom to allow the scrollbars in webkit to
+              // overlay the table:
+              paddingBottom: hasHorizontalScroll ? -6 : undefined,
+              paddingRight: hasVerticalScroll ? -6 : undefined,
+            }),
           }}
           // Apply custom rendering (e.g. for missing or required cells):
           drawCell={drawCell}
