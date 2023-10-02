@@ -45,7 +45,7 @@ export type AutoSizerReturn = {
 
 export function calculateMaxHeight(numRows: number): number {
   // +2 pixels for borders
-  return Math.max(numRows * ROW_HEIGHT + 2, MIN_TABLE_HEIGHT)
+  return Math.max(numRows * ROW_HEIGHT + 1 + 2, MIN_TABLE_HEIGHT)
 }
 /**
  * A custom React hook that manages all aspects related to the size of the table.
