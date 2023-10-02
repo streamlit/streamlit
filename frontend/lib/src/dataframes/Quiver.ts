@@ -27,9 +27,10 @@ import {
   Dictionary,
   Struct,
   Schema as ArrowSchema,
+  util,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip, zip } from "lodash"
+import { range, unzip, zip, trimEnd } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
@@ -875,6 +876,26 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
   }
 
+  private static formatDecimal(value: Uint32Array, scale: number): string {
+    // This code is partly based on: https://github.com/apache/arrow/issues/35745
+    let numString = util
+      .bigNumToString(new util.BN(value))
+      .padStart(scale, "0")
+
+    if (scale === 0) {
+      return numString
+    }
+    // Arrow JS does not handle the fractional part yet:
+    let sign = ""
+    if (numString.startsWith("-")) {
+      sign = "-"
+      numString = numString.slice(1)
+    }
+    const wholePart = numString.slice(0, -scale) || "0"
+    const decimalPart = trimEnd(numString.slice(-scale), "0") || "0"
+    return `${sign}${wholePart}.${decimalPart}`
+  }
+
   private static formatPeriodType(
     duration: bigint,
     typeName: PeriodType
@@ -999,26 +1020,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName === "decimal") {
-      // Support decimal type
-      // Unfortunately, this still can fail in certain situations:
-      // https://github.com/apache/arrow/issues/22932
-      // https://github.com/streamlit/streamlit/issues/5864
-      const decimalStr = x.toString()
-      if (
-        !notNullOrUndefined(field?.type?.scale) ||
-        Number.isNaN(field?.type?.scale) ||
-        field?.type?.scale > decimalStr.length
-      ) {
-        return decimalStr
-      }
-      const scaleIndex = decimalStr.length - field?.type?.scale
-      if (scaleIndex === 0) {
-        return `0.${decimalStr}`
-      }
-
-      return `${decimalStr.slice(0, scaleIndex)}.${decimalStr.slice(
-        scaleIndex
-      )}`
+      return this.formatDecimal(x as Uint32Array, field?.type?.scale || 0)
     }
 
     // Nested arrays and objects.
