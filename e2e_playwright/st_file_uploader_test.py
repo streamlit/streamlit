@@ -67,7 +67,9 @@ def test_file_uploader_error_message_disallowed_files(
     assert_snapshot(file_uploader_in_error_state, name="st_file_uploader-error")
 
 
-def test_handles_date_selection(app: Page):
+def test_uploads_and_deletes_single_file_only(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that uploading a file for single file uploader works as expected."""
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
@@ -77,49 +79,57 @@ def test_handles_date_selection(app: Page):
 
     uploader_index = 0
 
-    with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+    with themed_app.expect_file_chooser() as fc_info:
+        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(250)
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(250)
 
-    expect(app.locator(".uploadedFileName")).to_have_text(
+    expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content1), use_inner_text=True
     )
 
+    file_uploader_uploaded_state = themed_app.get_by_test_id("stFileUploader").nth(
+        uploader_index
+    )
+
+    assert_snapshot(
+        file_uploader_uploaded_state, name="st_single_file_uploader-uploaded"
+    )
+
     expect(
-        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
+        themed_app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
     ).to_have_text("True", use_inner_text=True)
 
     # Upload a second file.This one will replace the first.
-    with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+    with themed_app.expect_file_chooser() as fc_info:
+        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
     )
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(250)
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(250)
 
-    expect(app.locator(".uploadedFileName")).to_have_text(
+    expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content2), use_inner_text=True
     )
 
     expect(
-        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
+        themed_app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
     ).to_have_text("True", use_inner_text=True)
