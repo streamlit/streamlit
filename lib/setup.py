@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.26.0"  # PEP-440
+VERSION = "1.27.1"  # PEP-440
 
 NAME = "streamlit"
 
@@ -41,7 +41,7 @@ INSTALL_REQUIRES = [
     "packaging>=16.8, <24",
     # Lowest version with available wheel for 3.7 + amd64 + linux
     "pandas>=1.3.0, <3",
-    "pillow>=7.1.0, <10",
+    "pillow>=7.1.0, <11",
     # Python protobuf 4.21 (the first 4.x version) is compatible with protobufs
     # generated from `protoc` >= 3.20. (`protoc` is installed separately from the Python
     # protobuf package, so this pin doesn't actually enforce a `protoc` minimum version.
@@ -52,7 +52,7 @@ INSTALL_REQUIRES = [
     # upper bound on it.
     "pyarrow>=6.0",
     "python-dateutil>=2.7.3, <3",
-    "requests>=2.18, <3",
+    "requests>=2.27, <3",
     "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",

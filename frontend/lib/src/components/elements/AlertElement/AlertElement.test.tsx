@@ -15,8 +15,10 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 
-import { shallow } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { Alert as AlertProto } from "@streamlit/lib/src/proto"
 import AlertElement, {
@@ -39,29 +41,27 @@ describe("Alert element", () => {
       kind: getAlertElementKind(AlertProto.Format.ERROR),
       body: "#what in the world?",
     })
-    const wrap = shallow(<AlertElement {...props} />)
-    const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.ERROR)
-    expect(wrap.find("EmojiIcon")).toEqual({})
-    expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
-      "#what in the world?"
-    )
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationContentError")
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
+    expect(screen.getByText("#what in the world?")).toBeInTheDocument()
   })
 
   it("renders a WARNING box as expected", () => {
     const props = getProps({
       kind: getAlertElementKind(AlertProto.Format.WARNING),
-      body: "Are you *sure*?",
+      body: "test",
     })
-    const wrap = shallow(<AlertElement {...props} />)
-    const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.WARNING)
-    expect(wrap.find("EmojiIcon")).toEqual({})
-    expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
-      "Are you *sure*?"
-    )
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationContentWarning")
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
+    expect(screen.getByText("test")).toBeInTheDocument()
   })
 
   it("renders a SUCCESS box as expected", () => {
@@ -69,14 +69,15 @@ describe("Alert element", () => {
       kind: getAlertElementKind(AlertProto.Format.SUCCESS),
       body: "But our princess was in another castle!",
     })
-    const wrap = shallow(<AlertElement {...props} />)
-    const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.SUCCESS)
-    expect(wrap.find("EmojiIcon")).toEqual({})
-    expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
-      "But our princess was in another castle!"
-    )
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stNotificationContentSuccess")
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("But our princess was in another castle!")
+    ).toBeInTheDocument()
   })
 
   it("renders an INFO box as expected", () => {
@@ -84,14 +85,11 @@ describe("Alert element", () => {
       kind: getAlertElementKind(AlertProto.Format.INFO),
       body: "It's dangerous to go alone.",
     })
-    const wrap = shallow(<AlertElement {...props} />)
-    const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.INFO)
-    expect(wrap.find("EmojiIcon")).toEqual({})
-    expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
-      "It's dangerous to go alone."
-    )
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeInTheDocument()
+    expect(screen.getByTestId("stNotificationContentInfo")).toBeInTheDocument()
+    expect(screen.queryByTestId("stAlertEmojiIcon")).not.toBeInTheDocument()
+    expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
 
   it("accepts an icon", () => {
@@ -100,15 +98,11 @@ describe("Alert element", () => {
       body: "It's dangerous to go alone.",
       icon: "👉🏻",
     })
-    const wrap = shallow(<AlertElement {...props} />)
-    const elem = wrap.get(0)
-    expect(elem.props.className.includes("stAlert")).toBeTruthy()
-    expect(wrap.find("AlertContainer").prop("kind")).toEqual(Kind.INFO)
-    expect(wrap.find("StreamlitMarkdown").prop("source")).toBe(
-      "It's dangerous to go alone."
-    )
-    expect(wrap.find("EmojiIcon")).toBeDefined()
-    expect(wrap.find("EmojiIcon").prop("children")).toContain("👉🏻")
+    render(<AlertElement {...props} />)
+    expect(screen.getByTestId("stAlert")).toBeInTheDocument()
+    expect(screen.getByTestId("stNotificationContentInfo")).toBeInTheDocument()
+    expect(screen.getByTestId("stAlertEmojiIcon")).toHaveTextContent("👉🏻")
+    expect(screen.getByText("It's dangerous to go alone.")).toBeInTheDocument()
   })
 })
 

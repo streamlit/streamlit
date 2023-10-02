@@ -15,9 +15,11 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
 import { logError } from "@streamlit/lib/src/util/log"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
 import { GraphVizChart, GraphVizChartProps } from "./GraphVizChart"
 
@@ -57,11 +59,16 @@ describe("GraphVizChart Element", () => {
     logError.mockClear()
   })
 
+  afterEach(() => {
+    // @ts-expect-error
+    graphviz.mockClear()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<GraphVizChart {...props} />)
+    render(<GraphVizChart {...props} />)
 
-    expect(wrapper.find("StyledGraphVizChart").length).toBe(1)
+    expect(screen.getByTestId("stGraphVizChart")).toBeInTheDocument()
     expect(logError).not.toHaveBeenCalled()
     expect(graphviz).toHaveBeenCalled()
   })
@@ -92,27 +99,29 @@ describe("GraphVizChart Element", () => {
       spec: "crash",
     })
 
-    const wrapper = mount(<GraphVizChart {...props} />)
+    const { rerender } = render(<GraphVizChart {...props} />)
+
     // @ts-expect-error
     logError.mockClear()
 
-    wrapper.setProps({
-      width: 400,
-      height: 500,
-    })
+    const newProps = { ...props, height: 500, width: 400 }
+    rerender(<GraphVizChart {...newProps} />)
 
     expect(logError).toHaveBeenCalledTimes(1)
     expect(mockRenderDot).toHaveBeenCalledWith("crash")
+    expect(graphviz).toHaveBeenCalledTimes(2)
   })
 
-  it("should render with height and width", () => {
+  it("shoud render with height and width", () => {
     const props = {
       ...getProps(),
       height: 500,
       width: 400,
     }
-    const wrapper = mount(<GraphVizChart {...props} />)
+    render(<GraphVizChart {...props} />)
 
-    expect(wrapper.find("StyledGraphVizChart").props()).toMatchSnapshot()
+    expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
+      "height: 500px; width: 400px"
+    )
   })
 })

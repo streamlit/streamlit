@@ -19,6 +19,8 @@ syntax = "proto3";
 import "streamlit/proto/DataFrame.proto";
 import "streamlit/proto/NamedDataSet.proto";
 
+// DEPRECATED: This proto message is deprecated and unused. The ArrowVegaLiteChart
+// proto message should be used instead.
 message VegaLiteChart {
   // The a JSON-formatted string with the Vega-Lite spec.
   string spec = 1;
