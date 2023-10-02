@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -202,6 +203,9 @@ def _parse_value(
 
         if column_data_kind == ColumnDataKind.BOOLEAN:
             return bool(value)
+
+        if column_data_kind == ColumnDataKind.DECIMAL:
+            return Decimal(str(value))
 
         if column_data_kind in [
             ColumnDataKind.DATETIME,
