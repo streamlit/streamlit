@@ -174,6 +174,7 @@ def test_uploads_and_deletes_multiple_files_quickly(
     file_chooser.set_files(files=files)
 
     wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(250)
 
     uploaded_file_names = themed_app.locator(".uploadedFileName")
 
