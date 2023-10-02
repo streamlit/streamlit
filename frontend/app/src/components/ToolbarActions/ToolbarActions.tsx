@@ -65,7 +65,7 @@ function ToolbarActions({
   hostToolbarItems,
 }: ToolbarActionsProps): ReactElement {
   return (
-    <div data-testid="stToolbarActions">
+    <div data-testid="stToolbarActions" style={{ display: "flex" }}>
       {hostToolbarItems.map(({ key, label, icon }) => (
         <ActionButton
           key={key}
