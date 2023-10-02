@@ -194,6 +194,9 @@ jobs:
           TARGET_BRANCH: constraints-${{ github.ref_name }}
 
   py_snowflake:
+    needs:
+      - build_info
+
     runs-on: ubuntu-latest
 
     # Runs triggered by PRs from forks or by dependabot won't run this job, since that PR wouldn't have secrets access
@@ -209,6 +212,10 @@ jobs:
 
     name: >
       Python 3.8: Python tests for Snowflake
+
+    env:
+      USE_CONSTRAINTS_FILE: "${{ fromJson(needs.build_info.outputs.USE_CONSTRAINTS_FILE )}}"
+      CONSTRAINTS_BRANCH: ${{ inputs.constraints-branch || 'constraints-develop' }}
 
     steps:
       - name: Checkout Streamlit code
