@@ -133,3 +133,19 @@ def test_uploads_and_deletes_single_file_only(
     expect(
         themed_app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
     ).to_have_text("True", use_inner_text=True)
+
+    themed_app.get_by_test_id("stHeader").press("r")
+    wait_for_app_run(themed_app)
+
+    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        str(file_content2), use_inner_text=True
+    )
+
+    themed_app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
+
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(250)
+
+    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        "No upload", use_inner_text=True
+    )
