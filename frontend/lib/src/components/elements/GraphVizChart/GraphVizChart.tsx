@@ -59,10 +59,9 @@ export function GraphVizChart({
     return (node: SVGGraphicsElement): void => {
       const bbox = node.getBBox()
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      originalHeight = bbox.height
+      originalHeight = Math.round(bbox.height)
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      originalWidth = bbox.width
-
+      originalWidth = Math.round(bbox.width)
       select(node)
         .attr("width", isFullScreenRef.current ? "100%" : `${originalWidth}pt`)
         .attr(
