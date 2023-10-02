@@ -198,5 +198,4 @@ def test_uploads_and_deletes_multiple_files(
     )
 
     file_uploader = themed_app.get_by_test_id("stFileUploader").nth(uploader_index)
-
     assert_snapshot(file_uploader, name="st_multi_file_uploader-uploaded")
