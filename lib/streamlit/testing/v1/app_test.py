@@ -32,6 +32,7 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
+    Button,
     Caption,
     Checkbox,
     Code,
@@ -158,6 +159,10 @@ class AppTest:
     @property
     def sidebar(self) -> Block:
         return self._tree.sidebar
+
+    @property
+    def button(self) -> WidgetList[Button]:
+        return self._tree.button
 
     @property
     def caption(self) -> ElementList[Caption]:
