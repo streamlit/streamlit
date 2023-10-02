@@ -38,8 +38,6 @@ interface Dimensions {
 const dummyGraphviz = graphviz
 dummyGraphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
 
-const isFullScreen = (height = 0): boolean => Boolean(height)
-
 export function GraphVizChart({
   width: propWidth,
   element,
@@ -47,12 +45,12 @@ export function GraphVizChart({
 }: GraphVizChartProps): ReactElement {
   const chartId = `graphviz-chart-${element.elementId}`
 
-  const isFull = isFullScreen(propHeight)
-  const isFullRef = useRef(isFull)
-  // Update isFull state whenever propHeight changes
+  const isFullScreen = Boolean(propHeight)
+  const isFullScreenRef = useRef(isFullScreen)
+  // Update isFullScreen state whenever propHeight changes
   useEffect(() => {
-    isFullRef.current = isFull
-  }, [isFull])
+    isFullScreenRef.current = isFullScreen
+  }, [isFullScreen])
 
   let originalHeight = 0
   let originalWidth = 0
@@ -61,22 +59,25 @@ export function GraphVizChart({
     return (node: SVGGraphicsElement): void => {
       const bbox = node.getBBox()
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      originalHeight = Math.round(bbox.height)
+      originalHeight = bbox.height
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      originalWidth = Math.round(bbox.width)
+      originalWidth = bbox.width
 
       select(node)
-        .attr("width", isFullRef.current ? "100%" : `${originalWidth}pt`)
-        .attr("height", isFullRef.current ? "100%" : `${originalHeight}pt`)
+        .attr("width", isFullScreenRef.current ? "100%" : `${originalWidth}pt`)
+        .attr(
+          "height",
+          isFullScreenRef.current ? "100%" : `${originalHeight}pt`
+        )
     }
-  }, [isFullRef])
+  }, [isFullScreenRef])
 
   const getChartDimensions = (): Dimensions => {
     const chartWidth =
-      isFullRef.current || element.useContainerWidth
+      isFullScreenRef.current || element.useContainerWidth
         ? propWidth
         : originalWidth
-    const chartHeight = isFullRef.current
+    const chartHeight = isFullScreenRef.current
       ? propHeight || originalHeight
       : originalHeight
     return { chartWidth, chartHeight }
