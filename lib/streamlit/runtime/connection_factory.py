@@ -23,6 +23,7 @@ from typing import Any, Dict, Type, TypeVar, overload
 from typing_extensions import Final, Literal
 
 from streamlit.connections import BaseConnection, SnowparkConnection, SQLConnection
+from streamlit.deprecation_util import deprecate_obj_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
@@ -278,9 +279,18 @@ def connection_factory(
 
     # At this point, connection_class should be of type Type[ConnectionClass].
     try:
-        return _create_connection(
+        conn = _create_connection(
             name, connection_class, max_entries=max_entries, ttl=ttl, **kwargs
         )
+        if isinstance(conn, SnowparkConnection):
+            conn = deprecate_obj_name(
+                conn,
+                "SnowparkConnection",
+                "SnowflakeConnection",
+                "2024-04-01",
+                include_st_prefix=False,
+            )
+        return conn
     except ModuleNotFoundError as e:
         err_string = str(e)
         missing_module = re.search(MODULE_EXTRACTION_REGEX, err_string)

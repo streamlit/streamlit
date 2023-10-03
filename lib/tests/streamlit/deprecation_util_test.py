@@ -105,3 +105,29 @@ class DeprecationUtilTest(unittest.TestCase):
 
         # We only show the warning a single time for a given object.
         mock_show_warning.assert_called_once_with(expected_warning)
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_obj_name_no_st_prefix(self, mock_show_warning: Mock):
+        class DictClass(dict):
+            pass
+
+        beta_dict = deprecate_obj_name(
+            DictClass(),
+            "beta_dict",
+            "my_dict",
+            "1980-01-01",
+            include_st_prefix=False,
+        )
+
+        beta_dict["foo"] = "bar"
+        self.assertEqual(beta_dict["foo"], "bar")
+        self.assertEqual(len(beta_dict), 1)
+        self.assertEqual(list(beta_dict), ["foo"])
+
+        expected_warning = (
+            "Please replace `beta_dict` with `my_dict`.\n\n"
+            "`beta_dict` will be removed after 1980-01-01."
+        )
+
+        # We only show the warning a single time for a given object.
+        mock_show_warning.assert_called_once_with(expected_warning)
