@@ -98,7 +98,7 @@ class AppTest:
 
     @classmethod
     def from_file(cls, script_path: str, default_timeout: float = 3) -> AppTest:
-        """Create a runner for the script with the given name, for testing.
+        """Create a runner for the script with the given relative file name.
 
         `default_timeout` is the default time in seconds before a script is
         timed out, if not overridden for an individual `.run()` call.
