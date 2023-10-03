@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def select_for_kth_multiselect(
@@ -39,6 +39,7 @@ def select_for_kth_multiselect(
     page.locator("li").filter(has_text=option_text).first.click()
     if close_after_selecting:
         page.keyboard.press("Escape")
+    wait_for_app_run(page)
 
 
 def del_from_kth_multiselect(page: Page, option_text: str, k: int):

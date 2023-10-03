@@ -21,7 +21,7 @@ from typing import Tuple
 from parameterized import parameterized
 
 from streamlit.cursor import make_delta_path
-from streamlit.elements import legacy_data_frame
+from streamlit.elements import arrow
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
@@ -44,14 +44,15 @@ ADD_BLOCK_MSG = ForwardMsg()
 ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 DF_DELTA_MSG = ForwardMsg()
-legacy_data_frame.marshall_data_frame(
-    {"col1": [0, 1, 2], "col2": [10, 11, 12]}, DF_DELTA_MSG.delta.new_element.data_frame
+arrow.marshall(
+    DF_DELTA_MSG.delta.new_element.arrow_data_frame,
+    {"col1": [0, 1, 2], "col2": [10, 11, 12]},
 )
 DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
 ADD_ROWS_MSG = ForwardMsg()
-legacy_data_frame.marshall_data_frame(
-    {"col1": [3, 4, 5], "col2": [13, 14, 15]}, ADD_ROWS_MSG.delta.add_rows.data
+arrow.marshall(
+    ADD_ROWS_MSG.delta.arrow_add_rows.data, {"col1": [3, 4, 5], "col2": [13, 14, 15]}
 )
 ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)
 
@@ -165,110 +166,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
         self.assertEqual(ADD_BLOCK_MSG, queue[0])
         self.assertEqual(other_msg, queue[1])
 
-    def test_simple_add_rows(self):
-        """'add_rows' messages should behave as expected."""
-        rq = ForwardMsgQueue()
-        self.assertTrue(rq.is_empty())
-
-        rq.enqueue(NEW_SESSION_MSG)
-
-        TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
-            RootContainer.MAIN, (), 0
-        )
-        rq.enqueue(TEXT_DELTA_MSG1)
-
-        DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 1)
-        rq.enqueue(DF_DELTA_MSG)
-
-        ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 1)
-        rq.enqueue(ADD_ROWS_MSG)
-
-        queue = rq.flush()
-        self.assertEqual(4, len(queue))
-
-        # Text delta
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
-        )
-        self.assertEqual("text1", queue[1].delta.new_element.text.body)
-
-        # Dataframe delta
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
-        )
-        df_col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
-        df_col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
-        self.assertEqual([0, 1, 2], df_col0)
-        self.assertEqual([10, 11, 12], df_col1)
-
-        # AddRows delta
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 1), queue[3].metadata.delta_path
-        )
-        ar_col0 = queue[3].delta.add_rows.data.data.cols[0].int64s.data
-        ar_col1 = queue[3].delta.add_rows.data.data.cols[1].int64s.data
-        self.assertEqual([3, 4, 5], ar_col0)
-        self.assertEqual([13, 14, 15], ar_col1)
-
-    def test_add_rows_rerun(self):
-        rq = ForwardMsgQueue()
-        self.assertTrue(rq.is_empty())
-
-        rq.enqueue(NEW_SESSION_MSG)
-
-        # Simulate rerun
-        for i in range(2):
-            TEXT_DELTA_MSG1.metadata.delta_path[:] = make_delta_path(
-                RootContainer.MAIN, (), 0
-            )
-            rq.enqueue(TEXT_DELTA_MSG1)
-
-            DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(
-                RootContainer.MAIN, (), 1
-            )
-            rq.enqueue(DF_DELTA_MSG)
-
-            ADD_ROWS_MSG.metadata.delta_path[:] = make_delta_path(
-                RootContainer.MAIN, (), 1
-            )
-            rq.enqueue(ADD_ROWS_MSG)
-
-        queue = rq.flush()
-        self.assertEqual(5, len(queue))
-
-        # Text delta
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 0), queue[1].metadata.delta_path
-        )
-        self.assertEqual("text1", queue[1].delta.new_element.text.body)
-
-        # Dataframe delta
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 1), queue[2].metadata.delta_path
-        )
-        col0 = queue[2].delta.new_element.data_frame.data.cols[0].int64s.data
-        col1 = queue[2].delta.new_element.data_frame.data.cols[1].int64s.data
-        self.assertEqual([0, 1, 2], col0)
-        self.assertEqual([10, 11, 12], col1)
-
-        # First add_rows delta
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 1), queue[3].metadata.delta_path
-        )
-        ar_col0 = queue[3].delta.add_rows.data.data.cols[0].int64s.data
-        ar_col1 = queue[3].delta.add_rows.data.data.cols[1].int64s.data
-        self.assertEqual([3, 4, 5], ar_col0)
-        self.assertEqual([13, 14, 15], ar_col1)
-
-        # Second add_rows delta
-        self.assertEqual(
-            make_delta_path(RootContainer.MAIN, (), 1), queue[4].metadata.delta_path
-        )
-        ar_col0 = queue[4].delta.add_rows.data.data.cols[0].int64s.data
-        ar_col1 = queue[4].delta.add_rows.data.data.cols[1].int64s.data
-        self.assertEqual([3, 4, 5], ar_col0)
-        self.assertEqual([13, 14, 15], ar_col1)
-
     def test_multiple_containers(self):
         """Deltas should only be coalesced if they're in the same container"""
         rq = ForwardMsgQueue()
@@ -300,24 +197,6 @@ class ForwardMsgQueueTest(unittest.TestCase):
                 make_delta_path(container, path, 0), queue[idx].metadata.delta_path
             )
             self.assertEqual("text1", queue[idx].delta.new_element.text.body)
-
-            # Dataframe delta
-            self.assertEqual(
-                make_delta_path(container, path, 1), queue[idx + 1].metadata.delta_path
-            )
-            col0 = queue[idx + 1].delta.new_element.data_frame.data.cols[0].int64s.data
-            col1 = queue[idx + 1].delta.new_element.data_frame.data.cols[1].int64s.data
-            self.assertEqual([0, 1, 2], col0)
-            self.assertEqual([10, 11, 12], col1)
-
-            # add_rows delta
-            self.assertEqual(
-                make_delta_path(container, path, 1), queue[idx + 2].metadata.delta_path
-            )
-            ar_col0 = queue[idx + 2].delta.add_rows.data.data.cols[0].int64s.data
-            ar_col1 = queue[idx + 2].delta.add_rows.data.data.cols[1].int64s.data
-            self.assertEqual([3, 4, 5], ar_col0)
-            self.assertEqual([13, 14, 15], ar_col1)
 
         queue = rq.flush()
         self.assertEqual(7, len(queue))

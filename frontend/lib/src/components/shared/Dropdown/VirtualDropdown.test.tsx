@@ -15,7 +15,9 @@
  */
 
 import React, { ReactElement } from "react"
-import { shallow, mount } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import VirtualDropdown from "./VirtualDropdown"
 
@@ -29,28 +31,31 @@ function Option(props: OptionProps): ReactElement {
 
 describe("VirtualDropdown element", () => {
   it("renders a StyledEmptyState when it has no children", () => {
-    const wrapper = shallow(<VirtualDropdown />)
+    render(<VirtualDropdown />)
 
-    expect(wrapper.find("StyledEmptyState").exists()).toBeTruthy()
+    expect(screen.getByTestId("stVirtualDropdownEmpty")).toBeInTheDocument()
   })
 
   it("renders a StyledEmptyState when it has children with no item", () => {
-    const wrapper = shallow(
+    render(
       <VirtualDropdown>
         <Option />
       </VirtualDropdown>
     )
 
-    expect(wrapper.find("StyledEmptyState").exists()).toBeTruthy()
+    expect(screen.getByTestId("stVirtualDropdownEmpty")).toBeInTheDocument()
   })
 
   it("renders a FixedSizeList when it has children", () => {
-    const wrapper = mount(
+    render(
       <VirtualDropdown>
         <Option item={{ value: "abc" }} />
       </VirtualDropdown>
     )
 
-    expect(wrapper.find("FixedSizeListItem").exists()).toBeTruthy()
+    expect(screen.getByTestId("stVirtualDropdown")).toBeInTheDocument()
+
+    // each option will have a tooltip attached to it
+    expect(screen.getAllByTestId("tooltipHoverTarget")).toHaveLength(1)
   })
 })

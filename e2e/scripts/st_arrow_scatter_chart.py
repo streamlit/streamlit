@@ -41,14 +41,14 @@ df2["e"] = ["bird" if x % 2 else "airplane" for x in range(N)]
 
 Should show a warning.
 """
-st._arrow_scatter_chart(snowpark_mocks.DataFrame())
+st.scatter_chart(snowpark_mocks.DataFrame())
 
 """
 ### Dataframe with no data.
 
 Chart should still have a normal size (though no axes, etc.)
 """
-st._arrow_scatter_chart()
+st.scatter_chart()
 
 """
 ### Long dataframe with nominal or quantitative color column
@@ -57,6 +57,6 @@ Each should show 2 series, with varying sizes.
 
 The color and size legends should be more or less vertically centered on each other.
 """
-st._arrow_scatter_chart(df2, x="a", y="b", size="c", color="e")
-st._arrow_scatter_chart(df2, x="a", y="b", size="d", color="e")
-st._arrow_scatter_chart(df2, x="a", y="b", size="d", color="c")
+st.scatter_chart(df2, x="a", y="b", size="c", color="e")
+st.scatter_chart(df2, x="a", y="b", size="d", color="e")
+st.scatter_chart(df2, x="a", y="b", size="d", color="c")

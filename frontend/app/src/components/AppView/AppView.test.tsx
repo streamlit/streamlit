@@ -42,6 +42,16 @@ import {
 } from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
+// Mock needed for Block.tsx
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserver
+
 function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
   return {
     wideMode: false,

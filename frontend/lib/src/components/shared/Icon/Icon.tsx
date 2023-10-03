@@ -48,6 +48,7 @@ interface IconProps {
   color?: ThemeColor
   margin?: string
   padding?: string
+  testid?: string
 }
 
 const Icon = ({
@@ -56,11 +57,13 @@ const Icon = ({
   size,
   margin,
   padding,
+  testid,
 }: IconProps): ReactElement => (
   <StyledIcon
     as={content}
     color={color || "inherit"}
     aria-hidden="true"
+    data-testid={testid}
     {...getDefaultProps({ size, margin, padding })}
   />
 )
@@ -70,6 +73,7 @@ interface EmojiIconProps {
   margin?: string
   padding?: string
   children: ReactNode
+  testid?: string
 }
 
 export const EmojiIcon = ({
@@ -77,8 +81,10 @@ export const EmojiIcon = ({
   margin,
   padding,
   children,
+  testid,
 }: EmojiIconProps): ReactElement => (
   <StyledEmojiIcon
+    data-testid={testid}
     aria-hidden="true"
     {...getDefaultProps({ size, margin, padding })}
   >

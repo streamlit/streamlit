@@ -35,7 +35,6 @@ WIDGETS = [
 ]
 NONWIDGET_ELEMENTS = [
     "alert",
-    "area_chart",
     "arrow_area_chart",
     "arrow_bar_chart",
     "arrow_data_frame",
@@ -44,11 +43,8 @@ NONWIDGET_ELEMENTS = [
     "arrow_vega_lite_chart",
     "audio",
     "balloons",
-    "bar_chart",
     "bokeh_chart",
     "code",
-    "data_frame",
-    "dataframe_selector",
     "deck_gl_json_chart",
     "doc_string",
     "empty",
@@ -58,10 +54,6 @@ NONWIDGET_ELEMENTS = [
     "iframe",
     "imgs",
     "json",
-    "legacy_altair",
-    "legacy_data_frame",
-    "legacy_vega_lite",
-    "line_chart",
     # link_button unlike button and download_button is not a widget. It only sends a
     # forward messages to the frontend, and not sends trigger value back.
     "link_button",
@@ -71,9 +63,7 @@ NONWIDGET_ELEMENTS = [
     "progress",
     "pyplot",
     "snow",
-    "table",
     "text",
-    "vega_lite_chart",
     "video",
     "write",
 ]
