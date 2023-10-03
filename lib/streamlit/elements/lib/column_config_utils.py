@@ -508,13 +508,6 @@ def apply_data_specific_configs(
         # We rename it to "value" in selected cases to make it more descriptive
         data_df.rename(columns={0: "value"}, inplace=True)
 
-    if pd.api.types.infer_dtype(data_df.columns) != "string":
-        # If the column names are not all strings, we need to convert them to strings
-        # to avoid issues with editing
-        data_df.rename(
-            columns={column: str(column) for column in data_df.columns}, inplace=True
-        )
-
 
 def marshall_column_config(
     proto: ArrowProto, column_config_mapping: ColumnConfigMapping

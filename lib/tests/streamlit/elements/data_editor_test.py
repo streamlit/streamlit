@@ -557,6 +557,19 @@ class DataEditorTest(DeltaGeneratorTestCase):
             return_df = st.data_editor(df)
             self.assertIsInstance(return_df, pd.DataFrame)
 
+    def test_works_with_multiindex_column_headers(self):
+        """Test that it works with multiindex column headers."""
+        df = pd.DataFrame(
+            index=[0, 1],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
+        )
+
+        return_df = st.data_editor(df)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), return_df)
+
     def test_pandas_styler_support(self):
         """Test that it supports Pandas styler styles."""
         df = pd.DataFrame(

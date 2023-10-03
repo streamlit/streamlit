@@ -410,7 +410,7 @@ def _check_column_names(data_df: pd.DataFrame):
 
     # Check if the column names are unique and raise an exception if not.
     # Add the names of the duplicated columns to the exception message.
-    duplicated_columns = data_df.columns[data_df.columns.astype(str).duplicated()]
+    duplicated_columns = data_df.columns[data_df.columns.duplicated()]
     if len(duplicated_columns) > 0:
         raise StreamlitAPIException(
             f"All column names are required to be unique for usage with data editor. "
@@ -763,6 +763,19 @@ class DataEditorMixin:
         apply_data_specific_configs(
             column_config_mapping, data_df, data_format, check_arrow_compatibility=True
         )
+
+        if isinstance(data_df.columns, pd.MultiIndex):
+            # Flatten hierarchical column headers to a single level:
+            data_df.columns = [
+                "_".join(str(header)) for header in data_df.columns.to_flat_index()
+            ]
+        elif pd.api.types.infer_dtype(data_df.columns) != "string":
+            # If the column names are not all strings, we need to convert them to strings
+            # to avoid issues with editing:
+            data_df.rename(
+                columns={column: str(column) for column in data_df.columns},
+                inplace=True,
+            )
 
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
