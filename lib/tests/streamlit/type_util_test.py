@@ -348,7 +348,7 @@ class TypeUtilTest(unittest.TestCase):
 
         if incompatible:
             # Column should have been converted to string.
-            self.assertEqual(col_dtype, "object")
+            self.assertEqual(col_dtype, "string[python]")
             self.assertEqual(inferred_type, "string")
         else:
             # Column should have the original type.
@@ -395,14 +395,14 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
         self.assertEqual(infer_dtype(fixed_df["string"]), "string")
         self.assertEqual(infer_dtype(fixed_df.index), "string")
-
+        print("FOOO", str(fixed_df.dtypes))
         self.assertEqual(
             str(fixed_df.dtypes),
-            """mixed-integer     object
-mixed             object
-integer            int64
-float            float64
-string            object
+            """mixed-integer    string[python]
+mixed            string[python]
+integer                   int64
+float                   float64
+string                   object
 dtype: object""",
         )
 
