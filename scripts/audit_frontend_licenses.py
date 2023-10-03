@@ -77,6 +77,15 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "Zach Carter",
     ),
     (
+        # Apache 2.0 license: https://github.com/google/flatbuffers
+        "flatbuffers",
+        "23.5.26",
+        "SEE LICENSE IN LICENSE.txt",
+        "git+https://github.com/google/flatbuffers.git",
+        "https://google.github.io/flatbuffers/",
+        "The FlatBuffers project",
+    ),
+    (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl",
         "1.13.3",
