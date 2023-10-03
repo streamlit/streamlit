@@ -12,23 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-import pandas as pd
+from playwright.sync_api import Page, expect
 
-import streamlit as st
-from tests.streamlit import snowpark_mocks
 
-np.random.seed(0)
+def test_bokeh_chart(themed_app: Page):
+    """Test that st.bokeh_chart renders correctly."""
+    bokeh_chart_elements = themed_app.locator("[data-testid=stBokehChart]")
+    expect(bokeh_chart_elements).to_have_count(4)
 
-data = np.random.randn(20, 3)
-df = pd.DataFrame(data, columns=["a", "b", "c"])
+    expect(bokeh_chart_elements.nth(0).locator("canvas").nth(0)).to_be_visible()
+    expect(bokeh_chart_elements.nth(1).locator("canvas").nth(0)).to_be_visible()
+    expect(bokeh_chart_elements.nth(2).locator("canvas").nth(0)).to_be_visible()
 
-st.area_chart(df)
-st.area_chart(df, x="a")
-st.area_chart(df, y="a")
-st.area_chart(df, y=["a", "b"])
-st.area_chart(df, x="a", y="b")
-st.area_chart(df, x="b", y="a")
-st.area_chart(df, x="a", y=["b", "c"])
-
-st.area_chart(snowpark_mocks.DataFrame())
+    # show a bokeh slider
+    expect(bokeh_chart_elements.nth(3).locator("canvas").nth(0)).to_be_visible()

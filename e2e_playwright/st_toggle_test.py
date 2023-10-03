@@ -15,7 +15,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -55,6 +55,7 @@ def test_toggle_values_on_click(app: Page):
 
     for toggle_element in toggle_elements.all():
         toggle_element.click(delay=50)
+        wait_for_app_run(app)
 
     markdown_elements = app.locator(".stMarkdown")
     expected = [

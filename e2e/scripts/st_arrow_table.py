@@ -25,66 +25,66 @@ df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=pd.CategoricalIndex([1, 2]),
 )
-st._arrow_table(df)
+st.table(df)
 
 "## DatetimeIndex"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=pd.Series(pd.date_range("2021-01-01", periods=2, freq="Y")),
 )
-st._arrow_table(df)
+st.table(df)
 
 "## Float64Index"
 df = pd.DataFrame([["foo", 100], ["bar", 200]], index=[1.23, 2.34])
-st._arrow_table(df)
+st.table(df)
 
 "## Int64Index"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=[1, 2],
 )
-st._arrow_table(df)
+st.table(df)
 
 "## IntervalIndex"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=pd.interval_range(start=0, end=2),
 )
-st._arrow_table(df)
+st.table(df)
 
 "## MultiIndex"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=[["a", "b"], [1, 2]],
 )
-st._arrow_table(df)
+st.table(df)
 
 "## PeriodIndex"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=pd.PeriodIndex(year=[2000, 2002], quarter=[1, 3]),
 )
-st._arrow_table(df)
+st.table(df)
 
 "## RangeIndex"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
 )
-st._arrow_table(df)
+st.table(df)
 
 "## UInt64Index"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=pd.Index([1, 2], dtype="uint64"),
 )
-st._arrow_table(df)
+st.table(df)
 
 "## UnicodeIndex"
 df = pd.DataFrame(
     [["foo", 100], ["bar", 200]],
     index=["a", "b"],
 )
-st._arrow_table(df)
+st.table(df)
 
 "## PySpark DataFrame"
-st._arrow_table(pyspark_mocks.DataFrame())
+st.table(pyspark_mocks.DataFrame())
