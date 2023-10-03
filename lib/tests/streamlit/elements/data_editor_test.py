@@ -598,6 +598,14 @@ class DataEditorTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             _check_column_names(df)
 
+    def test_non_string_column_names_are_converted_to_string(self):
+        """Test that non-string column names are converted to string."""
+        # create a dataframe with non-string columns
+        df = pd.DataFrame(0, ["John", "Sarah", "Jane"], list(range(1, 4)))
+        self.assertNotEqual(pd.api.types.infer_dtype(df.columns), "string")
+        return_df = st.data_editor(df)
+        self.assertEqual(pd.api.types.infer_dtype(return_df.columns), "string")
+
     def test_index_column_name_raises_exception(self):
         """Test that an index column name raises an exception."""
         # create a dataframe with a column named "_index"

@@ -404,9 +404,13 @@ def _check_column_names(data_df: pd.DataFrame):
     named ``_index``. If the column names are not valid, a ``StreamlitAPIException``
     is raised.
     """
+
+    if data_df.columns.empty:
+        return
+
     # Check if the column names are unique and raise an exception if not.
     # Add the names of the duplicated columns to the exception message.
-    duplicated_columns = data_df.columns[data_df.columns.duplicated()]
+    duplicated_columns = data_df.columns[data_df.columns.astype(str).duplicated()]
     if len(duplicated_columns) > 0:
         raise StreamlitAPIException(
             f"All column names are required to be unique for usage with data editor. "
