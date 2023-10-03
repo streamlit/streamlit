@@ -1352,18 +1352,15 @@ Node: TypeAlias = Union[Element, Block]
 class ElementTree(Block):
     """A tree of the elements produced by running a streamlit script.
 
-    This acts as the initial entrypoint for querying the produced elements,
-    and interacting with widgets.
-
     Elements can be queried in three ways:
-    - By element type, using `.get(...)` to get a list of all of that element,
+    - By element type, using `.foo` properties to get a list of all of that element,
     in the order they appear in the app
-    - By user key, for widgets, using `.get_widget(...)` to get that widget node
+    - By user key, for widgets, by calling the above list with a key: `.foo(key='bar')`
     - Positionally, using list indexing syntax (`[...]`) to access a child of a
     block element. Not recommended because the exact tree structure can be surprising.
 
-    Element queries made on a block will return only the elements descending
-    from that block.
+    Element queries made on a block container will return only the elements
+    descending from that block.
 
     Returned elements have methods for accessing whatever attributes are relevant.
     For very simple elements this may be only its value, while complex elements
@@ -1372,8 +1369,8 @@ class ElementTree(Block):
     Widgets provide a fluent API for faking frontend interaction and rerunning
     the script with the new widget values. All widgets provide a low level `set_value`
     method, along with higher level methods specific to that type of widget.
-    After an interaction, calling `.run()` will return the ElementTree for
-    the rerun.
+    After an interaction, calling `.run()` will update the AppTest with the
+    results of that script run.
     """
 
     _runner: AppTest | None = field(repr=False, default=None)
