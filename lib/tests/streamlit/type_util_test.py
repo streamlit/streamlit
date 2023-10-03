@@ -752,7 +752,7 @@ class TypeUtilTest(unittest.TestCase):
         # Things that do not require coercion
         assert type_util.coerce_enum(EnumAOrig.A, EnumAOrig) is EnumAOrig.A
         # Things which cause errors
-        with pytest.raises(ValueError, match="Expected an EnumType"):
+        with pytest.raises(ValueError, match="Expected an EnumMeta"):
             type_util.coerce_enum(EnumAOrig.A, EnumAEqual.A)
         with pytest.raises(ValueError, match="Expected an Enum"):
             type_util.coerce_enum(EnumAOrig, EnumAEqual)
