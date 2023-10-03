@@ -45,6 +45,8 @@ describe("st.camera_input", () => {
       .first()
       .should("not.be.disabled")
 
+    // Wait until the camera is ready, there some delay even between
+    // `onUserMedia` event and camera is ready.
     cy.wait(2000)
 
     cy.getIndexed("[data-testid='stCameraInputButton']", 0)
