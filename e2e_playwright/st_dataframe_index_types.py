@@ -23,6 +23,8 @@ from tests.streamlit.data_mocks import (
     INTERVAL_TYPES_DF,
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
+    PERIOD_TYPES_DF,
+    SPECIAL_TYPES_DF,
 )
 
 np.random.seed(0)
@@ -42,7 +44,7 @@ st.subheader("Int64 Index (pd.Int64Index)")
 st.dataframe(NUMBER_TYPES_DF.set_index("int64"), use_container_width=True)
 
 st.subheader("Uint64 Index (pd.UInt64Index)")
-st.dataframe(NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True)
+st.data_editor(NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True)
 
 st.subheader("Datetime Index (pd.DatetimeIndex)")
 st.dataframe(DATETIME_TYPES_DF.set_index("datetime"), use_container_width=True)
@@ -62,8 +64,10 @@ st.dataframe(LIST_TYPES_DF.set_index("string_list"), use_container_width=True)
 st.subheader("Multi Index (pd.MultiIndex)")
 st.dataframe(BASE_TYPES_DF.set_index(["string", "int64"]), use_container_width=True)
 
+st.subheader("Categorical Index (pd.CategoricalIndex)")
+st.dataframe(SPECIAL_TYPES_DF.set_index("categorical"), use_container_width=True)
+
+st.subheader("Period Index (pd.PeriodIndex)")
+st.dataframe(PERIOD_TYPES_DF.set_index("L"), use_container_width=True)
+
 # TODO(lukasmasuch): Add timedelta index once the type is supported
-# TODO(lukasmasuch): Add period index once the type is supported
-# TODO(lukasmasuch): Fix support for categorical index:
-# st.subheader("Categorical Index (pd.CategoricalIndex)")
-# st.dataframe(SPECIAL_TYPES_DF.set_index("categorical"), use_container_width=True)

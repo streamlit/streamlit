@@ -388,6 +388,14 @@ def _is_supported_index(df_index: pd.Index) -> bool:
         in [
             pd.RangeIndex,
             pd.Index,
+            pd.DatetimeIndex,
+            # Categorical index doesn't work since arrow
+            # does serialize the options:
+            # pd.CategoricalIndex,
+            # Interval type isn't editable currently:
+            # pd.IntervalIndex,
+            # Period type isn't editable currently:
+            # pd.PeriodIndex,
         ]
         # We need to check these index types without importing, since they are deprecated
         # and planned to be removed soon.
