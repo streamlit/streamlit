@@ -196,15 +196,12 @@ W = TypeVar("W", bound=Widget, covariant=True)
 
 
 class WidgetList(Generic[W], ElementList[W]):
-    def _get_widget(self, key: str) -> W:
+    def __call__(self, key: str) -> W:
         for e in self._list:
             if e.key == key:
                 return e
 
         raise KeyError(key)
-
-    def __call__(self, key: str) -> W:
-        return self._get_widget(key)
 
     def __getitem__(self, k: int) -> W:
         return self._list[k]
