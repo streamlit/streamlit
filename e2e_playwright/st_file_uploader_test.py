@@ -200,3 +200,18 @@ def test_uploads_and_deletes_multiple_files(
 
     file_uploader = themed_app.get_by_test_id("stFileUploader").nth(uploader_index)
     assert_snapshot(file_uploader, name="st_multi_file_uploader-uploaded")
+
+    #  Delete the second file. The second file is on top because it was
+    #  most recently uploaded. The first file should still exist.
+    themed_app.get_by_test_id("fileDeleteBtn").first.click()
+
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
+    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        files[0]["buffer"].decode("utf-8"), use_inner_text=True
+    )
+
+    expect(themed_app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
+        "True", use_inner_text=True
+    )
