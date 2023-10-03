@@ -526,8 +526,8 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         else:
             self.assertEqual(
                 data_df.columns[0],
-                0,
-                f"Data of type {data_format} should not be renamed.",
+                "0",
+                f"Data of type {data_format} should be changed to string.",
             )
 
     def test_apply_data_specific_configs_disables_columns(self):
