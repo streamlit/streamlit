@@ -22,6 +22,7 @@ def test_file_uploader_render_correctly(
 ):
     """Test that the file uploader render as expected via screenshot matching."""
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
+    expect(file_uploaders).to_have_count(7)
 
     assert_snapshot(file_uploaders.nth(0), name="st_single-file-uploader")
     assert_snapshot(file_uploaders.nth(1), name="st_disabled-file-uploader")
