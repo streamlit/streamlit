@@ -103,6 +103,7 @@ class AppTest:
         `default_timeout` is the default time in seconds before a script is
         timed out, if not overridden for an individual `.run()` call.
         """
+        # TODO: Make this not super fragile
         stack = traceback.StackSummary.extract(traceback.walk_stack(None))
         filepath = pathlib.Path(stack[1].filename)
         full_path = filepath.parent / script_path
