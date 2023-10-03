@@ -124,4 +124,11 @@ describe("Host communication", () => {
                 cy.get("[data-testid='collapsedControl']").should("have.css", "top", "50px")
             });
     });
+
+    it("displays the toolbar with horizontal buttons", () => {
+        cy.get('[data-testid="stToolbarActions"]')
+            // Assert that the element is visible
+            .should('be.visible')
+        cy.get('[data-testid="stToolbarActions"]').matchImageSnapshot("toolbarActions")
+    })
 });

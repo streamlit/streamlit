@@ -75,8 +75,19 @@ Usage:
         {
           borderless: false,
           label: "Favorite",
-          icon: "",
+          icon: "Favorite",
           key: "favorite",
+        },
+      ],
+    })
+    sendMessage({
+      type: "SET_TOOLBAR_ITEMS",
+      items: [
+        {
+          borderless: false,
+          label: "Share",
+          icon: "Share",
+          key: "Share",
         },
       ],
     })
