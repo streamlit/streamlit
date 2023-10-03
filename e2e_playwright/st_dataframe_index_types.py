@@ -44,7 +44,7 @@ st.subheader("Int64 Index (pd.Int64Index)")
 st.dataframe(NUMBER_TYPES_DF.set_index("int64"), use_container_width=True)
 
 st.subheader("Uint64 Index (pd.UInt64Index)")
-st.data_editor(NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF.set_index("uint64"), use_container_width=True)
 
 st.subheader("Datetime Index (pd.DatetimeIndex)")
 st.dataframe(DATETIME_TYPES_DF.set_index("datetime"), use_container_width=True)
