@@ -16,7 +16,7 @@ from streamlit.testing.v1 import AppTest
 
 
 def test_smoke():
-    sr = AppTest.from_string(
+    at = AppTest.from_string(
         """
         import streamlit as st
 
@@ -24,20 +24,17 @@ def test_smoke():
         st.radio("default index", options=["a", "b", "c"], index=2)
         """
     ).run()
-    assert sr.radio
+    assert at.radio
+    assert at.radio[0].value == "a"
+    assert at.radio(key="r").value == "a"
+    assert at.radio.values == ["a", "c"]
 
-    assert sr.radio[0].value == "a"
-    assert sr.radio(key="r").value == "a"
-
-    assert sr.radio[1].value == "c"
-    assert sr.radio.values == ["a", "c"]
-
-    r = sr.radio[0].set_value("b")
+    r = at.radio[0].set_value("b")
     assert r.index == 1
     assert r.value == "b"
-    sr2 = r.run()
-    assert sr2.radio[0].value == "b"
-    assert [s.value for s in sr2.radio] == ["b", "c"]
+    at = r.run()
+    assert at.radio[0].value == "b"
+    assert at.radio.values == ["b", "c"]
 
 
 def test_checkbox():
