@@ -80,7 +80,7 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         # Apache 2.0 license: https://github.com/google/flatbuffers
         "flatbuffers",
         "23.5.26",
-        "SEE LICENSE IN LICENSE.txt",
+        "SEE LICENSE IN LICENSE",
         "git+https://github.com/google/flatbuffers.git",
         "https://google.github.io/flatbuffers/",
         "The FlatBuffers project",
