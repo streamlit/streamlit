@@ -37,28 +37,6 @@ def test_smoke():
     assert at.radio.values == ["b", "c"]
 
 
-def test_checkbox():
-    script = AppTest.from_string(
-        """
-        import streamlit as st
-
-        st.checkbox("defaults")
-        st.checkbox("defaulted on", True)
-        """,
-    )
-    sr = script.run()
-    assert sr.checkbox
-    assert sr.checkbox.values == [False, True]
-
-    sr.checkbox[0].check().run()
-    assert sr.checkbox[0].value == True
-    assert sr.checkbox[1].value == True
-
-    sr.checkbox[1].uncheck().run()
-    assert sr.checkbox[0].value == True
-    assert sr.checkbox[1].value == False
-
-
 def test_from_file():
     script = AppTest.from_file("../test_data/widgets_script.py")
     script.run()

@@ -43,6 +43,25 @@ def test_button():
     assert sr3.button[1].value == False
 
 
+def test_checkbox():
+    at = AppTest.from_string(
+        """
+        import streamlit as st
+
+        st.checkbox("defaults")
+        st.checkbox("defaulted on", True)
+        """,
+    ).run()
+    assert at.checkbox
+    assert at.checkbox.values == [False, True]
+
+    at.checkbox[0].check().run()
+    assert at.checkbox.values == [True, True]
+
+    at.checkbox[1].uncheck().run()
+    assert at.checkbox.values == [True, False]
+
+
 def test_color_picker():
     at = AppTest.from_string(
         """
