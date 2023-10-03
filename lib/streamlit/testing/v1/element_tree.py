@@ -1319,14 +1319,6 @@ class Block:
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
-    def get_widget(self, key: str) -> Widget:
-        for e in self:
-            if e.key == key:
-                assert isinstance(e, Widget)
-                return e
-
-        raise KeyError(key)
-
     def widget_state(self) -> WidgetState | None:
         return None
 
