@@ -17,8 +17,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Hashable,
+    Iterable,
     List,
     Optional,
+    Sequence,
     Tuple,
     Type,
     Union,
@@ -115,6 +117,7 @@ def get_label_visibility_proto_value(
 def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[Enum],
     options: Type[Enum],
+    opt_sequence: Sequence[Any],
 ) -> RegisterWidgetResult[Enum]:
     ...
 
@@ -123,20 +126,32 @@ def maybe_coerce_enum(
 def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[type_util.T],
     options: type_util.OptionSequence[type_util.T],
+    opt_sequence: Sequence[type_util.T],
 ) -> RegisterWidgetResult[type_util.T]:
     ...
 
 
-def maybe_coerce_enum(register_widget_result, options):
-    """Maybe Coerce a RegisterWidgetResult with an Enum member value to RegisterWidgetResult[option] if option
-    is an EnumType, otherwise just return the original RegisterWidgetResult."""
+def maybe_coerce_enum(register_widget_result, options, opt_sequence):
+    """Maybe Coerce a RegisterWidgetResult with an Enum member value to
+    RegisterWidgetResult[option] if option is an EnumType, otherwise just return
+    the original RegisterWidgetResult."""
 
-    if isinstance(register_widget_result.value, Enum) and isinstance(options, EnumMeta):
-        return RegisterWidgetResult(
-            type_util.coerce_enum(register_widget_result.value, options),
-            register_widget_result.value_changed,
-        )
-    return register_widget_result
+    # If the value is not a Enum, return early
+    if not isinstance(register_widget_result.value, Enum):
+        return register_widget_result
+
+    coerce_class: Optional[EnumMeta]
+    if isinstance(options, EnumMeta):
+        coerce_class = options
+    else:
+        coerce_class = _extract_common_class_from_iter(opt_sequence)
+        if not isinstance(coerce_class, EnumMeta):
+            return register_widget_result
+
+    return RegisterWidgetResult(
+        type_util.coerce_enum(register_widget_result.value, coerce_class),
+        register_widget_result.value_changed,
+    )
 
 
 # slightly ugly typing because TypeVars with Generic Bounds are not supported
@@ -145,6 +160,7 @@ def maybe_coerce_enum(register_widget_result, options):
 def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[List[type_util.T]],
     options: type_util.OptionSequence[type_util.T],
+    opt_sequence: Sequence[type_util.T],
 ) -> RegisterWidgetResult[List[type_util.T]]:
     ...
 
@@ -153,23 +169,47 @@ def maybe_coerce_enum_sequence(
 def maybe_coerce_enum_sequence(
     register_widget_result: RegisterWidgetResult[Tuple[type_util.T, type_util.T]],
     options: type_util.OptionSequence[type_util.T],
+    opt_sequence: Sequence[type_util.T],
 ) -> RegisterWidgetResult[Tuple[type_util.T, type_util.T]]:
     ...
 
 
-def maybe_coerce_enum_sequence(register_widget_result, options):
+def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
     """Maybe Coerce a RegisterWidgetResult with a sequence of Enum members as value
     to RegisterWidgetResult[Sequence[option]] if option is an EnumType, otherwise just return
     the original RegisterWidgetResult."""
 
-    if all(
-        isinstance(val, Enum) for val in register_widget_result.value
-    ) and isinstance(options, EnumMeta):
-        return RegisterWidgetResult(
-            type(register_widget_result.value)(
-                type_util.coerce_enum(val, options)
-                for val in register_widget_result.value
-            ),
-            register_widget_result.value_changed,
-        )
-    return register_widget_result
+    # If not all widget values are Enums, return early
+    if not all(isinstance(val, Enum) for val in register_widget_result.value):
+        return register_widget_result
+
+    # Extract the class to coerce
+    coerce_class: Optional[EnumMeta]
+    if isinstance(options, EnumMeta):
+        coerce_class = options
+    else:
+        coerce_class = _extract_common_class_from_iter(opt_sequence)
+        if not isinstance(coerce_class, EnumMeta):
+            return register_widget_result
+
+    # Return a new RegisterWidgetResult with the coerced enum values sequence
+    return RegisterWidgetResult(
+        type(register_widget_result.value)(
+            type_util.coerce_enum(val, coerce_class)
+            for val in register_widget_result.value
+        ),
+        register_widget_result.value_changed,
+    )
+
+
+def _extract_common_class_from_iter(iterable: Iterable[Any]) -> Any:
+    """Return the common class of all elements in a iterable if they share one.
+    Otherwise, return the iterable itself."""
+    try:
+        inner_iter = iter(iterable)
+        first_class = type(next(inner_iter))
+    except StopIteration:
+        return iterable
+    if all(type(item) is first_class for item in inner_iter):
+        return first_class
+    return iterable

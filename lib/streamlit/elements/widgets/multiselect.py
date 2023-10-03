@@ -348,7 +348,7 @@ class MultiSelectMixin:
             raise StreamlitAPIException(
                 _get_over_max_options_message(default_count, max_selections)
             )
-        widget_state = maybe_coerce_enum_sequence(widget_state, options)
+        widget_state = maybe_coerce_enum_sequence(widget_state, options, opt)
 
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)

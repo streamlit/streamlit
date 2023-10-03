@@ -287,7 +287,7 @@ class SelectboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        widget_state = maybe_coerce_enum(widget_state, options)
+        widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             serialized_value = serde.serialize(widget_state.value)

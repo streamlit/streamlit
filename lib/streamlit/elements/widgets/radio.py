@@ -319,7 +319,7 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
-        widget_state = maybe_coerce_enum(widget_state, options)
+        widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             if widget_state.value is not None:

@@ -334,10 +334,10 @@ class SelectSliderMixin:
         )
         if isinstance(widget_state.value, tuple):
             widget_state = maybe_coerce_enum_sequence(
-                cast(RegisterWidgetResult[Tuple[T, T]], widget_state), options
+                cast(RegisterWidgetResult[Tuple[T, T]], widget_state), options, opt
             )
         else:
-            widget_state = maybe_coerce_enum(widget_state, options)
+            widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)

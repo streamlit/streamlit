@@ -169,6 +169,7 @@ class ElementUtilsTest(unittest.TestCase):
             C = enum.auto()
 
         EnumAEqual = EnumA
+        EnumAEqualList = [EnumAEqual.A, EnumAEqual.C, EnumAEqual.B]
 
         int_result = RegisterWidgetResult(1, False)
         intlist_result = RegisterWidgetResult([1, 2, 3], False)
@@ -182,12 +183,56 @@ class ElementUtilsTest(unittest.TestCase):
         list_result = RegisterWidgetResult([EnumAOrig.A, EnumAOrig.C], True)
         list_coerced = RegisterWidgetResult([EnumAEqual.A, EnumAEqual.C], True)
 
-        assert maybe_coerce_enum(single_result, EnumAEqual) == single_coerced
-        assert maybe_coerce_enum(single_result, [1, 2, 3]) is single_result
-        assert maybe_coerce_enum(int_result, EnumAEqual) is int_result
+        assert maybe_coerce_enum(single_result, EnumAEqual, []) == single_coerced
+        assert (
+            maybe_coerce_enum(single_result, EnumAEqualList, EnumAEqualList)
+            == single_coerced
+        )
+        assert (
+            maybe_coerce_enum(single_result, EnumAEqualList, [EnumAEqual.A])
+            == single_coerced
+        )
+        assert maybe_coerce_enum(single_result, [1, 2, 3], []) is single_result
+        assert maybe_coerce_enum(int_result, EnumAEqual, []) is int_result
+        assert (
+            maybe_coerce_enum(
+                single_result, EnumAEqualList, [EnumAEqual.A, EnumAOrig.B]
+            )
+            is single_result
+        )
 
-        assert maybe_coerce_enum_sequence(tuple_result, EnumAEqual) == tuple_coerced
-        assert maybe_coerce_enum_sequence(list_result, EnumAEqual) == list_coerced
-        assert maybe_coerce_enum_sequence(list_result, [1, 2, 3]) is list_result
-        assert maybe_coerce_enum_sequence(tuple_result, [1, 2, 3]) is tuple_result
-        assert maybe_coerce_enum_sequence(intlist_result, EnumAEqual) is intlist_result
+        assert maybe_coerce_enum_sequence(tuple_result, EnumAEqual, []) == tuple_coerced
+        assert (
+            maybe_coerce_enum_sequence(tuple_result, EnumAEqualList, EnumAEqualList)
+            == tuple_coerced
+        )
+        assert (
+            maybe_coerce_enum_sequence(tuple_result, EnumAEqualList, [EnumAEqual.A])
+            == tuple_coerced
+        )
+        assert maybe_coerce_enum_sequence(list_result, EnumAEqual, []) == list_coerced
+        assert (
+            maybe_coerce_enum_sequence(list_result, EnumAEqualList, EnumAEqualList)
+            == list_coerced
+        )
+        assert (
+            maybe_coerce_enum_sequence(list_result, EnumAEqualList, [EnumAEqual.A])
+            == list_coerced
+        )
+        assert maybe_coerce_enum_sequence(list_result, [1, 2, 3], []) is list_result
+        assert maybe_coerce_enum_sequence(tuple_result, [1, 2, 3], []) is tuple_result
+        assert (
+            maybe_coerce_enum_sequence(intlist_result, EnumAEqual, []) is intlist_result
+        )
+        assert (
+            maybe_coerce_enum_sequence(
+                list_result, EnumAEqualList, [EnumAEqual.A, EnumAOrig.B]
+            )
+            is list_result
+        )
+        assert (
+            maybe_coerce_enum_sequence(
+                tuple_result, EnumAEqualList, [EnumAEqual.A, EnumAOrig.B]
+            )
+            is tuple_result
+        )
