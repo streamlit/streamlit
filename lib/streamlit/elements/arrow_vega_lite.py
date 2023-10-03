@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """A Python wrapper around Vega-Lite."""
+from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
@@ -37,20 +38,20 @@ LOGGER: Final = get_logger(__name__)
 
 
 class ArrowVegaLiteMixin:
-    @gather_metrics("_arrow_vega_lite_chart")
-    def _arrow_vega_lite_chart(
+    @gather_metrics("vega_lite_chart")
+    def vega_lite_chart(
         self,
         data: Data = None,
-        spec: Optional[Dict[str, Any]] = None,
+        spec: Dict[str, Any] | None = None,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Literal["streamlit"] | None = "streamlit",
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
 
@@ -76,19 +77,24 @@ class ArrowVegaLiteMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
+        >>> chart_data = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
         >>>
-        >>> st._arrow_vega_lite_chart(df, {
-        ...     'mark': {'type': 'circle', 'tooltip': True},
-        ...     'encoding': {
-        ...         'x': {'field': 'a', 'type': 'quantitative'},
-        ...         'y': {'field': 'b', 'type': 'quantitative'},
-        ...         'size': {'field': 'c', 'type': 'quantitative'},
-        ...         'color': {'field': 'c', 'type': 'quantitative'},
-        ...     },
-        ... })
+        >>> st.vega_lite_chart(
+        ...    chart_data,
+        ...    {
+        ...        "mark": {"type": "circle", "tooltip": True},
+        ...        "encoding": {
+        ...            "x": {"field": "a", "type": "quantitative"},
+        ...            "y": {"field": "b", "type": "quantitative"},
+        ...            "size": {"field": "c", "type": "quantitative"},
+        ...            "color": {"field": "c", "type": "quantitative"},
+        ...        },
+        ...    },
+        ... )
+
+        .. output::
+           https://doc-vega-lite-chart.streamlit.app/
+           height: 300px
 
         Examples of Vega-Lite usage without Streamlit can be found at
         https://vega.github.io/vega-lite/examples/. Most of those can be easily

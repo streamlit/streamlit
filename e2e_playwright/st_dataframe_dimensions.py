@@ -18,17 +18,26 @@ import pandas as pd
 import streamlit as st
 from tests.streamlit import snowpark_mocks
 
+# Explicitly seed the RNG for deterministic results
 np.random.seed(0)
 
-data = np.random.randn(20, 3)
-df = pd.DataFrame(data, columns=["a", "b", "c"])
+data = np.random.randn(100, 100)
 
-st.area_chart(df)
-st.area_chart(df, x="a")
-st.area_chart(df, y="a")
-st.area_chart(df, y=["a", "b"])
-st.area_chart(df, x="a", y="b")
-st.area_chart(df, x="b", y="a")
-st.area_chart(df, x="a", y=["b", "c"])
+df = pd.DataFrame(data)
+st.dataframe(df)
+st.dataframe(df, 250, 150)
+st.dataframe(df, width=250)
+st.dataframe(df, height=150)
+st.dataframe(df, 5000, 5000)
+st.dataframe(df, use_container_width=True)
 
-st.area_chart(snowpark_mocks.DataFrame())
+small_df = pd.DataFrame(np.random.randn(100, 3))
+st.dataframe(small_df, width=500)
+st.dataframe(small_df, use_container_width=True)
+st.dataframe(small_df, width=200, use_container_width=True)
+st.dataframe(small_df, width=200, use_container_width=False)
+
+one_col_df = pd.DataFrame(np.random.randn(100, 1))
+st.dataframe(one_col_df, use_container_width=True)
+
+st.dataframe(snowpark_mocks.DataFrame(), use_container_width=True)

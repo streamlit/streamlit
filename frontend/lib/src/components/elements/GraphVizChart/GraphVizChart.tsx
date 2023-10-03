@@ -111,6 +111,7 @@ export function GraphVizChart({
   return (
     <StyledGraphVizChart
       className="graphviz stGraphVizChart"
+      data-testid="stGraphVizChart"
       id={chartId}
       style={{ width, height }}
     />
