@@ -181,7 +181,7 @@ class ElementList(Generic[El]):
     def __repr__(self):
         return util.repr_(self)
 
-    def __eq__(self, other: ElementList[El] | Sequence[El]) -> bool:
+    def __eq__(self, other: ElementList[El] | object) -> bool:
         if isinstance(other, ElementList):
             return self._list == other._list
         else:
@@ -202,9 +202,6 @@ class WidgetList(Generic[W], ElementList[W]):
                 return e
 
         raise KeyError(key)
-
-    def __getitem__(self, k: int) -> W:
-        return self._list[k]
 
 
 @dataclass(repr=False)

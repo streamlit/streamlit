@@ -71,7 +71,7 @@ class AppTest:
         self._script_path = script_path
         self.default_timeout = default_timeout
         self.session_state = SessionState()
-        self.query_params = {}
+        self.query_params: dict[str, Any] = {}
 
         tree = ElementTree()
         tree._runner = self
