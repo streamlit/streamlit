@@ -61,36 +61,34 @@ def test_color_picker():
     assert at.color_picker[0].value == "#123456"
 
 
-class DateInputTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
-            import datetime
+def test_value():
+    at = AppTest.from_string(
+        """
+        import streamlit as st
+        import datetime
 
-            st.date_input("date", value=datetime.date(2023, 4, 17))
-            st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
-            st.date_input("range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1)))
-            """,
-        )
-        sr = script.run()
-        assert not sr.exception
-        assert [d.value for d in sr.date_input] == [
-            date(2023, 4, 17),
-            datetime(2023, 4, 17).date(),
-            (date(2020, 1, 1), date(2030, 1, 1)),
-        ]
-        ds = sr.date_input
-        ds[0].set_value(date(2023, 5, 1))
-        ds[1].set_value(datetime(2023, 1, 1))
-        ds[2].set_value((date(2023, 1, 1), date(2024, 1, 1)))
+        st.date_input("date", value=datetime.date(2023, 4, 17))
+        st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
+        st.date_input("range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1)))
+        """,
+    ).run()
+    assert not at.exception
+    assert at.date_input.values == [
+        date(2023, 4, 17),
+        datetime(2023, 4, 17).date(),
+        (date(2020, 1, 1), date(2030, 1, 1)),
+    ]
+    ds = at.date_input
+    ds[0].set_value(date(2023, 5, 1))
+    ds[1].set_value(datetime(2023, 1, 1))
+    ds[2].set_value((date(2023, 1, 1), date(2024, 1, 1)))
 
-        sr2 = sr.run()
-        assert [d.value for d in sr2.date_input] == [
-            date(2023, 5, 1),
-            date(2023, 1, 1),
-            (date(2023, 1, 1), date(2024, 1, 1)),
-        ]
+    at.run()
+    assert at.date_input.values == [
+        date(2023, 5, 1),
+        date(2023, 1, 1),
+        (date(2023, 1, 1), date(2024, 1, 1)),
+    ]
 
 
 class ExceptionTest(InteractiveScriptTests):
