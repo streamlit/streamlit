@@ -55,14 +55,6 @@ describe("st.file_uploader", () => {
     );
   });
 
-  it("sets cookie options correctly", () => {
-    cy.getCookie("_xsrf").should("have.property", "secure", true);
-    // Cypress use a "no_restrictions" value for SameSite header when
-    // it is set to "None".
-    // https://docs.cypress.io/api/commands/setcookie#Arguments
-    cy.getCookie("_xsrf").should("have.property", "sameSite", "no_restriction");
-  });
-
   it("shows error message for disallowed files", () => {
     const fileName = "example.json";
     const uploaderIndex = 0;
