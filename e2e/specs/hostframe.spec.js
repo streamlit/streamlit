@@ -126,6 +126,7 @@ describe("Host communication", () => {
     });
 
     it("displays the toolbar with horizontal buttons", () => {
+        cy.get("#toolbar").contins("Add Toolbar Item").click()
         cy.get('[data-testid="stToolbarActions"]').matchImageSnapshot("toolbarActions")
     })
 });
