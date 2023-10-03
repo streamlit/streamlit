@@ -395,7 +395,6 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
         self.assertEqual(infer_dtype(fixed_df["string"]), "string")
         self.assertEqual(infer_dtype(fixed_df.index), "string")
-        print("FOOO", str(fixed_df.dtypes))
         self.assertEqual(
             str(fixed_df.dtypes),
             """mixed-integer    string[python]
