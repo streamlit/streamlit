@@ -19,20 +19,11 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+from pandas.io.formats.style_render import StylerRenderer as Styler
 
 import streamlit as st
-from streamlit.type_util import (
-    bytes_to_data_frame,
-    is_pandas_version_less_than,
-    pyarrow_table_to_bytes,
-)
+from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-
-# In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
-if is_pandas_version_less_than("1.3.0"):
-    from pandas.io.formats.style import Styler
-else:
-    from pandas.io.formats.style_render import StylerRenderer as Styler
 
 
 def mock_data_frame():
