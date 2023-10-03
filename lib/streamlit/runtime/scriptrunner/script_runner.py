@@ -493,6 +493,8 @@ class ScriptRunner:
         # is interrupted by a RerunException.
         rerun_exception_data: Optional[RerunData] = None
 
+        # Tracks why the script run finished, so interrupted script runs don't
+        # lose widget state.
         premature_stop: bool = False
 
         try:
