@@ -53,7 +53,7 @@ def test_color_picker():
         st.color_picker("invalid", value="blue")
         """,
     ).run()
-    assert at.color_picker.len() == 2
+    assert at.color_picker.len == 2
     assert at.color_picker.values == ["#000000", "#ABC"]
     assert "blue" in at.exception[0].value
 

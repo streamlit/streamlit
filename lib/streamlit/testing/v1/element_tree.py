@@ -158,6 +158,7 @@ class ElementList(Generic[El]):
     def __len__(self) -> int:
         return len(self._list)
 
+    @property
     def len(self) -> int:
         return len(self)
 
