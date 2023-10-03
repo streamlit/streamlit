@@ -199,6 +199,7 @@ class LLMThought:
             label=self._labeler.get_tool_label(self._last_tool, is_complete=False),
             state="running",
         )
+        self._container.markdown(f"Input:\n\n{input_str}")
 
     def on_tool_end(
         self,
@@ -208,7 +209,7 @@ class LLMThought:
         llm_prefix: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        self._container.markdown(output)
+        self._container.markdown(f"\n\nOutput:{output}")
 
     def on_tool_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._container.markdown("**Tool encountered an error...**")
