@@ -18,50 +18,47 @@ import pytest
 
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 
 
 @pytest.mark.xfail(reason="button does not work correctly with session state")
-class ButtonTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
+def test_button():
+    sr = AppTest.from_string(
+        """
+        import streamlit as st
 
-            st.button("button")
-            st.button("second button")
-            """,
-        )
-        sr = script.run()
-        assert sr.button[0].value == False
-        assert sr.button[1].value == False
+        st.button("button")
+        st.button("second button")
+        """,
+    ).run()
+    assert sr.button[0].value == False
+    assert sr.button[1].value == False
 
-        sr2 = sr.button[0].click().run()
-        assert sr2.button[0].value == True
-        assert sr2.button[1].value == False
+    sr2 = sr.button[0].click().run()
+    assert sr2.button[0].value == True
+    assert sr2.button[1].value == False
 
-        sr3 = sr2.run()
-        assert sr3.button[0].value == False
-        assert sr3.button[1].value == False
+    sr3 = sr2.run()
+    assert sr3.button[0].value == False
+    assert sr3.button[1].value == False
 
 
-class ColorPickerTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
+def test_color_picker():
+    at = AppTest.from_string(
+        """
+        import streamlit as st
 
-            st.color_picker("what is your favorite color?")
-            st.color_picker("short hex", value="#ABC")
-            st.color_picker("invalid", value="blue")
-            """,
-        )
-        sr = script.run()
-        assert len(sr.color_picker) == 2
-        assert [c.value for c in sr.color_picker] == ["#000000", "#ABC"]
-        assert "blue" in sr.exception[0].value
+        st.color_picker("what is your favorite color?")
+        st.color_picker("short hex", value="#ABC")
+        st.color_picker("invalid", value="blue")
+        """,
+    ).run()
+    assert at.color_picker.len() == 2
+    assert at.color_picker.values == ["#000000", "#ABC"]
+    assert "blue" in at.exception[0].value
 
-        sr2 = sr.color_picker[0].pick("#123456").run()
-        assert sr2.color_picker[0].value == "#123456"
+    at.color_picker[0].pick("#123456").run()
+    assert at.color_picker[0].value == "#123456"
 
 
 class DateInputTest(InteractiveScriptTests):
