@@ -348,7 +348,7 @@ class TypeUtilTest(unittest.TestCase):
 
         if incompatible:
             # Column should have been converted to string.
-            self.assertEqual(col_dtype, "string[python]")
+            self.assertIsInstance(col_dtype, pd.StringDtype)
             self.assertEqual(inferred_type, "string")
         else:
             # Column should have the original type.
