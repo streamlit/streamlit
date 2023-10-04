@@ -224,10 +224,10 @@ def _determine_data_kind_via_pandas_dtype(
     if pd.api.types.is_timedelta64_dtype(column_dtype):
         return ColumnDataKind.TIMEDELTA
 
-    if pd.api.types.is_period_dtype(column_dtype):
+    if isinstance(column_dtype, pd.PeriodDtype):
         return ColumnDataKind.PERIOD
 
-    if pd.api.types.is_interval_dtype(column_dtype):
+    if isinstance(column_dtype, pd.IntervalDtype):
         return ColumnDataKind.INTERVAL
 
     if pd.api.types.is_complex_dtype(column_dtype):
