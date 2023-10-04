@@ -31,12 +31,13 @@ the API *from LangChain itself*.
 
 from __future__ import annotations
 
-from enum import Enum
 import time
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import AgentAction, AgentFinish, LLMResult
+
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
