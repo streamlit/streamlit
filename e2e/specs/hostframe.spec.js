@@ -29,6 +29,7 @@ describe("Host communication", () => {
             cy.prepForElementSnapshots()
         });
 
+        cy.get("iframe").first().matchImageSnapshot("theme-message-before");
         cy.get("#toolbar").contains("Send Theme").click();
         cy.get("iframe").first().matchImageSnapshot("theme-message-after");
     });
