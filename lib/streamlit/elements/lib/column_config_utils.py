@@ -330,7 +330,7 @@ def _determine_data_kind(
         The data kind of the column.
     """
 
-    if pd.api.types.is_categorical_dtype(column.dtype):
+    if isinstance(column.dtype, pd.CategoricalDtype):
         # Categorical columns can have different underlying data kinds
         # depending on the categories.
         return _determine_data_kind_via_inferred_type(column.dtype.categories)
@@ -507,6 +507,11 @@ def apply_data_specific_configs(
         # Pandas automatically names the first column "0"
         # We rename it to "value" in selected cases to make it more descriptive
         data_df.rename(columns={0: "value"}, inplace=True)
+
+    if not isinstance(data_df.index, pd.RangeIndex):
+        # If the index is not a range index, we will configure it as required
+        # since the user is required to provide a (unique) value for editing.
+        update_column_config(columns_config, INDEX_IDENTIFIER, {"required": True})
 
 
 def marshall_column_config(

@@ -70,7 +70,6 @@ TORNADO_SETTINGS = {
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
-    "xsrf_cookie_kwargs": {"secure": True, "samesite": "None"},
 }
 
 # When server.port is not available it will look for the next available port
