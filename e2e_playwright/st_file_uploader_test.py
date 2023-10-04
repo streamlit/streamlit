@@ -187,7 +187,7 @@ def test_uploads_and_deletes_multiple_files(
         expect(element).to_have_text(file_names[i], use_inner_text=True)
 
     # The script should have printed the contents of the two files
-    # into a st.text. (This tests that the upload actually went through.)
+    # into a st.text. This tests that the upload actually went through.
     content = "\n".join(
         [
             files[0]["buffer"].decode("utf-8"),
