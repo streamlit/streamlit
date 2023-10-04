@@ -44,7 +44,7 @@ jsonschema==4.19.1
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.5
-langchain==0.0.306
+langchain==0.0.308
 langsmith==0.0.41
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
@@ -59,7 +59,6 @@ mypy-protobuf==3.3.0
 mysqlclient==2.2.0
 nh3==0.2.14
 nodeenv==1.8.0
-numexpr==2.8.7
 numpy==1.26.0
 opencv-python==4.8.1.78
 packaging==23.2
@@ -133,7 +132,7 @@ types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
 typing_extensions==4.8.0
 tzdata==2023.3
-tzlocal==5.0.1
+tzlocal==5.1
 urllib3==2.0.6
 validators==0.22.0
 virtualenv==20.24.5
