@@ -96,9 +96,16 @@ describe("Host communication", () => {
             .iframe(() => {
                 // Check toolbar contents
                 cy.get('.stActionButton').should("exist")
-                cy.get('.stActionButton').should("have.text", "Favorite")
+                cy.getIndexed('[data-testid="stActionButton"]', 0).should("have.text", "Favorite")
             });
     });
+
+    it("displays the toolbar with horizontal buttons", () => {
+        cy.get("#toolbar").contains("Add Toolbar Item").click();
+        cy.get("iframe").iframe(() => {
+            cy.get('[data-testid="stToolbarActions"]').matchImageSnapshot("toolbarActions")
+        })
+    })
 
     it("handles a hide sidebar nav message", () => {
         cy.get("iframe").iframe(() => {
@@ -124,9 +131,4 @@ describe("Host communication", () => {
                 cy.get("[data-testid='collapsedControl']").should("have.css", "top", "50px")
             });
     });
-
-    it("displays the toolbar with horizontal buttons", () => {
-        cy.get("#toolbar").contins("Add Toolbar Item").click()
-        cy.get('[data-testid="stToolbarActions"]').matchImageSnapshot("toolbarActions")
-    })
 });
