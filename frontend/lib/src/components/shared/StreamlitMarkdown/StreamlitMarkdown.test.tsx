@@ -258,11 +258,11 @@ describe("StreamlitMarkdown", () => {
     expect(tag instanceof HTMLAnchorElement).toBe(false)
   })
 
-  it("renders smaller text sizing when smallerFont is true", () => {
-    const source = "Here is some smaller text"
-    render(<StreamlitMarkdown source={source} allowHTML={false} smallerFont />)
+  it("renders smaller text sizing when isToast is true", () => {
+    const source = "Here is some toast text"
+    render(<StreamlitMarkdown source={source} allowHTML={false} isToast />)
 
-    const textTag = screen.getByText("Here is some smaller text")
+    const textTag = screen.getByText("Here is some toast text")
     expect(textTag).toHaveStyle("font-size: 14px")
   })
 

@@ -39,7 +39,7 @@ function Spinner({ width, element }: SpinnerProps): ReactElement {
         width,
         background:
           "linear-gradient(to bottom, #FFFFFF 0%, #FFFFFF 80%, transparent 100%)",
-        padding: "16px 0px",
+        padding: "0px 0px 16px 0px",
       }
     : { width }
 
@@ -51,11 +51,7 @@ function Spinner({ width, element }: SpinnerProps): ReactElement {
     >
       <StyledSpinnerContainer>
         <ThemedStyledSpinner usingCustomTheme={usingCustomTheme} />
-        <StreamlitMarkdown
-          source={element.text}
-          allowHTML={false}
-          smallerFont={cache}
-        />
+        <StreamlitMarkdown source={element.text} allowHTML={false} />
       </StyledSpinnerContainer>
     </div>
   )

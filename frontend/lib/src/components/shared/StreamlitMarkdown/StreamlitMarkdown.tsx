@@ -91,14 +91,9 @@ export interface Props {
   disableLinks?: boolean
 
   /**
-   * Handles special CSS for toast messages
+   * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
-
-  /**
-   * Use smaller font size for markdown text
-   */
-  smallerFont?: boolean
 }
 
 /**
@@ -396,7 +391,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
       largerLabel,
       disableLinks,
       isToast,
-      smallerFont,
     } = this.props
     const isInSidebar = this.context
 
@@ -407,7 +401,6 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isLabel={isLabel}
         largerLabel={largerLabel}
         isToast={isToast}
-        smallerFont={smallerFont}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
       >
