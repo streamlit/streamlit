@@ -29,7 +29,6 @@ describe("Host communication", () => {
             cy.prepForElementSnapshots()
         });
 
-        cy.get("iframe").first().matchImageSnapshot("theme-message-before");
         cy.get("#toolbar").contains("Send Theme").click();
         cy.get("iframe").first().matchImageSnapshot("theme-message-after");
     });
@@ -97,14 +96,14 @@ describe("Host communication", () => {
                 // Check toolbar contents
                 cy.get('.stActionButton').should("exist")
                 cy.getIndexed('[data-testid="stActionButton"]', 0).should("have.text", "Favorite")
+                cy.getIndexed('[data-testid="stActionButton"]', 1).should("have.text", "Share")
             });
     });
 
     it("displays the toolbar with horizontal buttons", () => {
+        cy.get("iframe").first().matchImageSnapshot("toolbarActions-before");
         cy.get("#toolbar").contains("Add Toolbar Item").click();
-        cy.get("iframe").iframe(() => {
-            cy.get('[data-testid="stToolbarActions"]').matchImageSnapshot("toolbarActions")
-        })
+        cy.get("iframe").first().matchImageSnapshot("toolbarActions-after");
     })
 
     it("handles a hide sidebar nav message", () => {
