@@ -93,3 +93,18 @@ def make_pretty(styler):
 styled_df = weather_df.style.pipe(make_pretty)
 
 st.dataframe(styled_df)
+
+st.header("Styled link column")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "https://streamlit.io",
+                "https://docs.streamlit.io",
+                "https://streamlit.io/gallery",
+                None,
+            ]
+        }
+    ).style.format(lambda url: url.replace("https://", "") if url else ""),
+    column_config={"col_0": st.column_config.LinkColumn()},
+)

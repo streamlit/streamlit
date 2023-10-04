@@ -60,6 +60,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
     kind: GridCellKind.Uri,
     data: "",
+    displayData: undefined,
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,

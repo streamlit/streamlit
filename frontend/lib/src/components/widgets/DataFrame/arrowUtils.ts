@@ -20,6 +20,7 @@ import {
   TextCell,
   NumberCell,
   GridCellKind,
+  UriCell,
 } from "@glideapps/glide-data-grid"
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment from "moment"
@@ -411,6 +412,11 @@ export function getCellFromArrow(
           ...cellTemplate,
           displayData,
         } as NumberCell
+      } else if (cellTemplate.kind === GridCellKind.Uri) {
+        cellTemplate = {
+          ...cellTemplate,
+          displayData,
+        } as UriCell
       } else if (
         cellTemplate.kind === GridCellKind.Custom &&
         (cellTemplate as DatePickerType).data?.kind === "date-picker-cell"
