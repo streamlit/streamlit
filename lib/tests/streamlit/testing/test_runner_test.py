@@ -43,15 +43,14 @@ def test_from_file():
 
 
 def test_query_params():
-    sr = AppTest.from_string(
-        """
+    def script():
         import streamlit as st
 
         st.write(st.experimental_get_query_params())
-        """
-    ).run()
-    assert sr.get("json")[0].proto.json.body == "{}"
-    sr.query_params["foo"] = 5
-    sr.query_params["bar"] = "baz"
-    sr.run()
-    assert sr.get("json")[0].proto.json.body == '{"foo": ["5"], "bar": ["baz"]}'
+
+    at = AppTest.from_function(script).run()
+    assert at.get("json")[0].body == "{}"
+    at.query_params["foo"] = 5
+    at.query_params["bar"] = "baz"
+    at.run()
+    assert at.get("json")[0].body == '{"foo": ["5"], "bar": ["baz"]}'

@@ -120,6 +120,12 @@ class Element:
             # No id field, not a widget
             return p.value
 
+    def __getattr__(self, name: str) -> Any:
+        """Fallback attempt to get an attribute from the proto"""
+        proto = getattr(self.proto, self.type)
+        attr = getattr(proto, name)
+        return attr
+
     def widget_state(self) -> WidgetState | None:
         return None
 
