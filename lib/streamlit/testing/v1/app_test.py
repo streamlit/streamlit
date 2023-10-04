@@ -102,6 +102,7 @@ class AppTest:
     def from_function(
         cls, script: Callable[[], None], default_timeout: float = 3
     ) -> AppTest:
+        # TODO: Simplify this using `ast.unparse()` once we drop 3.8 support
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
         module = ast.parse(source)
