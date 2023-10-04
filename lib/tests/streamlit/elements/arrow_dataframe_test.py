@@ -21,22 +21,13 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest as pytest
+from pandas.io.formats.style_render import StylerRenderer as Styler
 
 import streamlit as st
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
-from streamlit.type_util import (
-    bytes_to_data_frame,
-    is_pandas_version_less_than,
-    pyarrow_table_to_bytes,
-)
+from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_snowpark_session
-
-# In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
-if is_pandas_version_less_than("1.3.0"):
-    from pandas.io.formats.style import Styler
-else:
-    from pandas.io.formats.style_render import StylerRenderer as Styler
 
 
 def mock_data_frame():
@@ -159,19 +150,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.styler.display_values), expected
         )
-
-    @patch(
-        "streamlit.type_util.is_pandas_version_less_than",
-        MagicMock(return_value=True),
-    )
-    @patch.object(Styler, "_translate")
-    def test_pandas_version_below_1_3_0(self, mock_styler_translate):
-        """Tests that `styler._translate` is called without arguments in Pandas < 1.3.0"""
-        df = mock_data_frame()
-        styler = df.style.set_uuid("FAKE_UUID")
-
-        st.dataframe(styler)
-        mock_styler_translate.assert_called_once_with()
 
     @patch(
         "streamlit.type_util.is_pandas_version_less_than",
