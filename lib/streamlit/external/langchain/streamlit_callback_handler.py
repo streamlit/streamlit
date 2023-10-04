@@ -31,13 +31,12 @@ the API *from LangChain itself*.
 
 from __future__ import annotations
 
-import time
 from enum import Enum
+import time
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import AgentAction, AgentFinish, LLMResult
-
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -199,7 +198,8 @@ class LLMThought:
             label=self._labeler.get_tool_label(self._last_tool, is_complete=False),
             state="running",
         )
-        self._container.markdown(f"Input:\n\n{input_str}")
+        if len(input_str) > MAX_TOOL_INPUT_STR_LENGTH:
+            self._container.markdown(f"**Input:**\n\n{input_str}\n\n**Output:**")
 
     def on_tool_end(
         self,
@@ -209,7 +209,7 @@ class LLMThought:
         llm_prefix: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        self._container.markdown(f"Output:\n\n{output}")
+        self._container.markdown(output)
 
     def on_tool_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._container.markdown("**Tool encountered an error...**")
