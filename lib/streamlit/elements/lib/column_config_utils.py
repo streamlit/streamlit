@@ -330,7 +330,7 @@ def _determine_data_kind(
         The data kind of the column.
     """
 
-    if pd.api.types.is_categorical_dtype(column.dtype):
+    if isinstance(column.dtype, pd.CategoricalDtype):
         # Categorical columns can have different underlying data kinds
         # depending on the categories.
         return _determine_data_kind_via_inferred_type(column.dtype.categories)
