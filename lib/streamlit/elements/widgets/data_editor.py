@@ -397,6 +397,24 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     )
 
 
+def _fix_column_headers(data_df: pd.DataFrame) -> None:
+    """Fix the column headers of the provided dataframe inplace to work
+    correctly for data editing."""
+
+    if isinstance(data_df.columns, pd.MultiIndex):
+        # Flatten hierarchical column headers to a single level:
+        data_df.columns = [
+            "_".join(map(str, header)) for header in data_df.columns.to_flat_index()
+        ]
+    elif pd.api.types.infer_dtype(data_df.columns) != "string":
+        # If the column names are not all strings, we need to convert them to strings
+        # to avoid issues with editing:
+        data_df.rename(
+            columns={column: str(column) for column in data_df.columns},
+            inplace=True,
+        )
+
+
 def _check_column_names(data_df: pd.DataFrame):
     """Check if the column names in the provided dataframe are valid.
 
@@ -404,6 +422,10 @@ def _check_column_names(data_df: pd.DataFrame):
     named ``_index``. If the column names are not valid, a ``StreamlitAPIException``
     is raised.
     """
+
+    if data_df.columns.empty:
+        return
+
     # Check if the column names are unique and raise an exception if not.
     # Add the names of the duplicated columns to the exception message.
     duplicated_columns = data_df.columns[data_df.columns.duplicated()]
@@ -760,6 +782,8 @@ class DataEditorMixin:
             column_config_mapping, data_df, data_format, check_arrow_compatibility=True
         )
 
+        # Fix the column headers to work correctly for data editing:
+        _fix_column_headers(data_df)
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
