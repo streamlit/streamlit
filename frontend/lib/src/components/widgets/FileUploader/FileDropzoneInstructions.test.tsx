@@ -55,9 +55,9 @@ describe("FileDropzoneInstructions widget", () => {
 
   it("renders with extensions", () => {
     const props = getProps({
-      acceptedExtensions: ["jpg"],
+      acceptedExtensions: ["jpg", "csv.gz", ".png", ".tar.gz"],
     })
     render(<FileDropzoneInstructions {...props} />)
-    expect(screen.getByText(/• JPG/)).toBeInTheDocument()
+    expect(screen.getByText(/• JPG, CSV.GZ, PNG, TAR.GZ/)).toBeInTheDocument()
   })
 })

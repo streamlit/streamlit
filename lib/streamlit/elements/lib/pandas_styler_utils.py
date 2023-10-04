@@ -45,13 +45,7 @@ def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> N
     # which is not ideal and could break if the interface changes.
     styler._compute()
 
-    # In Pandas 1.3.0, styler._translate() signature was changed.
-    # 2 arguments were added: sparse_index and sparse_columns.
-    # The functionality that they provide is not yet supported.
-    if type_util.is_pandas_version_less_than("1.3.0"):
-        pandas_styles = styler._translate()
-    else:
-        pandas_styles = styler._translate(False, False)
+    pandas_styles = styler._translate(False, False)
 
     _marshall_caption(proto, styler)
     _marshall_styles(proto, styler, pandas_styles)
@@ -184,16 +178,6 @@ def _pandas_style_to_css(
 
     table_selector = f"#T_{uuid}"
 
-    # In pandas < 1.1.0
-    # translated_style["cellstyle"] has the following shape:
-    # [
-    #   {
-    #       "props": [["color", " black"], ["background-color", "orange"], ["", ""]],
-    #       "selector": "row0_col0"
-    #   }
-    #   ...
-    # ]
-    #
     # In pandas >= 1.1.0
     # translated_style["cellstyle"] has the following shape:
     # [
@@ -203,9 +187,7 @@ def _pandas_style_to_css(
     #   }
     #   ...
     # ]
-    if style_type == "table_styles" or (
-        style_type == "cell_style" and type_util.is_pandas_version_less_than("1.1.0")
-    ):
+    if style_type == "table_styles":
         cell_selectors = [style["selector"]]
     else:
         cell_selectors = style["selectors"]
