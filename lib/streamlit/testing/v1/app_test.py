@@ -13,12 +13,14 @@
 # limitations under the License.
 from __future__ import annotations
 
+import ast
 import hashlib
+import inspect
 import pathlib
 import tempfile
 import textwrap
 import traceback
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 
 from streamlit import source_util
@@ -95,6 +97,18 @@ class AppTest:
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
         return AppTest(str(path), default_timeout=default_timeout)
+
+    @classmethod
+    def from_function(
+        cls, script: Callable[[], None], default_timeout: float = 3
+    ) -> AppTest:
+        source_lines, _ = inspect.getsourcelines(script)
+        source = textwrap.dedent("".join(source_lines))
+        module = ast.parse(source)
+        fn_def = module.body[0]
+        body_lines = source_lines[fn_def.lineno :]
+        body = textwrap.dedent("".join(body_lines))
+        return cls.from_string(body, default_timeout=default_timeout)
 
     @classmethod
     def from_file(cls, script_path: str, default_timeout: float = 3) -> AppTest:

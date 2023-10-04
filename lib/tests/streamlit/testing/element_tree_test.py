@@ -44,14 +44,13 @@ def test_button():
 
 
 def test_checkbox():
-    at = AppTest.from_string(
-        """
+    def script():
         import streamlit as st
 
         st.checkbox("defaults")
         st.checkbox("defaulted on", True)
-        """,
-    ).run()
+
+    at = AppTest.from_function(script).run()
     assert at.checkbox
     assert at.checkbox.values == [False, True]
 
