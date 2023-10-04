@@ -763,8 +763,7 @@ class TypeUtilTest(unittest.TestCase):
         with patch_config_options({"runner.enumCoercion": "nameAndValue"}):
             assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAEqual.A
             assert type_util.coerce_enum(EnumAOrig.A, EnumADiffValues) is EnumAOrig.A
-        with (
-            pytest.raises(errors.StreamlitAPIException),
-            patch_config_options({"runner.enumCoercion": "badValue"}),
+        with pytest.raises(errors.StreamlitAPIException), patch_config_options(
+            {"runner.enumCoercion": "badValue"}
         ):
             type_util.coerce_enum(EnumAOrig.A, EnumAEqual)
