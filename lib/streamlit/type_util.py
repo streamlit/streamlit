@@ -760,7 +760,7 @@ def fix_arrow_incompatible_column_types(
     The fixed dataframe.
     """
     # Make a copy, but only initialize if necessary to preserve memory.
-    df_copy = None
+    df_copy: DataFrame | None = None
     for col in selected_columns or df.columns:
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
