@@ -25,6 +25,7 @@ from pandas.io.formats.style_render import StylerRenderer as Styler
 
 import streamlit as st
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
+from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_snowpark_session
@@ -150,6 +151,15 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.styler.display_values), expected
         )
+
+    def test_throw_exception_if_data_exceeds_styler_config(self):
+        """Test that an exception is thrown if the dataframe exceeds the styler.render.max_elements config."""
+        pd.set_option("styler.render.max_elements", 5000)
+        # big example with default styler.render.max_elements
+        df = pd.DataFrame(list(range(5001)))
+        with self.assertRaises(StreamlitAPIException):
+            st.dataframe(df.style.format("{:03d}"))
+        pd.reset_option("styler.render.max_elements")
 
     @patch(
         "streamlit.type_util.is_pandas_version_less_than",
