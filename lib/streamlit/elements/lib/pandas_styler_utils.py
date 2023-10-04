@@ -252,7 +252,7 @@ def _use_display_values(df: pd.DataFrame, styles: Mapping[str, Any]) -> pd.DataF
     # If values in a column are not of the same type, Arrow
     # serialization would fail. Thus, we need to cast all values
     # of the dataframe to strings before assigning them display values.
-    new_df = df.astype("string").applymap(lambda x: None)
+    new_df = df.astype(str)
 
     cell_selector_regex = re.compile(r"row(\d+)_col(\d+)")
     if "body" in styles:
