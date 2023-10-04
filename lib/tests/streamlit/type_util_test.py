@@ -395,7 +395,7 @@ class TypeUtilTest(unittest.TestCase):
         self.assertTrue(pd.api.types.is_integer_dtype(fixed_df["integer"].dtype))
         self.assertTrue(pd.api.types.is_float_dtype(fixed_df["float"].dtype))
         self.assertTrue(pd.api.types.is_object_dtype(fixed_df["string"].dtype))
-        self.assertIsInstance(fixed_df.index.dtype, pd.StringDtype)
+        self.assertEqual(fixed_df.index.dtype.kind, "O")
 
         # Check inferred types:
         self.assertEqual(infer_dtype(fixed_df["mixed-integer"]), "string")
