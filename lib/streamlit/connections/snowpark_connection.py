@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# NOTE: We won't always be able to import from snowflake.snowpark.session so need the
-# `type: ignore` comment below, but that comment will explode if `warn-unused-ignores` is
-# turned on when the package is available. Unfortunately, mypy doesn't provide a good
-# way to configure this at a per-line level :(
-# mypy: no-warn-unused-ignores
-
 import configparser
 import os
 import threading
@@ -33,7 +27,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
-    from snowflake.snowpark.session import Session  # type: ignore
+    from snowflake.snowpark.session import Session
 
 
 _REQUIRED_CONNECTION_PARAMS = {"account"}
@@ -87,10 +81,8 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         super().__init__(connection_name, **kwargs)
 
     def _connect(self, **kwargs) -> "Session":
-        from snowflake.snowpark.context import get_active_session  # type: ignore
-        from snowflake.snowpark.exceptions import (  # type: ignore
-            SnowparkSessionException,
-        )
+        from snowflake.snowpark.context import get_active_session
+        from snowflake.snowpark.exceptions import SnowparkSessionException
         from snowflake.snowpark.session import Session
 
         # If we're in a runtime environment where there's already an active session
@@ -154,9 +146,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
-        from snowflake.snowpark.exceptions import (  # type: ignore
-            SnowparkServerException,
-        )
+        from snowflake.snowpark.exceptions import SnowparkServerException
         from tenacity import (
             retry,
             retry_if_exception_type,
