@@ -34,7 +34,7 @@ def test_file_uploader_render_correctly(
 def test_file_uploader_error_message_disallowed_files(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that shows error message for disallowed files"""
+    """Test that shows error message for disallowed files."""
     file_name1 = "example.json"
     file_content1 = b"{}"
 
