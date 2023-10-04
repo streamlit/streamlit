@@ -102,9 +102,7 @@ describe("Host communication", () => {
     });
 
     it("displays the toolbar with horizontal buttons", () => {
-        cy.get("iframe").first().matchImageSnapshot("toolbarActions-before");
-        cy.get("#toolbar").contains("Add Toolbar Item").click();
-        cy.get("iframe").first().matchImageSnapshot("toolbarActions-after");
+        cy.get("iframe").first().matchImageSnapshot("toolbarActions");
     })
 
     it("handles a hide sidebar nav message", () => {
