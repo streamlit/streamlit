@@ -491,6 +491,19 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         else:
             self.assertNotIn(INDEX_IDENTIFIER, columns_config)
 
+    def test_apply_data_specific_configs_makes_index_required(self):
+        """Test that a non-range index gets configured as required."""
+        columns_config: ColumnConfigMapping = {}
+        data_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=["a", "b", "c"])
+        apply_data_specific_configs(
+            columns_config, data_df, DataFormat.PANDAS_DATAFRAME
+        )
+        self.assertEqual(
+            columns_config[INDEX_IDENTIFIER]["required"],
+            True,
+            f"Index of type {type(data_df.index)} should be configured as required.",
+        )
+
     @parameterized.expand(
         [
             (DataFormat.SET_OF_VALUES, True),

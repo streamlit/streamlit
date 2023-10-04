@@ -508,6 +508,11 @@ def apply_data_specific_configs(
         # We rename it to "value" in selected cases to make it more descriptive
         data_df.rename(columns={0: "value"}, inplace=True)
 
+    if not isinstance(data_df.index, pd.RangeIndex):
+        # If the index is not a range index, we will configure it as required
+        # since the user is required to provide a (unique) value for editing.
+        update_column_config(columns_config, INDEX_IDENTIFIER, {"required": True})
+
 
 def marshall_column_config(
     proto: ArrowProto, column_config_mapping: ColumnConfigMapping
