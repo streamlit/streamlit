@@ -17,7 +17,7 @@
 syntax = "proto3";
 
 message GraphVizChart {
-  // A specification of the GraphViz graph in the "Dot" language.
+  // A specification of the GraphViz graph.
   string spec = 1;
 
   // If True, will overwrite the chart width spec to fit to container.
