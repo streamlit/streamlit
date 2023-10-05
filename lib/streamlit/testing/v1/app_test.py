@@ -23,7 +23,7 @@ import traceback
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 
-from streamlit import source_util
+from streamlit import source_util, util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -314,3 +314,6 @@ class AppTest:
 
     def get(self, element_type: str) -> Sequence[Node]:
         return self._tree.get(element_type)
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
