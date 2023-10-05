@@ -200,6 +200,12 @@ class AppTest:
         and interaction.
 
         Timeout is in seconds, or None to use the default timeout of the runner.
+
+        Parameters
+        ----------
+        timeout
+            The maximum number of seconds to run the script. None means
+            use the AppTest's default.
         """
         return self._tree.run(timeout)
 
