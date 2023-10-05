@@ -353,9 +353,14 @@ function DataFrame({
   }, [element.formId, resetEditingState, widgetMgr])
 
   // Determine if the table requires horizontal or vertical scrolling:
+  // This is only a temporary solution until glide-data-grid provides a
+  // better way to determine this: https://github.com/glideapps/glide-data-grid/issues/784
   React.useEffect(() => {
     if (dataEditorRef.current && resizableContainerRef.current) {
-      const boundsFirstCell = dataEditorRef.current.getBounds(0, -1)
+      const boundsFirstCell = dataEditorRef.current.getBounds(
+        !isEmptyTable && element.editingMode === DYNAMIC ? -1 : 0,
+        -1
+      )
       const boundsLastCell = dataEditorRef.current.getBounds(
         glideColumns.length - 1,
         numRows - 1
