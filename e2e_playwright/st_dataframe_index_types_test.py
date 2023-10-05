@@ -20,19 +20,17 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_dataframe_index_types(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.dataframe render various index types correctly."""
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(10)
+    expect(dataframe_elements).to_have_count(12)
 
-    assert_snapshot(dataframe_elements.nth(0), name=f"st_dataframe-String_index_types")
-    assert_snapshot(dataframe_elements.nth(1), name=f"st_dataframe-Float64_index_types")
-    assert_snapshot(dataframe_elements.nth(2), name=f"st_dataframe-Int64_index_types")
-    assert_snapshot(dataframe_elements.nth(3), name=f"st_dataframe-Uint64_index_types")
-    assert_snapshot(
-        dataframe_elements.nth(4), name=f"st_dataframe-Datetime_index_types"
-    )
-    assert_snapshot(dataframe_elements.nth(5), name=f"st_dataframe-Date_index_types")
-    assert_snapshot(dataframe_elements.nth(6), name=f"st_dataframe-Time_index_types")
-    assert_snapshot(
-        dataframe_elements.nth(7), name=f"st_dataframe-Interval_index_types"
-    )
-    assert_snapshot(dataframe_elements.nth(8), name=f"st_dataframe-List_index_types")
-    assert_snapshot(dataframe_elements.nth(9), name=f"st_dataframe-Multi_index_types")
+    assert_snapshot(dataframe_elements.nth(0), name="st_dataframe-String_index_types")
+    assert_snapshot(dataframe_elements.nth(1), name="st_dataframe-Float64_index_types")
+    assert_snapshot(dataframe_elements.nth(2), name="st_dataframe-Int64_index_types")
+    assert_snapshot(dataframe_elements.nth(3), name="st_dataframe-Uint64_index_types")
+    assert_snapshot(dataframe_elements.nth(4), name="st_dataframe-Datetime_index_types")
+    assert_snapshot(dataframe_elements.nth(5), name="st_dataframe-Date_index_types")
+    assert_snapshot(dataframe_elements.nth(6), name="st_dataframe-Time_index_types")
+    assert_snapshot(dataframe_elements.nth(7), name="st_dataframe-Interval_index_types")
+    assert_snapshot(dataframe_elements.nth(8), name="st_dataframe-List_index_types")
+    assert_snapshot(dataframe_elements.nth(9), name="st_dataframe-Multi_index_types")
+    assert_snapshot(dataframe_elements.nth(10), name="st_dataframe-Categorical_index")
+    assert_snapshot(dataframe_elements.nth(11), name="st_dataframe-Period_index")
