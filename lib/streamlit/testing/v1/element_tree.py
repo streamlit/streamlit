@@ -1030,194 +1030,95 @@ class Block:
     # much worse type information.
     @property
     def button(self) -> WidgetList[Button]:
-        return WidgetList(self.get("button"))
+        return WidgetList(self.get("button"))  # type: ignore
 
     @property
     def caption(self) -> ElementList[Caption]:
-        return ElementList(self.get("caption"))
+        return ElementList(self.get("caption"))  # type: ignore
 
     @property
     def checkbox(self) -> WidgetList[Checkbox]:
-        return WidgetList(self.get("checkbox"))
+        return WidgetList(self.get("checkbox"))  # type: ignore
 
     @property
     def code(self) -> ElementList[Code]:
-        return ElementList(self.get("code"))
+        return ElementList(self.get("code"))  # type: ignore
 
     @property
     def color_picker(self) -> WidgetList[ColorPicker]:
-        return WidgetList(self.get("color_picker"))
+        return WidgetList(self.get("color_picker"))  # type: ignore
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
-        return WidgetList(self.get("date_input"))
+        return WidgetList(self.get("date_input"))  # type: ignore
 
     @property
     def divider(self) -> ElementList[Divider]:
-        return ElementList(self.get("divider"))
+        return ElementList(self.get("divider"))  # type: ignore
 
     @property
     def exception(self) -> ElementList[Exception]:
-        return ElementList(self.get("exception"))
+        return ElementList(self.get("exception"))  # type: ignore
 
     @property
     def header(self) -> ElementList[Header]:
-        return ElementList(self.get("header"))
+        return ElementList(self.get("header"))  # type: ignore
 
     @property
     def latex(self) -> ElementList[Latex]:
-        return ElementList(self.get("latex"))
+        return ElementList(self.get("latex"))  # type: ignore
 
     @property
     def markdown(self) -> ElementList[Markdown]:
-        return ElementList(self.get("markdown"))
+        return ElementList(self.get("markdown"))  # type: ignore
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:
-        return WidgetList(self.get("multiselect"))
+        return WidgetList(self.get("multiselect"))  # type: ignore
 
     @property
     def number_input(self) -> WidgetList[NumberInput]:
-        return WidgetList(self.get("number_input"))
+        return WidgetList(self.get("number_input"))  # type: ignore
 
     @property
     def radio(self) -> WidgetList[Radio[Any]]:
-        return WidgetList(self.get("radio"))
+        return WidgetList(self.get("radio"))  # type: ignore
 
     @property
     def select_slider(self) -> WidgetList[SelectSlider[Any]]:
-        return WidgetList(self.get("select_slider"))
+        return WidgetList(self.get("select_slider"))  # type: ignore
 
     @property
     def selectbox(self) -> WidgetList[Selectbox[Any]]:
-        return WidgetList(self.get("selectbox"))
+        return WidgetList(self.get("selectbox"))  # type: ignore
 
     @property
     def slider(self) -> WidgetList[Slider[Any]]:
-        return WidgetList(self.get("slider"))
+        return WidgetList(self.get("slider"))  # type: ignore
 
     @property
     def subheader(self) -> ElementList[Subheader]:
-        return ElementList(self.get("subheader"))
+        return ElementList(self.get("subheader"))  # type: ignore
 
     @property
     def text(self) -> ElementList[Text]:
-        return ElementList(self.get("text"))
+        return ElementList(self.get("text"))  # type: ignore
 
     @property
     def text_area(self) -> WidgetList[TextArea]:
-        return WidgetList(self.get("text_area"))
+        return WidgetList(self.get("text_area"))  # type: ignore
 
     @property
     def text_input(self) -> WidgetList[TextInput]:
-        return WidgetList(self.get("text_input"))
+        return WidgetList(self.get("text_input"))  # type: ignore
 
     @property
     def time_input(self) -> WidgetList[TimeInput]:
-        return WidgetList(self.get("time_input"))
+        return WidgetList(self.get("time_input"))  # type: ignore
 
     @property
     def title(self) -> ElementList[Title]:
-        return ElementList(self.get("title"))
-
-    # These overloads improve type information for code calling `get`
-    @overload
-    def get(self, element_type: Literal["button"]) -> Sequence[Button]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["caption"]) -> Sequence[Caption]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["checkbox"]) -> Sequence[Checkbox]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["code"]) -> Sequence[Code]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["color_picker"]) -> Sequence[ColorPicker]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["date_input"]) -> Sequence[DateInput]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["divider"]) -> Sequence[Divider]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["exception"]) -> Sequence[Exception]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["header"]) -> Sequence[Header]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["latex"]) -> Sequence[Latex]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["markdown"]) -> Sequence[Markdown]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["multiselect"]) -> Sequence[Multiselect[Any]]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["number_input"]) -> Sequence[NumberInput]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["radio"]) -> Sequence[Radio[Any]]:
-        ...
-
-    @overload
-    def get(
-        self, element_type: Literal["select_slider"]
-    ) -> Sequence[SelectSlider[Any]]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["selectbox"]) -> Sequence[Selectbox[Any]]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["slider"]) -> Sequence[Slider[Any]]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["subheader"]) -> Sequence[Subheader]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["text"]) -> Sequence[Text]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["text_area"]) -> Sequence[TextArea]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["text_input"]) -> Sequence[TextInput]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["time_input"]) -> Sequence[TimeInput]:
-        ...
-
-    @overload
-    def get(self, element_type: Literal["title"]) -> Sequence[Title]:
-        ...
-
-    @overload
-    def get(self, element_type: str) -> Sequence[Node]:
-        ...
+        return ElementList(self.get("title"))  # type: ignore
 
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
