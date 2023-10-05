@@ -24,7 +24,7 @@ def test_data_editor_supports_various_configurations(
     # The dataframe config test is already testing with themed apps, so using the default theme
     # only is fine here.
     elements = app.get_by_test_id("stDataFrame")
-    expect(elements).to_have_count(23)
+    expect(elements).to_have_count(22)
 
     # The dataframe component might require a bit more time for rendering the canvas
     app.wait_for_timeout(250)
