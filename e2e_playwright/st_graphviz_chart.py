@@ -42,6 +42,7 @@ engine = st.sidebar.radio(
     "Select engine",
     ["dot", "neato", "twopi", "circo", "fdp", "osage", "patchwork"],
 )
+st.sidebar.write(engine)
 finite = graphviz.Digraph("finite_state_machine", filename="fsm.gv", engine=engine)
 finite.attr(rankdir="LR", size="8,5")
 

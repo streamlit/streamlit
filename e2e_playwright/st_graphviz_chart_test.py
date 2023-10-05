@@ -44,6 +44,7 @@ def test_renders_with_specified_engines(
     for idx, engine in enumerate(engines):
         radios[idx].click(force=True)
         wait_for_app_run(app)
+        expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(engine)
 
         assert_snapshot(
             app.locator(".stGraphVizChart > svg").nth(2),
