@@ -226,17 +226,10 @@ class Button(Widget):
     proto: ButtonProto
 
     def __init__(self, proto: ButtonProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = False
-
         self.type = "button"
-        self.id = proto.id
-        self.label = proto.label
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
@@ -326,17 +319,9 @@ class ColorPicker(Widget):
     proto: ColorPickerProto
 
     def __init__(self, proto: ColorPickerProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
-        self._value = None
-
         self.type = "color_picker"
-        self.id = proto.id
-        self.label = proto.label
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     @property
     def value(self) -> str:
@@ -381,20 +366,13 @@ class DateInput(Widget):
     is_range: bool
 
     def __init__(self, proto: DateInputProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = InitialValue()
-
         self.type = "date_input"
-        self.id = proto.id
-        self.label = proto.label
         self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
         self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
         self.is_range = proto.is_range
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def set_value(self, v: DateValue) -> DateInput:
         self._value = v
@@ -534,19 +512,11 @@ class Multiselect(Widget, Generic[T]):
     max_selections: int
 
     def __init__(self, proto: MultiSelectProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
-        self._value = None
-
         self.type = "multiselect"
-        self.id = proto.id
-        self.label = proto.label
         self.options = list(proto.options)
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
         self.max_selections = proto.max_selections
-        self.key = user_key_from_widget_id(self.id)
 
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
@@ -617,20 +587,13 @@ class NumberInput(Widget):
     step: Number
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = InitialValue()
-
         self.type = "number_input"
-        self.id = proto.id
-        self.label = proto.label
         self.min_value = proto.min if proto.has_min else None
         self.max_value = proto.max if proto.has_max else None
         self.step = proto.step
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def set_value(self, v: Number | None) -> NumberInput:
         self._value = v
@@ -678,19 +641,12 @@ class Radio(Widget, Generic[T]):
     horizontal: bool
 
     def __init__(self, proto: RadioProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = InitialValue()
-
         self.type = "radio"
-        self.id = proto.id
-        self.label = proto.label
         self.options = list(proto.options)
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
         self.horizontal = proto.horizontal
-        self.key = user_key_from_widget_id(self.id)
 
     @property
     def index(self) -> int | None:
@@ -732,18 +688,11 @@ class Selectbox(Widget, Generic[T]):
     options: list[str]
 
     def __init__(self, proto: SelectboxProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = InitialValue()
-
         self.type = "selectbox"
-        self.id = proto.id
-        self.label = proto.label
         self.options = list(proto.options)
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     @property
     def index(self) -> int | None:
@@ -803,19 +752,11 @@ class SelectSlider(Widget, Generic[T]):
     options: list[str]
 
     def __init__(self, proto: SliderProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
-        self._value = None
-
         self.type = "select_slider"
         self.data_type = proto.data_type
-        self.id = proto.id
-        self.label = proto.label
         self.options = list(proto.options)
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def set_value(self, v: T | Sequence[T]) -> SelectSlider[T]:
         self._value = v
@@ -856,21 +797,13 @@ class Slider(Widget, Generic[SliderScalarT]):
     step: Step
 
     def __init__(self, proto: SliderProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
-        self._value = None
-
         self.type = "slider"
         self.data_type = proto.data_type
-        self.id = proto.id
-        self.label = proto.label
         self.min_value = proto.min
         self.max_value = proto.max
         self.step = proto.step
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def set_value(
         self, v: SliderScalarT | Sequence[SliderScalarT]
@@ -930,19 +863,12 @@ class TextArea(Widget):
     placeholder: str
 
     def __init__(self, proto: TextAreaProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = InitialValue()
-
         self.type = "text_area"
-        self.id = proto.id
-        self.label = proto.label
         self.max_chars = proto.max_chars
-        self.help = proto.help
-        self.form_id = proto.form_id
         self.placeholder = proto.placeholder
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def set_value(self, v: str | None) -> TextArea:
         self._value = v
@@ -981,20 +907,13 @@ class TextInput(Widget):
     placeholder: str
 
     def __init__(self, proto: TextInputProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = InitialValue()
-
         self.type = "text_input"
-        self.id = proto.id
-        self.label = proto.label
         self.max_chars = proto.max_chars
-        self.help = proto.help
-        self.form_id = proto.form_id
         self.autocomplete = proto.autocomplete
         self.placeholder = proto.placeholder
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def set_value(self, v: str | None) -> TextInput:
         self._value = v
@@ -1034,18 +953,11 @@ class TimeInput(Widget):
     step: int
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
         self._value = InitialValue()
-
         self.type = "time_input"
-        self.id = proto.id
-        self.label = proto.label
         self.step = proto.step
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def set_value(self, v: TimeValue | None) -> TimeInput:
         self._value = v
