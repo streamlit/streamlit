@@ -143,8 +143,10 @@ def set_page_config(
         "wide" uses the entire screen.
     initial_sidebar_state: "auto", "expanded", or "collapsed"
         How the sidebar should start out. Defaults to "auto",
-        which hides the sidebar on mobile-sized devices, and shows it otherwise.
+        which hides the sidebar on small devices and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
+        In most cases, you should just use "auto", otherwise the app will
+        look bad when embedded and viewed on mobile.
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
         The keys in this dict denote the menu item you'd like to configure:
