@@ -154,7 +154,7 @@ class Widget(ABC, Element):
 
     @property
     @abstractmethod
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ...
 
 
@@ -228,7 +228,7 @@ class Button(Widget):
         self.type = "button"
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
         ws.trigger_value = self._value
@@ -263,7 +263,7 @@ class Checkbox(Widget):
         self.type = "checkbox"
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
         ws.bool_value = self.value
@@ -330,7 +330,7 @@ class ColorPicker(Widget):
             return cast(str, state[self.id])
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
         Should be the same as the frontend would produce for those interactions.
@@ -375,7 +375,7 @@ class DateInput(Widget):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
 
@@ -508,7 +508,7 @@ class Multiselect(Widget, Generic[T]):
         self.options = list(proto.options)
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
         Should be the same as the frontend would produce for those interactions.
@@ -589,7 +589,7 @@ class NumberInput(Widget):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
         if self.value is not None:
@@ -658,7 +658,7 @@ class Radio(Widget, Generic[T]):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
         Should be the same as the frontend would produce for those interactions.
@@ -722,7 +722,7 @@ class Selectbox(Widget, Generic[T]):
         return self.set_value(cast(T, self.options[index]))
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
         Should be the same as the frontend would produce for those interactions.
@@ -753,7 +753,7 @@ class SelectSlider(Widget, Generic[T]):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         serde = SelectSliderSerde(self.options, [], False)
         v = serde.serialize(self.value)
 
@@ -799,7 +799,7 @@ class Slider(Widget, Generic[SliderScalarT]):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         data_type = self.proto.data_type
         serde = SliderSerde([], data_type, True, None)
         v = serde.serialize(self.value)
@@ -861,7 +861,7 @@ class TextArea(Widget):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
         if self.value is not None:
@@ -904,7 +904,7 @@ class TextInput(Widget):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
         if self.value is not None:
@@ -948,7 +948,7 @@ class TimeInput(Widget):
         return self
 
     @property
-    def widget_state(self) -> WidgetState:
+    def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
 
@@ -1138,7 +1138,7 @@ Node: TypeAlias = Union[Element, Block]
 
 def get_widget_state(node: Node) -> WidgetState | None:
     if isinstance(node, Widget):
-        return node.widget_state
+        return node._widget_state
     else:
         return None
 
