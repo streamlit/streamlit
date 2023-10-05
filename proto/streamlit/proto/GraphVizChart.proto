@@ -26,5 +26,8 @@ message GraphVizChart {
   // A unique ID of this element.
   string element_id = 5;
 
+  // The engine used to layout and render the graph.
+  string engine = 6;
+
   reserved 2, 3;
 }

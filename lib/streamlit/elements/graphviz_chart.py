@@ -130,13 +130,16 @@ def marshall(
 
     if type_util.is_graphviz_chart(figure_or_dot):
         dot = figure_or_dot.source
+        engine = figure_or_dot.engine
     elif isinstance(figure_or_dot, str):
         dot = figure_or_dot
+        engine = "dot"
     else:
         raise StreamlitAPIException(
             "Unhandled type for graphviz chart: %s" % type(figure_or_dot)
         )
 
     proto.spec = dot
+    proto.engine = engine
     proto.use_container_width = use_container_width
     proto.element_id = element_id
