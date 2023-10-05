@@ -50,6 +50,8 @@ jobs:
         run: make frontend-fast
       - name: Run make playwright
         run: make playwright
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 12
       - name: Check that all screenshot have been committed
         run: |
           set -x;
