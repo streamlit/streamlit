@@ -54,6 +54,9 @@ def test_file_uploader_error_message_disallowed_files(
         ]
     )
 
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
     expect(
         themed_app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
     ).to_have_text("application/json files are not allowed.", use_inner_text=True)
@@ -85,6 +88,9 @@ def test_uploads_and_deletes_single_file_only(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
 
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
     expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name1, use_inner_text=True
     )
@@ -114,6 +120,9 @@ def test_uploads_and_deletes_single_file_only(
         files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
     )
 
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
     expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
     )
@@ -134,6 +143,9 @@ def test_uploads_and_deletes_single_file_only(
     )
 
     themed_app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
+
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
 
     expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
@@ -163,6 +175,9 @@ def test_uploads_and_deletes_multiple_files(
     file_chooser = fc_info.value
     file_chooser.set_files(files=files)
 
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
     uploaded_file_names = themed_app.locator(".uploadedFileName")
 
     # The widget should show the names of the uploaded files in reverse order
@@ -189,6 +204,9 @@ def test_uploads_and_deletes_multiple_files(
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
     themed_app.get_by_test_id("fileDeleteBtn").first.click()
+
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
 
     expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
