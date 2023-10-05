@@ -31,12 +31,19 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Generator, List, Literal, Protocol
+from typing import Any, Dict, Generator, List, Literal, Protocol
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import ElementHandle, Locator, Page
+from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    BrowserType,
+    ElementHandle,
+    Locator,
+    Page,
+)
 from pytest import FixtureRequest
 
 
@@ -215,6 +222,29 @@ def app(page: Page, app_port: int) -> Page:
     page.goto(f"http://localhost:{app_port}/")
     wait_for_app_loaded(page)
     return page
+
+
+@pytest.fixture(scope="function")
+def app_with_camera_dialog_accepted(context: BrowserContext, app_port: int) -> Page:
+    """Fixture that opens the app and confirm camera permission dialog."""
+    # create a new incognito browser context
+
+    context.grant_permissions(["camera", "microphone"])
+    # create a new page inside context.
+    page = context.new_page()
+    # page.on("dialog", lambda dialog: dialog.accept())
+    page.goto(f"http://localhost:{app_port}/")
+    wait_for_app_loaded(page)
+    return page
+
+
+@pytest.fixture(scope="session", autouse=True)
+def launch_with_different_options(browser_type_launch_args: Dict):
+    browser_type_launch_args["firefox_user_prefs"] = {
+        "media.navigator.streams.fake": True,
+        "permissions.default.microphone": 1,
+        "permissions.default.camera": 1,
+    }
 
 
 @pytest.fixture(scope="function", params=["light_theme", "dark_theme"])
