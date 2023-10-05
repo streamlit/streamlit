@@ -84,8 +84,8 @@ class InitialValue:
 
 # TODO This class serves as a fallback option for elements that have not
 # been implemented yet, as well as providing implementations of some
-# trivial methods. It may have significantly reduced scope, or be removed
-# entirely, once all elements have been implemented.
+# trivial methods. It may have significantly reduced scope once all elements
+# have been implemented.
 # This class will not be sufficient implementation for most elements.
 # Widgets need their own classes to translate interactions into the appropriate
 # WidgetState and provide higher level interaction interfaces, and other elements
