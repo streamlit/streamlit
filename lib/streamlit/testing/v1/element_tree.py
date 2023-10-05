@@ -145,11 +145,6 @@ class Widget(ABC, Element):
 
     def __init__(self, proto):
         self.proto = proto
-        self.id = proto.id
-        self.label = proto.label
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
         self.key = user_key_from_widget_id(self.id)
         self._value = None
 
@@ -302,8 +297,6 @@ class Code(Element):
     def __init__(self, proto: CodeProto, root: ElementTree):
         self.proto = proto
         self.key = None
-        self.language = proto.language
-        self.show_line_numbers = proto.show_line_numbers
         self.root = root
         self.type = "code"
 
@@ -372,7 +365,6 @@ class DateInput(Widget):
         self.type = "date_input"
         self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
         self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
-        self.is_range = proto.is_range
 
     def set_value(self, v: DateValue) -> DateInput:
         self._value = v
@@ -410,10 +402,8 @@ class Exception(Element):
         self.proto = proto
         self.type = "exception"
 
-        self.message = proto.message
         self.is_markdown = proto.message_is_markdown
         self.stack_trace = list(proto.stack_trace)
-        self.is_warning = proto.is_warning
 
     @property
     def value(self) -> str:
@@ -432,9 +422,6 @@ class HeadingBase(Element, ABC):
     def __init__(self, proto: HeadingProto, root: ElementTree, type_: str):
         self.proto = proto
         self.key = None
-        self.tag = proto.tag
-        self.anchor = proto.anchor
-        self.hide_anchor = proto.hide_anchor
         self.root = root
         self.type = type_
 
@@ -472,8 +459,6 @@ class Markdown(Element):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         self.proto = proto
         self.key = None
-        self.is_caption = proto.is_caption
-        self.allow_html = proto.allow_html
         self.root = root
         self.type = "markdown"
 
@@ -516,7 +501,6 @@ class Multiselect(Widget, Generic[T]):
         self.root = root
         self.type = "multiselect"
         self.options = list(proto.options)
-        self.max_selections = proto.max_selections
 
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
@@ -593,7 +577,6 @@ class NumberInput(Widget):
         self.type = "number_input"
         self.min_value = proto.min if proto.has_min else None
         self.max_value = proto.max if proto.has_max else None
-        self.step = proto.step
 
     def set_value(self, v: Number | None) -> NumberInput:
         self._value = v
@@ -646,7 +629,6 @@ class Radio(Widget, Generic[T]):
         self._value = InitialValue()
         self.type = "radio"
         self.options = list(proto.options)
-        self.horizontal = proto.horizontal
 
     @property
     def index(self) -> int | None:
@@ -755,7 +737,6 @@ class SelectSlider(Widget, Generic[T]):
         super().__init__(proto)
         self.root = root
         self.type = "select_slider"
-        self.data_type = proto.data_type
         self.options = list(proto.options)
 
     def set_value(self, v: T | Sequence[T]) -> SelectSlider[T]:
@@ -800,10 +781,8 @@ class Slider(Widget, Generic[SliderScalarT]):
         super().__init__(proto)
         self.root = root
         self.type = "slider"
-        self.data_type = proto.data_type
         self.min_value = proto.min
         self.max_value = proto.max
-        self.step = proto.step
 
     def set_value(
         self, v: SliderScalarT | Sequence[SliderScalarT]
@@ -867,8 +846,6 @@ class TextArea(Widget):
         self.root = root
         self._value = InitialValue()
         self.type = "text_area"
-        self.max_chars = proto.max_chars
-        self.placeholder = proto.placeholder
 
     def set_value(self, v: str | None) -> TextArea:
         self._value = v
@@ -911,9 +888,6 @@ class TextInput(Widget):
         self.root = root
         self._value = InitialValue()
         self.type = "text_input"
-        self.max_chars = proto.max_chars
-        self.autocomplete = proto.autocomplete
-        self.placeholder = proto.placeholder
 
     def set_value(self, v: str | None) -> TextInput:
         self._value = v
@@ -957,7 +931,6 @@ class TimeInput(Widget):
         self.root = root
         self._value = InitialValue()
         self.type = "time_input"
-        self.step = proto.step
 
     def set_value(self, v: TimeValue | None) -> TimeInput:
         self._value = v
