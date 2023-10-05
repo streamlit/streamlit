@@ -83,7 +83,11 @@ schemaname = public
         "snowflake.snowpark.context.get_active_session",
         MagicMock(return_value="some active session"),
     )
-    def test_just_uses_current_active_session_if_available(self):
+    @patch(
+        "streamlit.connections.snowpark_connection._running_in_sis",
+        MagicMock(return_value=True),
+    )
+    def test_uses_active_session_if_in_sis(self):
         conn = SnowparkConnection("my_snowpark_connection")
         assert conn._instance == "some active session"
 
