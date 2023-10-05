@@ -99,10 +99,10 @@ class Element:
     key: str | None
 
     def __init__(self, proto: ElementProto, root: ElementTree):
-        self.proto = proto
-        self.root = root
         ty = proto.WhichOneof("type")
         assert ty is not None
+        self.proto = getattr(proto, ty)
+        self.root = root
         self.type = ty
         self.key = None
 
@@ -111,20 +111,17 @@ class Element:
 
     @property
     def value(self) -> Any:
-        p = getattr(self.proto, self.type)
         try:
             state = self.root.session_state
             assert state is not None
-            return state[p.id]
+            return state[self.proto.id]
         except ValueError:
             # No id field, not a widget
-            return p.value
+            return self.proto.value
 
     def __getattr__(self, name: str) -> Any:
         """Fallback attempt to get an attribute from the proto"""
-        proto = getattr(self.proto, self.type)
-        attr = getattr(proto, name)
-        return attr
+        return getattr(self.proto, name)
 
     def run(self, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
