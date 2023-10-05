@@ -24,7 +24,7 @@ def test_dataframe_supports_various_configurations(
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
     expect(dataframe_elements).to_have_count(21)
 
-    # The data editor might require a bit more time for rendering the canvas
+    # The dataframe component might require a bit more time for rendering the canvas
     themed_app.wait_for_timeout(250)
 
     assert_snapshot(dataframe_elements.nth(0), name="st_dataframe-hide_index")
