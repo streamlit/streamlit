@@ -143,6 +143,16 @@ class Widget(ABC, Element):
     key: str | None
     _value: Any
 
+    def __init__(self, proto):
+        self.proto = proto
+        self.id = proto.id
+        self.label = proto.label
+        self.help = proto.help
+        self.form_id = proto.form_id
+        self.disabled = proto.disabled
+        self.key = user_key_from_widget_id(self.id)
+        self._value = None
+
     def set_value(self, v: Any):
         self._value = v
         return self
@@ -258,17 +268,9 @@ class Checkbox(Widget):
     proto: CheckboxProto
 
     def __init__(self, proto: CheckboxProto, root: ElementTree):
-        self.proto = proto
+        super().__init__(proto)
         self.root = root
-        self._value = None
-
         self.type = "checkbox"
-        self.id = proto.id
-        self.label = proto.label
-        self.help = proto.help
-        self.form_id = proto.form_id
-        self.disabled = proto.disabled
-        self.key = user_key_from_widget_id(self.id)
 
     def widget_state(self) -> WidgetState:
         ws = WidgetState()

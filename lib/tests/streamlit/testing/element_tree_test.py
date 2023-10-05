@@ -51,7 +51,7 @@ def test_checkbox():
         st.checkbox("defaulted on", True)
 
     at = AppTest.from_function(script).run()
-    assert at.checkbox
+    assert at.checkbox[0].label == "defaults"
     assert at.checkbox.values == [False, True]
 
     at.checkbox[0].check().run()
