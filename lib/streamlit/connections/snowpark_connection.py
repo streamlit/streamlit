@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
 import pandas as pd
 
 from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections.util import running_in_sis
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -67,15 +68,6 @@ def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
     return conn_params
 
 
-def _running_in_sis() -> bool:
-    import snowflake.connector.connection  # type: ignore
-
-    # snowflake.connector.connection.SnowflakeConnection does not exist inside a Stored
-    # Proc or Streamlit. It is only part of the external package. So this returns true
-    # only in SiS.
-    return not hasattr(snowflake.connector.connection, "SnowflakeConnection")
-
-
 class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
     ``st.experimental_connection("<name>", type="snowpark")``.
@@ -104,7 +96,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
 
         # If we're running in SiS, just call get_active_session(). Otherwise, attempt to
         # create a new session from whatever credentials we have available.
-        if _running_in_sis():
+        if running_in_sis():
             return get_active_session()
 
         conn_params = ChainMap(

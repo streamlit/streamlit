@@ -84,7 +84,7 @@ schemaname = public
         MagicMock(return_value="some active session"),
     )
     @patch(
-        "streamlit.connections.snowpark_connection._running_in_sis",
+        "streamlit.connections.snowpark_connection.running_in_sis",
         MagicMock(return_value=True),
     )
     def test_uses_active_session_if_in_sis(self):

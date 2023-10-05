@@ -40,3 +40,13 @@ def extract_from_dict(
             d[k] = source_dict.pop(k)
 
     return d
+
+
+def running_in_sis() -> bool:
+    """Return whether this app seems to be running in SiS."""
+    import snowflake.connector.connection
+
+    # snowflake.connector.connection.SnowflakeConnection does not exist inside a Stored
+    # Proc or Streamlit. It is only part of the external package. So this returns true
+    # only in SiS.
+    return not hasattr(snowflake.connector.connection, "SnowflakeConnection")

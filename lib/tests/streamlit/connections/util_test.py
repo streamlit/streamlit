@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import MagicMock, patch
 
-from streamlit.connections.util import extract_from_dict
+from streamlit.connections.util import extract_from_dict, running_in_sis
 
 
 class ConnectionUtilTest(unittest.TestCase):
@@ -28,3 +29,14 @@ class ConnectionUtilTest(unittest.TestCase):
 
         assert extracted == {"k1": "v1", "k2": "v2"}
         assert d == {"k3": "v3", "k4": "v4"}
+
+    @patch("snowflake.connector.connection", MagicMock())
+    def test_not_running_in_sis(self):
+        assert not running_in_sis()
+
+    @patch(
+        "snowflake.connector.connection",
+    )
+    def test_running_in_sis(self, patched_connection):
+        delattr(patched_connection, "SnowflakeConnection")
+        assert running_in_sis()
