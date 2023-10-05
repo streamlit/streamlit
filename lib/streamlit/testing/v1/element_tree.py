@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import (
@@ -126,9 +126,6 @@ class Element:
         attr = getattr(proto, name)
         return attr
 
-    def widget_state(self) -> WidgetState | None:
-        return None
-
     def run(self, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
@@ -152,6 +149,10 @@ class Widget(ABC, Element):
     def set_value(self, v: Any):
         self._value = v
         return self
+
+    @abstractmethod
+    def widget_state(self) -> WidgetState:
+        ...
 
 
 El = TypeVar("El", bound=Element, covariant=True)
@@ -1325,9 +1326,6 @@ class Block:
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
-    def widget_state(self) -> WidgetState | None:
-        return None
-
     def run(self, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
         Timeout is a number of seconds, or None to use the default.
@@ -1339,6 +1337,13 @@ class Block:
 
 
 Node: TypeAlias = Union[Element, Block]
+
+
+def get_widget_state(node: Node) -> WidgetState | None:
+    if isinstance(node, Widget):
+        return node.widget_state()
+    else:
+        return None
 
 
 @dataclass(repr=False)
@@ -1394,7 +1399,7 @@ class ElementTree(Block):
     def get_widget_states(self) -> WidgetStates:
         ws = WidgetStates()
         for node in self:
-            w = node.widget_state()
+            w = get_widget_state(node)
             if w is not None:
                 ws.widgets.append(w)
 
