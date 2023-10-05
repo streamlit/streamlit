@@ -572,8 +572,8 @@ Number = Union[int, float]
 class NumberInput(Widget):
     _value: Number | None | InitialValue
     proto: NumberInputProto
-    min_value: Number | None
-    max_value: Number | None
+    min: Number | None
+    max: Number | None
     step: Number
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
@@ -581,8 +581,8 @@ class NumberInput(Widget):
         self.root = root
         self._value = InitialValue()
         self.type = "number_input"
-        self.min_value = proto.min if proto.has_min else None
-        self.max_value = proto.max if proto.has_max else None
+        self.min = proto.min if proto.has_min else None
+        self.max = proto.max if proto.has_max else None
 
     def set_value(self, v: Number | None) -> NumberInput:
         self._value = v
@@ -611,14 +611,14 @@ class NumberInput(Widget):
         if self.value is None:
             return self
 
-        v = min(self.value + self.step, self.max_value or float("inf"))
+        v = min(self.value + self.step, self.max or float("inf"))
         return self.set_value(v)
 
     def decrement(self) -> NumberInput:
         if self.value is None:
             return self
 
-        v = max(self.value - self.step, self.min_value or float("-inf"))
+        v = max(self.value - self.step, self.min or float("-inf"))
         return self.set_value(v)
 
 
@@ -783,16 +783,14 @@ class Slider(Widget, Generic[SliderScalarT]):
 
     proto: SliderProto
     data_type: SliderProto.DataType.ValueType
-    min_value: SliderScalar
-    max_value: SliderScalar
+    min: SliderScalar
+    max: SliderScalar
     step: Step
 
     def __init__(self, proto: SliderProto, root: ElementTree):
         super().__init__(proto)
         self.root = root
         self.type = "slider"
-        self.min_value = proto.min
-        self.max_value = proto.max
 
     def set_value(
         self, v: SliderScalarT | Sequence[SliderScalarT]
