@@ -24,5 +24,8 @@ def test_dataframe_column_types(
     dataframe_elements = themed_app.locator(".stDataFrame")
     expect(dataframe_elements).to_have_count(9)
 
+    # The dataframe component might require a bit more time for rendering the canvas
+    themed_app.wait_for_timeout(250)
+
     for i, element in enumerate(dataframe_elements.all()):
         assert_snapshot(element, name=f"dataframe-column-types-{i}")
