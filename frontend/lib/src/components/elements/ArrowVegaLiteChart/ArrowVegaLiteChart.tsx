@@ -336,15 +336,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // DOM. We set these styles manually for finer control over them and to
       // avoid inlining styles.
       tooltip: { disableDefaultStyle: true },
-      // NOTE: We pass the empty string to the `defaultStyle` field here
-      // because setting it to false causes vega-embed to omit menu options on
-      // the chart entirely, which we don't want. Setting `defaultStyle` to the
-      // empty string causes vega-embed to inject an empty <style /> tag into
-      // the DOM, which may be harmlessly blocked by a CSP. This is fine as
-      // we're providing our own styles for vega components. While this works
-      // for now, we'll be submitting an upstream PR to vega-embed to make
-      // things less hacky.
-      defaultStyle: "",
+      defaultStyle: false,
+      forceActionsMenu: true,
     }
 
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)

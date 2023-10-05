@@ -50,9 +50,8 @@ const FileDropzoneInstructions = ({
         {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions
-              .join(", ")
-              .replace(/\./g, "")
-              .toUpperCase()}`
+              .map(ext => ext.replace(/^\./, "").toUpperCase())
+              .join(", ")}`
           : null}
       </Small>
     </StyledFileDropzoneInstructionsColumn>
