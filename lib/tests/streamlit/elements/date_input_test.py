@@ -22,7 +22,7 @@ from pytest import raises
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -267,26 +267,24 @@ class DateInputTest(DeltaGeneratorTestCase):
         self.assertTrue(str(ex.exception).startswith("The provided format"))
 
 
-class DateInputInteractiveTest(InteractiveScriptTests):
-    def test_date_input_interaction(self):
-        """Test interactions with an empty date_input widget."""
-        script = self.script_from_string(
-            """
-        import streamlit as st
-
-        st.date_input("the label", value=None)
+def test_date_input_interaction():
+    """Test interactions with an empty date_input widget."""
+    at = AppTest.from_string(
         """
-        )
-        sr = script.run()
-        date_input = sr.date_input[0]
-        assert date_input.value is None
+    import streamlit as st
 
-        # Set the value to a specific date
-        sr2 = date_input.set_value(date(2012, 1, 3)).run()
-        date_input = sr2.date_input[0]
-        assert date_input.value == date(2012, 1, 3)
+    st.date_input("the label", value=None)
+    """
+    ).run()
+    date_input = at.date_input[0]
+    assert date_input.value is None
 
-        # # Clear the value
-        sr3 = date_input.set_value(None).run()
-        date_input = sr3.date_input[0]
-        assert date_input.value is None
+    # Set the value to a specific date
+    at = date_input.set_value(date(2012, 1, 3)).run()
+    date_input = at.date_input[0]
+    assert date_input.value == date(2012, 1, 3)
+
+    # # Clear the value
+    at = date_input.set_value(None).run()
+    date_input = at.date_input[0]
+    assert date_input.value is None

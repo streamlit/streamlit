@@ -21,7 +21,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -112,25 +112,23 @@ class TimeInputTest(DeltaGeneratorTestCase):
         )
 
 
-class TimeInputInteractiveTest(InteractiveScriptTests):
-    def test_time_input_interaction(self):
-        """Test interactions with an empty time_input widget."""
-        script = self.script_from_string(
-            """
-        import streamlit as st
-        st.time_input("the label", value=None)
+def test_time_input_interaction():
+    """Test interactions with an empty time_input widget."""
+    at = AppTest.from_string(
         """
-        )
-        sr = script.run()
-        time_input = sr.time_input[0]
-        assert time_input.value is None
+    import streamlit as st
+    st.time_input("the label", value=None)
+    """
+    ).run()
+    time_input = at.time_input[0]
+    assert time_input.value is None
 
-        # Input a time:
-        sr2 = time_input.set_value(time(8, 45)).run()
-        time_input = sr2.time_input[0]
-        assert time_input.value == time(8, 45)
+    # Input a time:
+    at = time_input.set_value(time(8, 45)).run()
+    time_input = at.time_input[0]
+    assert time_input.value == time(8, 45)
 
-        # # Clear the value
-        sr3 = time_input.set_value(None).run()
-        time_input = sr3.time_input[0]
-        assert time_input.value is None
+    # # Clear the value
+    at = time_input.set_value(None).run()
+    time_input = at.time_input[0]
+    assert time_input.value is None

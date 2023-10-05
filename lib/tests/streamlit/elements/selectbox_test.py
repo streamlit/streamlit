@@ -23,7 +23,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -203,25 +203,23 @@ class SelectboxTest(DeltaGeneratorTestCase):
         self.assertEqual(c.placeholder, "Please select")
 
 
-class SelectboxInteractiveTest(InteractiveScriptTests):
-    def test_selectbox_interaction(self):
-        """Test interactions with an empty selectbox widget."""
-        script = self.script_from_string(
-            """
-        import streamlit as st
-        st.selectbox("the label", ("m", "f"), index=None)
+def test_selectbox_interaction():
+    """Test interactions with an empty selectbox widget."""
+    at = AppTest.from_string(
         """
-        )
-        sr = script.run()
-        selectbox = sr.selectbox[0]
-        assert selectbox.value is None
+    import streamlit as st
+    st.selectbox("the label", ("m", "f"), index=None)
+    """
+    ).run()
+    selectbox = at.selectbox[0]
+    assert selectbox.value is None
 
-        # Select option m
-        sr2 = selectbox.set_value("m").run()
-        selectbox = sr2.selectbox[0]
-        assert selectbox.value == "m"
+    # Select option m
+    at = selectbox.set_value("m").run()
+    selectbox = at.selectbox[0]
+    assert selectbox.value == "m"
 
-        # # Clear the value
-        sr3 = selectbox.set_value(None).run()
-        selectbox = sr3.selectbox[0]
-        assert selectbox.value is None
+    # # Clear the value
+    at = selectbox.set_value(None).run()
+    selectbox = at.selectbox[0]
+    assert selectbox.value is None
