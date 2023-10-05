@@ -148,8 +148,9 @@ class Widget(ABC, Element):
     key: str | None
     _value: Any
 
-    def __init__(self, proto):
+    def __init__(self, proto: Any, root: ElementTree):
         self.proto = proto
+        self.root = root
         self.key = user_key_from_widget_id(self.id)
         self._value = None
 
@@ -227,8 +228,7 @@ class Button(Widget):
     proto: ButtonProto
 
     def __init__(self, proto: ButtonProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = False
         self.type = "button"
 
@@ -263,8 +263,7 @@ class Checkbox(Widget):
     proto: CheckboxProto
 
     def __init__(self, proto: CheckboxProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self.type = "checkbox"
 
     @property
@@ -320,8 +319,7 @@ class ColorPicker(Widget):
     proto: ColorPickerProto
 
     def __init__(self, proto: ColorPickerProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self.type = "color_picker"
 
     @property
@@ -368,8 +366,7 @@ class DateInput(Widget):
     is_range: bool
 
     def __init__(self, proto: DateInputProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "date_input"
         self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
@@ -507,8 +504,7 @@ class Multiselect(Widget, Generic[T]):
     max_selections: int
 
     def __init__(self, proto: MultiSelectProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self.type = "multiselect"
         self.options = list(proto.options)
 
@@ -582,8 +578,7 @@ class NumberInput(Widget):
     step: Number
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "number_input"
         self.min = proto.min if proto.has_min else None
@@ -636,8 +631,7 @@ class Radio(Widget, Generic[T]):
     horizontal: bool
 
     def __init__(self, proto: RadioProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "radio"
         self.options = list(proto.options)
@@ -683,8 +677,7 @@ class Selectbox(Widget, Generic[T]):
     options: list[str]
 
     def __init__(self, proto: SelectboxProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "selectbox"
         self.options = list(proto.options)
@@ -748,8 +741,7 @@ class SelectSlider(Widget, Generic[T]):
     options: list[str]
 
     def __init__(self, proto: SliderProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self.type = "select_slider"
         self.options = list(proto.options)
 
@@ -793,8 +785,7 @@ class Slider(Widget, Generic[SliderScalarT]):
     step: Step
 
     def __init__(self, proto: SliderProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self.type = "slider"
 
     def set_value(
@@ -856,8 +847,7 @@ class TextArea(Widget):
     placeholder: str
 
     def __init__(self, proto: TextAreaProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "text_area"
 
@@ -899,8 +889,7 @@ class TextInput(Widget):
     placeholder: str
 
     def __init__(self, proto: TextInputProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "text_input"
 
@@ -943,8 +932,7 @@ class TimeInput(Widget):
     step: int
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
-        super().__init__(proto)
-        self.root = root
+        super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "time_input"
 
