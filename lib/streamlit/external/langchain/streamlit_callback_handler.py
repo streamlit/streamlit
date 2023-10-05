@@ -200,6 +200,7 @@ class LLMThought:
             state="running",
         )
         if len(input_str) > MAX_TOOL_INPUT_STR_LENGTH:
+            # output is printed later in on_tool_end
             self._container.markdown(f"**Input:**\n\n{input_str}\n\n**Output:**")
 
     def on_tool_end(
