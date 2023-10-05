@@ -113,16 +113,21 @@ class AppTest:
 
     @classmethod
     def from_file(cls, script_path: str, default_timeout: float = 3) -> AppTest:
-        """Create a runner for the script with the given relative file name.
+        """Create a runner for the script with the given file name.
 
         `default_timeout` is the default time in seconds before a script is
         timed out, if not overridden for an individual `.run()` call.
         """
-        # TODO: Make this not super fragile
-        stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-        filepath = pathlib.Path(stack[1].filename)
-        full_path = filepath.parent / script_path
-        return AppTest(str(full_path), default_timeout=default_timeout)
+        if pathlib.Path.is_file(pathlib.Path(script_path)):
+            path = script_path
+        else:
+            # TODO: Make this not super fragile
+            # Attempt to find the test file calling this method, so the
+            # path can be relative to there.
+            stack = traceback.StackSummary.extract(traceback.walk_stack(None))
+            filepath = pathlib.Path(stack[1].filename)
+            path = str(filepath.parent / script_path)
+        return AppTest(path, default_timeout=default_timeout)
 
     def _run(
         self,
