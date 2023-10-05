@@ -447,3 +447,16 @@ st.dataframe(
         ),
     },
 )
+
+st.subheader("Long colum header")
+st.dataframe(
+    pd.DataFrame(
+        np.random.randn(100, 4),
+        columns=[
+            "this is a very long header name",
+            "A",
+            "C",
+            "this is another long name",
+        ],
+    )
+)
