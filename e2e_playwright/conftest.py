@@ -224,20 +224,6 @@ def app(page: Page, app_port: int) -> Page:
     return page
 
 
-@pytest.fixture(scope="function")
-def app_with_camera_dialog_accepted(context: BrowserContext, app_port: int) -> Page:
-    """Fixture that opens the app and confirm camera permission dialog."""
-    # create a new incognito browser context
-
-    context.grant_permissions(["camera", "microphone"])
-    # create a new page inside context.
-    page = context.new_page()
-    # page.on("dialog", lambda dialog: dialog.accept())
-    page.goto(f"http://localhost:{app_port}/")
-    wait_for_app_loaded(page)
-    return page
-
-
 @pytest.fixture(scope="session", autouse=True)
 def launch_with_different_options(browser_type_launch_args: Dict):
     browser_type_launch_args["firefox_user_prefs"] = {
@@ -245,6 +231,14 @@ def launch_with_different_options(browser_type_launch_args: Dict):
         "permissions.default.microphone": 1,
         "permissions.default.camera": 1,
     }
+
+
+@pytest.fixture(scope="session", autouse=True)
+def launch_with_chromium_different_options(browser_type_launch_args: Dict):
+    browser_type_launch_args["args"] = [
+        "--use-fake-device-for-media-stream",
+        "--use-fake-ui-for-media-stream",
+    ]
 
 
 @pytest.fixture(scope="function", params=["light_theme", "dark_theme"])

@@ -22,15 +22,11 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_file_uploader_render_correctly(
-    # app_with_camera_dialog_accepted: Page,
     app: Page,
     assert_snapshot: ImageCompareFunction,
 ):
-    """AAAA"""
-    app_with_camera_dialog_accepted = app
-    # app_with_camera_dialog_accepted.on("dialog", lambda dialog: dialog.accept())
-    app_with_camera_dialog_accepted.wait_for_timeout(1000)
-
-    camera_inputs = app_with_camera_dialog_accepted.get_by_test_id("stCameraInput")
+    """Test to check that camera video stream works"""
+    app.wait_for_timeout(1000)
+    camera_inputs = app.get_by_test_id("stCameraInput")
     expect(camera_inputs).to_have_count(2)
-    app_with_camera_dialog_accepted.wait_for_timeout(1000)
+    app.wait_for_timeout(1000)
