@@ -152,6 +152,7 @@ class Widget(ABC, Element):
         self._value = v
         return self
 
+    @property
     @abstractmethod
     def widget_state(self) -> WidgetState:
         ...
@@ -226,6 +227,7 @@ class Button(Widget):
         self._value = False
         self.type = "button"
 
+    @property
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
@@ -260,6 +262,7 @@ class Checkbox(Widget):
         self.root = root
         self.type = "checkbox"
 
+    @property
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
@@ -326,6 +329,7 @@ class ColorPicker(Widget):
             assert state
             return cast(str, state[self.id])
 
+    @property
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
@@ -370,6 +374,7 @@ class DateInput(Widget):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
@@ -502,6 +507,7 @@ class Multiselect(Widget, Generic[T]):
         self.type = "multiselect"
         self.options = list(proto.options)
 
+    @property
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
@@ -582,6 +588,7 @@ class NumberInput(Widget):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
@@ -650,6 +657,7 @@ class Radio(Widget, Generic[T]):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
@@ -713,6 +721,7 @@ class Selectbox(Widget, Generic[T]):
             return self.set_value(None)
         return self.set_value(cast(T, self.options[index]))
 
+    @property
     def widget_state(self) -> WidgetState:
         """Protobuf message representing the state of the widget, including
         any interactions that have happened.
@@ -743,6 +752,7 @@ class SelectSlider(Widget, Generic[T]):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         serde = SelectSliderSerde(self.options, [], False)
         v = serde.serialize(self.value)
@@ -790,6 +800,7 @@ class Slider(Widget, Generic[SliderScalarT]):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         data_type = self.proto.data_type
         serde = SliderSerde([], data_type, True, None)
@@ -851,6 +862,7 @@ class TextArea(Widget):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
@@ -893,6 +905,7 @@ class TextInput(Widget):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
@@ -936,6 +949,7 @@ class TimeInput(Widget):
         self._value = v
         return self
 
+    @property
     def widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
@@ -1225,7 +1239,7 @@ Node: TypeAlias = Union[Element, Block]
 
 def get_widget_state(node: Node) -> WidgetState | None:
     if isinstance(node, Widget):
-        return node.widget_state()
+        return node.widget_state
     else:
         return None
 
