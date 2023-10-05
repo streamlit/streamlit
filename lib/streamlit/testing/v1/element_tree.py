@@ -125,7 +125,12 @@ class Element:
 
     def run(self, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
-        Timeout is a number of seconds, or None to use the default.
+
+        Parameters
+        ----------
+        timeout
+            The maximum number of seconds to run the script. None means
+            use the AppTest's default.
         """
         return self.root.run(timeout=timeout)
 
@@ -1125,7 +1130,12 @@ class Block:
 
     def run(self, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
-        Timeout is a number of seconds, or None to use the default.
+
+        Parameters
+        ----------
+        timeout
+            The maximum number of seconds to run the script. None means
+            use the AppTest's default.
         """
         return self.root.run(timeout=timeout)
 
@@ -1204,7 +1214,12 @@ class ElementTree(Block):
 
     def run(self, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
-        Timeout is a number of seconds, or None to use the default.
+
+        Parameters
+        ----------
+        timeout
+            The maximum number of seconds to run the script. None means
+            use the AppTest's default.
         """
         assert self._runner is not None
 
