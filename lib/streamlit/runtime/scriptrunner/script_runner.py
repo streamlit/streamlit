@@ -493,8 +493,8 @@ class ScriptRunner:
         # is interrupted by a RerunException.
         rerun_exception_data: Optional[RerunData] = None
 
-        # Tracks why the script run finished, so interrupted script runs don't
-        # lose widget state.
+        # If the script stops early, we don't want to remove unseen widgets,
+        # so we track this to potentially skip session state cleanup later.
         premature_stop: bool = False
 
         try:
