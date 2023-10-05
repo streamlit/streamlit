@@ -22,7 +22,7 @@ def test_initial_setup(app: Page):
 
     wait_for_app_run(app)
     title_count = len(app.locator(".stGraphVizChart > svg > g > title").all())
-    assert title_count == 5
+    assert title_count == 6
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -51,3 +51,15 @@ def test_renders_with_specified_engines(
             app.locator(".stGraphVizChart > svg").nth(2),
             name=f"st_graphviz_chart_engine-{engine}",
         )
+
+
+def test_dot_string(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test if it renders charts when input is a string (dot language)."""
+
+    title = app.locator(".stGraphVizChart > svg > g > title").nth(5)
+    expect(title).to_have_text("Dot")
+
+    assert_snapshot(
+        app.locator(".stGraphVizChart > svg").nth(5),
+        name="st_graphviz_chart_dot_string",
+    )

@@ -90,3 +90,11 @@ with col1:
 
 with col2:
     st.graphviz_chart(right_graph)
+
+
+dot_code = """
+digraph Dot {
+  A -> {B, C, D} -> {F}
+}
+"""
+st.graphviz_chart(dot_code)
