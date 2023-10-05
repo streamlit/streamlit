@@ -160,9 +160,10 @@ class SelectSliderMixin:
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
         options : Iterable
-            Labels for the slider options. All options will be cast to str
-            internally by default. For pandas.DataFrame, the first column is
-            selected.
+            Labels for the select options in an Iterable. For example, this can
+            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
+            pandas.Index. For pandas.DataFrame, the first column is used.
+            Each label will be cast to str internally by default.
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower

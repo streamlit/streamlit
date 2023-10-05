@@ -127,10 +127,12 @@ class RadioMixin:
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
         options : Iterable
-            Labels for the radio options. Labels can include markdown as
-            described in the ``label`` parameter and will be cast to str
-            internally by default. For pandas.DataFrame, the first column is
-            used.
+            Labels for the select options in an Iterable. For example, this can
+            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
+            pandas.Index. For pandas.DataFrame, the first column is used.
+
+            Labels can include markdown as described in the ``label`` parameter
+            and will be cast to str internally by default.
         index : int or None
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.

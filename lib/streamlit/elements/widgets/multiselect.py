@@ -193,8 +193,10 @@ class MultiSelectMixin:
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
         options : Iterable
-            Labels for the select options. Label values will be cast to str internally
-            by default. For pandas.DataFrame, the first column is used.
+            Labels for the select options in an Iterable. For example, this can
+            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
+            pandas.Index. For pandas.DataFrame, the first column is used.
+            Each label will be cast to str internally by default.
         default: Iterable of V, V, or None
             List of default values. Can also be a single value.
         format_func : function
