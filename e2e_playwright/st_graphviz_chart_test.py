@@ -20,6 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
 
+    wait_for_app_run(app)
     title_count = len(app.locator(".stGraphVizChart > svg > g > title").all())
     assert title_count == 5
 
