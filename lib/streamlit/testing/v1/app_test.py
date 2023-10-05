@@ -87,8 +87,15 @@ class AppTest:
         string in the test itself, without having to create a separate file
         for it.
 
-        `default_timeout` is the default time in seconds before a script is
-        timed out, if not overridden for an individual `.run()` call.
+        Parameters
+        ----------
+        script
+            The string contents of the script to be run.
+
+        default_timeout
+            Default time in seconds before a script run is timed out. Can be
+            overridden for individual `.run()` calls.
+
         """
         hasher = hashlib.md5(bytes(script, "utf-8"))
         script_name = hasher.hexdigest()
@@ -102,6 +109,22 @@ class AppTest:
     def from_function(
         cls, script: Callable[[], None], default_timeout: float = 3
     ) -> AppTest:
+        """Create a runner for a script with the contents from a function.
+
+        Similar to `AppTest.from_string()`, but more convenient to write
+        with IDE assistance.
+
+        Parameters
+        ----------
+        script
+            A function whose body will be used as a script. Must be runnable
+            in isolation, so it must include any used imports.
+
+        default_timeout
+            Default time in seconds before a script run is timed out. Can be
+            overridden for individual `.run()` calls.
+
+        """
         # TODO: Simplify this using `ast.unparse()` once we drop 3.8 support
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
@@ -115,8 +138,15 @@ class AppTest:
     def from_file(cls, script_path: str, default_timeout: float = 3) -> AppTest:
         """Create a runner for the script with the given file name.
 
-        `default_timeout` is the default time in seconds before a script is
-        timed out, if not overridden for an individual `.run()` call.
+        Parameters
+        ----------
+        script_path
+            Path to a script file. Several locations are tried, including treating
+            the path as relative to the file calling `.from_file`.
+
+        default_timeout
+            Default time in seconds before a script run is timed out. Can be
+            overridden for individual `.run()` calls.
         """
         if pathlib.Path.is_file(pathlib.Path(script_path)):
             path = script_path
