@@ -106,6 +106,7 @@ import {
   WidgetStateManager,
   IHostConfigResponse,
   LibConfig,
+  AppConfig,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -168,6 +169,7 @@ interface State {
   queryParams: string
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
+  appConfig: AppConfig
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -389,9 +391,12 @@ export class App extends PureComponent<Props, State> {
           useExternalAuthToken: response.useExternalAuthToken,
         })
 
-        // Set the host config settings in LibContext:
-        // TODO: Potentially deconstruct the response object here
-        // so that only the relevant fields are passed to LibContext.
+        // TODO: Potentially deconstruct the response object for app/lib context
+        // so that only the relevant fields are passed to context.
+
+        // Set the streamlit-app specific config settings in AppContext:
+        this.setAppConfig(response)
+        // Set the streamlit-lib specific config settings in LibContext:
         this.setLibConfig(response)
       },
     })
@@ -1489,6 +1494,13 @@ export class App extends PureComponent<Props, State> {
     this.setState({ libConfig })
   }
 
+  /**
+   * Set streamlit-app specific configurations.
+   */
+  setAppConfig = (appConfig: AppConfig): void => {
+    this.setState({ appConfig })
+  }
+
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
@@ -1623,6 +1635,7 @@ export class App extends PureComponent<Props, State> {
           sidebarChevronDownshift,
           toastAdjustment: hostToolbarItems.length > 0,
           gitInfo: this.state.gitInfo,
+          appConfig: this.state.appConfig,
         }}
       >
         <LibContext.Provider

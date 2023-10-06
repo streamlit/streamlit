@@ -39,6 +39,7 @@ export type {
   IMenuItem,
   IHostConfigResponse,
   IToolbarItem,
+  AppConfig,
 } from "./hostComm/types"
 export {
   default as Modal,

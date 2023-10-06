@@ -23,7 +23,7 @@ import {
   IMenuItem,
   IToolbarItem,
   DeployedAppMetadata,
-  AllowedMessageOriginsConfig,
+  AppConfig,
 } from "./types"
 
 import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
@@ -115,7 +115,7 @@ export default class HostCommunicationManager {
   public setAllowedOrigins = ({
     allowedOrigins,
     useExternalAuthToken,
-  }: AllowedMessageOriginsConfig): void => {
+  }: AppConfig): void => {
     if (!useExternalAuthToken) {
       this.deferredAuthToken.resolve(undefined)
     }
