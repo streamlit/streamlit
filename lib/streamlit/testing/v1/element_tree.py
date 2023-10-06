@@ -1000,7 +1000,7 @@ class Block:
         elif type is not None:
             self.type = type
         else:
-            self.type = ""
+            self.type = "unknown"
         self.root = root
 
     def __len__(self) -> int:
@@ -1040,6 +1040,10 @@ class Block:
     @property
     def color_picker(self) -> WidgetList[ColorPicker]:
         return WidgetList(self.get("color_picker"))  # type: ignore
+
+    @property
+    def columns(self) -> Sequence[Column]:
+        return self.get("column")  # type: ignore
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -1094,6 +1098,10 @@ class Block:
         return ElementList(self.get("subheader"))  # type: ignore
 
     @property
+    def tabs(self) -> Sequence[Tab]:
+        return self.get("tab")  # type: ignore
+
+    @property
     def text(self) -> ElementList[Text]:
         return ElementList(self.get("text"))  # type: ignore
 
@@ -1129,6 +1137,44 @@ class Block:
 
     def __repr__(self):
         return util.repr_(self)
+
+
+@dataclass(repr=False)
+class Column(Block):
+    proto: BlockProto.Column = field(repr=False)
+    weight: float
+    gap: str
+
+    def __init__(
+        self,
+        root: ElementTree,
+        proto: BlockProto.Column,
+        type: str | None = None,
+    ):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "column"
+        self.weight = proto.weight
+        self.gap = proto.gap
+
+
+@dataclass(repr=False)
+class Tab(Block):
+    proto: BlockProto.Tab = field(repr=False)
+    label: str
+
+    def __init__(
+        self,
+        root: ElementTree,
+        proto: BlockProto.Tab,
+        type: str | None = None,
+    ):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "tab"
+        self.label = proto.label
 
 
 Node: TypeAlias = Union[Element, Block]
@@ -1297,7 +1343,14 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
-            new_node = Block(proto=delta.add_block, root=root)
+            block = delta.add_block
+            bty = block.WhichOneof("type")
+            if bty == "column":
+                new_node = Column(proto=block.column, root=root)
+            elif bty == "tab":
+                new_node = Tab(proto=block.tab, root=root)
+            else:
+                new_node = Block(proto=block, root=root)
         else:
             # add_rows
             continue
