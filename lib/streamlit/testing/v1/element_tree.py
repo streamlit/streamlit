@@ -123,7 +123,7 @@ class Element:
         """Fallback attempt to get an attribute from the proto"""
         return getattr(self.proto, name)
 
-    def run(self, timeout: float | None = None) -> AppTest:
+    def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
 
         Parameters
@@ -1116,7 +1116,7 @@ class Block:
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
-    def run(self, timeout: float | None = None) -> AppTest:
+    def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
 
         Parameters
@@ -1200,7 +1200,7 @@ class ElementTree(Block):
 
         return ws
 
-    def run(self, timeout: float | None = None) -> AppTest:
+    def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script with updated widget values.
 
         Parameters

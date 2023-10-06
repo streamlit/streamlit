@@ -72,7 +72,7 @@ _fix_matplotlib_crash()
 
 
 class AppTest:
-    def __init__(self, script_path: str, default_timeout: float):
+    def __init__(self, script_path: str, *, default_timeout: float):
         self._script_path = script_path
         self.default_timeout = default_timeout
         self.session_state = SessionState()
@@ -83,7 +83,7 @@ class AppTest:
         self._tree = tree
 
     @classmethod
-    def from_string(cls, script: str, default_timeout: float = 3) -> AppTest:
+    def from_string(cls, script: str, *, default_timeout: float = 3) -> AppTest:
         """Create a runner for a script with the contents from a string.
 
         Useful for testing short scripts that fit comfortably as an inline
@@ -110,7 +110,7 @@ class AppTest:
 
     @classmethod
     def from_function(
-        cls, script: Callable[[], None], default_timeout: float = 3
+        cls, script: Callable[[], None], *, default_timeout: float = 3
     ) -> AppTest:
         """Create a runner for a script with the contents from a function.
 
@@ -138,7 +138,7 @@ class AppTest:
         return cls.from_string(body, default_timeout=default_timeout)
 
     @classmethod
-    def from_file(cls, script_path: str, default_timeout: float = 3) -> AppTest:
+    def from_file(cls, script_path: str, *, default_timeout: float = 3) -> AppTest:
         """Create a runner for the script with the given file name.
 
         Parameters
@@ -198,7 +198,7 @@ class AppTest:
 
         return self
 
-    def run(self, timeout: float | None = None) -> AppTest:
+    def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script, and parse the output messages for querying
         and interaction.
 
@@ -210,7 +210,7 @@ class AppTest:
             The maximum number of seconds to run the script. None means
             use the AppTest's default.
         """
-        return self._tree.run(timeout)
+        return self._tree.run(timeout=timeout)
 
     @property
     def main(self) -> Block:
