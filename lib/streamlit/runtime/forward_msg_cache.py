@@ -196,7 +196,7 @@ class ForwardMsgCache(CacheStatsProvider):
 
         Parameters
         ----------
-        hash : string
+        hash : str
             The id of the message to retrieve.
 
         Returns

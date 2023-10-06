@@ -475,11 +475,11 @@ class DeltaGenerator(
 
         Parameters
         ----------
-        delta_type: string
+        delta_type : str
             The name of the streamlit method being called
-        element_proto: proto
+        element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
-        return_value: any or None
+        return_value : any or None
             The value to return to the calling script (for widgets)
         element_width : int or None
             Desired width for the element
