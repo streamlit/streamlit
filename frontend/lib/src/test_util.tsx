@@ -116,7 +116,7 @@ export const customRenderLibContext = (
     availableThemes: [],
     addThemes: jest.fn(),
     hideFullScreenButtons: false,
-    hostConfig: {},
+    libConfig: {},
   }
 
   return reactTestingLibraryRender(component, {
