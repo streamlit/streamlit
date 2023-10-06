@@ -12,8 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# NOTE: We won't always be able to import from snowflake.connector.connection so need the
+# `type: ignore` comment below, but that comment will explode if `warn-unused-ignores` is
+# turned on when the package is available. Unfortunately, mypy doesn't provide a good
+# way to configure this at a per-line level :(
+# mypy: no-warn-unused-ignores
 
+
+import configparser
+import os
 from typing import Any, Collection, Dict
+
+SNOWSQL_CONNECTION_FILE = "~/.snowsql/config"
 
 
 def extract_from_dict(
@@ -40,3 +50,40 @@ def extract_from_dict(
             d[k] = source_dict.pop(k)
 
     return d
+
+
+def load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
+    """Loads the dictionary from snowsql config file."""
+    snowsql_config_file = os.path.expanduser(SNOWSQL_CONNECTION_FILE)
+    if not os.path.exists(snowsql_config_file):
+        return {}
+
+    config = configparser.ConfigParser(inline_comment_prefixes="#")
+    config.read(snowsql_config_file)
+
+    if f"connections.{connection_name}" in config:
+        raw_conn_params = config[f"connections.{connection_name}"]
+    elif "connections" in config:
+        raw_conn_params = config["connections"]
+    else:
+        return {}
+
+    conn_params = {
+        k.replace("name", ""): v.strip('"') for k, v in raw_conn_params.items()
+    }
+
+    if "db" in conn_params:
+        conn_params["database"] = conn_params["db"]
+        del conn_params["db"]
+
+    return conn_params
+
+
+def running_in_sis() -> bool:
+    """Return whether this app seems to be running in SiS."""
+    import snowflake.connector.connection  # type: ignore
+
+    # snowflake.connector.connection.SnowflakeConnection does not exist inside a Stored
+    # Proc or Streamlit. It is only part of the external package. So this returns true
+    # only in SiS.
+    return not hasattr(snowflake.connector.connection, "SnowflakeConnection")
