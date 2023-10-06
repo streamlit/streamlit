@@ -27,9 +27,10 @@ import {
   Dictionary,
   Struct,
   Schema as ArrowSchema,
+  util,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip, zip } from "lodash"
+import { range, unzip, zip, trimEnd } from "lodash"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
@@ -875,6 +876,51 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
   }
 
+  /**
+   * Formats a decimal value with a given scale to a string.
+   *
+   * This code is partly based on: https://github.com/apache/arrow/issues/35745
+   *
+   * TODO: This is only a temporary workaround until ArrowJS can format decimals correctly.
+   * This is tracked here:
+   * https://github.com/apache/arrow/issues/37920
+   * https://github.com/apache/arrow/issues/28804
+   * https://github.com/apache/arrow/issues/35745
+   */
+  private static formatDecimal(value: Uint32Array, scale: number): string {
+    // Format Uint32Array to a numerical string and pad it with zeros
+    // So that it is exactly the length of the scale.
+    let numString = util
+      .bigNumToString(new util.BN(value))
+      .padStart(scale, "0")
+
+    // ArrowJS 13 correctly adds a minus sign for negative numbers.
+    // but it doesn't handle th fractional part yet. So we can just return
+    // the value if scale === 0, but we need to do some additional processing
+    // for the fractional part if scale > 0.
+
+    if (scale === 0) {
+      return numString
+    }
+
+    let sign = ""
+    if (numString.startsWith("-")) {
+      // Check if number is negative, and if so remember the sign and remove it.
+      // We will add it back later.
+      sign = "-"
+      numString = numString.slice(1)
+    }
+    // Extract the whole number part. If the number is < 1, it doesn't
+    // have a whole number part, so we'll use "0" instead.
+    // E.g for 123450 with scale 3, we'll get "123" as the whole part.
+    const wholePart = numString.slice(0, -scale) || "0"
+    // Extract the fractional part and remove trailing zeros.
+    // E.g. for 123450 with scale 3, we'll get "45" as the fractional part.
+    const decimalPart = trimEnd(numString.slice(-scale), "0") || ""
+    // Combine the parts and add the sign.
+    return `${sign}${wholePart}` + (decimalPart ? `.${decimalPart}` : "")
+  }
+
   private static formatPeriodType(
     duration: bigint,
     typeName: PeriodType
@@ -999,26 +1045,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     }
 
     if (typeName === "decimal") {
-      // Support decimal type
-      // Unfortunately, this still can fail in certain situations:
-      // https://github.com/apache/arrow/issues/22932
-      // https://github.com/streamlit/streamlit/issues/5864
-      const decimalStr = x.toString()
-      if (
-        !notNullOrUndefined(field?.type?.scale) ||
-        Number.isNaN(field?.type?.scale) ||
-        field?.type?.scale > decimalStr.length
-      ) {
-        return decimalStr
-      }
-      const scaleIndex = decimalStr.length - field?.type?.scale
-      if (scaleIndex === 0) {
-        return `0.${decimalStr}`
-      }
-
-      return `${decimalStr.slice(0, scaleIndex)}.${decimalStr.slice(
-        scaleIndex
-      )}`
+      return this.formatDecimal(x as Uint32Array, field?.type?.scale || 0)
     }
 
     // Nested arrays and objects.

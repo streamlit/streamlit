@@ -71,6 +71,7 @@ _EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = 
     "number": [
         ColumnDataKind.INTEGER,
         ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
         ColumnDataKind.STRING,
         ColumnDataKind.EMPTY,
     ],

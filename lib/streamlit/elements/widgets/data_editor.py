@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -202,6 +203,12 @@ def _parse_value(
 
         if column_data_kind == ColumnDataKind.BOOLEAN:
             return bool(value)
+
+        if column_data_kind == ColumnDataKind.DECIMAL:
+            # Decimal theoretically can also be initialized via number values.
+            # However, using number values here seems to cause issues with Arrow
+            # serialization, once you try to render the returned dataframe.
+            return Decimal(str(value))
 
         if column_data_kind in [
             ColumnDataKind.DATETIME,

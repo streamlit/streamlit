@@ -157,7 +157,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (typeName === "date") {
     return DateColumn
   }
-  if (["object", "decimal", "bytes"].includes(typeName)) {
+  if (["object", "bytes"].includes(typeName)) {
     return ObjectColumn
   }
   if (["bool"].includes(typeName)) {
@@ -179,6 +179,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
       "float96",
       "float128",
       "range", // The default index in pandas uses a range type.
+      "decimal",
     ].includes(typeName)
   ) {
     return NumberColumn
@@ -343,6 +344,10 @@ export function getCellFromArrow(
   arrowCell: DataFrameCell,
   cssStyles: string | undefined = undefined
 ): GridCell {
+  const typeName = column.arrowType
+    ? Quiver.getTypeName(column.arrowType)
+    : null
+
   let cellTemplate
   if (column.kind === "object") {
     // Always use display value from Quiver for object types
@@ -370,7 +375,7 @@ export function getCellFromArrow(
     // do some custom conversion here.
     let parsedDate
     if (
-      Quiver.getTypeName(column.arrowType) === "time" &&
+      typeName === "time" &&
       notNullOrUndefined(arrowCell.field?.type?.unit)
     ) {
       // Time values needs to be adjusted to seconds based on the unit
@@ -384,6 +389,18 @@ export function getCellFromArrow(
     }
 
     cellTemplate = column.getCell(parsedDate)
+  } else if (typeName === "decimal") {
+    // This is a special case where we want to already prepare a decimal value
+    // to a number string based on the arrow field metadata. This is required
+    // because we don't have access to the required scale in the number column.
+    const decimalStr = isNullOrUndefined(arrowCell.content)
+      ? null
+      : Quiver.format(
+          arrowCell.content,
+          arrowCell.contentType,
+          arrowCell.field
+        )
+    cellTemplate = column.getCell(decimalStr)
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }
