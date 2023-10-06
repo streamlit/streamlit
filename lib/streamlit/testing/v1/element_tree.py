@@ -28,9 +28,10 @@ from typing import (
     overload,
 )
 
-from typing_extensions import Literal, TypeAlias
+from pandas import DataFrame
+from typing_extensions import TypeAlias
 
-from streamlit import util
+from streamlit import type_util, util
 from streamlit.elements.heading import HeadingProtoTag
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import (
@@ -45,6 +46,7 @@ from streamlit.elements.widgets.time_widgets import (
     TimeInputSerde,
     _parse_date_value,
 )
+from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -351,6 +353,21 @@ class ColorPicker(Widget):
         if not v.startswith("#"):
             v = f"#{v}"
         return self.set_value(v)
+
+
+@dataclass(repr=False)
+class Dataframe(Element):
+    proto: ArrowProto = field(repr=False)
+
+    def __init__(self, proto: ArrowProto, root: ElementTree):
+        self.key = None
+        self.proto = proto
+        self.root = root
+        self.type = "arrow_data_frame"
+
+    @property
+    def value(self) -> DataFrame:
+        return type_util.bytes_to_data_frame(self.proto.data)
 
 
 SingleDateValue: TypeAlias = Union[date, datetime]
@@ -1042,6 +1059,10 @@ class Block:
         return WidgetList(self.get("color_picker"))  # type: ignore
 
     @property
+    def dataframe(self) -> ElementList[Dataframe]:
+        return ElementList(self.get("arrow_data_frame"))  # type: ignore
+
+    @property
     def date_input(self) -> WidgetList[DateInput]:
         return WidgetList(self.get("date_input"))  # type: ignore
 
@@ -1237,7 +1258,9 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             elt = delta.new_element
             ty = elt.WhichOneof("type")
             new_node: Node
-            if ty == "button":
+            if ty == "arrow_data_frame":
+                new_node = Dataframe(elt.arrow_data_frame, root=root)
+            elif ty == "button":
                 new_node = Button(elt.button, root=root)
             elif ty == "checkbox":
                 new_node = Checkbox(elt.checkbox, root=root)

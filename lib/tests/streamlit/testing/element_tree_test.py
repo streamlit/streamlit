@@ -14,6 +14,8 @@
 
 from datetime import date, datetime, time
 
+import numpy as np
+import pandas as pd
 import pytest
 
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
@@ -77,6 +79,31 @@ def test_color_picker():
 
     at.color_picker[0].pick("#123456").run()
     assert at.color_picker[0].value == "#123456"
+
+
+def test_dataframe():
+    def script():
+        import numpy as np
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame(
+            index=[[0, 1], ["i1", "i2"]],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
+        )
+        st.dataframe(df)
+
+    at = AppTest.from_function(script).run()
+    d = at.dataframe[0]
+    assert d.value.equals(
+        pd.DataFrame(
+            index=[[0, 1], ["i1", "i2"]],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
+        )
+    )
 
 
 def test_date_input():
