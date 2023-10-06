@@ -52,6 +52,16 @@ const mockCustomThemeConfig = {
 
 jest.mock("@streamlit/app/src/connection/ConnectionManager")
 
+// Mock needed for Block.tsx
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserver
+
 describe("ThemedApp", () => {
   beforeEach(() => {
     // sourced from:

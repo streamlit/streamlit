@@ -40,15 +40,15 @@ def test_third_metric_in_first_row(app: Page):
 
 def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(0),
-        name="metric-container-green",
+        themed_app.locator('[data-testid="stMetric"]').nth(0),
+        name="stMetric-green",
     )
 
 
 def test_red_down_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(2),
-        name="metric-container-red",
+        themed_app.locator('[data-testid="stMetric"]').nth(2),
+        name="stMetric-red",
     )
 
 
@@ -56,8 +56,8 @@ def test_gray_down_arrow_render(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(4),
-        name="metric-container-gray",
+        themed_app.locator('[data-testid="stMetric"]').nth(4),
+        name="stMetric-gray",
     )
 
 
@@ -65,7 +65,7 @@ def test_help_shows_up_without_columns(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(6),
+        themed_app.locator('[data-testid="stMetric"]').nth(6),
         name="metric-with-help",
     )
 
@@ -74,7 +74,7 @@ def test_none_results_in_dash_in_value(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(7),
+        themed_app.locator('[data-testid="stMetric"]').nth(7),
         name="metric-with-none-value",
     )
 
@@ -86,7 +86,7 @@ def test_label_visibility_set_to_hidden(
         "Test 4"
     )
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(3),
+        themed_app.locator('[data-testid="stMetric"]').nth(3),
         name="metric-label-hidden",
     )
 
@@ -98,7 +98,7 @@ def test_label_visibility_set_to_collapse(
         "Test 5"
     )
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(5),
+        themed_app.locator('[data-testid="stMetric"]').nth(5),
         name="metric-label-collapse",
     )
 
@@ -107,6 +107,6 @@ def test_ellipses_and_help_shows_up_properly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
-        themed_app.locator('[data-testid="metric-container"]').nth(8),
+        themed_app.locator('[data-testid="stMetric"]').nth(8),
         name="metric-help-and-ellipses",
     )

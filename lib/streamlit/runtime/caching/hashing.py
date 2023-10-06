@@ -252,13 +252,7 @@ def _key(obj: Optional[Any]) -> Any:
         if all(map(is_simple, obj)):
             return ("__l", tuple(obj))
 
-    if (
-        type_util.is_type(obj, "pandas.core.frame.DataFrame")
-        or type_util.is_type(obj, "numpy.ndarray")
-        or inspect.isbuiltin(obj)
-        or inspect.isroutine(obj)
-        or inspect.iscode(obj)
-    ):
+    if inspect.isbuiltin(obj) or inspect.isroutine(obj) or inspect.iscode(obj):
         return id(obj)
 
     return NoResult
@@ -402,15 +396,40 @@ class _CacheFuncHasher:
         elif isinstance(obj, Enum):
             return str(obj).encode()
 
-        elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
-            obj, "pandas.core.series.Series"
-        ):
+        elif type_util.is_type(obj, "pandas.core.series.Series"):
             import pandas as pd
+
+            h = hashlib.new("md5")
+            self.update(h, obj.size)
+            self.update(h, obj.dtype.name)
+
+            if len(obj) >= _PANDAS_ROWS_LARGE:
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+
+            try:
+                self.update(h, pd.util.hash_pandas_object(obj).values.tobytes())
+                return h.digest()
+            except TypeError:
+                # Use pickle if pandas cannot hash the object for example if
+                # it contains unhashable objects.
+                return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+
+        elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
+            import pandas as pd
+
+            h = hashlib.new("md5")
+            self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
-                return b"%s" % pd.util.hash_pandas_object(obj).sum()
+                column_hash_bytes = self.to_bytes(
+                    pd.util.hash_pandas_object(obj.dtypes)
+                )
+                self.update(h, column_hash_bytes)
+                values_hash_bytes = self.to_bytes(pd.util.hash_pandas_object(obj))
+                self.update(h, values_hash_bytes)
+                return h.digest()
             except TypeError:
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
@@ -419,6 +438,7 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "numpy.ndarray"):
             h = hashlib.new("md5")
             self.update(h, obj.shape)
+            self.update(h, str(obj.dtype))
 
             if obj.size >= _NP_SIZE_LARGE:
                 import numpy as np

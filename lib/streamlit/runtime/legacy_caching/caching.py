@@ -500,20 +500,20 @@ def cache(
     func : callable
         The function to cache. Streamlit hashes the function and dependent code.
 
-    persist : boolean
+    persist : bool
         Whether to persist the cache on disk.
 
-    allow_output_mutation : boolean
+    allow_output_mutation : bool
         Streamlit shows a warning when return values are mutated, as that
         can have unintended consequences. This is done by hashing the return value internally.
 
         If you know what you're doing and would like to override this warning, set this to True.
 
-    show_spinner : boolean
+    show_spinner : bool
         Enable the spinner. Default is True to show a spinner when there is
         a cache miss.
 
-    suppress_st_warning : boolean
+    suppress_st_warning : bool
         Suppress warnings about calling Streamlit commands from within
         the cached function.
 

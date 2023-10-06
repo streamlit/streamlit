@@ -12,12 +12,12 @@ protobuf==3.20
 pyarrow==6.0
 pydeck==0.8.0b4
 python-dateutil==2.7.3
-requests==2.18
+requests==2.27
 rich==10.14.0
 tenacity==8.1.0
 toml==0.10.1
 tornado==6.0.3
-typing-extensions==4.1.0
+typing-extensions==4.3.0
 tzlocal==1.1
 validators==0.2
 watchdog==2.1.5

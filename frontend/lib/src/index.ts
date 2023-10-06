@@ -33,7 +33,6 @@ export { FileUploadClient } from "./FileUploadClient"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { BlockNode, AppRoot, ElementNode } from "./AppNode"
 export { Quiver } from "./dataframes/Quiver"
-export { default as VegaLiteChartElement } from "./components/elements/VegaLiteChart"
 export type {
   DeployedAppMetadata,
   IGuestToHostMessage,

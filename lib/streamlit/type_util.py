@@ -760,12 +760,12 @@ def fix_arrow_incompatible_column_types(
     The fixed dataframe.
     """
     # Make a copy, but only initialize if necessary to preserve memory.
-    df_copy = None
+    df_copy: DataFrame | None = None
     for col in selected_columns or df.columns:
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
                 df_copy = df.copy()
-            df_copy[col] = df[col].astype(str)
+            df_copy[col] = df[col].astype("string")
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -780,7 +780,7 @@ def fix_arrow_incompatible_column_types(
     ):
         if df_copy is None:
             df_copy = df.copy()
-        df_copy.index = df.index.astype(str)
+        df_copy.index = df.index.astype("string")
     return df_copy if df_copy is not None else df
 
 
@@ -1027,6 +1027,7 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # The code below is copied from Altair, and slightly modified.
 # We copy this code here so we don't depend on private Altair functions.
 # Source: https://github.com/altair-viz/altair/blob/62ca5e37776f5cecb27e83c1fbd5d685a173095d/altair/utils/core.py#L193
+
 
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does
