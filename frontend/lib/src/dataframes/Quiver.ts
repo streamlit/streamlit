@@ -915,12 +915,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // E.g for 123450 with scale 3, we'll get "123" as the whole part.
     const wholePart = numString.slice(0, -scale) || "0"
     // Extract the fractional part and remove trailing zeros.
-    // If there is no fractional part, we'll use "0" instead
-    // (thought I think this is not possible).
     // E.g. for 123450 with scale 3, we'll get "45" as the fractional part.
-    const decimalPart = trimEnd(numString.slice(-scale), "0") || "0"
+    const decimalPart = trimEnd(numString.slice(-scale), "0") || ""
     // Combine the parts and add the sign.
-    return `${sign}${wholePart}.${decimalPart}`
+    return `${sign}${wholePart}` + (decimalPart ? `.${decimalPart}` : "")
   }
 
   private static formatPeriodType(
