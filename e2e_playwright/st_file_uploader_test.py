@@ -114,6 +114,9 @@ def test_uploads_and_deletes_single_file_only(
         files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
     )
 
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
     expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
     )
