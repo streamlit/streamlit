@@ -507,7 +507,7 @@ describe("Quiver", () => {
         const cell4 = q.getCell(2, 2)
         expect(
           Quiver.format(cell4.content, cell4.contentType, cell4.field)
-        ).toEqual("0.1")
+        ).toEqual("-0.1")
       })
 
       test("dictionary", () => {
