@@ -54,6 +54,9 @@ def test_file_uploader_error_message_disallowed_files(
         ]
     )
 
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
     expect(
         themed_app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
     ).to_have_text("application/json files are not allowed.", use_inner_text=True)
@@ -84,6 +87,8 @@ def test_uploads_and_deletes_single_file_only(
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
 
     expect(themed_app.locator(".uploadedFileName")).to_have_text(
         file_name1, use_inner_text=True
@@ -130,7 +135,9 @@ def test_uploads_and_deletes_single_file_only(
     ).to_have_text("True", use_inner_text=True)
 
     themed_app.get_by_test_id("stHeader").press("r")
+
     wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
 
     expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content2), use_inner_text=True
