@@ -280,6 +280,7 @@ export class App extends PureComponent<Props, State> {
       queryParams: "",
       deployedAppMetadata: {},
       libConfig: {},
+      appConfig: {},
     }
 
     this.connectionManager = null
