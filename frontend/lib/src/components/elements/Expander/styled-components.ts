@@ -76,7 +76,7 @@ export const StyledSummary = styled.summary(({ theme }) => ({
 }))
 
 export const StyledDetailsPanel = styled.div(({ theme }) => ({
-  paddingBottom: theme.spacing.md,
+  paddingBottom: theme.spacing.lg,
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
 }))
