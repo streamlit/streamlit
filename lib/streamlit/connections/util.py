@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# NOTE: We won't always be able to import from snowflake.connector.connection so need the
+# `type: ignore` comment below, but that comment will explode if `warn-unused-ignores` is
+# turned on when the package is available. Unfortunately, mypy doesn't provide a good
+# way to configure this at a per-line level :(
+# mypy: no-warn-unused-ignores
+
 
 import configparser
 import os
@@ -75,7 +81,7 @@ def load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 def running_in_sis() -> bool:
     """Return whether this app seems to be running in SiS."""
-    import snowflake.connector.connection
+    import snowflake.connector.connection  # type: ignore
 
     # snowflake.connector.connection.SnowflakeConnection does not exist inside a Stored
     # Proc or Streamlit. It is only part of the external package. So this returns true
