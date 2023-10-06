@@ -876,23 +876,41 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
   }
 
+  /**
+   * Formats a decimal value with a given scale to a string.
+   */
   private static formatDecimal(value: Uint32Array, scale: number): string {
     // This code is partly based on: https://github.com/apache/arrow/issues/35745
+
+    // Format Uint32Array to a numerical string and pad it with zeros
+    // So that it is exactly the length of the scale.
     let numString = util
       .bigNumToString(new util.BN(value))
       .padStart(scale, "0")
 
+    // ArrowJS 13 correctly adds a minus sign for negative numbers.
+    // but it doesn't handle th fractional part yet. So we can just return
+    // the value if scale === 0, but we need to do some additional processing
+    // for the fractional part if scale > 0.
+
     if (scale === 0) {
       return numString
     }
-    // Arrow JS does not handle the fractional part yet:
+
     let sign = ""
     if (numString.startsWith("-")) {
+      // Check if number is negative, and if so remember the sign and remove it.
       sign = "-"
       numString = numString.slice(1)
     }
+    // Extract the whole number part. If the number is < 1, it doesn't
+    // have a whole number part, so we'll use "0" instead.
     const wholePart = numString.slice(0, -scale) || "0"
+    // Extract the fractional part and remove trailing zeros.
+    // If there is no fractional part, we'll use "0" instead
+    // (thought I think this is not possible).
     const decimalPart = trimEnd(numString.slice(-scale), "0") || "0"
+    // Combine the parts and add the sign.
     return `${sign}${wholePart}.${decimalPart}`
   }
 
