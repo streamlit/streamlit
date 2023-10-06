@@ -98,7 +98,7 @@ class ArrowMixin:
             Whether to hide the index column(s). If None (default), the visibility of
             index columns is automatically determined based on the data.
 
-        column_order : iterable of str or None
+        column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If

@@ -181,7 +181,7 @@ def _parse_value(
 
     column_data_kind : ColumnDataKind
         The determined data kind of the column. The column data kind refers to the
-        shared data type of the values in the column (e.g. integer, float, string).
+        shared data type of the values in the column (e.g. int, float, str).
 
     Returns
     -------
@@ -615,7 +615,7 @@ class DataEditorMixin:
             Whether to hide the index column(s). If None (default), the visibility of
             index columns is automatically determined based on the data.
 
-        column_order : iterable of str or None
+        column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If
@@ -644,9 +644,9 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool or iterable of str
+        disabled : bool or Iterable of str
             Controls the editing of columns. If True, editing is disabled for all columns.
-            If an iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
+            If an Iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
             only the specified columns will be disabled for editing. If False (default),
             all columns that support editing are editable.
 
