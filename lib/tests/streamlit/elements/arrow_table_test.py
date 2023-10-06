@@ -19,20 +19,11 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+from pandas.io.formats.style_render import StylerRenderer as Styler
 
 import streamlit as st
-from streamlit.type_util import (
-    bytes_to_data_frame,
-    is_pandas_version_less_than,
-    pyarrow_table_to_bytes,
-)
+from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-
-# In Pandas 1.3.0, Styler functionality was moved under StylerRenderer.
-if is_pandas_version_less_than("1.3.0"):
-    from pandas.io.formats.style import Styler
-else:
-    from pandas.io.formats.style_render import StylerRenderer as Styler
 
 
 def mock_data_frame():
@@ -48,7 +39,7 @@ class ArrowTest(DeltaGeneratorTestCase):
 
     def test_dataframe_data(self):
         df = mock_data_frame()
-        st._arrow_table(df)
+        st.table(df)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), df)
@@ -56,7 +47,7 @@ class ArrowTest(DeltaGeneratorTestCase):
     def test_pyarrow_table_data(self):
         df = mock_data_frame()
         table = pa.Table.from_pandas(df)
-        st._arrow_table(table)
+        st.table(table)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.data, pyarrow_table_to_bytes(table))
@@ -65,7 +56,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style
         styler.set_uuid("FAKE_UUID")
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.styler.uuid, "FAKE_UUID")
@@ -74,7 +65,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style
         styler.set_caption("FAKE_CAPTION")
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(proto.styler.caption, "FAKE_CAPTION")
@@ -87,7 +78,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         styler.set_table_styles(
             [{"selector": ".blank", "props": [("background-color", "red")]}]
         )
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(
@@ -100,7 +91,7 @@ class ArrowTest(DeltaGeneratorTestCase):
         # NOTE: If UUID is not set - a random UUID will be generated.
         styler.set_uuid("FAKE_UUID")
         styler.highlight_max(axis=None)
-        st._arrow_table(styler)
+        st.table(styler)
 
         proto = self.get_delta_from_queue().new_element.arrow_table
         self.assertEqual(
@@ -112,7 +103,7 @@ class ArrowTest(DeltaGeneratorTestCase):
             [[1, 2, 3], [4, 5, 6]],
         )
         styler = df.style.format("{:.2%}")
-        st._arrow_table(styler)
+        st.table(styler)
 
         expected = pd.DataFrame(
             [["100.00%", "200.00%", "300.00%"], ["400.00%", "500.00%", "600.00%"]],
@@ -125,19 +116,6 @@ class ArrowTest(DeltaGeneratorTestCase):
 
     @patch(
         "streamlit.type_util.is_pandas_version_less_than",
-        MagicMock(return_value=True),
-    )
-    @patch.object(Styler, "_translate")
-    def test_pandas_version_below_1_3_0(self, mock_styler_translate):
-        """Tests that `styler._translate` is called without arguments in Pandas < 1.3.0"""
-        df = mock_data_frame()
-        styler = df.style.set_uuid("FAKE_UUID")
-
-        st._arrow_table(styler)
-        mock_styler_translate.assert_called_once_with()
-
-    @patch(
-        "streamlit.type_util.is_pandas_version_less_than",
         MagicMock(return_value=False),
     )
     @patch.object(Styler, "_translate")
@@ -146,5 +124,5 @@ class ArrowTest(DeltaGeneratorTestCase):
         df = mock_data_frame()
         styler = df.style.set_uuid("FAKE_UUID")
 
-        st._arrow_table(styler)
+        st.table(styler)
         mock_styler_translate.assert_called_once_with(False, False)

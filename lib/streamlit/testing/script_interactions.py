@@ -21,7 +21,7 @@ import textwrap
 import unittest
 from unittest.mock import MagicMock
 
-from streamlit import config, source_util
+from streamlit import config, logger, source_util
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -30,12 +30,18 @@ from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.testing.local_script_runner import LocalScriptRunner
 
+_LOGGER = logger.get_logger(__name__)
+
 
 class InteractiveScriptTests(unittest.TestCase):
     tmp_script_dir: tempfile.TemporaryDirectory[str]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        _LOGGER.warning(
+            "`InteractiveScriptTests` is deprecated, please convert your tests to use the new `AppTest` API. "
+        )
 
         # To allow loading scripts to be relative to the test class's directory,
         # we do this in the init so it will run in the subclass's module.
