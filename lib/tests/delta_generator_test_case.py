@@ -51,7 +51,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             session_id="test session id",
             _enqueue=self.forward_msg_queue.enqueue,
             query_string="",
-            session_state=SafeSessionState(SessionState()),
+            session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
             page_script_hash="",
             user_info={"email": "test@test.com"},

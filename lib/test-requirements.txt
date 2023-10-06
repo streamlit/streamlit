@@ -29,6 +29,8 @@ testfixtures
 pytest-playwright>=0.1.2
 pixelmatch>=0.3.0
 pytest-xdist
+pytest-rerunfailures
+pytest-github-actions-annotate-failures
 
 mypy-protobuf>=3.2, <3.4
 

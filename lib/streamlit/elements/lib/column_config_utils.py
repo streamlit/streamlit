@@ -71,6 +71,7 @@ _EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = 
     "number": [
         ColumnDataKind.INTEGER,
         ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
         ColumnDataKind.STRING,
         ColumnDataKind.EMPTY,
     ],
@@ -130,7 +131,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     """Determine the data kind via the arrow type information.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -196,7 +197,7 @@ def _determine_data_kind_via_pandas_dtype(
     """Determine the data kind by using the pandas dtype.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -248,7 +249,7 @@ def _determine_data_kind_via_inferred_type(
     """Determine the data kind by inferring it from the underlying data.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -315,7 +316,7 @@ def _determine_data_kind(
     """Determine the data kind of a column.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
