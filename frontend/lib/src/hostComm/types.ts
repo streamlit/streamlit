@@ -156,6 +156,10 @@ export type IGuestToHostMessage =
       type: "SCRIPT_RUN_STATE_CHANGED"
       scriptRunState: ScriptRunState
     }
+  | {
+      type: "CUSTOM_PARENT_MESSAGE"
+      message: string
+    }
 
 export type VersionedMessage<Message> = {
   stCommVersion: number
@@ -172,6 +176,19 @@ export type VersionedMessage<Message> = {
  */
 export type AppConfig = {
   /**
+   * Enables custom string messages to be sent to the host
+   */
+  enableCustomParentMessages?: boolean
+}
+
+/**
+ * The response structure of the `_stcore/host-config` endpoint.
+ * This combines streamlit-lib specific configuration options,
+ * streamlit-app specific options, and host commmunication options
+ * (e.g. allowed message origins).
+ */
+export type IHostConfigResponse = {
+  /**
    * A list of origins that we're allowed to receive cross-iframe messages
    * from via the browser's window.postMessage API.
    */
@@ -183,11 +200,9 @@ export type AppConfig = {
    * with the Streamlit server.
    */
   useExternalAuthToken?: boolean
-}
 
-/**
- * The response structure of the `_stcore/host-config` endpoint.
- * This combines streamlit-lib specific configuration options with
- * streamlit-app specific options (e.g. allowed message origins).
- */
-export type IHostConfigResponse = LibConfig & AppConfig
+  /**
+   * Host Platform configuration options for both streamlit-lib and streamlit-app.
+   */
+  hostConfig?: AppConfig & LibConfig
+}

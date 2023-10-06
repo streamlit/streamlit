@@ -184,6 +184,11 @@ _DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
     "https://*.streamlit.app",
 ]
 
+_DEFAULT_HOST_CONFIG = {
+    # Default host configuration settings.
+    "enableCustomParentMessages": False,
+}
+
 
 class HostConfigHandler(_SpecialRequestHandler):
     def initialize(self):
@@ -202,6 +207,7 @@ class HostConfigHandler(_SpecialRequestHandler):
             {
                 "allowedOrigins": self._allowed_origins,
                 "useExternalAuthToken": False,
+                "hostConfig": _DEFAULT_HOST_CONFIG,
             }
         )
         self.set_status(200)
