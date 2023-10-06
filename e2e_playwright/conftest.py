@@ -419,4 +419,4 @@ def assert_snapshot(
     yield compare
 
     if test_failure_messages:
-        pytest.fail("Snapshot test failed \n" + "\n".join(test_failure_messages))
+        pytest.fail("Missing snapshots: \n" + "\n".join(test_failure_messages))
