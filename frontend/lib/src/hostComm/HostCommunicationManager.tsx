@@ -110,7 +110,6 @@ export default class HostCommunicationManager {
 
   /**
    * Sets the allowed origins configuration.
-   * See the AllowedMessageOriginsConfig type for more information.
    */
   public setAllowedOrigins = ({
     allowedOrigins,
