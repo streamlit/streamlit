@@ -46,7 +46,7 @@ jobs:
         run: make develop
       - name: Run make protobuf
         run: make protobuf
-      - name: Run make frontend
+      - name: Run make frontend-fast
         run: make frontend-fast
       - name: Run make playwright
         run: make playwright
