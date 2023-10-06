@@ -17,7 +17,7 @@
 import { ICustomThemeConfig, IAppPage } from "@streamlit/lib/src/proto"
 import { ExportedTheme } from "@streamlit/lib/src/theme"
 import { ScriptRunState } from "@streamlit/lib/src/ScriptRunState"
-import { HostConfig } from "@streamlit/lib/src/components/core/LibContext"
+import { LibConfig } from "@streamlit/lib/src/components/core/LibContext"
 
 export type DeployedAppMetadata = {
   hostedAt?: string
@@ -176,4 +176,4 @@ export type AllowedMessageOriginsConfig = {
   useExternalAuthToken?: boolean
 }
 
-export type IHostConfigResponse = HostConfig & AllowedMessageOriginsConfig
+export type IHostConfigResponse = LibConfig & AllowedMessageOriginsConfig

@@ -105,7 +105,7 @@ import {
   FormsData,
   WidgetStateManager,
   IHostConfigResponse,
-  HostConfig,
+  LibConfig,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -167,7 +167,7 @@ interface State {
   pageLinkBaseUrl: string
   queryParams: string
   deployedAppMetadata: DeployedAppMetadata
-  hostConfig: HostConfig
+  libConfig: LibConfig
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -277,7 +277,7 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrl: "",
       queryParams: "",
       deployedAppMetadata: {},
-      hostConfig: {},
+      libConfig: {},
     }
 
     this.connectionManager = null
@@ -384,9 +384,15 @@ export class App extends PureComponent<Props, State> {
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       onHostConfigResp: (response: IHostConfigResponse) => {
         // Set the allowed origins configuration for the host communication:
-        this.hostCommunicationMgr.setAllowedOrigins(response)
+        this.hostCommunicationMgr.setAllowedOrigins({
+          allowedOrigins: response.allowedOrigins,
+          useExternalAuthToken: response.useExternalAuthToken,
+        })
+
         // Set the host config settings in LibContext:
-        this.setHostConfig(response)
+        // TODO: Potentially deconstruct the response object here
+        // so that only the relevant fields are passed to LibContext.
+        this.setLibConfig(response)
       },
     })
 
@@ -1476,8 +1482,11 @@ export class App extends PureComponent<Props, State> {
     this.setState({ isFullScreen })
   }
 
-  setHostConfig = (hostConfig: HostConfig): void => {
-    this.setState({ hostConfig })
+  /**
+   * Set streamlit-lib specific configurations.
+   */
+  setLibConfig = (libConfig: LibConfig): void => {
+    this.setState({ libConfig })
   }
 
   addScriptFinishedHandler = (func: () => void): void => {
@@ -1571,7 +1580,7 @@ export class App extends PureComponent<Props, State> {
       sidebarChevronDownshift,
       hostMenuItems,
       hostToolbarItems,
-      hostConfig,
+      libConfig,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1627,7 +1636,7 @@ export class App extends PureComponent<Props, State> {
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
             hideFullScreenButtons: false,
-            hostConfig,
+            libConfig,
           }}
         >
           <HotKeys
