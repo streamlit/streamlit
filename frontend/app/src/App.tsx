@@ -385,19 +385,16 @@ export class App extends PureComponent<Props, State> {
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       onHostConfigResp: (response: IHostConfigResponse) => {
+        const { allowedOrigins, useExternalAuthToken } = response
+        const appConfig: AppConfig = { allowedOrigins, useExternalAuthToken }
+        const libConfig: LibConfig = {} // TODO(lukasmasuch): We don't have any libConfig yet:
+
         // Set the allowed origins configuration for the host communication:
-        this.hostCommunicationMgr.setAllowedOrigins({
-          allowedOrigins: response.allowedOrigins,
-          useExternalAuthToken: response.useExternalAuthToken,
-        })
-
-        // TODO: Potentially deconstruct the response object for app/lib context
-        // so that only the relevant fields are passed to context.
-
+        this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
-        this.setAppConfig(response)
+        this.setAppConfig(appConfig)
         // Set the streamlit-lib specific config settings in LibContext:
-        this.setLibConfig(response)
+        this.setLibConfig(libConfig)
       },
     })
 
@@ -1593,6 +1590,7 @@ export class App extends PureComponent<Props, State> {
       hostMenuItems,
       hostToolbarItems,
       libConfig,
+      appConfig,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1635,7 +1633,7 @@ export class App extends PureComponent<Props, State> {
           sidebarChevronDownshift,
           toastAdjustment: hostToolbarItems.length > 0,
           gitInfo: this.state.gitInfo,
-          appConfig: this.state.appConfig,
+          appConfig,
         }}
       >
         <LibContext.Provider
