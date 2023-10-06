@@ -116,6 +116,7 @@ const Expander: React.FC<ExpanderProps> = ({
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const summaryRef = useRef<HTMLElement>(null)
   const animationRef = useRef<Animation | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -159,6 +160,11 @@ const Expander: React.FC<ExpanderProps> = ({
 
     if (animationRef.current) {
       animationRef.current.cancel()
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     }
 
     const animation = detailsEl.animate(
@@ -180,7 +186,7 @@ const Expander: React.FC<ExpanderProps> = ({
 
     setExpanded(!expanded)
     const detailsEl = detailsRef.current
-    if (!detailsEl || !summaryRef.current || !contentRef.current) {
+    if (!detailsEl || !summaryRef.current) {
       return
     }
 
@@ -191,14 +197,34 @@ const Expander: React.FC<ExpanderProps> = ({
     if (!expanded) {
       detailsEl.style.height = `${detailsHeight}px`
       detailsEl.open = true
-      const contentHeight = contentRef.current.getBoundingClientRect().height
 
       window.requestAnimationFrame(() => {
+        // For expansion animations, we rely on the rendered width and height
+        // of the children content. However, in Safari, the children are not
+        // rendered because Safari doesn't paint elements that are not visible
+        // (in this case, the details element is not visible because it's
+        // not open). This operation produces inconsistent heights to animate.
+        // To work around this, we force a repaint by animating a tiny bit
+        // and animate the rest of it later.
         toggleAnimation(
           detailsEl,
           detailsHeight,
-          summaryHeight + contentHeight + 2 * BORDER_SIZE
+          summaryHeight + 2 * BORDER_SIZE + 5 // Arbitrary size of 5px
         )
+
+        timeoutRef.current = setTimeout(() => {
+          if (!contentRef.current) {
+            return
+          }
+
+          const contentHeight =
+            contentRef.current.getBoundingClientRect().height
+          toggleAnimation(
+            detailsEl,
+            detailsHeight,
+            summaryHeight + contentHeight + 2 * BORDER_SIZE
+          )
+        }, 100)
       })
     } else {
       toggleAnimation(

@@ -67,6 +67,9 @@ export const StyledSummary = styled.summary(({ theme }) => ({
   paddingTop: theme.spacing.md,
   paddingBottom: theme.spacing.md,
   listStyleType: "none",
+  "&::-webkit-details-marker": {
+    display: "none",
+  },
   "&:hover": {
     color: theme.colors.primary,
   },
