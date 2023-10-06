@@ -900,15 +900,18 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     let sign = ""
     if (numString.startsWith("-")) {
       // Check if number is negative, and if so remember the sign and remove it.
+      // We will add it back later.
       sign = "-"
       numString = numString.slice(1)
     }
     // Extract the whole number part. If the number is < 1, it doesn't
     // have a whole number part, so we'll use "0" instead.
+    // E.g for 123450 with scale 3, we'll get "123" as the whole part.
     const wholePart = numString.slice(0, -scale) || "0"
     // Extract the fractional part and remove trailing zeros.
     // If there is no fractional part, we'll use "0" instead
     // (thought I think this is not possible).
+    // E.g. for 123450 with scale 3, we'll get "45" as the fractional part.
     const decimalPart = trimEnd(numString.slice(-scale), "0") || "0"
     // Combine the parts and add the sign.
     return `${sign}${wholePart}.${decimalPart}`
