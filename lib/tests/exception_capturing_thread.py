@@ -62,7 +62,7 @@ def call_on_threads(
                 session_id=f"Thread{ii}_Session",
                 _enqueue=ForwardMsgQueue().enqueue,
                 query_string="",
-                session_state=SafeSessionState(SessionState()),
+                session_state=SafeSessionState(SessionState(), lambda: None),
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 page_script_hash="",
                 user_info={"email": "test@test.com"},

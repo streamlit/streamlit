@@ -51,7 +51,7 @@ def get_session_state() -> SafeSessionState:
                 LOGGER.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )
-        return SafeSessionState(SessionState())
+        return SafeSessionState(SessionState(), lambda: None)
     return ctx.session_state
 
 
