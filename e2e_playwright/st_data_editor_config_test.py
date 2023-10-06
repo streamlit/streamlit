@@ -27,7 +27,7 @@ def test_data_editor_supports_various_configurations(
     expect(elements).to_have_count(22)
 
     # The dataframe component might require a bit more time for rendering the canvas
-    app.wait_for_timeout(250)
+    app.wait_for_timeout(500)
 
     assert_snapshot(elements.nth(0), name="st_data_editor-disabled_all_columns")
     assert_snapshot(elements.nth(1), name="st_data_editor-disabled_two_columns")
