@@ -1394,7 +1394,7 @@ describe("handles HostCommunication messaging", () => {
     instance = wrapper.instance() as App
 
     // @ts-expect-error - hostCommunicationMgr is private
-    instance.hostCommunicationMgr.setAllowedOriginsResp({
+    instance.hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })

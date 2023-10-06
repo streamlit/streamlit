@@ -104,6 +104,9 @@ import {
   createFormsData,
   FormsData,
   WidgetStateManager,
+  IHostConfigResponse,
+  LibConfig,
+  AppConfig,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -165,6 +168,8 @@ interface State {
   pageLinkBaseUrl: string
   queryParams: string
   deployedAppMetadata: DeployedAppMetadata
+  libConfig: LibConfig
+  appConfig: AppConfig
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -274,6 +279,8 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrl: "",
       queryParams: "",
       deployedAppMetadata: {},
+      libConfig: {},
+      appConfig: {},
     }
 
     this.connectionManager = null
@@ -378,7 +385,18 @@ export class App extends PureComponent<Props, State> {
       connectionStateChanged: this.handleConnectionStateChanged,
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
-      setAllowedOriginsResp: this.hostCommunicationMgr.setAllowedOriginsResp,
+      onHostConfigResp: (response: IHostConfigResponse) => {
+        const { allowedOrigins, useExternalAuthToken } = response
+        const appConfig: AppConfig = { allowedOrigins, useExternalAuthToken }
+        const libConfig: LibConfig = {} // TODO(lukasmasuch): We don't have any libConfig yet:
+
+        // Set the allowed origins configuration for the host communication:
+        this.hostCommunicationMgr.setAllowedOrigins(appConfig)
+        // Set the streamlit-app specific config settings in AppContext:
+        this.setAppConfig(appConfig)
+        // Set the streamlit-lib specific config settings in LibContext:
+        this.setLibConfig(libConfig)
+      },
     })
 
     if (isScrollingHidden()) {
@@ -1467,6 +1485,20 @@ export class App extends PureComponent<Props, State> {
     this.setState({ isFullScreen })
   }
 
+  /**
+   * Set streamlit-lib specific configurations.
+   */
+  setLibConfig = (libConfig: LibConfig): void => {
+    this.setState({ libConfig })
+  }
+
+  /**
+   * Set streamlit-app specific configurations.
+   */
+  setAppConfig = (appConfig: AppConfig): void => {
+    this.setState({ appConfig })
+  }
+
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
@@ -1558,6 +1590,8 @@ export class App extends PureComponent<Props, State> {
       sidebarChevronDownshift,
       hostMenuItems,
       hostToolbarItems,
+      libConfig,
+      appConfig,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1600,6 +1634,7 @@ export class App extends PureComponent<Props, State> {
           sidebarChevronDownshift,
           toastAdjustment: hostToolbarItems.length > 0,
           gitInfo: this.state.gitInfo,
+          appConfig,
         }}
       >
         <LibContext.Provider
@@ -1613,6 +1648,7 @@ export class App extends PureComponent<Props, State> {
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
             hideFullScreenButtons: false,
+            libConfig,
           }}
         >
           <HotKeys

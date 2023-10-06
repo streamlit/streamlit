@@ -162,13 +162,10 @@ class HealthHandler(_SpecialRequestHandler):
             self.write(msg)
 
 
-# NOTE: We eventually want to get rid of this hard-coded list entirely as we don't want
-# to have links to Community Cloud live in the open source library in a way that affects
-# functionality (links advertising Community Cloud are probably okay 🙂). In the long
-# run, this list will most likely be replaced by a config option allowing us to more
-# granularly control what domains a Streamlit app should accept cross-origin iframe
-# messages from.
-ALLOWED_MESSAGE_ORIGINS = [
+_DEFAULT_ALLOWED_MESSAGE_ORIGINS = [
+    # Community-cloud related domains.
+    # We can remove these in the future if community cloud
+    # provides those domains via the host-config endpoint.
     "https://devel.streamlit.test",
     "https://*.streamlit.apptest",
     "https://*.streamlitapp.test",
@@ -188,21 +185,22 @@ ALLOWED_MESSAGE_ORIGINS = [
 ]
 
 
-class AllowedMessageOriginsHandler(_SpecialRequestHandler):
+class HostConfigHandler(_SpecialRequestHandler):
     def initialize(self):
-        self.allowed_message_origins = [*ALLOWED_MESSAGE_ORIGINS]
-        if config.get_option("global.developmentMode"):
+        # Make a copy of the allowedOrigins list, since we might modify it later:
+        self._allowed_origins = _DEFAULT_ALLOWED_MESSAGE_ORIGINS.copy()
+
+        if (
+            config.get_option("global.developmentMode")
+            and "http://localhost" not in self._allowed_origins
+        ):
             # Allow messages from localhost in dev mode for testing of host <-> guest communication
-            self.allowed_message_origins.append("http://localhost")
+            self._allowed_origins.append("http://localhost")
 
     async def get(self) -> None:
-        # ALLOWED_MESSAGE_ORIGINS must be wrapped in a dictionary because Tornado
-        # disallows writing lists directly into responses due to potential XSS
-        # vulnerabilities.
-        # See https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.write
         self.write(
             {
-                "allowedOrigins": self.allowed_message_origins,
+                "allowedOrigins": self._allowed_origins,
                 "useExternalAuthToken": False,
             }
         )

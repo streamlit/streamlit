@@ -16,7 +16,7 @@
 import { ReactNode } from "react"
 
 import {
-  IAllowedMessageOriginsResponse,
+  IHostConfigResponse,
   BaseUriParts,
   getPossibleBaseUris,
   logError,
@@ -75,10 +75,10 @@ interface Props {
   resetHostAuthToken: () => void
 
   /**
-   * Function to set the list of origins that this app should accept
-   * cross-origin messages from (if in a relevant deployment scenario).
+   * Function to set the host config for this app (if in a relevant deployment
+   * scenario).
    */
-  setAllowedOriginsResp: (resp: IAllowedMessageOriginsResponse) => void
+  onHostConfigResp: (resp: IHostConfigResponse) => void
 }
 
 /**
@@ -192,7 +192,7 @@ export class ConnectionManager {
       onRetry: this.showRetryError,
       claimHostAuthToken: this.props.claimHostAuthToken,
       resetHostAuthToken: this.props.resetHostAuthToken,
-      setAllowedOriginsResp: this.props.setAllowedOriginsResp,
+      onHostConfigResp: this.props.onHostConfigResp,
     })
   }
 }

@@ -18,6 +18,16 @@ import React from "react"
 
 import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
 
+/**
+ * The lib config contains various configurations that the host platform can
+ * use to configure streamlit-lib frontend behavior. This should to be treated as part of the public
+ * API, and changes need to be backwards-compatible meaning that an old host configuration
+ * should still work with a new frontend versions.
+ */
+export type LibConfig = {
+  // TODO(lukasmasuch): Add lib config options in subsequent PRs.
+}
+
 export interface LibContextProps {
   /** True if the app is in full-screen mode. */
   isFullScreen: boolean
@@ -58,6 +68,11 @@ export interface LibContextProps {
    * will default to false for regular streamlit
    */
   hideFullScreenButtons: boolean
+
+  /** The lib-specific configuration from the apps host which is requested via the
+   * _stcore/host-config endpoint.
+   */
+  libConfig: LibConfig
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -70,4 +85,5 @@ export const LibContext = React.createContext<LibContextProps>({
   availableThemes: [],
   addThemes: () => {},
   hideFullScreenButtons: false,
+  libConfig: {},
 })
