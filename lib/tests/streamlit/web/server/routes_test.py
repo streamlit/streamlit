@@ -24,7 +24,10 @@ import tornado.websocket
 
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.routes import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
+from streamlit.web.server.routes import (
+    _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+    _DEFAULT_HOST_CONFIG,
+)
 from streamlit.web.server.server import (
     HEALTH_ENDPOINT,
     HOST_CONFIG_ENDPOINT,
@@ -191,6 +194,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
             {
                 "allowedOrigins": _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
                 "useExternalAuthToken": False,
+                "hostConfig": _DEFAULT_HOST_CONFIG,
             },
             response_body,
         )
