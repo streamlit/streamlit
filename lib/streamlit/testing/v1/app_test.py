@@ -39,6 +39,7 @@ from streamlit.testing.v1.element_tree import (
     Checkbox,
     Code,
     ColorPicker,
+    Dataframe,
     DateInput,
     Divider,
     ElementList,
@@ -239,6 +240,10 @@ class AppTest:
     @property
     def color_picker(self) -> WidgetList[ColorPicker]:
         return self._tree.color_picker
+
+    @property
+    def dataframe(self) -> ElementList[Dataframe]:
+        return self._tree.dataframe
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
