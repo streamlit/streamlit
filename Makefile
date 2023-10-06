@@ -340,7 +340,6 @@ e2etest:
 .PHONY: playwright
 # Run playwright E2E tests.
 playwright:
-	python -m playwright install --with-deps; \
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
 	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" -r aR -v
