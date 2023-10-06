@@ -986,9 +986,8 @@ class Block:
 
     def __init__(
         self,
+        proto: BlockProto | None,
         root: ElementTree,
-        proto: BlockProto | None = None,
-        type: str | None = None,
     ):
         self.children = {}
         self.proto = proto
@@ -997,8 +996,6 @@ class Block:
             # TODO does not work for `st.container` which has no block proto
             assert ty is not None
             self.type = ty
-        elif type is not None:
-            self.type = type
         else:
             self.type = "unknown"
         self.root = root
@@ -1140,6 +1137,27 @@ class Block:
 
 
 @dataclass(repr=False)
+class SpecialBlock(Block):
+    def __init__(
+        self,
+        proto: BlockProto | None,
+        root: ElementTree,
+        type: str | None = None,
+    ):
+        self.children = {}
+        self.proto = proto
+        if type:
+            self.type = type
+        elif proto and proto.WhichOneof("type"):
+            ty = proto.WhichOneof("type")
+            assert ty is not None
+            self.type = ty
+        else:
+            self.type = "unknown"
+        self.root = root
+
+
+@dataclass(repr=False)
 class Column(Block):
     proto: BlockProto.Column = field(repr=False)
     weight: float
@@ -1147,9 +1165,8 @@ class Column(Block):
 
     def __init__(
         self,
-        root: ElementTree,
         proto: BlockProto.Column,
-        type: str | None = None,
+        root: ElementTree,
     ):
         self.children = {}
         self.proto = proto
@@ -1166,9 +1183,8 @@ class Tab(Block):
 
     def __init__(
         self,
-        root: ElementTree,
         proto: BlockProto.Tab,
-        type: str | None = None,
+        root: ElementTree,
     ):
         self.children = {}
         self.proto = proto
@@ -1215,7 +1231,6 @@ class ElementTree(Block):
     _runner: AppTest | None = field(repr=False, default=None)
 
     def __init__(self):
-        # Expect script_path and session_state to be filled in afterwards
         self.children = {}
         self.root = self
         self.type = "root"
@@ -1270,8 +1285,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
     """
     root = ElementTree()
     root.children = {
-        0: Block(type="main", root=root),
-        1: Block(type="sidebar", root=root),
+        0: SpecialBlock(type="main", root=root, proto=None),
+        1: SpecialBlock(type="sidebar", root=root, proto=None),
     }
 
     for msg in messages:
@@ -1346,9 +1361,9 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             block = delta.add_block
             bty = block.WhichOneof("type")
             if bty == "column":
-                new_node = Column(proto=block.column, root=root)
+                new_node = Column(block.column, root=root)
             elif bty == "tab":
-                new_node = Tab(proto=block.tab, root=root)
+                new_node = Tab(block.tab, root=root)
             else:
                 new_node = Block(proto=block, root=root)
         else:
@@ -1361,7 +1376,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             children = current_node.children
             child = children.get(idx)
             if child is None:
-                child = Block(root=root)
+                child = Block(proto=None, root=root)
                 children[idx] = child
             assert isinstance(child, Block)
             current_node = child
