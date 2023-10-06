@@ -79,7 +79,7 @@ def test_color_picker():
     assert at.color_picker[0].value == "#123456"
 
 
-def test_value():
+def test_date_input():
     at = AppTest.from_string(
         """
         import streamlit as st
