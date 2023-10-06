@@ -15,6 +15,8 @@
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
+
 from streamlit.connections.util import (
     extract_from_dict,
     load_from_snowsql_config_file,
@@ -34,10 +36,12 @@ class ConnectionUtilTest(unittest.TestCase):
         assert extracted == {"k1": "v1", "k2": "v2"}
         assert d == {"k3": "v3", "k4": "v4"}
 
+    @pytest.mark.require_snowflake
     @patch("snowflake.connector.connection", MagicMock())
     def test_not_running_in_sis(self):
         assert not running_in_sis()
 
+    @pytest.mark.require_snowflake
     @patch(
         "snowflake.connector.connection",
     )
