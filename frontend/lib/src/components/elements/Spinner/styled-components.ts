@@ -42,6 +42,23 @@ export const ThemedStyledSpinner = styled(Spinner, {
   }
 })
 
+interface StyledSpinnerProps {
+  width: number
+  cache: boolean
+}
+
+export const StyledSpinner = styled.div<StyledSpinnerProps>(
+  ({ theme, width, cache }) => ({
+    width: width,
+    ...(cache
+      ? {
+          paddingBottom: "1rem",
+          background: `linear-gradient(to bottom, ${theme.colors.bgColor} 0%, ${theme.colors.bgColor} 80%, transparent 100%)`,
+        }
+      : null),
+  })
+)
+
 export const StyledSpinnerContainer = styled.div(({ theme }) => ({
   display: "flex",
   gap: theme.spacing.sm,

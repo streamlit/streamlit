@@ -15,12 +15,14 @@
  */
 
 import React, { ReactElement } from "react"
+import classNames from "classnames"
 import { isPresetTheme } from "@streamlit/lib/src/theme"
 import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 import {
+  StyledSpinner,
   StyledSpinnerContainer,
   ThemedStyledSpinner,
 } from "./styled-components"
@@ -34,26 +36,19 @@ function Spinner({ width, element }: SpinnerProps): ReactElement {
   const { activeTheme } = React.useContext(LibContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
   const { cache } = element
-  const styleProp = cache
-    ? {
-        width,
-        background:
-          "linear-gradient(to bottom, #FFFFFF 0%, #FFFFFF 80%, transparent 100%)",
-        padding: "0px 0px 16px 0px",
-      }
-    : { width }
 
   return (
-    <div
-      className={`stSpinner ${cache ? "cacheSpinner" : ""}`}
+    <StyledSpinner
+      className={classNames({ stSpinner: true, cacheSpinner: cache })}
       data-testid="stSpinner"
-      style={styleProp}
+      width={width}
+      cache={cache}
     >
       <StyledSpinnerContainer>
         <ThemedStyledSpinner usingCustomTheme={usingCustomTheme} />
         <StreamlitMarkdown source={element.text} allowHTML={false} />
       </StyledSpinnerContainer>
-    </div>
+    </StyledSpinner>
   )
 }
 
