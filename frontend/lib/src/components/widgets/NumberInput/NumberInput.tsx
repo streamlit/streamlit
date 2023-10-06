@@ -468,7 +468,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
           />
 
           {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-          {width > breakpoints.hideWidgetDetails && (
+          {width > breakpoints.hideNumberInputControls && (
             <StyledInputControls>
               <StyledInputControl
                 className="step-down"

@@ -130,7 +130,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     """Determine the data kind via the arrow type information.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -196,7 +196,7 @@ def _determine_data_kind_via_pandas_dtype(
     """Determine the data kind by using the pandas dtype.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -224,10 +224,10 @@ def _determine_data_kind_via_pandas_dtype(
     if pd.api.types.is_timedelta64_dtype(column_dtype):
         return ColumnDataKind.TIMEDELTA
 
-    if pd.api.types.is_period_dtype(column_dtype):
+    if isinstance(column_dtype, pd.PeriodDtype):
         return ColumnDataKind.PERIOD
 
-    if pd.api.types.is_interval_dtype(column_dtype):
+    if isinstance(column_dtype, pd.IntervalDtype):
         return ColumnDataKind.INTERVAL
 
     if pd.api.types.is_complex_dtype(column_dtype):
@@ -248,7 +248,7 @@ def _determine_data_kind_via_inferred_type(
     """Determine the data kind by inferring it from the underlying data.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -315,7 +315,7 @@ def _determine_data_kind(
     """Determine the data kind of a column.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -479,7 +479,7 @@ def apply_data_specific_configs(
             if is_colum_type_arrow_incompatible(column_data):
                 update_column_config(columns_config, column_name, {"disabled": True})
                 # Convert incompatible type to string
-                data_df[column_name] = column_data.astype(str)
+                data_df[column_name] = column_data.astype("string")
 
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary

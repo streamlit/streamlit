@@ -181,7 +181,7 @@ def _parse_value(
 
     column_data_kind : ColumnDataKind
         The determined data kind of the column. The column data kind refers to the
-        shared data type of the values in the column (e.g. integer, float, string).
+        shared data type of the values in the column (e.g. int, float, str).
 
     Returns
     -------
@@ -388,6 +388,14 @@ def _is_supported_index(df_index: pd.Index) -> bool:
         in [
             pd.RangeIndex,
             pd.Index,
+            pd.DatetimeIndex,
+            # Categorical index doesn't work since arrow
+            # does serialize the options:
+            # pd.CategoricalIndex,
+            # Interval type isn't editable currently:
+            # pd.IntervalIndex,
+            # Period type isn't editable currently:
+            # pd.PeriodIndex,
         ]
         # We need to check these index types without importing, since they are deprecated
         # and planned to be removed soon.
@@ -397,6 +405,24 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     )
 
 
+def _fix_column_headers(data_df: pd.DataFrame) -> None:
+    """Fix the column headers of the provided dataframe inplace to work
+    correctly for data editing."""
+
+    if isinstance(data_df.columns, pd.MultiIndex):
+        # Flatten hierarchical column headers to a single level:
+        data_df.columns = [
+            "_".join(map(str, header)) for header in data_df.columns.to_flat_index()
+        ]
+    elif pd.api.types.infer_dtype(data_df.columns) != "string":
+        # If the column names are not all strings, we need to convert them to strings
+        # to avoid issues with editing:
+        data_df.rename(
+            columns={column: str(column) for column in data_df.columns},
+            inplace=True,
+        )
+
+
 def _check_column_names(data_df: pd.DataFrame):
     """Check if the column names in the provided dataframe are valid.
 
@@ -404,6 +430,10 @@ def _check_column_names(data_df: pd.DataFrame):
     named ``_index``. If the column names are not valid, a ``StreamlitAPIException``
     is raised.
     """
+
+    if data_df.columns.empty:
+        return
+
     # Check if the column names are unique and raise an exception if not.
     # Add the names of the duplicated columns to the exception message.
     duplicated_columns = data_df.columns[data_df.columns.duplicated()]
@@ -585,7 +615,7 @@ class DataEditorMixin:
             Whether to hide the index column(s). If None (default), the visibility of
             index columns is automatically determined based on the data.
 
-        column_order : iterable of str or None
+        column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If
@@ -614,9 +644,9 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool or iterable of str
+        disabled : bool or Iterable of str
             Controls the editing of columns. If True, editing is disabled for all columns.
-            If an iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
+            If an Iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
             only the specified columns will be disabled for editing. If False (default),
             all columns that support editing are editable.
 
@@ -760,6 +790,8 @@ class DataEditorMixin:
             column_config_mapping, data_df, data_format, check_arrow_compatibility=True
         )
 
+        # Fix the column headers to work correctly for data editing:
+        _fix_column_headers(data_df)
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
