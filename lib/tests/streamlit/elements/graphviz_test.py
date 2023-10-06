@@ -58,3 +58,18 @@ class GraphvizTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.graphviz_chart
         self.assertEqual(c.use_container_width, True)
+
+    def test_engines(self):
+        """Test that it can be called with engines."""
+        engines = ["dot", "neato", "twopi", "circo", "fdp", "osage", "patchwork"]
+        for engine in engines:
+            graph = graphviz.Graph(comment="The Round Table", engine=engine)
+            graph.node("A", "King Arthur")
+            graph.node("B", "Sir Bedevere the gWise")
+            graph.edges(["AB"])
+
+            st.graphviz_chart(graph)
+
+            c = self.get_delta_from_queue().new_element.graphviz_chart
+            self.assertEqual(hasattr(c, "engine"), True)
+            self.assertEqual(c.engine, engine)
