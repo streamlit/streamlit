@@ -878,10 +878,16 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /**
    * Formats a decimal value with a given scale to a string.
+   *
+   * This code is partly based on: https://github.com/apache/arrow/issues/35745
+   *
+   * TODO: This is only a temporary workaround until ArrowJS can format decimals correctly.
+   * This is tracked here:
+   * https://github.com/apache/arrow/issues/37920
+   * https://github.com/apache/arrow/issues/28804
+   * https://github.com/apache/arrow/issues/35745
    */
   private static formatDecimal(value: Uint32Array, scale: number): string {
-    // This code is partly based on: https://github.com/apache/arrow/issues/35745
-
     // Format Uint32Array to a numerical string and pad it with zeros
     // So that it is exactly the length of the scale.
     let numString = util
