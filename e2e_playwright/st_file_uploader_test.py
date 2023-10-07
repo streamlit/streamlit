@@ -176,6 +176,9 @@ def test_uploads_and_deletes_multiple_files(
     file_chooser = fc_info.value
     file_chooser.set_files(files=files)
 
+    wait_for_app_run(themed_app)
+    themed_app.wait_for_timeout(1000)
+
     uploaded_file_names = themed_app.locator(".uploadedFileName")
 
     # The widget should show the names of the uploaded files in reverse order
