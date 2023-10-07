@@ -460,21 +460,21 @@ describe("NumberInput widget", () => {
       expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
     })
 
-    it("hides stepUp and stepDown buttons when width is smaller than 180px", () => {
+    it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
       const wrapper = shallow(<NumberInput {...props} width={100} />)
 
       expect(wrapper.find(StyledInputControls).exists()).toBe(false)
     })
 
-    it("shows stepUp and stepDown buttons when width is bigger than 180px", () => {
+    it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
       const wrapper = shallow(<NumberInput {...props} width={185} />)
 
       expect(wrapper.find(StyledInputControls).exists()).toBe(true)
     })
 
-    it("hides Please enter to apply text when width is smaller than 180px", () => {
+    it("hides Please enter to apply text when width is smaller than 120px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
       const wrapper = shallow(<NumberInput {...props} width={100} />)
 
@@ -483,7 +483,7 @@ describe("NumberInput widget", () => {
       expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(false)
     })
 
-    it("shows Please enter to apply text when width is bigger than 180px", () => {
+    it("shows Please enter to apply text when width is bigger than 120px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
       const wrapper = shallow(<NumberInput {...props} width={185} />)
 

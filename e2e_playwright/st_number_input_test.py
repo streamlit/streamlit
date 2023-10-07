@@ -15,7 +15,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_number_input_widget_display(
@@ -45,7 +45,7 @@ def test_number_input_widget_display(
 
 def test_number_input_has_correct_default_values(app: Page):
     """Test that st.number_input has the correct initial values."""
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
     expect(markdown_elements).to_have_count(13)
 
     expected = [
@@ -72,10 +72,10 @@ def test_number_input_shows_instructions_when_dirty(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.number_input shows the instructions correctly when dirty."""
-    first_number_input_field = app.locator(".stNumberInput input").nth(0)
-    first_number_input_field.fill("10")
+    first_number_input = app.get_by_test_id("stNumberInput").first
+    first_number_input.locator("input").fill("10")
 
-    assert_snapshot(first_number_input_field, name="st_number_input-input_instructions")
+    assert_snapshot(first_number_input, name="st_number_input-input_instructions")
 
 
 def test_number_input_updates_value_correctly_on_enter(app: Page):
@@ -84,7 +84,7 @@ def test_number_input_updates_value_correctly_on_enter(app: Page):
     first_number_input_field.fill("10")
     first_number_input_field.press("Enter")
 
-    expect(app.locator(".stMarkdown").nth(0)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
         "number input 1 (default) - value: 10.0", use_inner_text=True
     )
 
@@ -96,8 +96,9 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
     for i, button in enumerate(number_input_up_buttons.all()):
         if i not in [5, 9]:
             button.click()
+            wait_for_app_run(app)
 
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
 
     expected = [
         "number input 1 (default) - value: 0.01",
@@ -124,7 +125,7 @@ def test_number_input_has_correct_value_on_arrow_up(app: Page):
     first_number_input_field = app.locator(".stNumberInput input").nth(0)
     first_number_input_field.press("ArrowUp")
 
-    expect(app.locator(".stMarkdown").nth(0)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
         "number input 1 (default) - value: 0.01", use_inner_text=True
     )
 
@@ -137,7 +138,7 @@ def test_number_input_has_correct_value_on_blur(app: Page):
     first_number_input_field.fill("10")
     first_number_input_field.blur()
 
-    expect(app.locator(".stMarkdown").nth(0)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
         "number input 1 (default) - value: 10.0", use_inner_text=True
     )
 
@@ -147,33 +148,35 @@ def test_empty_number_input_behaves_correctly(
 ):
     """Test that st.number_input behaves correctly when empty."""
     # Enter 10 in the first empty input:
-    empty_number_input = app.locator(".stNumberInput input").nth(10)
-    empty_number_input.fill("10")
-    empty_number_input.press("Enter")
+    empty_number_input = app.get_by_test_id("stNumberInput").nth(10)
+    empty_number_input_field = empty_number_input.locator("input").first
+    empty_number_input_field.fill("10")
+    empty_number_input_field.press("Enter")
 
-    expect(app.locator(".stMarkdown").nth(11)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "number input 11 (value=None) - value: 10.0", use_inner_text=True
     )
 
     assert_snapshot(empty_number_input, name="st_number_input-clearable_input")
 
     # Press escape to clear value:
-    empty_number_input = app.locator(".stNumberInput").nth(10)
     empty_number_input.focus()
     empty_number_input.press("Escape")
     empty_number_input.press("Enter")
 
     # Should be empty again:
-    expect(app.locator(".stMarkdown").nth(11)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "number input 11 (value=None) - value: None", use_inner_text=True
     )
 
     # Check with second empty input, this one should be integer since the min_value was
     # set to an integer:
-    empty_number_input_with_min = app.locator(".stNumberInput input").nth(11)
+    empty_number_input_with_min = (
+        app.get_by_test_id("stNumberInput").nth(11).locator("input").first
+    )
     empty_number_input_with_min.fill("15")
     empty_number_input_with_min.press("Enter")
 
-    expect(app.locator(".stMarkdown").nth(12)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
         "number input 12 (value from state & min=1) - value: 15", use_inner_text=True
     )

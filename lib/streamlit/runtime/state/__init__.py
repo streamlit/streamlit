@@ -33,7 +33,6 @@ from streamlit.runtime.state.session_state_proxy import (
 from streamlit.runtime.state.session_state_proxy import (
     get_session_state as get_session_state,
 )
-from streamlit.runtime.state.widgets import DefaultValue as DefaultValue
 from streamlit.runtime.state.widgets import NoValue as NoValue
 from streamlit.runtime.state.widgets import (
     coalesce_widget_states as coalesce_widget_states,

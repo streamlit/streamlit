@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_radio_widget_rendering(
@@ -68,8 +68,9 @@ def test_radio_has_correct_default_values(app: Page):
 def test_set_value_correctly_when_click(app: Page):
     """Test that st.radio returns the correct values when the selection is changed."""
     for index, element in enumerate(app.get_by_test_id("stRadio").all()):
-        if index != 3:  # skip disabled widget
-            element.locator('label[data-baseweb="radio"]').last.click(force=True)
+        if index not in [2, 3]:  # skip disabled and no-options widget
+            element.locator('label[data-baseweb="radio"]').nth(1).click(force=True)
+            wait_for_app_run(app)
 
     expected = [
         "value 1: male",
@@ -80,9 +81,9 @@ def test_set_value_correctly_when_click(app: Page):
         "value 6: male",
         "value 7: male",
         "value 8: male",
-        "value 9: red blue green violet orange",
-        "value 10: G",
-        "value 11: no",
+        "value 9: italics text",
+        "value 10: B",
+        "value 11: maybe",
         "value 12: male",
         "radio changed: False",
         "value 13: male",
@@ -99,6 +100,7 @@ def test_calls_callback_on_change(app: Page):
     radio_widget = app.get_by_test_id("stRadio").nth(11)
 
     radio_widget.locator('label[data-baseweb="radio"]').first.click(force=True)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "value 12: female",
@@ -112,6 +114,7 @@ def test_calls_callback_on_change(app: Page):
     # Change different date input to trigger delta path change
     first_date_input_field = app.get_by_test_id("stRadio").first
     first_date_input_field.locator('label[data-baseweb="radio"]').last.click(force=True)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
         "value 1: male", use_inner_text=True
@@ -120,5 +123,9 @@ def test_calls_callback_on_change(app: Page):
     # Test if value is still correct after delta path change
     expect(app.get_by_test_id("stMarkdown").nth(11)).to_have_text(
         "value 12: female",
+        use_inner_text=True,
+    )
+    expect(app.get_by_test_id("stMarkdown").nth(12)).to_have_text(
+        "radio changed: False",
         use_inner_text=True,
     )

@@ -308,7 +308,12 @@ class SessionState:
         widget_state.
         """
         for key_or_wid in self:
-            self._old_state[key_or_wid] = self[key_or_wid]
+            try:
+                self._old_state[key_or_wid] = self[key_or_wid]
+            except KeyError:
+                # handle key errors from widget state not having metadata gracefully
+                # https://github.com/streamlit/streamlit/issues/7206
+                pass
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
@@ -488,8 +493,8 @@ class SessionState:
         Update widget data and call callbacks on widgets whose value changed
         between the previous and current script runs.
         """
-        # Update ourselves with the new widget_states. The old widget states,
-        # used to skip callbacks if values haven't changed, are also preserved.
+        # Clear any triggers that weren't reset because the script was disconnected
+        self._reset_triggers()
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
         self._call_callbacks()
@@ -507,9 +512,7 @@ class SessionState:
             try:
                 self._new_widget_state.call_callback(wid)
             except RerunException:
-                st.warning(
-                    "Calling st.experimental_rerun() within a callback is a no-op."
-                )
+                st.warning("Calling st.rerun() within a callback is a no-op.")
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous

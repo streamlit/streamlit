@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/app",
-  "version": "1.26.0",
+  "version": "1.27.2",
   "license": "Apache-2.0",
   "private": true,
   "homepage": "./",
@@ -33,7 +33,7 @@
     "@emotion/react": "^11.10.5",
     "@emotion/serialize": "^1.1.1",
     "@emotion/styled": "^11.10.5",
-    "@streamlit/lib": "1.26.0",
+    "@streamlit/lib": "1.27.2",
     "axios": "^0.27.2",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",

@@ -18,7 +18,6 @@ This file is automatically run by pytest before tests are executed.
 """
 from __future__ import annotations
 
-import contextlib
 import os
 import re
 import shlex
@@ -29,6 +28,7 @@ import sys
 import time
 from io import BytesIO
 from pathlib import Path
+from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
 from typing import Any, Generator, List, Literal, Protocol
@@ -102,12 +102,36 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
     return test_module.__file__.replace("_test.py", ".py")
 
 
-def find_available_port(host: str = "localhost") -> int:
+def is_port_available(port: int, host: str) -> bool:
+    """Check if a port is available on the given host."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        return sock.connect_ex((host, port)) != 0
+
+
+def find_available_port(
+    min_port: int = 10000,
+    max_port: int = 65535,
+    max_tries: int = 50,
+    host: str = "localhost",
+) -> int:
     """Find an available port on the given host."""
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind((host, 0))  # 0 means that the OS chooses a random port
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return int(s.getsockname()[1])  # [1] contains the randomly selected port number
+    for _ in range(max_tries):
+        selected_port = randint(min_port, max_port)
+        if is_port_available(selected_port, host):
+            return selected_port
+    raise RuntimeError("Unable to find an available port.")
+
+
+# TODO(lukasmasuch): This was the previous method to rely on the OS to find a free port.
+# but when running the tests in parallel, it can happen that the OS assigns the same port
+# to multiple tests. This is why we now use the find_available_port method above.
+
+# def find_available_port(host: str = "localhost") -> int:
+#     """Find an available port on the given host."""
+#     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+#         s.bind((host, 0))  # 0 means that the OS chooses a random port
+#         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#         return int(s.getsockname()[1])  # [1] contains the randomly selected port number
 
 
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
@@ -236,7 +260,7 @@ class ImageCompareFunction(Protocol):
         self,
         element: ElementHandle | Locator | Page,
         *,
-        image_threshold: float = 0.001,
+        image_threshold: float = 0.002,
         pixel_threshold: float = 0.05,
         name: str | None = None,
         fail_fast: bool = False,
@@ -306,7 +330,7 @@ def assert_snapshot(
     def compare(
         element: ElementHandle | Locator | Page,
         *,
-        image_threshold: float = 0.001,
+        image_threshold: float = 0.002,
         pixel_threshold: float = 0.05,
         name: str | None = None,
         fail_fast: bool = False,
@@ -396,7 +420,7 @@ def assert_snapshot(
             # Update this in updates folder:
             snapshot_updates_file_path.parent.mkdir(parents=True, exist_ok=True)
             snapshot_updates_file_path.write_bytes(img_bytes)
-            pytest.fail(f"Snapshot matching failed: {ex}")
+            pytest.fail(f"Snapshot matching for {snapshot_file_name} failed: {ex}")
         max_diff_pixels = int(image_threshold * img_a.size[0] * img_a.size[1])
 
         if mismatch < max_diff_pixels:
@@ -419,4 +443,4 @@ def assert_snapshot(
     yield compare
 
     if test_failure_messages:
-        pytest.fail("Snapshot test failed \n" + "\n".join(test_failure_messages))
+        pytest.fail("Missing snapshots: \n" + "\n".join(test_failure_messages))

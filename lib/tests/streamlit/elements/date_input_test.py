@@ -22,6 +22,7 @@ from pytest import raises
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -49,6 +50,16 @@ class DateInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.date_input
         self.assertEqual(c.disabled, True)
+
+    def test_none_value(self):
+        """Test that it can be called with None as value."""
+        st.date_input("the label", value=None)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, [])
 
     @parameterized.expand(
         [
@@ -254,3 +265,26 @@ class DateInputTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException) as ex:
             st.date_input("the label", format=format)
         self.assertTrue(str(ex.exception).startswith("The provided format"))
+
+
+def test_date_input_interaction():
+    """Test interactions with an empty date_input widget."""
+    at = AppTest.from_string(
+        """
+    import streamlit as st
+
+    st.date_input("the label", value=None)
+    """
+    ).run()
+    date_input = at.date_input[0]
+    assert date_input.value is None
+
+    # Set the value to a specific date
+    at = date_input.set_value(date(2012, 1, 3)).run()
+    date_input = at.date_input[0]
+    assert date_input.value == date(2012, 1, 3)
+
+    # # Clear the value
+    at = date_input.set_value(None).run()
+    date_input = at.date_input[0]
+    assert date_input.value is None

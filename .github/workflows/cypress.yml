@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "develop"
-      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
   # Allows workflow to be called from other workflows
@@ -34,11 +33,11 @@ jobs:
         # Be aware that specs should be sequential integers starting from 1 without gaps
         # based on logic in "Cypress Tests" step.
         # prettier-ignore
-        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 ]
+        specs: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -76,7 +75,7 @@ jobs:
         env:
           CURRENT_RUN: ${{matrix.specs}}
           CYPRESS_VERIFY_TIMEOUT: 90000
-          TOTAL_WORKERS: 22
+          TOTAL_WORKERS: 16
         run: |
           js_specs=(e2e/specs/*)
 

@@ -49,14 +49,24 @@ export default function DocString({
     <StyledDocContainer width={width} data-testid="stDocstring">
       <StyledDocHeader>
         <StyledDocSummary>
-          {name ? <StyledDocName>{name}</StyledDocName> : null}
-          {type ? <StyledDocType>{type}</StyledDocType> : null}
-          {value ? <StyledDocValue>{value}</StyledDocValue> : null}
+          {name ? (
+            <StyledDocName data-testid="stDocstringName">{name}</StyledDocName>
+          ) : null}
+          {type ? (
+            <StyledDocType data-testid="stDocstringType">{type}</StyledDocType>
+          ) : null}
+          {value ? (
+            <StyledDocValue data-testid="stDocstringValue">
+              {value}
+            </StyledDocValue>
+          ) : null}
         </StyledDocSummary>
       </StyledDocHeader>
-      <StyledDocString>{docString || "No docs available"}</StyledDocString>
+      <StyledDocString data-testid="stDocstring-Doc">
+        {docString || "No docs available"}
+      </StyledDocString>
       {members.length > 0 ? (
-        <StyledMembersTable>
+        <StyledMembersTable data-testid="stDocstringMembersTable">
           {members.map(member => (
             <Member member={member} key={member.name} />
           ))}
@@ -75,17 +85,25 @@ export function Member({ member }: MemberProps): ReactElement {
   const { name, type, value, docString } = member
 
   return (
-    <StyledMembersRow>
+    <StyledMembersRow data-testid="stMember">
       <StyledMembersSummaryCell>
-        {name ? <StyledDocName>{name}</StyledDocName> : null}
-        {type ? <StyledDocType>{type}</StyledDocType> : null}
+        {name ? (
+          <StyledDocName data-testid="stMemberDocName">{name}</StyledDocName>
+        ) : null}
+        {type ? (
+          <StyledDocType data-testid="stMemberDocType">{type}</StyledDocType>
+        ) : null}
       </StyledMembersSummaryCell>
 
       <StyledMembersDetailsCell>
         {value ? (
-          <StyledDocValue>{value}</StyledDocValue>
+          <StyledDocValue data-testid="stMemberDocValue">
+            {value}
+          </StyledDocValue>
         ) : (
-          <StyledDocValue>{docString || "No docs available"}</StyledDocValue>
+          <StyledDocValue data-testid="stMemberDocString">
+            {docString || "No docs available"}
+          </StyledDocValue>
         )}
       </StyledMembersDetailsCell>
     </StyledMembersRow>

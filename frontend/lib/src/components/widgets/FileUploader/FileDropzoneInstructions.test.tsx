@@ -15,9 +15,10 @@
  */
 
 import React from "react"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
-import { Small } from "@streamlit/lib/src/components/shared/TextElements"
 import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -30,34 +31,33 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 describe("FileDropzoneInstructions widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<FileDropzoneInstructions {...props} />)
+    render(<FileDropzoneInstructions {...props} />)
 
-    expect(wrapper).toBeDefined()
+    expect(
+      screen.getByTestId("stFileDropzoneInstructions")
+    ).toBeInTheDocument()
   })
 
   it("shows file size limit", () => {
     const props = getProps({ maxSizeBytes: 2000 })
-    const wrapper = mount(<FileDropzoneInstructions {...props} />)
-    const smallWrapper = wrapper.find(Small)
+    render(<FileDropzoneInstructions {...props} />)
 
-    expect(smallWrapper.text()).toBe("Limit 2KB per file")
+    expect(screen.getByText("Limit 2KB per file")).toBeInTheDocument()
   })
 
   it("renders without extensions", () => {
     const props = getProps({
       acceptedExtensions: [],
     })
-    const wrapper = mount(<FileDropzoneInstructions {...props} />)
-    const smallWrapper = wrapper.find(Small)
-    expect(smallWrapper.text()).toMatch(/per file$/)
+    render(<FileDropzoneInstructions {...props} />)
+    expect(screen.getByText(/per file$/)).toBeInTheDocument()
   })
 
   it("renders with extensions", () => {
     const props = getProps({
-      acceptedExtensions: ["jpg"],
+      acceptedExtensions: ["jpg", "csv.gz", ".png", ".tar.gz"],
     })
-    const wrapper = mount(<FileDropzoneInstructions {...props} />)
-    const smallWrapper = wrapper.find(Small)
-    expect(smallWrapper.text()).toMatch(/•/)
+    render(<FileDropzoneInstructions {...props} />)
+    expect(screen.getByText(/• JPG, CSV.GZ, PNG, TAR.GZ/)).toBeInTheDocument()
   })
 })

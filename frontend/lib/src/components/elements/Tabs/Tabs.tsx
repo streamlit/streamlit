@@ -20,6 +20,7 @@ import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
 import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
 import { BlockPropsWithoutWidth } from "@streamlit/lib/src/components/core/Block"
+import { isElementStale } from "@streamlit/lib/src/components/core/Block/utils"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { StyledTabContainer } from "./styled-components"
@@ -32,19 +33,47 @@ export interface TabProps extends BlockPropsWithoutWidth {
 }
 
 function Tabs(props: TabProps): ReactElement {
-  const { widgetsDisabled, node, isStale } = props
+  const { widgetsDisabled, node, isStale, scriptRunState, scriptRunId } = props
 
-  const [activeKey, setActiveKey] = useState<React.Key>(0)
+  let allTabLabels: string[] = []
+  const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
+  const [activeTabName, setActiveTabName] = useState<string>(
+    // @ts-expect-error
+    node.children[0].deltaBlock.tab.label || "0"
+  )
+
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useTheme()
 
   const [isOverflowing, setIsOverflowing] = useState(false)
+
+  // Reconciles active key & tab name
+  useEffect(() => {
+    const newTabKey = allTabLabels.indexOf(activeTabName)
+    if (newTabKey === -1) {
+      setActiveTabKey(0)
+      setActiveTabName(allTabLabels[0])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allTabLabels])
 
   useEffect(() => {
     if (tabListRef.current) {
       const { scrollWidth, clientWidth } = tabListRef.current
       setIsOverflowing(scrollWidth > clientWidth)
     }
+
+    // If tab # changes, match the selected tab label, otherwise default to first tab
+    const newTabKey = allTabLabels.indexOf(activeTabName)
+    if (newTabKey !== -1) {
+      setActiveTabKey(newTabKey)
+      setActiveTabName(allTabLabels[newTabKey])
+    } else {
+      setActiveTabKey(0)
+      setActiveTabName(allTabLabels[0])
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.children.length])
 
   const TAB_HEIGHT = "2.5rem"
@@ -56,9 +85,11 @@ function Tabs(props: TabProps): ReactElement {
       className="stTabs"
     >
       <UITabs
-        activeKey={activeKey}
+        activateOnFocus
+        activeKey={activeTabKey}
         onChange={({ activeKey }) => {
-          setActiveKey(activeKey)
+          setActiveTabKey(activeKey)
+          setActiveTabName(allTabLabels[activeKey as number])
         }}
         /* renderAll on UITabs should always be set to true to avoid scrolling issue
            https://github.com/streamlit/streamlit/issues/5069
@@ -72,8 +103,6 @@ function Tabs(props: TabProps): ReactElement {
                 ? theme.colors.fadedText40
                 : theme.colors.primary,
               height: TAB_BORDER_HEIGHT,
-              // Requires bottom offset to align with the TabBorder
-              // bottom: "3px",
             }),
           },
           TabBorder: {
@@ -104,18 +133,34 @@ function Tabs(props: TabProps): ReactElement {
             }),
           },
         }}
-        activateOnFocus
       >
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
+          // Reset available tab labels when rerendering
+          if (index === 0) allTabLabels = []
+
+          // If the tab is stale, disable it
+          const isStaleTab = isElementStale(
+            appNode,
+            scriptRunState,
+            scriptRunId
+          )
+          const disabled = widgetsDisabled || isStaleTab
+
+          // Ensure stale tab's elements are also marked stale/disabled
           const childProps = {
             ...props,
+            isStale: isStale || isStaleTab,
+            widgetsDisabled: disabled,
             node: appNode as BlockNode,
           }
           let nodeLabel = index.toString()
           if (childProps.node.deltaBlock?.tab?.label) {
             nodeLabel = childProps.node.deltaBlock.tab.label
           }
-          const isSelected = activeKey.toString() === index.toString()
+          allTabLabels[index] = nodeLabel
+
+          const isSelected =
+            activeTabKey.toString() === index.toString() && !isStaleTab
           const isLast = index === node.children.length - 1
 
           return (
@@ -128,6 +173,7 @@ function Tabs(props: TabProps): ReactElement {
                 />
               }
               key={index}
+              disabled={disabled}
               overrides={{
                 TabPanel: {
                   style: () => ({
@@ -147,25 +193,25 @@ function Tabs(props: TabProps): ReactElement {
                     paddingBottom: theme.spacing.none,
                     fontSize: theme.fontSizes.sm,
                     background: "transparent",
-                    color: widgetsDisabled
+                    color: disabled
                       ? theme.colors.fadedText40
                       : theme.colors.bodyText,
                     ":focus": {
                       outline: "none",
-                      color: widgetsDisabled
+                      color: disabled
                         ? theme.colors.fadedText40
                         : theme.colors.primary,
                       background: "none",
                     },
                     ":hover": {
-                      color: widgetsDisabled
+                      color: disabled
                         ? theme.colors.fadedText40
                         : theme.colors.primary,
                       background: "none",
                     },
                     ...(isSelected
                       ? {
-                          color: widgetsDisabled
+                          color: disabled
                             ? theme.colors.fadedText40
                             : theme.colors.primary,
                         }

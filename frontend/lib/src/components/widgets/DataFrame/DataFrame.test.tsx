@@ -16,16 +16,20 @@
 
 import React from "react"
 
-import { DataEditor as GlideDataEditor } from "@glideapps/glide-data-grid"
-
 import { TEN_BY_TEN } from "@streamlit/lib/src/mocks/arrow"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+import * as glideDataGridModule from "@glideapps/glide-data-grid"
 
-import { Resizable } from "re-resizable"
+jest.mock("@glideapps/glide-data-grid", () => ({
+  ...jest.requireActual("@glideapps/glide-data-grid"),
+  DataEditor: jest.fn(props => <div {...props} />),
+}))
+
 import DataFrame, { DataFrameProps } from "./DataFrame"
-import { StyledResizableContainer } from "./styled-components"
 
 const getProps = (
   data: Quiver,
@@ -70,31 +74,34 @@ describe("DataFrame widget", () => {
   })
 
   it("renders without crashing", () => {
-    const wrapper = mount(<DataFrame {...props} />)
-    expect(wrapper.find(GlideDataEditor).length).toBe(1)
+    render(<DataFrame {...props} />)
+    expect(screen.getAllByTestId("stDataFrameResizable").length).toBe(1)
   })
 
   it("should have correct className", () => {
-    const wrapper = mount(<DataFrame {...props} />)
-    expect(wrapper.find(StyledResizableContainer).prop("className")).toContain(
-      "stDataFrame"
-    )
+    render(<DataFrame {...props} />)
+
+    const styledResizableContainer = screen.getByTestId("stDataFrame")
+
+    expect(styledResizableContainer).toHaveClass("stDataFrame")
   })
 
   it("grid container should use full width when useContainerWidth is used", () => {
-    const wrapper = mount(
-      <DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />
+    render(<DataFrame {...getProps(new Quiver({ data: TEN_BY_TEN }), true)} />)
+    const dfStyle = getComputedStyle(
+      screen.getByTestId("stDataFrameResizable")
     )
-    const dataFrameContainer = wrapper.find(Resizable).props() as any
-    expect(dataFrameContainer.size.width).toBe(700)
-    expect(dataFrameContainer.size.height).toBe(400)
+    expect(dfStyle.width).toBe("700px")
+    expect(dfStyle.height).toBe("400px")
   })
 
   it("grid container should render with specific size", () => {
-    const wrapper = mount(<DataFrame {...props} />)
-    const dataFrameContainer = wrapper.find(Resizable).props() as any
-    expect(dataFrameContainer.size.width).toBe(400)
-    expect(dataFrameContainer.size.height).toBe(400)
+    render(<DataFrame {...props} />)
+    const dfStyle = getComputedStyle(
+      screen.getByTestId("stDataFrameResizable")
+    )
+    expect(dfStyle.width).toBe("400px")
+    expect(dfStyle.height).toBe("400px")
   })
 
   it("Touch detection correctly deactivates some features", () => {
@@ -103,7 +110,7 @@ describe("DataFrame widget", () => {
       matches: true,
     }))
 
-    const wrapper = mount(
+    render(
       <DataFrame
         {...getProps(
           new Quiver({ data: TEN_BY_TEN }),
@@ -112,8 +119,10 @@ describe("DataFrame widget", () => {
         )}
       />
     )
-    const glideDataEditorProps = wrapper.find(GlideDataEditor).props()
-    expect(glideDataEditorProps.rangeSelect).toBe("none")
-    expect(glideDataEditorProps.fillHandle).toBe(false)
+    // You have to set a second arg with {} to test work and get the received props
+    expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
+      expect.objectContaining({ rangeSelect: "none", fillHandle: false }),
+      {}
+    )
   })
 })

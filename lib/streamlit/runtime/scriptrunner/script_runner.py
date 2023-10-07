@@ -99,7 +99,6 @@ class ScriptRunner:
         self,
         session_id: str,
         main_script_path: str,
-        client_state: ClientState,
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         script_cache: ScriptCache,
@@ -117,9 +116,6 @@ class ScriptRunner:
 
         main_script_path
             Path to our main app script.
-
-        client_state
-            The current state from the client (widgets and query params).
 
         uploaded_file_mgr
             The File manager to store the data uploaded by the file_uploader widget.
@@ -145,11 +141,9 @@ class ScriptRunner:
         self._script_cache = script_cache
         self._user_info = user_info
 
-        # Initialize SessionState with the latest widget states
-        session_state.set_widgets_from_proto(client_state.widget_states)
-
-        self._client_state = client_state
-        self._session_state = SafeSessionState(session_state)
+        self._session_state = SafeSessionState(
+            session_state, yield_callback=self._maybe_handle_execution_control_request
+        )
 
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
@@ -200,19 +194,6 @@ class ScriptRunner:
         Safe to call from any thread.
         """
         self._requests.request_stop()
-
-        # "Disconnect" our SafeSessionState wrapper from its underlying
-        # SessionState instance. This will cause all further session_state
-        # operations in this ScriptRunner to no-op.
-        #
-        # After `request_stop` is called, our script will continue executing
-        # until it reaches a yield point. AppSession may also *immediately*
-        # spin up a new ScriptRunner after this call, which means we'll
-        # potentially have two active ScriptRunners for a brief period while
-        # this one is shutting down. Disconnecting our SessionState ensures
-        # that this ScriptRunner's thread won't introduce SessionState-
-        # related race conditions during this script overlap.
-        self._session_state.disconnect()
 
     def request_rerun(self, rerun_data: RerunData) -> bool:
         """Request that the ScriptRunner interrupt its currently-running
@@ -287,10 +268,10 @@ class ScriptRunner:
             session_id=self._session_id,
             _enqueue=self._enqueue_forward_msg,
             script_requests=self._requests,
-            query_string=self._client_state.query_string,
+            query_string="",
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
-            page_script_hash=self._client_state.page_script_hash,
+            page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
         )
@@ -307,15 +288,11 @@ class ScriptRunner:
 
         assert request.type == ScriptRequestType.STOP
 
-        # Send a SHUTDOWN event before exiting. This includes the widget values
-        # as they existed after our last successful script run, which the
-        # AppSession will pass on to the next ScriptRunner that gets
-        # created.
+        # Send a SHUTDOWN event before exiting, so some state can be saved
+        # for use in a future script run when not triggered by the client.
         client_state = ClientState()
         client_state.query_string = ctx.query_string
         client_state.page_script_hash = ctx.page_script_hash
-        widget_states = self._session_state.get_widget_states()
-        client_state.widget_states.widgets.extend(widget_states)
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
         )
@@ -516,6 +493,10 @@ class ScriptRunner:
         # is interrupted by a RerunException.
         rerun_exception_data: Optional[RerunData] = None
 
+        # If the script stops early, we don't want to remove unseen widgets,
+        # so we track this to potentially skip session state cleanup later.
+        premature_stop: bool = False
+
         try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
@@ -555,16 +536,18 @@ class ScriptRunner:
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
             rerun_exception_data = e.rerun_data
+            premature_stop = True
 
         except StopException:
             # This is thrown when the script executes `st.stop()`.
             # We don't have to do anything here.
-            pass
+            premature_stop = True
 
         except Exception as ex:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
             uncaught_exception = ex
             handle_uncaught_app_exception(uncaught_exception)
+            premature_stop = True
 
         finally:
             if rerun_exception_data:
@@ -595,7 +578,7 @@ class ScriptRunner:
                     # Always capture all exceptions since we want to make sure that
                     # the telemetry never causes any issues.
                     _LOGGER.debug("Failed to create page profile", exc_info=ex)
-            self._on_script_finished(ctx, finished_event)
+            self._on_script_finished(ctx, finished_event, premature_stop)
 
         # Use _log_if_error() to make sure we never ever ever stop running the
         # script without meaning to.
@@ -605,13 +588,14 @@ class ScriptRunner:
             self._run_script(rerun_exception_data)
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent
+        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
         # Tell session_state to update itself in response
-        self._session_state.on_script_finished(ctx.widget_ids_this_run)
+        if not premature_stop:
+            self._session_state.on_script_finished(ctx.widget_ids_this_run)
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)

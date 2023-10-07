@@ -146,6 +146,16 @@ jest.mock("moment", () =>
   }))
 )
 
+// Mock needed for Block.tsx
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserver
+
 describe("App", () => {
   beforeEach(() => {
     // @ts-expect-error
@@ -1384,7 +1394,7 @@ describe("handles HostCommunication messaging", () => {
     instance = wrapper.instance() as App
 
     // @ts-expect-error - hostCommunicationMgr is private
-    instance.hostCommunicationMgr.setAllowedOriginsResp({
+    instance.hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })

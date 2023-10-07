@@ -42,14 +42,17 @@ def test_code_blocks_render_correctly(
     assert_snapshot(code_blocks.nth(2), name="st_code-python_lang")
     assert_snapshot(code_blocks.nth(3), name="st_code-line_numbers")
     assert_snapshot(code_blocks.nth(4), name="st_code-no_lang")
+    assert_snapshot(code_blocks.nth(5), name="st_markdown-code_block")
 
 
-def test_code_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the syntax highlighting is applied correctly to the code block."""
-    # This test seems to be a little flaky without additional timeout:
-    app.wait_for_timeout(1000)
+def test_correct_bottom_spacing_for_code_blocks(app: Page):
+    """Test that the code blocks have the correct bottom spacing."""
 
-    expander_with_code = app.get_by_test_id("stExpander")
-
-    assert_snapshot(expander_with_code.nth(0), name="expander_with_code")
-    assert_snapshot(expander_with_code.nth(1), name="expander_with_markdown_code")
+    # The first code block should have no bottom margin:
+    expect(
+        app.get_by_test_id("stExpander").nth(0).get_by_test_id("stCodeBlock").first
+    ).to_have_css("margin-bottom", "0px")
+    # While the codeblock used inside markdown should have a bottom margin to imitate the gap:
+    expect(
+        app.get_by_test_id("stExpander").nth(1).get_by_test_id("stCodeBlock").first
+    ).to_have_css("margin-bottom", "16px")

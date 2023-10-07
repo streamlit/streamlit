@@ -22,7 +22,6 @@ from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
-from streamlit import source_util
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import (
     Runtime,
@@ -30,9 +29,6 @@ from streamlit.runtime import (
     RuntimeState,
     SessionClient,
     SessionClientDisconnectedError,
-)
-from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    MemoryCacheStorageManager,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
@@ -48,10 +44,7 @@ from tests.streamlit.message_mocks import (
     create_dataframe_msg,
     create_script_finished_message,
 )
-from tests.streamlit.runtime.runtime_test_case import (
-    MockSessionManager,
-    RuntimeTestCase,
-)
+from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
 from tests.testutil import patch_config_options
 
 

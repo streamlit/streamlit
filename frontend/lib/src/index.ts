@@ -33,13 +33,13 @@ export { FileUploadClient } from "./FileUploadClient"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { BlockNode, AppRoot, ElementNode } from "./AppNode"
 export { Quiver } from "./dataframes/Quiver"
-export { default as VegaLiteChartElement } from "./components/elements/VegaLiteChart"
 export type {
   DeployedAppMetadata,
   IGuestToHostMessage,
   IMenuItem,
-  IAllowedMessageOriginsResponse,
+  IHostConfigResponse,
   IToolbarItem,
+  AppConfig,
 } from "./hostComm/types"
 export {
   default as Modal,
@@ -114,7 +114,7 @@ export {
 } from "./util/utils"
 export { useIsOverflowing } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"
-export type { LibContextProps } from "./components/core/LibContext"
+export type { LibContextProps, LibConfig } from "./components/core/LibContext"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"

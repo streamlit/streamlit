@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-latest-16-cores
 
     defaults:
       run:
@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -44,9 +44,11 @@ jobs:
         uses: ./.github/actions/make_init
       - name: Run make develop
         run: make develop
+      - name: Install playwright
+        run: python -m playwright install --with-deps
       - name: Run make protobuf
         run: make protobuf
-      - name: Run make frontend
+      - name: Run make frontend-fast
         run: make frontend-fast
       - name: Run make playwright
         run: make playwright
@@ -61,12 +63,6 @@ jobs:
             git ls-files --others --exclude-standard | grep snapshots;
             exit 1;
           fi
-      - name: Upload snapshots
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: playwright_snapshots
-          path: e2e_playwright/__snapshots__
       - name: Upload failed test results
         uses: actions/upload-artifact@v3
         if: always()

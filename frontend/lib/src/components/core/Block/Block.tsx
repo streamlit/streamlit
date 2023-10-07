@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactElement, useEffect, useMemo, useRef } from "react"
 import { useTheme } from "@emotion/react"
-import { AutoSizer } from "react-virtualized"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
@@ -38,7 +37,7 @@ import {
   StyledColumn,
   StyledHorizontalBlock,
   StyledVerticalBlock,
-  styledVerticalBlockWrapperStyles,
+  StyledVerticalBlockWrapper,
 } from "./styled-components"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
@@ -178,21 +177,38 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
+  const wrapperElement = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = React.useState(-1)
+
+  const observer = useMemo(
+    () =>
+      new ResizeObserver(([entry]) => {
+        // We need to determine the available width here to be able to set
+        // an explicit width for the `StyledVerticalBlock`.
+        setWidth(entry.target.getBoundingClientRect().width)
+      }),
+    [setWidth]
+  )
+
+  useEffect(() => {
+    if (wrapperElement.current) {
+      observer.observe(wrapperElement.current)
+    }
+    return () => {
+      observer.disconnect()
+    }
+  }, [wrapperElement, observer])
+
+  const propsWithNewWidth = { ...props, ...{ width } }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
   return (
-    <AutoSizer disableHeight={true} style={styledVerticalBlockWrapperStyles}>
-      {({ width }) => {
-        const propsWithNewWidth = { ...props, ...{ width } }
-
-        return (
-          <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
-            <ChildRenderer {...propsWithNewWidth} />
-          </StyledVerticalBlock>
-        )
-      }}
-    </AutoSizer>
+    <StyledVerticalBlockWrapper ref={wrapperElement}>
+      <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
+        <ChildRenderer {...propsWithNewWidth} />
+      </StyledVerticalBlock>
+    </StyledVerticalBlockWrapper>
   )
 }
 

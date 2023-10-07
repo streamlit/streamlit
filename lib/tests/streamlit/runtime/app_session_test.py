@@ -266,7 +266,6 @@ class AppSessionTest(unittest.TestCase):
         mock_scriptrunner.assert_called_once_with(
             session_id=session.id,
             main_script_path=session._script_data.main_script_path,
-            client_state=session._client_state,
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
             script_cache=session._script_cache,

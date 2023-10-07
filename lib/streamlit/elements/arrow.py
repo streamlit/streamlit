@@ -53,12 +53,12 @@ Data: TypeAlias = Union[
 
 
 class ArrowMixin:
-    @gather_metrics("_arrow_dataframe")
-    def _arrow_dataframe(
+    @gather_metrics("dataframe")
+    def dataframe(
         self,
         data: Data = None,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         *,
         use_container_width: bool = False,
         hide_index: bool | None = None,
@@ -73,19 +73,21 @@ class ArrowMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Series, pandas.Styler, pandas.Index, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The data to display.
 
             If 'data' is a pandas.Styler, it will be used to style its
-            underlying DataFrame.
+            underlying DataFrame. Streamlit supports custom cell
+            values and colors. It does not support some of the more exotic
+            pandas styling features, like bar charts, hovering, and captions.
 
         width : int or None
-            Desired width of the dataframe element expressed in pixels. If None, the
-            width will be automatically determined.
+            Desired width of the dataframe expressed in pixels. If None, the width
+            will be automatically calculated based on the column content.
 
         height : int or None
-            Desired height of the dataframe element expressed in pixels. If None, the
-            height will be automatically determined.
+            Desired height of the dataframe expressed in pixels. If None, a
+            default height is used.
 
         use_container_width : bool
             If True, set the dataframe width to the width of the parent container.
@@ -96,7 +98,7 @@ class ArrowMixin:
             Whether to hide the index column(s). If None (default), the visibility of
             index columns is automatically determined based on the data.
 
-        column_order : iterable of str or None
+        column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If
@@ -124,22 +126,63 @@ class ArrowMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(50, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> st._arrow_dataframe(df)
+        >>> df = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>>
+        >>> st.dataframe(df)  # Same as st.write(df)
 
-        >>> st._arrow_dataframe(df, 200, 100)
+        .. output::
+           https://doc-dataframe.streamlit.app/
+           height: 410px
 
         You can also pass a Pandas Styler object to change the style of
         the rendered DataFrame:
 
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df = pd.DataFrame(np.random.randn(10, 20), columns=("col %d" % i for i in range(20)))
+        >>>
+        >>> st.dataframe(df.style.highlight_max(axis=0))
+
+        .. output::
+           https://doc-dataframe1.streamlit.app/
+           height: 410px
+
+        Or you can customize the dataframe via ``column_config``, ``hide_index``, or ``column_order``:
+
+        >>> import random
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
         >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 20),
-        ...    columns=('col %d' % i for i in range(20)))
-        ...
-        >>> st._arrow_dataframe(df.style.highlight_max(axis=0))
+        >>>     {
+        >>>         "name": ["Roadmap", "Extras", "Issues"],
+        >>>         "url": ["https://roadmap.streamlit.app", "https://extras.streamlit.app", "https://issues.streamlit.app"],
+        >>>         "stars": [random.randint(0, 1000) for _ in range(3)],
+        >>>         "views_history": [[random.randint(0, 5000) for _ in range(30)] for _ in range(3)],
+        >>>     }
+        >>> )
+        >>> st.dataframe(
+        >>>     df,
+        >>>     column_config={
+        >>>         "name": "App name",
+        >>>         "stars": st.column_config.NumberColumn(
+        >>>             "Github Stars",
+        >>>             help="Number of stars on GitHub",
+        >>>             format="%d ⭐",
+        >>>         ),
+        >>>         "url": st.column_config.LinkColumn("App URL"),
+        >>>         "views_history": st.column_config.LineChartColumn(
+        >>>             "Views (past 30 days)", y_min=0, y_max=5000
+        >>>         ),
+        >>>     },
+        >>>     hide_index=True,
+        >>> )
+
+        .. output::
+           https://doc-dataframe-config.streamlit.app/
+           height: 350px
 
         """
 
@@ -195,16 +238,16 @@ class ArrowMixin:
 
         return self.dg._enqueue("arrow_data_frame", proto)
 
-    @gather_metrics("_arrow_table")
-    def _arrow_table(self, data: Data = None) -> "DeltaGenerator":
+    @gather_metrics("table")
+    def table(self, data: Data = None) -> "DeltaGenerator":
         """Display a static table.
 
-        This differs from `st._arrow_dataframe` in that the table in this case is
+        This differs from ``st.dataframe`` in that the table in this case is
         static: its entire contents are laid out directly on the page.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table, Iterable, dict, or None
             The table data.
 
         Example
@@ -213,11 +256,13 @@ class ArrowMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...    np.random.randn(10, 5),
-        ...    columns=("col %d" % i for i in range(5)))
-        ...
-        >>> st._arrow_table(df)
+        >>> df = pd.DataFrame(np.random.randn(10, 5), columns=("col %d" % i for i in range(5)))
+        >>>
+        >>> st.table(df)
+
+        .. output::
+           https://doc-table.streamlit.app/
+           height: 480px
 
         """
 
@@ -237,6 +282,60 @@ class ArrowMixin:
         proto = ArrowProto()
         marshall(proto, data, default_uuid)
         return self.dg._enqueue("arrow_table", proto)
+
+    @gather_metrics("add_rows")
+    def add_rows(self, data: "Data" = None, **kwargs) -> Optional["DeltaGenerator"]:
+        """Concatenate a dataframe to the bottom of the current one.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
+            Table to concat. Optional.
+
+        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
+            The named dataset to concat. Optional. You can only pass in 1
+            dataset (including the one in the data parameter).
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>>
+        >>> df1 = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>>
+        >>> my_table = st.table(df1)
+        >>>
+        >>> df2 = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+        >>>
+        >>> my_table.add_rows(df2)
+        >>> # Now the table shown in the Streamlit app contains the data for
+        >>> # df1 followed by the data for df2.
+
+        You can do the same thing with plots. For example, if you want to add
+        more data to a line chart:
+
+        >>> # Assuming df1 and df2 from the example above still exist...
+        >>> my_chart = st.line_chart(df1)
+        >>> my_chart.add_rows(df2)
+        >>> # Now the chart shown in the Streamlit app contains the data for
+        >>> # df1 followed by the data for df2.
+
+        And for plots whose datasets are named, you can pass the data with a
+        keyword argument where the key is the name:
+
+        >>> my_chart = st.vega_lite_chart({
+        ...     'mark': 'line',
+        ...     'encoding': {'x': 'a', 'y': 'b'},
+        ...     'datasets': {
+        ...       'some_fancy_name': df1,  # <-- named dataset
+        ...      },
+        ...     'data': {'name': 'some_fancy_name'},
+        ... }),
+        >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
+
+        """
+        return self.dg._arrow_add_rows(data, **kwargs)
 
     @property
     def dg(self) -> "DeltaGenerator":

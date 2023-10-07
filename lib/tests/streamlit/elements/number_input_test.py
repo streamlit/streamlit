@@ -26,7 +26,7 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -63,6 +63,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
         self.assertEqual(c.disabled, False)
+        self.assertEqual(c.placeholder, "")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -70,6 +71,13 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.disabled, True)
+
+    def test_placeholder(self):
+        """Test that it can be called with placeholder param."""
+        st.number_input("the label", placeholder="Type a number...")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.placeholder, "Type a number...")
 
     def test_none_value(self):
         """Test that it can be called with None as value."""
@@ -363,31 +371,29 @@ class NumberInputTest(DeltaGeneratorTestCase):
             st.number_input("My Label", value=value, max_value=max_value)
 
 
-class NumberInputInteractiveTest(InteractiveScriptTests):
-    def test_number_input_interaction(self):
-        """Test interactions with an empty number input widget."""
-        script = self.script_from_string(
-            """
-        import streamlit as st
-
-        st.number_input("the label", value=None)
+def test_number_input_interaction():
+    """Test interactions with an empty number input widget."""
+    at = AppTest.from_string(
         """
-        )
-        sr = script.run()
-        number_input = sr.number_input[0]
-        assert number_input.value is None
+    import streamlit as st
 
-        # Set the value to 10
-        sr2 = number_input.set_value(10).run()
-        number_input = sr2.number_input[0]
-        assert number_input.value == 10
+    st.number_input("the label", value=None)
+    """
+    ).run()
+    number_input = at.number_input[0]
+    assert number_input.value is None
 
-        # # Increment the value
-        sr3 = number_input.increment().run()
-        number_input = sr3.number_input[0]
-        assert number_input.value == 10.01
+    # Set the value to 10
+    at = number_input.set_value(10).run()
+    number_input = at.number_input[0]
+    assert number_input.value == 10
 
-        # # Clear the value
-        sr4 = number_input.set_value(None).run()
-        number_input = sr4.number_input[0]
-        assert number_input.value is None
+    # # Increment the value
+    at = number_input.increment().run()
+    number_input = at.number_input[0]
+    assert number_input.value == 10.01
+
+    # # Clear the value
+    at = number_input.set_value(None).run()
+    number_input = at.number_input[0]
+    assert number_input.value is None

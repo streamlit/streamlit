@@ -64,7 +64,7 @@ describe("Host communication", () => {
                 // Open the Main Menu
                 cy.get("#MainMenu > button").click()
                 // Open the Settings Modal
-                cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click()
+                cy.getIndexed('[data-testid="main-menu-list"] > ul', 1).click({ force: true })
                 cy.get("div[role='dialog']").should("exist")
             });
         // Close modal
@@ -77,7 +77,7 @@ describe("Host communication", () => {
 
     it("handles a host menu item message", () => {
         // Add Menu Item message
-        cy.get("#toolbar").contains("Add Menu Item").click();
+        cy.get("#toolbar").contains("Add Menu Item").click({ force: true });
         cy.get("iframe")
             .iframe(() => {
                 // Open the Main Menu
@@ -96,9 +96,14 @@ describe("Host communication", () => {
             .iframe(() => {
                 // Check toolbar contents
                 cy.get('.stActionButton').should("exist")
-                cy.get('.stActionButton').should("have.text", "Favorite")
+                cy.getIndexed('[data-testid="stActionButton"]', 0).should("have.text", "Favorite")
+                cy.getIndexed('[data-testid="stActionButton"]', 1).should("have.text", "Share")
             });
     });
+
+    it("displays the toolbar with horizontal buttons", () => {
+        cy.get("iframe").first().matchImageSnapshot("toolbarActions");
+    })
 
     it("handles a hide sidebar nav message", () => {
         cy.get("iframe").iframe(() => {

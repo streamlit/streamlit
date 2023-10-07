@@ -26,6 +26,9 @@ import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
+import "@streamlit/lib/src/assets/css/vega-embed.css"
+import "@streamlit/lib/src/assets/css/vega-tooltip.css"
+
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 
@@ -325,10 +328,16 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const el = this.props.element
     const spec = this.generateSpec()
     const options = {
-      defaultStyle: true,
       // Adds interpreter support for Vega expressions that is compliant with CSP
       ast: true,
       expr: expressionInterpreter,
+
+      // Disable default styles so that vega doesn't inject <style> tags in the
+      // DOM. We set these styles manually for finer control over them and to
+      // avoid inlining styles.
+      tooltip: { disableDefaultStyle: true },
+      defaultStyle: false,
+      forceActionsMenu: true,
     }
 
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)

@@ -82,7 +82,8 @@ from streamlit.elements.spinner import spinner as spinner
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
     stop as stop,
-    rerun as _rerun,
+    rerun as rerun,
+    experimental_rerun as _experimental_rerun,
 )
 
 # We add the metrics tracking for caching here,
@@ -181,25 +182,6 @@ status = _main.status
 # Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
 toast = event.toast
 
-# Legacy
-_legacy_dataframe = _main._legacy_dataframe
-_legacy_table = _main._legacy_table
-_legacy_altair_chart = _main._legacy_altair_chart
-_legacy_area_chart = _main._legacy_area_chart
-_legacy_bar_chart = _main._legacy_bar_chart
-_legacy_line_chart = _main._legacy_line_chart
-_legacy_vega_lite_chart = _main._legacy_vega_lite_chart
-
-# Apache Arrow
-_arrow_dataframe = _main._arrow_dataframe
-_arrow_table = _main._arrow_table
-_arrow_altair_chart = _main._arrow_altair_chart
-_arrow_area_chart = _main._arrow_area_chart
-_arrow_bar_chart = _main._arrow_bar_chart
-_arrow_line_chart = _main._arrow_line_chart
-_arrow_scatter_chart = _main._arrow_scatter_chart
-_arrow_vega_lite_chart = _main._arrow_vega_lite_chart
-
 # Config
 get_option = _config.get_option
 # We add the metrics tracking here, since importing
@@ -222,6 +204,6 @@ experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
 experimental_get_query_params = _get_query_params
 experimental_set_query_params = _set_query_params
-experimental_rerun = _rerun
+experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _connection_factory

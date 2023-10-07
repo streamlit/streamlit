@@ -110,7 +110,7 @@ describe("websocket reconnects", () => {
     });
   });
 
-  it("retains captured pictures when the websocket connection is dropped and reconnects", () => {
+  it("retains captured pictures when the websocket connection is dropped and reconnects", { retries: { runMode: 1 } }, () => {
     // Be generous with some of the timeouts in this test as uploading and
     // rendering images can be quite slow.
     const timeout = 30000;

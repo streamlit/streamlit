@@ -1,31 +1,69 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Tooltip component should render and match snapshots when ellipsized 1`] = `
-<Tooltip
-  content="the content"
-  placement="auto"
->
-  <StyledWrapper>
-    <StyledEllipsizedDiv
-      style={Object {}}
+<body>
+  <div>
+    <div
+      aria-describedby="2"
+      data-testid="tooltipHoverTarget"
+      id="2__anchor"
+      style="display: flex; flex-direction: row;"
     >
-      the child
-    </StyledEllipsizedDiv>
-  </StyledWrapper>
-</Tooltip>
+      <div
+        class="css-5mp5n6-StyledWrapper e1gc5fo22"
+      >
+        <div
+          class="css-1av0x41-StyledEllipsizedDiv e1gc5fo21"
+        >
+          the child
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div
+      data-autofocus-inside="false"
+    >
+      <div
+        class=""
+        data-baseweb="tooltip"
+        id="2"
+        role="tooltip"
+      >
+        <div
+          class=""
+        >
+          <div
+            class="stTooltipContent css-2bnxxn-StyledTooltipContentWrapper e1gc5fo20"
+            data-testid="stTooltipContent"
+          >
+            the content
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
 `;
 
 exports[`Tooltip component should render and match snapshots when it fits onscreen 1`] = `
-<Tooltip
-  content=""
-  placement="auto"
->
-  <StyledWrapper>
-    <StyledEllipsizedDiv
-      style={Object {}}
+<body>
+  <div>
+    <div
+      data-testid="tooltipHoverTarget"
+      id="1__anchor"
+      style="display: flex; flex-direction: row;"
     >
-      the child
-    </StyledEllipsizedDiv>
-  </StyledWrapper>
-</Tooltip>
+      <div
+        class="css-5mp5n6-StyledWrapper e1gc5fo22"
+      >
+        <div
+          class="css-1av0x41-StyledEllipsizedDiv e1gc5fo21"
+        >
+          the child
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
 `;

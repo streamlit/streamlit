@@ -66,6 +66,9 @@ function stringsToDates(strings: string[]): Date[] {
 
 /** Convert an array of dates to an array of strings. */
 function datesToStrings(dates: Date[]): string[] {
+  if (!dates) {
+    return []
+  }
   return dates.map((value: Date) => moment(value as Date).format(DATE_FORMAT))
 }
 
@@ -85,7 +88,9 @@ class DateInput extends React.PureComponent<Props, State> {
       this.props.element
     )
     const stringArray =
-      storedValue !== undefined ? storedValue : this.props.element.default
+      storedValue !== undefined
+        ? storedValue
+        : this.props.element.default || []
     return stringsToDates(stringArray)
   }
 
@@ -115,9 +120,11 @@ class DateInput extends React.PureComponent<Props, State> {
   private updateFromProtobuf(): void {
     const { value: values } = this.props.element
     this.props.element.setValue = false
+    const dateValues = values.map((v: string) => new Date(v))
     this.setState(
       {
-        values: values.map((v: string) => new Date(v)),
+        values: dateValues,
+        isEmpty: !dateValues,
       },
       () => {
         this.commitWidgetValue({ fromUi: false })
@@ -140,8 +147,12 @@ class DateInput extends React.PureComponent<Props, State> {
    */
   private onFormCleared = (): void => {
     const defaultValue = stringsToDates(this.props.element.default)
-    this.setState({ values: defaultValue }, () =>
-      this.commitWidgetValue({ fromUi: true })
+    this.setState(
+      {
+        values: defaultValue,
+        isEmpty: !defaultValue,
+      },
+      () => this.commitWidgetValue({ fromUi: true })
     )
   }
 
@@ -214,6 +225,7 @@ class DateInput extends React.PureComponent<Props, State> {
     const style = { width }
     const minDate = moment(element.min, DATE_FORMAT).toDate()
     const maxDate = this.getMaxDate()
+    const clearable = element.default.length === 0 && !disabled
 
     // We need to extract the mask and format (date-fns notation) from the provided format string
     // The user configured date format is based on the momentJS notation and is only allowed to contain
@@ -235,7 +247,7 @@ class DateInput extends React.PureComponent<Props, State> {
     )
 
     return (
-      <div className="stDateInput" style={style}>
+      <div className="stDateInput" style={style} data-testid="stDateInput">
         <WidgetLabel
           label={element.label}
           disabled={disabled}
@@ -253,7 +265,6 @@ class DateInput extends React.PureComponent<Props, State> {
           )}
         </WidgetLabel>
         <UIDatePicker
-          data-testid="stDateInputPicker"
           density={DENSITY.high}
           formatString={dateFormat}
           mask={isRange ? `${dateMask} – ${dateMask}` : dateMask}
@@ -368,7 +379,26 @@ class DateInput extends React.PureComponent<Props, State> {
                       borderBottomWidth: "1px",
                     },
                   },
-
+                  ClearIcon: {
+                    props: {
+                      overrides: {
+                        Svg: {
+                          style: {
+                            color: theme.colors.darkGray,
+                            // Since the close icon is an SVG, and we can't control its viewbox nor its attributes,
+                            // Let's use a scale transform effect to make it bigger.
+                            // The width property only enlarges its bounding box, so it's easier to click.
+                            transform: "scale(1.41)",
+                            width: theme.spacing.twoXL,
+                            marginRight: "-8px",
+                            ":hover": {
+                              fill: theme.colors.bodyText,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
                   Input: {
                     style: {
                       // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
@@ -376,6 +406,10 @@ class DateInput extends React.PureComponent<Props, State> {
                       paddingLeft: ".5rem",
                       paddingBottom: ".5rem",
                       paddingTop: ".5rem",
+                      lineHeight: 1.4,
+                    },
+                    props: {
+                      "data-testid": "stDateInput-Input",
                     },
                   },
                 },
@@ -386,6 +420,7 @@ class DateInput extends React.PureComponent<Props, State> {
           minDate={minDate}
           maxDate={maxDate}
           range={isRange}
+          clearable={clearable}
         />
       </div>
     )

@@ -21,6 +21,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -40,6 +41,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
         self.assertLessEqual(
             datetime.strptime(c.default, "%H:%M").time(), datetime.now().time()
         )
+        self.assertEqual(c.HasField("default"), True)
         self.assertEqual(c.disabled, False)
 
     def test_just_disabled(self):
@@ -48,6 +50,17 @@ class TimeInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.time_input
         self.assertEqual(c.disabled, True)
+
+    def test_none_value(self):
+        """Test that it can be called with None as initial value."""
+        st.time_input("the label", value=None)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, "")
+        self.assertEqual(c.HasField("default"), False)
 
     @parameterized.expand(
         [(time(8, 45), "08:45"), (datetime(2019, 7, 6, 21, 15), "21:15")]
@@ -97,3 +110,25 @@ class TimeInputTest(DeltaGeneratorTestCase):
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
         )
+
+
+def test_time_input_interaction():
+    """Test interactions with an empty time_input widget."""
+    at = AppTest.from_string(
+        """
+    import streamlit as st
+    st.time_input("the label", value=None)
+    """
+    ).run()
+    time_input = at.time_input[0]
+    assert time_input.value is None
+
+    # Input a time:
+    at = time_input.set_value(time(8, 45)).run()
+    time_input = at.time_input[0]
+    assert time_input.value == time(8, 45)
+
+    # # Clear the value
+    at = time_input.set_value(None).run()
+    time_input = at.time_input[0]
+    assert time_input.value is None

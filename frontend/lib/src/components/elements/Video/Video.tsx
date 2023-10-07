@@ -87,6 +87,7 @@ export default function Video({
 
     return (
       <iframe
+        data-testid="stVideo"
         title={url}
         src={getYoutubeSrc(url)}
         width={width}
@@ -100,6 +101,7 @@ export default function Video({
 
   return (
     <video
+      data-testid="stVideo"
       ref={videoRef}
       controls
       src={endpoints.buildMediaURL(url)}

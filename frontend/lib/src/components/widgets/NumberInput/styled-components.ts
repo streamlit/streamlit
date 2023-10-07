@@ -91,9 +91,16 @@ export const StyledInputControl = styled.button(({ theme }) => ({
   },
 }))
 
-export const StyledInstructionsContainer = styled.div(({ theme }) => ({
-  position: "absolute",
-  marginRight: theme.spacing.twoXS,
-  left: 0,
-  right: `${CONTROLS_WIDTH * 2}px`,
-}))
+export interface StyledInstructionsContainerProps {
+  // If widget is clearable, the instruction needs to be moved a couple
+  // pixels to the left to avoid overlapping with the clear button.
+  clearable: boolean
+}
+
+export const StyledInstructionsContainer =
+  styled.div<StyledInstructionsContainerProps>(({ theme, clearable }) => ({
+    position: "absolute",
+    marginRight: theme.spacing.twoXS,
+    left: 0,
+    right: `${CONTROLS_WIDTH * 2 + (clearable ? 12 : 0)}px`,
+  }))
