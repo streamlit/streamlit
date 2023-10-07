@@ -54,10 +54,15 @@ of the client's browser and the Streamlit server._
 
 def is_cacheable_msg(msg: ForwardMsg) -> bool:
     """True if the given message qualifies for caching."""
-    if msg.WhichOneof("type") in {"ref_hash", "initialize"}:
+    if msg.WhichOneof("type") in {"forward_msg_ref", "initialize"}:
         # Some message types never get cached
         return False
-    return msg.ByteSize() >= int(config.get_option("global.minCachedMessageSize"))
+
+    return (
+        int(config.get_option("global.minCachedMessageSize"))
+        <= msg.ByteSize()
+        < get_max_message_size_bytes()
+    )
 
 
 def serialize_forward_msg(msg: ForwardMsg) -> bytes:

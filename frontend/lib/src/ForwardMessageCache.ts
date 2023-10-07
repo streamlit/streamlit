@@ -19,6 +19,8 @@ import { logMessage } from "./util/log"
 import { ensureError } from "./util/ErrorHandling"
 import { StreamlitEndpoints } from "./StreamlitEndpoints"
 
+const FRONTEND_CACHE_MESSAGE_MAX_SIZE = 100 * 1e6
+
 class CacheEntry {
   public readonly encodedMsg: Uint8Array
 
@@ -133,7 +135,7 @@ export class ForwardMsgCache {
    * Add a new message to the cache if appropriate.
    */
   private maybeCacheMessage(msg: ForwardMsg, encodedMsg: Uint8Array): void {
-    if (msg.type === "refHash") {
+    if (msg.type === "forwardMsgRef") {
       // We never cache reference messages. These messages
       // may have `metadata.cacheable` set, but this is
       // only because they carry the metadata for the messages
@@ -154,7 +156,13 @@ export class ForwardMsgCache {
       return
     }
 
-    logMessage(`Caching ForwardMsg [hash=${msg.hash}]`)
+    // Hardcoded limit for max message size we cache on frontned
+    if (encodedMsg.byteLength > FRONTEND_CACHE_MESSAGE_MAX_SIZE) {
+      logMessage(`TOO BIG MESSAGE TO CACHE!!! [hash=${msg.hash}]`)
+      return
+    }
+
+    logMessage(`Caching ForwardMsg [hash=${msg.hash}], type=${msg.type}`)
     this.messages.set(
       msg.hash,
       new CacheEntry(encodedMsg, this.scriptRunCount)

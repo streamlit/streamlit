@@ -358,9 +358,9 @@ _create_option(
     description="""Only cache ForwardMsgs that are greater than or equal to
         this minimum.""",
     visibility="hidden",
-    default_val=10 * 1e3,
+    default_val=int(1e6),
     type_=float,
-)  # 10k
+)  # 1MB
 
 _create_option(
     "global.maxCachedMessageAge",

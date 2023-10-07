@@ -72,7 +72,7 @@ message ForwardMsg {
     // The client should substitute the message with the given hash
     // for this one. If the client does not have the referenced message
     // in its cache, it can retrieve it from the server.
-    string ref_hash = 11;
+    string ref_hash = 11; // deprecated
     ForwardMsgRef forward_msg_ref = 20;
   }
 
