@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   js_test:
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-latest
 
     defaults:
       run:
