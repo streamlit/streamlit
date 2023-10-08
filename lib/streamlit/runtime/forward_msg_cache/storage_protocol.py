@@ -23,7 +23,10 @@ RefURL: TypeAlias = str
 class ForwardMsgCacheStorageProtocol(Protocol):
     @abstractmethod
     def add_message(self, msg: ForwardMsg) -> RefURL:
-        """Add message to storage, return message URL"""
+        """Add message to storage, return message URL
+        Message recieved via get request to RefURL should be able to be unpacked
+        on frontend via `ForwardMsg.decode(encodedMsg)`.
+        """
         raise NotImplementedError
 
     @abstractmethod
