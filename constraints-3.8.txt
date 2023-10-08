@@ -1,4 +1,4 @@
-aiohttp==3.8.5
+aiohttp==3.8.6
 aiosignal==1.3.1
 altair==5.1.2
 anyio==3.7.1
@@ -7,7 +7,7 @@ async-timeout==4.0.3
 attrs==23.1.0
 backports.zoneinfo==0.2.1
 black==23.9.1
-blinker==1.6.2
+blinker==1.6.3
 bokeh==2.4.3
 cachetools==5.3.1
 certifi==2023.7.22
