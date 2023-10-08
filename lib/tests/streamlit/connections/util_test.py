@@ -13,8 +13,15 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
-from streamlit.connections.util import extract_from_dict
+import pytest
+
+from streamlit.connections.util import (
+    extract_from_dict,
+    load_from_snowsql_config_file,
+    running_in_sis,
+)
 
 
 class ConnectionUtilTest(unittest.TestCase):
@@ -28,3 +35,63 @@ class ConnectionUtilTest(unittest.TestCase):
 
         assert extracted == {"k1": "v1", "k2": "v2"}
         assert d == {"k3": "v3", "k4": "v4"}
+
+    @pytest.mark.require_snowflake
+    @patch("snowflake.connector.connection", MagicMock())
+    def test_not_running_in_sis(self):
+        assert not running_in_sis()
+
+    @pytest.mark.require_snowflake
+    @patch(
+        "snowflake.connector.connection",
+    )
+    def test_running_in_sis(self, patched_connection):
+        delattr(patched_connection, "SnowflakeConnection")
+        assert running_in_sis()
+
+    def test_load_from_snowsql_config_file_no_file(self):
+        assert load_from_snowsql_config_file("my_snowpark_connection") == {}
+
+    @patch(
+        "streamlit.connections.util.os.path.exists",
+        MagicMock(return_value=True),
+    )
+    def test_load_from_snowsql_config_file_no_section(self):
+        with patch("builtins.open", new_callable=mock_open, read_data=""):
+            assert load_from_snowsql_config_file("my_snowpark_connection") == {}
+
+    @patch(
+        "streamlit.connections.util.os.path.exists",
+        MagicMock(return_value=True),
+    )
+    def test_load_from_snowsql_config_file_named_section(self):
+        config_data = """
+[connections.my_snowpark_connection]
+accountname = "hello"
+dbname = notPostgres
+
+[connections]
+accountname = "i get overwritten"
+schemaname = public
+"""
+        with patch("builtins.open", new_callable=mock_open, read_data=config_data):
+            assert load_from_snowsql_config_file("my_snowpark_connection") == {
+                "account": "hello",
+                "database": "notPostgres",
+            }
+
+    @patch(
+        "streamlit.connections.util.os.path.exists",
+        MagicMock(return_value=True),
+    )
+    def test_load_from_snowsql_config_file_default_section(self):
+        config_data = """
+[connections]
+accountname = "not overwritten"
+schemaname = public
+"""
+        with patch("builtins.open", new_callable=mock_open, read_data=config_data):
+            assert load_from_snowsql_config_file("my_snowpark_connection") == {
+                "account": "not overwritten",
+                "schema": "public",
+            }

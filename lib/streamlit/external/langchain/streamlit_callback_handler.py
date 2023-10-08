@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import time
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import AgentAction, AgentFinish, LLMResult
@@ -182,9 +182,7 @@ class LLMThought:
         # data is redundant
         self._reset_llm_token_stream()
 
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_llm_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._container.markdown("**LLM encountered an error...**")
         self._container.exception(error)
         self._state = LLMThoughtState.ERROR
@@ -201,6 +199,9 @@ class LLMThought:
             label=self._labeler.get_tool_label(self._last_tool, is_complete=False),
             state="running",
         )
+        if len(input_str) > MAX_TOOL_INPUT_STR_LENGTH:
+            # output is printed later in on_tool_end
+            self._container.markdown(f"**Input:**\n\n{input_str}\n\n**Output:**")
 
     def on_tool_end(
         self,
@@ -212,9 +213,7 @@ class LLMThought:
     ) -> None:
         self._container.markdown(output)
 
-    def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_tool_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._container.markdown("**Tool encountered an error...**")
         self._container.exception(error)
         self._container.update(state="error")
@@ -352,9 +351,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         self._require_current_thought().on_llm_end(response, **kwargs)
 
-    def on_llm_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_llm_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._require_current_thought().on_llm_error(error, **kwargs)
 
     def on_tool_start(
@@ -375,9 +372,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         )
         self._complete_current_thought()
 
-    def on_tool_error(
-        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-    ) -> None:
+    def on_tool_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._require_current_thought().on_tool_error(error, **kwargs)
 
     def on_agent_action(

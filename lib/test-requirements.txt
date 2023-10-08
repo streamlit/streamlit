@@ -1,6 +1,7 @@
 # Packages used to test things users may do with Streamlit.
 # As of September 21, 2022, only the latest version of Bokeh (2.4.3) is supported.
 # NOTE: Python Bokeh and BokehJS versions must always match.
+anyio>=3.7.1, <4.0
 bokeh==2.4.3
 cffi>=1.14
 chart-studio>=1.1.0
@@ -22,11 +23,14 @@ hypothesis>=6.17.4
 parameterized
 pytest
 pytest-cov
+requests>=2.27, <3
 requests-mock
 testfixtures
 pytest-playwright>=0.1.2
 pixelmatch>=0.3.0
 pytest-xdist
+pytest-rerunfailures
+pytest-github-actions-annotate-failures
 
 mypy-protobuf>=3.2, <3.4
 
@@ -46,3 +50,6 @@ sqlalchemy[mypy]>=1.4.25, <2.0
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.
 pydantic>=1.0, <2.0
+
+# semver 3 renames VersionInfo so temporarily pin until we deal with it
+semver<3

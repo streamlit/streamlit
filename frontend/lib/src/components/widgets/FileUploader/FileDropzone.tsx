@@ -58,7 +58,7 @@ const FileDropzone = ({
         isDisabled={disabled}
         aria-label={label}
       >
-        <input {...getInputProps()} />
+        <input data-testid="stDropzoneInput" {...getInputProps()} />
         <FileDropzoneInstructions
           multiple={multiple}
           acceptedExtensions={acceptedExtensions}

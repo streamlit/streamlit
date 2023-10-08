@@ -256,7 +256,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 session_id="test session id",
                 _enqueue=forward_msg_queue.enqueue,
                 query_string="",
-                session_state=SafeSessionState(SessionState()),
+                session_state=SafeSessionState(SessionState(), lambda: None),
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 page_script_hash="",
                 user_info={"email": "test@test.com"},

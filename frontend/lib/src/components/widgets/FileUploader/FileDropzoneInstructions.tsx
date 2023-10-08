@@ -38,7 +38,7 @@ const FileDropzoneInstructions = ({
   acceptedExtensions,
   maxSizeBytes,
 }: Props): React.ReactElement => (
-  <StyledFileDropzoneInstructions>
+  <StyledFileDropzoneInstructions data-testid="stFileDropzoneInstructions">
     <StyledFileDropzoneInstructionsFileUploaderIcon>
       <Icon content={CloudUpload} size="threeXL" />
     </StyledFileDropzoneInstructionsFileUploaderIcon>
@@ -50,9 +50,8 @@ const FileDropzoneInstructions = ({
         {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions
-              .join(", ")
-              .replace(/\./g, "")
-              .toUpperCase()}`
+              .map(ext => ext.replace(/^\./, "").toUpperCase())
+              .join(", ")}`
           : null}
       </Small>
     </StyledFileDropzoneInstructionsColumn>
