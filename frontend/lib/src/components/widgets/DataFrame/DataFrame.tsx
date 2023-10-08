@@ -46,6 +46,7 @@ import {
   useColumnLoader,
   useTooltips,
   useCustomRenderer,
+  useDataExporter,
 } from "./hooks"
 import {
   BaseColumn,
@@ -341,6 +342,8 @@ function DataFrame({
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
   const isRowSelected = gridSelection.rows.length > 0
 
+  const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
+
   return (
     <StyledResizableContainer
       data-testid="stDataFrame"
@@ -379,6 +382,9 @@ function DataFrame({
               }
             : undefined
         }
+        onExport={() => {
+          exportToCsv()
+        }}
       />
       <Resizable
         data-testid="stDataFrameResizable"

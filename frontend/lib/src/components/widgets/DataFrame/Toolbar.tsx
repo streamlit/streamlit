@@ -80,12 +80,14 @@ export interface ToolbarProps {
   onSearch?: () => void
   onAddRow?: () => void
   onDeleteRow?: () => void
+  onExport?: () => void
 }
 
 function Toolbar({
   onSearch,
   onDeleteRow,
   onAddRow,
+  onExport,
 }: ToolbarProps): ReactElement {
   return (
     <StyledDataframeToolbar>
@@ -104,11 +106,13 @@ function Toolbar({
           onClick={() => onAddRow()}
         />
       )}
-      <ActionButton
-        label={"Download as CSV"}
-        icon={FileDownload}
-        onClick={() => {}}
-      />
+      {onExport && (
+        <ActionButton
+          label={"Download as CSV"}
+          icon={FileDownload}
+          onClick={() => onExport()}
+        />
+      )}
       {onSearch && (
         <ActionButton
           label={"Search table"}
