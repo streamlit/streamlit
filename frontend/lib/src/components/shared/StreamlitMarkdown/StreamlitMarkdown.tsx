@@ -114,8 +114,7 @@ export function createAnchorFromText(text: string | null): string {
       .join("-")
   } else if (text) {
     // if the text is not valid ASCII, use a hash of the text
-    const firstWord = text.split(" ")[0]
-    newAnchor = xxhash.h32(firstWord, 0xabcd).toString(16)
+    newAnchor = xxhash.h32(text, 0xabcd).toString(16)
   }
   return newAnchor
 }
