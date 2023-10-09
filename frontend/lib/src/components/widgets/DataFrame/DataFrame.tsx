@@ -402,9 +402,7 @@ function DataFrame({
               }
             : undefined
         }
-        onExport={() => {
-          exportToCsv()
-        }}
+        onExport={exportToCsv}
         onExpand={expand}
         onCollapse={collapse}
       />
