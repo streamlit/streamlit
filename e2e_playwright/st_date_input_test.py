@@ -186,7 +186,7 @@ def test_calls_callback_on_change(app: Page):
     # Change different date input to trigger delta path change
     first_date_input_field = app.locator(".stDateInput input").first
     first_date_input_field.type("1971/01/03")
-    first_date_input_field.blur()
+    first_date_input_field.press("Enter")
 
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
         "Value 1: 1971-01-03", use_inner_text=True

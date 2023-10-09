@@ -17,12 +17,13 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_data_editor_index_types(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_data_editor_index_types(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.data_editor renders various index types correctly."""
-    dataframe_elements = themed_app.get_by_test_id("stDataFrame")
+    dataframe_elements = app.get_by_test_id("stDataFrame")
     expect(dataframe_elements).to_have_count(7)
+
+    # The dataframe component might require a bit more time for rendering the canvas
+    app.wait_for_timeout(250)
 
     assert_snapshot(dataframe_elements.nth(0), name="st_data_editor-string_index")
     assert_snapshot(dataframe_elements.nth(1), name="st_data_editor-float64_index")

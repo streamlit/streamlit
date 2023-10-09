@@ -79,18 +79,6 @@ st.data_editor(
     },
 )
 
-
-st.header("Ignore editing-only config options:")
-st.data_editor(
-    pd.DataFrame(
-        {
-            "col_0": ["a", "b", "c", None],
-        }
-    ),
-    column_config={"col_0": st.column_config.Column(disabled=False, required=True)},
-)
-
-
 st.header("Text column:")
 st.caption(
     "Editing the first column should only allow 5 characters. The second column should only allow numerical characters."

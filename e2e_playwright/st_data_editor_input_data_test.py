@@ -25,7 +25,7 @@ def test_data_editor_input_format_rendering(
     expect(dataframe_elements).to_have_count(35)
 
     # The data editor might require a bit more time for rendering the canvas
-    app.wait_for_timeout(250)
+    app.wait_for_timeout(1000)
 
     for i, element in enumerate(dataframe_elements.all()):
         assert_snapshot(element, name=f"st_data_editor-input_data_{i}")
