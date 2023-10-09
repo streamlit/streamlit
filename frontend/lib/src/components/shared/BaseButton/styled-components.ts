@@ -88,7 +88,7 @@ export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
       fontWeight: theme.fontWeights.normal,
       padding: `${theme.spacing.xs} ${theme.spacing.md}`,
       borderRadius: theme.radii.lg,
-      // minHeight: "38.4px",
+      minHeight: "38.4px",
       margin: 0,
       lineHeight: theme.lineHeights.base,
       color: "inherit",
@@ -348,6 +348,7 @@ export const StyledElementToolbarButton = styled(
     display: "flex",
     gap: theme.spacing.xs,
     alignItems: "center",
+    minHeight: "unset",
     // line height should be the same as the icon size
     lineHeight: theme.iconSizes.md,
 
