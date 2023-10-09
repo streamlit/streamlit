@@ -998,7 +998,7 @@ class TimeInput(Widget):
 class Block:
     type: str
     children: dict[int, Node]
-    proto: BlockProto | None = field(repr=False)
+    proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
 
     def __init__(
