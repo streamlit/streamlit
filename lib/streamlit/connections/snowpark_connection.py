@@ -18,17 +18,20 @@
 # way to configure this at a per-line level :(
 # mypy: no-warn-unused-ignores
 
-import configparser
-import os
 import threading
 from collections import ChainMap
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
+from typing import TYPE_CHECKING, Iterator, Optional, Union, cast
 
 import pandas as pd
 
 from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections.util import (
+    SNOWSQL_CONNECTION_FILE,
+    load_from_snowsql_config_file,
+    running_in_sis,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -37,34 +40,6 @@ if TYPE_CHECKING:
 
 
 _REQUIRED_CONNECTION_PARAMS = {"account"}
-_DEFAULT_CONNECTION_FILE = "~/.snowsql/config"
-
-
-def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
-    """Loads the dictionary from snowsql config file."""
-    snowsql_config_file = os.path.expanduser(_DEFAULT_CONNECTION_FILE)
-    if not os.path.exists(snowsql_config_file):
-        return {}
-
-    config = configparser.ConfigParser(inline_comment_prefixes="#")
-    config.read(snowsql_config_file)
-
-    if f"connections.{connection_name}" in config:
-        raw_conn_params = config[f"connections.{connection_name}"]
-    elif "connections" in config:
-        raw_conn_params = config["connections"]
-    else:
-        return {}
-
-    conn_params = {
-        k.replace("name", ""): v.strip('"') for k, v in raw_conn_params.items()
-    }
-
-    if "db" in conn_params:
-        conn_params["database"] = conn_params["db"]
-        del conn_params["db"]
-
-    return conn_params
 
 
 class SnowparkConnection(ExperimentalBaseConnection["Session"]):
@@ -93,24 +68,21 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         )
         from snowflake.snowpark.session import Session
 
-        # If we're in a runtime environment where there's already an active session
-        # available, we just use that one. Otherwise, we fall back to attempting to
-        # create a new one from whatever credentials we have available.
-        try:
+        # If we're running in SiS, just call get_active_session(). Otherwise, attempt to
+        # create a new session from whatever credentials we have available.
+        if running_in_sis():
             return get_active_session()
-        except SnowparkSessionException:
-            pass
 
         conn_params = ChainMap(
             kwargs,
             self._secrets.to_dict(),
-            _load_from_snowsql_config_file(self._connection_name),
+            load_from_snowsql_config_file(self._connection_name),
         )
 
         if not len(conn_params):
             raise StreamlitAPIException(
                 "Missing Snowpark connection configuration. "
-                f"Did you forget to set this in `secrets.toml`, `{_DEFAULT_CONNECTION_FILE}`, "
+                f"Did you forget to set this in `secrets.toml`, `{SNOWSQL_CONNECTION_FILE}`, "
                 "or as kwargs to `st.experimental_connection`?"
             )
 

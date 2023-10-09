@@ -96,9 +96,14 @@ describe("Host communication", () => {
             .iframe(() => {
                 // Check toolbar contents
                 cy.get('.stActionButton').should("exist")
-                cy.get('.stActionButton').should("have.text", "Favorite")
+                cy.getIndexed('[data-testid="stActionButton"]', 0).should("have.text", "Favorite")
+                cy.getIndexed('[data-testid="stActionButton"]', 1).should("have.text", "Share")
             });
     });
+
+    it("displays the toolbar with horizontal buttons", () => {
+        cy.get("iframe").first().matchImageSnapshot("toolbarActions");
+    })
 
     it("handles a hide sidebar nav message", () => {
         cy.get("iframe").iframe(() => {
