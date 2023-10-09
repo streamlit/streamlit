@@ -81,30 +81,30 @@ export function ToolbarAction({
 export interface ToolbarProps {
   onExpand?: () => void
   onCollapse?: () => void
-  isFullscreen?: boolean
+  isFullScreen?: boolean
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
   onExpand,
   onCollapse,
-  isFullscreen,
+  isFullScreen,
   children,
 }): ReactElement => {
   return (
     <StyledToolbar
-      isFullscreen={isFullscreen}
+      isFullScreen={isFullScreen}
       className={"stElementToolbar"}
       data-testid={"stElementToolbar"}
     >
       {children}
-      {onExpand && !isFullscreen && (
+      {onExpand && !isFullScreen && (
         <ToolbarAction
           label={"Open in fullscreen"}
           icon={Fullscreen}
           onClick={() => onExpand()}
         />
       )}
-      {onCollapse && isFullscreen && (
+      {onCollapse && isFullScreen && (
         <ToolbarAction
           label={"Close fullscreen"}
           icon={FullscreenExit}

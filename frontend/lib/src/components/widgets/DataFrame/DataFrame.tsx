@@ -379,7 +379,7 @@ function DataFrame({
       }}
     >
       <Toolbar
-        isFullscreen={isFullScreen}
+        isFullScreen={isFullScreen}
         onExpand={expand}
         onCollapse={collapse}
       >

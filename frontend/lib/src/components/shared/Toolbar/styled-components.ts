@@ -19,11 +19,11 @@ import styled from "@emotion/styled"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
 export interface StyledToolbarProps {
-  isFullscreen?: boolean
+  isFullScreen?: boolean
 }
 
 export const StyledToolbar = styled.div<StyledToolbarProps>(
-  ({ theme, isFullscreen }) => ({
+  ({ theme, isFullScreen }) => ({
     color: hasLightBackgroundColor(theme)
       ? theme.colors.fadedText60
       : theme.colors.bodyText,
@@ -40,7 +40,7 @@ export const StyledToolbar = styled.div<StyledToolbarProps>(
     width: "fit-content",
     position: "absolute",
     zIndex: theme.zIndices.sidebar + 1,
-    ...(!isFullscreen && {
+    ...(!isFullScreen && {
       transition: "opacity 300ms 150ms, transform 300ms 150ms",
       opacity: 0,
       "&:active, &:focus-visible, &:hover": {
