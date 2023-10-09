@@ -1,4 +1,5 @@
 /**
+import { withFullScreenWrapper } from '@streamlit/lib/src/hocs/withFullScreenWrapper';
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,3 +16,4 @@
  */
 
 export { default } from "./FullScreenWrapper"
+export { default as withFullScreenWrapper } from "./withFullScreenWrapper"

@@ -29,6 +29,8 @@ export type Size = {
   width: number
   expanded: boolean
   height?: number
+  expand: () => void
+  collapse: () => void
 }
 
 /*
@@ -41,6 +43,7 @@ export interface FullScreenWrapperProps {
   width: number
   height?: number
   theme: EmotionTheme
+  hideFullScreenButton?: boolean
 }
 
 interface State {
@@ -141,11 +144,14 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
       buttonTitle = "Exit fullscreen"
     }
 
-    const { hideFullScreenButtons } = this.context
+    const hideFullScreenButton =
+      this.props.hideFullScreenButton ??
+      this.context.hideFullScreenButtons ??
+      false
 
     return (
       <StyledFullScreenFrame isExpanded={expanded}>
-        {!hideFullScreenButtons && (
+        {!hideFullScreenButton && (
           <StyledFullScreenButton
             data-testid={"StyledFullScreenButton"}
             onClick={buttonOnClick}
@@ -156,8 +162,20 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
           </StyledFullScreenButton>
         )}
         {expanded
-          ? children({ width: fullWidth, height: fullHeight, expanded })
-          : children({ width, height, expanded })}
+          ? children({
+              width: fullWidth,
+              height: fullHeight,
+              expanded,
+              expand: this.zoomIn,
+              collapse: this.zoomOut,
+            })
+          : children({
+              width,
+              height,
+              expanded,
+              expand: this.zoomIn,
+              collapse: this.zoomOut,
+            })}
       </StyledFullScreenFrame>
     )
   }

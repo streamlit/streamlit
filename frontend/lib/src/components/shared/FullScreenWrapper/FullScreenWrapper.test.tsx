@@ -20,7 +20,7 @@ import { screen } from "@testing-library/react"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
-import { LibContextProps } from "src/components/core/LibContext"
+import { LibContextProps } from "@streamlit/lib/src/components/core/LibContext"
 
 describe("FullScreenWrapper", () => {
   const getProps = (
