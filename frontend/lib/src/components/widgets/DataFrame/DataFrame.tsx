@@ -26,7 +26,7 @@ import {
 import { Resizable } from "re-resizable"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
@@ -82,6 +82,8 @@ export interface DataFrameProps {
   disabled: boolean
   widgetMgr: WidgetStateManager
   isFullScreen?: boolean
+  expand?: () => void
+  collapse?: () => void
 }
 
 /**
@@ -103,6 +105,8 @@ function DataFrame({
   disabled,
   widgetMgr,
   isFullScreen,
+  expand,
+  collapse,
 }: DataFrameProps): ReactElement {
   const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
@@ -348,26 +352,42 @@ function DataFrame({
     <StyledResizableContainer
       data-testid="stDataFrame"
       className="stDataFrame"
-      onBlur={() => {
+      onBlur={event => {
         // If the container loses focus, clear the current selection.
         // Touch screen devices have issues with this, so we don't clear
         // the selection on those devices.
-        if (!isFocused && !isTouchDevice) {
+        // We also don't want to clear the selection if the user clicks on
+        // on the toolbar by checking that relatedTarget is not a children of
+        // this element.
+        if (
+          !isFocused &&
+          !isTouchDevice &&
+          !event.currentTarget.contains(
+            event.relatedTarget as HTMLElement | null
+          )
+        ) {
           clearSelection()
         }
       }}
     >
       <Toolbar
+        isFullscreen={isFullScreen}
         onSearch={() => {
-          setIsFocused(true)
-          setShowSearch(true)
+          if (!showSearch) {
+            setIsFocused(true)
+            setShowSearch(true)
+          } else {
+            setShowSearch(false)
+          }
+          clearTooltip()
         }}
         onAddRow={
           isDynamicAndEditable
             ? () => {
-                setIsFocused(true)
                 if (onRowAppended) {
+                  setIsFocused(true)
                   onRowAppended()
+                  clearTooltip()
                 }
               }
             : undefined
@@ -375,9 +395,9 @@ function DataFrame({
         onDeleteRow={
           isDynamicAndEditable && isRowSelected
             ? () => {
-                setIsFocused(true)
                 if (onDelete) {
                   onDelete(gridSelection)
+                  clearTooltip()
                 }
               }
             : undefined
@@ -385,6 +405,8 @@ function DataFrame({
         onExport={() => {
           exportToCsv()
         }}
+        onExpand={expand}
+        onCollapse={collapse}
       />
       <Resizable
         data-testid="stDataFrameResizable"
@@ -567,4 +589,4 @@ function DataFrame({
   )
 }
 
-export default withFullScreenWrapper(DataFrame)
+export default withFullScreenWrapper(DataFrame, true)

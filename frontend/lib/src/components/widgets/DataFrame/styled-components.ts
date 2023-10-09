@@ -34,21 +34,43 @@ export const StyledResizableContainer = styled.div(({ theme }) => ({
     ["overflowX" as any]: "overlay !important",
     ["overflowY" as any]: "overlay !important",
   },
+
+  "&:hover": {
+    [StyledDataframeToolbar as any]: {
+      opacity: 1,
+      transition: "none",
+    },
+  },
 }))
 
 export interface StyledDataframeToolbarProps {
   disabled?: boolean | null
+  isFullscreen?: boolean
 }
 
 export const StyledDataframeToolbar = styled.div<StyledDataframeToolbarProps>(
-  ({ theme, disabled }) => ({
+  ({ theme, disabled, isFullscreen }) => ({
     color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
-    top: theme.spacing.threeXS,
-    right: theme.spacing.twoXS,
+    top: "-2.1rem",
+    right: "0rem",
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
     marginBottom: theme.spacing.xs,
     justifyContent: "flex-end",
+    boxShadow: "1px 2px 8px rgba(0, 0, 0, 0.08)",
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.lightenedBg05,
+    width: "fit-content",
+    position: "absolute",
+    zIndex: theme.zIndices.sidebar + 1,
+    ...(!isFullscreen && {
+      transition: "opacity 300ms 150ms, transform 300ms 150ms",
+      opacity: 0,
+      "&:active, &:focus-visible, &:hover": {
+        opacity: 1,
+        transition: "none",
+      },
+    }),
   })
 )

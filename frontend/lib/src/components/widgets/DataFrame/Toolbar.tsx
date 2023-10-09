@@ -17,8 +17,16 @@
 import React, { ReactElement } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
-
 import { useTheme } from "@emotion/react"
+import {
+  Search,
+  Add,
+  Remove,
+  Fullscreen,
+  FullscreenExit,
+  FileDownload,
+} from "@emotion-icons/material-outlined"
+
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import Tooltip, {
   Placement,
@@ -26,13 +34,6 @@ import Tooltip, {
 import Button, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
-import {
-  Search,
-  Add,
-  Remove,
-  Fullscreen,
-  FileDownload,
-} from "@emotion-icons/material-outlined"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
@@ -65,9 +66,18 @@ function ActionButton({
           />
         }
         placement={Placement.TOP}
+        onMouseEnterDelay={1000}
         inline
       >
-        <Button onClick={onClick} kind={BaseButtonKind.ELEMENT_TOOLBAR}>
+        <Button
+          onClick={event => {
+            if (onClick) {
+              onClick()
+            }
+            event.stopPropagation()
+          }}
+          kind={BaseButtonKind.ELEMENT_TOOLBAR}
+        >
           {icon && <Icon content={icon} size="md" />}
           {displayLabel && <span>{displayLabel}</span>}
         </Button>
@@ -81,6 +91,9 @@ export interface ToolbarProps {
   onAddRow?: () => void
   onDeleteRow?: () => void
   onExport?: () => void
+  onExpand?: () => void
+  onCollapse?: () => void
+  isFullscreen?: boolean
 }
 
 function Toolbar({
@@ -88,13 +101,15 @@ function Toolbar({
   onDeleteRow,
   onAddRow,
   onExport,
+  onExpand,
+  onCollapse,
+  isFullscreen,
 }: ToolbarProps): ReactElement {
   return (
-    <StyledDataframeToolbar>
+    <StyledDataframeToolbar isFullscreen={isFullscreen}>
       {onDeleteRow && (
         <ActionButton
-          label={"Delete row"}
-          show_label={true}
+          label={"Delete row(s)"}
           icon={Remove}
           onClick={() => onDeleteRow()}
         />
@@ -120,11 +135,20 @@ function Toolbar({
           onClick={() => onSearch()}
         />
       )}
-      <ActionButton
-        label={"Open in fullscreen"}
-        icon={Fullscreen}
-        onClick={() => {}}
-      />
+      {onExpand && !isFullscreen && (
+        <ActionButton
+          label={"Open in fullscreen"}
+          icon={Fullscreen}
+          onClick={() => onExpand()}
+        />
+      )}
+      {onCollapse && isFullscreen && (
+        <ActionButton
+          label={"Close fullscreen"}
+          icon={FullscreenExit}
+          onClick={() => onCollapse()}
+        />
+      )}
     </StyledDataframeToolbar>
   )
 }
