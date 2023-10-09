@@ -33,13 +33,7 @@ declare module "@loaders.gl/csv"
 
 declare module "@loaders.gl/gltf"
 
-// Workaround to get native-file-system-adapter working with typescript:
-// https://github.com/jimmywarting/native-file-system-adapter/issues/50#issuecomment-1528271081
-declare module "native-file-system-adapter" {
-  /* eslint-disable import/no-extraneous-dependencies */
-  export * from "native-file-system-adapter/types/mod"
-  /* eslint-enable */
-}
+declare module "native-file-system-adapter"
 
 declare module "fzy.js" {
   export function score(pattern: string, subject: string): number

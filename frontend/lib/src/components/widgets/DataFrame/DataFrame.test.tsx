@@ -29,6 +29,8 @@ jest.mock("@glideapps/glide-data-grid", () => ({
   DataEditor: jest.fn(props => <div {...props} />),
 }))
 
+jest.mock("native-file-system-adapter", () => ({}))
+
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
 const getProps = (
