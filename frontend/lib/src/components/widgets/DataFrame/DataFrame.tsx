@@ -509,8 +509,17 @@ function DataFrame({
           rowSelect={"none"}
           // Enable tooltips on hover of a cell or column header:
           onItemHovered={onItemHovered}
-          // Activate search:
-          keybindings={{ search: true, downFill: true }}
+          // Activate keybindings:
+          keybindings={{ downFill: true }}
+          // Search needs to be activated manually, too support search
+          // via the toolbar:
+          onKeyDown={event => {
+            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+              setShowSearch(cv => !cv)
+              event.stopPropagation()
+              event.preventDefault()
+            }
+          }}
           showSearch={showSearch}
           onSearchClose={() => {
             setShowSearch(false)
