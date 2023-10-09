@@ -53,6 +53,7 @@ import {
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
+import xxhash from "xxhashjs"
 import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 export enum Tags {
@@ -101,12 +102,21 @@ export interface Props {
  * Splits the string on non-alphanumeric characters, and joins with a dash.
  */
 export function createAnchorFromText(text: string | null): string {
-  const newAnchor = text
-    ?.toLowerCase()
-    .split(/[^A-Za-z0-9]/)
-    .filter(Boolean)
-    .join("-")
-  return newAnchor || ""
+  let newAnchor = ""
+  // Check if the text is valid ASCII characters - necessary for fully functional anchors (issue #5291)
+  const isASCII = text && /^[\x00-\x7F]*$/.test(text)
+
+  if (isASCII) {
+    newAnchor = text
+      ?.toLowerCase()
+      .split(/[^\p{L}\p{N}]+/gu) // split on non-alphanumeric characters
+      .filter(Boolean) // filter out falsy values using Boolean constructor
+      .join("-")
+  } else if (text) {
+    // if the text is not valid ASCII, use a hash of the text
+    newAnchor = xxhash.h32(text, 0xabcd).toString(16)
+  }
+  return newAnchor
 }
 
 // Note: React markdown limits hrefs to specific protocols ('http', 'https',
