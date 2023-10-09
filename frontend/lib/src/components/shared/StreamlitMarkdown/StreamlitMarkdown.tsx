@@ -110,7 +110,7 @@ export function createAnchorFromText(text: string | null): string {
     newAnchor = text
       ?.toLowerCase()
       .split(/[^\p{L}\p{N}]+/gu) // split on non-alphanumeric characters
-      .filter(Boolean)
+      .filter(Boolean) // filter out falsy values using Boolean constructor
       .join("-")
   } else if (text) {
     // if the text is not valid ASCII, use a hash of the text
