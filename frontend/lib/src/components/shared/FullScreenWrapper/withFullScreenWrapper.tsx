@@ -27,7 +27,7 @@ export interface Props {
 // Our wrapper takes the wrapped component's props, plus "width", "height?".
 // It will pass "isFullScreen" to the wrapped component automatically
 // (but the wrapped component is free to ignore that prop).
-type WrapperProps<P> = Omit<P & Props, "isFullScreen" | "collapse" | "extend">
+type WrapperProps<P> = Omit<P & Props, "isFullScreen" | "collapse" | "expand">
 
 function withFullScreenWrapper<P>(
   WrappedComponent: ComponentType<P>,
