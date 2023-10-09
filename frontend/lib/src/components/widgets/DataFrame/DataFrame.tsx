@@ -380,13 +380,6 @@ function DataFrame({
         element.editingMode === DYNAMIC ? numRows : numRows - 1
       )
 
-      console.log(
-        boundsFirstUnfreezedCell,
-        boundsFirstCell,
-        boundsLastCell,
-        resizableContainerRef.current?.clientWidth,
-        resizableContainerRef.current?.clientHeight
-      )
       if (
         !isNullOrUndefined(boundsLastCell) &&
         !isNullOrUndefined(boundsFirstCell) &&
