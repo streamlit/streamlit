@@ -348,7 +348,7 @@ class TypeUtilTest(unittest.TestCase):
 
         if incompatible:
             # Column should have been converted to string.
-            self.assertEqual(col_dtype, "object")
+            self.assertIsInstance(col_dtype, pd.StringDtype)
             self.assertEqual(inferred_type, "string")
         else:
             # Column should have the original type.
@@ -389,22 +389,21 @@ class TypeUtilTest(unittest.TestCase):
 
         fixed_df = fix_arrow_incompatible_column_types(df)
 
+        # Check dtypes
+        self.assertIsInstance(fixed_df["mixed-integer"].dtype, pd.StringDtype)
+        self.assertIsInstance(fixed_df["mixed"].dtype, pd.StringDtype)
+        self.assertTrue(pd.api.types.is_integer_dtype(fixed_df["integer"].dtype))
+        self.assertTrue(pd.api.types.is_float_dtype(fixed_df["float"].dtype))
+        self.assertTrue(pd.api.types.is_object_dtype(fixed_df["string"].dtype))
+        self.assertEqual(fixed_df.index.dtype.kind, "O")
+
+        # Check inferred types:
         self.assertEqual(infer_dtype(fixed_df["mixed-integer"]), "string")
         self.assertEqual(infer_dtype(fixed_df["mixed"]), "string")
         self.assertEqual(infer_dtype(fixed_df["integer"]), "integer")
         self.assertEqual(infer_dtype(fixed_df["float"]), "floating")
         self.assertEqual(infer_dtype(fixed_df["string"]), "string")
         self.assertEqual(infer_dtype(fixed_df.index), "string")
-
-        self.assertEqual(
-            str(fixed_df.dtypes),
-            """mixed-integer     object
-mixed             object
-integer            int64
-float            float64
-string            object
-dtype: object""",
-        )
 
     def test_data_frame_with_unsupported_column_types(self):
         """Test that `data_frame_to_bytes` correctly handles dataframes

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -181,7 +182,7 @@ def _parse_value(
 
     column_data_kind : ColumnDataKind
         The determined data kind of the column. The column data kind refers to the
-        shared data type of the values in the column (e.g. integer, float, string).
+        shared data type of the values in the column (e.g. int, float, str).
 
     Returns
     -------
@@ -202,6 +203,12 @@ def _parse_value(
 
         if column_data_kind == ColumnDataKind.BOOLEAN:
             return bool(value)
+
+        if column_data_kind == ColumnDataKind.DECIMAL:
+            # Decimal theoretically can also be initialized via number values.
+            # However, using number values here seems to cause issues with Arrow
+            # serialization, once you try to render the returned dataframe.
+            return Decimal(str(value))
 
         if column_data_kind in [
             ColumnDataKind.DATETIME,
@@ -388,6 +395,14 @@ def _is_supported_index(df_index: pd.Index) -> bool:
         in [
             pd.RangeIndex,
             pd.Index,
+            pd.DatetimeIndex,
+            # Categorical index doesn't work since arrow
+            # does serialize the options:
+            # pd.CategoricalIndex,
+            # Interval type isn't editable currently:
+            # pd.IntervalIndex,
+            # Period type isn't editable currently:
+            # pd.PeriodIndex,
         ]
         # We need to check these index types without importing, since they are deprecated
         # and planned to be removed soon.
@@ -607,7 +622,7 @@ class DataEditorMixin:
             Whether to hide the index column(s). If None (default), the visibility of
             index columns is automatically determined based on the data.
 
-        column_order : iterable of str or None
+        column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If
@@ -636,9 +651,9 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool or iterable of str
+        disabled : bool or Iterable of str
             Controls the editing of columns. If True, editing is disabled for all columns.
-            If an iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
+            If an Iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
             only the specified columns will be disabled for editing. If False (default),
             all columns that support editing are editable.
 

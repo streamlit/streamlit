@@ -23,7 +23,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -187,25 +187,23 @@ class SomeObj:
     pass
 
 
-class TextInputInteractiveTest(InteractiveScriptTests):
-    def test_text_input_interaction(self):
-        """Test interactions with an empty text_input widget."""
-        script = self.script_from_string(
-            """
-        import streamlit as st
-        st.text_input("the label", value=None)
+def test_text_input_interaction():
+    """Test interactions with an empty text_input widget."""
+    at = AppTest.from_string(
         """
-        )
-        sr = script.run()
-        text_input = sr.text_input[0]
-        assert text_input.value is None
+    import streamlit as st
+    st.text_input("the label", value=None)
+    """
+    ).run()
+    text_input = at.text_input[0]
+    assert text_input.value is None
 
-        # Input a value:
-        sr2 = text_input.input("Foo").run()
-        text_input = sr2.text_input[0]
-        assert text_input.value == "Foo"
+    # Input a value:
+    at = text_input.input("Foo").run()
+    text_input = at.text_input[0]
+    assert text_input.value == "Foo"
 
-        # # Clear the value
-        sr3 = text_input.set_value(None).run()
-        text_input = sr3.text_input[0]
-        assert text_input.value is None
+    # # Clear the value
+    at = text_input.set_value(None).run()
+    text_input = at.text_input[0]
+    assert text_input.value is None

@@ -19,8 +19,13 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 def test_dataframe_pd_styler(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.dataframe supports styling and display values via Pandas Styler."""
-    dataframe_elements = themed_app.locator(".stDataFrame")
-    expect(dataframe_elements).to_have_count(4)
+    elements = themed_app.get_by_test_id("stDataFrame")
+    expect(elements).to_have_count(4)
 
-    for i, element in enumerate(dataframe_elements.all()):
-        assert_snapshot(element, name=f"dataframe-pd-styler-{i}")
+    # The dataframe component might require a bit more time for rendering the canvas
+    themed_app.wait_for_timeout(250)
+
+    assert_snapshot(elements.nth(0), name="st_dataframe-styler_value_formatting")
+    assert_snapshot(elements.nth(1), name="st_dataframe-styler_background_color")
+    assert_snapshot(elements.nth(2), name="st_dataframe-styler_background_and_font")
+    assert_snapshot(elements.nth(3), name="st_dataframe-styler_gradient")

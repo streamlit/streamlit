@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime
 import json
 import unittest
+from decimal import Decimal
 from typing import Any, Dict, List, Mapping
 from unittest.mock import MagicMock, patch
 
@@ -148,6 +149,11 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
+                "col5": [
+                    Decimal("1.1"),
+                    Decimal("-12.3456"),
+                    Decimal("123456"),
+                ],
             }
         )
 
@@ -157,6 +163,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col2": "foo",
                 "col3": False,
                 "col4": "2020-03-20T14:28:23",
+                "col5": "2.3",
             },
             1: {"col2": None},
         }
@@ -170,6 +177,7 @@ class DataEditorUtilTest(unittest.TestCase):
         self.assertEqual(df.iat[1, 1], None)
         self.assertEqual(df.iat[0, 2], False)
         self.assertEqual(df.iat[0, 3], pd.Timestamp("2020-03-20T14:28:23"))
+        self.assertEqual(df.iat[0, 4], Decimal("2.3"))
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
@@ -446,7 +454,6 @@ class DataEditorTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (pd.CategoricalIndex(["a", "b", "c"]),),
-            (pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03"]),),
             (pd.PeriodIndex(["2020-01-01", "2020-01-02", "2020-01-03"], freq="D"),),
             (pd.TimedeltaIndex(["1 day", "2 days", "3 days"]),),
             (pd.MultiIndex.from_tuples([("a", "b"), ("c", "d"), ("e", "f")]),),
@@ -473,6 +480,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             (pd.Index([1, 2, 3], dtype="uint64"),),
             (pd.Index([1.0, 2.0, 3.0], dtype="float"),),
             (pd.Index(["a", "b", "c"]),),
+            (pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03"]),),
         ]
     )
     def test_with_supported_index(self, index: pd.Index):

@@ -43,7 +43,7 @@
     "@loaders.gl/core": "^3.2.13",
     "@loaders.gl/csv": "^3.2.13",
     "@loaders.gl/gltf": "^3.2.13",
-    "apache-arrow": "^11.0.0",
+    "apache-arrow": "^13.0.0",
     "axios": "^0.27.2",
     "baseui": "12.2.0",
     "camelcase": "^7.0.1",
