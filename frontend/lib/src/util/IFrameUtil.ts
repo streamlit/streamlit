@@ -96,9 +96,6 @@ export const DEFAULT_IFRAME_FEATURE_POLICY = [
   // Controls whether the current document is allowed to use video input devices. When this policy is disabled, the Promise returned by getUserMedia() will reject with a NotAllowedError DOMException.
   "camera",
 
-  // Controls whether the current document is allowed to read from the clipboard. When this policy is disabled, attempts to read from the clipboard will be rejected.
-  "clipboard-read",
-
   // Controls whether the current document is allowed to write to the clipboard. When this policy is disabled, attempts to write to the clipboard will be rejected.
   "clipboard-write",
 
