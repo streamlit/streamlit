@@ -24,6 +24,12 @@ import {
   GridCell,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
+import {
+  Remove,
+  Add,
+  FileDownload,
+  Search,
+} from "@emotion-icons/material-outlined"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
@@ -34,6 +40,9 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import Toolbar, {
+  ToolbarAction,
+} from "@streamlit/lib/src/components/shared/Toolbar"
 
 import EditingState from "./EditingState"
 import {
@@ -54,9 +63,8 @@ import {
   getTextCell,
   ImageCellEditor,
 } from "./columns"
-import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
-import Toolbar from "./Toolbar"
+import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
@@ -372,40 +380,57 @@ function DataFrame({
     >
       <Toolbar
         isFullscreen={isFullScreen}
-        onSearch={() => {
-          if (!showSearch) {
-            setIsFocused(true)
-            setShowSearch(true)
-          } else {
-            setShowSearch(false)
-          }
-          clearTooltip()
-        }}
-        onAddRow={
-          isDynamicAndEditable
-            ? () => {
-                if (onRowAppended) {
-                  setIsFocused(true)
-                  onRowAppended()
-                  clearTooltip()
-                }
-              }
-            : undefined
-        }
-        onDeleteRow={
-          isDynamicAndEditable && isRowSelected
-            ? () => {
-                if (onDelete) {
-                  onDelete(gridSelection)
-                  clearTooltip()
-                }
-              }
-            : undefined
-        }
-        onExport={exportToCsv}
         onExpand={expand}
         onCollapse={collapse}
-      />
+      >
+        {isDynamicAndEditable && isRowSelected && (
+          <ToolbarAction
+            label={"Delete row(s)"}
+            icon={Remove}
+            onClick={() => {
+              if (onDelete) {
+                onDelete(gridSelection)
+                clearTooltip()
+              }
+            }}
+          />
+        )}
+        {isDynamicAndEditable && (
+          <ToolbarAction
+            label={"Add row"}
+            icon={Add}
+            onClick={() => {
+              if (onRowAppended) {
+                setIsFocused(true)
+                onRowAppended()
+                clearTooltip()
+              }
+            }}
+          />
+        )}
+        {!isLargeTable && !isEmptyTable && (
+          <ToolbarAction
+            label={"Download as CSV"}
+            icon={FileDownload}
+            onClick={() => exportToCsv()}
+          />
+        )}
+        {!isEmptyTable && (
+          <ToolbarAction
+            label={"Search table"}
+            icon={Search}
+            onClick={() => {
+              if (!showSearch) {
+                setIsFocused(true)
+                setShowSearch(true)
+              } else {
+                setShowSearch(false)
+              }
+              clearTooltip()
+            }}
+          />
+        )}
+      </Toolbar>
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}

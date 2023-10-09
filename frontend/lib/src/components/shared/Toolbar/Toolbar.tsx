@@ -18,14 +18,7 @@ import React, { ReactElement } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { useTheme } from "@emotion/react"
-import {
-  Search,
-  Add,
-  Remove,
-  Fullscreen,
-  FullscreenExit,
-  FileDownload,
-} from "@emotion-icons/material-outlined"
+import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import Tooltip, {
@@ -37,26 +30,25 @@ import Button, {
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
-import { StyledDataframeToolbar } from "./styled-components"
+import { StyledToolbar } from "./styled-components"
 
-interface ActionButtonProps {
-  borderless?: boolean
+interface ToolbarActionProps {
   label: string
   icon?: EmotionIcon
   show_label?: boolean
   onClick: () => void
 }
 
-function ActionButton({
+export function ToolbarAction({
   label,
   show_label,
   icon,
   onClick,
-}: ActionButtonProps): ReactElement {
+}: ToolbarActionProps): ReactElement {
   const theme: EmotionTheme = useTheme()
   const displayLabel = show_label ? label : ""
   return (
-    <div className="stActionButton">
+    <div data-testid="stElementToolbarButton">
       <Tooltip
         content={
           <StreamlitMarkdown
@@ -87,69 +79,39 @@ function ActionButton({
 }
 
 export interface ToolbarProps {
-  onSearch?: () => void
-  onAddRow?: () => void
-  onDeleteRow?: () => void
-  onExport?: () => void
   onExpand?: () => void
   onCollapse?: () => void
   isFullscreen?: boolean
 }
 
-function Toolbar({
-  onSearch,
-  onDeleteRow,
-  onAddRow,
-  onExport,
+const Toolbar: React.FC<ToolbarProps> = ({
   onExpand,
   onCollapse,
   isFullscreen,
-}: ToolbarProps): ReactElement {
+  children,
+}): ReactElement => {
   return (
-    <StyledDataframeToolbar isFullscreen={isFullscreen}>
-      {onDeleteRow && (
-        <ActionButton
-          label={"Delete row(s)"}
-          icon={Remove}
-          onClick={() => onDeleteRow()}
-        />
-      )}
-      {onAddRow && (
-        <ActionButton
-          label={"Add row"}
-          icon={Add}
-          onClick={() => onAddRow()}
-        />
-      )}
-      {onExport && (
-        <ActionButton
-          label={"Download as CSV"}
-          icon={FileDownload}
-          onClick={() => onExport()}
-        />
-      )}
-      {onSearch && (
-        <ActionButton
-          label={"Search table"}
-          icon={Search}
-          onClick={() => onSearch()}
-        />
-      )}
+    <StyledToolbar
+      isFullscreen={isFullscreen}
+      className={"stElementToolbar"}
+      data-testid={"stElementToolbar"}
+    >
+      {children}
       {onExpand && !isFullscreen && (
-        <ActionButton
+        <ToolbarAction
           label={"Open in fullscreen"}
           icon={Fullscreen}
           onClick={() => onExpand()}
         />
       )}
       {onCollapse && isFullscreen && (
-        <ActionButton
+        <ToolbarAction
           label={"Close fullscreen"}
           icon={FullscreenExit}
           onClick={() => onCollapse()}
         />
       )}
-    </StyledDataframeToolbar>
+    </StyledToolbar>
   )
 }
 
