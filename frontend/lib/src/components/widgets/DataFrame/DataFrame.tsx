@@ -352,36 +352,69 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, widgetMgr])
 
+  const freezeColumns = isEmptyTable
+    ? 0
+    : columns.filter((col: BaseColumn) => col.isIndex).length
+
   // Determine if the table requires horizontal or vertical scrolling:
   // This is only a temporary solution until glide-data-grid provides a
   // better way to determine this: https://github.com/glideapps/glide-data-grid/issues/784
   React.useEffect(() => {
-    if (dataEditorRef.current && resizableContainerRef.current) {
+    if (
+      dataEditorRef.current &&
+      resizableContainerRef.current &&
+      !isEmptyTable
+    ) {
+      const boundsFirstUnfreezedCell = dataEditorRef.current.getBounds(
+        freezeColumns,
+        0
+      )
+
       const boundsFirstCell = dataEditorRef.current.getBounds(
-        !isEmptyTable && element.editingMode === DYNAMIC ? -1 : 0,
+        element.editingMode === DYNAMIC ? -1 : 0,
         -1
       )
+
       const boundsLastCell = dataEditorRef.current.getBounds(
         glideColumns.length - 1,
-        numRows - 1
+        element.editingMode === DYNAMIC ? numRows : numRows - 1
       )
 
+      console.log(
+        boundsFirstUnfreezedCell,
+        boundsFirstCell,
+        boundsLastCell,
+        resizableContainerRef.current?.clientWidth,
+        resizableContainerRef.current?.clientHeight
+      )
       if (
         !isNullOrUndefined(boundsLastCell) &&
-        !isNullOrUndefined(boundsFirstCell)
+        !isNullOrUndefined(boundsFirstCell) &&
+        !isNullOrUndefined(boundsFirstUnfreezedCell)
       ) {
-        setHasVerticalScroll(
-          boundsLastCell.y - boundsFirstCell.y + boundsFirstCell.height >
-            resizableContainerRef.current?.clientHeight
-        )
+        if (boundsFirstUnfreezedCell.y - boundsFirstCell.y < 0) {
+          setHasVerticalScroll(true)
+        } else {
+          setHasVerticalScroll(
+            boundsLastCell.y - boundsFirstCell.y + boundsLastCell.height >
+              resizableContainerRef.current?.clientHeight
+          )
+        }
 
-        setHasHorizontalScroll(
-          boundsLastCell.x - boundsFirstCell.x + boundsFirstCell.width >
-            resizableContainerRef.current?.clientWidth
-        )
+        if (
+          (freezeColumns === 0 && boundsFirstUnfreezedCell.x < 0) ||
+          boundsFirstUnfreezedCell.x - boundsFirstCell.x < 0
+        ) {
+          setHasHorizontalScroll(true)
+        } else {
+          setHasHorizontalScroll(
+            boundsLastCell.x - boundsFirstCell.x + boundsLastCell.width >
+              resizableContainerRef.current?.clientWidth
+          )
+        }
       }
     }
-  }, [resizableSize, glideColumns, numRows])
+  }, [resizableSize, glideColumns, numRows, isEmptyTable])
 
   return (
     <StyledResizableContainer
@@ -471,11 +504,7 @@ function DataFrame({
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
-          freezeColumns={
-            isEmptyTable
-              ? 0
-              : columns.filter((col: BaseColumn) => col.isIndex).length
-          }
+          freezeColumns={freezeColumns}
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:
