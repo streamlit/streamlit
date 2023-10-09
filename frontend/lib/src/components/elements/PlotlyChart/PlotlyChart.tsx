@@ -33,17 +33,32 @@ import {
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
+import {
+  PlotHoverEvent,
+  PlotMouseEvent,
+  PlotRelayoutEvent,
+  PlotSelectionEvent,
+} from "plotly.js"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
   height: number | undefined
+  widgetMgr: WidgetStateManager
 }
 
 export interface PlotlyIFrameProps {
   width: number
   height: number | undefined
   url: string
+}
+
+export interface InteractivePlotlyReturnValue {
+  x: number
+  y: number
+  pointNumber: number
+  pointIndex: number
 }
 
 export const DEFAULT_HEIGHT = 450
@@ -67,6 +82,7 @@ function PlotlyFigure({
   element,
   width,
   height,
+  widgetMgr,
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
 
@@ -118,6 +134,54 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
+  const handleClick = (event: PlotMouseEvent): void => {
+    // Build array of points to return
+    const selectedPoints: Array<InteractivePlotlyReturnValue> = []
+    event.points.forEach(function (point: any) {
+      selectedPoints.push({
+        x: point.x,
+        y: point.y,
+        pointNumber: point.pointNumber,
+        pointIndex: point.pointIndex,
+      })
+    })
+
+    console.log("Handling select")
+    console.log(selectedPoints)
+    widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
+    console.log("Done handling select")
+  }
+
+  const handleHover = (event: PlotHoverEvent): void => {
+    console.log("Handle Hover")
+    console.log(event)
+    console.log("Done Handle Hover")
+  }
+
+  const handleZoomAndPan = (event: PlotRelayoutEvent): void => {
+    console.log("Handle ZoomAndPan")
+    console.log(event)
+    console.log("Done Handle ZoomAndPan")
+  }
+
+  const handleSelect = (event: PlotSelectionEvent): void => {
+    // Build array of points to return
+    const selectedPoints: Array<InteractivePlotlyReturnValue> = []
+    event.points.forEach(function (point: any) {
+      selectedPoints.push({
+        x: point.x,
+        y: point.y,
+        pointNumber: point.pointNumber,
+        pointIndex: point.pointIndex,
+      })
+    })
+
+    console.log("Handling select")
+    console.log(selectedPoints)
+    widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
+    console.log("Done handling select")
+  }
+
   return (
     <Plot
       key={isFullScreen(height) ? "fullscreen" : "original"}
@@ -126,6 +190,10 @@ function PlotlyFigure({
       layout={layout}
       config={config}
       frames={frames}
+      onClick={handleClick}
+      onHover={handleHover}
+      onRelayout={handleZoomAndPan}
+      onSelected={handleSelect}
     />
   )
 }
@@ -134,6 +202,7 @@ export function PlotlyChart({
   width,
   element,
   height,
+  widgetMgr,
 }: PlotlyChartProps): ReactElement {
   switch (element.chart) {
     case "url":
@@ -143,7 +212,14 @@ export function PlotlyChart({
         width,
       })
     case "figure":
-      return <PlotlyFigure width={width} element={element} height={height} />
+      return (
+        <PlotlyFigure
+          width={width}
+          element={element}
+          height={height}
+          widgetMgr={widgetMgr}
+        />
+      )
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
   }

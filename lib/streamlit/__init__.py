@@ -155,6 +155,7 @@ metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 plotly_chart = _main.plotly_chart
+plotly_chart_widget = _main.plotly_chart_widget
 progress = _main.progress
 pyplot = _main.pyplot
 radio = _main.radio

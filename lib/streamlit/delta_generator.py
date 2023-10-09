@@ -74,6 +74,7 @@ from streamlit.elements.widgets.data_editor import DataEditorMixin
 from streamlit.elements.widgets.file_uploader import FileUploaderMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
+from streamlit.elements.widgets.plotly_chart_widget import PlotlyWidgetMixin
 from streamlit.elements.widgets.radio import RadioMixin
 from streamlit.elements.widgets.select_slider import SelectSliderMixin
 from streamlit.elements.widgets.selectbox import SelectboxMixin
@@ -174,6 +175,7 @@ class DeltaGenerator(
     MultiSelectMixin,
     NumberInputMixin,
     PlotlyMixin,
+    PlotlyWidgetMixin,
     ProgressMixin,
     PydeckMixin,
     PyplotMixin,

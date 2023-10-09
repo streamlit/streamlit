@@ -21,11 +21,15 @@ from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit import type_util
+from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import matplotlib
@@ -77,14 +81,15 @@ FigureOrData: TypeAlias = Union[
 ]
 
 
-class PlotlyMixin:
-    @gather_metrics("plotly_chart")
-    def plotly_chart(
+class PlotlyWidgetMixin:
+    def plotly_chart_widget(
         self,
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
         theme: Union[None, Literal["streamlit"]] = "streamlit",
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display an interactive Plotly chart.
@@ -160,15 +165,43 @@ class PlotlyMixin:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
+
+        plotly_chart_proto.form_id = current_form_id(self.dg)
         marshall(
             plotly_chart_proto,
             figure_or_data,
             use_container_width,
             sharing,
             theme,
+            id,
             **kwargs,
         )
+
+        def serialize(self, points: dict) -> str:
+            print("serializing")
+            print(f"{points}")
+            return json.dumps(points, default=str)
+
+        def deserialize(self, points: dict) -> dict:
+            print("deserializing")
+            print(f"{points}")
+            return points
+
+        ctx = get_script_run_ctx()
+
+        widget_state = register_widget(
+            "plotly_chart_widget",
+            plotly_chart_proto,
+            user_key=key,
+            on_change_handler=on_change,
+            kwargs=kwargs,
+            deserializer=deserialize,
+            serializer=serialize,
+            ctx=ctx,
+        )
         self.dg._enqueue("plotly_chart", plotly_chart_proto)
+        print(widget_state)
+        return widget_state.value
 
     @property
     def dg(self) -> "DeltaGenerator":
@@ -182,6 +215,7 @@ def marshall(
     use_container_width: bool,
     sharing: SharingMode,
     theme: Union[None, Literal["streamlit"]],
+    id: str,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.

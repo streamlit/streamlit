@@ -32,6 +32,7 @@ WIDGETS = [
     "text_area",
     "time_input",
     "date_input",
+    "plotly_chart_widget",
 ]
 NONWIDGET_ELEMENTS = [
     "alert",
