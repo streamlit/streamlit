@@ -392,14 +392,14 @@ function DataFrame({
 
           if (
             hasHorizontalScroll &&
-            boundingClient.height - WEBKIT_SCROLLBAR_SIZE <
+            boundingClient.height - (WEBKIT_SCROLLBAR_SIZE + 1) <
               e.clientY - boundingClient.top
           ) {
             e.stopPropagation()
           }
           if (
             hasVerticalScroll &&
-            boundingClient.width - WEBKIT_SCROLLBAR_SIZE <
+            boundingClient.width - (WEBKIT_SCROLLBAR_SIZE + 1) <
               e.clientX - boundingClient.left
           ) {
             e.stopPropagation()
