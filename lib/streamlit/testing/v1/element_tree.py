@@ -264,7 +264,6 @@ class ChatInput(Widget):
     _value: str | None
     proto: ChatInputProto = field(repr=False)
     placeholder: str
-    default: str
 
     def __init__(self, proto: ChatInputProto, root: ElementTree):
         super().__init__(proto, root)
