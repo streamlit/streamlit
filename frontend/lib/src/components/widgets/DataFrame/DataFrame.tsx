@@ -81,6 +81,8 @@ const DEBOUNCE_TIME_MS = 100
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
+// The size in px of the customized webkit scrollbar (defined in globalStyles)
+const WEBKIT_SCROLLBAR_SIZE = 6
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -118,15 +120,30 @@ function DataFrame({
 }: DataFrameProps): ReactElement {
   const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
+  const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
   const theme = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
+  const [hasVerticalScroll, setHasVerticalScroll] =
+    React.useState<boolean>(false)
+  const [hasHorizontalScroll, setHasHorizontalScroll] =
+    React.useState<boolean>(false)
 
   // Determine if the device is primary using touch as input:
   const isTouchDevice = React.useMemo<boolean>(
     () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
+    []
+  )
+
+  // Determine if it uses customized scrollbars (webkit browsers):
+  // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
+  const hasCustomizedScrollbars = React.useMemo<boolean>(
+    () =>
+      (window.navigator.userAgent.includes("Mac OS") &&
+        window.navigator.userAgent.includes("Safari")) ||
+      window.navigator.userAgent.includes("Chrome"),
     []
   )
 
@@ -276,6 +293,8 @@ function DataFrame({
     [widgetMgr, element, numRows, clearSelection, columns]
   )
 
+  const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
+
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor(
       columns,
@@ -355,12 +374,62 @@ function DataFrame({
   const isRowSelected = gridSelection.rows.length > 0
   const isCellSelected = gridSelection.current !== undefined
 
-  const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
+  const freezeColumns = isEmptyTable
+    ? 0
+    : columns.filter((col: BaseColumn) => col.isIndex).length
+
+  // Determine if the table requires horizontal or vertical scrolling:
+  React.useEffect(() => {
+    if (resizableContainerRef.current && !isEmptyTable) {
+      // TODO(lukasmasuch): This is only a hacky and temporary solution until
+      // glide-data-grid provides a better way to determine this:
+      // https://github.com/glideapps/glide-data-grid/issues/784
+
+      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+      const scrollAreaBounds = resizableContainerRef.current
+        ?.querySelector(".dvn-stack")
+        ?.getBoundingClientRect()
+      if (scrollAreaBounds) {
+        setHasVerticalScroll(
+          scrollAreaBounds.height > resizableContainerRef.current.clientHeight
+        )
+        setHasHorizontalScroll(
+          scrollAreaBounds.width > resizableContainerRef.current.clientWidth
+        )
+      }
+    }
+  }, [resizableSize, numRows, isEmptyTable, glideColumns])
 
   return (
     <StyledResizableContainer
       data-testid="stDataFrame"
       className="stDataFrame"
+      ref={resizableContainerRef}
+      onMouseDown={e => {
+        if (resizableContainerRef.current && hasCustomizedScrollbars) {
+          // Prevent clicks on the scrollbar handle to propagate to the grid:
+          const boundingClient =
+            resizableContainerRef.current.getBoundingClientRect()
+
+          if (
+            // For whatever reason, we are still able to use the scrollbars even
+            // if the mouse is one pixel outside of the scrollbar. Therefore, we add
+            // an additional pixel.
+            hasHorizontalScroll &&
+            boundingClient.height - (WEBKIT_SCROLLBAR_SIZE + 1) <
+              e.clientY - boundingClient.top
+          ) {
+            e.stopPropagation()
+          }
+          if (
+            hasVerticalScroll &&
+            boundingClient.width - (WEBKIT_SCROLLBAR_SIZE + 1) <
+              e.clientX - boundingClient.left
+          ) {
+            e.stopPropagation()
+          }
+        }
+      }}
       onBlur={event => {
         // If the container loses focus, clear the current selection.
         // Touch screen devices have issues with this, so we don't clear
@@ -486,11 +555,7 @@ function DataFrame({
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
-          freezeColumns={
-            isEmptyTable
-              ? 0
-              : columns.filter((col: BaseColumn) => col.isIndex).length
-          }
+          freezeColumns={freezeColumns}
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:
@@ -562,8 +627,18 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            // We use an overlay scrollbar, so no need to have space for reserved for the scrollbar:
+            // Prevent the cell border from being cut off at the bottom and right:
             scrollbarWidthOverride: 1,
+            ...(hasCustomizedScrollbars && {
+              // Add negative padding to the right and bottom to allow the scrollbars in
+              // webkit to overlay the table:
+              paddingBottom: hasHorizontalScroll
+                ? -WEBKIT_SCROLLBAR_SIZE
+                : undefined,
+              paddingRight: hasVerticalScroll
+                ? -WEBKIT_SCROLLBAR_SIZE
+                : undefined,
+            }),
           }}
           // Apply custom rendering (e.g. for missing or required cells):
           drawCell={drawCell}
