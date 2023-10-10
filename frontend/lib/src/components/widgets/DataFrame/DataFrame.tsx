@@ -357,57 +357,27 @@ function DataFrame({
     : columns.filter((col: BaseColumn) => col.isIndex).length
 
   // Determine if the table requires horizontal or vertical scrolling:
-  // This is only a temporary solution until glide-data-grid provides a
-  // better way to determine this: https://github.com/glideapps/glide-data-grid/issues/784
   React.useEffect(() => {
     if (
       dataEditorRef.current &&
       resizableContainerRef.current &&
       !isEmptyTable
     ) {
-      const boundsFirstUnfreezedCell = dataEditorRef.current.getBounds(
-        freezeColumns,
-        0
-      )
-
-      const boundsFirstCell = dataEditorRef.current.getBounds(
-        element.editingMode === DYNAMIC ? -1 : 0,
-        -1
-      )
-
-      const boundsLastCell = dataEditorRef.current.getBounds(
-        glideColumns.length - 1,
-        element.editingMode === DYNAMIC ? numRows : numRows - 1
-      )
-
-      if (
-        !isNullOrUndefined(boundsLastCell) &&
-        !isNullOrUndefined(boundsFirstCell) &&
-        !isNullOrUndefined(boundsFirstUnfreezedCell)
-      ) {
-        if (boundsFirstUnfreezedCell.y - boundsFirstCell.y < 0) {
-          setHasVerticalScroll(true)
-        } else {
-          setHasVerticalScroll(
-            boundsLastCell.y - boundsFirstCell.y + boundsLastCell.height >
-              resizableContainerRef.current?.clientHeight
-          )
-        }
-
-        if (
-          (freezeColumns === 0 && boundsFirstUnfreezedCell.x < 0) ||
-          boundsFirstUnfreezedCell.x - boundsFirstCell.x < 0
-        ) {
-          setHasHorizontalScroll(true)
-        } else {
-          setHasHorizontalScroll(
-            boundsLastCell.x - boundsFirstCell.x + boundsLastCell.width >
-              resizableContainerRef.current?.clientWidth
-          )
-        }
+      // TODO(lukasmasuch): This is only a hacky and temporary solution until glide-data-grid provides
+      // a better way to determine this: https://github.com/glideapps/glide-data-grid/issues/784
+      const boundingRect = resizableContainerRef.current
+        ?.querySelector(".dvn-stack")
+        ?.getBoundingClientRect()
+      if (boundingRect) {
+        setHasVerticalScroll(
+          boundingRect.height > resizableContainerRef.current.clientHeight
+        )
+        setHasHorizontalScroll(
+          boundingRect.width > resizableContainerRef.current.clientWidth
+        )
       }
     }
-  }, [resizableSize, glideColumns, numRows, isEmptyTable])
+  }, [resizableSize, numRows, isEmptyTable, glideColumns])
 
   return (
     <StyledResizableContainer
