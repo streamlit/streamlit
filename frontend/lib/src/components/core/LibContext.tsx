@@ -26,6 +26,7 @@ import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
  */
 export type LibConfig = {
   // TODO(lukasmasuch): Add lib config options in subsequent PRs.
+  userMapboxToken?: string
 }
 
 export interface LibContextProps {
