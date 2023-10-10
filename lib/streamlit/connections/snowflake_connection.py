@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, Any, Dict, Sequence, cast
 
 import pandas as pd
 
@@ -41,11 +41,21 @@ if TYPE_CHECKING:
 _REQUIRED_CONNECTION_PARAMS = {"account"}
 
 
+def _validate_connection_params(params: Dict[str, Any]) -> None:
+    for p in _REQUIRED_CONNECTION_PARAMS:
+        if p not in params:
+            raise StreamlitAPIException(f"Missing Snowflake connection param: {p}")
+
+
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     """A connection to Snowflake using the Snowflake Python Connector. Initialize using
     ``st.connection("<name>", type="snowflake")``.
 
-    TODO(vdonato): Finish this docstring.
+    SnowflakeConnection supports direct SQL querying using ``.query("...")``, access to
+    the underlying Snowflake Python Connector object with ``.raw_connection``, and other
+    convenience functions. See the methods below for more information.
+    SnowflakeConnections should always be created using ``st.connection()``, **not**
+    initialized directly.
     """
 
     def _connect(self, **kwargs) -> "InternalSnowflakeConnection":
@@ -67,8 +77,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         st_secrets = self._secrets.to_dict()
         if len(st_secrets):
             # TODO(vdonato): Double-check that we want to merge any secrets we find with
+
             # the kwargs passed to `st.connection`.
             conn_kwargs = {**st_secrets, **kwargs}
+            _validate_connection_params(conn_kwargs)
             return snowflake.connector.connect(**conn_kwargs)
 
         if hasattr(snowflake.connector.connection, "CONFIG_MANAGER"):
@@ -92,10 +104,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         # resort.
         snowsql_config = load_from_snowsql_config_file(self._connection_name)
         conn_kwargs = {**snowsql_config, **kwargs}
-
-        for p in _REQUIRED_CONNECTION_PARAMS:
-            if p not in conn_kwargs:
-                raise StreamlitAPIException(f"Missing Snowflake connection param: {p}")
+        _validate_connection_params(conn_kwargs)
 
         return snowflake.connector.connect(**conn_kwargs)
 
@@ -106,11 +115,45 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         ttl: float | int | timedelta | None = None,
         show_spinner: bool | str = "Running `snowflake.query(...)`.",
         params=None,
-        **kwargs,
     ) -> pd.DataFrame:
         """Run a read-only SQL query.
 
-        TODO(vdonato): Finish this docstring.
+        This method implements both query result caching (with caching behavior
+        identical to that of using ``@st.cache_data``) as well as simple error handling/retries.
+
+        .. note::
+            Queries that are run without a specified ttl are cached indefinitely.
+
+        Parameters
+        ----------
+        sql : str
+            The read-only SQL query to execute.
+        ttl : float, int, timedelta or None
+            The maximum number of seconds to keep results in the cache, or
+            None if cached results should not expire. The default is None.
+        show_spinner : boolean or string
+            Enable the spinner. The default is to show a spinner when there is a
+            "cache miss" and the cached resource is being created. If a string, the value
+            of the show_spinner param will be used for the spinner text.
+        params : list, tuple, dict or None
+            List of parameters to pass to the execute method. The syntax used to pass
+            parameters is database driver dependent. Check your database driver
+            documentation for which of the five syntax styles, described in `PEP 249
+            paramstyle <https://peps.python.org/pep-0249/#paramstyle>`_, is supported.
+            Default is None.
+
+        Returns
+        -------
+        pd.DataFrame
+            The result of running the query, formatted as a pandas DataFrame.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> conn = st.connection("snowflake")
+        >>> df = conn.query("select * from pet_owners")
+        >>> st.dataframe(df)
         """
         # TODO(vdonato): Make our error handling more specific if possible. This may be
         # difficult to do given the limited documentation on the different connector
@@ -136,7 +179,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         )
         def _query(sql: str) -> pd.DataFrame:
             cur = self._instance.cursor()
-            cur.execute(sql)
+            cur.execute(sql, **(params or {}))
             return cur.fetch_pandas_all()
 
         return _query(sql)

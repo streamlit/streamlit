@@ -46,10 +46,11 @@ class SnowparkConnection(BaseConnection["Session"]):
     """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
     ``st.connection("<name>", type="snowpark")``.
 
-    In addition to accessing the Snowpark Session, SnowparkConnection supports direct SQL querying using
-    ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
-    below for more information. SnowparkConnections should always be created using
-    ``st.connection()``, **not** initialized directly.
+    In addition to providing access to the Snowpark Session, SnowparkConnection supports
+    direct SQL querying using ``query("...")`` and thread safe access using
+    ``with conn.safe_session():``. See methods below for more information.
+    SnowparkConnections should always be created using ``st.connection()``, **not**
+    initialized directly.
 
     .. note::
         We don't expect this iteration of SnowparkConnection to be able to scale
