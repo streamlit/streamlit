@@ -363,7 +363,7 @@ function DataFrame({
       // glide-data-grid provides a better way to determine this:
       // https://github.com/glideapps/glide-data-grid/issues/784
 
-      // Get the bounds of the data grid scroll area:
+      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
       const scrollAreaBounds = resizableContainerRef.current
         ?.querySelector(".dvn-stack")
         ?.getBoundingClientRect()
@@ -390,6 +390,9 @@ function DataFrame({
             resizableContainerRef.current.getBoundingClientRect()
 
           if (
+            // For whatever reason, we are still able to use the scrollbars even
+            // if the mouse is one pixel outside of the scrollbar. Therefore, we add
+            // an additional pixel.
             hasHorizontalScroll &&
             boundingClient.height - (WEBKIT_SCROLLBAR_SIZE + 1) <
               e.clientY - boundingClient.top
