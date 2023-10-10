@@ -451,12 +451,23 @@ st.dataframe(
 st.subheader("Long colum header")
 st.dataframe(
     pd.DataFrame(
-        np.random.randn(100, 4),
+        np.random.randn(100, 15),
         columns=[
-            "this is a very long header name",
+            "this is a very long column header name",
             "A",
+            "Short header",
+            "B",
+            "this is another very very column long header name",
             "C",
-            "this is another long name",
+            "this is another very very very very very very very very very very very very very very very long header name",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I",
+            "J",
+            "K",
         ],
     )
 )
