@@ -31,7 +31,7 @@ export const StyledResizableContainer = styled.div(({ theme }) => ({
 
   "& .dvn-scroller": {
     scrollbarWidth: "thin",
-    ["overflowX" as any]: "overlay !important",
-    ["overflowY" as any]: "overlay !important",
+    ["overflowX" as any]: "auto !important",
+    ["overflowY" as any]: "auto !important",
   },
 }))
