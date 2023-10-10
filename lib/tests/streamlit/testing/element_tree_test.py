@@ -81,6 +81,22 @@ def test_color_picker():
     assert at.color_picker[0].value == "#123456"
 
 
+def test_columns():
+    def script():
+        import streamlit as st
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.text("c1")
+        c2.radio("c2", ["a", "b", "c"])
+
+    at = AppTest.from_function(script).run()
+    assert len(at.columns) == 2
+    assert at.columns[0].weight == at.columns[1].weight
+    assert at.columns[0].text[0].value == "c1"
+    assert at.columns[1].radio[0].value == "a"
+
+
 def test_dataframe():
     def script():
         import numpy as np
@@ -521,6 +537,23 @@ class SliderTest(InteractiveScriptTests):
         assert s[2].value == (time(12, 0), time(12, 15))
         assert s[3].value == datetime(2020, 1, 10, 8, 0)
         assert s[4].value == 0.1
+
+
+def test_tabs():
+    def script():
+        import streamlit as st
+
+        t1, t2 = st.tabs(["cat", "dog"])
+        with t1:
+            st.text("meow")
+        t2.text("woof")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.tabs) == 2
+    assert at.tabs[0].label == "cat"
+    assert at.tabs[0].text[0].value == "meow"
+    assert at.tabs[1].label == "dog"
+    assert at.tabs[1].text[0].value == "woof"
 
 
 class TextAreaTest(InteractiveScriptTests):
