@@ -40,6 +40,7 @@ export default function Audio({
   const uri = endpoints.buildMediaURL(element.url)
   return (
     <audio
+      data-testid="stAudio"
       id="audio"
       ref={audioRef}
       controls

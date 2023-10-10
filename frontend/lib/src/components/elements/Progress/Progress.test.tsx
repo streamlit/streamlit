@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import { Progress as ProgressProto } from "@streamlit/lib/src/proto"
 import Progress, { ProgressProps } from "./Progress"
@@ -30,17 +32,20 @@ const getProps = (
   ...propOverrides,
 })
 
-describe("ProgressBar component", () => {
+describe("Progress component", () => {
   it("renders without crashing", () => {
-    const wrapper = shallow(<Progress {...getProps()} />)
+    render(<Progress {...getProps()} />)
 
-    expect(wrapper.find("ProgressBar").length).toBe(1)
+    expect(screen.getByTestId("stProgress")).toBeInTheDocument()
   })
 
-  it("sets the value and width correctly", () => {
-    const wrapper = shallow(<Progress {...getProps({ width: 100 })} />)
+  it("sets the value correctly", () => {
+    render(<Progress {...getProps({ width: 100 })} />)
 
-    expect(wrapper.find("ProgressBar").prop("value")).toEqual(50)
-    expect(wrapper.find("ProgressBar").prop("width")).toEqual(100)
+    expect(screen.getByTestId("stProgress")).toBeInTheDocument()
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "50"
+    )
   })
 })

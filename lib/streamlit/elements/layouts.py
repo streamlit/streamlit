@@ -96,12 +96,12 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        spec : int or iterable of numbers
+        spec : int or Iterable of numbers
             Controls the number and width of columns to insert. Can be one of:
 
             * An integer that specifies the number of columns. All columns have equal
               width in this case.
-            * An iterable of numbers (int or float) that specify the relative width of
+            * An Iterable of numbers (int or float) that specify the relative width of
               each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
               one takes up 70% of the available with and the second one takes up 30%.
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
@@ -222,7 +222,7 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        tabs : list of strings
+        tabs : list of str
             Creates a tab for each string in the list. The first tab is selected by default.
             The string is used as the name of the tab and can optionally contain Markdown,
             supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,

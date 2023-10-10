@@ -17,6 +17,9 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
+import langchain
+import pytest
+import semver
 from google.protobuf.json_format import MessageToDict
 
 import streamlit as st
@@ -74,6 +77,12 @@ class StreamlitCallbackHandlerAPITest(unittest.TestCase):
 
 
 class StreamlitCallbackHandlerTest(DeltaGeneratorTestCase):
+    @pytest.mark.skipif(
+        semver.VersionInfo.parse(langchain.__version__) >= "0.0.296",
+        reason="Skip test if langchain version >= 0.0.296, "
+        "since test data (alanis.pickle) generated with old langchain version,"
+        "and not valid for newer versions.",
+    )
     def test_agent_run(self):
         """Test a complete LangChain Agent run using StreamlitCallbackHandler."""
         from streamlit.external.langchain import StreamlitCallbackHandler
