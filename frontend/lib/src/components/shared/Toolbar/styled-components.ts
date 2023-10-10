@@ -38,7 +38,7 @@ export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
         top: "-2.4rem",
       },
       ...(target && {
-        [`${target}:hover &`]: {
+        [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]: {
           transition: "opacity 150ms 100ms, top 100ms 100ms",
           opacity: 1,
           top: "-2.4rem",
