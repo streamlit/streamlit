@@ -62,6 +62,10 @@ def test_chat():
     assert at.chat_input[0].value == "hi"
     assert at.chat_message[0].markdown[0].value == "hi"
 
+    # verify value resets after use
+    at.run()
+    assert at.chat_input[0].value == None
+
 
 def test_checkbox():
     def script():

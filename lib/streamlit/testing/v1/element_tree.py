@@ -278,8 +278,8 @@ class ChatInput(Widget):
     def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        if self.value is not None:
-            ws.string_trigger_value.data = self.value
+        if self._value is not None:
+            ws.string_trigger_value.data = self._value
         return ws
 
     @property
