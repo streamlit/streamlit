@@ -57,6 +57,7 @@ from streamlit.runtime.legacy_caching.hashing import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.util import HASHLIB_KWARGS
 from streamlit.vendor.pympler.asizeof import asizeof
 
 _LOGGER = get_logger(__name__)
@@ -357,7 +358,7 @@ def _write_to_mem_cache(
 def _get_output_hash(
     value: Any, func_or_code: Callable[..., Any], hash_funcs: Optional[HashFuncsDict]
 ) -> bytes:
-    hasher = hashlib.new("md5")
+    hasher = hashlib.new("md5", **HASHLIB_KWARGS)
     update_hash(
         value,
         hasher=hasher,
