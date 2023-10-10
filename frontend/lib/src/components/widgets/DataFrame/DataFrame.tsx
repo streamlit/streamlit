@@ -602,7 +602,7 @@ function DataFrame({
                 bgCellMedium: theme.bgHeader,
               },
               rowMarkers: "checkbox",
-              rowSelectionMode: "auto",
+              rowSelectionMode: "multi",
               rowSelect: disabled ? "none" : "multi",
               // Support adding rows:
               onRowAppended: disabled ? undefined : onRowAppended,
