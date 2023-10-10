@@ -1032,14 +1032,13 @@ class TimeInput(Widget):
 class Block:
     type: str
     children: dict[int, Node]
-    proto: BlockProto | None = field(repr=False)
+    proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
 
     def __init__(
         self,
+        proto: BlockProto | None,
         root: ElementTree,
-        proto: BlockProto | None = None,
-        type: str | None = None,
     ):
         self.children = {}
         self.proto = proto
@@ -1048,10 +1047,8 @@ class Block:
             # TODO does not work for `st.container` which has no block proto
             assert ty is not None
             self.type = ty
-        elif type is not None:
-            self.type = type
         else:
-            self.type = ""
+            self.type = "unknown"
         self.root = root
 
     def __len__(self) -> int:
@@ -1099,6 +1096,10 @@ class Block:
     @property
     def color_picker(self) -> WidgetList[ColorPicker]:
         return WidgetList(self.get("color_picker"))  # type: ignore
+
+    @property
+    def columns(self) -> Sequence[Column]:
+        return self.get("column")  # type: ignore
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
@@ -1155,6 +1156,10 @@ class Block:
     @property
     def subheader(self) -> ElementList[Subheader]:
         return ElementList(self.get("subheader"))  # type: ignore
+
+    @property
+    def tabs(self) -> Sequence[Tab]:
+        return self.get("tab")  # type: ignore
 
     @property
     def text(self) -> ElementList[Text]:
@@ -1308,7 +1313,6 @@ class ElementTree(Block):
     _runner: AppTest | None = field(repr=False, default=None)
 
     def __init__(self):
-        # Expect script_path and session_state to be filled in afterwards
         self.children = {}
         self.root = self
         self.type = "root"
@@ -1363,8 +1367,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
     """
     root = ElementTree()
     root.children = {
-        0: Block(type="main", root=root),
-        1: Block(type="sidebar", root=root),
+        0: SpecialBlock(type="main", root=root, proto=None),
+        1: SpecialBlock(type="sidebar", root=root, proto=None),
     }
 
     for msg in messages:
@@ -1460,7 +1464,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             children = current_node.children
             child = children.get(idx)
             if child is None:
-                child = Block(root=root)
+                child = Block(proto=None, root=root)
                 children[idx] = child
             assert isinstance(child, Block)
             current_node = child

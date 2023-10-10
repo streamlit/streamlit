@@ -41,6 +41,7 @@ from streamlit.testing.v1.element_tree import (
     Checkbox,
     Code,
     ColorPicker,
+    Column,
     Dataframe,
     DateInput,
     Divider,
@@ -58,6 +59,7 @@ from streamlit.testing.v1.element_tree import (
     SelectSlider,
     Slider,
     Subheader,
+    Tab,
     Text,
     TextArea,
     TextInput,
@@ -252,6 +254,10 @@ class AppTest:
         return self._tree.color_picker
 
     @property
+    def columns(self) -> Sequence[Column]:
+        return self._tree.columns
+
+    @property
     def dataframe(self) -> ElementList[Dataframe]:
         return self._tree.dataframe
 
@@ -306,6 +312,10 @@ class AppTest:
     @property
     def subheader(self) -> ElementList[Subheader]:
         return self._tree.subheader
+
+    @property
+    def tabs(self) -> Sequence[Tab]:
+        return self._tree.tabs
 
     @property
     def text(self) -> ElementList[Text]:
