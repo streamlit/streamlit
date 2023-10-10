@@ -97,7 +97,9 @@ function useColumnSort(
       sort,
     })
 
-  const updatedColumns = updateSortingHeader(columns, sort)
+  const updatedColumns = React.useMemo(() => {
+    return updateSortingHeader(columns, sort)
+  }, [columns, sort])
 
   const sortColumn = React.useCallback(
     (index: number) => {
