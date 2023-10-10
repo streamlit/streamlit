@@ -34,9 +34,4 @@ export const StyledResizableContainer = styled.div(({ theme }) => ({
     ["overflowX" as any]: "overlay !important",
     ["overflowY" as any]: "overlay !important",
   },
-
-  "&:hover .stElementToolbar": {
-    opacity: 1,
-    transition: "none",
-  },
 }))

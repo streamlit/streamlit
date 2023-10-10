@@ -14,39 +14,51 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
+import styled, { StyledComponent } from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
-export interface StyledToolbarProps {
-  isFullScreen?: boolean
+export interface StyledToolbarWrapperProps {
+  locked?: boolean
+  target?: StyledComponent<any, any, any>
 }
 
-export const StyledToolbar = styled.div<StyledToolbarProps>(
-  ({ theme, isFullScreen }) => ({
-    color: hasLightBackgroundColor(theme)
-      ? theme.colors.fadedText60
-      : theme.colors.bodyText,
-    top: "-2.1rem",
-    right: "0rem",
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: theme.spacing.xs,
-    justifyContent: "flex-end",
-    boxShadow: "1px 2px 8px rgba(0, 0, 0, 0.08)",
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.lightenedBg05,
-    width: "fit-content",
+export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
+  ({ locked, target }) => ({
+    padding: "0.5rem 0 0.5rem 0.5rem",
     position: "absolute",
-    zIndex: theme.zIndices.sidebar + 1,
-    ...(!isFullScreen && {
-      transition: "opacity 300ms 150ms, transform 300ms 150ms",
+    top: locked ? "-2.4rem" : "-1rem",
+    right: "0rem",
+    transition: "none",
+    ...(!locked && {
       opacity: 0,
       "&:active, &:focus-visible, &:hover": {
+        transition: "opacity 150ms 100ms, top 100ms 100ms",
         opacity: 1,
-        transition: "none",
+        top: "-2.4rem",
       },
+      ...(target && {
+        [`${target}:hover &`]: {
+          transition: "opacity 150ms 100ms, top 100ms 100ms",
+          opacity: 1,
+          top: "-2.4rem",
+        },
+      }),
     }),
   })
 )
+
+export const StyledToolbar = styled.div(({ theme }) => ({
+  color: hasLightBackgroundColor(theme)
+    ? theme.colors.fadedText60
+    : theme.colors.bodyText,
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  boxShadow: "1px 2px 8px rgba(0, 0, 0, 0.08)",
+  borderRadius: theme.radii.lg,
+  backgroundColor: theme.colors.lightenedBg05,
+  width: "fit-content",
+  zIndex: theme.zIndices.sidebar + 1,
+}))

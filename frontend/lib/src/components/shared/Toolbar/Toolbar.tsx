@@ -18,6 +18,7 @@ import React, { ReactElement } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { useTheme } from "@emotion/react"
+import { StyledComponent } from "@emotion/styled"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
@@ -30,7 +31,7 @@ import Button, {
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
-import { StyledToolbar } from "./styled-components"
+import { StyledToolbar, StyledToolbarWrapper } from "./styled-components"
 
 interface ToolbarActionProps {
   label: string
@@ -82,36 +83,43 @@ export interface ToolbarProps {
   onExpand?: () => void
   onCollapse?: () => void
   isFullScreen?: boolean
+  locked?: boolean
+  target?: StyledComponent<any, any, any>
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
   onExpand,
   onCollapse,
   isFullScreen,
+  locked,
   children,
+  target,
 }): ReactElement => {
   return (
-    <StyledToolbar
-      isFullScreen={isFullScreen}
+    <StyledToolbarWrapper
       className={"stElementToolbar"}
       data-testid={"stElementToolbar"}
+      locked={locked || isFullScreen}
+      target={target}
     >
-      {children}
-      {onExpand && !isFullScreen && (
-        <ToolbarAction
-          label={"Open in fullscreen"}
-          icon={Fullscreen}
-          onClick={() => onExpand()}
-        />
-      )}
-      {onCollapse && isFullScreen && (
-        <ToolbarAction
-          label={"Close fullscreen"}
-          icon={FullscreenExit}
-          onClick={() => onCollapse()}
-        />
-      )}
-    </StyledToolbar>
+      <StyledToolbar>
+        {children}
+        {onExpand && !isFullScreen && (
+          <ToolbarAction
+            label={"Fullscreen"}
+            icon={Fullscreen}
+            onClick={() => onExpand()}
+          />
+        )}
+        {onCollapse && isFullScreen && (
+          <ToolbarAction
+            label={"Close fullscreen"}
+            icon={FullscreenExit}
+            onClick={() => onCollapse()}
+          />
+        )}
+      </StyledToolbar>
+    </StyledToolbarWrapper>
   )
 }
 

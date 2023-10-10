@@ -25,7 +25,7 @@ import {
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import {
-  Remove,
+  Delete,
   Add,
   FileDownload,
   Search,
@@ -380,13 +380,15 @@ function DataFrame({
     >
       <Toolbar
         isFullScreen={isFullScreen}
+        locked={isRowSelected}
         onExpand={expand}
         onCollapse={collapse}
+        target={StyledResizableContainer}
       >
         {isDynamicAndEditable && isRowSelected && (
           <ToolbarAction
             label={"Delete row(s)"}
-            icon={Remove}
+            icon={Delete}
             onClick={() => {
               if (onDelete) {
                 onDelete(gridSelection)
@@ -395,7 +397,7 @@ function DataFrame({
             }}
           />
         )}
-        {isDynamicAndEditable && (
+        {isDynamicAndEditable && !isRowSelected && (
           <ToolbarAction
             label={"Add row"}
             icon={Add}
@@ -417,7 +419,7 @@ function DataFrame({
         )}
         {!isEmptyTable && (
           <ToolbarAction
-            label={"Search table"}
+            label={"Search"}
             icon={Search}
             onClick={() => {
               if (!showSearch) {
