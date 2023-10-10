@@ -23,7 +23,6 @@ from streamlit.testing.script_interactions import InteractiveScriptTests
 from streamlit.testing.v1.app_test import AppTest
 
 
-@pytest.mark.xfail(reason="button does not work correctly with session state")
 def test_button():
     sr = AppTest.from_string(
         """
