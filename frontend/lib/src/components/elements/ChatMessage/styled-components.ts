@@ -47,6 +47,14 @@ export const StyledMessageContent = styled.div(({ theme }) => ({
   color: theme.colors.bodyText,
   margin: "auto",
   flexGrow: 1,
+  // Ensure the size of the message has an interpreted width as
+  // the amount defined by flex layout and disregard its contents
+  // they will handle their overflow.
+  //
+  // Unintuitively, setting the min width to 0 tells the browser
+  // that it can shrink past the content's width to the desired size.
+  // https://makandracards.com/makandra/66994-css-flex-and-min-width
+  minWidth: 0,
 }))
 
 export const StyledAvatarBackground = styled.div(({ theme }) => {
@@ -60,7 +68,8 @@ export const StyledAvatarBackground = styled.div(({ theme }) => {
     color: lightTheme ? theme.colors.gray90 : theme.colors.white,
     lineHeight: "1",
     fontSize: theme.fontSizes.md,
-    padding: "1rem",
+    // Ensure the avatar always respects the width/height
+    flexShrink: 0,
     width: "2rem",
     height: "2rem",
     borderRadius: theme.radii.lg,
@@ -80,6 +89,8 @@ export const StyledAvatarIcon = styled.div<StyledAvatarIconProps>(
       display: "flex",
       width: "2rem",
       height: "2rem",
+      // Ensure the avatar always respects the width/height
+      flexShrink: 0,
       borderRadius: theme.radii.lg,
       alignItems: "center",
       justifyContent: "center",
@@ -93,6 +104,8 @@ export const StyledAvatarImage = styled.img(({ theme }) => {
   return {
     width: "2rem",
     height: "2rem",
+    // Ensure the avatar always respects the width/height
+    flexShrink: 0,
     borderRadius: theme.radii.lg,
     objectFit: "cover",
     display: "flex",
