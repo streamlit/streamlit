@@ -124,7 +124,7 @@ function DataFrame({
 
   // Determine if it uses customized scrollbars (webkit browsers):
   // https://developer.mozilla.org/en-US/docs/Web/CSS/::-webkit-scrollbar#css.selectors.-webkit-scrollbar
-  const hasCustomScrollbars = React.useMemo<boolean>(
+  const hasCustomizedScrollbars = React.useMemo<boolean>(
     () =>
       (window.navigator.userAgent.includes("Mac OS") &&
         window.navigator.userAgent.includes("Safari")) ||
@@ -385,7 +385,7 @@ function DataFrame({
       className="stDataFrame"
       ref={resizableContainerRef}
       onMouseDown={e => {
-        if (resizableContainerRef.current && hasCustomScrollbars) {
+        if (resizableContainerRef.current && hasCustomizedScrollbars) {
           // Prevent clicks on the scrollbar handle to propagate to the grid:
           const boundingClient =
             resizableContainerRef.current.getBoundingClientRect()
@@ -527,7 +527,7 @@ function DataFrame({
           experimental={{
             // Prevent the cell border from being cut off at the bottom and right:
             scrollbarWidthOverride: 1,
-            ...(hasCustomScrollbars && {
+            ...(hasCustomizedScrollbars && {
               // Add negative padding to the right and bottom to allow the scrollbars in webkit to
               // overlay the table:
               paddingBottom: hasHorizontalScroll
