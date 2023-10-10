@@ -450,7 +450,10 @@ function DataFrame({
     >
       <Toolbar
         isFullScreen={isFullScreen}
-        locked={isRowSelected || isCellSelected}
+        // Lock the toolbar in some specific situations:
+        locked={
+          isRowSelected || isCellSelected || (isTouchDevice && isFocused)
+        }
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
@@ -572,7 +575,7 @@ function DataFrame({
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={!isTouchDevice ? "rect" : "none"}
+          rangeSelect={isTouchDevice ? "none" : "rect"}
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable tooltips on hover of a cell or column header:
