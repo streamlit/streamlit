@@ -386,9 +386,10 @@ export class App extends PureComponent<Props, State> {
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       onHostConfigResp: (response: IHostConfigResponse) => {
-        const { allowedOrigins, useExternalAuthToken } = response
+        const { allowedOrigins, useExternalAuthToken, disableFullscreenMode } =
+          response
         const appConfig: AppConfig = { allowedOrigins, useExternalAuthToken }
-        const libConfig: LibConfig = {} // TODO(lukasmasuch): We don't have any libConfig yet:
+        const libConfig: LibConfig = { disableFullscreenMode }
 
         // Set the allowed origins configuration for the host communication:
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
@@ -1647,7 +1648,6 @@ export class App extends PureComponent<Props, State> {
             setTheme: this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
-            hideFullScreenButtons: false,
             libConfig,
           }}
         >

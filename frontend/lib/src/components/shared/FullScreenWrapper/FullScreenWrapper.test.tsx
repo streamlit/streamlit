@@ -33,10 +33,12 @@ describe("FullScreenWrapper", () => {
     ...props,
   })
 
-  it("cannot find StyledFullScreenButton when hideFullScreenButtons is true", () => {
+  it("cannot find StyledFullScreenButton when disableFullscreenMode is true", () => {
     const props = getProps()
     const providerProps = {
-      hideFullScreenButtons: true,
+      libConfig: {
+        disableFullscreenMode: true,
+      },
     } as Partial<LibContextProps>
 
     customRenderLibContext(<FullScreenWrapper {...props} />, providerProps)

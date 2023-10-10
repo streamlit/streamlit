@@ -146,7 +146,7 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
 
     const hideFullScreenButton =
       this.props.hideFullScreenButton ??
-      this.context.hideFullScreenButtons ??
+      this.context.libConfig.disableFullscreenMode ??
       false
 
     return (
