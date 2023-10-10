@@ -79,6 +79,11 @@ st.chat_message("assistant", avatar=image2).write(
     "Another message with the same blue avatar."
 )
 
+# Hardcoded user input
+query = "This is a hardcoded user message"
+sources = "example sources"
+llm_response = "some response"
+
 past_messages = st.empty()
 
 if "messages" not in st.session_state:
@@ -92,9 +97,6 @@ with past_messages.container():
                 with st.expander("See sources"):
                     st.markdown(message["sources"])
 
-# Hardcoded user input
-query = "This is a hardcoded user message"
-
 # User input
 with st.chat_message("user"):
     st.markdown(query)
@@ -102,12 +104,9 @@ with st.chat_message("user"):
 user_message = {"role": "user", "content": query, "sources": ""}
 st.session_state.messages.append(user_message)
 
-sources = "example sources"
-
 # LLM's message
 with st.chat_message("assistant"):
     displayed_response = st.empty()
-    llm_response = "some response"
     with displayed_response.container():
         st.markdown(llm_response)
         with st.expander("See sources"):
