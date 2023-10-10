@@ -16,3 +16,6 @@ import streamlit as st
 
 st.title("This title is awesome!")
 st.title("This title is awesome too!", anchor="awesome-title")
+
+st.title("日本語タイトル")
+st.title("その他の邦題", anchor="アンカー")
