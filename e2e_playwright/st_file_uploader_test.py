@@ -32,7 +32,7 @@ def test_file_uploader_render_correctly(
 
 
 def test_file_uploader_error_message_disallowed_files(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that shows error message for disallowed files."""
     file_name1 = "example.json"
@@ -40,8 +40,8 @@ def test_file_uploader_error_message_disallowed_files(
 
     uploader_index = 0
 
-    with themed_app.expect_file_chooser() as fc_info:
-        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -54,14 +54,14 @@ def test_file_uploader_error_message_disallowed_files(
         ]
     )
 
-    wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(1000)
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
 
     expect(
-        themed_app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
+        app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
     ).to_have_text("application/json files are not allowed.", use_inner_text=True)
 
-    file_uploader_in_error_state = themed_app.get_by_test_id("stFileUploader").nth(
+    file_uploader_in_error_state = app.get_by_test_id("stFileUploader").nth(
         uploader_index
     )
 
@@ -69,7 +69,7 @@ def test_file_uploader_error_message_disallowed_files(
 
 
 def test_uploads_and_deletes_single_file_only(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that uploading a file for single file uploader works as expected."""
     file_name1 = "file1.txt"
@@ -80,25 +80,25 @@ def test_uploads_and_deletes_single_file_only(
 
     uploader_index = 0
 
-    with themed_app.expect_file_chooser() as fc_info:
-        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
-    wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(1000)
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
 
-    expect(themed_app.locator(".uploadedFileName")).to_have_text(
+    expect(app.locator(".uploadedFileName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
-    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content1), use_inner_text=True
     )
 
-    file_uploader_uploaded_state = themed_app.get_by_test_id("stFileUploader").nth(
+    file_uploader_uploaded_state = app.get_by_test_id("stFileUploader").nth(
         uploader_index
     )
 
@@ -107,54 +107,54 @@ def test_uploads_and_deletes_single_file_only(
     )
 
     expect(
-        themed_app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
+        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
     ).to_have_text("True", use_inner_text=True)
 
     # Upload a second file. This one will replace the first.
-    with themed_app.expect_file_chooser() as fc_info:
-        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
     )
 
-    wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(1000)
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
 
-    expect(themed_app.locator(".uploadedFileName")).to_have_text(
+    expect(app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
     )
 
-    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content2), use_inner_text=True
     )
 
     expect(
-        themed_app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
+        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
     ).to_have_text("True", use_inner_text=True)
 
-    themed_app.get_by_test_id("stHeader").press("r")
+    app.get_by_test_id("stHeader").press("r")
 
-    wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(1000)
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
 
-    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content2), use_inner_text=True
     )
 
-    themed_app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
+    app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
 
-    wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(1000)
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
 
-    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
     )
 
 
 def test_uploads_and_deletes_multiple_files(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that uploading multiple files at once works correctly."""
     file_name1 = "file1.txt"
@@ -170,16 +170,16 @@ def test_uploads_and_deletes_multiple_files(
 
     uploader_index = 2
 
-    with themed_app.expect_file_chooser() as fc_info:
-        themed_app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(files=files)
 
-    wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(1000)
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
 
-    uploaded_file_names = themed_app.locator(".uploadedFileName")
+    uploaded_file_names = app.locator(".uploadedFileName")
 
     # The widget should show the names of the uploaded files in reverse order
     file_names = [files[1]["name"], files[0]["name"]]
@@ -195,24 +195,24 @@ def test_uploads_and_deletes_multiple_files(
             files[1]["buffer"].decode("utf-8"),
         ]
     )
-    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         content, use_inner_text=True
     )
 
-    file_uploader = themed_app.get_by_test_id("stFileUploader").nth(uploader_index)
+    file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
     assert_snapshot(file_uploader, name="st_multi_file_uploader-uploaded")
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    themed_app.get_by_test_id("fileDeleteBtn").first.click()
+    app.get_by_test_id("fileDeleteBtn").first.click()
 
-    wait_for_app_run(themed_app)
-    themed_app.wait_for_timeout(1000)
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
 
-    expect(themed_app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(themed_app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
+    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
