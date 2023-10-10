@@ -358,22 +358,21 @@ function DataFrame({
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
-    if (
-      dataEditorRef.current &&
-      resizableContainerRef.current &&
-      !isEmptyTable
-    ) {
-      // TODO(lukasmasuch): This is only a hacky and temporary solution until glide-data-grid provides
-      // a better way to determine this: https://github.com/glideapps/glide-data-grid/issues/784
-      const boundingRect = resizableContainerRef.current
+    if (resizableContainerRef.current && !isEmptyTable) {
+      // TODO(lukasmasuch): This is only a hacky and temporary solution until
+      // glide-data-grid provides a better way to determine this:
+      // https://github.com/glideapps/glide-data-grid/issues/784
+
+      // Get the bounds of the data grid scroll area:
+      const scrollAreaBounds = resizableContainerRef.current
         ?.querySelector(".dvn-stack")
         ?.getBoundingClientRect()
-      if (boundingRect) {
+      if (scrollAreaBounds) {
         setHasVerticalScroll(
-          boundingRect.height > resizableContainerRef.current.clientHeight
+          scrollAreaBounds.height > resizableContainerRef.current.clientHeight
         )
         setHasHorizontalScroll(
-          boundingRect.width > resizableContainerRef.current.clientWidth
+          scrollAreaBounds.width > resizableContainerRef.current.clientWidth
         )
       }
     }
@@ -528,8 +527,8 @@ function DataFrame({
             // Prevent the cell border from being cut off at the bottom and right:
             scrollbarWidthOverride: 1,
             ...(hasCustomizedScrollbars && {
-              // Add negative padding to the right and bottom to allow the scrollbars in webkit to
-              // overlay the table:
+              // Add negative padding to the right and bottom to allow the scrollbars in
+              // webkit to overlay the table:
               paddingBottom: hasHorizontalScroll
                 ? -WEBKIT_SCROLLBAR_SIZE
                 : undefined,
