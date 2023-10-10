@@ -353,6 +353,7 @@ function DataFrame({
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
   const isRowSelected = gridSelection.rows.length > 0
+  const isCellSelected = gridSelection.current !== undefined
 
   const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
 
@@ -380,7 +381,7 @@ function DataFrame({
     >
       <Toolbar
         isFullScreen={isFullScreen}
-        locked={isRowSelected}
+        locked={isRowSelected || isCellSelected}
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
