@@ -45,6 +45,25 @@ def test_button():
     assert sr3.button[1].value == False
 
 
+def test_chat():
+    def script():
+        import streamlit as st
+
+        input = st.chat_input(placeholder="Type a thing")
+        with st.chat_message("user"):
+            st.write(input)
+
+    at = AppTest.from_function(script).run()
+    assert at.chat_input[0].value == None
+    msg = at.chat_message[0]
+    assert msg.name == "user"
+    assert msg.markdown[0].value == "`None`"
+
+    at.chat_input[0].set_value("hi").run()
+    assert at.chat_input[0].value == "hi"
+    assert at.chat_message[0].markdown[0].value == "hi"
+
+
 def test_checkbox():
     def script():
         import streamlit as st
