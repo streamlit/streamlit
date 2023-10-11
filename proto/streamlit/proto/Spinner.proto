@@ -19,4 +19,7 @@ syntax = "proto3";
 message Spinner {
   // A message to display while executing that block.
   string text = 1;
+
+  // Whether spinner used in caching functions.
+  bool cache = 2;
 }

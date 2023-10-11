@@ -15,12 +15,14 @@
  */
 
 import React, { ReactElement } from "react"
-import { useTheme } from "@emotion/react"
-import { EmotionTheme, isPresetTheme } from "@streamlit/lib/src/theme"
+import classNames from "classnames"
+import { isPresetTheme } from "@streamlit/lib/src/theme"
 import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+
 import {
+  StyledSpinner,
   StyledSpinnerContainer,
   ThemedStyledSpinner,
 } from "./styled-components"
@@ -31,21 +33,22 @@ export interface SpinnerProps {
 }
 
 function Spinner({ width, element }: SpinnerProps): ReactElement {
-  const theme: EmotionTheme = useTheme()
   const { activeTheme } = React.useContext(LibContext)
   const usingCustomTheme = !isPresetTheme(activeTheme)
-  const styleProp = { width }
+  const { cache } = element
 
   return (
-    <div className="stSpinner" data-testid="stSpinner" style={styleProp}>
+    <StyledSpinner
+      className={classNames({ stSpinner: true, cacheSpinner: cache })}
+      data-testid="stSpinner"
+      width={width}
+      cache={cache}
+    >
       <StyledSpinnerContainer>
-        <ThemedStyledSpinner
-          $size={theme.iconSizes.twoXL}
-          $usingCustomTheme={usingCustomTheme}
-        />
+        <ThemedStyledSpinner usingCustomTheme={usingCustomTheme} />
         <StreamlitMarkdown source={element.text} allowHTML={false} />
       </StyledSpinnerContainer>
-    </div>
+    </StyledSpinner>
   )
 }
 
