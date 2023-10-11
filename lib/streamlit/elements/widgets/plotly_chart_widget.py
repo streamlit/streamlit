@@ -177,15 +177,16 @@ class PlotlyWidgetMixin:
             **kwargs,
         )
 
-        def serialize(self, points: dict) -> str:
-            print("serializing")
-            print(f"{points}")
-            return json.dumps(points, default=str)
+        def deserialize(ui_value, widget_id=""):
+            if ui_value is None:
+                return {}
+            if isinstance(ui_value, str):
+                return json.loads(ui_value)
 
-        def deserialize(self, points: dict) -> dict:
-            print("deserializing")
-            print(f"{points}")
-            return points
+            return ui_value
+
+        def serialize(v):
+            return json.dumps(v, default=str)
 
         ctx = get_script_run_ctx()
 
@@ -200,7 +201,6 @@ class PlotlyWidgetMixin:
             ctx=ctx,
         )
         self.dg._enqueue("plotly_chart", plotly_chart_proto)
-        print(widget_state)
         return widget_state.value
 
     @property

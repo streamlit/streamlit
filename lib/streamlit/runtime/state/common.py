@@ -48,6 +48,7 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.PlotlyChart_pb2 import PlotlyChart
 from streamlit.proto.Radio_pb2 import Radio
 from streamlit.proto.Selectbox_pb2 import Selectbox
 from streamlit.proto.Slider_pb2 import Slider
@@ -82,6 +83,7 @@ WidgetProto: TypeAlias = Union[
     TextArea,
     TextInput,
     TimeInput,
+    PlotlyChart,
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"

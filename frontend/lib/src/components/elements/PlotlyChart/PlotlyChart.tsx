@@ -17,7 +17,9 @@
 import React, {
   ReactElement,
   useCallback,
+  useEffect,
   useLayoutEffect,
+  useRef,
   useState,
 } from "react"
 import { useTheme } from "@emotion/react"
@@ -40,6 +42,8 @@ import {
   PlotSelectionEvent,
 } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { merge } from "lodash"
+import { Layout } from "vega"
 
 export interface PlotlyChartProps {
   width: number
@@ -57,9 +61,19 @@ export interface PlotlyIFrameProps {
 export interface InteractivePlotlyReturnValue {
   x: number
   y: number
+  z?: number
   pointNumber: number
   pointIndex: number
 }
+
+type DragMode =
+  | "zoom"
+  | "pan"
+  | "select"
+  | "lasso"
+  | "orbit"
+  | "turntable"
+  | false
 
 export const DEFAULT_HEIGHT = 450
 
@@ -86,15 +100,48 @@ function PlotlyFigure({
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
 
+  const [config, setConfig] = useState(JSON.parse(figure.config))
+  // const [height, _] = useState(spec.layout.height)
+  const dragmode = useRef<DragMode>(false)
+  const hoverEvents: PlotHoverEvent[] = []
+
   const theme: EmotionTheme = useTheme()
+  const jsonSpec = JSON.parse(
+    replaceTemporaryColors(figure.spec, theme, element.theme)
+  )
+  const [initialHeight, x] = useState(jsonSpec.layout.height)
+  const [initialWidth, y] = useState(jsonSpec.layout.width)
 
   const generateSpec = useCallback((): any => {
+    // console.log("generating spec")
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
-    const initialHeight = spec.layout.height
-    const initialWidth = spec.layout.width
+    // const initialHeight = spec.layout.height
+    // const initialWidth = spec.layout.width
 
+    // if (isFullScreen(height)) {
+    //   spec.layout.width = width
+    //   spec.layout.height = height
+    // } else if (element.useContainerWidth) {
+    //   spec.layout.width = width
+    // } else {
+    //   spec.layout.width = initialWidth
+    //   spec.layout.height = initialHeight
+    // }
+    // if (element.theme === "streamlit") {
+    //   applyStreamlitTheme(spec, theme)
+    // } else {
+    //   // Apply minor theming improvements to work better with Streamlit
+    //   spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    // }
+
+    return spec
+  }, [height])
+
+  const [spec, setSpec] = useState(generateSpec())
+
+  useLayoutEffect(() => {
     if (isFullScreen(height)) {
       spec.layout.width = width
       spec.layout.height = height
@@ -110,55 +157,83 @@ function PlotlyFigure({
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
-
-    return spec
-  }, [
-    element.theme,
-    element.useContainerWidth,
-    figure.spec,
-    height,
-    theme,
-    width,
-  ])
-
-  const [config, setConfig] = useState(JSON.parse(figure.config))
-  const [spec, setSpec] = useState(generateSpec())
-
-  // Update config and spec references iff the theme or props change
-  // Use useLayoutEffect to synchronize rerender by updating state
-  // More information: https://kentcdodds.com/blog/useeffect-vs-uselayouteffect
-  useLayoutEffect(() => {
-    setConfig(JSON.parse(figure.config))
-    setSpec(generateSpec())
-  }, [element, theme, height, width, figure.config, generateSpec])
+    setSpec(spec)
+  }, [height, width])
 
   const { data, layout, frames } = spec
 
   const handleClick = (event: PlotMouseEvent): void => {
+    console.log(event)
     // Build array of points to return
     const selectedPoints: Array<InteractivePlotlyReturnValue> = []
     event.points.forEach(function (point: any) {
       selectedPoints.push({
         x: point.x,
         y: point.y,
+        z: point.z ? point.z : undefined,
         pointNumber: point.pointNumber,
         pointIndex: point.pointIndex,
       })
     })
 
-    console.log("Handling select")
+    console.log("Handling click")
     console.log(selectedPoints)
     widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
-    console.log("Done handling select")
+    console.log("Done handling click")
   }
 
   const handleHover = (event: PlotHoverEvent): void => {
-    console.log("Handle Hover")
-    console.log(event)
-    console.log("Done Handle Hover")
+    // console.log("Handle Hover")
+    // console.log(event)
+    // console.log("Done Handle Hover")
+    // Array to store the selected points
+    let debounceTimeout: NodeJS.Timeout | null = null
+    hoverEvents.push(event)
+
+    // // If there's a pending timeout, clear it
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout)
+    }
+
+    if (!dragmode || dragmode.current === "pan") {
+      // Set a new timeout to handle the selectedPoints after 1000ms
+      debounceTimeout = setTimeout(() => {
+        const selectedPoints: Array<InteractivePlotlyReturnValue> = []
+        // Loop through each point in the event
+        hoverEvents[hoverEvents.length - 1].points.forEach((point: any) => {
+          selectedPoints.push({
+            x: point.x,
+            y: point.y,
+            pointNumber: point.pointNumber,
+            pointIndex: point.pointIndex,
+          })
+        })
+        widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
+
+        // Clear the selectedPoints array after setting the JSON value
+        selectedPoints.length = 0
+      }, 700)
+    }
   }
 
   const handleZoomAndPan = (event: PlotRelayoutEvent): void => {
+    if (
+      !event.dragmode &&
+      // @ts-expect-error
+      !event.selections &&
+      // @ts-expect-error
+      !event["selections[0].path"] &&
+      !event["xaxis.autorange"] &&
+      !event["yaxis.autorange"]
+    ) {
+      console.log(event)
+      widgetMgr.setJsonValue(element, event, { fromUi: true })
+    }
+    if (event.dragmode) {
+      dragmode.current = event.dragmode
+    }
+    // widgetMgr.setJsonValue(element, event, { fromUi: true })
+    // console.log({ xaxis: event.xaxis, yaxis: event.yaxis })
     console.log("Handle ZoomAndPan")
     console.log(event)
     console.log("Done Handle ZoomAndPan")
@@ -194,6 +269,12 @@ function PlotlyFigure({
       onHover={handleHover}
       onRelayout={handleZoomAndPan}
       onSelected={handleSelect}
+      onInitialized={figure => {
+        setSpec(figure)
+      }}
+      onUpdate={figure => {
+        setSpec(figure)
+      }}
     />
   )
 }
