@@ -49,6 +49,7 @@ from streamlit.elements.widgets.time_widgets import (
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
@@ -256,6 +257,38 @@ class Button(Widget):
 
     def click(self) -> Button:
         return self.set_value(True)
+
+
+@dataclass(repr=False)
+class ChatInput(Widget):
+    _value: str | None
+    proto: ChatInputProto = field(repr=False)
+    placeholder: str
+
+    def __init__(self, proto: ChatInputProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "chat_input"
+
+    def set_value(self, v: str | None) -> ChatInput:
+        self._value = v
+        return self
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        if self._value is not None:
+            ws.string_trigger_value.data = self._value
+        return ws
+
+    @property
+    def value(self) -> str | None:
+        if self._value:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return state[self.id]  # type: ignore
 
 
 @dataclass(repr=False)
@@ -1044,6 +1077,14 @@ class Block:
         return ElementList(self.get("caption"))  # type: ignore
 
     @property
+    def chat_input(self) -> WidgetList[ChatInput]:
+        return WidgetList(self.get("chat_input"))  # type: ignore
+
+    @property
+    def chat_message(self) -> Sequence[ChatMessage]:
+        return self.get("chat_message")  # type: ignore
+
+    @property
     def checkbox(self) -> WidgetList[Checkbox]:
         return WidgetList(self.get("checkbox"))  # type: ignore
 
@@ -1176,6 +1217,25 @@ class SpecialBlock(Block):
         else:
             self.type = "unknown"
         self.root = root
+
+
+@dataclass(repr=False)
+class ChatMessage(Block):
+    proto: BlockProto.ChatMessage = field(repr=False)
+    name: str
+    avatar: str
+
+    def __init__(
+        self,
+        proto: BlockProto.ChatMessage,
+        root: ElementTree,
+    ):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "chat_message"
+        self.name = proto.name
+        self.avatar = proto.avatar
 
 
 @dataclass(repr=False)
@@ -1323,6 +1383,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Dataframe(elt.arrow_data_frame, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
+            elif ty == "chat_input":
+                new_node = ChatInput(elt.chat_input, root=root)
             elif ty == "checkbox":
                 new_node = Checkbox(elt.checkbox, root=root)
             elif ty == "code":
@@ -1383,7 +1445,9 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
         elif delta.WhichOneof("type") == "add_block":
             block = delta.add_block
             bty = block.WhichOneof("type")
-            if bty == "column":
+            if bty == "chat_message":
+                new_node = ChatMessage(block.chat_message, root=root)
+            elif bty == "column":
                 new_node = Column(block.column, root=root)
             elif bty == "tab":
                 new_node = Tab(block.tab, root=root)

@@ -36,6 +36,8 @@ from streamlit.testing.v1.element_tree import (
     Block,
     Button,
     Caption,
+    ChatInput,
+    ChatMessage,
     Checkbox,
     Code,
     ColorPicker,
@@ -230,6 +232,14 @@ class AppTest:
     @property
     def caption(self) -> ElementList[Caption]:
         return self._tree.caption
+
+    @property
+    def chat_input(self) -> WidgetList[ChatInput]:
+        return self._tree.chat_input
+
+    @property
+    def chat_message(self) -> Sequence[ChatMessage]:
+        return self._tree.chat_message
 
     @property
     def checkbox(self) -> WidgetList[Checkbox]:
