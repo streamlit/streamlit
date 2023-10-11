@@ -91,8 +91,10 @@ def test_expander_session_state_set(app: Page):
     main_expanders.nth(2).locator(EXPANDER_HEADER_IDENTIFIER).click()
 
     app.get_by_text("Update Num Input").click()
+    wait_for_app_run(app)
 
     app.get_by_text("Print State Value").click()
+    wait_for_app_run(app)
 
     text_elements = app.locator("[data-testid='stText']")
     expect(text_elements).to_have_count(2)
