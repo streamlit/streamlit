@@ -198,7 +198,7 @@ describe("getColumnConfig", () => {
       }),
     })
 
-    const columnConfig = getColumnConfig(element)
+    const columnConfig = getColumnConfig(element.columns)
     expect(columnConfig.size).toBe(2)
     expect(columnConfig.get("c1")).toEqual({
       width: "small",
