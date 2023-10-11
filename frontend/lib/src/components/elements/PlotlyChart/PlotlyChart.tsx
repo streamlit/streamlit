@@ -17,7 +17,6 @@
 import React, {
   ReactElement,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -42,8 +41,6 @@ import {
   PlotSelectionEvent,
 } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { merge } from "lodash"
-import { Layout } from "vega"
 
 export interface PlotlyChartProps {
   width: number
@@ -100,46 +97,23 @@ function PlotlyFigure({
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
 
+  console.log(element)
   const [config, setConfig] = useState(JSON.parse(figure.config))
-  // const [height, _] = useState(spec.layout.height)
   const dragmode = useRef<DragMode>(false)
   const hoverEvents: PlotHoverEvent[] = []
 
   const theme: EmotionTheme = useTheme()
-  const jsonSpec = JSON.parse(
-    replaceTemporaryColors(figure.spec, theme, element.theme)
+  const [spec, setSpec] = useState(
+    JSON.parse(replaceTemporaryColors(figure.spec, theme, element.theme))
   )
-  const [initialHeight, x] = useState(jsonSpec.layout.height)
-  const [initialWidth, y] = useState(jsonSpec.layout.width)
-
-  const generateSpec = useCallback((): any => {
-    // console.log("generating spec")
-    const spec = JSON.parse(
-      replaceTemporaryColors(figure.spec, theme, element.theme)
-    )
-    // const initialHeight = spec.layout.height
-    // const initialWidth = spec.layout.width
-
-    // if (isFullScreen(height)) {
-    //   spec.layout.width = width
-    //   spec.layout.height = height
-    // } else if (element.useContainerWidth) {
-    //   spec.layout.width = width
-    // } else {
-    //   spec.layout.width = initialWidth
-    //   spec.layout.height = initialHeight
-    // }
-    // if (element.theme === "streamlit") {
-    //   applyStreamlitTheme(spec, theme)
-    // } else {
-    //   // Apply minor theming improvements to work better with Streamlit
-    //   spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    // }
-
-    return spec
-  }, [height])
-
-  const [spec, setSpec] = useState(generateSpec())
+  if (element.theme === "streamlit") {
+    applyStreamlitTheme(spec, theme)
+  } else {
+    // Apply minor theming improvements to work better with Streamlit
+    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+  }
+  const [initialHeight] = useState(spec.layout.height)
+  const [initialWidth] = useState(spec.layout.width)
 
   useLayoutEffect(() => {
     if (isFullScreen(height)) {
@@ -147,18 +121,23 @@ function PlotlyFigure({
       spec.layout.height = height
     } else if (element.useContainerWidth) {
       spec.layout.width = width
+      if (height !== initialHeight) {
+        spec.layout.height = initialHeight
+      }
     } else {
+      console.log("Not full screen!")
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
     setSpec(spec)
-  }, [height, width])
+  }, [
+    height,
+    width,
+    element.useContainerWidth,
+    spec,
+    initialWidth,
+    initialHeight,
+  ])
 
   const { data, layout, frames } = spec
 
@@ -183,9 +162,7 @@ function PlotlyFigure({
   }
 
   const handleHover = (event: PlotHoverEvent): void => {
-    // console.log("Handle Hover")
-    // console.log(event)
-    // console.log("Done Handle Hover")
+    console.log("handle hover")
     // Array to store the selected points
     let debounceTimeout: NodeJS.Timeout | null = null
     hoverEvents.push(event)
@@ -195,25 +172,26 @@ function PlotlyFigure({
       clearTimeout(debounceTimeout)
     }
 
-    if (!dragmode || dragmode.current === "pan") {
-      // Set a new timeout to handle the selectedPoints after 1000ms
-      debounceTimeout = setTimeout(() => {
-        const selectedPoints: Array<InteractivePlotlyReturnValue> = []
-        // Loop through each point in the event
-        hoverEvents[hoverEvents.length - 1].points.forEach((point: any) => {
-          selectedPoints.push({
-            x: point.x,
-            y: point.y,
-            pointNumber: point.pointNumber,
-            pointIndex: point.pointIndex,
-          })
+    // if (!dragmode || dragmode.current === "pan") {
+    // Set a new timeout to handle the selectedPoints after 1000ms
+    debounceTimeout = setTimeout(() => {
+      const selectedPoints: Array<InteractivePlotlyReturnValue> = []
+      // Loop through each point in the LAST event
+      hoverEvents[hoverEvents.length - 1].points.forEach((point: any) => {
+        selectedPoints.push({
+          x: point.x,
+          y: point.y,
+          pointNumber: point.pointNumber,
+          pointIndex: point.pointIndex,
         })
-        widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
+      })
+      widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
 
-        // Clear the selectedPoints array after setting the JSON value
-        selectedPoints.length = 0
-      }, 700)
-    }
+      // Clear the selectedPoints array after setting the JSON value
+      selectedPoints.length = 0
+    }, 1000)
+    // }
+    console.log("Done handle hover")
   }
 
   const handleZoomAndPan = (event: PlotRelayoutEvent): void => {
@@ -232,8 +210,6 @@ function PlotlyFigure({
     if (event.dragmode) {
       dragmode.current = event.dragmode
     }
-    // widgetMgr.setJsonValue(element, event, { fromUi: true })
-    // console.log({ xaxis: event.xaxis, yaxis: event.yaxis })
     console.log("Handle ZoomAndPan")
     console.log(event)
     console.log("Done Handle ZoomAndPan")
@@ -265,10 +241,10 @@ function PlotlyFigure({
       layout={layout}
       config={config}
       frames={frames}
-      onClick={handleClick}
-      onHover={handleHover}
-      onRelayout={handleZoomAndPan}
-      onSelected={handleSelect}
+      onClick={element.onClick ? handleClick : () => {}}
+      onHover={element.onHover ? handleHover : () => {}}
+      onRelayout={element.onRelayout ? handleZoomAndPan : () => {}}
+      onSelected={element.onSelect ? handleSelect : () => {}}
       onInitialized={figure => {
         setSpec(figure)
       }}

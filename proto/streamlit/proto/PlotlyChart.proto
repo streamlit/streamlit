@@ -35,9 +35,18 @@ message PlotlyChart {
 
   reserved 3, 4;
 
+  // widget id
   string id = 7;
 
   string form_id = 8;
+
+  bool on_select = 9;
+  bool on_hover = 10;
+  bool on_click = 11;
+  bool on_relayout = 12;
+
+  // figure json id
+  string figure_id = 13;
 }
 
 message Figure {

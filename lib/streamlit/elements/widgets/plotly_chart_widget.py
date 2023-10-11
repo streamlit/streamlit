@@ -14,14 +14,17 @@
 
 """Streamlit support for Plotly charts."""
 
+import hashlib
 import json
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
 
+import plotly.graph_objs as go
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit import type_util
 from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
@@ -33,7 +36,6 @@ from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import matplotlib
-    import plotly.graph_objs as go
     from plotly.basedatatypes import BaseFigure
 
     from streamlit.delta_generator import DeltaGenerator
@@ -89,6 +91,10 @@ class PlotlyWidgetMixin:
         sharing: SharingMode = "streamlit",
         theme: Union[None, Literal["streamlit"]] = "streamlit",
         key: Key | None = None,
+        on_select: bool | None = None,
+        on_hover: bool | None = None,
+        on_click: bool | None = None,
+        on_relayout: bool | None = None,
         on_change: WidgetCallback | None = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
@@ -160,12 +166,34 @@ class PlotlyWidgetMixin:
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
 
+        key = to_key(key)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        print(f"{key=}")
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
+        # Custom serializer
+        def serialize(obj):
+            # Here, you might need to implement custom serialization logic for
+            # each type to ensure it's converted to a string or byte representation properly.
+            if isinstance(obj, (go.Figure, go.Data)):
+                return json.dumps(obj, default=str)  # or use obj.to_json() if available
+            elif isinstance(obj, list):
+                return json.dumps([serialize(sub_obj) for sub_obj in obj])
+            elif isinstance(obj, dict):
+                return json.dumps({key: serialize(value) for key, value in obj.items()})
+            # Add serialization for other types as needed
+
+        # Hash function
+        def get_hash(obj):
+            serialized_obj = serialize(obj).encode("utf-8")
+            return hashlib.sha256(serialized_obj).hexdigest()
+
+        # Example usage
+        figure_id = get_hash(figure_or_data)
         plotly_chart_proto.form_id = current_form_id(self.dg)
         marshall(
             plotly_chart_proto,
@@ -173,7 +201,11 @@ class PlotlyWidgetMixin:
             use_container_width,
             sharing,
             theme,
-            id,
+            figure_id,
+            on_select,
+            on_hover,
+            on_click,
+            on_relayout,
             **kwargs,
         )
 
@@ -215,7 +247,11 @@ def marshall(
     use_container_width: bool,
     sharing: SharingMode,
     theme: Union[None, Literal["streamlit"]],
-    id: str,
+    figure_id: str,
+    on_select: bool | None,
+    on_hover: bool | None,
+    on_click: bool | None,
+    on_relayout: bool | None,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -258,6 +294,19 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
+    if on_select is None:
+        on_select = False
+    if on_hover is None:
+        on_hover = False
+    if on_click is None:
+        on_click = False
+    if on_relayout is None:
+        on_relayout = False
+    proto.on_select = on_select
+    proto.on_hover = on_hover
+    proto.on_click = on_click
+    proto.on_relayout = on_relayout
+    proto.figure_id = figure_id
 
 
 @caching.cache
