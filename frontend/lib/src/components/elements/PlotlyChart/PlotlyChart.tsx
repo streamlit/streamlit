@@ -206,6 +206,8 @@ function PlotlyFigure({
       !event.selections &&
       // @ts-expect-error
       !event["selections[0].path"] &&
+      // @ts-expect-error
+      !event["selections[0].x0"] &&
       !event["xaxis.autorange"] &&
       !event["yaxis.autorange"]
     ) {
