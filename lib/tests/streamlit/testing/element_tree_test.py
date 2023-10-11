@@ -152,30 +152,30 @@ def test_date_input():
     ]
 
 
-class ExceptionTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
+def test_exception():
+    script = AppTest.from_string(
+        """
+        import streamlit as st
 
-            st.exception(RuntimeError("foo"))
-            """,
-        )
-        sr = script.run()
+        st.exception(RuntimeError("foo"))
+        """,
+    )
+    sr = script.run()
 
-        assert sr.exception[0].value == "foo"
+    assert sr.exception[0].value == "foo"
 
-    def test_markdown(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
 
-            st.exception(st.errors.MarkdownFormattedException("# Oh no"))
-            """,
-        )
-        sr = script.run()
+def test_markdown_exception():
+    script = AppTest.from_string(
+        """
+        import streamlit as st
 
-        assert sr.exception[0].is_markdown
+        st.exception(st.errors.MarkdownFormattedException("# Oh no"))
+        """,
+    )
+    sr = script.run()
+
+    assert sr.exception[0].is_markdown
 
 
 class HeadingTest(InteractiveScriptTests):
