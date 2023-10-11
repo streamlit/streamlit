@@ -32,6 +32,7 @@ from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -208,6 +209,10 @@ class PlotlyWidgetMixin:
             on_relayout,
             **kwargs,
         )
+        plotly_chart_proto.id = compute_widget_id(
+            "plotly_chart_widget",
+            plotly_chart_proto,
+        )
 
         def deserialize(ui_value, widget_id=""):
             if ui_value is None:
@@ -225,9 +230,10 @@ class PlotlyWidgetMixin:
         widget_state = register_widget(
             "plotly_chart_widget",
             plotly_chart_proto,
-            user_key=key,
-            on_change_handler=on_change,
-            kwargs=kwargs,
+            user_key=None,
+            on_change_handler=None,
+            args=None,
+            kwargs=None,
             deserializer=deserialize,
             serializer=serialize,
             ctx=ctx,
@@ -306,7 +312,7 @@ def marshall(
     proto.on_hover = on_hover
     proto.on_click = on_click
     proto.on_relayout = on_relayout
-    proto.figure_id = figure_id
+    # proto.figure_id = figure_id
 
 
 @caching.cache
