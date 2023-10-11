@@ -17,6 +17,7 @@
 import React, {
   ReactElement,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -35,6 +36,8 @@ import {
   replaceTemporaryColors,
 } from "./CustomTheme"
 import {
+  Data,
+  LegendClickEvent,
   PlotHoverEvent,
   PlotMouseEvent,
   PlotRelayoutEvent,
@@ -97,8 +100,7 @@ function PlotlyFigure({
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
 
-  console.log(element)
-  const [config, setConfig] = useState(JSON.parse(figure.config))
+  const [config] = useState(JSON.parse(figure.config))
   const dragmode = useRef<DragMode>(false)
   const hoverEvents: PlotHoverEvent[] = []
 
@@ -106,12 +108,15 @@ function PlotlyFigure({
   const [spec, setSpec] = useState(
     JSON.parse(replaceTemporaryColors(figure.spec, theme, element.theme))
   )
-  if (element.theme === "streamlit") {
-    applyStreamlitTheme(spec, theme)
-  } else {
-    // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-  }
+  useEffect(() => {
+    if (element.theme === "streamlit") {
+      applyStreamlitTheme(spec, theme)
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    }
+  }, [])
+
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
 
@@ -121,7 +126,7 @@ function PlotlyFigure({
       spec.layout.height = height
     } else if (element.useContainerWidth) {
       spec.layout.width = width
-      if (height !== initialHeight) {
+      if (!isFullScreen(height) && height !== initialHeight) {
         spec.layout.height = initialHeight
       }
     } else {
@@ -238,6 +243,7 @@ function PlotlyFigure({
       key={isFullScreen(height) ? "fullscreen" : "original"}
       className="stPlotlyChart"
       data={data}
+      // divId={element.figureId}
       layout={layout}
       config={config}
       frames={frames}

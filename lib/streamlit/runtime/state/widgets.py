@@ -149,9 +149,6 @@ def register_widget(
         For both paths a widget return value is provided, allowing the widgets
         to be used in a non-streamlit setting.
     """
-    print(
-        f"ELEMENT_TYPE_TO_VALUE_TYPE[element_type]: {ELEMENT_TYPE_TO_VALUE_TYPE[element_type]}"
-    )
 
     # Create the widget's updated metadata, and register it with session_state.
     metadata = WidgetMetadata(
@@ -163,7 +160,6 @@ def register_widget(
         callback_args=args,
         callback_kwargs=kwargs,
     )
-    print(f"{metadata=}")
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
 
 
