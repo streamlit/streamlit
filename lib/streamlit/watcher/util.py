@@ -20,7 +20,6 @@ functions that use streamlit.config can go here to avoid a dependency cycle.
 
 import hashlib
 import os
-import sys
 import time
 from pathlib import Path
 from typing import Optional
