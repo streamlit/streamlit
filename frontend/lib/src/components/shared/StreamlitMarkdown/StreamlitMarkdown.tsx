@@ -92,7 +92,7 @@ export interface Props {
   disableLinks?: boolean
 
   /**
-   * Toast has smaller font sizing
+   * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
 }
