@@ -224,8 +224,8 @@ def app(page: Page, app_port: int) -> Page:
     return page
 
 
-@pytest.fixture(scope="session", autouse=True)
-def launch_with_different_options(browser_type_launch_args: Dict):
+@pytest.fixture(scope="session")
+def launch_with_camera_options_firefox(browser_type_launch_args: Dict):
     browser_type_launch_args["firefox_user_prefs"] = {
         "media.navigator.streams.fake": True,
         "permissions.default.microphone": 1,
@@ -233,8 +233,8 @@ def launch_with_different_options(browser_type_launch_args: Dict):
     }
 
 
-@pytest.fixture(scope="session", autouse=True)
-def launch_with_chromium_different_options(browser_type_launch_args: Dict):
+@pytest.fixture(scope="session")
+def launch_with_camera_options_chromium(browser_type_launch_args: Dict):
     browser_type_launch_args["args"] = [
         "--use-fake-device-for-media-stream",
         "--use-fake-ui-for-media-stream",
