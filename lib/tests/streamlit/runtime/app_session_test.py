@@ -60,7 +60,10 @@ def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
 
 
-def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppSession:
+def _create_test_session(
+    event_loop: Optional[AbstractEventLoop] = None,
+    session_id_override: Optional[str] = None,
+) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
         event_loop = MagicMock()
@@ -76,6 +79,7 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
             message_enqueued_callback=None,
             local_sources_watcher=MagicMock(),
             user_info={"email": "test@test.com"},
+            session_id_override=session_id_override,
         )
 
 
@@ -96,6 +100,19 @@ class AppSessionTest(unittest.TestCase):
     def tearDown(self) -> None:
         super().tearDown()
         Runtime._instance = None
+
+    @patch(
+        "streamlit.runtime.app_session.uuid.uuid4", MagicMock(return_value="some_uuid")
+    )
+    def test_generates_uuid_for_session_id_if_no_override(self):
+        session = _create_test_session()
+
+        assert session.id == "some_uuid"
+
+    def test_uses_session_id_override_if_set(self):
+        session = _create_test_session(session_id_override="some_custom_session_id")
+
+        assert session.id == "some_custom_session_id"
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"

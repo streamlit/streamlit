@@ -61,12 +61,13 @@ class WebsocketSessionManagerTests(unittest.TestCase):
             message_enqueued_callback=MagicMock(),
         )
 
-    def connect_session(self, existing_session_id=None):
+    def connect_session(self, existing_session_id=None, session_id_override=None):
         return self.session_mgr.connect_session(
             client=MagicMock(),
             script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
             user_info={},
             existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
         )
 
     def test_connect_session(self):
@@ -74,6 +75,19 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         session_info = self.session_mgr._active_session_info_by_id[session_id]
 
         assert session_info.session.id == session_id
+
+    def test_connect_session_assert(self):
+        with pytest.raises(AssertionError):
+            session_id = self.connect_session(
+                existing_session_id="existing_session_id",
+                session_id_override="session_id_override",
+            )
+
+    def test_connect_session_with_session_id_override(self):
+        self.connect_session(session_id_override="my_session_id")
+        session_info = self.session_mgr._active_session_info_by_id["my_session_id"]
+
+        assert session_info.session.id == "my_session_id"
 
     def test_connect_session_on_invalid_session_id(self):
         """Test that connect_session gives us a new session if existing_session_id is invalid."""

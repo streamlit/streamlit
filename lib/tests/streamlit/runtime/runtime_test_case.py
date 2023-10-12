@@ -62,6 +62,7 @@ class MockSessionManager(SessionManager):
         script_data: ScriptData,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
+        session_id_override: Optional[str] = None,
     ) -> str:
         with mock.patch(
             "streamlit.runtime.scriptrunner.ScriptRunner", new=mock.MagicMock()
@@ -73,6 +74,7 @@ class MockSessionManager(SessionManager):
                 message_enqueued_callback=self._message_enqueued_callback,
                 local_sources_watcher=mock.MagicMock(),
                 user_info=user_info,
+                session_id_override=session_id_override,
             )
 
         assert (
