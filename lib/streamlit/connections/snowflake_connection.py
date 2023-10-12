@@ -21,30 +21,32 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Dict, Sequence, cast
+from typing import TYPE_CHECKING, Any, Sequence, cast
 
 import pandas as pd
 
 from streamlit.connections import BaseConnection
-from streamlit.connections.util import load_from_snowsql_config_file, running_in_sis
+from streamlit.connections.util import running_in_sis
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
-    from snowflake.connector import (  # type: ignore # isort: skip
+    from snowflake.connector import (  # type:ignore[import] # isort: skip
         SnowflakeConnection as InternalSnowflakeConnection,
     )
-    from snowflake.connector.cursor import SnowflakeCursor  # type: ignore
-    from snowflake.snowpark.session import Session  # type: ignore
+    from snowflake.connector.cursor import SnowflakeCursor  # type:ignore[import]
+    from snowflake.snowpark.session import Session  # type:ignore[import]
 
 
 _REQUIRED_CONNECTION_PARAMS = {"account"}
 
 
-def _validate_connection_params(params: Dict[str, Any]) -> None:
-    for p in _REQUIRED_CONNECTION_PARAMS:
-        if p not in params:
-            raise StreamlitAPIException(f"Missing Snowflake connection param: {p}")
+def _validate_connection_params(required: set[str], params: dict[str, Any]) -> None:
+    missing = required - set(params)
+    if len(missing) > 0:
+        raise StreamlitAPIException(
+            f"Missing Snowflake connection params: {', '.join(missing)}"
+        )
 
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
@@ -59,8 +61,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     """
 
     def _connect(self, **kwargs) -> "InternalSnowflakeConnection":
-        import snowflake.connector  # type: ignore
-        from snowflake.snowpark.context import get_active_session  # type: ignore
+        import snowflake.connector  # type:ignore[import]
+        from snowflake.snowpark.context import get_active_session  # type:ignore[import]
 
         # If we're running in SiS, just call get_active_session() and retrieve the
         # lower-level connection from it.
@@ -76,19 +78,11 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         st_secrets = self._secrets.to_dict()
         if len(st_secrets):
-            # TODO(vdonato): Double-check that we want to merge any secrets we find with
-
-            # the kwargs passed to `st.connection`.
             conn_kwargs = {**st_secrets, **kwargs}
-            _validate_connection_params(conn_kwargs)
+            _validate_connection_params(_REQUIRED_CONNECTION_PARAMS, conn_kwargs)
             return snowflake.connector.connect(**conn_kwargs)
 
         if hasattr(snowflake.connector.connection, "CONFIG_MANAGER"):
-            # TODO(vdonato): Double-check that we want to map the "snowflake" connection
-            # name in a call to `st.connection` to the "default" connection in the
-            # Snowflake config file. This is aligned with the default behavior for the
-            # underlying python connector and seems more sane than having a "snowflake"
-            # connection in a snowflake-specific config file.
             connection_name = (
                 "default"
                 if self._connection_name == "snowflake"
@@ -99,12 +93,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                 **kwargs,
             )
 
-        # If we have a version of the Snowflake Python Connector installed that predates
-        # the ConfigManager, look for credentials in  ~/.snowsql/config as a last
-        # resort.
-        snowsql_config = load_from_snowsql_config_file(self._connection_name)
-        conn_kwargs = {**snowsql_config, **kwargs}
-        _validate_connection_params(conn_kwargs)
+        # If nothing else works, try using the kwargs passed to st.connection as our
+        # connection params.
+        conn_kwargs = {**kwargs}
+        _validate_connection_params(_REQUIRED_CONNECTION_PARAMS, conn_kwargs)
 
         return snowflake.connector.connect(**conn_kwargs)
 
@@ -218,9 +210,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         information, see the `Snowflake Python Connector documentation
         <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#write_pandas>`_.
         """
-        from snowflake.connector.pandas_tools import write_pandas  # type: ignore
+        from snowflake.connector.pandas_tools import write_pandas  # type:ignore[import]
 
-        return write_pandas(  # type: ignore
+        return write_pandas(  # type:ignore[no-any-return]
             conn=self._instance,
             df=df,
             table_name=table_name,

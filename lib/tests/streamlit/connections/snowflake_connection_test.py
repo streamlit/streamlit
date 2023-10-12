@@ -20,6 +20,7 @@ import pytest
 
 import streamlit as st
 from streamlit.connections import SnowflakeConnection
+from streamlit.connections.snowflake_connection import _validate_connection_params
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
@@ -30,6 +31,19 @@ from tests.testutil import create_mock_script_run_ctx
 class SnowflakeConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
+
+    def test_validate_connection_params(self):
+        with pytest.raises(StreamlitAPIException) as e:
+            _validate_connection_params(
+                {"required1", "required2", "required3"}, {"required1": "foo"}
+            )
+
+        for msg in [
+            "Missing Snowflake connection params",
+            "required2",
+            "required3",
+        ]:
+            assert msg in str(e.value)
 
     @patch(
         "snowflake.snowpark.context.get_active_session",
@@ -66,31 +80,22 @@ class SnowflakeConnectionTest(unittest.TestCase):
     def test_uses_streamlit_secrets_error(self):
         with pytest.raises(StreamlitAPIException) as e:
             SnowflakeConnection("my_snowflake_connection")
-        assert "Missing Snowflake connection param: account" in str(e.value)
+        assert "Missing Snowflake connection params: account" in str(e.value)
 
-    @patch("streamlit.connections.snowflake_connection.load_from_snowsql_config_file")
     @patch("snowflake.connector.connect")
-    def test_uses_config_manager_if_available(
-        self, patched_connect, patched_load_config
-    ):
+    def test_uses_config_manager_if_available(self, patched_connect):
         SnowflakeConnection("snowflake", some_kwarg="some_value")
 
-        patched_load_config.assert_not_called()
         patched_connect.assert_called_once_with(
             connection_name="default", some_kwarg="some_value"
         )
 
-    @patch("streamlit.connections.snowflake_connection.load_from_snowsql_config_file")
     @patch("snowflake.connector.connection")
     @patch("snowflake.connector.connect")
-    def test_falls_back_to_reading_from_snowsql_last(
-        self, patched_connect, patched_connection, patched_load_config
-    ):
+    def test_falls_back_to_using_kwargs_last(self, patched_connect, patched_connection):
         delattr(patched_connection, "CONFIG_MANAGER")
 
         SnowflakeConnection("snowflake", account="account", some_kwarg="some_value")
-
-        patched_load_config.assert_called_once_with("snowflake")
         patched_connect.assert_called_once_with(
             account="account", some_kwarg="some_value"
         )
