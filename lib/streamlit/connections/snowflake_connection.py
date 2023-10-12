@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Sequence, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 
@@ -73,9 +73,12 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                 return session.connection
             return session._conn._conn
 
+        # We require qmark-style parameters everywhere for consistency across different
+        # environments where SnowflakeConnections may be used.
+        snowflake.connector.paramstyle = "qmark"
+
         # Otherwise, attempt to create a new connection from whatever credentials we
         # have available.
-
         st_secrets = self._secrets.to_dict()
         if len(st_secrets):
             conn_kwargs = {**st_secrets, **kwargs}
@@ -83,8 +86,16 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             return snowflake.connector.connect(**conn_kwargs)
 
         if hasattr(snowflake.connector.connection, "CONFIG_MANAGER"):
+            config_mgr = snowflake.connector.connection.CONFIG_MANAGER
+
+            default_connection_name = "default"
+            try:
+                default_connection_name = config_mgr["default_connection_name"]
+            except snowflake.connector.errors.ConfigSourceError:
+                pass
+
             connection_name = (
-                "default"
+                default_connection_name
                 if self._connection_name == "snowflake"
                 else self._connection_name
             )
@@ -107,6 +118,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         ttl: float | int | timedelta | None = None,
         show_spinner: bool | str = "Running `snowflake.query(...)`.",
         params=None,
+        **kwargs,
     ) -> pd.DataFrame:
         """Run a read-only SQL query.
 
@@ -171,7 +183,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         )
         def _query(sql: str) -> pd.DataFrame:
             cur = self._instance.cursor()
-            cur.execute(sql, **(params or {}))
+            cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()
 
         return _query(sql)
@@ -184,25 +196,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         schema: str | None = None,
         chunk_size: int | None = None,
         **kwargs,
-    ) -> tuple[  # This return type is somewhat horrifying but is the return type of pandas_tools.write_pandas, so we keep it consistent here.
-        bool,
-        int,
-        int,
-        Sequence[
-            tuple[
-                str,
-                str,
-                int,
-                int,
-                int,
-                int,
-                str | None,
-                int | None,
-                int | None,
-                str | None,
-            ]
-        ],
-    ]:
+    ) -> tuple[bool, int, int]:
         """Call snowflake.connector.pandas_tools.write_pandas with this connection.
 
         This convenience method is simply a thin wrapper around the ``write_pandas``
@@ -212,7 +206,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """
         from snowflake.connector.pandas_tools import write_pandas  # type:ignore[import]
 
-        return write_pandas(  # type:ignore[no-any-return]
+        success, nchunks, nrows, _ = write_pandas(
             conn=self._instance,
             df=df,
             table_name=table_name,
@@ -221,6 +215,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             chunk_size=chunk_size,
             **kwargs,
         )
+
+        return (success, nchunks, nrows)
 
     def cursor(self) -> "SnowflakeCursor":
         """Return a PEP 249-compliant cursor object.
@@ -245,7 +241,11 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         Information on how to use Snowpark sessions can be found in the `Snowpark documentation
         <https://docs.snowflake.com/en/developer-guide/snowpark/python/working-with-dataframes>`_.
         """
-        from snowflake.snowpark.session import Session
+        from snowflake.snowpark.context import get_active_session  # type:ignore[import]
+        from snowflake.snowpark.session import Session  # type:ignore[import]
+
+        if running_in_sis():
+            return get_active_session()
 
         return cast(
             Session, Session.builder.configs({"connection": self._instance}).create()
