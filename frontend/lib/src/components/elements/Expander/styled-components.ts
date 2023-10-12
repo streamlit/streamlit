@@ -62,6 +62,7 @@ export const StyledSummary = styled.summary(({ theme }) => ({
   "&:focus svg": {
     fill: theme.colors.primary,
   },
+  fontSize: theme.fontSizes.sm,
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
   paddingTop: theme.spacing.md,
