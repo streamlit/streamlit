@@ -168,6 +168,7 @@ function PlotlyFigure({
 
   const handleHover = (event: PlotHoverEvent): void => {
     console.log("handle hover")
+    console.log(event)
     // Array to store the selected points
     let debounceTimeout: NodeJS.Timeout | null = null
     hoverEvents.push(event)
@@ -211,7 +212,6 @@ function PlotlyFigure({
       !event["xaxis.autorange"] &&
       !event["yaxis.autorange"]
     ) {
-      console.log(event)
       widgetMgr.setJsonValue(element, event, { fromUi: true })
     }
     if (event.dragmode) {
@@ -235,7 +235,8 @@ function PlotlyFigure({
     })
 
     console.log("Handling select")
-    console.log(selectedPoints)
+    console.log(event)
+    // console.log(selectedPoints)/
     widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
     console.log("Done handling select")
   }
@@ -253,6 +254,13 @@ function PlotlyFigure({
       onHover={element.onHover ? handleHover : () => {}}
       onRelayout={element.onRelayout ? handleZoomAndPan : () => {}}
       onSelected={element.onSelect ? handleSelect : () => {}}
+      onDoubleClick={
+        element.onRelayout || element.onSelect || element.onClick
+          ? () => {
+              widgetMgr.setJsonValue(element, {}, { fromUi: true })
+            }
+          : () => {}
+      }
       onInitialized={figure => {
         setSpec(figure)
       }}
