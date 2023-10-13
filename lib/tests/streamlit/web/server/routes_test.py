@@ -24,10 +24,7 @@ import tornado.websocket
 
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.routes import (
-    _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
-    _DEFAULT_HOST_CONFIG,
-)
+from streamlit.web.server.routes import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
     HEALTH_ENDPOINT,
     HOST_CONFIG_ENDPOINT,
@@ -194,7 +191,8 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
             {
                 "allowedOrigins": _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
                 "useExternalAuthToken": False,
-                "hostConfig": _DEFAULT_HOST_CONFIG,
+                # Default host configuration settings:
+                "enableCustomParentMessages": False,
             },
             response_body,
         )
@@ -211,11 +209,3 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Check that localhost has been appended/allowed in dev mode
         origins_list = json.loads(response.body)["allowedOrigins"]
         self.assertIn("http://localhost", origins_list)
-
-    @patch_config_options({"global.developmentMode": False})
-    def test_default_host_config(self):
-        response = self.fetch("/_stcore/host-config")
-        self.assertEqual(200, response.code)
-        # Check that default settings as expected
-        host_config_settings = json.loads(response.body)["hostConfig"]
-        self.assertEqual(False, host_config_settings["enableCustomParentMessages"])

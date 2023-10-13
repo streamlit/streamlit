@@ -387,13 +387,20 @@ export class App extends PureComponent<Props, State> {
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       onHostConfigResp: (response: IHostConfigResponse) => {
-        const { allowedOrigins, useExternalAuthToken, hostConfig } = response
-        const hostCommConfig = { allowedOrigins, useExternalAuthToken }
-        const appConfig: AppConfig = { ...hostConfig }
+        const {
+          allowedOrigins,
+          useExternalAuthToken,
+          enableCustomParentMessages,
+        } = response
+        const appConfig: AppConfig = {
+          allowedOrigins,
+          useExternalAuthToken,
+          enableCustomParentMessages,
+        }
         const libConfig: LibConfig = {} // TODO(lukasmasuch): We don't have any libConfig yet:
 
         // Set the allowed origins configuration for the host communication:
-        this.hostCommunicationMgr.setAllowedOrigins(hostCommConfig)
+        this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
         // Set the streamlit-lib specific config settings in LibContext:
