@@ -45,6 +45,7 @@ import {
   PageInfo,
   PageNotFound,
   PagesChanged,
+  ParentMessage,
   mockTheme,
   HOST_COMM_VERSION,
 } from "@streamlit/lib"
@@ -1734,5 +1735,20 @@ describe("handles HostCommunication messaging", () => {
     )
 
     expect(wrapper.find("DeployButton")).toHaveLength(0)
+  })
+
+  it("does not relay custom parent messages by default", () => {
+    const logErrorSpy = jest
+      .spyOn(global.console, "error")
+      .mockImplementation(() => {})
+
+    const msg = new ForwardMsg()
+    msg.parentMessage = new ParentMessage({ message: "random string" })
+    instance.handleMessage(msg)
+
+    expect(logErrorSpy).toHaveBeenCalled()
+    expect(logErrorSpy.mock.calls[0][0]).toEqual(
+      "Sending messages to the host is disabled in line with the platform security policy."
+    )
   })
 })

@@ -211,3 +211,11 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
         # Check that localhost has been appended/allowed in dev mode
         origins_list = json.loads(response.body)["allowedOrigins"]
         self.assertIn("http://localhost", origins_list)
+
+    @patch_config_options({"global.developmentMode": False})
+    def test_default_host_config(self):
+        response = self.fetch("/_stcore/host-config")
+        self.assertEqual(200, response.code)
+        # Check that default settings as expected
+        host_config_settings = json.loads(response.body)["hostConfig"]
+        self.assertEqual(False, host_config_settings["enableCustomParentMessages"])
