@@ -363,6 +363,14 @@ _create_option(
 )  # 1MB
 
 _create_option(
+    "global.forwardMessageCachedHTTPDelivery",
+    description="""Deliver cached forwardMessaged only via HTTP""",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "global.maxCachedMessageAge",
     description="""Expire cached ForwardMsgs whose age is greater than this
         value. A message's age is defined by how many times its script has
