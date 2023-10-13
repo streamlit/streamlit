@@ -118,7 +118,7 @@ class SnowflakeConnectionTest(unittest.TestCase):
         assert conn.query("SELECT 1;") == "i am a dataframe"
 
         conn._instance.cursor.assert_called_once()
-        mock_cursor.execute.assert_called_once_with("SELECT 1;")
+        mock_cursor.execute.assert_called_once_with("SELECT 1;", params=None)
 
     @patch(
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
