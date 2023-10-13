@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# NOTE: Our conda release of streamlit currently requires Python 3.8+ while
-# the PyPI release requires Python 3.7+, so we can't grab the minimum python
-# version from package_data.get('python_requires') for now.
-{% set python_version_bound = ">=3.8" %}
 {% set package_data = load_setup_py_data() %}
 
 
@@ -41,7 +37,7 @@ build:
 requirements:
   host:
     - pip
-    - python {{ python_version_bound }}
+    - python {{ package_data.get('python_requires') }}
   run:
     {% for req in package_data.get('install_requires', []) %}
       # 2022.07.01 - temporarily set protobuf's lower bound to 3.11 to work
