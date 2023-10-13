@@ -489,8 +489,25 @@ describe("Quiver", () => {
       test("decimal", () => {
         const mockElement = { data: DECIMAL }
         const q = new Quiver(mockElement)
-        const { content, contentType, field } = q.getCell(1, 1)
-        expect(Quiver.format(content, contentType, field)).toEqual("1.1")
+        const cell1 = q.getCell(1, 1)
+        expect(
+          Quiver.format(cell1.content, cell1.contentType, cell1.field)
+        ).toEqual("1.1")
+
+        const cell2 = q.getCell(2, 1)
+        expect(
+          Quiver.format(cell2.content, cell2.contentType, cell2.field)
+        ).toEqual("10000")
+
+        const cell3 = q.getCell(1, 2)
+        expect(
+          Quiver.format(cell3.content, cell3.contentType, cell3.field)
+        ).toEqual("2.23")
+
+        const cell4 = q.getCell(2, 2)
+        expect(
+          Quiver.format(cell4.content, cell4.contentType, cell4.field)
+        ).toEqual("-0.1")
       })
 
       test("dictionary", () => {

@@ -24,13 +24,13 @@ import tornado.websocket
 
 from streamlit.runtime.forward_msg_cache import ForwardMsgCache, populate_hash_if_needed
 from streamlit.runtime.runtime_util import serialize_forward_msg
-from streamlit.web.server.routes import ALLOWED_MESSAGE_ORIGINS
+from streamlit.web.server.routes import _DEFAULT_ALLOWED_MESSAGE_ORIGINS
 from streamlit.web.server.server import (
-    ALLOWED_MESSAGE_ORIGIN_ENDPOINT,
     HEALTH_ENDPOINT,
+    HOST_CONFIG_ENDPOINT,
     MESSAGE_ENDPOINT,
-    AllowedMessageOriginsHandler,
     HealthHandler,
+    HostConfigHandler,
     MessageCacheHandler,
     StaticFileHandler,
 )
@@ -168,44 +168,42 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             assert r.code == 404
 
 
-class AllowedMessageOriginsHandlerTest(tornado.testing.AsyncHTTPTestCase):
+class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def setUp(self):
-        super(AllowedMessageOriginsHandlerTest, self).setUp()
+        super(HostConfigHandlerTest, self).setUp()
 
     def get_app(self):
         return tornado.web.Application(
             [
                 (
-                    rf"/{ALLOWED_MESSAGE_ORIGIN_ENDPOINT}",
-                    AllowedMessageOriginsHandler,
+                    rf"/{HOST_CONFIG_ENDPOINT}",
+                    HostConfigHandler,
                 )
             ]
         )
 
     @patch_config_options({"global.developmentMode": False})
     def test_allowed_message_origins(self):
-        response = self.fetch("/_stcore/allowed-message-origins")
+        response = self.fetch("/_stcore/host-config")
         response_body = json.loads(response.body)
         self.assertEqual(200, response.code)
         self.assertEqual(
-            {"allowedOrigins": ALLOWED_MESSAGE_ORIGINS, "useExternalAuthToken": False},
+            {
+                "allowedOrigins": _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
+                "useExternalAuthToken": False,
+            },
             response_body,
         )
         # Check that localhost NOT appended/allowed outside dev mode
-        local_host_appended = "http://localhost" in response_body["allowedOrigins"]
-        self.assertEqual(
-            local_host_appended,
-            False,
+        self.assertNotIn(
+            "http://localhost",
+            response_body["allowedOrigins"],
         )
 
     @patch_config_options({"global.developmentMode": True})
     def test_allowed_message_origins_dev_mode(self):
-        response = self.fetch("/_stcore/allowed-message-origins")
+        response = self.fetch("/_stcore/host-config")
         self.assertEqual(200, response.code)
         # Check that localhost has been appended/allowed in dev mode
         origins_list = json.loads(response.body)["allowedOrigins"]
-        local_host_appended = "http://localhost" in origins_list
-        self.assertEqual(
-            local_host_appended,
-            True,
-        )
+        self.assertIn("http://localhost", origins_list)

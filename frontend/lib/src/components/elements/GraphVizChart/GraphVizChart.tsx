@@ -16,7 +16,7 @@
 
 import React, { ReactElement, useEffect, useRef, useMemo } from "react"
 import { select } from "d3"
-import { graphviz } from "d3-graphviz"
+import { graphviz, Engine } from "d3-graphviz"
 import { logError } from "@streamlit/lib/src/util/log"
 import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
@@ -85,7 +85,11 @@ export function GraphVizChart({
   useEffect(() => {
     try {
       // Layout and render the graph
-      const graph = graphviz(`#${chartId}`).zoom(false).fit(true).scale(1)
+      const graph = graphviz(`#${chartId}`)
+        .zoom(false)
+        .fit(true)
+        .scale(1)
+        .engine(element.engine as Engine)
 
       graph.renderDot(element.spec).on("end", () => {
         const node = select(`#${chartId} > svg`).node()
@@ -94,7 +98,14 @@ export function GraphVizChart({
     } catch (error) {
       logError(error)
     }
-  }, [propHeight, propWidth, element.spec, chartId, setSvgDimensions])
+  }, [
+    propHeight,
+    propWidth,
+    element.spec,
+    element.engine,
+    chartId,
+    setSvgDimensions,
+  ])
 
   const elementDimensions = getChartDimensions()
   const width: number = elementDimensions.chartWidth || propWidth

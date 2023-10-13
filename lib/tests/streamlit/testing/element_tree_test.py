@@ -14,110 +14,126 @@
 
 from datetime import date, datetime, time
 
+import numpy as np
+import pandas as pd
 import pytest
 
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 
 
 @pytest.mark.xfail(reason="button does not work correctly with session state")
-class ButtonTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
+def test_button():
+    sr = AppTest.from_string(
+        """
+        import streamlit as st
 
-            st.button("button")
-            st.button("second button")
-            """,
+        st.button("button")
+        st.button("second button")
+        """,
+    ).run()
+    assert sr.button[0].value == False
+    assert sr.button[1].value == False
+
+    sr2 = sr.button[0].click().run()
+    assert sr2.button[0].value == True
+    assert sr2.button[1].value == False
+
+    sr3 = sr2.run()
+    assert sr3.button[0].value == False
+    assert sr3.button[1].value == False
+
+
+def test_checkbox():
+    def script():
+        import streamlit as st
+
+        st.checkbox("defaults")
+        st.checkbox("defaulted on", True)
+
+    at = AppTest.from_function(script).run()
+    assert at.checkbox[0].label == "defaults"
+    assert at.checkbox.values == [False, True]
+
+    at.checkbox[0].check().run()
+    assert at.checkbox.values == [True, True]
+
+    at.checkbox[1].uncheck().run()
+    assert at.checkbox.values == [True, False]
+
+
+def test_color_picker():
+    at = AppTest.from_string(
+        """
+        import streamlit as st
+
+        st.color_picker("what is your favorite color?")
+        st.color_picker("short hex", value="#ABC")
+        st.color_picker("invalid", value="blue")
+        """,
+    ).run()
+    assert at.color_picker.len == 2
+    assert at.color_picker.values == ["#000000", "#ABC"]
+    assert "blue" in at.exception[0].value
+
+    at.color_picker[0].pick("#123456").run()
+    assert at.color_picker[0].value == "#123456"
+
+
+def test_dataframe():
+    def script():
+        import numpy as np
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame(
+            index=[[0, 1], ["i1", "i2"]],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
         )
-        sr = script.run()
-        assert sr.button[0].value == False
-        assert sr.button[1].value == False
+        st.dataframe(df)
 
-        sr2 = sr.button[0].click().run()
-        assert sr2.button[0].value == True
-        assert sr2.button[1].value == False
-
-        sr3 = sr2.run()
-        assert sr3.button[0].value == False
-        assert sr3.button[1].value == False
-
-
-class CheckboxTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
-
-            st.checkbox("defaults")
-            st.checkbox("defaulted on", True)
-            """,
+    at = AppTest.from_function(script).run()
+    d = at.dataframe[0]
+    assert d.value.equals(
+        pd.DataFrame(
+            index=[[0, 1], ["i1", "i2"]],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
         )
-        sr = script.run()
-        assert sr.checkbox
-        assert sr.checkbox[0].value == False
-        assert sr.checkbox[1].value == True
-
-        sr2 = sr.checkbox[0].check().run()
-        assert sr2.checkbox[0].value == True
-        assert sr2.checkbox[1].value == True
-
-        sr3 = sr2.checkbox[1].uncheck().run()
-        assert sr3.checkbox[0].value == True
-        assert sr3.checkbox[1].value == False
+    )
 
 
-class ColorPickerTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
+def test_date_input():
+    at = AppTest.from_string(
+        """
+        import streamlit as st
+        import datetime
 
-            st.color_picker("what is your favorite color?")
-            st.color_picker("short hex", value="#ABC")
-            st.color_picker("invalid", value="blue")
-            """,
-        )
-        sr = script.run()
-        assert len(sr.color_picker) == 2
-        assert [c.value for c in sr.color_picker] == ["#000000", "#ABC"]
-        assert "blue" in sr.exception[0].value
+        st.date_input("date", value=datetime.date(2023, 4, 17))
+        st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
+        st.date_input("range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1)))
+        """,
+    ).run()
+    assert not at.exception
+    assert at.date_input.values == [
+        date(2023, 4, 17),
+        datetime(2023, 4, 17).date(),
+        (date(2020, 1, 1), date(2030, 1, 1)),
+    ]
+    ds = at.date_input
+    ds[0].set_value(date(2023, 5, 1))
+    ds[1].set_value(datetime(2023, 1, 1))
+    ds[2].set_value((date(2023, 1, 1), date(2024, 1, 1)))
 
-        sr2 = sr.color_picker[0].pick("#123456").run()
-        assert sr2.color_picker[0].value == "#123456"
-
-
-class DateInputTest(InteractiveScriptTests):
-    def test_value(self):
-        script = self.script_from_string(
-            """
-            import streamlit as st
-            import datetime
-
-            st.date_input("date", value=datetime.date(2023, 4, 17))
-            st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
-            st.date_input("range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1)))
-            """,
-        )
-        sr = script.run()
-        assert not sr.exception
-        assert [d.value for d in sr.date_input] == [
-            date(2023, 4, 17),
-            datetime(2023, 4, 17).date(),
-            (date(2020, 1, 1), date(2030, 1, 1)),
-        ]
-        ds = sr.date_input
-        ds[0].set_value(date(2023, 5, 1))
-        ds[1].set_value(datetime(2023, 1, 1))
-        ds[2].set_value((date(2023, 1, 1), date(2024, 1, 1)))
-
-        sr2 = sr.run()
-        assert [d.value for d in sr2.date_input] == [
-            date(2023, 5, 1),
-            date(2023, 1, 1),
-            (date(2023, 1, 1), date(2024, 1, 1)),
-        ]
+    at.run()
+    assert at.date_input.values == [
+        date(2023, 5, 1),
+        date(2023, 1, 1),
+        (date(2023, 1, 1), date(2024, 1, 1)),
+    ]
 
 
 class ExceptionTest(InteractiveScriptTests):

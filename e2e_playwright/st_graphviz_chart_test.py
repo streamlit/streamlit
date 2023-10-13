@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def get_first_graph_svg(app: Page):
@@ -30,8 +30,9 @@ def click_fullscreen(app: Page):
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
 
+    wait_for_app_run(app)
     title_count = len(app.locator(".stGraphVizChart > svg > g > title").all())
-    assert title_count == 5
+    assert title_count == 6
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -81,3 +82,35 @@ def test_first_graph_after_exit_fullscreen(
     assert first_graph_svg.get_attribute("width") == "79pt"
     assert first_graph_svg.get_attribute("height") == "116pt"
     assert_snapshot(first_graph_svg, name="graphviz_after_exit_fullscreen")
+
+
+def test_renders_with_specified_engines(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test if it renders with specified engines."""
+
+    engines = ["dot", "neato", "twopi", "circo", "fdp", "osage", "patchwork"]
+
+    radios = app.query_selector_all('label[data-baseweb="radio"]')
+
+    for idx, engine in enumerate(engines):
+        radios[idx].click(force=True)
+        wait_for_app_run(app)
+        expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(engine)
+
+        assert_snapshot(
+            app.locator(".stGraphVizChart > svg").nth(2),
+            name=f"st_graphviz_chart_engine-{engine}",
+        )
+
+
+def test_dot_string(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test if it renders charts when input is a string (dot language)."""
+
+    title = app.locator(".stGraphVizChart > svg > g > title").nth(5)
+    expect(title).to_have_text("Dot")
+
+    assert_snapshot(
+        app.locator(".stGraphVizChart > svg").nth(5),
+        name="st_graphviz_chart_dot_string",
+    )

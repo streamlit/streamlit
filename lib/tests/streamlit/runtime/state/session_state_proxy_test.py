@@ -37,7 +37,7 @@ def _create_mock_session_state(
     session_state = SessionState()
     for key, value in initial_state_values.items():
         session_state[key] = value
-    return SafeSessionState(session_state)
+    return SafeSessionState(session_state, lambda: None)
 
 
 @patch(
