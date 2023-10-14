@@ -216,3 +216,10 @@ def test_uploads_and_deletes_multiple_files(
     expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
+
+
+# TODO(kajarenc): Migrate missing test from cypress test spec st_file_uploader.spec.js
+#  to playwright:
+#  - uploads and deletes multiple files quickly / slowly
+#  - works inside st.form()
+#  - does not call a callback when not changed
