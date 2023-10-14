@@ -46,6 +46,8 @@ export function GraphVizChart({
 
       if (isFullScreen || element.useContainerWidth) {
         const node = select(`#${chartId} > svg`).node() as SVGGraphicsElement
+        // We explicitly remove width and height to let CSS and the SVG viewBox
+        // define its dimensions
         node.removeAttribute("width")
         node.removeAttribute("height")
       }
