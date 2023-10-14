@@ -28,8 +28,10 @@ jest.mock("d3-graphviz", () => ({
     zoom: () => ({
       fit: () => ({
         scale: () => ({
-          renderDot: () => ({
-            on: jest.fn(),
+          engine: () => ({
+            renderDot: () => ({
+              on: jest.fn(),
+            }),
           }),
         }),
       }),

@@ -49,22 +49,23 @@ function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
     [columnSizes]
   )
 
-  // Apply column widths from state:
-  const sizedColumns = columns.map(column => {
-    if (
-      column.id &&
-      columnSizes.has(column.id) &&
-      columnSizes.get(column.id) !== undefined
-    ) {
-      return {
-        ...column,
-        width: columnSizes.get(column.id),
-        // Deactivate grow whenever a column gets manually resized
-        grow: 0,
-      } as GridColumn
-    }
-    return column
-  })
+  const sizedColumns = React.useMemo(() => {
+    return columns.map(column => {
+      if (
+        column.id &&
+        columnSizes.has(column.id) &&
+        columnSizes.get(column.id) !== undefined
+      ) {
+        return {
+          ...column,
+          width: columnSizes.get(column.id),
+          // Deactivate grow whenever a column gets manually resized
+          grow: 0,
+        } as GridColumn
+      }
+      return column
+    })
+  }, [columns, columnSizes])
 
   return {
     columns: sizedColumns,

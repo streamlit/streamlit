@@ -23,7 +23,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -250,26 +250,24 @@ class RadioTest(DeltaGeneratorTestCase):
         self.assertEqual(c.captions, ["first caption", "", "", "last caption"])
 
 
-class RadioInteractiveTest(InteractiveScriptTests):
-    def test_radio_interaction(self):
-        """Test interactions with an empty radio widget."""
-        script = self.script_from_string(
-            """
-        import streamlit as st
-
-        st.radio("the label", ("m", "f"), index=None)
+def test_radio_interaction():
+    """Test interactions with an empty radio widget."""
+    at = AppTest.from_string(
         """
-        )
-        sr = script.run()
-        radio = sr.radio[0]
-        assert radio.value is None
+    import streamlit as st
 
-        # Select option m
-        sr2 = radio.set_value("m").run()
-        radio = sr2.radio[0]
-        assert radio.value == "m"
+    st.radio("the label", ("m", "f"), index=None)
+    """
+    ).run()
+    radio = at.radio[0]
+    assert radio.value is None
 
-        # # Clear the value
-        sr3 = radio.set_value(None).run()
-        radio = sr3.radio[0]
-        assert radio.value is None
+    # Select option m
+    at = radio.set_value("m").run()
+    radio = at.radio[0]
+    assert radio.value == "m"
+
+    # # Clear the value
+    at = radio.set_value(None).run()
+    radio = at.radio[0]
+    assert radio.value is None

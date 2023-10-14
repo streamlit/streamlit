@@ -688,7 +688,7 @@ class TimeWidgetsMixin:
         elif isinstance(value, (datetime, date)):
             parsed = parse_date_deterministic(value)
         else:
-            parsed = [parse_date_deterministic(v) for v in value]
+            parsed = [parse_date_deterministic(cast(SingleDateValue, v)) for v in value]
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 
