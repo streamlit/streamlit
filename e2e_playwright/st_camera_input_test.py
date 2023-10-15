@@ -16,23 +16,46 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
-# Try with dialog accept
-# Try with grant permissions (should work only in chromium, but doesn't work there)
-# Show interactive debug example
-
 
 @pytest.mark.skip_browser("webkit")
-def test_camera_input_video_stream(
+def test_displays_correct_number_of_elements(
     app: Page,
-    assert_snapshot: ImageCompareFunction,
     launch_with_camera_options_firefox,
     launch_with_camera_options_chromium,
 ):
-    """Test to check that camera video stream works"""
+    """Test that it renders correct number of camera_input elements."""
+    camera_input_widgets = app.get_by_test_id("stCameraInput")
+    expect(camera_input_widgets).to_have_count(2)
+
+
+@pytest.mark.skip_browser("webkit")
+def test_captures_photo(
+    app: Page,
+    launch_with_camera_options_firefox,
+    launch_with_camera_options_chromium,
+):
+    """Test camera_input captures photo when 'Take photo' button clicked"""
+    # Wait for some timeout, until fake video stream available for camera_input
+    app.wait_for_timeout(2000)
+    take_photo_button = app.get_by_test_id("stCameraInputButton").first
+    take_photo_button.click()
+    expect(app.get_by_test_id("stImage")).to_have_count(1)
+
+
+@pytest.mark.skip_browser("webkit")
+def test_clear_photo(
+    app: Page,
+    launch_with_camera_options_firefox,
+    launch_with_camera_options_chromium,
+):
+    """Test camera_input removes photo when 'Clear photo' button clicked"""
+    # Wait for some timeout, until fake video stream available for camera_input
+    app.wait_for_timeout(2000)
+    take_photo_button = app.get_by_test_id("stCameraInputButton").first
+    # Capture a photo
+    take_photo_button.click()
+    expect(app.get_by_test_id("stImage")).to_have_count(1)
+    remove_photo_button = app.get_by_text("Clear photo").first
+    remove_photo_button.click()
     app.wait_for_timeout(1000)
-    camera_inputs = app.get_by_test_id("stCameraInput")
-    expect(camera_inputs).to_have_count(2)
-    camera_input_take_photo = app.get_by_test_id("stCameraInputButton").first
-    app.wait_for_timeout(1000)
-    camera_input_take_photo.click()
-    app.wait_for_timeout(1000)
+    expect(app.get_by_test_id("stImage")).to_have_count(0)
