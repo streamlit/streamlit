@@ -14,14 +14,14 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction
 
 
 @pytest.mark.skip_browser("webkit")
 def test_displays_correct_number_of_elements(
     app: Page,
-    launch_with_camera_options_firefox,
-    launch_with_camera_options_chromium,
+    launch_with_camera_options_firefox: None,
+    launch_with_camera_options_chromium: None,
 ):
     """Test that it renders correct number of camera_input elements."""
     camera_input_widgets = app.get_by_test_id("stCameraInput")
@@ -31,8 +31,8 @@ def test_displays_correct_number_of_elements(
 @pytest.mark.skip_browser("webkit")
 def test_captures_photo(
     app: Page,
-    launch_with_camera_options_firefox,
-    launch_with_camera_options_chromium,
+    launch_with_camera_options_firefox: None,
+    launch_with_camera_options_chromium: None,
 ):
     """Test camera_input captures photo when 'Take photo' button clicked"""
     # Wait for some timeout, until fake video stream available for camera_input
@@ -45,8 +45,8 @@ def test_captures_photo(
 @pytest.mark.skip_browser("webkit")
 def test_clear_photo(
     app: Page,
-    launch_with_camera_options_firefox,
-    launch_with_camera_options_chromium,
+    launch_with_camera_options_firefox: None,
+    launch_with_camera_options_chromium: None,
 ):
     """Test camera_input removes photo when 'Clear photo' button clicked"""
     # Wait for some timeout, until fake video stream available for camera_input
@@ -59,3 +59,17 @@ def test_clear_photo(
     remove_photo_button.click()
     app.wait_for_timeout(1000)
     expect(app.get_by_test_id("stImage")).to_have_count(0)
+
+
+@pytest.mark.skip_browser("webkit")
+def test_shows_disabled_widget_correctly(
+    app: Page,
+    assert_snapshot: ImageCompareFunction,
+    launch_with_camera_options_firefox: None,
+    launch_with_camera_options_chromium: None,
+):
+    """Test that it renders disabled camera_input widget correctly."""
+    camera_input_widgets = app.get_by_test_id("stCameraInput")
+    expect(camera_input_widgets).to_have_count(2)
+    disabled_camera_input = camera_input_widgets.nth(1)
+    assert_snapshot(disabled_camera_input, name="disabled-camera-input")
