@@ -63,13 +63,13 @@ def test_clear_photo(
 
 @pytest.mark.skip_browser("webkit")
 def test_shows_disabled_widget_correctly(
-    app: Page,
+    themed_app: Page,
     assert_snapshot: ImageCompareFunction,
     launch_with_camera_options_firefox: None,
     launch_with_camera_options_chromium: None,
 ):
     """Test that it renders disabled camera_input widget correctly."""
-    camera_input_widgets = app.get_by_test_id("stCameraInput")
+    camera_input_widgets = themed_app.get_by_test_id("stCameraInput")
     expect(camera_input_widgets).to_have_count(2)
     disabled_camera_input = camera_input_widgets.nth(1)
     assert_snapshot(disabled_camera_input, name="disabled-camera-input")
