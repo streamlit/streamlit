@@ -61,7 +61,7 @@ mypy-protobuf==3.3.0
 mysqlclient==2.2.0
 nh3==0.2.14
 nodeenv==1.8.0
-numpy==1.26.0
+numpy==1.26.1
 opencv-python==4.8.1.78
 packaging==23.2
 pandas==2.1.1
