@@ -31,6 +31,10 @@ class SafeSessionState:
     must not mutate its SessionState.
     """
 
+    _state: SessionState
+    _lock: threading.RLock
+    _yield_callback: Callable[[], None]
+
     def __init__(self, state: SessionState, yield_callback: Callable[[], None]):
         # Fields must be set using the object's setattr method to avoid
         # infinite recursion from trying to look up the fields we're setting.
