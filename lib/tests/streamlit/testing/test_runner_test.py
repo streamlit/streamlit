@@ -65,3 +65,16 @@ def test_set_query_params():
     at = AppTest.from_function(script).run()
     # parse.parse_qs puts everything in lists
     assert at.query_params["foo"] == ["bar"]
+
+
+def test_secrets():
+    def script():
+        import streamlit as st
+
+        st.write(st.secrets["foo"])
+
+    at = AppTest.from_function(script)
+    at.secrets["foo"] = "bar"
+    at.run()
+    assert at.markdown[0].value == "bar"
+    assert at.secrets["foo"] == "bar"

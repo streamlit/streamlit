@@ -24,6 +24,7 @@ from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
 
+import streamlit as st
 from streamlit import source_util, util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime import Runtime
@@ -32,6 +33,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
@@ -83,6 +85,7 @@ class AppTest:
         self.default_timeout = default_timeout
         self.session_state = SessionState()
         self.query_params: dict[str, Any] = {}
+        self.secrets: dict[str, Any] = {}
 
         tree = ElementTree()
         tree._runner = self
@@ -192,6 +195,13 @@ class AppTest:
             self.saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
 
+        saved_secrets: Secrets | None = None
+        if self.secrets:
+            saved_secrets = st.secrets
+            new_secrets = Secrets([])
+            new_secrets._secrets = self.secrets
+            st.secrets = new_secrets
+
         with patch_config_options({"runner.postScriptGC": False}):
             script_runner = LocalScriptRunner(self._script_path, self.session_state)
             self._tree = script_runner.run(widget_state, self.query_params, timeout)
@@ -203,6 +213,11 @@ class AppTest:
         # teardown
         with source_util._pages_cache_lock:
             source_util._cached_pages = self.saved_cached_pages
+        if self.secrets:
+            if st.secrets._secrets is not None:
+                self.secrets = st.secrets._secrets  #  type: ignore
+            if saved_secrets is not None:
+                st.secrets = saved_secrets
         Runtime._instance = None
 
         return self
