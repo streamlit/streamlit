@@ -22,7 +22,12 @@ from typing import Any, Dict, Type, TypeVar, overload
 
 from typing_extensions import Final, Literal
 
-from streamlit.connections import BaseConnection, SnowparkConnection, SQLConnection
+from streamlit.connections import (
+    BaseConnection,
+    SnowflakeConnection,
+    SnowparkConnection,
+    SQLConnection,
+)
 from streamlit.deprecation_util import deprecate_obj_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
@@ -35,6 +40,7 @@ from streamlit.runtime.secrets import secrets_singleton
 #      only the connection name is specified and another when both name and type are).
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 FIRST_PARTY_CONNECTIONS = {
+    "snowflake": SnowflakeConnection,
     "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
@@ -43,7 +49,8 @@ MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
     "MySQLdb": "mysqlclient",
     "psycopg2": "psycopg2-binary",
     "sqlalchemy": "sqlalchemy",
-    "snowflake": "snowflake-snowpark-python",
+    "snowflake": "snowflake-connector-python",
+    "snowflake.connector": "snowflake-connector-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
 
@@ -117,6 +124,29 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs,
 ) -> SQLConnection:
+    pass
+
+
+@overload
+def connection_factory(
+    name: Literal["snowflake"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs,
+) -> SnowflakeConnection:
+    pass
+
+
+@overload
+def connection_factory(
+    name: str,
+    type: Literal["snowflake"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs,
+) -> SnowflakeConnection:
     pass
 
 
