@@ -22,6 +22,7 @@ import textwrap
 import traceback
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
+from urllib import parse
 
 from streamlit import source_util, util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -195,6 +196,9 @@ class AppTest:
             script_runner = LocalScriptRunner(self._script_path, self.session_state)
             self._tree = script_runner.run(widget_state, self.query_params, timeout)
             self._tree._runner = self
+            # Last event is SHUTDOWN, so the corresponding data includes query string
+            query_string = script_runner.event_data[-1]["client_state"].query_string
+            self.query_params = parse.parse_qs(query_string)
 
         # teardown
         with source_util._pages_cache_lock:
