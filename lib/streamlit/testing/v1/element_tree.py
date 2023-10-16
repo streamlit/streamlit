@@ -144,7 +144,6 @@ class Element:
 @dataclass(repr=False)
 class Widget(ABC, Element):
     id: str
-    label: str
     help: str
     form_id: str
     disabled: bool
@@ -229,6 +228,7 @@ class Button(Widget):
     _value: bool
 
     proto: ButtonProto
+    label: str
 
     def __init__(self, proto: ButtonProto, root: ElementTree):
         super().__init__(proto, root)
@@ -296,6 +296,7 @@ class Checkbox(Widget):
     _value: bool | None
 
     proto: CheckboxProto
+    label: str
 
     def __init__(self, proto: CheckboxProto, root: ElementTree):
         super().__init__(proto, root)
@@ -350,6 +351,7 @@ class Code(Element):
 @dataclass(repr=False)
 class ColorPicker(Widget):
     _value: str | None
+    label: str
 
     proto: ColorPickerProto
 
@@ -411,6 +413,7 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
 class DateInput(Widget):
     _value: DateValue | None | InitialValue
     proto: DateInputProto
+    label: str
     min: date
     max: date
     is_range: bool
@@ -550,6 +553,7 @@ class Multiselect(Widget, Generic[T]):
     _value: list[T] | None
 
     proto: MultiSelectProto
+    label: str
     options: list[str]
     max_selections: int
 
@@ -623,6 +627,7 @@ Number = Union[int, float]
 class NumberInput(Widget):
     _value: Number | None | InitialValue
     proto: NumberInputProto
+    label: str
     min: Number | None
     max: Number | None
     step: Number
@@ -677,6 +682,7 @@ class Radio(Widget, Generic[T]):
     _value: T | None | InitialValue
 
     proto: RadioProto = field(repr=False)
+    label: str
     options: list[str]
     horizontal: bool
 
@@ -724,6 +730,7 @@ class Selectbox(Widget, Generic[T]):
     _value: T | None | InitialValue
 
     proto: SelectboxProto = field(repr=False)
+    label: str
     options: list[str]
 
     def __init__(self, proto: SelectboxProto, root: ElementTree):
@@ -787,6 +794,7 @@ class SelectSlider(Widget, Generic[T]):
     _value: T | Sequence[T] | None
 
     proto: SliderProto
+    label: str
     data_type: SliderProto.DataType.ValueType
     options: list[str]
 
@@ -829,6 +837,7 @@ class Slider(Widget, Generic[SliderScalarT]):
     _value: SliderScalarT | Sequence[SliderScalarT] | None
 
     proto: SliderProto
+    label: str
     data_type: SliderProto.DataType.ValueType
     min: SliderScalar
     max: SliderScalar
@@ -893,6 +902,7 @@ class TextArea(Widget):
     _value: str | None | InitialValue
 
     proto: TextAreaProto
+    label: str
     max_chars: int
     placeholder: str
 
@@ -934,6 +944,7 @@ class TextArea(Widget):
 class TextInput(Widget):
     _value: str | None | InitialValue
     proto: TextInputProto
+    label: str
     max_chars: int
     autocomplete: str
     placeholder: str
@@ -979,6 +990,7 @@ TimeValue: TypeAlias = Union[time, datetime]
 class TimeInput(Widget):
     _value: TimeValue | None | InitialValue
     proto: TimeInputProto
+    label: str
     step: int
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
