@@ -591,14 +591,14 @@ _create_option(
 _create_option(
     "runner.enumCoercion",
     description="""
-        Adjust how certain 'options' widgets like radio, seletbox, and
+        Adjust how certain 'options' widgets like radio, selectbox, and
         multiselect coerce Enum members when the Enum class gets
         re-defined during a script re-run.
 
         Allowed values:
         * "off": Disables Enum coercion.
         * "nameOnly": Enum classes can be coerced if their member names match.
-        * "nameAndValue": Enum classes can be coerced if their member names
+        * "nameAndValue": Enum classes can be coerced if their member names AND
           member values match.
     """,
     default_val="nameOnly",

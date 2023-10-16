@@ -1092,9 +1092,13 @@ def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
     match as well. (This is configurable in streamlist configs)
     """
     if not isinstance(from_enum_value, Enum):
-        raise ValueError("Expected an Enum")
+        raise ValueError(
+            f"Expected an Enum in the first argument. Got {type(from_enum_value)}"
+        )
     if not isinstance(to_enum_class, EnumMeta):
-        raise ValueError("Expected an EnumMeta (i.e. the class of an Enum)")
+        raise ValueError(
+            f"Expected an EnumMeta/Type in the second argument. Got {type(to_enum_class)}"
+        )
     if isinstance(from_enum_value, to_enum_class):
         return from_enum_value  # Enum is already a member, no coersion necessary
 
@@ -1108,9 +1112,12 @@ def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
     if coercion_type == "off":
         return from_enum_value  # do not attempt to coerce
 
+    # We now know this IS an Enum the user has configured coercion enabled.
+    # Check if we do NOT meet the required conditions and log a failure message
+    # if that is the case.
     from_enum_class = from_enum_value.__class__
     if (
-        not from_enum_class.__qualname__ == to_enum_class.__qualname__
+        from_enum_class.__qualname__ != to_enum_class.__qualname__
         or (
             coercion_type == "nameOnly"
             and set(to_enum_class._member_names_) != set(from_enum_class._member_names_)
@@ -1123,6 +1130,7 @@ def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
     ):
         _LOGGER.debug("Failed to coerce %s to class %s", from_enum_value, to_enum_class)
         return from_enum_value  # do not attempt to coerce
+
     # At this point we think the Enum is coercable, and we know
     # E1 and E2 have the same member names. We convert from E1 to E2 using _name_
     # (since user Enum subclasses can override the .name property in 3.11)

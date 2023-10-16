@@ -35,6 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state import WidgetCallback, get_session_state
 from streamlit.runtime.state.common import RegisterWidgetResult
+from streamlit.type_util import T
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -124,10 +125,10 @@ def maybe_coerce_enum(
 
 @overload
 def maybe_coerce_enum(
-    register_widget_result: RegisterWidgetResult[type_util.T],
-    options: type_util.OptionSequence[type_util.T],
-    opt_sequence: Sequence[type_util.T],
-) -> RegisterWidgetResult[type_util.T]:
+    register_widget_result: RegisterWidgetResult[T],
+    options: type_util.OptionSequence[T],
+    opt_sequence: Sequence[T],
+) -> RegisterWidgetResult[T]:
     ...
 
 
@@ -158,19 +159,19 @@ def maybe_coerce_enum(register_widget_result, options, opt_sequence):
 # (https://github.com/python/typing/issues/548)
 @overload
 def maybe_coerce_enum_sequence(
-    register_widget_result: RegisterWidgetResult[List[type_util.T]],
-    options: type_util.OptionSequence[type_util.T],
-    opt_sequence: Sequence[type_util.T],
-) -> RegisterWidgetResult[List[type_util.T]]:
+    register_widget_result: RegisterWidgetResult[List[T]],
+    options: type_util.OptionSequence[T],
+    opt_sequence: Sequence[T],
+) -> RegisterWidgetResult[List[T]]:
     ...
 
 
 @overload
 def maybe_coerce_enum_sequence(
-    register_widget_result: RegisterWidgetResult[Tuple[type_util.T, type_util.T]],
-    options: type_util.OptionSequence[type_util.T],
-    opt_sequence: Sequence[type_util.T],
-) -> RegisterWidgetResult[Tuple[type_util.T, type_util.T]]:
+    register_widget_result: RegisterWidgetResult[Tuple[T, T]],
+    options: type_util.OptionSequence[T],
+    opt_sequence: Sequence[T],
+) -> RegisterWidgetResult[Tuple[T, T]]:
     ...
 
 
