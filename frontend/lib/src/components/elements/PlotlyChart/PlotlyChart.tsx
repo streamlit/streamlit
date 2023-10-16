@@ -36,8 +36,6 @@ import {
   replaceTemporaryColors,
 } from "./CustomTheme"
 import {
-  Data,
-  LegendClickEvent,
   PlotHoverEvent,
   PlotMouseEvent,
   PlotRelayoutEvent,
@@ -59,9 +57,11 @@ export interface PlotlyIFrameProps {
 }
 
 export interface InteractivePlotlyReturnValue {
-  x: number
-  y: number
-  z?: number
+  x: any
+  y: any
+  z?: any
+  hoverText?: string
+  markerSize?: any
   pointNumber: number
   pointIndex: number
 }
@@ -130,7 +130,7 @@ function PlotlyFigure({
         spec.layout.height = initialHeight
       }
     } else {
-      console.log("Not full screen!")
+      // console.log("Not full screen!")
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
@@ -155,6 +155,8 @@ function PlotlyFigure({
         x: point.x,
         y: point.y,
         z: point.z ? point.z : undefined,
+        hoverText: point.hovertext ? point.hovertext : undefined,
+        markerSize: point["marker.size"] ? point["marker.size"] : undefined,
         pointNumber: point.pointNumber,
         pointIndex: point.pointIndex,
       })
@@ -187,6 +189,9 @@ function PlotlyFigure({
         selectedPoints.push({
           x: point.x,
           y: point.y,
+          z: point.z ? point.z : undefined,
+          hoverText: point.hovertext ? point.hovertext : undefined,
+          markerSize: point["marker.size"] ? point["marker.size"] : undefined,
           pointNumber: point.pointNumber,
           pointIndex: point.pointIndex,
         })
@@ -229,6 +234,9 @@ function PlotlyFigure({
       selectedPoints.push({
         x: point.x,
         y: point.y,
+        z: point.z ? point.z : undefined,
+        hoverText: point.hovertext ? point.hovertext : undefined,
+        markerSize: point["marker.size"] ? point["marker.size"] : undefined,
         pointNumber: point.pointNumber,
         pointIndex: point.pointIndex,
       })
