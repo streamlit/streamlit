@@ -680,56 +680,92 @@ class TypeUtilTest(unittest.TestCase):
             {0: None, 1: None, 2: None, 3: None},
         )
 
-    def test_coerce_enum(self):
+
+class TestEnumCoercion:
+    """Test class for Enum Coercion feature."""
+
+    @pytest.fixture
+    def EnumAOrig(self):
         class EnumA(enum.Enum):
             A = enum.auto()
             B = enum.auto()
             C = enum.auto()
 
-        EnumAOrig = EnumA
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
 
+    @pytest.fixture
+    def EnumAEqual(self):
         class EnumA(enum.Enum):
             A = enum.auto()
             B = enum.auto()
             C = enum.auto()
 
-        EnumAEqual = EnumA
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
 
+    @pytest.fixture
+    def EnumADiffMembers(self):
         class EnumA(enum.Enum):
             A = enum.auto()
             B = enum.auto()
             D = enum.auto()
 
-        EnumADiffMembers = EnumA
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
 
+    @pytest.fixture
+    def EnumADiffValues(self):
         class EnumA(enum.Enum):
             A = "1"
             B = "2"
             C = "3"
 
-        EnumADiffValues = EnumA
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
 
+    @pytest.fixture
+    def EnumAExtraMembers(self):
         class EnumA(enum.Enum):
             A = enum.auto()
             B = enum.auto()
             C = enum.auto()
             D = enum.auto()
 
-        EnumAExtraMembers = EnumA
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
 
+    @pytest.fixture
+    def EnumADiffQualname(self):
         class EnumA(enum.Enum):
             A = enum.auto()
             B = enum.auto()
             C = enum.auto()
 
-        EnumADiffQualname = EnumA
-        EnumADiffQualname.__qualname__ = "foobar.EnumA"
+        EnumA.__qualname__ = "foobar.EnumA"
+        return EnumA
 
+    @pytest.fixture
+    def EnumB(self):
         class EnumB(enum.Enum):
             A = enum.auto()
             B = enum.auto()
             C = enum.auto()
 
+        EnumB.__qualname__ = "__main__.EnumB"
+        return EnumB
+
+    def test_enum_uniqueness(
+        self,
+        EnumAOrig,
+        EnumAEqual,
+        EnumADiffMembers,
+        EnumADiffValues,
+        EnumADiffQualname,
+        EnumB,
+        EnumAExtraMembers,
+    ):
+        """A preliminary check, to ensure testing the others makes sense."""
         assert all(
             EnumAOrig.A not in enum
             for enum in (
@@ -737,33 +773,58 @@ class TypeUtilTest(unittest.TestCase):
                 EnumADiffMembers,
                 EnumADiffValues,
                 EnumADiffQualname,
+                EnumAExtraMembers,
+                EnumB,
             )
         )
         assert EnumAOrig.A.value == EnumAEqual.A.value
+        assert EnumAOrig.__qualname__ == EnumAEqual.__qualname__
 
-        # Things that are coercable
+    def test_coerce_enum_coercable(
+        self,
+        EnumAOrig,
+        EnumAEqual,
+        EnumADiffValues,
+    ):
         assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAEqual.A
+        # Different values are coercable by default
         assert type_util.coerce_enum(EnumAOrig.A, EnumADiffValues) is EnumADiffValues.A
+
+    def test_coerce_enum_not_coercable(
+        self,
+        EnumAOrig,
+        EnumADiffMembers,
+        EnumAExtraMembers,
+        EnumADiffQualname,
+        EnumB,
+    ):
         # Things that are not coercable
         assert type_util.coerce_enum(EnumAOrig.A, EnumADiffMembers) is EnumAOrig.A
         assert type_util.coerce_enum(EnumAOrig.A, EnumAExtraMembers) is EnumAOrig.A
         assert type_util.coerce_enum(EnumAOrig.A, EnumB) is EnumAOrig.A
         assert type_util.coerce_enum(EnumAOrig.A, EnumADiffQualname) is EnumAOrig.A
-        # Things that do not require coercion
+
+    def test_coerce_enum_noop(self, EnumAOrig):
         assert type_util.coerce_enum(EnumAOrig.A, EnumAOrig) is EnumAOrig.A
-        # Things which cause errors
+
+    def test_coerce_enum_errors(self, EnumAOrig, EnumAEqual):
         with pytest.raises(ValueError, match="Expected an EnumMeta"):
             type_util.coerce_enum(EnumAOrig.A, EnumAEqual.A)
         with pytest.raises(ValueError, match="Expected an Enum"):
             type_util.coerce_enum(EnumAOrig, EnumAEqual)
 
-        # test with different config option
-        with patch_config_options({"runner.enumCoercion": "off"}):
-            assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAOrig.A
-        with patch_config_options({"runner.enumCoercion": "nameAndValue"}):
-            assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAEqual.A
-            assert type_util.coerce_enum(EnumAOrig.A, EnumADiffValues) is EnumAOrig.A
-        with pytest.raises(errors.StreamlitAPIException), patch_config_options(
-            {"runner.enumCoercion": "badValue"}
-        ):
+    @patch_config_options({"runner.enumCoercion": "off"})
+    def test_coerce_enum_config_off(self, EnumAOrig, EnumAEqual):
+        assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAOrig.A
+
+    @patch_config_options({"runner.enumCoercion": "nameAndValue"})
+    def test_coerce_enum_config_name_and_value(
+        self, EnumAOrig, EnumAEqual, EnumADiffValues
+    ):
+        assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAEqual.A
+        assert type_util.coerce_enum(EnumAOrig.A, EnumADiffValues) is EnumAOrig.A
+
+    @patch_config_options({"runner.enumCoercion": "badValue"})
+    def test_coerce_enum_bad_config_value(self, EnumAOrig, EnumAEqual):
+        with pytest.raises(errors.StreamlitAPIException):
             type_util.coerce_enum(EnumAOrig.A, EnumAEqual)
