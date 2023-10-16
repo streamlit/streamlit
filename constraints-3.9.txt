@@ -31,7 +31,7 @@ gitdb==4.0.10
 GitPython==3.1.37
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.87.4
+hypothesis==6.88.0
 identify==2.5.30
 idna==3.4
 importlib-metadata==6.8.0
@@ -67,7 +67,7 @@ packaging==23.2
 pandas==2.1.1
 parameterized==0.9.0
 pathspec==0.11.2
-Pillow==10.0.1
+Pillow==10.1.0
 pixelmatch==0.3.0
 pkginfo==1.9.6
 platformdirs==3.11.0
