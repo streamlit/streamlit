@@ -195,8 +195,7 @@ export type AppConfig = {
 
 /**
  * The response structure of the `_stcore/host-config` endpoint.
- * This combines streamlit-lib specific configuration options,
- * streamlit-app specific options, and host commmunication options
- * (e.g. allowed message origins).
+ * This combines streamlit-lib specific configuration options with
+ * streamlit-app specific options (e.g. allowed message origins).
  */
 export type IHostConfigResponse = LibConfig & AppConfig

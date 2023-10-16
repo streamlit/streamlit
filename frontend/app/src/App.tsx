@@ -563,10 +563,6 @@ export class App extends PureComponent<Props, State> {
 
   handleCustomParentMessage = (parentMessage: ParentMessage): void => {
     if (this.state.appConfig.enableCustomParentMessages) {
-      console.log(
-        "Sending custom parent message to host:",
-        parentMessage.message
-      )
       this.hostCommunicationMgr.sendMessageToHost({
         type: "CUSTOM_PARENT_MESSAGE",
         message: parentMessage.message,
