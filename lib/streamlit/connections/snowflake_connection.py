@@ -71,6 +71,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
             if hasattr(session, "connection"):
                 return session.connection
+            # session.connection is only a valid attr in more recent versions of
+            # snowflake-connector-python, so we fall back to grabbing
+            # session._conn._conn if `.connection` is unavailable.
             return session._conn._conn
 
         # We require qmark-style parameters everywhere for consistency across different
@@ -85,6 +88,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             _validate_connection_params(_REQUIRED_CONNECTION_PARAMS, conn_kwargs)
             return snowflake.connector.connect(**conn_kwargs)
 
+        # session.connector.connection.CONFIG_MANAGER is only available in more recent
+        # versions of snowflake-connector-python.
         if hasattr(snowflake.connector.connection, "CONFIG_MANAGER"):
             config_mgr = snowflake.connector.connection.CONFIG_MANAGER
 
@@ -92,6 +97,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             try:
                 default_connection_name = config_mgr["default_connection_name"]
             except snowflake.connector.errors.ConfigSourceError:
+                # Similarly, config_mgr["default_connection_name"] only exists in even
+                # later versions of recent versions. if it doesn't, we just use
+                # "default" as the default connection name.
                 pass
 
             connection_name = (
@@ -159,9 +167,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
-        # TODO(vdonato): Make our error handling more specific if possible. This may be
-        # difficult to do given the limited documentation on the different connector
-        # error subclasses + how many there are.
         from snowflake.connector import Error as SnowflakeError
         from tenacity import (
             retry,
