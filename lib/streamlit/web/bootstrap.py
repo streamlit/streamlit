@@ -132,7 +132,7 @@ def _fix_tornado_crash() -> None:
     """
     if env_util.IS_WINDOWS:
         try:
-            from asyncio import (
+            from asyncio import (  # type: ignore[attr-defined]
                 WindowsProactorEventLoopPolicy,
                 WindowsSelectorEventLoopPolicy,
             )
