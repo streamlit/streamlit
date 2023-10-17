@@ -23,6 +23,24 @@ from streamlit.testing.script_interactions import InteractiveScriptTests
 from streamlit.testing.v1.app_test import AppTest
 
 
+def test_alert():
+    def script():
+        import streamlit as st
+
+        st.success("yay we did it", icon="🚨")
+        st.info("something happened")
+        st.warning("danger danger")
+        st.error("something went terribly wrong", icon="💥")
+
+    at = AppTest.from_function(script).run()
+    assert at.error[0].value == "something went terribly wrong"
+    assert at.error[0].icon == "💥"
+    assert at.info[0].value == "something happened"
+    assert at.success[0].value == "yay we did it"
+    assert at.success[0].icon == "🚨"
+    assert at.warning[0].value == "danger danger"
+
+
 def test_button():
     sr = AppTest.from_string(
         """
