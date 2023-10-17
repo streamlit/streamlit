@@ -62,9 +62,12 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
 
     first_graph_svg = get_first_graph_svg(app)
     # The width and height unset on the element on fullscreen
-    # but the style attribute is set to 100% for both
-    expect(first_graph_svg).to_have_attribute("width", "100%")
-    expect(first_graph_svg).to_have_attribute("height", "100%")
+    expect(first_graph_svg).not_to_have_attribute("width", "79pt")
+    expect(first_graph_svg).not_to_have_attribute("height", "116pt")
+
+    svg_dimensions = first_graph_svg.bounding_box()
+    assert svg_dimensions["width"] == 1256
+    assert svg_dimensions["height"] == 662
     assert_snapshot(first_graph_svg, name="graphviz_fullscreen")
 
 
