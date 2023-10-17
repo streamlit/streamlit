@@ -31,10 +31,10 @@ filelock==3.12.4
 fonttools==4.43.1
 frozenlist==1.4.0
 gitdb==4.0.10
-GitPython==3.1.37
+GitPython==3.1.38
 graphviz==0.20.1
 greenlet==2.0.2
-hypothesis==6.88.0
+hypothesis==6.88.1
 identify==2.5.30
 idna==3.4
 importlib-metadata==6.8.0
@@ -49,8 +49,8 @@ jsonschema==4.19.1
 jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.5
-langchain==0.0.314
-langsmith==0.0.43
+langchain==0.0.315
+langsmith==0.0.44
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
 marshmallow==3.20.1
@@ -124,7 +124,7 @@ six==1.16.0
 smmap==5.0.1
 sniffio==1.3.0
 snowflake-connector-python==3.3.0
-snowflake-snowpark-python==1.8.0
+snowflake-snowpark-python==1.9.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.49
 sqlalchemy2-stubs==0.0.2a35
