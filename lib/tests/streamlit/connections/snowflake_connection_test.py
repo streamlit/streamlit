@@ -20,7 +20,6 @@ import pytest
 
 import streamlit as st
 from streamlit.connections import SnowflakeConnection
-from streamlit.connections.snowflake_connection import _validate_connection_params
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
@@ -31,19 +30,6 @@ from tests.testutil import create_mock_script_run_ctx
 class SnowflakeConnectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         st.cache_data.clear()
-
-    def test_validate_connection_params(self):
-        with pytest.raises(StreamlitAPIException) as e:
-            _validate_connection_params(
-                {"required1", "required2", "required3"}, {"required1": "foo"}
-            )
-
-        for msg in [
-            "Missing Snowflake connection params",
-            "required2",
-            "required3",
-        ]:
-            assert msg in str(e.value)
 
     @patch(
         "snowflake.snowpark.context.get_active_session",
@@ -72,15 +58,6 @@ class SnowflakeConnectionTest(unittest.TestCase):
         patched_connect.assert_called_once_with(
             account="some_val_1", some_key="some_val_2"
         )
-
-    @patch(
-        "streamlit.connections.snowflake_connection.SnowflakeConnection._secrets",
-        PropertyMock(return_value=AttrDict({"some_key": "some_val_2"})),
-    )
-    def test_uses_streamlit_secrets_error(self):
-        with pytest.raises(StreamlitAPIException) as e:
-            SnowflakeConnection("my_snowflake_connection")
-        assert "Missing Snowflake connection params: account" in str(e.value)
 
     @patch("snowflake.connector.connect")
     def test_uses_config_manager_if_available(self, patched_connect):

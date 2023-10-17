@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
@@ -39,14 +39,6 @@ if TYPE_CHECKING:
 
 
 _REQUIRED_CONNECTION_PARAMS = {"account"}
-
-
-def _validate_connection_params(required: set[str], params: dict[str, Any]) -> None:
-    missing = required - set(params)
-    if len(missing) > 0:
-        raise StreamlitAPIException(
-            f"Missing Snowflake connection params: {', '.join(missing)}"
-        )
 
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
@@ -85,7 +77,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         st_secrets = self._secrets.to_dict()
         if len(st_secrets):
             conn_kwargs = {**st_secrets, **kwargs}
-            _validate_connection_params(_REQUIRED_CONNECTION_PARAMS, conn_kwargs)
             return snowflake.connector.connect(**conn_kwargs)
 
         # session.connector.connection.CONFIG_MANAGER is only available in more recent
@@ -112,12 +103,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                 **kwargs,
             )
 
-        # If nothing else works, try using the kwargs passed to st.connection as our
-        # connection params.
-        conn_kwargs = {**kwargs}
-        _validate_connection_params(_REQUIRED_CONNECTION_PARAMS, conn_kwargs)
-
-        return snowflake.connector.connect(**conn_kwargs)
+        return snowflake.connector.connect(**kwargs)
 
     def query(
         self,
