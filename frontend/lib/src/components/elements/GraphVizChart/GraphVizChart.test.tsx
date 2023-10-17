@@ -51,8 +51,7 @@ const getProps = (
     elementId: "1",
     ...elementProps,
   }),
-  width: 0,
-  height: undefined,
+  isFullScreen: false,
 })
 
 describe("GraphVizChart Element", () => {
@@ -103,29 +102,33 @@ describe("GraphVizChart Element", () => {
       spec: "crash",
     })
 
-    const { rerender } = render(<GraphVizChart {...props} />)
-
-    // @ts-expect-error
-    logError.mockClear()
-
-    const newProps = { ...props, height: 500, width: 400 }
-    rerender(<GraphVizChart {...newProps} />)
+    render(<GraphVizChart {...props} />)
 
     expect(logError).toHaveBeenCalledTimes(1)
     expect(mockRenderDot).toHaveBeenCalledWith("crash")
-    expect(graphviz).toHaveBeenCalledTimes(2)
+    expect(graphviz).toHaveBeenCalledTimes(1)
   })
 
-  it("shoud render with height and width", () => {
+  it("shoud render with height and width set to auto", () => {
     const props = {
       ...getProps(),
-      height: 500,
-      width: 400,
     }
     render(<GraphVizChart {...props} />)
 
     expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
-      "height: 500px; width: 400px"
+      "height: auto; width: auto"
+    )
+  })
+
+  it("shoud render with height and width set to 100%", () => {
+    const props = {
+      ...getProps(),
+      isFullScreen: true,
+    }
+    render(<GraphVizChart {...props} />)
+
+    expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
+      "height: 100%; width: 100%"
     )
   })
 })
