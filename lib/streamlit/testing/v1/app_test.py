@@ -24,7 +24,6 @@ from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
 
-import streamlit as st
 from streamlit import source_util, util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime import Runtime
@@ -181,6 +180,10 @@ class AppTest:
 
         Timeout is in seconds, or None to use the default timeout of the runner.
         """
+        # Have to import the streamlit module itself so replacing st.secrets
+        # is visible to other modules.
+        import streamlit as st
+
         if timeout is None:
             timeout = self.default_timeout
 
@@ -215,7 +218,7 @@ class AppTest:
             source_util._cached_pages = self.saved_cached_pages
         if self.secrets:
             if st.secrets._secrets is not None:
-                self.secrets = st.secrets._secrets  #  type: ignore
+                self.secrets = dict(st.secrets._secrets)
             if saved_secrets is not None:
                 st.secrets = saved_secrets
         Runtime._instance = None
