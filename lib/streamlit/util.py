@@ -34,7 +34,9 @@ FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 
 # Due to security issue in md5 and sha1, usedforsecurity
 # argument is added to hashlib for python versions higher than 3.8
-HASHLIB_KWARGS = {"usedforsecurity": False} if sys.version_info >= (3, 9) else {}
+HASHLIB_KWARGS: Dict[str, Any] = (
+    {"usedforsecurity": False} if sys.version_info >= (3, 9) else {}
+)
 
 
 def memoize(func):
