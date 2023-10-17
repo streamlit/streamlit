@@ -134,10 +134,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             "cache miss" and the cached resource is being created. If a string, the value
             of the show_spinner param will be used for the spinner text.
         params : list, tuple, dict or None
-            List of parameters to pass to the execute method. The syntax used to pass
-            parameters is database driver dependent. Check your database driver
-            documentation for which of the five syntax styles, described in `PEP 249
-            paramstyle <https://peps.python.org/pep-0249/#paramstyle>`_, is supported.
+            List of parameters to pass to the execute method. This connector supports
+            binding data to a SQL statement using qmark bindings. For more information
+            and examples, see the `Snowflake Python Connector documentation
+            <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example#using-qmark-or-numeric-binding>`_.
             Default is None.
 
         Returns
