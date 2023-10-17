@@ -854,7 +854,10 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def _widget_state(self) -> WidgetState:
         serde = SelectSliderSerde(self.options, [], False)
-        v = serde.serialize(self.value)
+        # We don't have access to the `format_func`, and options have been
+        # converted to strings already, so hope that formatting with `str`
+        # will let us find the right option.
+        v = serde.serialize(str(self.value))
 
         ws = WidgetState()
         ws.id = self.id

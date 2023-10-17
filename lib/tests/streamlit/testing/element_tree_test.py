@@ -529,6 +529,19 @@ class SelectSliderTest(InteractiveScriptTests):
         assert sr3.select_slider[1].value == ("orange", "yellow")
 
 
+def test_select_slider_ints():
+    def script():
+        import streamlit as st
+
+        st.select_slider("What is your favorite small prime?", options=[2, 3, 5, 7])
+
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 2
+
+    at.select_slider[0].set_value(5).run()
+    assert at.select_slider[0].value == 5
+
+
 class SidebarTest(InteractiveScriptTests):
     def test_access(self):
         script = self.script_from_string(
