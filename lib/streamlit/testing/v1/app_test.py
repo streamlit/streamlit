@@ -48,8 +48,10 @@ from streamlit.testing.v1.element_tree import (
     Divider,
     ElementList,
     ElementTree,
+    Error,
     Exception,
     Header,
+    Info,
     Latex,
     Markdown,
     Multiselect,
@@ -60,12 +62,14 @@ from streamlit.testing.v1.element_tree import (
     SelectSlider,
     Slider,
     Subheader,
+    Success,
     Tab,
     Text,
     TextArea,
     TextInput,
     TimeInput,
     Title,
+    Warning,
     WidgetList,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
@@ -271,12 +275,20 @@ class AppTest:
         return self._tree.divider
 
     @property
+    def error(self) -> ElementList[Error]:
+        return self._tree.error
+
+    @property
     def exception(self) -> ElementList[Exception]:
         return self._tree.exception
 
     @property
     def header(self) -> ElementList[Header]:
         return self._tree.header
+
+    @property
+    def info(self) -> ElementList[Info]:
+        return self._tree.info
 
     @property
     def latex(self) -> ElementList[Latex]:
@@ -315,6 +327,10 @@ class AppTest:
         return self._tree.subheader
 
     @property
+    def success(self) -> ElementList[Success]:
+        return self._tree.success
+
+    @property
     def tabs(self) -> Sequence[Tab]:
         return self._tree.tabs
 
@@ -337,6 +353,10 @@ class AppTest:
     @property
     def title(self) -> ElementList[Title]:
         return self._tree.title
+
+    @property
+    def warning(self) -> ElementList[Warning]:
+        return self._tree.warning
 
     def __len__(self) -> int:
         return len(self._tree)
