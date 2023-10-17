@@ -198,9 +198,9 @@ class AppTest:
             self.saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
 
-        saved_secrets: Secrets | None = None
+        saved_secrets: Secrets = st.secrets
+        # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
-            saved_secrets = st.secrets
             new_secrets = Secrets([])
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
@@ -216,11 +216,11 @@ class AppTest:
         # teardown
         with source_util._pages_cache_lock:
             source_util._cached_pages = self.saved_cached_pages
+
         if self.secrets:
             if st.secrets._secrets is not None:
                 self.secrets = dict(st.secrets._secrets)
-            if saved_secrets is not None:
-                st.secrets = saved_secrets
+            st.secrets = saved_secrets
         Runtime._instance = None
 
         return self
