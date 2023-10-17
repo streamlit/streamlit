@@ -22,6 +22,7 @@ import textwrap
 import traceback
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
+from urllib import parse
 
 from streamlit import source_util, util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -31,6 +32,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
@@ -86,6 +88,7 @@ class AppTest:
         self.default_timeout = default_timeout
         self.session_state = SessionState()
         self.query_params: dict[str, Any] = {}
+        self.secrets: dict[str, Any] = {}
 
         tree = ElementTree()
         tree._runner = self
@@ -181,6 +184,10 @@ class AppTest:
 
         Timeout is in seconds, or None to use the default timeout of the runner.
         """
+        # Have to import the streamlit module itself so replacing st.secrets
+        # is visible to other modules.
+        import streamlit as st
+
         if timeout is None:
             timeout = self.default_timeout
 
@@ -195,14 +202,29 @@ class AppTest:
             self.saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
 
+        saved_secrets: Secrets = st.secrets
+        # Only modify global secrets stuff if we have been given secrets
+        if self.secrets:
+            new_secrets = Secrets([])
+            new_secrets._secrets = self.secrets
+            st.secrets = new_secrets
+
         with patch_config_options({"runner.postScriptGC": False}):
             script_runner = LocalScriptRunner(self._script_path, self.session_state)
             self._tree = script_runner.run(widget_state, self.query_params, timeout)
             self._tree._runner = self
+            # Last event is SHUTDOWN, so the corresponding data includes query string
+            query_string = script_runner.event_data[-1]["client_state"].query_string
+            self.query_params = parse.parse_qs(query_string)
 
         # teardown
         with source_util._pages_cache_lock:
             source_util._cached_pages = self.saved_cached_pages
+
+        if self.secrets:
+            if st.secrets._secrets is not None:
+                self.secrets = dict(st.secrets._secrets)
+            st.secrets = saved_secrets
         Runtime._instance = None
 
         return self
