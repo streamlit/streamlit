@@ -536,12 +536,18 @@ def test_select_slider_ints():
         import streamlit as st
 
         st.select_slider("What is your favorite small prime?", options=[2, 3, 5, 7])
+        st.select_slider(
+            "Best number range?", options=list(range(10)), value=[0, 1], key="range"
+        )
 
     at = AppTest.from_function(script).run()
     assert at.select_slider[0].value == 2
+    assert at.select_slider[1].value == (0, 1)
 
-    at.select_slider[0].set_value(5).run()
+    at.select_slider[0].set_value(5)
+    at.select_slider[1].set_value([7, 9]).run()
     assert at.select_slider[0].value == 5
+    assert at.select_slider[1].value == (7, 9)
 
 
 def test_access_methods():

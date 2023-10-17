@@ -857,7 +857,13 @@ class SelectSlider(Widget, Generic[T]):
         # We don't have access to the `format_func`, and options have been
         # converted to strings already, so hope that formatting with `str`
         # will let us find the right option.
-        v = serde.serialize(str(self.value))
+        try:
+            v = serde.serialize(str(self.value))
+        except (ValueError, TypeError):
+            try:
+                v = serde.serialize([str(val) for val in self.value])  # type: ignore
+            except:
+                raise ValueError(f"Could not find index for {self.value}")
 
         ws = WidgetState()
         ws.id = self.id
