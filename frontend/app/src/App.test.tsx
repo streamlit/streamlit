@@ -1748,7 +1748,25 @@ describe("handles HostCommunication messaging", () => {
 
     expect(logErrorSpy).toHaveBeenCalled()
     expect(logErrorSpy.mock.calls[0][0]).toEqual(
-      "Sending messages to the host is disabled in line with the platform security policy."
+      "Sending messages to the host is disabled in line with the platform policy."
     )
+  })
+
+  it("relays custom parent messages when enabled", () => {
+    instance.setState({ appConfig: { enableCustomParentMessages: true } })
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
+
+    const msg = new ForwardMsg()
+    msg.parentMessage = new ParentMessage({ message: "random string" })
+    instance.handleMessage(msg)
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "CUSTOM_PARENT_MESSAGE",
+      message: "random string",
+    })
   })
 })

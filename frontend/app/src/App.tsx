@@ -569,7 +569,7 @@ export class App extends PureComponent<Props, State> {
       })
     } else {
       logError(
-        "Sending messages to the host is disabled in line with the platform security policy."
+        "Sending messages to the host is disabled in line with the platform policy."
       )
     }
   }
