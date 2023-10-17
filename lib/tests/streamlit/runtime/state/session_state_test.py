@@ -38,7 +38,7 @@ from streamlit.runtime.state.session_state import (
     WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
 
@@ -259,95 +259,84 @@ class SessionStateTest(DeltaGeneratorTestCase):
         assert ctx.session_state["color"] is not color
 
 
-class SessionStateCallbackTest(InteractiveScriptTests):
-    def test_callbacks_with_rerun(self):
-        """Calling 'rerun' from within a widget callback
-        is disallowed and results in a warning.
-        """
-        script = self.script_from_string(
-            """
+def test_callbacks_with_rerun():
+    """Calling 'rerun' from within a widget callback
+    is disallowed and results in a warning.
+    """
+
+    def script():
         import streamlit as st
 
         def callback():
             st.session_state["message"] = "ran callback"
             st.rerun()
+
         st.checkbox("cb", on_change=callback)
-        """
-        )
-        sr = script.run()
-        sr2 = sr.checkbox[0].check().run()
-        assert sr2.session_state["message"] == "ran callback"
-        warning = sr2.get("alert")[0]
-        assert "no-op" in warning.proto.alert.body
+
+    at = AppTest.from_function(script).run()
+    at.checkbox[0].check().run()
+    assert at.session_state["message"] == "ran callback"
+    warning = at.get("alert")[0]
+    assert "no-op" in warning.proto.body
 
 
-class SessionStateInteractionTest(InteractiveScriptTests):
-    def test_updates(self):
-        script = self.script_from_filename("test_data/linked_sliders.py")
-        sr = script.run()
-        assert sr.slider[0].value == -100.0
-        assert sr.markdown[0].value == "Celsius `-100.0`"
-        assert sr.slider[1].value == -148.0
-        assert sr.markdown[1].value == "Fahrenheit `-148.0`"
+def test_updates():
+    at = AppTest.from_file("test_data/linked_sliders.py").run()
+    assert at.slider.values == [-100.0, -148.0]
+    assert at.markdown.values == ["Celsius `-100.0`", "Fahrenheit `-148.0`"]
 
-        # Both sliders update when first is changed
-        sr2 = sr.slider[0].set_value(0.0).run()
-        assert sr2.slider[0].value == 0.0
-        assert sr2.markdown[0].value == "Celsius `0.0`"
-        assert sr2.slider[1].value == 32.0
-        assert sr2.markdown[1].value == "Fahrenheit `32.0`"
+    # Both sliders update when first is changed
+    at.slider[0].set_value(0.0).run()
+    assert at.slider.values == [0.0, 32.0]
+    assert at.markdown.values == ["Celsius `0.0`", "Fahrenheit `32.0`"]
 
-        # Both sliders update when second is changed
-        sr3 = sr2.slider[1].set_value(212.0).run()
-        assert sr3.slider[0].value == 100.0
-        assert sr3.markdown[0].value == "Celsius `100.0`"
-        assert sr3.slider[1].value == 212.0
-        assert sr3.markdown[1].value == "Fahrenheit `212.0`"
+    # Both sliders update when second is changed
+    at.slider[1].set_value(212.0).run()
+    assert at.slider.values == [100.0, 212.0]
+    assert at.markdown.values == ["Celsius `100.0`", "Fahrenheit `212.0`"]
 
-        # Sliders update when one is changed repeatedly
-        sr4 = sr3.slider[0].set_value(0.0).run()
-        assert sr4.slider[0].value == 0.0
-        assert sr4.slider[1].value == 32.0
-        sr5 = sr4.slider[0].set_value(100.0).run()
-        assert sr5.slider[0].value == 100.0
-        assert sr5.slider[1].value == 212.0
+    # Sliders update when one is changed repeatedly
+    at.slider[0].set_value(0.0).run()
+    assert at.slider.values == [0.0, 32.0]
+    at.slider[0].set_value(100.0).run()
+    assert at.slider.values == [100.0, 212.0]
 
-    def test_serializable_check(self):
-        """When the config option is on, adding unserializable data to session
-        state should result in an exception.
-        """
-        with patch_config_options({"runner.enforceSerializableSessionState": True}):
-            script = self.script_from_string(
-                """
-                import streamlit as st
 
-                def unserializable_data():
-                    return lambda x: x
+def test_serializable_check():
+    """When the config option is on, adding unserializable data to session
+    state should result in an exception.
+    """
+    with patch_config_options({"runner.enforceSerializableSessionState": True}):
 
-                st.session_state.unserializable = unserializable_data()
-                """,
-            )
-            sr = script.run()
-            assert sr.exception
-            assert "pickle" in sr.exception[0].value
+        def script():
+            import streamlit as st
 
-    def test_serializable_check_off(self):
-        """When the config option is off, adding unserializable data to session
-        state should work without errors.
-        """
-        with patch_config_options({"runner.enforceSerializableSessionState": False}):
-            script = self.script_from_string(
-                """
-                import streamlit as st
+            def unserializable_data():
+                return lambda x: x
 
-                def unserializable_data():
-                    return lambda x: x
+            st.session_state.unserializable = unserializable_data()
 
-                st.session_state.unserializable = unserializable_data()
-                """,
-            )
-            sr = script.run()
-            assert not sr.exception
+        at = AppTest.from_function(script).run()
+        assert at.exception
+        assert "pickle" in at.exception[0].value
+
+
+def test_serializable_check_off():
+    """When the config option is off, adding unserializable data to session
+    state should work without errors.
+    """
+    with patch_config_options({"runner.enforceSerializableSessionState": False}):
+
+        def script():
+            import streamlit as st
+
+            def unserializable_data():
+                return lambda x: x
+
+            st.session_state.unserializable = unserializable_data()
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
