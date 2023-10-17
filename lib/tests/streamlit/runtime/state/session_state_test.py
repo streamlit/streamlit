@@ -276,8 +276,8 @@ def test_callbacks_with_rerun():
     at = AppTest.from_function(script).run()
     at.checkbox[0].check().run()
     assert at.session_state["message"] == "ran callback"
-    warning = at.get("alert")[0]
-    assert "no-op" in warning.proto.body
+    warning = at.warning[0]
+    assert "no-op" in warning.value
 
 
 def test_updates():

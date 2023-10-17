@@ -194,10 +194,10 @@ def test_date_input():
 def test_exception():
     script = AppTest.from_string(
         """
-        import streamlit as st
+            import streamlit as st
 
-        st.exception(RuntimeError("foo"))
-        """,
+            st.exception(RuntimeError("foo"))
+            """,
     )
     sr = script.run()
 
@@ -529,6 +529,25 @@ def test_select_slider():
     sr3 = sr2.select_slider[1].set_range("yellow", "orange").run()
     assert sr3.select_slider[0].value == "violet"
     assert sr3.select_slider[1].value == ("orange", "yellow")
+
+
+def test_select_slider_ints():
+    def script():
+        import streamlit as st
+
+        st.select_slider("What is your favorite small prime?", options=[2, 3, 5, 7])
+        st.select_slider(
+            "Best number range?", options=list(range(10)), value=[0, 1], key="range"
+        )
+
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 2
+    assert at.select_slider[1].value == (0, 1)
+
+    at.select_slider[0].set_value(5)
+    at.select_slider[1].set_value([7, 9]).run()
+    assert at.select_slider[0].value == 5
+    assert at.select_slider[1].value == (7, 9)
 
 
 def test_access_methods():
