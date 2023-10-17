@@ -223,3 +223,40 @@ def test_selectbox_interaction():
     at = selectbox.set_value(None).run()
     selectbox = at.selectbox[0]
     assert selectbox.value is None
+
+
+def test_selectbox_enum_coercion():
+    """Test E2E Enum Coercion on a selectbox."""
+    at = AppTest.from_string(
+        """
+    import streamlit as st
+    from enum import Enum
+
+    class EnumA(Enum):
+        A = 1
+        B = 2
+        C = 3
+
+    selected = st.selectbox("my_enum", EnumA, index=0)
+    st.text(str(selected in EnumA))
+    st.text(id(selected.__class__))
+    """
+    ).run()
+    selectbox = at.selectbox[0]
+    original_class = selectbox.value.__class__
+    original_id = at.text[1].value
+    assert original_class.__qualname__ == "EnumA"
+    assert at.text[0].value == "True"
+
+    at = selectbox.select_index(1).run()
+    selectbox = at.selectbox[0]
+    new_class = selectbox.value.__class__
+    # Note: We CANNOT check that `selectbox.value.__class__ is not original_class`
+    # here because `selectbox.value` uses `st.session_state` which HAS NOT been
+    # coerced, and thus still contains the Enum of the old class.
+    # Instead, we check the ID value printed within the script to verify the
+    # coercion has happened.
+    new_id = at.text[1].value
+    assert new_id != original_id
+    assert new_class.__qualname__ == "EnumA"
+    assert at.text[0].value == "True"

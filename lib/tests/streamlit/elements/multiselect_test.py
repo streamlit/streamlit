@@ -27,6 +27,7 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -375,3 +376,28 @@ Please select at most 2 options.
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.placeholder, "Select your beverage")
+
+
+def test_multiselect_enum_coercion():
+    """Test E2E Enum Coercion on a selectbox."""
+    at = AppTest.from_string(
+        """
+    import streamlit as st
+    from enum import Enum
+
+    class EnumA(Enum):
+        A = 1
+        B = 2
+        C = 3
+
+    selected_list = st.multiselect("my_enum", EnumA, default=[EnumA.A, EnumA.C])
+    assert all(selected in EnumA for selected in selected_list)
+    """
+    ).run()
+    assert len(at.exception) == 0
+
+    # https://github.com/streamlit/streamlit/issues/7563 requires conversion to a str
+    # before calling set_value. Here, rather than "convert" to a string we just
+    # pass in what the string _would_ be because it's easier that way :P
+    at = at.multiselect[0].set_value(["EnumA.B"]).run()
+    assert len(at.exception) == 0
