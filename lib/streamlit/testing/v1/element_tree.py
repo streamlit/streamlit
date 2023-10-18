@@ -1147,6 +1147,41 @@ class TimeInput(Widget):
 
 
 @dataclass(repr=False)
+class Toggle(Widget):
+    _value: bool | None
+
+    proto: CheckboxProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: CheckboxProto, root: ElementTree):
+        super().__init__(proto, root)
+        self._value = None
+        self.type = "toggle"
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        ws.bool_value = self.value
+        return ws
+
+    @property
+    def value(self) -> bool:
+        if self._value is not None:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return cast(bool, state[self.id])
+
+    def set_value(self, v: bool) -> Toggle:
+        self._value = v
+        return self
+
+
+@dataclass(repr=False)
 class Block:
     type: str
     children: dict[int, Node]
@@ -1322,6 +1357,10 @@ class Block:
     @property
     def title(self) -> ElementList[Title]:
         return ElementList(self.get("title"))  # type: ignore
+
+    @property
+    def toggle(self) -> WidgetList[Toggle]:
+        return WidgetList(self.get("toggle"))  # type: ignore
 
     @property
     def warning(self) -> ElementList[Warning]:
@@ -1549,7 +1588,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             elif ty == "chat_input":
                 new_node = ChatInput(elt.chat_input, root=root)
             elif ty == "checkbox":
-                new_node = Checkbox(elt.checkbox, root=root)
+                style = elt.checkbox.type
+                if style == CheckboxProto.StyleType.TOGGLE:
+                    new_node = Toggle(elt.checkbox, root=root)
+                else:
+                    new_node = Checkbox(elt.checkbox, root=root)
             elif ty == "code":
                 new_node = Code(elt.code, root=root)
             elif ty == "color_picker":

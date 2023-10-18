@@ -743,6 +743,23 @@ def test_time_input():
     ]
 
 
+def test_toggle():
+    def script():
+        import streamlit as st
+
+        on = st.toggle("Activate feature")
+        if on:
+            st.write("Feature activated!")
+
+    at = AppTest.from_function(script).run()
+    assert at.toggle[0].value is False
+
+    at.toggle[0].set_value(True).run()
+    assert at.toggle[0].value is True
+
+    repr(at.toggle[0])
+
+
 def test_short_timeout():
     script = AppTest.from_string(
         """

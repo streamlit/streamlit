@@ -74,6 +74,7 @@ from streamlit.testing.v1.element_tree import (
     TextInput,
     TimeInput,
     Title,
+    Toggle,
     Warning,
     WidgetList,
 )
@@ -391,6 +392,10 @@ class AppTest:
     @property
     def title(self) -> ElementList[Title]:
         return self._tree.title
+
+    @property
+    def toggle(self) -> WidgetList[Toggle]:
+        return self._tree.toggle
 
     @property
     def warning(self) -> ElementList[Warning]:
