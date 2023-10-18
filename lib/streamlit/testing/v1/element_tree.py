@@ -71,6 +71,7 @@ from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea as TextAreaProto
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
+from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.safe_session_state import SafeSessionState
@@ -1147,6 +1148,22 @@ class TimeInput(Widget):
 
 
 @dataclass(repr=False)
+class Toast(Element):
+    proto: ToastProto = field(repr=False)
+    icon: str
+
+    def __init__(self, proto: ToastProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.root = root
+        self.type = "toast"
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(repr=False)
 class Toggle(Widget):
     _value: bool | None
 
@@ -1359,6 +1376,10 @@ class Block:
         return ElementList(self.get("title"))  # type: ignore
 
     @property
+    def toast(self) -> ElementList[Toast]:
+        return ElementList(self.get("toast"))  # type: ignore
+
+    @property
     def toggle(self) -> WidgetList[Toggle]:
         return WidgetList(self.get("toggle"))  # type: ignore
 
@@ -1554,6 +1575,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
     root.children = {
         0: SpecialBlock(type="main", root=root, proto=None),
         1: SpecialBlock(type="sidebar", root=root, proto=None),
+        2: SpecialBlock(type="event", root=root, proto=None),
     }
 
     for msg in messages:
@@ -1650,6 +1672,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = TextInput(elt.text_input, root=root)
             elif ty == "time_input":
                 new_node = TimeInput(elt.time_input, root=root)
+            elif ty == "toast":
+                new_node = Toast(elt.toast, root=root)
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":

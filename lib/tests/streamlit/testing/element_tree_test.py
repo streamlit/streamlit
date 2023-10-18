@@ -743,6 +743,19 @@ def test_time_input():
     ]
 
 
+def test_toast():
+    def script():
+        import streamlit as st
+
+        st.toast("first")
+        st.write("something in the main area")
+        st.toast("second")
+
+    at = AppTest.from_function(script).run()
+    assert at.toast.len == 2
+    assert at.toast.values == ["first", "second"]
+
+
 def test_toggle():
     def script():
         import streamlit as st
