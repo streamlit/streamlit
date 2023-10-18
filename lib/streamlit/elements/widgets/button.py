@@ -115,11 +115,11 @@ class ButtonMixin:
             An optional dict of kwargs to pass to the callback.
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
-            button with additional emphasis or "secondary" for a normal button. This
-            argument can only be supplied by keyword. Defaults to "secondary".
+            button with additional emphasis or "secondary" for a normal button. Defaults
+            to "secondary".
         disabled : bool
             An optional boolean, which disables the button if set to True. The
-            default is False. This argument can only be supplied by keyword.
+            default is False.
         use_container_width: bool
             An optional boolean, which makes the button stretch its width to match the parent container.
 
@@ -215,8 +215,8 @@ class ButtonMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
+            Unsupported elements are unwrapped so only their children (text contents)
+            render. Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
         data : str or bytes or file
             The contents of the file to be downloaded. See example below for
@@ -246,14 +246,14 @@ class ButtonMixin:
             An optional dict of kwargs to pass to the callback.
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
-            button with additional emphasis or "secondary" for a normal button. This
-            argument can only be supplied by keyword. Defaults to "secondary".
+            button with additional emphasis or "secondary" for a normal button. Defaults
+            to "secondary".
         disabled : bool
             An optional boolean, which disables the download button if set to
-            True. The default is False. This argument can only be supplied by
-            keyword.
+            True. The default is False.
         use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the parent container.
+            An optional boolean, which makes the button stretch its width to match the
+            parent container.
 
 
         Returns
@@ -375,8 +375,8 @@ class ButtonMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
-            Unsupported elements are unwrapped so only their children (text contents) render.
-            Display unsupported elements as literal characters by
+            Unsupported elements are unwrapped so only their children (text contents)
+            render. Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
         url : str
             The url to be opened on user click
@@ -385,13 +385,14 @@ class ButtonMixin:
             hovered over.
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
-            button with additional emphasis or "secondary" for a normal button. This
-            argument can only be supplied by keyword. Defaults to "secondary".
+            button with additional emphasis or "secondary" for a normal button. Defaults
+            to "secondary".
         disabled : bool
             An optional boolean, which disables the link button if set to
             True. The default is False.
         use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the parent container.
+            An optional boolean, which makes the button stretch its width to match the
+            parent container.
 
         Example
         -------

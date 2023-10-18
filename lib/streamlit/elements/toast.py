@@ -69,7 +69,7 @@ class ToastMixin:
               where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
         icon : str or None
-            An optional, keyword-only argument that specifies an emoji to use as
+            An optional argument that specifies an emoji to use as
             the icon for the toast. Shortcodes are not allowed, please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to None, which means no icon is displayed.

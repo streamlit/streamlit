@@ -219,7 +219,6 @@ class MultiSelectMixin:
             An optional dict of kwargs to pass to the callback.
         max_selections : int
             The max selections that can be selected at a time.
-            This argument can only be supplied by keyword.
         placeholder : str
             A string to display when no options are selected. Defaults to 'Choose an option'.
         disabled : bool
@@ -230,7 +229,7 @@ class MultiSelectMixin:
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
         Returns
         -------
