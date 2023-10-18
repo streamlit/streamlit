@@ -46,9 +46,11 @@ from streamlit.elements.widgets.time_widgets import (
     TimeInputSerde,
     _parse_date_value,
 )
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
@@ -69,6 +71,7 @@ from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
+from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 
 if TYPE_CHECKING:
@@ -143,7 +146,6 @@ class Element:
 @dataclass(repr=False)
 class Widget(ABC, Element):
     id: str
-    label: str
     help: str
     form_id: str
     disabled: bool
@@ -224,10 +226,54 @@ class WidgetList(Generic[W], ElementList[W]):
 
 
 @dataclass(repr=False)
+class AlertBase(Element):
+    proto: AlertProto = field(repr=False)
+    icon: str
+
+    def __init__(self, proto: AlertProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.root = root
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
+
+
+@dataclass(repr=False)
+class Error(AlertBase):
+    def __init__(self, proto: AlertProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "error"
+
+
+@dataclass(repr=False)
+class Warning(AlertBase):
+    def __init__(self, proto: AlertProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "warning"
+
+
+@dataclass(repr=False)
+class Info(AlertBase):
+    def __init__(self, proto: AlertProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "info"
+
+
+@dataclass(repr=False)
+class Success(AlertBase):
+    def __init__(self, proto: AlertProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "success"
+
+
+@dataclass(repr=False)
 class Button(Widget):
     _value: bool
 
     proto: ButtonProto
+    label: str
 
     def __init__(self, proto: ButtonProto, root: ElementTree):
         super().__init__(proto, root)
@@ -259,10 +305,43 @@ class Button(Widget):
 
 
 @dataclass(repr=False)
+class ChatInput(Widget):
+    _value: str | None
+    proto: ChatInputProto = field(repr=False)
+    placeholder: str
+
+    def __init__(self, proto: ChatInputProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "chat_input"
+
+    def set_value(self, v: str | None) -> ChatInput:
+        self._value = v
+        return self
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        if self._value is not None:
+            ws.string_trigger_value.data = self._value
+        return ws
+
+    @property
+    def value(self) -> str | None:
+        if self._value:
+            return self._value
+        else:
+            state = self.root.session_state
+            assert state
+            return state[self.id]  # type: ignore
+
+
+@dataclass(repr=False)
 class Checkbox(Widget):
     _value: bool | None
 
     proto: CheckboxProto
+    label: str
 
     def __init__(self, proto: CheckboxProto, root: ElementTree):
         super().__init__(proto, root)
@@ -317,6 +396,7 @@ class Code(Element):
 @dataclass(repr=False)
 class ColorPicker(Widget):
     _value: str | None
+    label: str
 
     proto: ColorPickerProto
 
@@ -378,6 +458,7 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
 class DateInput(Widget):
     _value: DateValue | None | InitialValue
     proto: DateInputProto
+    label: str
     min: date
     max: date
     is_range: bool
@@ -517,6 +598,7 @@ class Multiselect(Widget, Generic[T]):
     _value: list[T] | None
 
     proto: MultiSelectProto
+    label: str
     options: list[str]
     max_selections: int
 
@@ -590,6 +672,7 @@ Number = Union[int, float]
 class NumberInput(Widget):
     _value: Number | None | InitialValue
     proto: NumberInputProto
+    label: str
     min: Number | None
     max: Number | None
     step: Number
@@ -644,6 +727,7 @@ class Radio(Widget, Generic[T]):
     _value: T | None | InitialValue
 
     proto: RadioProto = field(repr=False)
+    label: str
     options: list[str]
     horizontal: bool
 
@@ -691,6 +775,7 @@ class Selectbox(Widget, Generic[T]):
     _value: T | None | InitialValue
 
     proto: SelectboxProto = field(repr=False)
+    label: str
     options: list[str]
 
     def __init__(self, proto: SelectboxProto, root: ElementTree):
@@ -754,6 +839,7 @@ class SelectSlider(Widget, Generic[T]):
     _value: T | Sequence[T] | None
 
     proto: SliderProto
+    label: str
     data_type: SliderProto.DataType.ValueType
     options: list[str]
 
@@ -769,7 +855,16 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def _widget_state(self) -> WidgetState:
         serde = SelectSliderSerde(self.options, [], False)
-        v = serde.serialize(self.value)
+        # We don't have access to the `format_func`, and options have been
+        # converted to strings already, so hope that formatting with `str`
+        # will let us find the right option.
+        try:
+            v = serde.serialize(str(self.value))
+        except (ValueError, TypeError):
+            try:
+                v = serde.serialize([str(val) for val in self.value])  # type: ignore
+            except:
+                raise ValueError(f"Could not find index for {self.value}")
 
         ws = WidgetState()
         ws.id = self.id
@@ -796,6 +891,7 @@ class Slider(Widget, Generic[SliderScalarT]):
     _value: SliderScalarT | Sequence[SliderScalarT] | None
 
     proto: SliderProto
+    label: str
     data_type: SliderProto.DataType.ValueType
     min: SliderScalar
     max: SliderScalar
@@ -860,6 +956,7 @@ class TextArea(Widget):
     _value: str | None | InitialValue
 
     proto: TextAreaProto
+    label: str
     max_chars: int
     placeholder: str
 
@@ -901,6 +998,7 @@ class TextArea(Widget):
 class TextInput(Widget):
     _value: str | None | InitialValue
     proto: TextInputProto
+    label: str
     max_chars: int
     autocomplete: str
     placeholder: str
@@ -946,6 +1044,7 @@ TimeValue: TypeAlias = Union[time, datetime]
 class TimeInput(Widget):
     _value: TimeValue | None | InitialValue
     proto: TimeInputProto
+    label: str
     step: int
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
@@ -998,14 +1097,13 @@ class TimeInput(Widget):
 class Block:
     type: str
     children: dict[int, Node]
-    proto: BlockProto | None = field(repr=False)
+    proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
 
     def __init__(
         self,
+        proto: BlockProto | None,
         root: ElementTree,
-        proto: BlockProto | None = None,
-        type: str | None = None,
     ):
         self.children = {}
         self.proto = proto
@@ -1014,10 +1112,8 @@ class Block:
             # TODO does not work for `st.container` which has no block proto
             assert ty is not None
             self.type = ty
-        elif type is not None:
-            self.type = type
         else:
-            self.type = ""
+            self.type = "unknown"
         self.root = root
 
     def __len__(self) -> int:
@@ -1047,6 +1143,14 @@ class Block:
         return ElementList(self.get("caption"))  # type: ignore
 
     @property
+    def chat_input(self) -> WidgetList[ChatInput]:
+        return WidgetList(self.get("chat_input"))  # type: ignore
+
+    @property
+    def chat_message(self) -> Sequence[ChatMessage]:
+        return self.get("chat_message")  # type: ignore
+
+    @property
     def checkbox(self) -> WidgetList[Checkbox]:
         return WidgetList(self.get("checkbox"))  # type: ignore
 
@@ -1057,6 +1161,10 @@ class Block:
     @property
     def color_picker(self) -> WidgetList[ColorPicker]:
         return WidgetList(self.get("color_picker"))  # type: ignore
+
+    @property
+    def columns(self) -> Sequence[Column]:
+        return self.get("column")  # type: ignore
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
@@ -1071,12 +1179,20 @@ class Block:
         return ElementList(self.get("divider"))  # type: ignore
 
     @property
+    def error(self) -> ElementList[Error]:
+        return ElementList(self.get("error"))  # type: ignore
+
+    @property
     def exception(self) -> ElementList[Exception]:
         return ElementList(self.get("exception"))  # type: ignore
 
     @property
     def header(self) -> ElementList[Header]:
         return ElementList(self.get("header"))  # type: ignore
+
+    @property
+    def info(self) -> ElementList[Info]:
+        return ElementList(self.get("info"))  # type: ignore
 
     @property
     def latex(self) -> ElementList[Latex]:
@@ -1115,6 +1231,14 @@ class Block:
         return ElementList(self.get("subheader"))  # type: ignore
 
     @property
+    def success(self) -> ElementList[Success]:
+        return ElementList(self.get("success"))  # type: ignore
+
+    @property
+    def tabs(self) -> Sequence[Tab]:
+        return self.get("tab")  # type: ignore
+
+    @property
     def text(self) -> ElementList[Text]:
         return ElementList(self.get("text"))  # type: ignore
 
@@ -1134,6 +1258,10 @@ class Block:
     def title(self) -> ElementList[Title]:
         return ElementList(self.get("title"))  # type: ignore
 
+    @property
+    def warning(self) -> ElementList[Warning]:
+        return ElementList(self.get("warning"))  # type: ignore
+
     def get(self, element_type: str) -> Sequence[Node]:
         return [e for e in self if e.type == element_type]
 
@@ -1150,6 +1278,82 @@ class Block:
 
     def __repr__(self):
         return util.repr_(self)
+
+
+@dataclass(repr=False)
+class SpecialBlock(Block):
+    def __init__(
+        self,
+        proto: BlockProto | None,
+        root: ElementTree,
+        type: str | None = None,
+    ):
+        self.children = {}
+        self.proto = proto
+        if type:
+            self.type = type
+        elif proto and proto.WhichOneof("type"):
+            ty = proto.WhichOneof("type")
+            assert ty is not None
+            self.type = ty
+        else:
+            self.type = "unknown"
+        self.root = root
+
+
+@dataclass(repr=False)
+class ChatMessage(Block):
+    proto: BlockProto.ChatMessage = field(repr=False)
+    name: str
+    avatar: str
+
+    def __init__(
+        self,
+        proto: BlockProto.ChatMessage,
+        root: ElementTree,
+    ):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "chat_message"
+        self.name = proto.name
+        self.avatar = proto.avatar
+
+
+@dataclass(repr=False)
+class Column(Block):
+    proto: BlockProto.Column = field(repr=False)
+    weight: float
+    gap: str
+
+    def __init__(
+        self,
+        proto: BlockProto.Column,
+        root: ElementTree,
+    ):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "column"
+        self.weight = proto.weight
+        self.gap = proto.gap
+
+
+@dataclass(repr=False)
+class Tab(Block):
+    proto: BlockProto.Tab = field(repr=False)
+    label: str
+
+    def __init__(
+        self,
+        proto: BlockProto.Tab,
+        root: ElementTree,
+    ):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "tab"
+        self.label = proto.label
 
 
 Node: TypeAlias = Union[Element, Block]
@@ -1190,7 +1394,6 @@ class ElementTree(Block):
     _runner: AppTest | None = field(repr=False, default=None)
 
     def __init__(self):
-        # Expect script_path and session_state to be filled in afterwards
         self.children = {}
         self.root = self
         self.type = "root"
@@ -1208,7 +1411,7 @@ class ElementTree(Block):
         return s
 
     @property
-    def session_state(self) -> SessionState:
+    def session_state(self) -> SafeSessionState:
         assert self._runner is not None
         return self._runner.session_state
 
@@ -1245,8 +1448,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
     """
     root = ElementTree()
     root.children = {
-        0: Block(type="main", root=root),
-        1: Block(type="sidebar", root=root),
+        0: SpecialBlock(type="main", root=root, proto=None),
+        1: SpecialBlock(type="sidebar", root=root, proto=None),
     }
 
     for msg in messages:
@@ -1258,10 +1461,26 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             elt = delta.new_element
             ty = elt.WhichOneof("type")
             new_node: Node
-            if ty == "arrow_data_frame":
+            if ty == "alert":
+                format = elt.alert.format
+                if format == AlertProto.Format.ERROR:
+                    new_node = Error(elt.alert, root=root)
+                elif format == AlertProto.Format.INFO:
+                    new_node = Info(elt.alert, root=root)
+                elif format == AlertProto.Format.SUCCESS:
+                    new_node = Success(elt.alert, root=root)
+                elif format == AlertProto.Format.WARNING:
+                    new_node = Warning(elt.alert, root=root)
+                else:
+                    raise ValueError(
+                        f"Unknown alert type with format {elt.alert.format}"
+                    )
+            elif ty == "arrow_data_frame":
                 new_node = Dataframe(elt.arrow_data_frame, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
+            elif ty == "chat_input":
+                new_node = ChatInput(elt.chat_input, root=root)
             elif ty == "checkbox":
                 new_node = Checkbox(elt.checkbox, root=root)
             elif ty == "code":
@@ -1320,7 +1539,16 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             else:
                 new_node = Element(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
-            new_node = Block(proto=delta.add_block, root=root)
+            block = delta.add_block
+            bty = block.WhichOneof("type")
+            if bty == "chat_message":
+                new_node = ChatMessage(block.chat_message, root=root)
+            elif bty == "column":
+                new_node = Column(block.column, root=root)
+            elif bty == "tab":
+                new_node = Tab(block.tab, root=root)
+            else:
+                new_node = Block(proto=block, root=root)
         else:
             # add_rows
             continue
@@ -1331,7 +1559,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             children = current_node.children
             child = children.get(idx)
             if child is None:
-                child = Block(root=root)
+                child = Block(proto=None, root=root)
                 children[idx] = child
             assert isinstance(child, Block)
             current_node = child
