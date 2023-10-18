@@ -108,6 +108,17 @@ describe("DataFrame widget", () => {
     expect(dfStyle.height).toBe("400px")
   })
 
+  it("should have a toolbar", () => {
+    render(<DataFrame {...props} />)
+
+    const dataframeToolbar = screen.getByTestId("stElementToolbar")
+
+    expect(dataframeToolbar).toBeInTheDocument()
+
+    const toolbarButtons = screen.getAllByTestId("stElementToolbarButton")
+    expect(toolbarButtons).toHaveLength(3)
+  })
+
   it("Touch detection correctly deactivates some features", () => {
     // Set window.matchMedia to simulate a touch device
     window.matchMedia = jest.fn().mockImplementation(() => ({
