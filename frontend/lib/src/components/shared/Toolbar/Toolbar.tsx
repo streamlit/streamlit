@@ -61,6 +61,8 @@ export function ToolbarAction({
           />
         }
         placement={Placement.TOP}
+        // The default tooltip delay (== how fast the tooltip is triggered) of 200ms
+        // is a bit too fast for the toolbar use case. Therefore, we are setting it to 1000ms.
         onMouseEnterDelay={1000}
         inline
       >
