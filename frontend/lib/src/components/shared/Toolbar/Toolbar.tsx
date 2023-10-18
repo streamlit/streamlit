@@ -34,7 +34,7 @@ import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { StyledToolbar, StyledToolbarWrapper } from "./styled-components"
 
-interface ToolbarActionProps {
+export interface ToolbarActionProps {
   label: string
   icon?: EmotionIcon
   show_label?: boolean
@@ -73,7 +73,13 @@ export function ToolbarAction({
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}
         >
-          {icon && <Icon content={icon} size="md" />}
+          {icon && (
+            <Icon
+              content={icon}
+              size="md"
+              testid="stElementToolbarButtonIcon"
+            />
+          )}
           {displayLabel && <span>{displayLabel}</span>}
         </Button>
       </Tooltip>
