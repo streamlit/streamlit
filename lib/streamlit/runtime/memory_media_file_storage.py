@@ -38,6 +38,7 @@ LOGGER = get_logger(__name__)
 # so we handle it ourselves.
 PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
     "audio/wav": ".wav",
+    "text/vtt": ".vtt",
 }
 
 

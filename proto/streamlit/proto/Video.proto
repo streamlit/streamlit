@@ -32,6 +32,14 @@ message Video {
   // Type affects how browser wraps the video in tags: plain HTML5, YouTube...
   Type type = 5;
 
+  // Repeated field for subtitle tracks
+  repeated SubtitleTrack subtitles = 7;
+
   reserved 1,2,4;
   reserved "format", "data";
+}
+
+message SubtitleTrack {
+    string label = 1;  // Label for the subtitle
+    string path = 2;   // Filepath pointing to the subtitle file
 }
