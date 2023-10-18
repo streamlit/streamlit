@@ -22,7 +22,8 @@ import pytest
 from parameterized import parameterized
 
 from streamlit.connections import (
-    ExperimentalBaseConnection,
+    BaseConnection,
+    SnowflakeConnection,
     SnowparkConnection,
     SQLConnection,
 )
@@ -38,7 +39,7 @@ from streamlit.runtime.secrets import secrets_singleton
 from tests.testutil import create_mock_script_run_ctx
 
 
-class MockConnection(ExperimentalBaseConnection[None]):
+class MockConnection(BaseConnection[None]):
     def _connect(self, **kwargs):
         pass
 
@@ -63,7 +64,7 @@ class ConnectionFactoryTest(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self._prev_environ)
 
-    def test_create_connection_helper_explodes_if_not_ExperimentalBaseConnection_subclass(
+    def test_create_connection_helper_explodes_if_not_BaseConnection_subclass(
         self,
     ):
         class NotABaseConnection:
@@ -72,10 +73,11 @@ class ConnectionFactoryTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException) as e:
             _create_connection("my_connection", NotABaseConnection)
 
-        assert "is not a subclass of ExperimentalBaseConnection" in str(e.value)
+        assert "is not a subclass of BaseConnection" in str(e.value)
 
     @parameterized.expand(
         [
+            ("snowflake", SnowflakeConnection),
             ("snowpark", SnowparkConnection),
             ("sql", SQLConnection),
         ]
@@ -187,7 +189,8 @@ type="snowpark"
             ("MySQLdb", "mysqlclient"),
             ("psycopg2", "psycopg2-binary"),
             ("sqlalchemy", "sqlalchemy"),
-            ("snowflake", "snowflake-snowpark-python"),
+            ("snowflake", "snowflake-connector-python"),
+            ("snowflake.connector", "snowflake-connector-python"),
             ("snowflake.snowpark", "snowflake-snowpark-python"),
         ]
     )

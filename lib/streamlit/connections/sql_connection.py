@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from collections import ChainMap
 from copy import deepcopy
@@ -19,12 +20,13 @@ from typing import TYPE_CHECKING, List, Optional, Union, cast
 
 import pandas as pd
 
-from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections import BaseConnection
 from streamlit.connections.util import extract_from_dict
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection as SQLAlchemyConnection
     from sqlalchemy.engine.base import Engine
     from sqlalchemy.orm import Session
 
@@ -42,18 +44,17 @@ _ALL_CONNECTION_PARAMS = {
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
 
-class SQLConnection(ExperimentalBaseConnection["Engine"]):
-    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.experimental_connection("<name>", type="sql")``.
+class SQLConnection(BaseConnection["Engine"]):
+    """A connection to a SQL database using a SQLAlchemy Engine. Initialize using ``st.connection("<name>", type="sql")``.
 
     SQLConnection provides the ``query()`` convenience method, which can be used to
     run simple read-only queries with both caching and simple error handling/retries.
     More complex DB interactions can be performed by using the ``.session`` property
     to receive a regular SQLAlchemy Session.
 
-    SQLConnections should always be created using ``st.experimental_connection()``,
-    **not** initialized directly. Connection parameters for a SQLConnection can be
-    specified using either ``st.secrets`` or ``**kwargs``. Some frequently used
-    parameters include:
+    SQLConnections should always be created using ``st.connection()``, **not**
+    initialized directly. Connection parameters for a SQLConnection can be specified
+    using either ``st.secrets`` or ``**kwargs``. Some frequently used parameters include:
 
     - **url** or arguments for `sqlalchemy.engine.URL.create()
       <https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.engine.URL.create>`_.
@@ -62,7 +63,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
     - **create_engine_kwargs** can be passed via ``st.secrets``, such as for
       `snowflake-sqlalchemy <https://github.com/snowflakedb/snowflake-sqlalchemy#key-pair-authentication-support>`_
       or `Google BigQuery <https://github.com/googleapis/python-bigquery-sqlalchemy#authentication>`_.
-      These can also be passed directly as ``**kwargs`` to experimental_connection().
+      These can also be passed directly as ``**kwargs`` to connection().
 
     - **autocommit=True** to run with isolation level ``AUTOCOMMIT``. Default is False.
 
@@ -70,7 +71,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
     -------
     >>> import streamlit as st
     >>>
-    >>> conn = st.experimental_connection("sql")
+    >>> conn = st.connection("sql")
     >>> df = conn.query("select * from pet_owners")
     >>> st.dataframe(df)
     """
@@ -85,7 +86,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         if not len(conn_params):
             raise StreamlitAPIException(
                 "Missing SQL DB connection configuration. "
-                "Did you forget to set this in `secrets.toml` or as kwargs to `st.experimental_connection`?"
+                "Did you forget to set this in `secrets.toml` or as kwargs to `st.connection`?"
             )
 
         if "url" in conn_params:
@@ -122,6 +123,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         self,
         sql: str,
         *,  # keyword-only arguments:
+        show_spinner: bool | str = "Running `sql.query(...)`.",
         ttl: Optional[Union[float, int, timedelta]] = None,
         index_col: Optional[Union[str, List[str]]] = None,
         chunksize: Optional[int] = None,
@@ -144,6 +146,10 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         ----------
         sql : str
             The read-only SQL query to execute.
+        show_spinner : boolean or string
+            Enable the spinner. The default is to show a spinner when there is a
+            "cache miss" and the cached resource is being created. If a string, the value
+            of the show_spinner param will be used for the spinner text.
         ttl : float, int, timedelta or None
             The maximum number of seconds to keep results in the cache, or
             None if cached results should not expire. The default is None.
@@ -171,7 +177,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("sql")
+        >>> conn = st.connection("sql")
         >>> df = conn.query("select * from pet_owners where owner = :owner", ttl=3600, params={"owner":"barbara"})
         >>> st.dataframe(df)
         """
@@ -195,7 +201,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
             wait=wait_fixed(1),
         )
         @cache_data(
-            show_spinner="Running `sql.query(...)`.",
+            show_spinner=show_spinner,
             ttl=ttl,
         )
         def _query(
@@ -223,6 +229,33 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
             **kwargs,
         )
 
+    def connect(self) -> "SQLAlchemyConnection":
+        """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new
+        sqlalchemy.engine.Connection object.
+
+        Calling this method is equivalent to calling ``self._instance.connect()``.
+
+        NOTE: This method should not be confused with the internal _connect method used
+        to implement a Streamlit Connection.
+        """
+        return self._instance.connect()
+
+    @property
+    def engine(self) -> "Engine":
+        """The underlying SQLAlchemy Engine.
+
+        This is equivalent to accessing ``self._instance``.
+        """
+        return self._instance
+
+    @property
+    def driver(self) -> str:
+        """The name of the driver used by the underlying SQLAlchemy Engine.
+
+        This is equivalent to accessing ``self._instance.driver``.
+        """
+        return self._instance.driver
+
     @property
     def session(self) -> "Session":
         """Return a SQLAlchemy Session.
@@ -238,7 +271,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         Example
         -------
         >>> import streamlit as st
-        >>> conn = st.experimental_connection("sql")
+        >>> conn = st.connection("sql")
         >>> n = st.slider("Pick a number")
         >>> if st.button("Add the number!"):
         ...     with conn.session as session:
@@ -250,7 +283,7 @@ class SQLConnection(ExperimentalBaseConnection["Engine"]):
         return Session(self._instance)
 
     # NOTE: This more or less duplicates the default implementation in
-    # ExperimentalBaseConnection so that we can add another bullet point between the
+    # BaseConnection so that we can add another bullet point between the
     # "Configured from" and "Learn more" items :/
     def _repr_html_(self) -> str:
         module_name = getattr(self, "__module__", None)
