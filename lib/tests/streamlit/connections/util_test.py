@@ -37,16 +37,15 @@ class ConnectionUtilTest(unittest.TestCase):
         assert d == {"k3": "v3", "k4": "v4"}
 
     @pytest.mark.require_snowflake
-    @patch("snowflake.connector.connection", MagicMock())
     def test_not_running_in_sis(self):
         assert not running_in_sis()
 
     @pytest.mark.require_snowflake
     @patch(
-        "snowflake.connector.connection",
+        "snowflake.snowpark._internal.utils.is_in_stored_procedure",
+        MagicMock(return_value=True),
     )
-    def test_running_in_sis(self, patched_connection):
-        delattr(patched_connection, "SnowflakeConnection")
+    def test_running_in_sis(self):
         assert running_in_sis()
 
     def test_load_from_snowsql_config_file_no_file(self):
