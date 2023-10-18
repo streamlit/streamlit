@@ -156,6 +156,10 @@ export type IGuestToHostMessage =
       type: "SCRIPT_RUN_STATE_CHANGED"
       scriptRunState: ScriptRunState
     }
+  | {
+      type: "CUSTOM_PARENT_MESSAGE"
+      message: string
+    }
 
 export type VersionedMessage<Message> = {
   stCommVersion: number
@@ -183,6 +187,10 @@ export type AppConfig = {
    * with the Streamlit server.
    */
   useExternalAuthToken?: boolean
+  /**
+   * Enables custom string messages to be sent to the host
+   */
+  enableCustomParentMessages?: boolean
 }
 
 /**
