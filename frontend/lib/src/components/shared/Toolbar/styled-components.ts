@@ -24,11 +24,11 @@ export interface StyledToolbarWrapperProps {
 }
 
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
-  ({ locked, target }) => ({
+  ({ theme, locked, target }) => ({
     padding: "0.5rem 0 0.5rem 0.5rem",
     position: "absolute",
     top: locked ? "-2.4rem" : "-1rem",
-    right: "0rem",
+    right: theme.spacing.none,
     transition: "none",
     ...(!locked && {
       opacity: 0,

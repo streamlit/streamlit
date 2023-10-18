@@ -56,11 +56,13 @@ describe("FullScreenWrapper", () => {
     expect(screen.queryByTestId("StyledFullScreenButton")).not.toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
   })
 
-  it("hide find StyledFullScreenButton when hideFullScreenButton is true", () => {
+  it("hides StyledFullScreenScreenButton when disableFullscreenMode is true", () => {
     const props = getProps({ hideFullScreenButton: true })
 
     customRenderLibContext(<FullScreenWrapper {...props} />, {})
-    // queryBy returns null vs. error
-    expect(screen.queryByTestId("StyledFullScreenButton")).toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
+
+    expect(
+      screen.queryByTestId("StyledFullScreenButton")
+    ).not.toBeInTheDocument()
   })
 })
