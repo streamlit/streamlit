@@ -146,8 +146,6 @@ class Element:
 @dataclass(repr=False)
 class Widget(ABC, Element):
     id: str
-    help: str
-    form_id: str
     disabled: bool
     key: str | None
     _value: Any
@@ -274,6 +272,8 @@ class Button(Widget):
 
     proto: ButtonProto
     label: str
+    help: str
+    form_id: str
 
     def __init__(self, proto: ButtonProto, root: ElementTree):
         super().__init__(proto, root)
@@ -342,6 +342,8 @@ class Checkbox(Widget):
 
     proto: CheckboxProto
     label: str
+    help: str
+    form_id: str
 
     def __init__(self, proto: CheckboxProto, root: ElementTree):
         super().__init__(proto, root)
@@ -397,6 +399,8 @@ class Code(Element):
 class ColorPicker(Widget):
     _value: str | None
     label: str
+    help: str
+    form_id: str
 
     proto: ColorPickerProto
 
@@ -462,6 +466,8 @@ class DateInput(Widget):
     min: date
     max: date
     is_range: bool
+    help: str
+    form_id: str
 
     def __init__(self, proto: DateInputProto, root: ElementTree):
         super().__init__(proto, root)
@@ -601,6 +607,8 @@ class Multiselect(Widget, Generic[T]):
     label: str
     options: list[str]
     max_selections: int
+    help: str
+    form_id: str
 
     def __init__(self, proto: MultiSelectProto, root: ElementTree):
         super().__init__(proto, root)
@@ -676,6 +684,8 @@ class NumberInput(Widget):
     min: Number | None
     max: Number | None
     step: Number
+    help: str
+    form_id: str
 
     def __init__(self, proto: NumberInputProto, root: ElementTree):
         super().__init__(proto, root)
@@ -730,6 +740,8 @@ class Radio(Widget, Generic[T]):
     label: str
     options: list[str]
     horizontal: bool
+    help: str
+    form_id: str
 
     def __init__(self, proto: RadioProto, root: ElementTree):
         super().__init__(proto, root)
@@ -777,6 +789,8 @@ class Selectbox(Widget, Generic[T]):
     proto: SelectboxProto = field(repr=False)
     label: str
     options: list[str]
+    help: str
+    form_id: str
 
     def __init__(self, proto: SelectboxProto, root: ElementTree):
         super().__init__(proto, root)
@@ -842,6 +856,8 @@ class SelectSlider(Widget, Generic[T]):
     label: str
     data_type: SliderProto.DataType.ValueType
     options: list[str]
+    help: str
+    form_id: str
 
     def __init__(self, proto: SliderProto, root: ElementTree):
         super().__init__(proto, root)
@@ -896,6 +912,8 @@ class Slider(Widget, Generic[SliderScalarT]):
     min: SliderScalar
     max: SliderScalar
     step: Step
+    help: str
+    form_id: str
 
     def __init__(self, proto: SliderProto, root: ElementTree):
         super().__init__(proto, root)
@@ -959,6 +977,8 @@ class TextArea(Widget):
     label: str
     max_chars: int
     placeholder: str
+    help: str
+    form_id: str
 
     def __init__(self, proto: TextAreaProto, root: ElementTree):
         super().__init__(proto, root)
@@ -1002,6 +1022,8 @@ class TextInput(Widget):
     max_chars: int
     autocomplete: str
     placeholder: str
+    help: str
+    form_id: str
 
     def __init__(self, proto: TextInputProto, root: ElementTree):
         super().__init__(proto, root)
@@ -1046,6 +1068,8 @@ class TimeInput(Widget):
     proto: TimeInputProto
     label: str
     step: int
+    help: str
+    form_id: str
 
     def __init__(self, proto: TimeInputProto, root: ElementTree):
         super().__init__(proto, root)
