@@ -202,6 +202,8 @@ class HostConfigHandler(_SpecialRequestHandler):
             {
                 "allowedOrigins": self._allowed_origins,
                 "useExternalAuthToken": False,
+                # Default host configuration settings.
+                "enableCustomParentMessages": False,
             }
         )
         self.set_status(200)
