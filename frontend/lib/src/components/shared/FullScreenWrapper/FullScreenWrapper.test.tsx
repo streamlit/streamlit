@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 
