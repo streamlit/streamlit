@@ -57,6 +57,7 @@ from streamlit.testing.v1.element_tree import (
     Json,
     Latex,
     Markdown,
+    Metric,
     Multiselect,
     Node,
     NumberInput,
@@ -325,6 +326,10 @@ class AppTest:
     @property
     def markdown(self) -> ElementList[Markdown]:
         return self._tree.markdown
+
+    @property
+    def metric(self) -> ElementList[Metric]:
+        return self._tree.metric
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:

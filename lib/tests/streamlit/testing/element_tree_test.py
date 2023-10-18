@@ -430,6 +430,20 @@ def test_markdown_elements_by_type():
     assert len(sr.latex) == 2
 
 
+def test_metric():
+    def script():
+        import streamlit as st
+
+        st.metric("stonks", value=9500, delta=1000)
+
+    at = AppTest.from_function(script).run()
+    m = at.metric[0]
+    assert m.value == "9500"
+    assert m.delta == "1000"
+
+    repr(m)
+
+
 def test_multiselect():
     script = AppTest.from_string(
         """

@@ -61,6 +61,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
@@ -609,6 +610,25 @@ class Latex(Markdown):
     def __init__(self, proto: MarkdownProto, root: ElementTree):
         super().__init__(proto, root)
         self.type = "latex"
+
+
+@dataclass(repr=False)
+class Metric(Element):
+    proto: MetricProto
+    label: str
+    delta: str
+    color: str
+    help: str
+
+    def __init__(self, proto: MetricProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.root = root
+        self.type = "metric"
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
 
 
 @dataclass(repr=False)
@@ -1225,6 +1245,10 @@ class Block:
         return ElementList(self.get("markdown"))  # type: ignore
 
     @property
+    def metric(self) -> ElementList[Metric]:
+        return ElementList(self.get("metric"))  # type: ignore
+
+    @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:
         return WidgetList(self.get("multiselect"))  # type: ignore
 
@@ -1537,6 +1561,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
+            elif ty == "metric":
+                new_node = Metric(elt.metric, root=root)
             elif ty == "multiselect":
                 new_node = Multiselect(elt.multiselect, root=root)
             elif ty == "number_input":
