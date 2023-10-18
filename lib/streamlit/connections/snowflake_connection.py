@@ -38,9 +38,6 @@ if TYPE_CHECKING:
     from snowflake.snowpark.session import Session  # type:ignore[import]
 
 
-_REQUIRED_CONNECTION_PARAMS = {"account"}
-
-
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     """A connection to Snowflake using the Snowflake Python Connector. Initialize using
     ``st.connection("<name>", type="snowflake")``.
