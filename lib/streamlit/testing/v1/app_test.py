@@ -68,6 +68,7 @@ from streamlit.testing.v1.element_tree import (
     Subheader,
     Success,
     Tab,
+    Table,
     Text,
     TextArea,
     TextInput,
@@ -362,6 +363,10 @@ class AppTest:
     @property
     def success(self) -> ElementList[Success]:
         return self._tree.success
+
+    @property
+    def table(self) -> ElementList[Table]:
+        return self._tree.table
 
     @property
     def tabs(self) -> Sequence[Tab]:

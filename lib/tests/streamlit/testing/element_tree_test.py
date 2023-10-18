@@ -626,6 +626,31 @@ def test_slider():
     assert s[4].value == 0.1
 
 
+def test_table():
+    def script():
+        import numpy as np
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame(
+            index=[[0, 1], ["i1", "i2"]],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
+        )
+        st.table(df)
+
+    at = AppTest.from_function(script).run()
+    df = pd.DataFrame(
+        index=[[0, 1], ["i1", "i2"]],
+        columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+        data=np.arange(0, 6, 1).reshape(2, 3),
+    )
+    assert at.table[0].value.equals(df)
+
+    repr(at.table[0])
+
+
 def test_tabs():
     def script():
         import streamlit as st

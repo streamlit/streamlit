@@ -974,6 +974,21 @@ class Slider(Widget, Generic[SliderScalarT]):
 
 
 @dataclass(repr=False)
+class Table(Element):
+    proto: ArrowProto = field(repr=False)
+
+    def __init__(self, proto: ArrowProto, root: ElementTree):
+        self.key = None
+        self.proto = proto
+        self.root = root
+        self.type = "arrow_table"
+
+    @property
+    def value(self) -> DataFrame:
+        return type_util.bytes_to_data_frame(self.proto.data)
+
+
+@dataclass(repr=False)
 class Text(Element):
     proto: TextProto
 
@@ -1281,6 +1296,10 @@ class Block:
         return ElementList(self.get("success"))  # type: ignore
 
     @property
+    def table(self) -> ElementList[Table]:
+        return ElementList(self.get("arrow_table"))  # type: ignore
+
+    @property
     def tabs(self) -> Sequence[Tab]:
         return self.get("tab")  # type: ignore
 
@@ -1523,6 +1542,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     )
             elif ty == "arrow_data_frame":
                 new_node = Dataframe(elt.arrow_data_frame, root=root)
+            elif ty == "arrow_table":
+                new_node = Table(elt.arrow_table, root=root)
             elif ty == "button":
                 new_node = Button(elt.button, root=root)
             elif ty == "chat_input":
