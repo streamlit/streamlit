@@ -39,7 +39,7 @@ const CSV_ROW_DELIMITER = "\n"
 // Used to indicate Unicode encoding of a text file (for excel compatibility)
 const CSV_UTF8_BOM = "\ufeff"
 
-function toCsvRow(rowValues: any[]): string {
+export function toCsvRow(rowValues: any[]): string {
   return (
     rowValues.map(cell => escapeValue(cell)).join(CSV_DELIMITER) +
     CSV_ROW_DELIMITER
