@@ -30,7 +30,8 @@ jest.mock("@glideapps/glide-data-grid", () => ({
 }))
 
 // The native-file-system-adapter creates some issues in the test environment
-// so we mock it out:
+// so we mock it out. The errors might be related to the missing typescript
+// distribution. But the file picker most likely wouldn't work anyways in jest-dom.
 jest.mock("native-file-system-adapter", () => ({}))
 
 import DataFrame, { DataFrameProps } from "./DataFrame"
