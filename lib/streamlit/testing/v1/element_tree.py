@@ -71,6 +71,7 @@ from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
+from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 
 if TYPE_CHECKING:
@@ -1410,7 +1411,7 @@ class ElementTree(Block):
         return s
 
     @property
-    def session_state(self) -> SessionState:
+    def session_state(self) -> SafeSessionState:
         assert self._runner is not None
         return self._runner.session_state
 

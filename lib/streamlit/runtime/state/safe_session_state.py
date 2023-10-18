@@ -31,12 +31,18 @@ class SafeSessionState:
     must not mutate its SessionState.
     """
 
+    _state: SessionState
+    _lock: threading.RLock
+    _yield_callback: Callable[[], None]
+
     def __init__(self, state: SessionState, yield_callback: Callable[[], None]):
-        self._state = state
+        # Fields must be set using the object's setattr method to avoid
+        # infinite recursion from trying to look up the fields we're setting.
+        object.__setattr__(self, "_state", state)
         # TODO: we'd prefer this be a threading.Lock instead of RLock -
         #  but `call_callbacks` first needs to be rewritten.
-        self._lock = threading.RLock()
-        self._yield_callback = yield_callback
+        object.__setattr__(self, "_lock", threading.RLock())
+        object.__setattr__(self, "_yield_callback", yield_callback)
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: Optional[str]
@@ -96,3 +102,18 @@ class SafeSessionState:
         self._yield_callback()
         with self._lock:
             return key in self._state
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        self[key] = value
+
+    def __delattr__(self, key: str) -> None:
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")

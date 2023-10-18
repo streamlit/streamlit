@@ -24,7 +24,7 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-from streamlit.runtime.state.session_state import SessionState
+from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
 
@@ -34,7 +34,7 @@ class LocalScriptRunner(ScriptRunner):
     def __init__(
         self,
         script_path: str,
-        session_state: SessionState,
+        session_state: SafeSessionState,
     ):
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -47,7 +47,7 @@ class LocalScriptRunner(ScriptRunner):
         super().__init__(
             session_id="test session id",
             main_script_path=script_path,
-            session_state=self.session_state,
+            session_state=self.session_state._state,
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
