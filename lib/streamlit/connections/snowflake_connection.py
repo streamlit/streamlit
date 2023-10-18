@@ -191,6 +191,14 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         function of the same name from ``snowflake.connector.pandas_tools``. For more
         information, see the `Snowflake Python Connector documentation
         <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#write_pandas>`_.
+
+        Returns
+        -------
+        tuple[bool, int, int]
+            A tuple containing three values:
+                1. A bool that is True if the write was successful.
+                2. An int giving the number of chunks of data that were copied.
+                3. An int giving the number of rows that were inserted.
         """
         from snowflake.connector.pandas_tools import write_pandas  # type:ignore[import]
 
