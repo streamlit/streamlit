@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
@@ -38,17 +38,6 @@ if TYPE_CHECKING:
     from snowflake.snowpark.session import Session  # type:ignore[import]
 
 
-_REQUIRED_CONNECTION_PARAMS = {"account"}
-
-
-def _validate_connection_params(required: set[str], params: dict[str, Any]) -> None:
-    missing = required - set(params)
-    if len(missing) > 0:
-        raise StreamlitAPIException(
-            f"Missing Snowflake connection params: {', '.join(missing)}"
-        )
-
-
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     """A connection to Snowflake using the Snowflake Python Connector. Initialize using
     ``st.connection("<name>", type="snowflake")``.
@@ -62,6 +51,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     def _connect(self, **kwargs) -> "InternalSnowflakeConnection":
         import snowflake.connector  # type:ignore[import]
+        from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
         from snowflake.snowpark.context import get_active_session  # type:ignore[import]
 
         # If we're running in SiS, just call get_active_session() and retrieve the
@@ -71,6 +61,9 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
             if hasattr(session, "connection"):
                 return session.connection
+            # session.connection is only a valid attr in more recent versions of
+            # snowflake-connector-python, so we fall back to grabbing
+            # session._conn._conn if `.connection` is unavailable.
             return session._conn._conn
 
         # We require qmark-style parameters everywhere for consistency across different
@@ -79,37 +72,47 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         # Otherwise, attempt to create a new connection from whatever credentials we
         # have available.
-        st_secrets = self._secrets.to_dict()
-        if len(st_secrets):
-            conn_kwargs = {**st_secrets, **kwargs}
-            _validate_connection_params(_REQUIRED_CONNECTION_PARAMS, conn_kwargs)
-            return snowflake.connector.connect(**conn_kwargs)
+        try:
+            st_secrets = self._secrets.to_dict()
+            if len(st_secrets):
+                conn_kwargs = {**st_secrets, **kwargs}
+                return snowflake.connector.connect(**conn_kwargs)
 
-        if hasattr(snowflake.connector.connection, "CONFIG_MANAGER"):
-            config_mgr = snowflake.connector.connection.CONFIG_MANAGER
+            # session.connector.connection.CONFIG_MANAGER is only available in more recent
+            # versions of snowflake-connector-python.
+            if hasattr(snowflake.connector.connection, "CONFIG_MANAGER"):
+                config_mgr = snowflake.connector.connection.CONFIG_MANAGER
 
-            default_connection_name = "default"
-            try:
-                default_connection_name = config_mgr["default_connection_name"]
-            except snowflake.connector.errors.ConfigSourceError:
-                pass
+                default_connection_name = "default"
+                try:
+                    default_connection_name = config_mgr["default_connection_name"]
+                except snowflake.connector.errors.ConfigSourceError:
+                    # Similarly, config_mgr["default_connection_name"] only exists in even
+                    # later versions of recent versions. if it doesn't, we just use
+                    # "default" as the default connection name.
+                    pass
 
-            connection_name = (
-                default_connection_name
-                if self._connection_name == "snowflake"
-                else self._connection_name
-            )
-            return snowflake.connector.connect(
-                connection_name=connection_name,
-                **kwargs,
-            )
+                connection_name = (
+                    default_connection_name
+                    if self._connection_name == "snowflake"
+                    else self._connection_name
+                )
+                return snowflake.connector.connect(
+                    connection_name=connection_name,
+                    **kwargs,
+                )
 
-        # If nothing else works, try using the kwargs passed to st.connection as our
-        # connection params.
-        conn_kwargs = {**kwargs}
-        _validate_connection_params(_REQUIRED_CONNECTION_PARAMS, conn_kwargs)
-
-        return snowflake.connector.connect(**conn_kwargs)
+            return snowflake.connector.connect(**kwargs)
+        except SnowflakeError as e:
+            if not len(st_secrets) and not len(kwargs):
+                raise StreamlitAPIException(
+                    "Missing Snowflake connection configuration. "
+                    "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "
+                    "or as kwargs to `st.connection`? "
+                    "See the [Snowflake Python Connector documentation](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example#connecting-using-the-connections-toml-file) "
+                    "for some options on how to set connection params."
+                )
+            raise e
 
     def query(
         self,
@@ -140,10 +143,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             "cache miss" and the cached resource is being created. If a string, the value
             of the show_spinner param will be used for the spinner text.
         params : list, tuple, dict or None
-            List of parameters to pass to the execute method. The syntax used to pass
-            parameters is database driver dependent. Check your database driver
-            documentation for which of the five syntax styles, described in `PEP 249
-            paramstyle <https://peps.python.org/pep-0249/#paramstyle>`_, is supported.
+            List of parameters to pass to the execute method. This connector supports
+            binding data to a SQL statement using qmark bindings. For more information
+            and examples, see the `Snowflake Python Connector documentation
+            <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example#using-qmark-or-numeric-binding>`_.
             Default is None.
 
         Returns
@@ -159,9 +162,6 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
-        # TODO(vdonato): Make our error handling more specific if possible. This may be
-        # difficult to do given the limited documentation on the different connector
-        # error subclasses + how many there are.
         from snowflake.connector import Error as SnowflakeError
         from tenacity import (
             retry,
@@ -203,6 +203,14 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         function of the same name from ``snowflake.connector.pandas_tools``. For more
         information, see the `Snowflake Python Connector documentation
         <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#write_pandas>`_.
+
+        Returns
+        -------
+        tuple[bool, int, int]
+            A tuple containing three values:
+                1. A bool that is True if the write was successful.
+                2. An int giving the number of chunks of data that were copied.
+                3. An int giving the number of rows that were inserted.
         """
         from snowflake.connector.pandas_tools import write_pandas  # type:ignore[import]
 

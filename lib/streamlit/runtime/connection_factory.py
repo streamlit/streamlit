@@ -315,10 +315,9 @@ def connection_factory(
         if isinstance(conn, SnowparkConnection):
             conn = deprecate_obj_name(
                 conn,
-                "SnowparkConnection",
-                "SnowflakeConnection",
+                'connection("snowpark")',
+                'connection("snowflake")',
                 "2024-04-01",
-                include_st_prefix=False,
             )
         return conn
     except ModuleNotFoundError as e:

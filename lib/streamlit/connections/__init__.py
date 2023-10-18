@@ -22,7 +22,4 @@ from streamlit.connections.snowpark_connection import (
 )
 from streamlit.connections.sql_connection import SQLConnection as SQLConnection
 
-# TODO(vdonato): Maybe figure out a reasonable way to add a deprecation warning to this
-# constructor. In case this is infeasible, it'll probably be fine to just remove this
-# along with the `st.experimental_connection` function.
 ExperimentalBaseConnection = BaseConnection
