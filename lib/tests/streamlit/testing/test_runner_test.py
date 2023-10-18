@@ -49,11 +49,11 @@ def test_get_query_params():
         st.write(st.experimental_get_query_params())
 
     at = AppTest.from_function(script).run()
-    assert at.get("json")[0].body == "{}"
+    assert at.json[0].value == "{}"
     at.query_params["foo"] = 5
     at.query_params["bar"] = "baz"
     at.run()
-    assert at.get("json")[0].body == '{"foo": ["5"], "bar": ["baz"]}'
+    assert at.json[0].value == '{"foo": ["5"], "bar": ["baz"]}'
 
 
 def test_set_query_params():

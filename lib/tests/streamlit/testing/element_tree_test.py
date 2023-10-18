@@ -298,6 +298,20 @@ def test_heading_elements_by_type():
     assert len(sr.subheader) == 2
 
 
+def test_json():
+    def script():
+        import streamlit as st
+
+        st.json(["hi", {"foo": "bar"}])
+
+    at = AppTest.from_function(script).run()
+    j = at.json[0]
+    assert j.value == '["hi", {"foo": "bar"}]'
+    assert j.expanded
+
+    repr(j)
+
+
 def test_markdown():
     script = AppTest.from_string(
         """

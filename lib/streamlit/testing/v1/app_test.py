@@ -54,6 +54,7 @@ from streamlit.testing.v1.element_tree import (
     Exception,
     Header,
     Info,
+    Json,
     Latex,
     Markdown,
     Multiselect,
@@ -312,6 +313,10 @@ class AppTest:
     @property
     def info(self) -> ElementList[Info]:
         return self._tree.info
+
+    @property
+    def json(self) -> ElementList[Json]:
+        return self._tree.json
 
     @property
     def latex(self) -> ElementList[Latex]:

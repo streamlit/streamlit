@@ -59,6 +59,7 @@ from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
+from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -551,6 +552,23 @@ class Subheader(HeadingBase):
 class Title(HeadingBase):
     def __init__(self, proto: HeadingProto, root: ElementTree):
         super().__init__(proto, root, "title")
+
+
+@dataclass(repr=False)
+class Json(Element):
+    proto: JsonProto = field(repr=False)
+
+    expanded: bool
+
+    def __init__(self, proto: JsonProto, root: ElementTree):
+        self.proto = proto
+        self.key = None
+        self.root = root
+        self.type = "json"
+
+    @property
+    def value(self) -> str:
+        return self.proto.body
 
 
 @dataclass(repr=False)
@@ -1195,6 +1213,10 @@ class Block:
         return ElementList(self.get("info"))  # type: ignore
 
     @property
+    def json(self) -> ElementList[Json]:
+        return ElementList(self.get("json"))  # type: ignore
+
+    @property
     def latex(self) -> ElementList[Latex]:
         return ElementList(self.get("latex"))  # type: ignore
 
@@ -1500,6 +1522,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     raise ValueError(f"Unknown heading type with tag {elt.heading.tag}")
+            elif ty == "json":
+                new_node = Json(elt.json, root=root)
             elif ty == "markdown":
                 if elt.markdown.element_type == MarkdownProto.Type.NATIVE:
                     new_node = Markdown(elt.markdown, root=root)
