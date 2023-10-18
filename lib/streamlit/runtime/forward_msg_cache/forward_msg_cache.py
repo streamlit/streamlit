@@ -157,7 +157,11 @@ class ForwardMsgCache(CacheStatsProvider):
         return ref_msg
 
     def add_message(
-        self, msg: ForwardMsg, session: "AppSession", script_run_count: int
+        self,
+        msg: ForwardMsg,
+        session: "AppSession",
+        script_run_count: int,
+        add_to_storage: bool = True,
     ) -> None:
         """Add a ForwardMsg to the cache.
 
@@ -171,12 +175,18 @@ class ForwardMsgCache(CacheStatsProvider):
         session : AppSession
         script_run_count : int
             The number of times the session's script has run
-
+        add_to_storage: bool
+            Add messages that we send via websocket to storage too, so it could be
+            retrieved via HTTP in case if it is missing in frontend cache
         """
         populate_hash_if_needed(msg)
         entry = self._entries.get(msg.hash, None)
         if entry is None:
-            ref_url = self.forward_msg_cache_storage.add_message(msg)
+            if add_to_storage:
+                ref_url = self.forward_msg_cache_storage.add_message(msg)
+            else:
+                print("NOT ADD TO BACKEND STORAGE!!! JUST USE EMPTY REF URL")
+                ref_url = ""
             entry = ForwardMsgCache.Entry(msg.hash, ref_url=ref_url)
             self._entries[msg.hash] = entry
         entry.add_session_ref(session, script_run_count)

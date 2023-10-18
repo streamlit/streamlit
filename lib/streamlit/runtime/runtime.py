@@ -669,7 +669,10 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             # age.
             LOGGER.debug("Caching message (hash=%s)", msg.hash)
 
-            if config.get_option("global.forwardMessageCachedHTTPDelivery"):
+            if msg.ByteSize() >= config.get_option(
+                "global.forwardMessageCachedHTTPSize"
+            ) * int(1e6):
+                print("DELIVER VIA HTTP!!!!")
                 self._message_cache.add_message(
                     msg, session_info.session, session_info.script_run_count
                 )
@@ -682,6 +685,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                     LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
                     msg_to_send = self.message_cache.create_reference_msg(msg)
             else:
+                print("DELIVER VIA WEBSOCKET")
                 if self._message_cache.has_message_reference(
                     msg, session_info.session, session_info.script_run_count
                 ):
@@ -691,7 +695,12 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
                     msg_to_send = self.message_cache.create_reference_msg(msg)
 
                 self._message_cache.add_message(
-                    msg, session_info.session, session_info.script_run_count
+                    msg,
+                    session_info.session,
+                    session_info.script_run_count,
+                    add_to_storage=config.get_option(
+                        "global.addWebsocketMessagesToStorage"
+                    ),
                 )
 
         # If this was a `script_finished` message, we increment the

@@ -363,10 +363,18 @@ _create_option(
 )  # 1MB
 
 _create_option(
-    "global.forwardMessageCachedHTTPDelivery",
+    "global.forwardMessageCachedHTTPMinSize",
     description="""Deliver cached forwardMessaged only via HTTP""",
     visibility="hidden",
-    default_val=False,
+    default_val=32,
+    type_=int,
+)
+
+_create_option(
+    "global.addCachedWebsocketMessagesToStorage",
+    description="""Add websocket message to storage""",
+    visibility="hidden",
+    default_val=True,
     type_=bool,
 )
 
