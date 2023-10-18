@@ -97,7 +97,7 @@ def test_data_editor_delete_row_via_hotkey(app: Page):
     data_editor_element.click(position={"x": 10, "y": 100})
 
     # Press backspace to delete row:
-    data_editor_element.press("Backspace")
+    data_editor_element.press("Delete")
 
     # The height should reflect that one row is missing (248px-35px=213px):
     expect(data_editor_element).to_have_css("height", "213px")
