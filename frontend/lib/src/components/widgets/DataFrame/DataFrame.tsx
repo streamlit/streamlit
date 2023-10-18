@@ -582,7 +582,7 @@ function DataFrame({
           onItemHovered={onItemHovered}
           // Activate keybindings:
           keybindings={{ downFill: true }}
-          // Search needs to be activated manually, too support search
+          // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
             if ((event.ctrlKey || event.metaKey) && event.key === "f") {
