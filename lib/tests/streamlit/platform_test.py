@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly re-export public symbols.
-from streamlit.connections.base_connection import BaseConnection as BaseConnection
-from streamlit.connections.snowflake_connection import (
-    SnowflakeConnection as SnowflakeConnection,
-)
-from streamlit.connections.snowpark_connection import (
-    SnowparkConnection as SnowparkConnection,
-)
-from streamlit.connections.sql_connection import SQLConnection as SQLConnection
+from parameterized import parameterized
 
-ExperimentalBaseConnection = BaseConnection
+from streamlit.platform import post_parent_message
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+
+class PlatformTest(DeltaGeneratorTestCase):
+    """Tests the platform module functions"""
+
+    @parameterized.expand(["Hello", '{"name":"foo", "type":"bar"}'])
+    def test_post_parent_message(self, message: str):
+        post_parent_message(message)
+        c = self.get_message_from_queue().parent_message
+        self.assertEqual(c.message, message)

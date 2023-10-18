@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly re-export public symbols.
-from streamlit.connections.base_connection import BaseConnection as BaseConnection
-from streamlit.connections.snowflake_connection import (
-    SnowflakeConnection as SnowflakeConnection,
-)
-from streamlit.connections.snowpark_connection import (
-    SnowparkConnection as SnowparkConnection,
-)
-from streamlit.connections.sql_connection import SQLConnection as SQLConnection
+"""Platform module."""
 
-ExperimentalBaseConnection = BaseConnection
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+
+def post_parent_message(message: str) -> None:
+    """
+    Sends a string message to the parent window (when host configuration allows).
+    """
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return
+
+    fwd_msg = ForwardMsg()
+    fwd_msg.parent_message.message = message
+    ctx.enqueue(fwd_msg)

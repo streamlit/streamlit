@@ -92,6 +92,7 @@ import {
   PageNotFound,
   PageProfile,
   PagesChanged,
+  ParentMessage,
   SessionEvent,
   SessionStatus,
   WidgetStates,
@@ -386,9 +387,18 @@ export class App extends PureComponent<Props, State> {
       claimHostAuthToken: this.hostCommunicationMgr.claimAuthToken,
       resetHostAuthToken: this.hostCommunicationMgr.resetAuthToken,
       onHostConfigResp: (response: IHostConfigResponse) => {
-        const { allowedOrigins, useExternalAuthToken, disableFullscreenMode } =
-          response
-        const appConfig: AppConfig = { allowedOrigins, useExternalAuthToken }
+        const {
+          allowedOrigins,
+          useExternalAuthToken,
+          disableFullscreenMode,
+          enableCustomParentMessages,
+        } = response
+
+        const appConfig: AppConfig = {
+          allowedOrigins,
+          useExternalAuthToken,
+          enableCustomParentMessages,
+        }
         const libConfig: LibConfig = { disableFullscreenMode }
 
         // Set the allowed origins configuration for the host communication:
@@ -553,6 +563,19 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
+  handleCustomParentMessage = (parentMessage: ParentMessage): void => {
+    if (this.state.appConfig.enableCustomParentMessages) {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "CUSTOM_PARENT_MESSAGE",
+        message: parentMessage.message,
+      })
+    } else {
+      logError(
+        "Sending messages to the host is disabled in line with the platform policy."
+      )
+    }
+  }
+
   /**
    * Callback when we get a message from the server.
    */
@@ -596,6 +619,8 @@ export class App extends PureComponent<Props, State> {
           this.handlePageProfileMsg(pageProfile),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
+        parentMessage: (parentMessage: ParentMessage) =>
+          this.handleCustomParentMessage(parentMessage),
       })
     } catch (e) {
       const err = ensureError(e)
