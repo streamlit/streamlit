@@ -76,6 +76,7 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
+from streamlit.util import HASHLIB_KWARGS
 from streamlit.web.bootstrap import _fix_matplotlib_crash
 
 TMP_DIR = tempfile.TemporaryDirectory()
@@ -113,7 +114,7 @@ class AppTest:
             overridden for individual `.run()` calls.
 
         """
-        hasher = hashlib.md5(bytes(script, "utf-8"))
+        hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
         path = pathlib.Path(TMP_DIR.name, script_name)

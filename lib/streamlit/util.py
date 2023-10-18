@@ -21,6 +21,7 @@ import functools
 import hashlib
 import os
 import subprocess
+import sys
 from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar, Union
 
 from typing_extensions import Final
@@ -30,6 +31,12 @@ from streamlit import env_util
 # URL of Streamlit's help page.
 HELP_DOC: Final = "https://docs.streamlit.io/"
 FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
+
+# Due to security issue in md5 and sha1, usedforsecurity
+# argument is added to hashlib for python versions higher than 3.8
+HASHLIB_KWARGS: Dict[str, Any] = (
+    {"usedforsecurity": False} if sys.version_info >= (3, 9) else {}
+)
 
 
 def memoize(func):
@@ -171,7 +178,7 @@ class Error(Exception):
 
 def calc_md5(s: Union[bytes, str]) -> str:
     """Return the md5 hash of the given string."""
-    h = hashlib.new("md5")
+    h = hashlib.new("md5", **HASHLIB_KWARGS)
 
     b = s.encode("utf-8") if isinstance(s, str) else s
 

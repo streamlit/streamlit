@@ -48,13 +48,14 @@ from streamlit.runtime.legacy_caching.hashing import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import get_fqn_type, is_type
+from streamlit.util import HASHLIB_KWARGS
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
 
 # Get code hasher and mock the main script directory.
 def get_hash(f, context=None, hash_funcs=None):
-    hasher = hashlib.new("md5")
+    hasher = hashlib.new("md5", **HASHLIB_KWARGS)
     ch = _CodeHasher(hash_funcs=hash_funcs)
     ch._get_main_script_directory = MagicMock()
     ch._get_main_script_directory.return_value = os.getcwd()
