@@ -77,6 +77,12 @@ class SnowflakeConnectionTest(unittest.TestCase):
             account="account", some_kwarg="some_value"
         )
 
+    def test_throws_friendly_error_if_no_config_set(self):
+        with pytest.raises(StreamlitAPIException) as e:
+            SnowflakeConnection("snowflake")
+
+        assert "Missing Snowflake connection configuration." in str(e.value)
+
     @patch(
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
         MagicMock(),
