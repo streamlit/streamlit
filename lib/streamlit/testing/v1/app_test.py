@@ -33,6 +33,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
@@ -86,7 +87,7 @@ class AppTest:
     def __init__(self, script_path: str, *, default_timeout: float):
         self._script_path = script_path
         self.default_timeout = default_timeout
-        self.session_state = SessionState()
+        self.session_state = SafeSessionState(SessionState(), lambda: None)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
 

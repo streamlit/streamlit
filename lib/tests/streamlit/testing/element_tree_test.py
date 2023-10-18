@@ -703,3 +703,23 @@ def test_short_timeout():
     )
     with pytest.raises(RuntimeError):
         sr = script.run(timeout=0.2)
+
+
+def test_state_access():
+    def script():
+        import streamlit as st
+
+        if "foo" not in st.session_state:
+            st.session_state.foo = "bar"
+        st.write(st.session_state.foo)
+
+    at = AppTest.from_function(script).run()
+    assert at.markdown[0].value == "bar"
+
+    at.session_state["foo"] = "baz"
+    at.run()
+    assert at.markdown[0].value == "baz"
+
+    at.session_state.foo = "quux"
+    at.run()
+    assert at.markdown[0].value == "quux"
