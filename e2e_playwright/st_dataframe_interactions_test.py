@@ -136,7 +136,7 @@ def test_data_editor_add_row_via_trailing_row(app: Page):
 
 
 # Firefox seems to be unable to run this test. But I tested it manually
-# to make sure that it works correctly
+# to make sure that it works correctly.
 @pytest.mark.skip_browser("firefox")
 def test_dataframe_toolbar_on_toolbar_hover(app: Page):
     """Test that the toolbar is shown when hovering over the toolbar."""
