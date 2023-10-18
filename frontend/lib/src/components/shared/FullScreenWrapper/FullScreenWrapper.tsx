@@ -150,7 +150,10 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
       false
 
     return (
-      <StyledFullScreenFrame isExpanded={expanded}>
+      <StyledFullScreenFrame
+        isExpanded={expanded}
+        data-testid={"stStyledFullScreenFrame"}
+      >
         {!hideFullScreenButton && (
           <StyledFullScreenButton
             data-testid={"StyledFullScreenButton"}
