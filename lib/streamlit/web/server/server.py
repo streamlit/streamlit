@@ -72,6 +72,14 @@ TORNADO_SETTINGS = {
     "websocket_ping_timeout": 30,
 }
 
+
+class LargeForwardMessageHandler(tornado.web.StaticFileHandler):
+    def set_default_headers(self):
+        # CORS protection is disabled because we need access to this endpoint
+        # from the inner iframe.
+        self.set_header("Access-Control-Allow-Origin", "*")
+
+
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
 MAX_PORT_SEARCH_RETRIES = 100
@@ -85,6 +93,7 @@ UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
 MESSAGE_ENDPOINT: Final = r"_stcore/message"
+LARGE_MESSAGE_ENDPOINT: Final = r"_stcore/s4/(.*)"
 HEALTH_ENDPOINT: Final = r"(?:healthz|_stcore/health)"
 HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
@@ -288,6 +297,11 @@ class Server:
                 make_url_path_regex(base, MESSAGE_ENDPOINT),
                 MessageCacheHandler,
                 dict(cache=self._runtime.message_cache),
+            ),
+            (
+                make_url_path_regex(base, LARGE_MESSAGE_ENDPOINT),
+                LargeForwardMessageHandler,
+                {"path": r"s4"},
             ),
             (
                 make_url_path_regex(base, METRIC_ENDPOINT),

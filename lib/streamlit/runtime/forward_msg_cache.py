@@ -81,7 +81,9 @@ def create_reference_msg(msg: ForwardMsg) -> ForwardMsg:
 
     """
     ref_msg = ForwardMsg()
-    ref_msg.ref_hash = populate_hash_if_needed(msg)
+    populate_hash_if_needed(msg)
+    ref_msg.forward_msg_ref.ref_url = f"/_stcore/message?hash={msg.hash}"
+    ref_msg.forward_msg_ref.ref_hash = msg.hash
     ref_msg.metadata.CopyFrom(msg.metadata)
     return ref_msg
 

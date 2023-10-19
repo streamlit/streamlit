@@ -77,6 +77,7 @@ message ForwardMsg {
     // for this one. If the client does not have the referenced message
     // in its cache, it can retrieve it from the server.
     string ref_hash = 11;
+    ForwardMsgRef forward_msg_ref = 21;
   }
 
   // The ID of the last BackMsg that we received before sending this
@@ -85,7 +86,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 21
+  // Next: 22
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

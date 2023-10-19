@@ -15,6 +15,7 @@
 import base64
 import binascii
 import json
+import os.path
 from typing import Any, Awaitable, Dict, List, Optional, Union
 
 import tornado.concurrent
@@ -57,6 +58,17 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Send a ForwardMsg to the browser."""
         try:
+            if msg.ByteSize() > 50 * int(1e6):
+                serialized_msg = serialize_forward_msg(msg)
+                with open(os.path.join("s4", msg.hash), "wb") as f:
+                    f.write(serialized_msg)
+                ref_msg = ForwardMsg()
+                ref_msg.forward_msg_ref.ref_url = (
+                    f"http://localhost:8501/_stcore/s4/{msg.hash}/"
+                )
+                ref_msg.forward_msg_ref.ref_hash = msg.hash
+                ref_msg.metadata.CopyFrom(msg.metadata)
+                msg = ref_msg
             self.write_message(serialize_forward_msg(msg), binary=True)
         except tornado.websocket.WebSocketClosedError as e:
             raise SessionClientDisconnectedError from e

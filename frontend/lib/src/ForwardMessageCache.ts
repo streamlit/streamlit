@@ -92,24 +92,27 @@ export class ForwardMsgCache {
   ): Promise<ForwardMsg> {
     this.maybeCacheMessage(msg, encodedMsg)
 
-    if (msg.type !== "refHash") {
+    if (msg.type !== "forwardMsgRef") {
       return msg
     }
 
-    let newMsg = this.getCachedMessage(msg.refHash as string, true)
+    let newMsg = this.getCachedMessage(
+      msg.forwardMsgRef?.refHash as string,
+      true
+    )
     if (newMsg != null) {
-      logMessage(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
+      logMessage(`Cached ForwardMsg HIT [hash=${msg.forwardMsgRef?.refHash}]`)
     } else {
       // Cache miss: fetch from the server
-      logMessage(`Cached ForwardMsg MISS [hash=${msg.refHash}]`)
+      logMessage(`Cached ForwardMsg MISS [hash=${msg.forwardMsgRef?.refHash}]`)
       const encodedNewMsg = await this.endpoints.fetchCachedForwardMsg(
-        msg.refHash as string
+        msg.forwardMsgRef?.refUrl as string
       )
       try {
         newMsg = ForwardMsg.decode(encodedNewMsg)
       } catch (e) {
         throw new Error(
-          `Failed to decode ForwardMsg (hash=${msg.refHash}): ${
+          `Failed to decode ForwardMsg (hash=${msg.forwardMsgRef?.refHash}): ${
             ensureError(e).message
           }`
         )
@@ -130,7 +133,7 @@ export class ForwardMsgCache {
    * Add a new message to the cache if appropriate.
    */
   private maybeCacheMessage(msg: ForwardMsg, encodedMsg: Uint8Array): void {
-    if (msg.type === "refHash") {
+    if (msg.type === "forwardMsgRef") {
       // We never cache reference messages. These messages
       // may have `metadata.cacheable` set, but this is
       // only because they carry the metadata for the messages
