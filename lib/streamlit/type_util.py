@@ -1112,7 +1112,7 @@ def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
     if coercion_type == "off":
         return from_enum_value  # do not attempt to coerce
 
-    # We now know this IS an Enum the user has configured coercion enabled.
+    # We now know this is an Enum AND the user has configured coercion enabled.
     # Check if we do NOT meet the required conditions and log a failure message
     # if that is the case.
     from_enum_class = from_enum_value.__class__
