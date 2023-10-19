@@ -162,6 +162,15 @@ function DataFrame({
     })
   }, [])
 
+  // This callback is used to clear only cell selections
+  const clearCellSelection = React.useCallback(() => {
+    setGridSelection({
+      columns: gridSelection.columns,
+      rows: gridSelection.rows,
+      current: undefined,
+    })
+  }, [gridSelection])
+
   // This callback is used to refresh the rendering of selected cells
   const refreshCells = React.useCallback(
     (
@@ -444,7 +453,7 @@ function DataFrame({
             event.relatedTarget as HTMLElement | null
           )
         ) {
-          clearSelection()
+          clearCellSelection()
         }
       }}
     >
