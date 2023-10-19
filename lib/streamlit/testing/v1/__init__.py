@@ -12,4 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.testing.v1.app_test import AppTest as AppTest
+from streamlit.testing.v1.app_test import AppTest
+
+__all__ = ["AppTest"]
