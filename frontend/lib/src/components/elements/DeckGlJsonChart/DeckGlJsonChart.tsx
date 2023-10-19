@@ -37,7 +37,7 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import withMapboxToken from "@streamlit/lib/src/hocs/withMapboxToken"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"

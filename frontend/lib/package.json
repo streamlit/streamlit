@@ -67,6 +67,7 @@
     "moment": "^2.29.4",
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.40",
+    "native-file-system-adapter": "^3.0.0",
     "node-emoji": "^1.11.0",
     "numbro": "^2.3.6",
     "plotly.js": "^2.26.1",

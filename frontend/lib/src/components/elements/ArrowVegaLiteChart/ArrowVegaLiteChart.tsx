@@ -21,7 +21,7 @@ import * as vega from "vega"
 import { expressionInterpreter } from "vega-interpreter"
 
 import { logMessage } from "@streamlit/lib/src/util/log"
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { EmotionTheme } from "@streamlit/lib/src/theme"

@@ -18,7 +18,7 @@ import React, { ReactElement, useEffect } from "react"
 import { select } from "d3"
 import { graphviz, Engine } from "d3-graphviz"
 import { logError } from "@streamlit/lib/src/util/log"
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
 import { StyledGraphVizChart } from "./styled-components"
 
