@@ -39,6 +39,7 @@ def test_alert():
     assert at.success[0].icon == "🚨"
     assert at.warning[0].value == "danger danger"
 
+    # Verify that creating the reprs does not throw
     repr(at.error[0])
     repr(at.info[0])
     repr(at.success[0])
@@ -209,6 +210,7 @@ def test_date_input():
         (date(2023, 1, 1), date(2024, 1, 1)),
     ]
 
+    # Verify that creating the reprs does not throw
     repr(at.date_input[0])
 
 
@@ -482,6 +484,7 @@ def test_multiselect():
     assert sr4.multiselect[0].value == []
     assert set(sr3.multiselect[1].value) == set(["zero", "one", "two"])
 
+    # Verify that creating the reprs does not throw
     repr(sr.multiselect[0])
 
 
@@ -648,6 +651,7 @@ def test_slider():
     assert s[3].value == datetime(2020, 1, 10, 8, 0)
     assert s[4].value == 0.1
 
+    # Verify that creating the reprs does not throw
     repr(sr.slider[0])
 
 
