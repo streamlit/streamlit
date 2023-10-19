@@ -16,7 +16,6 @@
 
 import React, {
   ReactElement,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -42,7 +41,6 @@ import {
   PlotSelectionEvent,
 } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-
 export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
@@ -62,8 +60,21 @@ export interface InteractivePlotlyReturnValue {
   z?: any
   hoverText?: string
   markerSize?: any
+  curveNumber: number
   pointNumber: number
   pointIndex: number
+}
+
+function extractNonObjects(obj: any): any {
+  const result: any = {}
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value !== "object" || value === null) {
+      result[key] = value
+    }
+  }
+
+  return result
 }
 
 type DragMode =
@@ -105,22 +116,36 @@ function PlotlyFigure({
   const hoverEvents: PlotHoverEvent[] = []
 
   const theme: EmotionTheme = useTheme()
-  const [spec, setSpec] = useState(
-    JSON.parse(replaceTemporaryColors(figure.spec, theme, element.theme))
-  )
+  const [spec, setSpec] = useState(() => {
+    const initialSpec = JSON.parse(
+      replaceTemporaryColors(figure.spec, theme, element.theme)
+    )
+    return {
+      ...initialSpec,
+      layout: {
+        ...initialSpec.layout,
+        height: initialSpec.layout.height,
+        width: initialSpec.layout.width,
+      },
+    }
+  })
+
   useEffect(() => {
+    setSpec(
+      JSON.parse(replaceTemporaryColors(figure.spec, theme, element.theme))
+    )
+  }, [figure.spec, theme, element.theme])
+
+  const [initialHeight] = useState(spec.layout.height)
+  const [initialWidth] = useState(spec.layout.width)
+
+  useLayoutEffect(() => {
     if (element.theme === "streamlit") {
       applyStreamlitTheme(spec, theme)
     } else {
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
-  }, [])
-
-  const [initialHeight] = useState(spec.layout.height)
-  const [initialWidth] = useState(spec.layout.width)
-
-  useLayoutEffect(() => {
     if (isFullScreen(height)) {
       spec.layout.width = width
       spec.layout.height = height
@@ -130,7 +155,6 @@ function PlotlyFigure({
         spec.layout.height = initialHeight
       }
     } else {
-      // console.log("Not full screen!")
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
@@ -142,27 +166,34 @@ function PlotlyFigure({
     spec,
     initialWidth,
     initialHeight,
+    element.theme,
+    theme,
   ])
 
   const { data, layout, frames } = spec
 
-  const handleClick = (event: PlotMouseEvent): void => {
-    console.log(event)
-    // Build array of points to return
-    const selectedPoints: Array<InteractivePlotlyReturnValue> = []
+  const buildPlotlyReturnValue = (
+    event: PlotMouseEvent | PlotHoverEvent | PlotSelectionEvent
+  ): Array<any> => {
+    const selectedPoints: Array<any> = []
     event.points.forEach(function (point: any) {
       selectedPoints.push({
-        x: point.x,
-        y: point.y,
-        z: point.z ? point.z : undefined,
-        hoverText: point.hovertext ? point.hovertext : undefined,
-        markerSize: point["marker.size"] ? point["marker.size"] : undefined,
-        pointNumber: point.pointNumber,
-        pointIndex: point.pointIndex,
+        ...extractNonObjects(point),
+        legendgroup: point.data.legendgroup
+          ? point.data.legendgroup
+          : undefined,
       })
     })
+    return selectedPoints
+  }
+
+  const handleClick = (event: PlotMouseEvent): void => {
+    // Build array of points to return
+    const selectedPoints = buildPlotlyReturnValue(event)
 
     console.log("Handling click")
+    console.log(data)
+    console.log(event)
     console.log(selectedPoints)
     widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
     console.log("Done handling click")
@@ -183,19 +214,8 @@ function PlotlyFigure({
     // if (!dragmode || dragmode.current === "pan") {
     // Set a new timeout to handle the selectedPoints after 1000ms
     debounceTimeout = setTimeout(() => {
-      const selectedPoints: Array<InteractivePlotlyReturnValue> = []
-      // Loop through each point in the LAST event
-      hoverEvents[hoverEvents.length - 1].points.forEach((point: any) => {
-        selectedPoints.push({
-          x: point.x,
-          y: point.y,
-          z: point.z ? point.z : undefined,
-          hoverText: point.hovertext ? point.hovertext : undefined,
-          markerSize: point["marker.size"] ? point["marker.size"] : undefined,
-          pointNumber: point.pointNumber,
-          pointIndex: point.pointIndex,
-        })
-      })
+      // Build array of points to return
+      const selectedPoints = buildPlotlyReturnValue(event)
       widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
 
       // Clear the selectedPoints array after setting the JSON value
@@ -210,10 +230,13 @@ function PlotlyFigure({
       !event.dragmode &&
       // @ts-expect-error
       !event.selections &&
+      // ignore lasso selection
       // @ts-expect-error
       !event["selections[0].path"] &&
+      // ignore box selection
       // @ts-expect-error
       !event["selections[0].x0"] &&
+      // ignore autorange
       !event["xaxis.autorange"] &&
       !event["yaxis.autorange"]
     ) {
@@ -229,22 +252,7 @@ function PlotlyFigure({
 
   const handleSelect = (event: PlotSelectionEvent): void => {
     // Build array of points to return
-    const selectedPoints: Array<InteractivePlotlyReturnValue> = []
-    event.points.forEach(function (point: any) {
-      selectedPoints.push({
-        x: point.x,
-        y: point.y,
-        z: point.z ? point.z : undefined,
-        hoverText: point.hovertext ? point.hovertext : undefined,
-        markerSize: point["marker.size"] ? point["marker.size"] : undefined,
-        pointNumber: point.pointNumber,
-        pointIndex: point.pointIndex,
-      })
-    })
-
-    console.log("Handling select")
-    console.log(event)
-    // console.log(selectedPoints)/
+    const selectedPoints = buildPlotlyReturnValue(event)
     widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
     console.log("Done handling select")
   }
@@ -254,7 +262,6 @@ function PlotlyFigure({
       key={isFullScreen(height) ? "fullscreen" : "original"}
       className="stPlotlyChart"
       data={data}
-      // divId={element.figureId}
       layout={layout}
       config={config}
       frames={frames}

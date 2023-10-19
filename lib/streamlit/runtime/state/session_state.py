@@ -600,12 +600,10 @@ class SessionState:
 
         self._set_widget_metadata(metadata)
         if user_key is not None:
-            print("Got in here 1")
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
 
         if widget_id not in self and (user_key is None or user_key not in self):
-            print("Got in here 2")
             # This is the first time the widget is registered, so we save its
             # value in widget state.
             deserializer = metadata.deserializer
