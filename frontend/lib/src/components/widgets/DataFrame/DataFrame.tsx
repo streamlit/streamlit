@@ -445,7 +445,7 @@ function DataFrame({
         // the selection on those devices.
         // We also don't want to clear the selection if the user clicks on
         // on the toolbar by checking that relatedTarget is not a children of
-        // this element.
+        // this element. Unfortunately, this check isn't working reliably in Safari.
         if (
           !isFocused &&
           !isTouchDevice &&
