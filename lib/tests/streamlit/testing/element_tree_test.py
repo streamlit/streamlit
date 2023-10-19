@@ -331,6 +331,20 @@ def test_heading_elements_by_type():
     assert len(sr.subheader) == 2
 
 
+def test_json():
+    def script():
+        import streamlit as st
+
+        st.json(["hi", {"foo": "bar"}])
+
+    at = AppTest.from_function(script).run()
+    j = at.json[0]
+    assert j.value == '["hi", {"foo": "bar"}]'
+    assert j.expanded
+
+    repr(j)
+
+
 def test_markdown():
     script = AppTest.from_string(
         """
@@ -457,6 +471,20 @@ def test_markdown_elements_by_type():
     assert len(sr.caption) == 2
     assert len(sr.code) == 2
     assert len(sr.latex) == 2
+
+
+def test_metric():
+    def script():
+        import streamlit as st
+
+        st.metric("stonks", value=9500, delta=1000)
+
+    at = AppTest.from_function(script).run()
+    m = at.metric[0]
+    assert m.value == "9500"
+    assert m.delta == "1000"
+
+    repr(m)
 
 
 def test_multiselect():
@@ -655,6 +683,31 @@ def test_slider():
     repr(sr.slider[0])
 
 
+def test_table():
+    def script():
+        import numpy as np
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame(
+            index=[[0, 1], ["i1", "i2"]],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
+        )
+        st.table(df)
+
+    at = AppTest.from_function(script).run()
+    df = pd.DataFrame(
+        index=[[0, 1], ["i1", "i2"]],
+        columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+        data=np.arange(0, 6, 1).reshape(2, 3),
+    )
+    assert at.table[0].value.equals(df)
+
+    repr(at.table[0])
+
+
 def test_tabs():
     def script():
         import streamlit as st
@@ -752,6 +805,36 @@ def test_time_input():
     ]
 
     repr(sr.time_input[0])
+
+
+def test_toast():
+    def script():
+        import streamlit as st
+
+        st.toast("first")
+        st.write("something in the main area")
+        st.toast("second")
+
+    at = AppTest.from_function(script).run()
+    assert at.toast.len == 2
+    assert at.toast.values == ["first", "second"]
+
+
+def test_toggle():
+    def script():
+        import streamlit as st
+
+        on = st.toggle("Activate feature")
+        if on:
+            st.write("Feature activated!")
+
+    at = AppTest.from_function(script).run()
+    assert at.toggle[0].value is False
+
+    at.toggle[0].set_value(True).run()
+    assert at.toggle[0].value is True
+
+    repr(at.toggle[0])
 
 
 def test_short_timeout():
