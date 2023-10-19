@@ -194,10 +194,10 @@ def test_date_input():
 def test_exception():
     script = AppTest.from_string(
         """
-            import streamlit as st
+        import streamlit as st
 
-            st.exception(RuntimeError("foo"))
-            """,
+        st.exception(RuntimeError("foo"))
+        """,
     )
     sr = script.run()
 
