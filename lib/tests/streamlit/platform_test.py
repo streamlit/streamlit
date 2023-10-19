@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.testing.v1.app_test import AppTest
+from parameterized import parameterized
 
-__all__ = ["AppTest"]
+from streamlit.platform import post_parent_message
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+
+class PlatformTest(DeltaGeneratorTestCase):
+    """Tests the platform module functions"""
+
+    @parameterized.expand(["Hello", '{"name":"foo", "type":"bar"}'])
+    def test_post_parent_message(self, message: str):
+        post_parent_message(message)
+        c = self.get_message_from_queue().parent_message
+        self.assertEqual(c.message, message)

@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.watcher.local_sources_watcher import (
-    LocalSourcesWatcher as LocalSourcesWatcher,
-)
+
+from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from streamlit.watcher.path_watcher import (
-    report_watchdog_availability as report_watchdog_availability,
+    report_watchdog_availability,
+    watch_dir,
+    watch_file,
 )
-from streamlit.watcher.path_watcher import watch_dir as watch_dir
-from streamlit.watcher.path_watcher import watch_file as watch_file
+
+__all__ = [
+    "LocalSourcesWatcher",
+    "report_watchdog_availability",
+    "watch_dir",
+    "watch_file",
+]

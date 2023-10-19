@@ -108,8 +108,7 @@ class LayoutsMixin:
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", or "large"
-            The size of the gap between the columns. Defaults to "small". This
-            argument can only be supplied by keyword.
+            The size of the gap between the columns. Defaults to "small".
 
         Returns
         -------

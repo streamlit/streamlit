@@ -12,6 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.testing.v1.app_test import AppTest
+"""Platform module."""
 
-__all__ = ["AppTest"]
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+
+def post_parent_message(message: str) -> None:
+    """
+    Sends a string message to the parent window (when host configuration allows).
+    """
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return
+
+    fwd_msg = ForwardMsg()
+    fwd_msg.parent_message.message = message
+    ctx.enqueue(fwd_msg)

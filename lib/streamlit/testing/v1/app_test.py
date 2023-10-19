@@ -201,7 +201,7 @@ class AppTest:
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
         with source_util._pages_cache_lock:
-            self.saved_cached_pages = source_util._cached_pages
+            saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
 
         saved_secrets: Secrets = st.secrets
@@ -221,7 +221,7 @@ class AppTest:
 
         # teardown
         with source_util._pages_cache_lock:
-            source_util._cached_pages = self.saved_cached_pages
+            source_util._cached_pages = saved_cached_pages
 
         if self.secrets:
             if st.secrets._secrets is not None:
