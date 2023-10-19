@@ -25,7 +25,10 @@ import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
  * should still work with a new frontend versions.
  */
 export type LibConfig = {
-  // TODO(lukasmasuch): Add lib config options in subsequent PRs.
+  /**
+   * Whether to disable the full screen mode all elements / widgets.
+   */
+  disableFullscreenMode?: boolean
 }
 
 export interface LibContextProps {
@@ -62,13 +65,6 @@ export interface LibContextProps {
    */
   addThemes: (themes: ThemeConfig[]) => void
 
-  /**
-   * Whether or not to hide full screen for all elements / widgets
-   * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
-   * will default to false for regular streamlit
-   */
-  hideFullScreenButtons: boolean
-
   /** The lib-specific configuration from the apps host which is requested via the
    * _stcore/host-config endpoint.
    */
@@ -84,6 +80,5 @@ export const LibContext = React.createContext<LibContextProps>({
   setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
-  hideFullScreenButtons: false,
   libConfig: {},
 })

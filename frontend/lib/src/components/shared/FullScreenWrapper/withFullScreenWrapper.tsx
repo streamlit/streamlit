@@ -17,7 +17,7 @@
 import React, { PureComponent, ComponentType, ReactNode } from "react"
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import FullScreenWrapper from "@streamlit/lib/src/components/shared/FullScreenWrapper"
+import FullScreenWrapper from "./FullScreenWrapper"
 
 export interface Props {
   width: number
@@ -27,10 +27,11 @@ export interface Props {
 // Our wrapper takes the wrapped component's props, plus "width", "height?".
 // It will pass "isFullScreen" to the wrapped component automatically
 // (but the wrapped component is free to ignore that prop).
-type WrapperProps<P> = Omit<P & Props, "isFullScreen">
+type WrapperProps<P> = Omit<P & Props, "isFullScreen" | "collapse" | "expand">
 
 function withFullScreenWrapper<P>(
-  WrappedComponent: ComponentType<P>
+  WrappedComponent: ComponentType<P>,
+  hideFullScreenButton = false
 ): ComponentType<WrapperProps<P>> {
   class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps<P>> {
     public static readonly displayName = `withFullScreenWrapper(${
@@ -41,8 +42,12 @@ function withFullScreenWrapper<P>(
       const { width, height } = this.props
 
       return (
-        <FullScreenWrapper width={width} height={height}>
-          {({ width, height, expanded }) => (
+        <FullScreenWrapper
+          width={width}
+          height={height}
+          hideFullScreenButton={hideFullScreenButton}
+        >
+          {({ width, height, expanded, expand, collapse }) => (
             // `(this.props as P)` is required due to a TS bug:
             // https://github.com/microsoft/TypeScript/issues/28938#issuecomment-450636046
             <WrappedComponent
@@ -50,6 +55,8 @@ function withFullScreenWrapper<P>(
               width={width}
               height={height}
               isFullScreen={expanded}
+              expand={expand}
+              collapse={collapse}
             />
           )}
         </FullScreenWrapper>

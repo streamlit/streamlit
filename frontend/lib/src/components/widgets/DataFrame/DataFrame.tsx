@@ -24,9 +24,15 @@ import {
   GridCell,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
+import {
+  Delete,
+  Add,
+  FileDownload,
+  Search,
+} from "@emotion-icons/material-outlined"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
@@ -34,6 +40,9 @@ import {
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
 import { debounce, isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import Toolbar, {
+  ToolbarAction,
+} from "@streamlit/lib/src/components/shared/Toolbar"
 
 import EditingState from "./EditingState"
 import {
@@ -46,25 +55,27 @@ import {
   useColumnLoader,
   useTooltips,
   useCustomRenderer,
+  useDataExporter,
 } from "./hooks"
+import {
+  BORDER_THRESHOLD,
+  MIN_COLUMN_WIDTH,
+  MAX_COLUMN_WIDTH,
+  MAX_COLUMN_AUTO_WIDTH,
+  ROW_HEIGHT,
+} from "./hooks/useTableSizer"
 import {
   BaseColumn,
   toGlideColumn,
   getTextCell,
   ImageCellEditor,
 } from "./columns"
-import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
+import { StyledResizableContainer } from "./styled-components"
 
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
-// Min column width used for manual and automatic resizing
-const MIN_COLUMN_WIDTH = 50
-// Max column width used for manual resizing
-const MAX_COLUMN_WIDTH = 1000
-// Max column width used for automatic column sizing
-const MAX_COLUMN_AUTO_WIDTH = 500
 // Debounce time for triggering a widget state update
 // This prevents to rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 100
@@ -82,6 +93,8 @@ export interface DataFrameProps {
   disabled: boolean
   widgetMgr: WidgetStateManager
   isFullScreen?: boolean
+  expand?: () => void
+  collapse?: () => void
 }
 
 /**
@@ -103,6 +116,8 @@ function DataFrame({
   disabled,
   widgetMgr,
   isFullScreen,
+  expand,
+  collapse,
 }: DataFrameProps): ReactElement {
   const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
@@ -111,6 +126,7 @@ function DataFrame({
   const theme = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
+  const [showSearch, setShowSearch] = React.useState(false)
   const [hasVerticalScroll, setHasVerticalScroll] =
     React.useState<boolean>(false)
   const [hasHorizontalScroll, setHasHorizontalScroll] =
@@ -146,6 +162,15 @@ function DataFrame({
       current: undefined,
     })
   }, [])
+
+  // This callback is used to clear only cell selections
+  const clearCellSelection = React.useCallback(() => {
+    setGridSelection({
+      columns: gridSelection.columns,
+      rows: gridSelection.rows,
+      current: undefined,
+    })
+  }, [gridSelection])
 
   // This callback is used to refresh the rendering of selected cells
   const refreshCells = React.useCallback(
@@ -278,6 +303,8 @@ function DataFrame({
     [widgetMgr, element, numRows, clearSelection, columns]
   )
 
+  const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
+
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor(
       columns,
@@ -305,7 +332,6 @@ function DataFrame({
   )
 
   const {
-    rowHeight,
     minHeight,
     maxHeight,
     minWidth,
@@ -352,13 +378,18 @@ function DataFrame({
     }
   }, [element.formId, resetEditingState, widgetMgr])
 
+  const isDynamicAndEditable =
+    !isEmptyTable && element.editingMode === DYNAMIC && !disabled
+  const isRowSelected = gridSelection.rows.length > 0
+  const isCellSelected = gridSelection.current !== undefined
+
   const freezeColumns = isEmptyTable
     ? 0
     : columns.filter((col: BaseColumn) => col.isIndex).length
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
-    if (resizableContainerRef.current && !isEmptyTable) {
+    if (resizableContainerRef.current) {
       // TODO(lukasmasuch): This is only a hacky and temporary solution until
       // glide-data-grid provides a better way to determine this:
       // https://github.com/glideapps/glide-data-grid/issues/784
@@ -376,7 +407,7 @@ function DataFrame({
         )
       }
     }
-  }, [resizableSize, numRows, isEmptyTable, glideColumns])
+  }, [resizableSize, numRows, glideColumns])
 
   return (
     <StyledResizableContainer
@@ -408,15 +439,82 @@ function DataFrame({
           }
         }
       }}
-      onBlur={() => {
+      onBlur={event => {
         // If the container loses focus, clear the current selection.
         // Touch screen devices have issues with this, so we don't clear
         // the selection on those devices.
-        if (!isFocused && !isTouchDevice) {
-          clearSelection()
+        // We also don't want to clear the selection if the user clicks on
+        // on the toolbar by checking that relatedTarget is not a children of
+        // this element. Unfortunately, this check isn't working reliably in Safari.
+        if (
+          !isFocused &&
+          !isTouchDevice &&
+          !event.currentTarget.contains(
+            event.relatedTarget as HTMLElement | null
+          )
+        ) {
+          clearCellSelection()
         }
       }}
     >
+      <Toolbar
+        isFullScreen={isFullScreen}
+        // Lock the toolbar in some specific situations:
+        locked={
+          isRowSelected || isCellSelected || (isTouchDevice && isFocused)
+        }
+        onExpand={expand}
+        onCollapse={collapse}
+        target={StyledResizableContainer}
+      >
+        {isDynamicAndEditable && isRowSelected && (
+          <ToolbarAction
+            label={"Delete row(s)"}
+            icon={Delete}
+            onClick={() => {
+              if (onDelete) {
+                onDelete(gridSelection)
+                clearTooltip()
+              }
+            }}
+          />
+        )}
+        {isDynamicAndEditable && !isRowSelected && (
+          <ToolbarAction
+            label={"Add row"}
+            icon={Add}
+            onClick={() => {
+              if (onRowAppended) {
+                setIsFocused(true)
+                onRowAppended()
+                clearTooltip()
+              }
+            }}
+          />
+        )}
+        {!isLargeTable && !isEmptyTable && (
+          <ToolbarAction
+            label={"Download as CSV"}
+            icon={FileDownload}
+            onClick={() => exportToCsv()}
+          />
+        )}
+        {!isEmptyTable && (
+          <ToolbarAction
+            label={"Search"}
+            icon={Search}
+            onClick={() => {
+              if (!showSearch) {
+                setIsFocused(true)
+                setShowSearch(true)
+              } else {
+                setShowSearch(false)
+              }
+              clearTooltip()
+            }}
+          />
+        )}
+      </Toolbar>
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
@@ -440,8 +538,8 @@ function DataFrame({
           bottomLeft: false,
           topLeft: false,
         }}
-        grid={[1, rowHeight]}
-        snapGap={rowHeight / 3}
+        grid={[1, ROW_HEIGHT]}
+        snapGap={ROW_HEIGHT / 3}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             setResizableSize({
@@ -449,8 +547,9 @@ function DataFrame({
               height:
                 // Add an additional pixel if it is stretched to full width
                 // to allow the full cell border to be visible
-                maxHeight - resizableRef.current.size.height === 3
-                  ? resizableRef.current.size.height + 3
+                maxHeight - resizableRef.current.size.height ===
+                BORDER_THRESHOLD
+                  ? resizableRef.current.size.height + BORDER_THRESHOLD
                   : resizableRef.current.size.height,
             })
           }
@@ -464,8 +563,8 @@ function DataFrame({
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
-          rowHeight={rowHeight}
-          headerHeight={rowHeight}
+          rowHeight={ROW_HEIGHT}
+          headerHeight={ROW_HEIGHT}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
@@ -486,13 +585,27 @@ function DataFrame({
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={!isTouchDevice ? "rect" : "none"}
+          rangeSelect={isTouchDevice ? "none" : "rect"}
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable tooltips on hover of a cell or column header:
           onItemHovered={onItemHovered}
-          // Activate search:
-          keybindings={{ search: true, downFill: true }}
+          // Activate keybindings:
+          keybindings={{ downFill: true }}
+          // Search needs to be activated manually, to support search
+          // via the toolbar:
+          onKeyDown={event => {
+            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+              setShowSearch(cv => !cv)
+              event.stopPropagation()
+              event.preventDefault()
+            }
+          }}
+          showSearch={showSearch}
+          onSearchClose={() => {
+            setShowSearch(false)
+            clearTooltip()
+          }}
           // Header click is used for column sorting:
           onHeaderClicked={
             // Deactivate sorting for empty state and for large dataframes:
@@ -578,7 +691,7 @@ function DataFrame({
                 bgCellMedium: theme.bgHeader,
               },
               rowMarkers: "checkbox",
-              rowSelectionMode: "auto",
+              rowSelectionMode: "multi",
               rowSelect: disabled ? "none" : "multi",
               // Support adding rows:
               onRowAppended: disabled ? undefined : onRowAppended,
@@ -599,4 +712,4 @@ function DataFrame({
   )
 }
 
-export default withFullScreenWrapper(DataFrame)
+export default withFullScreenWrapper(DataFrame, true)

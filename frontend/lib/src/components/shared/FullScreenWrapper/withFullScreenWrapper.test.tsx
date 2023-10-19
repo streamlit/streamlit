@@ -17,7 +17,7 @@
 import React, { PureComponent, ReactNode } from "react"
 import { mount } from "@streamlit/lib/src/test_util"
 
-import FullScreenWrapper from "@streamlit/lib/src/components/shared/FullScreenWrapper"
+import FullScreenWrapper from "./FullScreenWrapper"
 import withFullScreenWrapper from "./withFullScreenWrapper"
 
 interface TestProps {
@@ -25,6 +25,8 @@ interface TestProps {
   isFullScreen: boolean
   label: string
   height?: number
+  expand: () => void
+  collapse: () => void
 }
 
 class TestComponent extends PureComponent<TestProps> {
@@ -34,6 +36,8 @@ class TestComponent extends PureComponent<TestProps> {
 const getProps = (props: Partial<TestProps> = {}): TestProps => ({
   width: 100,
   isFullScreen: false,
+  expand: jest.fn(),
+  collapse: jest.fn(),
   label: "label",
   ...props,
 })

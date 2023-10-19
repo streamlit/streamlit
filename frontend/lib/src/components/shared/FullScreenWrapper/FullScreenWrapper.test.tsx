@@ -17,10 +17,12 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
-import { LibContextProps } from "src/components/core/LibContext"
+import { LibContextProps } from "@streamlit/lib/src/components/core/LibContext"
+
+import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
 
 describe("FullScreenWrapper", () => {
   const getProps = (
@@ -33,10 +35,12 @@ describe("FullScreenWrapper", () => {
     ...props,
   })
 
-  it("cannot find StyledFullScreenButton when hideFullScreenButtons is true", () => {
+  it("cannot find StyledFullScreenButton when disableFullscreenMode is true", () => {
     const props = getProps()
     const providerProps = {
-      hideFullScreenButtons: true,
+      libConfig: {
+        disableFullscreenMode: true,
+      },
     } as Partial<LibContextProps>
 
     customRenderLibContext(<FullScreenWrapper {...props} />, providerProps)
@@ -50,5 +54,15 @@ describe("FullScreenWrapper", () => {
     customRenderLibContext(<FullScreenWrapper {...props} />, {})
     // queryBy returns null vs. error
     expect(screen.queryByTestId("StyledFullScreenButton")).not.toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
+  })
+
+  it("hides StyledFullScreenScreenButton when disableFullscreenMode is true", () => {
+    const props = getProps({ hideFullScreenButton: true })
+
+    customRenderLibContext(<FullScreenWrapper {...props} />, {})
+
+    expect(
+      screen.queryByTestId("StyledFullScreenButton")
+    ).not.toBeInTheDocument()
   })
 })
