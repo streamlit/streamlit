@@ -100,32 +100,23 @@ class InitialValue:
 # have enough variation in how to get their values that most will need their
 # own classes too.
 @dataclass
-class Element:
+class Element(ABC):
     type: str
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
     key: str | None
 
+    @abstractmethod
     def __init__(self, proto: ElementProto, root: ElementTree):
-        ty = proto.WhichOneof("type")
-        assert ty is not None
-        self.proto = getattr(proto, ty)
-        self.root = root
-        self.type = ty
-        self.key = None
+        ...
 
     def __iter__(self):
         yield self
 
     @property
+    @abstractmethod
     def value(self) -> Any:
-        try:
-            state = self.root.session_state
-            assert state is not None
-            return state[self.proto.id]
-        except ValueError:
-            # No id field, not a widget
-            return self.proto.value
+        ...
 
     def __getattr__(self, name: str) -> Any:
         """Fallback attempt to get an attribute from the proto"""
@@ -147,7 +138,28 @@ class Element:
 
 
 @dataclass(repr=False)
-class Widget(ABC, Element):
+class UnknownElement(Element):
+    def __init__(self, proto: ElementProto, root: ElementTree):
+        ty = proto.WhichOneof("type")
+        assert ty is not None
+        self.proto = getattr(proto, ty)
+        self.root = root
+        self.type = ty
+        self.key = None
+
+    @property
+    def value(self) -> Any:
+        try:
+            state = self.root.session_state
+            assert state is not None
+            return state[self.proto.id]
+        except ValueError:
+            # No id field, not a widget
+            return self.proto.value
+
+
+@dataclass(repr=False)
+class Widget(Element, ABC):
     id: str
     help: str
     form_id: str
@@ -1675,7 +1687,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             elif ty == "toast":
                 new_node = Toast(elt.toast, root=root)
             else:
-                new_node = Element(elt, root=root)
+                new_node = UnknownElement(elt, root=root)
         elif delta.WhichOneof("type") == "add_block":
             block = delta.add_block
             bty = block.WhichOneof("type")
