@@ -25,6 +25,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -278,30 +279,24 @@ def test_select_slider_enum_coercion():
         C = 3
 
     selected = st.select_slider("my_enum", EnumA, value=EnumA.A)
-    st.text(str(selected in EnumA))
     st.text(id(selected.__class__))
+    st.text(id(EnumA))
+    st.text(selected in EnumA)
     """
     ).run()
-    select_slider = at.select_slider[0]
-    original_class = select_slider.value.__class__
-    original_id = at.text[1].value
-    assert original_class.__qualname__ == "EnumA"
-    assert at.text[0].value == "True"
 
-    # https://github.com/streamlit/streamlit/issues/7563 requires conversion to a str
-    # before calling set_value
-    at = select_slider.set_value(str(original_class.C)).run()
-    select_slider = at.select_slider[0]
-    new_class = select_slider.value.__class__
-    # Note: We CANNOT check that `select_slider.value.__class__ is not original_class`
-    # here because `select_slider.value` uses `st.session_state` which HAS NOT been
-    # coerced, and thus still contains the Enum of the old class.
-    # Instead, we check the ID value printed within the script to verify the
-    # coercion has happened.
-    new_id = at.text[1].value
-    assert new_id != original_id
-    assert new_class.__qualname__ == "EnumA"
-    assert at.text[0].value == "True"
+    def test_enum():
+        select_slider = at.select_slider[0]
+        original_class = select_slider.value.__class__
+        select_slider.set_value(original_class.C).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.
 
 
 def test_select_slider_enum_coercion_multivalue():
@@ -317,13 +312,21 @@ def test_select_slider_enum_coercion_multivalue():
         C = 3
 
     selected_list = st.select_slider("my_enum", EnumA, value=[EnumA.A, EnumA.C])
-    assert all(selected in EnumA for selected in selected_list)
+    st.text(id(selected_list[0].__class__))
+    st.text(id(EnumA))
+    st.text(all(selected in EnumA for selected in selected_list))
     """
     ).run()
-    assert len(at.exception) == 0
 
-    # https://github.com/streamlit/streamlit/issues/7563 requires conversion to a str
-    # before calling set_value. Here, rather than "convert" to a string we just
-    # pass in what the string _would_ be because it's easier that way :P
-    at = at.select_slider[0].set_value(["EnumA.A", "EnumA.B"]).run()
-    assert len(at.exception) == 0
+    def test_enum():
+        select_slider = at.select_slider[0]
+        original_class = select_slider.value[0].__class__
+        select_slider.set_value([original_class.A, original_class.B]).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.

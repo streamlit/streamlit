@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -28,6 +29,7 @@ from streamlit.elements.widgets.multiselect import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -391,13 +393,21 @@ def test_multiselect_enum_coercion():
         C = 3
 
     selected_list = st.multiselect("my_enum", EnumA, default=[EnumA.A, EnumA.C])
-    assert all(selected in EnumA for selected in selected_list)
+    st.text(id(selected_list[0].__class__))
+    st.text(id(EnumA))
+    st.text(all(selected in EnumA for selected in selected_list))
     """
     ).run()
-    assert len(at.exception) == 0
 
-    # https://github.com/streamlit/streamlit/issues/7563 requires conversion to a str
-    # before calling set_value. Here, rather than "convert" to a string we just
-    # pass in what the string _would_ be because it's easier that way :P
-    at = at.multiselect[0].set_value(["EnumA.B"]).run()
-    assert len(at.exception) == 0
+    def test_enum():
+        multiselect = at.multiselect[0]
+        original_class = multiselect.value[0].__class__
+        multiselect.set_value([original_class.A, original_class.B]).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.

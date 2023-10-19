@@ -24,6 +24,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -238,25 +239,21 @@ def test_selectbox_enum_coercion():
         C = 3
 
     selected = st.selectbox("my_enum", EnumA, index=0)
-    st.text(str(selected in EnumA))
     st.text(id(selected.__class__))
+    st.text(id(EnumA))
+    st.text(selected in EnumA)
     """
     ).run()
-    selectbox = at.selectbox[0]
-    original_class = selectbox.value.__class__
-    original_id = at.text[1].value
-    assert original_class.__qualname__ == "EnumA"
-    assert at.text[0].value == "True"
 
-    at = selectbox.select_index(1).run()
-    selectbox = at.selectbox[0]
-    new_class = selectbox.value.__class__
-    # Note: We CANNOT check that `selectbox.value.__class__ is not original_class`
-    # here because `selectbox.value` uses `st.session_state` which HAS NOT been
-    # coerced, and thus still contains the Enum of the old class.
-    # Instead, we check the ID value printed within the script to verify the
-    # coercion has happened.
-    new_id = at.text[1].value
-    assert new_id != original_id
-    assert new_class.__qualname__ == "EnumA"
-    assert at.text[0].value == "True"
+    def test_enum():
+        selectbox = at.selectbox[0]
+        original_class = selectbox.value.__class__
+        selectbox.set_value(original_class.C).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.
