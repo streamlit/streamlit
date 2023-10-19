@@ -53,14 +53,13 @@ export const StyledSummaryHeading = styled.span(({ theme }) => ({
 }))
 
 export const StyledSummary = styled.summary(({ theme }) => ({
+  position: "relative",
   display: "flex",
   width: "100%",
   "&:focus": {
-    outline: "none",
-    color: theme.colors.primary,
-  },
-  "&:focus svg": {
-    fill: theme.colors.primary,
+    outline: `${BORDER_SIZE}px solid ${theme.colors.primary}`,
+    outlineOffset: `-${BORDER_SIZE}px`,
+    borderRadius: theme.radii.lg,
   },
   fontSize: theme.fontSizes.sm,
   paddingLeft: theme.spacing.lg,

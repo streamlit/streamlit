@@ -78,7 +78,7 @@ def test_empty_expander_not_rendered(app: Page):
 
 
 def test_expander_session_state_set(app: Page):
-    """Test that an empty expander is not rendered."""
+    """Test that session state updates are propagated to expander content"""
     main_expanders = app.locator(".main [data-testid='stExpander']")
     expect(main_expanders).to_have_count(3)
 

@@ -71,7 +71,7 @@ describe("Expander container", () => {
     expect(screen.getByText(props.element.label)).toBeInTheDocument()
   })
 
-  it("renders no collapse/expand icon if empty", () => {
+  it("does not render collapse/expand icon if empty", () => {
     const props = getProps({}, { empty: true })
     render(<Expander {...props}></Expander>)
     expect(screen.getByTestId("stExpanderToggleIcon")).toBeInTheDocument()
