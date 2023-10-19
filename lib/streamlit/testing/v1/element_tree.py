@@ -72,7 +72,6 @@ from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.safe_session_state import SafeSessionState
-from streamlit.runtime.state.session_state import SessionState
 
 if TYPE_CHECKING:
     from streamlit.testing.v1.app_test import AppTest
@@ -98,7 +97,7 @@ class InitialValue:
 # own classes too.
 @dataclass
 class Element:
-    type: str
+    type: str = field(repr=False)
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
     key: str | None
@@ -145,7 +144,7 @@ class Element:
 
 @dataclass(repr=False)
 class Widget(ABC, Element):
-    id: str
+    id: str = field(repr=False)
     help: str
     form_id: str
     disabled: bool
@@ -272,7 +271,7 @@ class Success(AlertBase):
 class Button(Widget):
     _value: bool
 
-    proto: ButtonProto
+    proto: ButtonProto = field(repr=False)
     label: str
 
     def __init__(self, proto: ButtonProto, root: ElementTree):
@@ -340,7 +339,7 @@ class ChatInput(Widget):
 class Checkbox(Widget):
     _value: bool | None
 
-    proto: CheckboxProto
+    proto: CheckboxProto = field(repr=False)
     label: str
 
     def __init__(self, proto: CheckboxProto, root: ElementTree):
@@ -376,7 +375,7 @@ class Checkbox(Widget):
 
 @dataclass(repr=False)
 class Code(Element):
-    proto: CodeProto
+    proto: CodeProto = field(repr=False)
 
     language: str
     show_line_numbers: bool
@@ -398,7 +397,7 @@ class ColorPicker(Widget):
     _value: str | None
     label: str
 
-    proto: ColorPickerProto
+    proto: ColorPickerProto = field(repr=False)
 
     def __init__(self, proto: ColorPickerProto, root: ElementTree):
         super().__init__(proto, root)
@@ -457,7 +456,7 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
 @dataclass(repr=False)
 class DateInput(Widget):
     _value: DateValue | None | InitialValue
-    proto: DateInputProto
+    proto: DateInputProto = field(repr=False)
     label: str
     min: date
     max: date
@@ -517,7 +516,7 @@ class Exception(Element):
 
 @dataclass(repr=False)
 class HeadingBase(Element, ABC):
-    proto: HeadingProto
+    proto: HeadingProto = field(repr=False)
 
     tag: str
     anchor: str | None
@@ -555,7 +554,7 @@ class Title(HeadingBase):
 
 @dataclass(repr=False)
 class Markdown(Element):
-    proto: MarkdownProto
+    proto: MarkdownProto = field(repr=False)
 
     is_caption: bool
     allow_html: bool
@@ -597,7 +596,7 @@ class Latex(Markdown):
 class Multiselect(Widget, Generic[T]):
     _value: list[T] | None
 
-    proto: MultiSelectProto
+    proto: MultiSelectProto = field(repr=False)
     label: str
     options: list[str]
     max_selections: int
@@ -671,7 +670,7 @@ Number = Union[int, float]
 @dataclass(repr=False)
 class NumberInput(Widget):
     _value: Number | None | InitialValue
-    proto: NumberInputProto
+    proto: NumberInputProto = field(repr=False)
     label: str
     min: Number | None
     max: Number | None
@@ -838,7 +837,7 @@ class Selectbox(Widget, Generic[T]):
 class SelectSlider(Widget, Generic[T]):
     _value: T | Sequence[T] | None
 
-    proto: SliderProto
+    proto: SliderProto = field(repr=False)
     label: str
     data_type: SliderProto.DataType.ValueType
     options: list[str]
@@ -890,7 +889,7 @@ class SelectSlider(Widget, Generic[T]):
 class Slider(Widget, Generic[SliderScalarT]):
     _value: SliderScalarT | Sequence[SliderScalarT] | None
 
-    proto: SliderProto
+    proto: SliderProto = field(repr=False)
     label: str
     data_type: SliderProto.DataType.ValueType
     min: SliderScalar
@@ -937,7 +936,7 @@ class Slider(Widget, Generic[SliderScalarT]):
 
 @dataclass(repr=False)
 class Text(Element):
-    proto: TextProto
+    proto: TextProto = field(repr=False)
 
     key: None = None
 
@@ -955,7 +954,7 @@ class Text(Element):
 class TextArea(Widget):
     _value: str | None | InitialValue
 
-    proto: TextAreaProto
+    proto: TextAreaProto = field(repr=False)
     label: str
     max_chars: int
     placeholder: str
@@ -997,7 +996,7 @@ class TextArea(Widget):
 @dataclass(repr=False)
 class TextInput(Widget):
     _value: str | None | InitialValue
-    proto: TextInputProto
+    proto: TextInputProto = field(repr=False)
     label: str
     max_chars: int
     autocomplete: str
@@ -1043,7 +1042,7 @@ TimeValue: TypeAlias = Union[time, datetime]
 @dataclass(repr=False)
 class TimeInput(Widget):
     _value: TimeValue | None | InitialValue
-    proto: TimeInputProto
+    proto: TimeInputProto = field(repr=False)
     label: str
     step: int
 
@@ -1303,6 +1302,7 @@ class SpecialBlock(Block):
 
 @dataclass(repr=False)
 class ChatMessage(Block):
+    type: str = field(repr=False)
     proto: BlockProto.ChatMessage = field(repr=False)
     name: str
     avatar: str
@@ -1322,6 +1322,7 @@ class ChatMessage(Block):
 
 @dataclass(repr=False)
 class Column(Block):
+    type: str = field(repr=False)
     proto: BlockProto.Column = field(repr=False)
     weight: float
     gap: str
@@ -1341,6 +1342,7 @@ class Column(Block):
 
 @dataclass(repr=False)
 class Tab(Block):
+    type: str = field(repr=False)
     proto: BlockProto.Tab = field(repr=False)
     label: str
 
@@ -1437,6 +1439,9 @@ class ElementTree(Block):
 
         widget_states = self.get_widget_states()
         return self._runner._run(widget_states, timeout=timeout)
+
+    def __repr__(self):
+        return repr(self.children)
 
 
 def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
