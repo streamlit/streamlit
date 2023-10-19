@@ -58,6 +58,13 @@ import {
   useDataExporter,
 } from "./hooks"
 import {
+  BORDER_THRESHOLD,
+  MIN_COLUMN_WIDTH,
+  MAX_COLUMN_WIDTH,
+  MAX_COLUMN_AUTO_WIDTH,
+  ROW_HEIGHT,
+} from "./hooks/useTableSizer"
+import {
   BaseColumn,
   toGlideColumn,
   getTextCell,
@@ -69,12 +76,6 @@ import { StyledResizableContainer } from "./styled-components"
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
-// Min column width used for manual and automatic resizing
-const MIN_COLUMN_WIDTH = 50
-// Max column width used for manual resizing
-const MAX_COLUMN_WIDTH = 1000
-// Max column width used for automatic column sizing
-const MAX_COLUMN_AUTO_WIDTH = 500
 // Debounce time for triggering a widget state update
 // This prevents to rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 100
@@ -331,7 +332,6 @@ function DataFrame({
   )
 
   const {
-    rowHeight,
     minHeight,
     maxHeight,
     minWidth,
@@ -389,7 +389,7 @@ function DataFrame({
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
-    if (resizableContainerRef.current && !isEmptyTable) {
+    if (resizableContainerRef.current) {
       // TODO(lukasmasuch): This is only a hacky and temporary solution until
       // glide-data-grid provides a better way to determine this:
       // https://github.com/glideapps/glide-data-grid/issues/784
@@ -400,14 +400,16 @@ function DataFrame({
         ?.getBoundingClientRect()
       if (scrollAreaBounds) {
         setHasVerticalScroll(
-          scrollAreaBounds.height > resizableContainerRef.current.clientHeight
+          scrollAreaBounds.height >
+            resizableContainerRef.current.clientHeight - BORDER_THRESHOLD
         )
         setHasHorizontalScroll(
-          scrollAreaBounds.width > resizableContainerRef.current.clientWidth
+          scrollAreaBounds.width >
+            resizableContainerRef.current.clientWidth - BORDER_THRESHOLD
         )
       }
     }
-  }, [resizableSize, numRows, isEmptyTable, glideColumns])
+  }, [resizableSize, numRows, glideColumns])
 
   return (
     <StyledResizableContainer
@@ -538,8 +540,8 @@ function DataFrame({
           bottomLeft: false,
           topLeft: false,
         }}
-        grid={[1, rowHeight]}
-        snapGap={rowHeight / 3}
+        grid={[1, ROW_HEIGHT]}
+        snapGap={ROW_HEIGHT / 3}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             setResizableSize({
@@ -547,8 +549,9 @@ function DataFrame({
               height:
                 // Add an additional pixel if it is stretched to full width
                 // to allow the full cell border to be visible
-                maxHeight - resizableRef.current.size.height === 3
-                  ? resizableRef.current.size.height + 3
+                maxHeight - resizableRef.current.size.height ===
+                BORDER_THRESHOLD
+                  ? resizableRef.current.size.height + BORDER_THRESHOLD
                   : resizableRef.current.size.height,
             })
           }
@@ -562,8 +565,8 @@ function DataFrame({
           minColumnWidth={MIN_COLUMN_WIDTH}
           maxColumnWidth={MAX_COLUMN_WIDTH}
           maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
-          rowHeight={rowHeight}
-          headerHeight={rowHeight}
+          rowHeight={ROW_HEIGHT}
+          headerHeight={ROW_HEIGHT}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={onColumnResize}
           // Freeze all index columns:
