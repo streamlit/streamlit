@@ -45,6 +45,7 @@ export interface TooltipProps {
   children: ReactNode
   inline?: boolean
   style?: React.CSSProperties
+  onMouseEnterDelay?: number
 }
 
 function Tooltip({
@@ -53,6 +54,7 @@ function Tooltip({
   children,
   inline,
   style,
+  onMouseEnterDelay,
 }: TooltipProps): ReactElement {
   const theme: EmotionTheme = useTheme()
   const { colors, fontSizes, radii } = theme
@@ -73,6 +75,7 @@ function Tooltip({
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
       showArrow={false}
       popoverMargin={10}
+      onMouseEnterDelay={onMouseEnterDelay}
       overrides={{
         Body: {
           style: {

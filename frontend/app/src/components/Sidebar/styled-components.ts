@@ -244,8 +244,8 @@ export const StyledSidebarUserContent =
       ? theme.spacing.lg
       : theme.sizes.sidebarTopSpace,
     paddingBottom: theme.sizes.sidebarTopSpace,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
+    paddingLeft: theme.spacing.twoXL,
+    paddingRight: theme.spacing.twoXL,
 
     "@media print": {
       paddingTop: `1rem`,

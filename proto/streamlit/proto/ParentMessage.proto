@@ -1,4 +1,4 @@
-/**
+/**!
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,4 +14,9 @@
  * limitations under the License.
  */
 
-export { default } from "./withFullScreenWrapper"
+syntax = "proto3";
+
+message ParentMessage {
+  // Message to send to the host.
+  string message = 1;
+}
