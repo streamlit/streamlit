@@ -49,17 +49,17 @@ describe("st.slider", () => {
     cy.get(".stSlider label").should(
       "have.text",
       "Label A" +
-      "Range A" +
-      "Label B" +
-      "Range B" +
-      "Label 1" +
-      "Label 2" +
-      "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
-      "Label 4" +
-      "Label 5" +
-      "Label 6" +
-      "Label 7" +
-      "Label 8"
+        "Range A" +
+        "Label B" +
+        "Range B" +
+        "Label 1" +
+        "Label 2" +
+        "Label 3 - This is a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long label" +
+        "Label 4" +
+        "Label 5" +
+        "Label 6" +
+        "Label 7" +
+        "Label 8"
     );
   });
 
@@ -91,32 +91,36 @@ describe("st.slider", () => {
 
   it("realigns label values when expander re-opened", () => {
     // Closes the expander
-    cy.get(".streamlit-expanderHeader").click();
+    cy.get('[data-testid="stExpander"] summary').click();
 
     // Reopens the expander
-    cy.get(".streamlit-expanderHeader").click();
+    cy.get('[data-testid="stExpander"] summary').click();
 
     // Positioning error occurs on overflow of expander container
     // which occurs when position left set to 0px
-    cy.getIndexed(".StyledThumbValue", 5).should("not.have.css", "left", "0px")
+    cy.getIndexed(".StyledThumbValue", 5).should(
+      "not.have.css",
+      "left",
+      "0px"
+    );
   });
 
   it("has correct values", () => {
     cy.get(".stMarkdown").should(
       "have.text",
       "Value A: 12345678" +
-      "Range Value A: (10000, 25000)" +
-      "Value B: 10000" +
-      "Range Value B: (10000, 25000)" +
-      "Value 1: 25" +
-      "Value 2: (25.0, 75.0)" +
-      "Value 3: 1" +
-      "Value 4: 10000" +
-      "Value 5: 25" +
-      "Value 6: 36" +
-      "Value 7: 2019-08-01 2019-09-01" +
-      "Value 8: 25" +
-      "Slider changed: False"
+        "Range Value A: (10000, 25000)" +
+        "Value B: 10000" +
+        "Range Value B: (10000, 25000)" +
+        "Value 1: 25" +
+        "Value 2: (25.0, 75.0)" +
+        "Value 3: 1" +
+        "Value 4: 10000" +
+        "Value 5: 25" +
+        "Value 6: 36" +
+        "Value 7: 2019-08-01 2019-09-01" +
+        "Value 8: 25" +
+        "Slider changed: False"
     );
   });
 
