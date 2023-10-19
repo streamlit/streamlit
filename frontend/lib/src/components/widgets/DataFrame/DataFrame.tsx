@@ -400,12 +400,10 @@ function DataFrame({
         ?.getBoundingClientRect()
       if (scrollAreaBounds) {
         setHasVerticalScroll(
-          scrollAreaBounds.height >
-            resizableContainerRef.current.clientHeight - BORDER_THRESHOLD
+          scrollAreaBounds.height > resizableContainerRef.current.clientHeight
         )
         setHasHorizontalScroll(
-          scrollAreaBounds.width >
-            resizableContainerRef.current.clientWidth - BORDER_THRESHOLD
+          scrollAreaBounds.width > resizableContainerRef.current.clientWidth
         )
       }
     }
