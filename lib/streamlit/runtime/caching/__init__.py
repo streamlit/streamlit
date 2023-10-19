@@ -23,7 +23,7 @@ from streamlit.runtime.caching.cache_data_api import (
     CacheDataAPI,
     _data_caches,
 )
-from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL as CACHE_DOCS_URL
+from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
@@ -100,11 +100,9 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 # Explicitly export public symbols
-from streamlit.runtime.caching.cache_data_api import (
-    get_data_cache_stats_provider as get_data_cache_stats_provider,
-)
+from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
 from streamlit.runtime.caching.cache_resource_api import (
-    get_resource_cache_stats_provider as get_resource_cache_stats_provider,
+    get_resource_cache_stats_provider,
 )
 
 # Create and export public API singletons.
@@ -130,3 +128,20 @@ experimental_singleton = CacheResourceAPI(
     decorator_metric_name="experimental_singleton",
     deprecation_warning=_SINGLETON_WARNING,
 )
+
+
+__all__ = [
+    "CACHE_DOCS_URL",
+    "save_element_message",
+    "save_block_message",
+    "save_widget_metadata",
+    "save_media_data",
+    "maybe_show_cached_st_function_warning",
+    "suppress_cached_st_function_warning",
+    "get_data_cache_stats_provider",
+    "get_resource_cache_stats_provider",
+    "cache_data",
+    "cache_resource",
+    "experimental_memo",
+    "experimental_singleton",
+]
