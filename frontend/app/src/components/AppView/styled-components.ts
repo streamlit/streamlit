@@ -122,13 +122,6 @@ export const StyledAppViewBlockContainer =
     }
   )
 
-export const StyledAppViewBlockSpacer = styled.div(({ theme }) => {
-  return {
-    width: theme.sizes.full,
-    flexGrow: 1,
-  }
-})
-
 export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   color: theme.colors.fadedText60,
   // We do not want to change the font for this based on theme.

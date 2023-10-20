@@ -241,36 +241,6 @@ describe("AppView element", () => {
     expect(style.maxWidth).toEqual("initial")
   })
 
-  it("renders the Spacer when not embedded", () => {
-    const realUseContext = React.useContext
-    jest.spyOn(React, "useContext").mockImplementation(input => {
-      if (input === AppContext) {
-        return getContextOutput({ wideMode: false, embedded: false })
-      }
-
-      return realUseContext(input)
-    })
-
-    render(<AppView {...getProps()} />)
-
-    expect(screen.getByTestId("AppViewBlockSpacer")).toBeInTheDocument()
-  })
-
-  it("does not render the Spacer when embedded", () => {
-    const realUseContext = React.useContext
-    jest.spyOn(React, "useContext").mockImplementation(input => {
-      if (input === AppContext) {
-        return getContextOutput({ wideMode: false, embedded: true })
-      }
-
-      return realUseContext(input)
-    })
-
-    render(<AppView {...getProps()} />)
-
-    expect(screen.queryByTestId("AppViewBlockSpacer")).not.toBeInTheDocument()
-  })
-
   describe("when window.location.hash changes", () => {
     let originalLocation: Location
     beforeEach(() => (originalLocation = window.location))

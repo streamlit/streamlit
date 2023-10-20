@@ -203,11 +203,6 @@ function AppView(props: AppViewProps): ReactElement {
             data-iframe-height
           />
         )}
-        {/* Spacer fills up dead space to ensure the footer remains at the
-        bottom of the page in larger views */}
-        {(!embedded || showFooter) && (
-          <StyledAppViewBlockSpacer data-testid="AppViewBlockSpacer" />
-        )}
       </Component>
       {hasEventElements && (
         <EventContainer
