@@ -41,7 +41,6 @@ import {
   StyledAppViewContainer,
   StyledAppViewMain,
   StyledIFrameResizerAnchor,
-  StyledAppViewBlockSpacer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
