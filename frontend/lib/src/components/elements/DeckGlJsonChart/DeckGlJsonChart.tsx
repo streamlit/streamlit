@@ -264,7 +264,9 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
                 ? deck.mapStyle
                 : deck.mapStyle[0])
             }
-            mapboxApiAccessToken={this.props.mapboxToken}
+            mapboxApiAccessToken={
+              this.props.element.mapboxToken || this.props.mapboxToken
+            }
           />
           <StyledNavigationControlContainer>
             <NavigationControl className="zoomButton" showCompass={false} />
