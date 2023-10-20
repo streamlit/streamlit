@@ -146,8 +146,9 @@ class MediaMixin:
             * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
               If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
 
-            * A dictionary: Pairs of display names (e.g., 'English', 'French') and file paths or raw subtitle content in '.vtt' or '.srt' formats.
-              Enables multiple subtitle tracks. Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+            * A dictionary: Pairs of labels and file paths or raw subtitle content in '.vtt' or '.srt' formats.
+              Enables multiple subtitle tracks. The label will be shown in the video player.
+              Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
 
             * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
 
@@ -441,20 +442,21 @@ def marshall_video(
     start_time : int
         The time from which this element should start playing. (default: 0)
     subtitles: str, dict, or io.BytesIO
-            Optional subtitle data for the video, supporting several input types:
+        Optional subtitle data for the video, supporting several input types:
 
-            * None (default): No subtitles.
+        * None (default): No subtitles.
 
-            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
-              If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
+        * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
+            If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
 
-            * A dictionary: Pairs of display names (e.g., 'English', 'French') and file paths or raw subtitle content in '.vtt' or '.srt' formats.
-              Enables multiple subtitle tracks. Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+        * A dictionary: Pairs of labels and file paths or raw subtitle content in '.vtt' or '.srt' formats.
+            Enables multiple subtitle tracks. The label will be shown in the video player.
+            Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
 
-            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
+        * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
 
-            When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
-            Not supported for YouTube videos.
+        When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
+        Not supported for YouTube videos.
     """
     from validators import url
 
