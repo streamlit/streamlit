@@ -39,6 +39,7 @@ from streamlit.color_util import Color, IntColorTuple, is_color_like, to_int_col
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from pandas.io.formats.style import Styler
@@ -129,23 +130,20 @@ class MapMixin:
 
         latitude : str or None
             The name of the column containing the latitude coordinates of
-            the datapoints in the chart. This argument can only be supplied
-            by keyword.
+            the datapoints in the chart.
 
             If None, the latitude data will come from any column named 'lat',
             'latitude', 'LAT', or 'LATITUDE'.
 
         longitude : str or None
             The name of the column containing the longitude coordinates of
-            the datapoints in the chart. This argument can only be supplied
-            by keyword.
+            the datapoints in the chart.
 
             If None, the longitude data will come from any column named 'lon',
             'longitude', 'LON', or 'LONGITUDE'.
 
         color : str or tuple or None
-            The color of the circles representing each datapoint. This argument
-            can only be supplied by keyword.
+            The color of the circles representing each datapoint.
 
             Can be:
 
@@ -159,8 +157,7 @@ class MapMixin:
               as described above.
 
         size : str or float or None
-            The size of the circles representing each point, in meters. This
-            argument can only be supplied by keyword.
+            The size of the circles representing each point, in meters.
 
             This can be:
 
@@ -173,12 +170,10 @@ class MapMixin:
         zoom : int
             Zoom level as specified in
             https://wiki.openstreetmap.org/wiki/Zoom_levels.
-            This argument can only be supplied by keyword.
 
         use_container_width: bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -491,7 +486,7 @@ def marshall(
     use_container_width: bool,
 ) -> None:
     json_bytes = pydeck_json.encode("utf-8")
-    id = hashlib.md5(json_bytes).hexdigest()
+    id = hashlib.md5(json_bytes, **HASHLIB_KWARGS).hexdigest()
 
     pydeck_proto.json = pydeck_json
     pydeck_proto.use_container_width = use_container_width

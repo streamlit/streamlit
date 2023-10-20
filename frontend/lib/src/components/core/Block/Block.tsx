@@ -73,7 +73,6 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       <Expander
         empty={node.isEmpty}
         isStale={isStale}
-        widgetsDisabled={props.widgetsDisabled}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
       >
         {child}

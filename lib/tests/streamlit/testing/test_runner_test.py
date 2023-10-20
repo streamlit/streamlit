@@ -42,15 +42,39 @@ def test_from_file():
     script.run()
 
 
-def test_query_params():
+def test_get_query_params():
     def script():
         import streamlit as st
 
         st.write(st.experimental_get_query_params())
 
     at = AppTest.from_function(script).run()
-    assert at.get("json")[0].body == "{}"
+    assert at.json[0].value == "{}"
     at.query_params["foo"] = 5
     at.query_params["bar"] = "baz"
     at.run()
-    assert at.get("json")[0].body == '{"foo": ["5"], "bar": ["baz"]}'
+    assert at.json[0].value == '{"foo": ["5"], "bar": ["baz"]}'
+
+
+def test_set_query_params():
+    def script():
+        import streamlit as st
+
+        st.experimental_set_query_params(foo="bar")
+
+    at = AppTest.from_function(script).run()
+    # parse.parse_qs puts everything in lists
+    assert at.query_params["foo"] == ["bar"]
+
+
+def test_secrets():
+    def script():
+        import streamlit as st
+
+        st.write(st.secrets["foo"])
+
+    at = AppTest.from_function(script)
+    at.secrets["foo"] = "bar"
+    at.run()
+    assert at.markdown[0].value == "bar"
+    assert at.secrets["foo"] == "bar"

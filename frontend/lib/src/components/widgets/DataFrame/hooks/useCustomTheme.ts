@@ -56,7 +56,7 @@ function useCustomTheme(): Partial<GlideTheme> & {
     fgIconHeader: theme.colors.white,
     bgHeader: theme.colors.bgMix,
     bgHeaderHasFocus: theme.colors.secondaryBg,
-    bgHeaderHovered: theme.colors.bgMix, // uses same color as bgHeader to deactivate the hover effect
+    bgHeaderHovered: theme.colors.secondaryBg,
     textHeader: theme.colors.fadedText60,
     textHeaderSelected: theme.colors.white,
     textGroupHeader: theme.colors.fadedText60,

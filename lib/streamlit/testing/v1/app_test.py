@@ -22,6 +22,7 @@ import textwrap
 import traceback
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
+from urllib import parse
 
 from streamlit import source_util, util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -31,23 +32,32 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
     Block,
     Button,
     Caption,
+    ChatInput,
+    ChatMessage,
     Checkbox,
     Code,
     ColorPicker,
+    Column,
     Dataframe,
     DateInput,
     Divider,
     ElementList,
     ElementTree,
+    Error,
     Exception,
     Header,
+    Info,
+    Json,
     Latex,
     Markdown,
+    Metric,
     Multiselect,
     Node,
     NumberInput,
@@ -56,15 +66,22 @@ from streamlit.testing.v1.element_tree import (
     SelectSlider,
     Slider,
     Subheader,
+    Success,
+    Tab,
+    Table,
     Text,
     TextArea,
     TextInput,
     TimeInput,
     Title,
+    Toast,
+    Toggle,
+    Warning,
     WidgetList,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
+from streamlit.util import HASHLIB_KWARGS
 from streamlit.web.bootstrap import _fix_matplotlib_crash
 
 TMP_DIR = tempfile.TemporaryDirectory()
@@ -76,8 +93,9 @@ class AppTest:
     def __init__(self, script_path: str, *, default_timeout: float):
         self._script_path = script_path
         self.default_timeout = default_timeout
-        self.session_state = SessionState()
+        self.session_state = SafeSessionState(SessionState(), lambda: None)
         self.query_params: dict[str, Any] = {}
+        self.secrets: dict[str, Any] = {}
 
         tree = ElementTree()
         tree._runner = self
@@ -101,7 +119,7 @@ class AppTest:
             overridden for individual `.run()` calls.
 
         """
-        hasher = hashlib.md5(bytes(script, "utf-8"))
+        hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
         path = pathlib.Path(TMP_DIR.name, script_name)
@@ -173,6 +191,10 @@ class AppTest:
 
         Timeout is in seconds, or None to use the default timeout of the runner.
         """
+        # Have to import the streamlit module itself so replacing st.secrets
+        # is visible to other modules.
+        import streamlit as st
+
         if timeout is None:
             timeout = self.default_timeout
 
@@ -184,17 +206,32 @@ class AppTest:
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
         with source_util._pages_cache_lock:
-            self.saved_cached_pages = source_util._cached_pages
+            saved_cached_pages = source_util._cached_pages
             source_util._cached_pages = None
+
+        saved_secrets: Secrets = st.secrets
+        # Only modify global secrets stuff if we have been given secrets
+        if self.secrets:
+            new_secrets = Secrets([])
+            new_secrets._secrets = self.secrets
+            st.secrets = new_secrets
 
         with patch_config_options({"runner.postScriptGC": False}):
             script_runner = LocalScriptRunner(self._script_path, self.session_state)
             self._tree = script_runner.run(widget_state, self.query_params, timeout)
             self._tree._runner = self
+            # Last event is SHUTDOWN, so the corresponding data includes query string
+            query_string = script_runner.event_data[-1]["client_state"].query_string
+            self.query_params = parse.parse_qs(query_string)
 
         # teardown
         with source_util._pages_cache_lock:
-            source_util._cached_pages = self.saved_cached_pages
+            source_util._cached_pages = saved_cached_pages
+
+        if self.secrets:
+            if st.secrets._secrets is not None:
+                self.secrets = dict(st.secrets._secrets)
+            st.secrets = saved_secrets
         Runtime._instance = None
 
         return self
@@ -230,6 +267,14 @@ class AppTest:
         return self._tree.caption
 
     @property
+    def chat_input(self) -> WidgetList[ChatInput]:
+        return self._tree.chat_input
+
+    @property
+    def chat_message(self) -> Sequence[ChatMessage]:
+        return self._tree.chat_message
+
+    @property
     def checkbox(self) -> WidgetList[Checkbox]:
         return self._tree.checkbox
 
@@ -240,6 +285,10 @@ class AppTest:
     @property
     def color_picker(self) -> WidgetList[ColorPicker]:
         return self._tree.color_picker
+
+    @property
+    def columns(self) -> Sequence[Column]:
+        return self._tree.columns
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
@@ -254,6 +303,10 @@ class AppTest:
         return self._tree.divider
 
     @property
+    def error(self) -> ElementList[Error]:
+        return self._tree.error
+
+    @property
     def exception(self) -> ElementList[Exception]:
         return self._tree.exception
 
@@ -262,12 +315,24 @@ class AppTest:
         return self._tree.header
 
     @property
+    def info(self) -> ElementList[Info]:
+        return self._tree.info
+
+    @property
+    def json(self) -> ElementList[Json]:
+        return self._tree.json
+
+    @property
     def latex(self) -> ElementList[Latex]:
         return self._tree.latex
 
     @property
     def markdown(self) -> ElementList[Markdown]:
         return self._tree.markdown
+
+    @property
+    def metric(self) -> ElementList[Metric]:
+        return self._tree.metric
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:
@@ -298,6 +363,18 @@ class AppTest:
         return self._tree.subheader
 
     @property
+    def success(self) -> ElementList[Success]:
+        return self._tree.success
+
+    @property
+    def table(self) -> ElementList[Table]:
+        return self._tree.table
+
+    @property
+    def tabs(self) -> Sequence[Tab]:
+        return self._tree.tabs
+
+    @property
     def text(self) -> ElementList[Text]:
         return self._tree.text
 
@@ -316,6 +393,18 @@ class AppTest:
     @property
     def title(self) -> ElementList[Title]:
         return self._tree.title
+
+    @property
+    def toast(self) -> ElementList[Toast]:
+        return self._tree.toast
+
+    @property
+    def toggle(self) -> WidgetList[Toggle]:
+        return self._tree.toggle
+
+    @property
+    def warning(self) -> ElementList[Warning]:
+        return self._tree.warning
 
     def __len__(self) -> int:
         return len(self._tree)

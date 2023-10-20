@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.connections.base_connection import BaseConnection
+from streamlit.connections.snowflake_connection import SnowflakeConnection
+from streamlit.connections.snowpark_connection import SnowparkConnection
+from streamlit.connections.sql_connection import SQLConnection
 
-# Explicitly re-export public symbols.
-from streamlit.connections.base_connection import (
-    ExperimentalBaseConnection as ExperimentalBaseConnection,
-)
-from streamlit.connections.snowpark_connection import (
-    SnowparkConnection as SnowparkConnection,
-)
-from streamlit.connections.sql_connection import SQLConnection as SQLConnection
+ExperimentalBaseConnection = BaseConnection
+
+__all__ = [
+    "BaseConnection",
+    "SnowflakeConnection",
+    "SnowparkConnection",
+    "SQLConnection",
+    "ExperimentalBaseConnection",
+]
