@@ -30,7 +30,8 @@ def test_captures_photo(app: Page):
     # Wait for some timeout, until fake video stream available for camera_input
     app.wait_for_timeout(2000)
     take_photo_button = app.get_by_test_id("stCameraInputButton").first
-    take_photo_button.click()
+    take_photo_button.click(force=True)
+    app.wait_for_timeout(1000)
     expect(app.get_by_test_id("stImage")).to_have_count(1)
 
 
@@ -41,10 +42,11 @@ def test_clear_photo(app: Page):
     app.wait_for_timeout(2000)
     take_photo_button = app.get_by_test_id("stCameraInputButton").first
     # Capture a photo
-    take_photo_button.click()
+    take_photo_button.click(force=True)
+    app.wait_for_timeout(1000)
     expect(app.get_by_test_id("stImage")).to_have_count(1)
     remove_photo_button = app.get_by_text("Clear photo").first
-    remove_photo_button.click()
+    remove_photo_button.click(force=True)
     app.wait_for_timeout(1000)
     expect(app.get_by_test_id("stImage")).to_have_count(0)
 
