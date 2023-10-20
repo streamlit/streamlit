@@ -19,7 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 @pytest.mark.only_browser("chromium")
 def test_displays_correct_number_of_elements(
-    app: Page,
+    app: Page, launch_with_camera_options_chromium
 ):
     """Test that it renders correct number of camera_input elements."""
     camera_input_widgets = app.get_by_test_id("stCameraInput")
@@ -27,9 +27,7 @@ def test_displays_correct_number_of_elements(
 
 
 @pytest.mark.only_browser("chromium")
-def test_captures_photo(
-    app: Page,
-):
+def test_captures_photo(app: Page, launch_with_camera_options_chromium):
     """Test camera_input captures photo when 'Take photo' button clicked"""
     # Wait for some timeout, until fake video stream available for camera_input
     app.wait_for_timeout(2000)
@@ -39,9 +37,7 @@ def test_captures_photo(
 
 
 @pytest.mark.only_browser("chromium")
-def test_clear_photo(
-    app: Page,
-):
+def test_clear_photo(app: Page, launch_with_camera_options_chromium):
     """Test camera_input removes photo when 'Clear photo' button clicked"""
     # Wait for some timeout, until fake video stream available for camera_input
     app.wait_for_timeout(2000)
@@ -59,6 +55,7 @@ def test_clear_photo(
 def test_shows_disabled_widget_correctly(
     themed_app: Page,
     assert_snapshot: ImageCompareFunction,
+    launch_with_camera_options_chromium,
 ):
     """Test that it renders disabled camera_input widget correctly."""
     camera_input_widgets = themed_app.get_by_test_id("stCameraInput")
