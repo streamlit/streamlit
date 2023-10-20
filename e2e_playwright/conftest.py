@@ -257,11 +257,12 @@ def app(page: Page, app_port: int) -> Page:
 
 
 @pytest.fixture(scope="session")
-def browser_type_launch_args(browser_type_launch_args: Dict):
-    browser_type_launch_args["args"] = [
-        "--use-fake-device-for-media-stream",
-        "--use-fake-ui-for-media-stream",
-    ]
+def browser_type_launch_args(browser_type_launch_args: Dict, browser_name: str):
+    if browser_name == "chromium":
+        browser_type_launch_args["args"] = [
+            "--use-fake-device-for-media-stream",
+            "--use-fake-ui-for-media-stream",
+        ]
     return browser_type_launch_args
 
 
