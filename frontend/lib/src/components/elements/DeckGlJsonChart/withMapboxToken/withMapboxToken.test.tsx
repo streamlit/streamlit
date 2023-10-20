@@ -62,7 +62,7 @@ describe("withMapboxToken", () => {
   describe("withMapboxToken rendering", () => {
     const DeltaType = "testDeltaType"
     const WrappedComponent = withMapboxToken(DeltaType)(MockComponent)
-    const HOST_CONFIG_TOKEN = "HOST_CONFIG_TOKEN"
+    const LIB_CONFIG_TOKEN = "LIB_TOKEN_CONFIG"
 
     beforeEach(() => {
       jest.resetAllMocks()
@@ -142,7 +142,7 @@ describe("withMapboxToken", () => {
       customRenderLibContext(
         <WrappedComponent element={element} width={500} />,
         {
-          libConfig: { mapboxToken: HOST_CONFIG_TOKEN },
+          libConfig: { mapboxToken: LIB_CONFIG_TOKEN },
         }
       )
 
@@ -160,13 +160,13 @@ describe("withMapboxToken", () => {
       customRenderLibContext(
         <WrappedComponent element={emptyElement} width={500} />,
         {
-          libConfig: { mapboxToken: HOST_CONFIG_TOKEN },
+          libConfig: { mapboxToken: LIB_CONFIG_TOKEN },
         }
       )
 
       await waitFor(() => {
         const element = screen.getByTestId("mock-component")
-        expect(element.textContent).toBe(HOST_CONFIG_TOKEN)
+        expect(element.textContent).toBe(LIB_CONFIG_TOKEN)
       })
     })
 
