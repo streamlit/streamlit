@@ -102,9 +102,11 @@ message ForwardMsgMetadata {
   // Only set for Delta messages.
   repeated uint32 delta_path = 2;
 
+  // DEPRECATED: This is not used anymore.
   ElementDimensionSpec element_dimension_spec = 3;
 }
 
+// DEPRECATED: This is not used anymore.
 // Specifies the dimensions for the element
 message ElementDimensionSpec {
   // width in CSS points
