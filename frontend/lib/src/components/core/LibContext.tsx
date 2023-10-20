@@ -25,8 +25,7 @@ import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
  * should still work with a new frontend versions.
  */
 export type LibConfig = {
-  // TODO(lukasmasuch): Add lib config options in subsequent PRs.
-  userMapboxToken?: string
+  mapboxToken?: string
 }
 
 export interface LibContextProps {

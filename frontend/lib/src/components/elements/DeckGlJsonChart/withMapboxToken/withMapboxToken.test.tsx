@@ -16,7 +16,7 @@
 
 import React, { ReactElement } from "react"
 import "@testing-library/jest-dom"
-import { render } from "@streamlit/lib/src/test_util"
+import { customRenderLibContext, render } from "@streamlit/lib/src/test_util"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 
 import withMapboxToken, {
@@ -62,6 +62,7 @@ describe("withMapboxToken", () => {
   describe("withMapboxToken rendering", () => {
     const DeltaType = "testDeltaType"
     const WrappedComponent = withMapboxToken(DeltaType)(MockComponent)
+    const HOST_CONFIG_TOKEN = "HOST_CONFIG_TOKEN"
 
     beforeEach(() => {
       jest.resetAllMocks()
@@ -131,6 +132,59 @@ describe("withMapboxToken", () => {
       await expect(wrappedComponentInstance.initMapboxToken()).rejects.toThrow(
         new MapboxTokenFetchingError(`ERROR (${TOKENS_URL})`)
       )
+    })
+
+    it("should inject mapbox token to the wrapped component when available in the libConfig", async () => {
+      axios.get = jest.fn().mockImplementation(() => ({
+        data: { userMapboxToken: mockMapboxToken },
+      }))
+
+      customRenderLibContext(
+        <WrappedComponent element={element} width={500} />,
+        {
+          libConfig: { mapboxToken: HOST_CONFIG_TOKEN },
+        }
+      )
+
+      await waitFor(() => {
+        const element = screen.getByTestId("mock-component")
+        expect(element.textContent).toBe(mockMapboxToken)
+      })
+    })
+
+    it("prioritizes the libConfig token if no config.toml token and don't fetch our token", async () => {
+      axios.get = jest
+        .fn()
+        .mockResolvedValue({ data: { mapbox: mockMapboxToken } })
+
+      customRenderLibContext(
+        <WrappedComponent element={emptyElement} width={500} />,
+        {
+          libConfig: { mapboxToken: HOST_CONFIG_TOKEN },
+        }
+      )
+
+      await waitFor(() => {
+        const element = screen.getByTestId("mock-component")
+        expect(element.textContent).toBe(HOST_CONFIG_TOKEN)
+      })
+    })
+
+    it("should fetch the token if userMapboxToken is not present in lib config or config.toml", async () => {
+      axios.get = jest
+        .fn()
+        .mockResolvedValue({ data: { mapbox: mockMapboxToken } })
+
+      customRenderLibContext(
+        <WrappedComponent element={emptyElement} width={500} />,
+        {
+          libConfig: { mapboxToken: "" },
+        }
+      )
+
+      await waitFor(() => {
+        expect(axios.get).toHaveBeenCalledWith(TOKENS_URL)
+      })
     })
   })
 })

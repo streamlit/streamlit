@@ -22,6 +22,7 @@ import React, { ComponentType, PureComponent, ReactNode } from "react"
 import MapboxTokenError from "./MapboxTokenError"
 import axios from "axios"
 import { DeckGlJsonChart } from "@streamlit/lib/src/proto"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 interface InjectedProps {
   mapboxToken: string
@@ -75,6 +76,8 @@ const withMapboxToken =
         WrappedComponent.displayName || WrappedComponent.name
       })`
 
+      static contextType = LibContext
+
       public constructor(props: WrappedMapboxProps<P>) {
         super(props)
 
@@ -116,7 +119,8 @@ const withMapboxToken =
       }
 
       public componentDidMount(): void {
-        const mapboxToken = this.props.element.mapboxToken
+        const mapboxToken =
+          this.props.element.mapboxToken || this.context.libConfig.mapboxToken
 
         if (mapboxToken) {
           this.setState({
