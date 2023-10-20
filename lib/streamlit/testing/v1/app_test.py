@@ -182,8 +182,8 @@ class AppTest:
         Returns
         -------
         AppTest
-            A simulated script runner for testing a script. The script
-            runner can be executed via ``.run()``.
+            A simulated Streamlit app for testing. The simulated app can be
+            executed via ``.run()``.
 
         """
         hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
@@ -219,8 +219,8 @@ class AppTest:
         Returns
         -------
         AppTest
-            A simulated script runner for testing a script. The script
-            runner can be executed via ``.run()``.
+            A simulated Streamlit app for testing. The simulated app can be
+            executed via ``.run()``.
 
         """
         # TODO: Simplify this using `ast.unparse()` once we drop 3.8 support
@@ -255,8 +255,8 @@ class AppTest:
         Returns
         -------
         AppTest
-            A simulated script runner for testing a script. The script
-            runner can be executed via ``.run()``.
+            A simulated Streamlit app for testing. The simulated app can be
+            executed via ``.run()``.
 
         """
         if pathlib.Path.is_file(pathlib.Path(script_path)):
