@@ -39,8 +39,6 @@ import { AppContext } from "@streamlit/app/src/components/AppContext"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewContainer,
-  StyledAppViewFooter,
-  StyledAppViewFooterLink,
   StyledAppViewMain,
   StyledIFrameResizerAnchor,
   StyledAppViewBlockSpacer,
@@ -209,14 +207,6 @@ function AppView(props: AppViewProps): ReactElement {
         bottom of the page in larger views */}
         {(!embedded || showFooter) && (
           <StyledAppViewBlockSpacer data-testid="AppViewBlockSpacer" />
-        )}
-        {(!embedded || showFooter) && !containsChatInput && (
-          <StyledAppViewFooter isWideMode={wideMode}>
-            Made with{" "}
-            <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
-              Streamlit
-            </StyledAppViewFooterLink>
-          </StyledAppViewFooter>
         )}
       </Component>
       {hasEventElements && (

@@ -141,33 +141,6 @@ export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   },
 }))
 
-export interface StyledAppViewFooterProps {
-  isWideMode: boolean
-}
-
-export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
-  ({ isWideMode, theme }) => {
-    const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
-    return {
-      color: theme.colors.fadedText40,
-      fontSize: theme.fontSizes.sm,
-      height: theme.sizes.footerHeight,
-      minWidth: isWideMode ? "auto" : undefined,
-      maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
-      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-      // Increase side padding, if layout = wide and we're not on mobile
-      "@media (min-width: 576px)": {
-        paddingLeft: wideSidePadding,
-        paddingRight: wideSidePadding,
-      },
-      width: theme.sizes.full,
-      a: {
-        color: theme.colors.fadedText60,
-      },
-    }
-  }
-)
-
 export interface StyledIFrameResizerAnchorProps {
   hasFooter: boolean
 }
