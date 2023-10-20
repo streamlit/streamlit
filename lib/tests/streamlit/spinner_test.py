@@ -23,9 +23,10 @@ class SpinnerTest(DeltaGeneratorTestCase):
         """Test st.spinner."""
         with spinner("some text"):
             # Without the timeout, the spinner is sometimes not available
-            time.sleep(0.2)
+            time.sleep(0.7)
             el = self.get_delta_from_queue().new_element
             self.assertEqual(el.spinner.text, "some text")
+            self.assertFalse(el.spinner.cache)
         # Check if it gets reset to st.empty()
         last_delta = self.get_delta_from_queue()
         self.assertTrue(last_delta.HasField("new_element"))
@@ -38,9 +39,10 @@ class SpinnerTest(DeltaGeneratorTestCase):
         with st.chat_message("user"):
             with spinner("some text"):
                 # Without the timeout, the spinner is sometimes not available
-                time.sleep(0.2)
+                time.sleep(0.7)
                 el = self.get_delta_from_queue().new_element
                 self.assertEqual(el.spinner.text, "some text")
+                self.assertFalse(el.spinner.cache)
         # Check that the element gets reset to an empty container block:
         last_delta = self.get_delta_from_queue()
         self.assertTrue(last_delta.HasField("add_block"))
@@ -49,3 +51,16 @@ class SpinnerTest(DeltaGeneratorTestCase):
         # it the container is empty. This is the desired behavior
         # for spinner
         self.assertFalse(last_delta.add_block.allow_empty)
+
+    def test_spinner_for_caching(self):
+        """Test st.spinner in cache functions."""
+        with spinner("some text", cache=True):
+            # Without the timeout, the spinner is sometimes not available
+            time.sleep(0.7)
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.spinner.text, "some text")
+            self.assertTrue(el.spinner.cache)
+        # Check if it gets reset to st.empty()
+        last_delta = self.get_delta_from_queue()
+        self.assertTrue(last_delta.HasField("new_element"))
+        self.assertEqual(last_delta.new_element.WhichOneof("type"), "empty")

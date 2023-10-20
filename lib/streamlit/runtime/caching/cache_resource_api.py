@@ -310,7 +310,7 @@ class CacheResourceAPI:
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
 
-        show_spinner : boolean or string
+        show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached resource is being created. If string,
             value of show_spinner param will be used for spinner text.
@@ -323,7 +323,7 @@ class CacheResourceAPI:
             is called to compute a new value. This is useful e.g. to check the
             health of database connections.
 
-        experimental_allow_widgets : boolean
+        experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the

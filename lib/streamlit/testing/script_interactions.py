@@ -21,7 +21,7 @@ import textwrap
 import unittest
 from unittest.mock import MagicMock
 
-from streamlit import config, source_util
+from streamlit import config, logger, source_util
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -29,6 +29,9 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.testing.local_script_runner import LocalScriptRunner
+from streamlit.util import HASHLIB_KWARGS
+
+_LOGGER = logger.get_logger(__name__)
 
 
 class InteractiveScriptTests(unittest.TestCase):
@@ -36,6 +39,10 @@ class InteractiveScriptTests(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        _LOGGER.warning(
+            "`InteractiveScriptTests` is deprecated, please convert your tests to use the new `AppTest` API. "
+        )
 
         # To allow loading scripts to be relative to the test class's directory,
         # we do this in the init so it will run in the subclass's module.
@@ -86,7 +93,7 @@ class InteractiveScriptTests(unittest.TestCase):
         `default_timeout` is the default time in seconds before a script is
         timed out, if not overridden for an individual `.run()` call.
         """
-        hasher = hashlib.md5(bytes(script, "utf-8"))
+        hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
         path = pathlib.Path(self.tmp_script_dir.name, script_name)

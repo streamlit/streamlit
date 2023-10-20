@@ -126,11 +126,13 @@ class RadioMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
-            Labels for the radio options. Labels can include markdown as
-            described in the ``label`` parameter and will be cast to str
-            internally by default. For pandas.DataFrame, the first column is
-            selected.
+        options : Iterable
+            Labels for the select options in an Iterable. For example, this can
+            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
+            pandas.Index. For pandas.DataFrame, the first column is used.
+
+            Labels can include markdown as described in the ``label`` parameter
+            and will be cast to str internally by default.
         index : int or None
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.
@@ -155,12 +157,10 @@ class RadioMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the radio button if set to
-            True. The default is False. This argument can only be supplied by
-            keyword.
+            True. The default is False.
         horizontal : bool
             An optional boolean, which orients the radio group horizontally.
-            The default is false (vertical buttons). This argument can only
-            be supplied by keyword.
+            The default is false (vertical buttons).
         captions : iterable of str or None
             A list of captions to show below each radio button. If None (default),
             no captions are shown.
@@ -168,7 +168,7 @@ class RadioMixin:
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
         Returns
         -------

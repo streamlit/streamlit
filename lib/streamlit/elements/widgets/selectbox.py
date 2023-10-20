@@ -118,9 +118,11 @@ class SelectboxMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
-            Labels for the select options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
+        options : Iterable
+            Labels for the select options in an Iterable. For example, this can
+            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
+            pandas.Index. For pandas.DataFrame, the first column is used.
+            Each label will be cast to str internally by default.
         index : int
             The index of the preselected option on first render. If ``None``,
             will initialize empty and return ``None`` until the user selects an option.
@@ -146,12 +148,12 @@ class SelectboxMixin:
             Defaults to 'Choose an option'.
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
-            The default is False. This argument can only be supplied by keyword.
+            The default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
         Returns
         -------

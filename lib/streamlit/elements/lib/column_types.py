@@ -685,7 +685,7 @@ def SelectboxColumn(
     default: str, int, float, bool, or None
         Specifies the default value in this column when a new row is added by the user.
 
-    options: iterable of str or None
+    options: Iterable of str or None
         The options that can be selected during editing. If None (default), this will be
         inferred from the underlying dataframe column if its dtype is “category”
         (`see Pandas docs on categorical data <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
@@ -1407,15 +1407,15 @@ def ProgressColumn(
     Parameters
     ----------
 
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If None (default),
         the column name is used.
 
-    width: "small", "medium", "large", or None
+    width : "small", "medium", "large", or None
         The display width of the column. Can be one of “small”, “medium”, or “large”.
         If None (default), the column will be sized to fit the cell contents.
 
-    help: str or None
+    help : str or None
         An optional tooltip that gets displayed when hovering over the column label.
 
     format : str or None

@@ -728,12 +728,12 @@ def fix_arrow_incompatible_column_types(
     The fixed dataframe.
     """
     # Make a copy, but only initialize if necessary to preserve memory.
-    df_copy = None
+    df_copy: DataFrame | None = None
     for col in selected_columns or df.columns:
         if is_colum_type_arrow_incompatible(df[col]):
             if df_copy is None:
                 df_copy = df.copy()
-            df_copy[col] = df[col].astype(str)
+            df_copy[col] = df[col].astype("string")
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -748,7 +748,7 @@ def fix_arrow_incompatible_column_types(
     ):
         if df_copy is None:
             df_copy = df.copy()
-        df_copy.index = df.index.astype(str)
+        df_copy.index = df.index.astype("string")
     return df_copy if df_copy is not None else df
 
 

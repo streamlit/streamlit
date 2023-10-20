@@ -26,10 +26,12 @@ import { render } from "@streamlit/lib/src/test_util"
 import Spinner, { SpinnerProps } from "./Spinner"
 
 const getProps = (
-  propOverrides: Partial<SpinnerProps> = {}
+  propOverrides: Partial<SpinnerProps> = {},
+  elementOverrides: Partial<SpinnerProto> = {}
 ): SpinnerProps => ({
   element: SpinnerProto.create({
     text: "Loading...",
+    ...elementOverrides,
   }),
   width: 0,
   ...propOverrides,
@@ -60,5 +62,20 @@ describe("Spinner component", () => {
     // For the width, as it's a style attribute, we can test it this way:
     const spinnerElement = screen.getByTestId("stSpinner")
     expect(spinnerElement).toHaveStyle(`width: 100px`)
+  })
+
+  it("sets additional className/CSS for caching spinner", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { cache: true })} />
+      </BaseProvider>
+    )
+
+    const spinnerContainer = screen.getByTestId("stSpinner")
+    expect(spinnerContainer).toBeInTheDocument()
+
+    expect(spinnerContainer).toHaveClass("stSpinner")
+    expect(spinnerContainer).toHaveClass("cacheSpinner")
+    expect(spinnerContainer).toHaveStyle("paddingBottom: 1rem")
   })
 })

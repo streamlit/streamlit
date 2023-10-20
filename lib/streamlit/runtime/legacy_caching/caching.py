@@ -57,6 +57,7 @@ from streamlit.runtime.legacy_caching.hashing import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.util import HASHLIB_KWARGS
 from streamlit.vendor.pympler.asizeof import asizeof
 
 _LOGGER = get_logger(__name__)
@@ -357,7 +358,7 @@ def _write_to_mem_cache(
 def _get_output_hash(
     value: Any, func_or_code: Callable[..., Any], hash_funcs: Optional[HashFuncsDict]
 ) -> bytes:
-    hasher = hashlib.new("md5")
+    hasher = hashlib.new("md5", **HASHLIB_KWARGS)
     update_hash(
         value,
         hasher=hasher,
@@ -500,20 +501,20 @@ def cache(
     func : callable
         The function to cache. Streamlit hashes the function and dependent code.
 
-    persist : boolean
+    persist : bool
         Whether to persist the cache on disk.
 
-    allow_output_mutation : boolean
+    allow_output_mutation : bool
         Streamlit shows a warning when return values are mutated, as that
         can have unintended consequences. This is done by hashing the return value internally.
 
         If you know what you're doing and would like to override this warning, set this to True.
 
-    show_spinner : boolean
+    show_spinner : bool
         Enable the spinner. Default is True to show a spinner when there is
         a cache miss.
 
-    suppress_st_warning : boolean
+    suppress_st_warning : bool
         Suppress warnings about calling Streamlit commands from within
         the cached function.
 
@@ -711,7 +712,7 @@ def cache(
             return return_value
 
         if show_spinner:
-            with spinner(message):
+            with spinner(message, cache=True):
                 return get_or_create_cached_value()
         else:
             return get_or_create_cached_value()
