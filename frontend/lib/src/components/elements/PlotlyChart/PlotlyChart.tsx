@@ -54,17 +54,6 @@ export interface PlotlyIFrameProps {
   url: string
 }
 
-export interface InteractivePlotlyReturnValue {
-  x: any
-  y: any
-  z?: any
-  hoverText?: string
-  markerSize?: any
-  curveNumber: number
-  pointNumber: number
-  pointIndex: number
-}
-
 function extractNonObjects(obj: any): any {
   const result: any = {}
 
@@ -76,15 +65,6 @@ function extractNonObjects(obj: any): any {
 
   return result
 }
-
-type DragMode =
-  | "zoom"
-  | "pan"
-  | "select"
-  | "lasso"
-  | "orbit"
-  | "turntable"
-  | false
 
 export const DEFAULT_HEIGHT = 450
 
@@ -102,6 +82,20 @@ function renderIFrame({
   return <iframe title="Plotly" src={url} style={{ width, height }} />
 }
 
+// TODO: Could convert array to set to make plotly faster
+
+const pointsAreEqual = (point1: any, point2: any): boolean => {
+  return (
+    point1.curveNumber === point2.curveNumber &&
+    point1.pointNumber === point2.pointNumber &&
+    point1.binNumber === point2.binNumber
+  )
+}
+
+const arrayIncludesPoint = (array: Array<any>, wantedPoint: any): boolean => {
+  return array.some((point): any => pointsAreEqual(point, wantedPoint))
+}
+
 /** Render a Plotly chart from a FigureProto */
 function PlotlyFigure({
   element,
@@ -112,23 +106,11 @@ function PlotlyFigure({
   const figure = element.figure as FigureProto
 
   const [config] = useState(JSON.parse(figure.config))
-  const dragmode = useRef<DragMode>(false)
   const hoverEvents: PlotHoverEvent[] = []
+  const selectedPoints = useRef<Array<any> | undefined>()
 
   const theme: EmotionTheme = useTheme()
-  const [spec, setSpec] = useState(() => {
-    const initialSpec = JSON.parse(
-      replaceTemporaryColors(figure.spec, theme, element.theme)
-    )
-    return {
-      ...initialSpec,
-      layout: {
-        ...initialSpec.layout,
-        height: initialSpec.layout.height,
-        width: initialSpec.layout.width,
-      },
-    }
-  })
+  const [spec, setSpec] = useState(JSON.parse(figure.spec))
 
   useEffect(() => {
     setSpec(
@@ -172,33 +154,62 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
-  const buildPlotlyReturnValue = (
-    event: PlotMouseEvent | PlotHoverEvent | PlotSelectionEvent
-  ): Array<any> => {
-    const selectedPoints: Array<any> = []
-    event.points.forEach(function (point: any) {
-      selectedPoints.push({
-        ...extractNonObjects(point),
-        legendgroup: point.data.legendgroup
-          ? point.data.legendgroup
-          : undefined,
-      })
-    })
-    return selectedPoints
-  }
+  //TODO: Change color for selected
 
   const handleClick = (event: PlotMouseEvent): void => {
-    // Build array of points to return
-    const selectedPoints = buildPlotlyReturnValue(event)
+    let returnPoints: Array<any> = []
+
+    // Include points
+    if (event.event.shiftKey) {
+      let currentPoints: Array<any> =
+        selectedPoints.current === undefined
+          ? []
+          : // deep copy of selected points
+            JSON.parse(JSON.stringify(selectedPoints.current))
+      event.points.forEach(function (point: any) {
+        // if we are not adding the same point
+        if (!arrayIncludesPoint(currentPoints, point)) {
+          currentPoints.push({
+            ...extractNonObjects(point),
+            legendgroup: point.data.legendgroup
+              ? point.data.legendgroup
+              : undefined,
+          })
+          // deselect
+        } else {
+          console.log("Deselecting!")
+          currentPoints = currentPoints.filter((currentPoint): any => {
+            return !pointsAreEqual(currentPoint, point)
+          })
+        }
+      })
+      returnPoints = currentPoints
+    }
+
+    // Return a single point
+    else {
+      const newPoints: Array<any> = []
+      event.points.forEach(function (point: any) {
+        newPoints.push({
+          ...extractNonObjects(point),
+          legendgroup: point.data.legendgroup
+            ? point.data.legendgroup
+            : undefined,
+        })
+        returnPoints = newPoints
+      })
+    }
+
+    selectedPoints.current = returnPoints
+    widgetMgr.setJsonValue(element, selectedPoints.current, { fromUi: true })
 
     console.log("Handling click")
     console.log(data)
     console.log(event)
-    console.log(selectedPoints)
-    widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
     console.log("Done handling click")
   }
 
+  // should disable hover event because it's too slow
   const handleHover = (event: PlotHoverEvent): void => {
     console.log("handle hover")
     console.log(event)
@@ -215,7 +226,15 @@ function PlotlyFigure({
     // Set a new timeout to handle the selectedPoints after 1000ms
     debounceTimeout = setTimeout(() => {
       // Build array of points to return
-      const selectedPoints = buildPlotlyReturnValue(event)
+      const selectedPoints: Array<any> = []
+      event.points.forEach(function (point: any) {
+        selectedPoints.push({
+          ...extractNonObjects(point),
+          legendgroup: point.data.legendgroup
+            ? point.data.legendgroup
+            : undefined,
+        })
+      })
       widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
 
       // Clear the selectedPoints array after setting the JSON value
@@ -227,6 +246,7 @@ function PlotlyFigure({
 
   const handleZoomAndPan = (event: PlotRelayoutEvent): void => {
     if (
+      // ignore dragmode change events
       !event.dragmode &&
       // @ts-expect-error
       !event.selections &&
@@ -242,8 +262,8 @@ function PlotlyFigure({
     ) {
       widgetMgr.setJsonValue(element, event, { fromUi: true })
     }
-    if (event.dragmode) {
-      dragmode.current = event.dragmode
+    if (event["xaxis.autorange"] && event["yaxis.autorange"]) {
+      widgetMgr.setJsonValue(element, {}, { fromUi: true })
     }
     console.log("Handle ZoomAndPan")
     console.log(event)
@@ -252,7 +272,15 @@ function PlotlyFigure({
 
   const handleSelect = (event: PlotSelectionEvent): void => {
     // Build array of points to return
-    const selectedPoints = buildPlotlyReturnValue(event)
+    const selectedPoints: Array<any> = []
+    event.points.forEach(function (point: any) {
+      selectedPoints.push({
+        ...extractNonObjects(point),
+        legendgroup: point.data.legendgroup
+          ? point.data.legendgroup
+          : undefined,
+      })
+    })
     widgetMgr.setJsonValue(element, selectedPoints, { fromUi: true })
     console.log("Done handling select")
   }
@@ -261,6 +289,7 @@ function PlotlyFigure({
     <Plot
       key={isFullScreen(height) ? "fullscreen" : "original"}
       className="stPlotlyChart"
+      divId={element.id}
       data={data}
       layout={layout}
       config={config}
@@ -272,6 +301,7 @@ function PlotlyFigure({
       onDoubleClick={
         element.onRelayout || element.onSelect || element.onClick
           ? () => {
+              selectedPoints.current = []
               widgetMgr.setJsonValue(element, {}, { fromUi: true })
             }
           : () => {}
