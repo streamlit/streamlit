@@ -129,7 +129,7 @@ sortedcontainers==2.4.0
 SQLAlchemy==1.4.49
 sqlalchemy2-stubs==0.0.2a35
 tenacity==8.2.3
-testfixtures==7.2.0
+testfixtures==7.2.1
 text-unidecode==1.3
 toml==0.10.2
 tomli==2.0.1
