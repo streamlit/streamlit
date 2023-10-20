@@ -90,8 +90,9 @@ _fix_matplotlib_crash()
 
 
 class AppTest:
-    """A simulated script runner to check the correctness of displayed elements\
-    and outputs.
+    """
+    A simulated Streamlit app to check the correctness of displayed\
+    elements and outputs.
 
     An instance of ``AppTest`` simulates a running Streamlit app. This class
     provides methods to set up, manipulate, and inspect the app contents via
@@ -100,9 +101,9 @@ class AppTest:
 
     ``AppTest`` can be initialized by one of three class methods:
 
-    * ``st.testing.v1.AppTest.from_string``
-    * ``st.testing.v1.AppTest.from_function``
-    * ``st.testing.v1.AppTest.from_file``
+    * |st.testing.v1.AppTest.from_file|_ (recommended)
+    * |st.testing.v1.AppTest.from_string|_
+    * |st.testing.v1.AppTest.from_function|_
 
     Once initialized, Session State and widget values can be updated and the
     script can be run. Unlike an actual live-running Streamlit app, you need to
@@ -117,11 +118,34 @@ class AppTest:
     locally and/or in a CI environment like Github Actions.
 
     .. note::
-        ``AppTest`` is currently limited to testing a single page of an app per
+        ``AppTest`` only supports testing a single page of an app per
         instance. For multipage apps, each page will need to be tested
         separately. No methods exist to programatically switch pages within
         ``AppTest``.
 
+    .. |st.testing.v1.AppTest.from_file| replace:: ``st.testing.v1.AppTest.from_file``
+    .. _st.testing.v1.AppTest.from_file: #apptestfrom_file
+    .. |st.testing.v1.AppTest.from_string| replace:: ``st.testing.v1.AppTest.from_string``
+    .. _st.testing.v1.AppTest.from_string: #apptestfrom_string
+    .. |st.testing.v1.AppTest.from_function| replace:: ``st.testing.v1.AppTest.from_function``
+    .. _st.testing.v1.AppTest.from_function: #apptestfrom_function
+
+    Attributes
+    ----------
+    secrets: dict[str, Any]
+        Dictionary of secrets to be used the simulated app. Use dict-like
+        syntax to set secret values for the simulated app.
+
+    session_state: SafeSessionState
+        Session State for the simulated app. SafeSessionState object supports
+        read and write operations as usual for Streamlit apps.
+
+    query_params: dict[str, Any]
+        Dictionary of query parameters to be used by the simluated app. Use
+        dict-like syntax to set ``query_params`` values for the simulated app.
+
+        Note: Inspecting ``query_params`` after a simulated app run is not yet
+        supported.
     """
 
     def __init__(self, script_path: str, *, default_timeout: float):
@@ -137,11 +161,14 @@ class AppTest:
 
     @classmethod
     def from_string(cls, script: str, *, default_timeout: float = 3) -> AppTest:
-        """Create a runner for a script within the given string.
+        """
+        Create an instance of ``AppTest`` to simulate an app page defined\
+        within a string.
 
         This is useful for testing short scripts that fit comfortably as an
         inline string in the test itself, without having to create a separate
-        file for it.
+        file for it. The script must be executable on its own and so must
+        contain all necessary imports.
 
         Parameters
         ----------
@@ -171,10 +198,13 @@ class AppTest:
     def from_function(
         cls, script: Callable[[], None], *, default_timeout: float = 3
     ) -> AppTest:
-        """Create a runner for the script within the given function.
+        """
+        Create an instance of ``AppTest`` to simulate an app page defined\
+        within a function.
 
         This is similar to ``AppTest.from_string()``, but more convenient to
-        write with IDE assistance.
+        write with IDE assistance. The script must be executable on its own and
+        so must contain all necessary imports.
 
         Parameters
         ----------
@@ -204,13 +234,19 @@ class AppTest:
 
     @classmethod
     def from_file(cls, script_path: str, *, default_timeout: float = 3) -> AppTest:
-        """Create a runner for the script with the given file name.
+        """
+        Create an instance of ``AppTest`` to simulate an app page defined\
+        within a file.
+
+        This option is most convenient for CI workflows and testing of
+        published apps. The script must be executable on its own and so must
+        contain all necessary imports.
 
         Parameters
         ----------
         script_path: str
-            Path to a script file. Several locations are tried, including treating
-            the path as relative to the file calling ``.from_file``.
+            Path to a script file. The path should be absolute or relative to
+            the file calling ``.from_file``.
 
         default_timeout: float
             Default time in seconds before a script run is timed out. Can be
@@ -360,7 +396,8 @@ class AppTest:
         ElementList of Caption
             Sequence of all ``st.caption`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.caption[0]`` for the first element.
+            example, ``at.caption[0]`` for the first element. Caption is an
+            extension of the Element class.
         """
         return self._tree.caption
 
@@ -387,7 +424,8 @@ class AppTest:
         Sequence of ChatMessage
             Sequence of all ``st.chat_message`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.chat_message[0]`` for the first element.
+            example, ``at.chat_message[0]`` for the first element.  ChatMessage
+            is an extension of the Block class.
         """
         return self._tree.chat_message
 
@@ -414,7 +452,8 @@ class AppTest:
         ElementList of Code
             Sequence of all ``st.code`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.code[0]`` for the first element.
+            example, ``at.code[0]`` for the first element. Code is an
+            extension of the Element class.
         """
         return self._tree.code
 
@@ -434,14 +473,18 @@ class AppTest:
 
     @property
     def columns(self) -> Sequence[Column]:
-        """Sequence of all ``st.columns`` elements.
+        """Sequence of all columns within ``st.columns`` elements.
+
+        Each column within a single ``st.columns`` will be returned as a
+        separate Column in the Sequence.
 
         Returns
         -------
         Sequence of Column
-            Sequence of all ``st.columns`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.columns[0]`` for the first element.
+            Sequence of all columns within ``st.columns`` elements. Individual
+            columns can be accessed from an ElementList by index (order on the
+            page). For example, ``at.columns[0]`` for the first column. Column
+            is an extension of the Block class.
         """
         return self._tree.columns
 
@@ -454,7 +497,8 @@ class AppTest:
         ElementList of Dataframe
             Sequence of all ``st.dataframe`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.dataframe[0]`` for the first element.
+            example, ``at.dataframe[0]`` for the first element. Dataframe is an
+            extension of the Element class.
         """
         return self._tree.dataframe
 
@@ -481,7 +525,8 @@ class AppTest:
         ElementList of Divider
             Sequence of all ``st.divider`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.divider[0]`` for the first element.
+            example, ``at.divider[0]`` for the first element. Divider is an
+            extension of the Element class.
         """
         return self._tree.divider
 
@@ -494,7 +539,8 @@ class AppTest:
         ElementList of Error
             Sequence of all ``st.error`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.error[0]`` for the first element.
+            example, ``at.error[0]`` for the first element. Error is an
+            extension of the Element class.
         """
         return self._tree.error
 
@@ -507,7 +553,8 @@ class AppTest:
         ElementList of Exception
             Sequence of all ``st.exception`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.exception[0]`` for the first element.
+            example, ``at.exception[0]`` for the first element. Exception is an
+            extension of the Element class.
         """
         return self._tree.exception
 
@@ -520,7 +567,8 @@ class AppTest:
         ElementList of Header
             Sequence of all ``st.header`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.header[0]`` for the first element.
+            example, ``at.header[0]`` for the first element. Header is an
+            extension of the Element class.
         """
         return self._tree.header
 
@@ -533,7 +581,8 @@ class AppTest:
         ElementList of Info
             Sequence of all ``st.info`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.info[0]`` for the first element.
+            example, ``at.info[0]`` for the first element. Info is an
+            extension of the Element class.
         """
         return self._tree.info
 
@@ -546,7 +595,8 @@ class AppTest:
         ElementList of Json
             Sequence of all ``st.json`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.json[0]`` for the first element.
+            example, ``at.json[0]`` for the first element. Json is an
+            extension of the Element class.
         """
         return self._tree.json
 
@@ -559,7 +609,8 @@ class AppTest:
         ElementList of Latex
             Sequence of all ``st.latex`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.latex[0]`` for the first element.
+            example, ``at.latex[0]`` for the first element. Latex is an
+            extension of the Element class.
         """
         return self._tree.latex
 
@@ -572,7 +623,8 @@ class AppTest:
         ElementList of Markdown
             Sequence of all ``st.markdown`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.markdown[0]`` for the first element.
+            example, ``at.markdown[0]`` for the first element. Markdown is an
+            extension of the Element class.
         """
         return self._tree.markdown
 
@@ -585,7 +637,8 @@ class AppTest:
         ElementList of Metric
             Sequence of all ``st.metric`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.metric[0]`` for the first element.
+            example, ``at.metric[0]`` for the first element. Metric is an
+            extension of the Element class.
         """
         return self._tree.metric
 
@@ -679,10 +732,11 @@ class AppTest:
 
         Returns
         -------
-        ElementList of Divider
-            Sequence of all ``st.divider`` elements. Individual elements can be
+        ElementList of Subheader
+            Sequence of all ``st.subheader`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.divider[0]`` for the first element.
+            example, ``at.subheader[0]`` for the first element. Subheader is an
+            extension of the Element class.
         """
         return self._tree.subheader
 
@@ -695,7 +749,8 @@ class AppTest:
         ElementList of Success
             Sequence of all ``st.success`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.success[0]`` for the first element.
+            example, ``at.success[0]`` for the first element. Success is an
+            extension of the Element class.
         """
         return self._tree.success
 
@@ -708,20 +763,28 @@ class AppTest:
         ElementList of Table
             Sequence of all ``st.table`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.table[0]`` for the first element.
+            example, ``at.table[0]`` for the first element. Table is an
+            extension of the Element class.
         """
         return self._tree.table
 
     @property
     def tabs(self) -> Sequence[Tab]:
-        """Sequence of all ``st.tabs`` elements.
+        """Sequence of all tabs within ``st.tabs`` elements.
+
+        Each tab within a single ``st.tabs`` will be returned as a separate Tab
+        in the Sequence. Additionally, the tab labels are forwarded to each
+        Tab element as a property. For example, ``st.tabs("A","B")`` will
+        yield two Tab objects, with ``Tab.label`` returning "A" and "B",
+        respectively.
 
         Returns
         -------
-        ElementList of Tab
-            Sequence of all ``st.tabs`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.tabs[0]`` for the first element.
+        Sequence of Tab
+            Sequence of all tabs within ``st.tabs`` elements. Individual
+            tabs can be accessed from an ElementList by index (order on the
+            page). For example, ``at.tabs[0]`` for the first tab. Tab is an
+            extension of the Block class.
         """
         return self._tree.tabs
 
@@ -734,7 +797,8 @@ class AppTest:
         ElementList of Text
             Sequence of all ``st.text`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.text[0]`` for the first element.
+            example, ``at.text[0]`` for the first element. Text is an
+            extension of the Element class.
         """
         return self._tree.text
 
@@ -789,7 +853,8 @@ class AppTest:
         ElementList of Title
             Sequence of all ``st.title`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.title[0]`` for the first element.
+            example, ``at.title[0]`` for the first element. Title is an
+            extension of the Element class.
         """
         return self._tree.title
 
@@ -802,7 +867,8 @@ class AppTest:
         ElementList of Toast
             Sequence of all ``st.toast`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.toast[0]`` for the first element.
+            example, ``at.toast[0]`` for the first element. Toast is an
+            extension of the Element class.
         """
         return self._tree.toast
 
@@ -829,7 +895,8 @@ class AppTest:
         ElementList of Warning
             Sequence of all ``st.warning`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page). For
-            example, ``at.warning[0]`` for the first element.
+            example, ``at.warning[0]`` for the first element. Warning is an
+            extension of the Element class.
         """
         return self._tree.warning
 

@@ -101,10 +101,19 @@ class InitialValue:
 @dataclass
 class Element(ABC):
     """
-    Element base class for testing. This class's methods and attributes are\
-    universal for all non-widget, non-container elements implemented in\
-    testing. For example, ``Caption``, ``Code``, ``Text``, and ``Title``\
-    inherit from ``Element``.
+    Element base class for testing.
+
+    This class's methods and attributes are universal for all elements
+    implemented in testing. For example, ``Caption``, ``Code``, ``Text``, and
+    ``Title`` inherit from ``Element``. All widget classes also
+    inherit from Element, but have additional methods specific to each
+    widget type. See the ``AppTest`` class for the full list of supported
+    elements.
+
+    For all element classes, parameters of the original element can be obtained
+    as properties. For example, ``Button.label``, ``Caption.help``, and
+    ``Toast.icon``.
+
     """
 
     type: str = field(repr=False)
@@ -1336,6 +1345,10 @@ class Block:
 
     Elements within a Block can be inspected and interacted with. This follows
     the same syntax as inspecting and interacting within an ``AppTest`` object.
+
+    For all container classes, parameters of the original element can be
+    obtained as properties. For example, ``ChatMessage.avatar`` and
+    ``Tab.label``.
     """
 
     type: str
