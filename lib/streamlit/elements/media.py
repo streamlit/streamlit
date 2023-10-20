@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import io
+import os.path
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union, cast
@@ -137,12 +138,22 @@ class MediaMixin:
             See https://tools.ietf.org/html/rfc4281 for more info.
         start_time: int
             The time from which this element should start playing.
-        subtitles: str, io.BytesIO, or dict
-            Subtitles for the video. Subtitles must be in one of the following
-            formats: .vtt, .srt. If a string is passed, it is assumed to be the
-            path to a subtitle file. If a dict is passed, it should be a mapping
-            from label/language to subtitle file path. The label is used to identify
-            the subtitle track in the video player. Defaults to None.
+        subtitles: str, dict, or io.BytesIO
+            Optional subtitle data for the video, supporting several input types:
+
+            * None (default): No subtitles.
+
+            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
+              If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
+
+            * A dictionary: Pairs of display names (e.g., 'English', 'French') and file paths or raw subtitle content in '.vtt' or '.srt' formats.
+              Enables multiple subtitle tracks. Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+
+            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
+
+            When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
+            Not supported for YouTube videos.
+
 
         Example
         -------
@@ -156,25 +167,6 @@ class MediaMixin:
         .. output::
            https://doc-video.streamlit.app/
            height: 700px
-
-        You can optionally pass one or more subtitle files to the video player:
-
-        >>> st.video(video_bytes, subtitles="english.vtt")
-        >>> st.video(video_bytes, subtitles="english.srt")
-        >>> st.video(video_bytes, subtitles={"English": "english.vtt", "French": "french.vtt"})
-
-        Subtitles can also be passed as a io.BytesIO object:
-
-        >>> import io
-        >>> subtitles = io.BytesIO(
-        ...     '''
-        ...     WEBVTT FILE
-        ...     1
-        ...     00:00:03.500 --> 00:00:05.000 D:vertical A:start
-        ...     The quick brown fox jumps over the lazy dog.
-        ...     '''.strip().encode("utf-8")
-        ... )
-        >>> st.video(video_bytes, subtitles=subtitles)
 
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
@@ -284,7 +276,11 @@ def _marshall_av_media(
     proto.url = file_url
 
 
-def is_probably_srt_stream(stream: io.BytesIO) -> bool:
+def is_probably_srt(stream: Union[str, io.BytesIO]) -> bool:
+    # Convert str to io.BytesIO if 'stream' is a string
+    if isinstance(stream, str):
+        stream = io.BytesIO(stream.encode("utf-8"))
+
     # Set the stream position to the beginning in case it's been moved
     stream.seek(0)
 
@@ -364,37 +360,56 @@ def process_subtitle_data(
 ) -> str:
     allowed_formats = {".srt", ".vtt"}
 
-    data_or_filename: Union[bytes, str]
+    def get_data_from_file(file_path: str) -> str:
+        """Reads the file and returns its content."""
+        with open(file_path, "r", encoding="utf-8") as file:
+            return file.read().strip()
 
-    if isinstance(data, str):
-        file_extension = Path(data).suffix.lower()
-        if file_extension not in allowed_formats:
-            raise ValueError(
-                f"Incorrect subtitle format {file_extension}. Subtitles must be in one of the following formats: {', '.join(allowed_formats)}"
-            )
-        if file_extension == ".srt":
-            with open(data, "r", encoding="utf-8") as file:
-                srt_content = file.read().strip()
-            data_or_filename = srt_to_vtt(srt_content)
+    def handle_string_data(data_str: str) -> bytes:
+        """Handles string data, either as a file path or raw content."""
+        if os.path.isfile(data_str):
+            path = Path(data_str)
+            file_extension = path.suffix.lower()
+
+            if file_extension not in allowed_formats:
+                raise ValueError(
+                    f"Incorrect subtitle format {file_extension}. Subtitles must be in one of the following formats: {', '.join(allowed_formats)}"
+                )
+            content = get_data_from_file(data_str)
+            return srt_to_vtt(content) if file_extension == ".srt" else data_str
         else:
-            data_or_filename = data
+            content = data_str.strip()
+            if content.startswith("WEBVTT"):
+                return content.encode("utf-8")
+            elif is_probably_srt(content):
+                return srt_to_vtt(content)
+            raise ValueError(
+                "The provided string neither matches valid VTT nor SRT format."
+            )
+
+    def handle_stream_data(stream: io.BytesIO) -> bytes:
+        """Handles io.BytesIO data, assuming it's SRT content."""
+        stream.seek(0)
+        stream_data = stream.getvalue()
+        return srt_to_vtt(stream_data) if is_probably_srt(stream) else stream_data
+
+    # Determine the type of data and process accordingly
+    if isinstance(data, str):
+        data_or_filename = handle_string_data(data)
     elif isinstance(data, bytes):
-        data_or_filename = data
+        data_or_filename = data  # Assume bytes are already in the correct format.
     elif isinstance(data, io.BytesIO):
-        data.seek(0)
-        data_or_filename = data.getvalue()
-        if is_probably_srt_stream(data):
-            data_or_filename = srt_to_vtt(data_or_filename)
+        data_or_filename = handle_stream_data(data)
     else:
         raise RuntimeError(f"Invalid binary data format for subtitle: {type(data)}.")
 
+    # Save the processed data and return the file URL
     file_url = runtime.get_instance().media_file_mgr.add(
         path_or_data=data_or_filename,
         mimetype=mimetype,
         coordinates=coordinates,
         file_name=f"{coordinates}.vtt",
     )
-
     caching.save_media_data(data_or_filename, mimetype, coordinates)
 
     return file_url
@@ -425,13 +440,21 @@ def marshall_video(
         See https://tools.ietf.org/html/rfc4281 for more info.
     start_time : int
         The time from which this element should start playing. (default: 0)
-    subtitles: str, io.BytesIO, or dict
-        Subtitles for the video. Subtitles must be in one of the following
-        formats: .srt, .vtt. If a string is passed, it is assumed to be the
-        path to a subtitle file. If a dict is passed, it should be a mapping
-        from label/language to subtitle file path. The label is used to identify
-        the subtitle track in the video player. Defaults to None.
+    subtitles: str, dict, or io.BytesIO
+            Optional subtitle data for the video, supporting several input types:
 
+            * None (default): No subtitles.
+
+            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
+              If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
+
+            * A dictionary: Pairs of display names (e.g., 'English', 'French') and file paths or raw subtitle content in '.vtt' or '.srt' formats.
+              Enables multiple subtitle tracks. Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+
+            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
+
+            When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
+            Not supported for YouTube videos.
     """
     from validators import url
 
