@@ -16,13 +16,8 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 
-pytestmark = [
-    pytest.mark.skip_browser("webkit"),
-    pytest.mark.skip_browser("firefox"),
-    # pytest.mark.usefixtures("launch_with_camera_options_chromium"),
-]
 
-
+@pytest.mark.only_browser("chromium")
 def test_displays_correct_number_of_elements(
     app: Page,
 ):
@@ -31,6 +26,7 @@ def test_displays_correct_number_of_elements(
     expect(camera_input_widgets).to_have_count(2)
 
 
+@pytest.mark.only_browser("chromium")
 def test_captures_photo(
     app: Page,
 ):
@@ -42,6 +38,7 @@ def test_captures_photo(
     expect(app.get_by_test_id("stImage")).to_have_count(1)
 
 
+@pytest.mark.only_browser("chromium")
 def test_clear_photo(
     app: Page,
 ):
@@ -58,6 +55,7 @@ def test_clear_photo(
     expect(app.get_by_test_id("stImage")).to_have_count(0)
 
 
+@pytest.mark.only_browser("chromium")
 def test_shows_disabled_widget_correctly(
     themed_app: Page,
     assert_snapshot: ImageCompareFunction,
