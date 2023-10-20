@@ -19,7 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 pytestmark = [
     pytest.mark.skip_browser("webkit"),
     pytest.mark.skip_browser("firefox"),
-    pytest.mark.usefixtures("launch_with_camera_options_chromium"),
+    # pytest.mark.usefixtures("launch_with_camera_options_chromium"),
 ]
 
 
