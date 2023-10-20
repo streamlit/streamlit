@@ -258,6 +258,16 @@ def browser_type_launch_args(browser_type_launch_args: Dict, browser_name: str):
                 "--use-fake-ui-for-media-stream",
             ],
         }
+
+    if browser_name == "firefox":
+        browser_type_launch_args = {
+            **browser_type_launch_args,
+            "firefox_user_prefs": {
+                "media.navigator.streams.fake": True,
+                "permissions.default.microphone": 1,
+                "permissions.default.camera": 1,
+            },
+        }
     return browser_type_launch_args
 
 

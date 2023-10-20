@@ -17,41 +17,42 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-@pytest.mark.only_browser("chromium")
+@pytest.mark.skip_browser("webkit")
 def test_displays_correct_number_of_elements(app: Page):
     """Test that it renders correct number of camera_input elements."""
     camera_input_widgets = app.get_by_test_id("stCameraInput")
     expect(camera_input_widgets).to_have_count(2)
 
 
-@pytest.mark.only_browser("chromium")
+@pytest.mark.skip_browser("webkit")
 def test_captures_photo(app: Page):
     """Test camera_input captures photo when 'Take photo' button clicked"""
     # Wait for some timeout, until fake video stream available for camera_input
-    app.wait_for_timeout(2000)
-    take_photo_button = app.get_by_test_id("stCameraInputButton").first
-    take_photo_button.click(force=True)
-    app.wait_for_timeout(1000)
-    expect(app.get_by_test_id("stImage")).to_have_count(1)
-
-
-@pytest.mark.only_browser("chromium")
-def test_clear_photo(app: Page):
-    """Test camera_input removes photo when 'Clear photo' button clicked"""
-    # Wait for some timeout, until fake video stream available for camera_input
-    app.wait_for_timeout(2000)
+    app.wait_for_timeout(3000)
     take_photo_button = app.get_by_test_id("stCameraInputButton").first
     # Capture a photo
     take_photo_button.click(force=True)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(3000)
+    expect(app.get_by_test_id("stImage")).to_have_count(1)
+
+
+@pytest.mark.skip_browser("webkit")
+def test_clear_photo(app: Page):
+    """Test camera_input removes photo when 'Clear photo' button clicked"""
+    # Wait for some timeout, until fake video stream available for camera_input
+    app.wait_for_timeout(3000)
+    take_photo_button = app.get_by_test_id("stCameraInputButton").first
+    # Capture a photo
+    take_photo_button.click(force=True)
+    app.wait_for_timeout(3000)
     expect(app.get_by_test_id("stImage")).to_have_count(1)
     remove_photo_button = app.get_by_text("Clear photo").first
     remove_photo_button.click(force=True)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(3000)
     expect(app.get_by_test_id("stImage")).to_have_count(0)
 
 
-@pytest.mark.only_browser("chromium")
+@pytest.mark.skip_browser("webkit")
 def test_shows_disabled_widget_correctly(
     themed_app: Page,
     assert_snapshot: ImageCompareFunction,
