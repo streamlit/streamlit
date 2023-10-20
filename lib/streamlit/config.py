@@ -283,7 +283,7 @@ _create_option(
     default_val=False,
     type_=bool,
     deprecated=True,
-    deprecation_text="global.disableWatchdogWarning has been deprecated has been deprecated and will be removed in future versions.",
+    deprecation_text="global.disableWatchdogWarning has been deprecated has been deprecated and will be removed in a future version.",
     expiration_date="2024-01-20",
 )
 
@@ -466,7 +466,7 @@ _create_option(
     type_=bool,
     scriptable=True,
     deprecated=True,
-    deprecation_text="client.displayEnabled has been deprecated and will be removed in future versions.",
+    deprecation_text="client.displayEnabled has been deprecated and will be removed in a future version.",
     expiration_date="2024-01-20",
 )
 
@@ -533,7 +533,7 @@ _create_option(
     default_val=False,
     type_=bool,
     deprecated=True,
-    deprecation_text="runner.installTracer has been deprecated and will be removed in future versions.",
+    deprecation_text="runner.installTracer has been deprecated and will be removed in a future version.",
     expiration_date="2024-01-20",
 )
 
@@ -545,7 +545,7 @@ _create_option(
         """,
     default_val=True,
     deprecated=True,
-    deprecation_text="runner.fixMatplotlib has been deprecated and will be removed in future versions.",
+    deprecation_text="runner.fixMatplotlib has been deprecated and will be removed in a future version.",
     expiration_date="2024-01-20",
     type_=bool,
 )
@@ -934,7 +934,7 @@ _create_option(
     scriptable=True,
     type_=bool,
     deprecated=True,
-    deprecation_text="deprecation.showfileUploaderEncoding has been deprecated and will be removed in future versions.",
+    deprecation_text="deprecation.showfileUploaderEncoding has been deprecated and will be removed in a future version.",
     expiration_date="2021-01-06",
 )
 
