@@ -100,7 +100,7 @@ describe("withMapboxToken", () => {
       expect(loadingTextElement).toBeInTheDocument()
     })
 
-    it("should fetch the token if userMapboxToken is not present in config.toml", async () => {
+    it("should fetch the token if userMapboxToken is not present in config.toml and libConfig", async () => {
       axios.get = jest
         .fn()
         .mockResolvedValue({ data: { mapbox: mockMapboxToken } })
@@ -167,23 +167,6 @@ describe("withMapboxToken", () => {
       await waitFor(() => {
         const element = screen.getByTestId("mock-component")
         expect(element.textContent).toBe(LIB_CONFIG_TOKEN)
-      })
-    })
-
-    it("should fetch the token if userMapboxToken is not present in lib config or config.toml", async () => {
-      axios.get = jest
-        .fn()
-        .mockResolvedValue({ data: { mapbox: mockMapboxToken } })
-
-      customRenderLibContext(
-        <WrappedComponent element={emptyElement} width={500} />,
-        {
-          libConfig: { mapboxToken: "" },
-        }
-      )
-
-      await waitFor(() => {
-        expect(axios.get).toHaveBeenCalledWith(TOKENS_URL)
       })
     })
   })
