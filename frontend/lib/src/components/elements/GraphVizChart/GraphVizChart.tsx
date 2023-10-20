@@ -27,11 +27,6 @@ export interface GraphVizChartProps {
   isFullScreen: boolean
 }
 
-// Use d3Graphviz in a dummy expression so the library actually gets loaded.
-// This way it registers itself in d3 as a plugin at this point.
-const dummyGraphviz = graphviz
-dummyGraphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
-
 export function GraphVizChart({
   element,
   isFullScreen,
