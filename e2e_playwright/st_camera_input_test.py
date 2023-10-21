@@ -26,7 +26,7 @@ def test_displays_correct_number_of_elements(app: Page):
 
 @pytest.mark.only_browser("chromium")
 def test_captures_photo(app: Page):
-    """Test camera_input captures photo when 'Take photo' button clicked"""
+    """Test camera_input captures photo when 'Take photo' button clicked."""
     # Wait for some timeout, until fake video stream available for camera_input
     app.wait_for_timeout(3000)
     take_photo_button = app.get_by_test_id("stCameraInputButton").first
@@ -38,7 +38,7 @@ def test_captures_photo(app: Page):
 
 @pytest.mark.only_browser("chromium")
 def test_clear_photo(app: Page):
-    """Test camera_input removes photo when 'Clear photo' button clicked"""
+    """Test camera_input removes photo when 'Clear photo' button clicked."""
     # Wait for some timeout, until fake video stream available for camera_input
     app.wait_for_timeout(3000)
     take_photo_button = app.get_by_test_id("stCameraInputButton").first
