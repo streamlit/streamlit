@@ -941,6 +941,7 @@ class Selectbox(Widget, Generic[T]):
 
     def set_value(self, v: T | None) -> Selectbox[T]:
         """Set the selection by value."""
+
         # Implementation note: set_value not work correctly if `format_func` is also
         # passed to the selectbox. This is because we send options via proto with applied
         # `format_func`, but keep original values in session state as widget value.

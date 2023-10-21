@@ -143,9 +143,6 @@ class AppTest:
     query_params: dict[str, Any]
         Dictionary of query parameters to be used by the simluated app. Use
         dict-like syntax to set ``query_params`` values for the simulated app.
-
-        Note: Inspecting ``query_params`` after a simulated app run is not yet
-        supported.
     """
 
     def __init__(self, script_path: str, *, default_timeout: float):
