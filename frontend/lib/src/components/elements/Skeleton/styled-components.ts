@@ -28,7 +28,7 @@ const pulseAnimation = keyframes`
 `
 
 const ANIMATION_STYLES = {
-  animationDuration: "500ms",
+  animationDuration: "750ms",
   animationName: pulseAnimation,
   animationTimingFunction: "ease-in",
   animationDirection: "normal",
