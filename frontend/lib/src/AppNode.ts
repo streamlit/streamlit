@@ -33,7 +33,7 @@ import {
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 import {
-  makeElementWithInfoText,
+  makeSkeletonElement,
   makeElementWithErrorText,
   notUndefined,
 } from "./util/utils"
@@ -404,20 +404,17 @@ export class AppRoot {
   private readonly root: BlockNode
 
   /**
-   * Create an empty AppRoot with an optional placeholder element.
+   * Create an empty AppRoot with an optional placeholder "skeleton" element.
    */
-  public static empty(placeholderText?: string): AppRoot {
+  public static empty(): AppRoot {
     let mainNodes: AppNode[]
-    if (placeholderText != null) {
-      const waitNode = new ElementNode(
-        makeElementWithInfoText(placeholderText),
-        ForwardMsgMetadata.create({}),
-        NO_SCRIPT_RUN_ID
-      )
-      mainNodes = [waitNode]
-    } else {
-      mainNodes = []
-    }
+
+    const waitNode = new ElementNode(
+      makeSkeletonElement(),
+      ForwardMsgMetadata.create({}),
+      NO_SCRIPT_RUN_ID
+    )
+    mainNodes = [waitNode]
 
     const main = new BlockNode(
       mainNodes,

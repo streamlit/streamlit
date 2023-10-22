@@ -241,7 +241,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(),
       isFullScreen: false,
       scriptName: "",
       scriptRunId: "<null>",

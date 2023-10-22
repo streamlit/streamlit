@@ -70,6 +70,10 @@ import ExceptionElement from "@streamlit/lib/src/components/elements/ExceptionEl
 import Json from "@streamlit/lib/src/components/elements/Json"
 import Markdown from "@streamlit/lib/src/components/elements/Markdown"
 import Metric from "@streamlit/lib/src/components/elements/Metric"
+import {
+  Skeleton,
+  AppSkeleton,
+} from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
@@ -623,6 +627,10 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "skeleton": {
+      return <AppSkeleton />
+    }
+
     case "slider": {
       const sliderProto = node.element.slider as SliderProto
       widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
@@ -751,11 +759,7 @@ const ElementNodeRenderer = (
         elementType={elementType}
       >
         <ErrorBoundary width={width}>
-          <Suspense
-            fallback={
-              <AlertElement body="Loading..." kind={Kind.INFO} width={width} />
-            }
-          >
+          <Suspense fallback={<Skeleton />}>
             <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>

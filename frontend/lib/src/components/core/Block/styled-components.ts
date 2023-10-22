@@ -79,7 +79,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
     // We do not want the chat input to be faded out.
     // TODO: Reconsider this when we implement fixed-sized chat containers
-    ...(isStale && elementType !== "chatInput"
+    ...(isStale && elementType !== "chatInput" && elementType !== "skeleton"
       ? {
           opacity: 0.33,
           transition: "opacity 1s ease-in 0.5s",
