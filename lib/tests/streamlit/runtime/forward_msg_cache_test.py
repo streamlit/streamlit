@@ -56,7 +56,7 @@ class ForwardMsgCacheTest(unittest.TestCase):
         """Test creation of 'reference' ForwardMsgs"""
         msg = create_dataframe_msg([1, 2, 3], 34)
         ref_msg = create_reference_msg(msg)
-        self.assertEqual(populate_hash_if_needed(msg), ref_msg.ref_hash)
+        self.assertEqual(populate_hash_if_needed(msg), ref_msg.forward_msg_ref.ref_hash)
         self.assertEqual(msg.metadata, ref_msg.metadata)
 
     def test_add_message(self):

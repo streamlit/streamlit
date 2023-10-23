@@ -479,10 +479,10 @@ class RuntimeTest(RuntimeTestCase):
             await self.tick_runtime_loop()
 
             cached = client.forward_msgs.pop()
-            self.assertEqual("ref_hash", cached.WhichOneof("type"))
+            self.assertEqual("forward_msg_ref", cached.WhichOneof("type"))
             # We should have the *hash* of msg1 and msg2:
-            self.assertEqual(msg1.hash, cached.ref_hash)
-            self.assertEqual(msg2.hash, cached.ref_hash)
+            self.assertEqual(msg1.hash, cached.forward_msg_ref.ref_hash)
+            self.assertEqual(msg2.hash, cached.forward_msg_ref.ref_hash)
             # And the same *metadata* as msg2:
             self.assertEqual(msg2.metadata, cached.metadata)
 
