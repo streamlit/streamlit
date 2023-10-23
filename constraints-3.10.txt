@@ -11,7 +11,7 @@ cachetools==5.3.1
 certifi==2023.7.22
 cffi==1.16.0
 cfgv==3.4.0
-charset-normalizer==3.3.0
+charset-normalizer==3.3.1
 chart-studio==1.1.0
 click==8.1.7
 contourpy==1.1.1
@@ -126,7 +126,7 @@ toolz==0.12.0
 tornado==6.3.3
 twine==4.0.2
 types-click==7.1.8
-types-protobuf==4.24.0.2
+types-protobuf==4.24.0.3
 types-python-dateutil==2.8.19.14
 types-pytz==2023.3.1.1
 types-requests==2.31.0.10
@@ -136,7 +136,7 @@ types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
 typing_extensions==4.8.0
 tzdata==2023.3
-tzlocal==5.1
+tzlocal==5.2
 urllib3==2.0.7
 validators==0.22.0
 virtualenv==20.24.5
