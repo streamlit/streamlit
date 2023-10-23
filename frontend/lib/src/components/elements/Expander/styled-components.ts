@@ -56,7 +56,7 @@ export const StyledSummary = styled.summary(({ theme }) => ({
   position: "relative",
   display: "flex",
   width: "100%",
-  "&:focus": {
+  "&:focus-visible": {
     outline: `${BORDER_SIZE}px solid ${theme.colors.primary}`,
     outlineOffset: `-${BORDER_SIZE}px`,
     borderRadius: theme.radii.lg,
