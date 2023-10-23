@@ -227,7 +227,6 @@ class MessageCacheHandler(tornado.web.RequestHandler):
             self.set_header("Access-Control-Allow-Origin", "*")
 
     def get(self):
-        print("IN GGGGGGGGGGGET!")
         msg_hash = self.get_argument("hash", None)
         if msg_hash is None:
             # Hash is missing! This is a malformed request.
