@@ -100,6 +100,22 @@ class InitialValue:
 # own classes too.
 @dataclass
 class Element(ABC):
+    """
+    Element base class for testing.
+
+    This class's methods and attributes are universal for all elements
+    implemented in testing. For example, ``Caption``, ``Code``, ``Text``, and
+    ``Title`` inherit from ``Element``. All widget classes also
+    inherit from Element, but have additional methods specific to each
+    widget type. See the ``AppTest`` class for the full list of supported
+    elements.
+
+    For all element classes, parameters of the original element can be obtained
+    as properties. For example, ``Button.label``, ``Caption.help``, and
+    ``Toast.icon``.
+
+    """
+
     type: str = field(repr=False)
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
@@ -115,6 +131,7 @@ class Element(ABC):
     @property
     @abstractmethod
     def value(self) -> Any:
+        """The value or contents of the element."""
         ...
 
     def __getattr__(self, name: str) -> Any:
@@ -122,7 +139,7 @@ class Element(ABC):
         return getattr(self.proto, name)
 
     def run(self, *, timeout: float | None = None) -> AppTest:
-        """Run the script with updated widget values.
+        """Run the ``AppTest`` script which contains the element.
 
         Parameters
         ----------
@@ -159,6 +176,8 @@ class UnknownElement(Element):
 
 @dataclass(repr=False)
 class Widget(Element, ABC):
+    """Widget base class for testing."""
+
     id: str = field(repr=False)
     disabled: bool
     key: str | None
@@ -171,6 +190,7 @@ class Widget(Element, ABC):
         self._value = None
 
     def set_value(self, v: Any):
+        """Set the value of the widget."""
         self._value = v
         return self
 
@@ -282,6 +302,8 @@ class Success(AlertBase):
 
 @dataclass(repr=False)
 class Button(Widget):
+    """A representation of ``st.button`` and ``st.form_submit_button``."""
+
     _value: bool
 
     proto: ButtonProto = field(repr=False)
@@ -303,6 +325,7 @@ class Button(Widget):
 
     @property
     def value(self) -> bool:
+        """The value of the button. (bool)"""
         if self._value:
             return self._value
         else:
@@ -311,15 +334,19 @@ class Button(Widget):
             return cast(bool, state[self.id])
 
     def set_value(self, v: bool) -> Button:
+        """Set the value of the button."""
         self._value = v
         return self
 
     def click(self) -> Button:
+        """Set the value of the button to True."""
         return self.set_value(True)
 
 
 @dataclass(repr=False)
 class ChatInput(Widget):
+    """A representation of ``st.chat_input``."""
+
     _value: str | None
     proto: ChatInputProto = field(repr=False)
     placeholder: str
@@ -329,6 +356,7 @@ class ChatInput(Widget):
         self.type = "chat_input"
 
     def set_value(self, v: str | None) -> ChatInput:
+        """Set the value of the widget."""
         self._value = v
         return self
 
@@ -342,6 +370,7 @@ class ChatInput(Widget):
 
     @property
     def value(self) -> str | None:
+        """The value of the widget. (str)"""
         if self._value:
             return self._value
         else:
@@ -352,6 +381,8 @@ class ChatInput(Widget):
 
 @dataclass(repr=False)
 class Checkbox(Widget):
+    """A representation of ``st.checkbox``."""
+
     _value: bool | None
 
     proto: CheckboxProto = field(repr=False)
@@ -372,6 +403,7 @@ class Checkbox(Widget):
 
     @property
     def value(self) -> bool:
+        """The value of the widget. (bool)"""
         if self._value is not None:
             return self._value
         else:
@@ -380,18 +412,23 @@ class Checkbox(Widget):
             return cast(bool, state[self.id])
 
     def set_value(self, v: bool) -> Checkbox:
+        """Set the value of the widget."""
         self._value = v
         return self
 
     def check(self) -> Checkbox:
+        """Set the value of the widget to True."""
         return self.set_value(True)
 
     def uncheck(self) -> Checkbox:
+        """Set the value of the widget to False."""
         return self.set_value(False)
 
 
 @dataclass(repr=False)
 class Code(Element):
+    """A representation of ``st.code``."""
+
     proto: CodeProto = field(repr=False)
 
     language: str
@@ -406,11 +443,14 @@ class Code(Element):
 
     @property
     def value(self) -> str:
+        """The value of the element. (str)"""
         return self.proto.code_text
 
 
 @dataclass(repr=False)
 class ColorPicker(Widget):
+    """A representation of ``st.color_picker``."""
+
     _value: str | None
     label: str
     help: str
@@ -424,7 +464,7 @@ class ColorPicker(Widget):
 
     @property
     def value(self) -> str:
-        """The currently selected value from the options."""
+        """The currently selected value as a hex string. (str)"""
         if self._value is not None:
             return self._value
         else:
@@ -444,10 +484,12 @@ class ColorPicker(Widget):
         return ws
 
     def set_value(self, v: str) -> ColorPicker:
+        """Set the value of the widget as a hex string."""
         self._value = v
         return self
 
     def pick(self, v: str) -> ColorPicker:
+        """Set the value of the widget as a hex string. May omit the "#" prefix."""
         if not v.startswith("#"):
             v = f"#{v}"
         return self.set_value(v)
@@ -474,6 +516,8 @@ DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue], None]
 
 @dataclass(repr=False)
 class DateInput(Widget):
+    """A representation of ``st.date_input``."""
+
     _value: DateValue | None | InitialValue
     proto: DateInputProto = field(repr=False)
     label: str
@@ -491,6 +535,7 @@ class DateInput(Widget):
         self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
 
     def set_value(self, v: DateValue) -> DateInput:
+        """Set the value of the widget."""
         self._value = v
         return self
 
@@ -505,6 +550,7 @@ class DateInput(Widget):
 
     @property
     def value(self) -> DateWidgetReturn:
+        """The value of the widget. (date or Tuple of date)"""
         if not isinstance(self._value, InitialValue):
             parsed, _ = _parse_date_value(self._value)
             return tuple(parsed) if parsed is not None else None  # type: ignore
@@ -651,6 +697,8 @@ class Metric(Element):
 
 @dataclass(repr=False)
 class Multiselect(Widget, Generic[T]):
+    """A representation of ``st.multiselect``."""
+
     _value: list[T] | None
 
     proto: MultiSelectProto = field(repr=False)
@@ -678,7 +726,7 @@ class Multiselect(Widget, Generic[T]):
 
     @property
     def value(self) -> list[T]:
-        """The currently selected values from the options."""
+        """The currently selected values from the options. (list)"""
         if self._value is not None:
             return self._value
         else:
@@ -688,20 +736,26 @@ class Multiselect(Widget, Generic[T]):
 
     @property
     def indices(self) -> Sequence[int]:
+        """The indices of the currently selected values from the options. (list)"""
         return [self.options.index(str(v)) for v in self.value]
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
-        """
-        Set the value of the multiselect widget.
-        Implementation note: set_value not work correctly if `format_func` is also
-        passed to the multiselect. This is because we send options via proto with
-        applied `format_func`, but keep original values in session state
-        as widget value.
-        """
+        """Set the value of the multiselect widget. (list)"""
+
+        # Implementation note: set_value not work correctly if `format_func` is also
+        # passed to the multiselect. This is because we send options via proto with
+        # applied `format_func`, but keep original values in session state
+        # as widget value.
+
         self._value = v
         return self
 
     def select(self, v: T) -> Multiselect[T]:
+        """
+        Add a selection to the widget. Do nothing if the value is already selected.\
+        If testing a multiselect widget with repeated options, use ``set_value``\
+        instead.
+        """
         current = self.value
         if v in current:
             return self
@@ -712,6 +766,11 @@ class Multiselect(Widget, Generic[T]):
             return self
 
     def unselect(self, v: T) -> Multiselect[T]:
+        """
+        Remove a selection from the widget. Do nothing if the value is not\
+        already selected. If a value is selected multiple times, the first\
+        instance is removed.
+        """
         current = self.value
         if v not in current:
             return self
@@ -728,6 +787,8 @@ Number = Union[int, float]
 
 @dataclass(repr=False)
 class NumberInput(Widget):
+    """A representation of ``st.number_input``."""
+
     _value: Number | None | InitialValue
     proto: NumberInputProto = field(repr=False)
     label: str
@@ -745,6 +806,7 @@ class NumberInput(Widget):
         self.max = proto.max if proto.has_max else None
 
     def set_value(self, v: Number | None) -> NumberInput:
+        """Set the value of the ``st.number_input`` widget."""
         self._value = v
         return self
 
@@ -758,6 +820,7 @@ class NumberInput(Widget):
 
     @property
     def value(self) -> Number | None:
+        """Get the current value of the ``st.number_input`` widget."""
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -768,6 +831,7 @@ class NumberInput(Widget):
             return state[self.id]  # type: ignore
 
     def increment(self) -> NumberInput:
+        """Increment the ``st.number_input`` widget as if the user clicked "+"."""
         if self.value is None:
             return self
 
@@ -775,6 +839,7 @@ class NumberInput(Widget):
         return self.set_value(v)
 
     def decrement(self) -> NumberInput:
+        """Decrement the ``st.number_input`` widget as if the user clicked "-"."""
         if self.value is None:
             return self
 
@@ -784,6 +849,8 @@ class NumberInput(Widget):
 
 @dataclass(repr=False)
 class Radio(Widget, Generic[T]):
+    """A representation of ``st.radio``."""
+
     _value: T | None | InitialValue
 
     proto: RadioProto = field(repr=False)
@@ -801,13 +868,14 @@ class Radio(Widget, Generic[T]):
 
     @property
     def index(self) -> int | None:
+        """The index of the current selection. (int)"""
         if self.value is None:
             return None
         return self.options.index(str(self.value))
 
     @property
     def value(self) -> T | None:
-        """The currently selected value from the options."""
+        """The currently selected value from the options. (Any)"""
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -816,6 +884,7 @@ class Radio(Widget, Generic[T]):
             return cast(T, state[self.id])
 
     def set_value(self, v: T | None) -> Radio[T]:
+        """Set the selection by value."""
         self._value = v
         return self
 
@@ -834,6 +903,8 @@ class Radio(Widget, Generic[T]):
 
 @dataclass(repr=False)
 class Selectbox(Widget, Generic[T]):
+    """A representation of ``st.selectbox``."""
+
     _value: T | None | InitialValue
 
     proto: SelectboxProto = field(repr=False)
@@ -850,6 +921,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def index(self) -> int | None:
+        """The index of the current selection. (int)"""
         if self.value is None:
             return None
 
@@ -859,7 +931,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def value(self) -> T | None:
-        """The currently selected value from the options."""
+        """The currently selected value from the options. (Any)"""
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -868,19 +940,21 @@ class Selectbox(Widget, Generic[T]):
             return cast(T, state[self.id])
 
     def set_value(self, v: T | None) -> Selectbox[T]:
-        """
-        Set the value of the selectbox.
-        Implementation note: set_value not work correctly if `format_func` is also
-        passed to the selectbox. This is because we send options via proto with applied
-        `format_func`, but keep original values in session state as widget value.
-        """
+        """Set the selection by value."""
+
+        # Implementation note: set_value not work correctly if `format_func` is also
+        # passed to the selectbox. This is because we send options via proto with applied
+        # `format_func`, but keep original values in session state as widget value.
+
         self._value = v
         return self
 
     def select(self, v: T | None) -> Selectbox[T]:
+        """Set the selection by value."""
         return self.set_value(v)
 
     def select_index(self, index: int | None) -> Selectbox[T]:
+        """Set the selection by index."""
         if index is None:
             return self.set_value(None)
         return self.set_value(cast(T, self.options[index]))
@@ -900,6 +974,8 @@ class Selectbox(Widget, Generic[T]):
 
 @dataclass(repr=False)
 class SelectSlider(Widget, Generic[T]):
+    """A representation of ``st.select_slider``."""
+
     _value: T | Sequence[T] | None
 
     proto: SliderProto = field(repr=False)
@@ -915,6 +991,7 @@ class SelectSlider(Widget, Generic[T]):
         self.options = list(proto.options)
 
     def set_value(self, v: T | Sequence[T]) -> SelectSlider[T]:
+        """Set the (single) selection by value."""
         self._value = v
         return self
 
@@ -939,7 +1016,7 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def value(self) -> T | Sequence[T]:
-        """The currently selected value or range."""
+        """The currently selected value or range. (Any or Sequence of Any)"""
         if self._value is not None:
             return self._value
         else:
@@ -949,11 +1026,14 @@ class SelectSlider(Widget, Generic[T]):
             return state[self.id]  # type: ignore
 
     def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
+        """Set the ranged selection by values."""
         return self.set_value([lower, upper])
 
 
 @dataclass(repr=False)
 class Slider(Widget, Generic[SliderScalarT]):
+    """A representation of ``st.slider``."""
+
     _value: SliderScalarT | Sequence[SliderScalarT] | None
 
     proto: SliderProto = field(repr=False)
@@ -972,6 +1052,7 @@ class Slider(Widget, Generic[SliderScalarT]):
     def set_value(
         self, v: SliderScalarT | Sequence[SliderScalarT]
     ) -> Slider[SliderScalarT]:
+        """Set the (single) value of the slider."""
         self._value = v
         return self
 
@@ -988,7 +1069,7 @@ class Slider(Widget, Generic[SliderScalarT]):
 
     @property
     def value(self) -> SliderScalarT | Sequence[SliderScalarT]:
-        """The currently selected value or range."""
+        """The currently selected value or range. (Any or Sequence of Any)"""
         if self._value is not None:
             return self._value
         else:
@@ -1000,6 +1081,7 @@ class Slider(Widget, Generic[SliderScalarT]):
     def set_range(
         self, lower: SliderScalarT, upper: SliderScalarT
     ) -> Slider[SliderScalarT]:
+        """Set the ranged value of the slider."""
         return self.set_value([lower, upper])
 
 
@@ -1031,11 +1113,14 @@ class Text(Element):
 
     @property
     def value(self) -> str:
+        """The value of the element. (str)"""
         return self.proto.body
 
 
 @dataclass(repr=False)
 class TextArea(Widget):
+    """A representation of ``st.text_area``."""
+
     _value: str | None | InitialValue
 
     proto: TextAreaProto = field(repr=False)
@@ -1051,6 +1136,7 @@ class TextArea(Widget):
         self.type = "text_area"
 
     def set_value(self, v: str | None) -> TextArea:
+        """Set the value of the widget."""
         self._value = v
         return self
 
@@ -1064,6 +1150,7 @@ class TextArea(Widget):
 
     @property
     def value(self) -> str | None:
+        """The current value of the widget. (str)"""
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -1073,6 +1160,10 @@ class TextArea(Widget):
             return state[self.id]  # type: ignore
 
     def input(self, v: str) -> TextArea:
+        """
+        Set the value of the widget only if the value does not exceed the\
+        maximum allowed characters.
+        """
         # TODO should input be setting or appending?
         if self.max_chars and len(v) > self.max_chars:
             return self
@@ -1081,6 +1172,8 @@ class TextArea(Widget):
 
 @dataclass(repr=False)
 class TextInput(Widget):
+    """A representation of ``st.text_input``."""
+
     _value: str | None | InitialValue
     proto: TextInputProto = field(repr=False)
     label: str
@@ -1096,6 +1189,7 @@ class TextInput(Widget):
         self.type = "text_input"
 
     def set_value(self, v: str | None) -> TextInput:
+        """Set the value of the widget."""
         self._value = v
         return self
 
@@ -1109,6 +1203,7 @@ class TextInput(Widget):
 
     @property
     def value(self) -> str | None:
+        """The current value of the widget. (str)"""
         if not isinstance(self._value, InitialValue):
             return self._value
         else:
@@ -1118,6 +1213,10 @@ class TextInput(Widget):
             return state[self.id]  # type: ignore
 
     def input(self, v: str) -> TextInput:
+        """
+        Set the value of the widget only if the value does not exceed the\
+        maximum allowed characters.
+        """
         # TODO should input be setting or appending?
         if self.max_chars and len(v) > self.max_chars:
             return self
@@ -1129,6 +1228,8 @@ TimeValue: TypeAlias = Union[time, datetime]
 
 @dataclass(repr=False)
 class TimeInput(Widget):
+    """A representation of ``st.time_input``."""
+
     _value: TimeValue | None | InitialValue
     proto: TimeInputProto = field(repr=False)
     label: str
@@ -1142,6 +1243,7 @@ class TimeInput(Widget):
         self.type = "time_input"
 
     def set_value(self, v: TimeValue | None) -> TimeInput:
+        """Set the value of the widget."""
         self._value = v
         return self
 
@@ -1158,6 +1260,7 @@ class TimeInput(Widget):
 
     @property
     def value(self) -> time | None:
+        """The current value of the widget. (time)"""
         if not isinstance(self._value, InitialValue):
             v = self._value
             v = v.time() if isinstance(v, datetime) else v
@@ -1200,6 +1303,8 @@ class Toast(Element):
 
 @dataclass(repr=False)
 class Toggle(Widget):
+    """A representation of ``st.toggle``."""
+
     _value: bool | None
 
     proto: CheckboxProto = field(repr=False)
@@ -1221,6 +1326,7 @@ class Toggle(Widget):
 
     @property
     def value(self) -> bool:
+        """The current value of the widget. (bool)"""
         if self._value is not None:
             return self._value
         else:
@@ -1229,12 +1335,23 @@ class Toggle(Widget):
             return cast(bool, state[self.id])
 
     def set_value(self, v: bool) -> Toggle:
+        """Set the value of the widget."""
         self._value = v
         return self
 
 
 @dataclass(repr=False)
 class Block:
+    """A container of other elements.
+
+    Elements within a Block can be inspected and interacted with. This follows
+    the same syntax as inspecting and interacting within an ``AppTest`` object.
+
+    For all container classes, parameters of the original element can be
+    obtained as properties. For example, ``ChatMessage.avatar`` and
+    ``Tab.label``.
+    """
+
     type: str
     children: dict[int, Node]
     proto: Any = field(repr=False)
@@ -1442,6 +1559,8 @@ class Block:
 
 @dataclass(repr=False)
 class SpecialBlock(Block):
+    """Base class for the sidebar and main body containers."""
+
     def __init__(
         self,
         proto: BlockProto | None,
@@ -1463,6 +1582,8 @@ class SpecialBlock(Block):
 
 @dataclass(repr=False)
 class ChatMessage(Block):
+    """A representation of ``st.chat_message``."""
+
     type: str = field(repr=False)
     proto: BlockProto.ChatMessage = field(repr=False)
     name: str
@@ -1483,6 +1604,8 @@ class ChatMessage(Block):
 
 @dataclass(repr=False)
 class Column(Block):
+    """A representation of a column within ``st.columns``."""
+
     type: str = field(repr=False)
     proto: BlockProto.Column = field(repr=False)
     weight: float
@@ -1503,6 +1626,8 @@ class Column(Block):
 
 @dataclass(repr=False)
 class Tab(Block):
+    """A representation of tab within ``st.tabs``."""
+
     type: str = field(repr=False)
     proto: BlockProto.Tab = field(repr=False)
     label: str
