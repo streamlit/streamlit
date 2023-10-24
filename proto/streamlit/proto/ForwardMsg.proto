@@ -48,6 +48,9 @@ message ForwardMsg {
 
     // Script was interrupted by rerun
     FINISHED_EARLY_FOR_RERUN = 2;
+
+    // The partial run was sucessful
+    FINISHED_PARTIAL_RUN_SUCCESSFULLY = 3;
   }
 
   oneof type {

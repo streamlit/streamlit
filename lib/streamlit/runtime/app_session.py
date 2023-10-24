@@ -349,6 +349,7 @@ class AppSession:
                 client_state.widget_states,
                 client_state.page_script_hash,
                 client_state.page_name,
+                client_state.partial_id,
             )
         else:
             rerun_data = RerunData()
@@ -536,17 +537,24 @@ class AppSession:
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
             or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
+            or event == ScriptRunnerEvent.PARTIAL_RUN_STOPPED_WITH_SUCCESS
         ):
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_NOT_RUNNING
 
-            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
-
-            script_finished_msg = self._create_script_finished_message(
-                ForwardMsg.FINISHED_SUCCESSFULLY
-                if script_succeeded
-                else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
+            script_succeeded = (
+                event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+                or event == ScriptRunnerEvent.PARTIAL_RUN_STOPPED_WITH_SUCCESS
             )
+
+            if event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS:
+                status = ForwardMsg.FINISHED_SUCCESSFULLY
+            elif event == ScriptRunnerEvent.PARTIAL_RUN_STOPPED_WITH_SUCCESS:
+                status = ForwardMsg.FINISHED_PARTIAL_RUN_SUCCESSFULLY
+            else:
+                status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
+
+            script_finished_msg = self._create_script_finished_message(status)
             self._enqueue_forward_msg(script_finished_msg)
 
             self._debug_last_backmsg_id = None

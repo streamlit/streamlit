@@ -21,6 +21,7 @@ from enum import Enum
 from timeit import default_timer as timer
 from typing import Callable, Dict, Optional
 
+import cloudpickle
 from blinker import Signal
 
 from streamlit import config, runtime, source_util, util
@@ -43,6 +44,7 @@ from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
     SessionState,
+    SessionStateProxy,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
@@ -65,6 +67,10 @@ class ScriptRunnerEvent(Enum):
 
     # The script run stopped in order to start a script run with newer widget state.
     SCRIPT_STOPPED_FOR_RERUN = "SCRIPT_STOPPED_FOR_RERUN"
+
+    # The partial run stopped ran to completion, or was
+    # interrupted by the user.
+    PARTIAL_RUN_STOPPED_WITH_SUCCESS = "PARTIAL_RUN_STOPPED_WITH_SUCCESS"
 
     # The ScriptRunner is done processing the ScriptEventQueue and
     # is shut down.
@@ -497,6 +503,7 @@ class ScriptRunner:
         # so we track this to potentially skip session state cleanup later.
         premature_stop: bool = False
 
+        partial_run = False
         try:
             # Create fake module. This gives us a name global namespace to
             # execute the code in.
@@ -531,7 +538,21 @@ class ScriptRunner:
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
-                exec(code, module.__dict__)
+                session_state = SessionStateProxy()
+                if (
+                    rerun_data.partial_id
+                    and "st_partials" in session_state
+                    and rerun_data.partial_id in session_state.st_partials
+                ):
+                    partial_func = cloudpickle.loads(
+                        session_state.st_partials[rerun_data.partial_id]
+                    )
+                    # Load dg stack
+                    # ctx.dg_stack = cloudpickle.loads(session_state.st_groups[rerun_data.group_id][1])
+                    partial_func()
+                    partial_run = True
+                else:
+                    exec(code, module.__dict__)
                 self._session_state.maybe_check_serializable()
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
@@ -552,6 +573,9 @@ class ScriptRunner:
         finally:
             if rerun_exception_data:
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+            elif partial_run:
+                # Temp: use own event. This prevent the cleanup of other elements outside the group
+                finished_event = ScriptRunnerEvent.PARTIAL_RUN_STOPPED_WITH_SUCCESS
             else:
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 

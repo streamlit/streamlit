@@ -30,4 +30,5 @@ message Button {
   string type = 7;
   bool disabled = 8;
   bool use_container_width = 9;
+  string partial_id=10;
 }

@@ -68,6 +68,7 @@ class ScriptRunContext:
         default_factory=list
     )
     script_requests: Optional[ScriptRequests] = None
+    current_partial_id: Optional[str] = None
 
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
@@ -82,6 +83,7 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
+        self.current_partial_id = None
 
     def on_script_start(self) -> None:
         self._has_script_started = True
