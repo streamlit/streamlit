@@ -187,3 +187,21 @@ class UtilTest(unittest.TestCase):
             util.calc_md5("eventually bytes"),
             util.calc_md5("eventually bytes".encode("utf-8")),
         )
+
+    @parameterized.expand(
+        [
+            (
+                {"a": [1], "b": [2, 3], "c": 4, "d": ["hello"]},
+                {"a": 1, "b": [2, 3], "c": 4, "d": "hello"},
+            ),
+            (
+                {"a": [], "b": [2, 3], "c": 4, "d": ["hello"]},
+                {"a": [], "b": [2, 3], "c": 4, "d": "hello"},
+            ),
+            ({}, {}),
+            ({"a": 1, "b": 2, "c": 3}, {"a": 1, "b": 2, "c": 3}),
+            ({"a": [1], "b": ["b"], "c": [True]}, {"a": 1, "b": "b", "c": True}),
+        ]
+    )
+    def test_extract_single_element_lists(self, input_dict, expected_output):
+        self.assertEqual(util.extract_single_element_lists(input_dict), expected_output)

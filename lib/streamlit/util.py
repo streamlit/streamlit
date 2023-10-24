@@ -212,3 +212,21 @@ def extract_key_query_params(
             for item in sublist
         ]
     )
+
+
+def extract_single_element_lists(
+    dict: Dict[str, List[Any]]
+) -> Dict[str, Union[Any, List[Any]]]:
+    """
+    Extracts the single element from lists in a dictionary if the list has a length of 1.
+
+    Args:
+    - d (dict): The dictionary containing lists.
+
+    Returns:
+    - dict: The modified dictionary with single element lists extracted.
+    """
+    for key, value in dict.items():
+        if isinstance(value, list) and len(value) == 1:
+            dict[key] = value[0]
+    return dict

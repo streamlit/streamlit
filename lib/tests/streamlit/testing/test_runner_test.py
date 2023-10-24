@@ -53,7 +53,7 @@ def test_get_query_params():
     at.query_params["foo"] = 5
     at.query_params["bar"] = "baz"
     at.run()
-    assert at.json[0].value == '{"foo": ["5"], "bar": ["baz"]}'
+    assert at.json[0].value == '{"foo": "5", "bar": "baz"}'
 
 
 def test_set_query_params():

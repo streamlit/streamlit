@@ -57,8 +57,10 @@ def get_query_params() -> Dict[str, List[str]]:
     if ctx is None:
         return {}
     # Return new query params dict, but without embed, embed_options query params
-    return util.exclude_key_query_params(
-        parse.parse_qs(ctx.query_string), keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
+    return util.extract_single_element_lists(
+        util.exclude_key_query_params(
+            parse.parse_qs(ctx.query_string), keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
+        )
     )
 
 

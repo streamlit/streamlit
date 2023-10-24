@@ -33,9 +33,18 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             st.experimental_set_query_params(embed_options="show_colored_line")
 
-    def test_get_query_params_after_set_query_params(self):
+    def test_get_query_params_after_set_query_params_single_element(self):
         """Test valid st.set_query_params sends protobuf message."""
+
         p_set = dict(x=["a"])
+        st.experimental_set_query_params(**p_set)
+        p_get = st.experimental_get_query_params()
+        self.assertEqual(p_get, dict(x="a"))
+
+    def test_get_query_params_after_set_query_params_list(self):
+        """Test valid st.set_query_params sends protobuf message."""
+
+        p_set = dict(x=["a", "b"])
         st.experimental_set_query_params(**p_set)
         p_get = st.experimental_get_query_params()
         self.assertEqual(p_get, p_set)
