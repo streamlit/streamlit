@@ -112,6 +112,15 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "fastchat",
     "assemblyai",
     "openllm",
+    "embedchain",
+    "haystack",
+    "vllm",
+    "alpa",
+    "jinaai",
+    "guidance",
+    "litellm",
+    "comet_llm",
+    "instructor",
     # Workflow Tools:
     "prefect",
     "luigi",
@@ -132,6 +141,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "snowflake",
     "streamlit_extras",
     "streamlit_pydantic",
+    "pydantic",
     "plost",
 ]
 
