@@ -14,10 +14,16 @@
 
 """Platform module."""
 
+
+from typing import Mapping, Optional
+
+from streamlit import runtime
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
+@gather_metrics("platform.post_parent_message")
 def post_parent_message(message: str) -> None:
     """
     Sends a string message to the parent window (when host configuration allows).
@@ -29,3 +35,53 @@ def post_parent_message(message: str) -> None:
     fwd_msg = ForwardMsg()
     fwd_msg.parent_message.message = message
     ctx.enqueue(fwd_msg)
+
+
+@gather_metrics("platform.get_websocket_headers")
+def get_websocket_headers() -> Optional[Mapping[str, str]]:
+    """Return a copy of the HTTP request headers for the current session's
+    WebSocket connection. If there's no active session, return None instead.
+
+    Raise an error if the server is not running.
+    """
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return None
+
+    session_client = runtime.get_instance().get_client(ctx.session_id)
+    if session_client is None:
+        return None
+
+    from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+
+    if not isinstance(session_client, BrowserWebSocketHandler):
+        raise RuntimeError(
+            f"SessionClient is not a BrowserWebSocketHandler! ({session_client})"
+        )
+
+    return dict(session_client.request.headers)
+
+
+@gather_metrics("platform.get_websocket_cookies")
+def get_websocket_cookies() -> Optional[Mapping[str, str]]:
+    """Return a copy of the HTTP request cookies for the current session's
+    WebSocket connection. If there's no active session, return None instead.
+
+    Raise an error if the server is not running.
+    """
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return None
+
+    session_client = runtime.get_instance().get_client(ctx.session_id)
+    if session_client is None:
+        return None
+
+    from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
+
+    if not isinstance(session_client, BrowserWebSocketHandler):
+        raise RuntimeError(
+            f"SessionClient is not a BrowserWebSocketHandler! ({session_client})"
+        )
+
+    return {key: value.value for key, value in session_client.request.cookies.items()}
