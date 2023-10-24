@@ -19,15 +19,16 @@ import { render } from "@streamlit/lib/src/test_util"
 import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
-import { Skeleton } from "./Skeleton"
+import { AppSkeleton } from "./AppSkeleton"
 
-describe("Skeleton element", () => {
-  it("renders without delay", () => {
-    render(<Skeleton />)
+describe("AppSkeleton element", () => {
+  it("renders after a delay", async () => {
+    render(<AppSkeleton />)
 
-    // Render the skeleton immediately, without any sort of delay.
-    // (This is normal React behavior, but different from AppSkeleton, so I'm
-    // writing a very trivial test for it.)
-    expect(screen.getByTestId("stSkeleton")).toBeVisible()
+    // At first, the skeleton should not appear on screen.
+    expect(screen.queryAllByTestId("stAppSkeleton")).toEqual([])
+
+    // Then, a few ms later (500ms at time of writing) we show the skeleton.
+    expect(await screen.findByTestId("stAppSkeleton")).toBeVisible()
   })
 })

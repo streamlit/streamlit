@@ -19,7 +19,7 @@ import React, { FC, useState, useEffect, memo } from "react"
 import { SquareSkeleton } from "./styled-components"
 
 const RawSkeleton: FC = () => {
-  return <SquareSkeleton />
+  return <SquareSkeleton data-testid="stSkeleton" />
 }
 
 export const Skeleton = memo(RawSkeleton)

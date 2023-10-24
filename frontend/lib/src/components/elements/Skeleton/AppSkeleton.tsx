@@ -42,7 +42,7 @@ const RawAppSkeleton: FC = () => {
   if (!visible) return <></>
 
   return (
-    <StyledSkeleton>
+    <StyledSkeleton data-testid="stAppSkeleton">
       <TitleSkeleton />
       <ParagraphSkeleton>
         <TextLineSkeleton width="98%" />
