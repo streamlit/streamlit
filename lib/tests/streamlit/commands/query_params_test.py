@@ -39,3 +39,9 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         st.experimental_set_query_params(**p_set)
         p_get = st.experimental_get_query_params()
         self.assertEqual(p_get, p_set)
+
+    def test_set_query_params_empty(self):
+        p_set = dict(x=[""])
+        st.experimental_set_query_params(**p_set)
+        p_get = st.experimental_get_query_params()
+        self.assertEqual(p_get, p_set)
