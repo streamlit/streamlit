@@ -4,7 +4,7 @@ altair==5.1.2
 anyio==3.7.1
 async-timeout==4.0.3
 attrs==23.1.0
-black==23.10.0
+black==23.10.1
 blinker==1.6.3
 bokeh==2.4.3
 cachetools==5.3.1
