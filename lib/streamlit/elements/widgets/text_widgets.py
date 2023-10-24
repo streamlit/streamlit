@@ -288,6 +288,9 @@ class TextWidgetsMixin:
             label_visibility
         )
 
+        if ctx and ctx.current_partial_id:
+            text_input_proto.partial_id = ctx.current_partial_id
+
         if help is not None:
             text_input_proto.help = dedent(help)
 

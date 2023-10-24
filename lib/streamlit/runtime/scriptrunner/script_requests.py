@@ -44,6 +44,7 @@ class RerunData:
     widget_states: Optional[WidgetStates] = None
     page_script_hash: str = ""
     page_name: str = ""
+    partial_id: Optional[str] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -130,6 +131,7 @@ class ScriptRequests:
                         widget_states=coalesced_states,
                         page_script_hash=new_data.page_script_hash,
                         page_name=new_data.page_name,
+                        partial_id=new_data.partial_id,
                     )
                     return True
 
