@@ -116,7 +116,6 @@ def _ensure_no_embed_params(
         )
 
     all_current_params = parse.parse_qs(query_string, True)
-    print(f"{all_current_params=}")
     current_embed_params = parse.urlencode(
         {
             EMBED_QUERY_PARAM: [
@@ -134,9 +133,7 @@ def _ensure_no_embed_params(
         },
         doseq=True,
     )
-    print(f"{current_embed_params=}")
     query_string = parse.urlencode(query_params, doseq=True)
-    print(f"{query_string=}")
 
     if query_string:
         separator = "&" if current_embed_params else ""
