@@ -221,7 +221,7 @@ def extract_single_element_lists(
     Extracts the single element from lists in a dictionary if the list has a length of 1.
 
     Args:
-    - d (dict): The dictionary containing lists.
+    - dict (dict): The dictionary containing lists.
 
     Returns:
     - dict: The modified dictionary with single element lists extracted.
