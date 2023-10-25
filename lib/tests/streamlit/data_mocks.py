@@ -34,7 +34,7 @@ class TestCaseMetadata(NamedTuple):
     expected_cols: int
     expected_data_format: DataFormat
 
-    # Test pytest this is not a TestClass despite having "Test" in the name.
+    # Tell pytest this is not a TestClass despite having "Test" in the name.
     __test__ = False
 
 
