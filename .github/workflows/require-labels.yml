@@ -2,7 +2,7 @@ name: Pull Request Labels
 
 on:
   pull_request:
-    types: [opened, labeled, unlabeled, synchronize]
+    types: [labeled, unlabeled]
 
 jobs:
   security-assessment:
