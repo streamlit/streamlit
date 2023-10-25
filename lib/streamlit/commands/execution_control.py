@@ -24,7 +24,7 @@ _LOGGER = get_logger(__name__)
 
 
 @gather_metrics("stop")
-def stop() -> NoReturn:  # type: ignore
+def stop() -> NoReturn:  # type: ignore[misc]
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
@@ -50,7 +50,7 @@ def stop() -> NoReturn:  # type: ignore
 
 
 @gather_metrics("rerun")
-def rerun() -> NoReturn:  # type: ignore
+def rerun() -> NoReturn:  # type: ignore[misc]
     """Rerun the script immediately.
 
     When `st.rerun()` is called, the script is halted - no more statements will
@@ -74,7 +74,7 @@ def rerun() -> NoReturn:  # type: ignore
 
 
 @gather_metrics("experimental_rerun")
-def experimental_rerun() -> NoReturn:  # type: ignore
+def experimental_rerun() -> NoReturn:
     """Rerun the script immediately.
 
     When `st.experimental_rerun()` is called, the script is halted - no
