@@ -33,7 +33,9 @@ class TestCaseMetadata(NamedTuple):
     expected_rows: int
     expected_cols: int
     expected_data_format: DataFormat
-    __test__ = False  # Tell pytest that this is not a test class
+
+    # Tell pytest this is not a TestClass despite having "Test" in the name.
+    __test__ = False
 
 
 SHARED_TEST_CASES = [
