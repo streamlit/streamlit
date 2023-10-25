@@ -22,6 +22,7 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
@@ -286,6 +287,7 @@ class SelectboxMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             serialized_value = serde.serialize(widget_state.value)

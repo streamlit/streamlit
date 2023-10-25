@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
@@ -27,6 +28,8 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -375,3 +378,37 @@ Please select at most 2 options.
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.placeholder, "Select your beverage")
+
+
+def test_multiselect_enum_coercion():
+    """Test E2E Enum Coercion on a selectbox."""
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected_list = st.multiselect("my_enum", EnumA, default=[EnumA.A, EnumA.C])
+        st.text(id(selected_list[0].__class__))
+        st.text(id(EnumA))
+        st.text(all(selected in EnumA for selected in selected_list))
+
+    at = AppTest.from_function(script).run()
+
+    def test_enum():
+        multiselect = at.multiselect[0]
+        original_class = multiselect.value[0].__class__
+        multiselect.set_value([original_class.A, original_class.B]).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.

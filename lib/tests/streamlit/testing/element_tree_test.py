@@ -47,14 +47,13 @@ def test_alert():
 
 
 def test_button():
-    sr = AppTest.from_string(
-        """
+    def script():
         import streamlit as st
 
         st.button("button")
         st.button("second button")
-        """,
-    ).run()
+
+    sr = AppTest.from_function(script).run()
     assert sr.button[0].value == False
     assert sr.button[1].value == False
 
@@ -117,15 +116,14 @@ def test_checkbox():
 
 
 def test_color_picker():
-    at = AppTest.from_string(
-        """
+    def script():
         import streamlit as st
 
         st.color_picker("what is your favorite color?")
         st.color_picker("short hex", value="#ABC")
         st.color_picker("invalid", value="blue")
-        """,
-    ).run()
+
+    at = AppTest.from_function(script).run()
     assert at.color_picker.len == 2
     assert at.color_picker.values == ["#000000", "#ABC"]
     assert "blue" in at.exception[0].value
@@ -182,16 +180,18 @@ def test_dataframe():
 
 
 def test_date_input():
-    at = AppTest.from_string(
-        """
-        import streamlit as st
+    def script():
         import datetime
+
+        import streamlit as st
 
         st.date_input("date", value=datetime.date(2023, 4, 17))
         st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
-        st.date_input("range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1)))
-        """,
-    ).run()
+        st.date_input(
+            "range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1))
+        )
+
+    at = AppTest.from_function(script).run()
     assert not at.exception
     assert at.date_input.values == [
         date(2023, 4, 17),
