@@ -304,13 +304,12 @@ class SliderTest(DeltaGeneratorTestCase):
 
 
 def test_id_stability():
-    at = AppTest.from_string(
-        """
-    import streamlit as st
+    def script():
+        import streamlit as st
 
-    st.slider("slider", key="slider")
-    """
-    ).run()
+        st.slider("slider", key="slider")
+
+    at = AppTest.from_function(script).run()
     s1 = at.slider[0]
     at = s1.set_value(5).run()
     s2 = at.slider[0]

@@ -382,22 +382,23 @@ Please select at most 2 options.
 
 def test_multiselect_enum_coercion():
     """Test E2E Enum Coercion on a selectbox."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    from enum import Enum
 
-    class EnumA(Enum):
-        A = 1
-        B = 2
-        C = 3
+    def script():
+        from enum import Enum
 
-    selected_list = st.multiselect("my_enum", EnumA, default=[EnumA.A, EnumA.C])
-    st.text(id(selected_list[0].__class__))
-    st.text(id(EnumA))
-    st.text(all(selected in EnumA for selected in selected_list))
-    """
-    ).run()
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected_list = st.multiselect("my_enum", EnumA, default=[EnumA.A, EnumA.C])
+        st.text(id(selected_list[0].__class__))
+        st.text(id(EnumA))
+        st.text(all(selected in EnumA for selected in selected_list))
+
+    at = AppTest.from_function(script).run()
 
     def test_enum():
         multiselect = at.multiselect[0]

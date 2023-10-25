@@ -206,12 +206,13 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
 def test_selectbox_interaction():
     """Test interactions with an empty selectbox widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    st.selectbox("the label", ("m", "f"), index=None)
-    """
-    ).run()
+
+    def script():
+        import streamlit as st
+
+        st.selectbox("the label", ("m", "f"), index=None)
+
+    at = AppTest.from_function(script).run()
     selectbox = at.selectbox[0]
     assert selectbox.value is None
 
@@ -228,22 +229,23 @@ def test_selectbox_interaction():
 
 def test_selectbox_enum_coercion():
     """Test E2E Enum Coercion on a selectbox."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    from enum import Enum
 
-    class EnumA(Enum):
-        A = 1
-        B = 2
-        C = 3
+    def script():
+        from enum import Enum
 
-    selected = st.selectbox("my_enum", EnumA, index=0)
-    st.text(id(selected.__class__))
-    st.text(id(EnumA))
-    st.text(selected in EnumA)
-    """
-    ).run()
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected = st.selectbox("my_enum", EnumA, index=0)
+        st.text(id(selected.__class__))
+        st.text(id(EnumA))
+        st.text(selected in EnumA)
+
+    at = AppTest.from_function(script).run()
 
     def test_enum():
         selectbox = at.selectbox[0]

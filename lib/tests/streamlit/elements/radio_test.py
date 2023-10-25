@@ -254,13 +254,13 @@ class RadioTest(DeltaGeneratorTestCase):
 
 def test_radio_interaction():
     """Test interactions with an empty radio widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
 
-    st.radio("the label", ("m", "f"), index=None)
-    """
-    ).run()
+    def script():
+        import streamlit as st
+
+        st.radio("the label", ("m", "f"), index=None)
+
+    at = AppTest.from_function(script).run()
     radio = at.radio[0]
     assert radio.value is None
 
@@ -277,22 +277,23 @@ def test_radio_interaction():
 
 def test_radio_enum_coercion():
     """Test E2E Enum Coercion on a radio."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    from enum import Enum
 
-    class EnumA(Enum):
-        A = 1
-        B = 2
-        C = 3
+    def script():
+        from enum import Enum
 
-    selected = st.radio("my_enum", EnumA, index=0)
-    st.text(id(selected.__class__))
-    st.text(id(EnumA))
-    st.text(selected in EnumA)
-    """
-    ).run()
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected = st.radio("my_enum", EnumA, index=0)
+        st.text(id(selected.__class__))
+        st.text(id(EnumA))
+        st.text(selected in EnumA)
+
+    at = AppTest.from_function(script).run()
 
     def test_enum():
         radio = at.radio[0]

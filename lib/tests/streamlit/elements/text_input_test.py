@@ -189,12 +189,13 @@ class SomeObj:
 
 def test_text_input_interaction():
     """Test interactions with an empty text_input widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    st.text_input("the label", value=None)
-    """
-    ).run()
+
+    def script():
+        import streamlit as st
+
+        st.text_input("the label", value=None)
+
+    at = AppTest.from_function(script).run()
     text_input = at.text_input[0]
     assert text_input.value is None
 

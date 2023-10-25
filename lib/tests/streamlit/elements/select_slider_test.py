@@ -268,22 +268,23 @@ class SliderTest(DeltaGeneratorTestCase):
 
 def test_select_slider_enum_coercion():
     """Test E2E Enum Coercion on a select_slider."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    from enum import Enum
 
-    class EnumA(Enum):
-        A = 1
-        B = 2
-        C = 3
+    def script():
+        from enum import Enum
 
-    selected = st.select_slider("my_enum", EnumA, value=EnumA.A)
-    st.text(id(selected.__class__))
-    st.text(id(EnumA))
-    st.text(selected in EnumA)
-    """
-    ).run()
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected = st.select_slider("my_enum", EnumA, value=EnumA.A)
+        st.text(id(selected.__class__))
+        st.text(id(EnumA))
+        st.text(selected in EnumA)
+
+    at = AppTest.from_function(script).run()
 
     def test_enum():
         select_slider = at.select_slider[0]
@@ -301,22 +302,23 @@ def test_select_slider_enum_coercion():
 
 def test_select_slider_enum_coercion_multivalue():
     """Test E2E Enum Coercion on a selectbox."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    from enum import Enum
 
-    class EnumA(Enum):
-        A = 1
-        B = 2
-        C = 3
+    def script():
+        from enum import Enum
 
-    selected_list = st.select_slider("my_enum", EnumA, value=[EnumA.A, EnumA.C])
-    st.text(id(selected_list[0].__class__))
-    st.text(id(EnumA))
-    st.text(all(selected in EnumA for selected in selected_list))
-    """
-    ).run()
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected_list = st.select_slider("my_enum", EnumA, value=[EnumA.A, EnumA.C])
+        st.text(id(selected_list[0].__class__))
+        st.text(id(EnumA))
+        st.text(all(selected in EnumA for selected in selected_list))
+
+    at = AppTest.from_function(script).run()
 
     def test_enum():
         select_slider = at.select_slider[0]
