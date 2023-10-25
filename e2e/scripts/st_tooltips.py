@@ -72,3 +72,6 @@ st.text_area("textarea", help=leading_indent_regular_text_tooltip)
 st.select_slider("selectslider", options=["a", "b", "c"], help=indented_code_tooltip)
 st.button("some button", help=no_indent_tooltip)
 st.metric("some metric", value=500, help=no_indent_tooltip)
+
+# Insert some space, otherwise the last tooltip is overlapping
+st.write("--")
