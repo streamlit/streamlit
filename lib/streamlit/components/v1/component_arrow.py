@@ -16,8 +16,6 @@
 CustomComponent for dataframe serialization.
 """
 
-from typing import Any
-
 import pandas as pd
 
 from streamlit import type_util
@@ -45,13 +43,6 @@ def marshall(proto, data, default_uuid=None):
     _marshall_data(proto, df.to_numpy())
 
 
-def _maybe_tuple_to_list(item: Any) -> Any:
-    """Convert a tuple to a list. Leave as is if it's not a tuple."""
-    if isinstance(item, tuple):
-        return list(item)
-    return item
-
-
 def _marshall_index(proto, index):
     """Marshall pandas.DataFrame index into an ArrowTable proto.
 
@@ -65,7 +56,7 @@ def _marshall_index(proto, index):
         Will default to RangeIndex (0, 1, 2, ..., n) if no index is provided.
 
     """
-    index = map(_maybe_tuple_to_list, index.values)
+    index = map(type_util.maybe_tuple_to_list, index.values)
     index_df = pd.DataFrame(index)
     proto.index = type_util.data_frame_to_bytes(index_df)
 
@@ -83,7 +74,7 @@ def _marshall_columns(proto, columns):
         Will default to RangeIndex (0, 1, 2, ..., n) if no column labels are provided.
 
     """
-    columns = map(_maybe_tuple_to_list, columns.values)
+    columns = map(type_util.maybe_tuple_to_list, columns.values)
     columns_df = pd.DataFrame(columns)
     proto.columns = type_util.data_frame_to_bytes(columns_df)
 
