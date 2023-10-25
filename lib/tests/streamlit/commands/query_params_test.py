@@ -53,4 +53,4 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         empty_str_params = dict(x=[""])
         st.experimental_set_query_params(**empty_str_params)
         params_get = st.experimental_get_query_params()
-        self.assertEqual(params_get, empty_str_params)
+        self.assertEqual(params_get, dict(x=""))
