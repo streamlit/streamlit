@@ -16,22 +16,29 @@
 
 import styled from "@emotion/styled"
 
-export const StyledApp = styled.div(({ theme }) => ({
-  position: "absolute",
-  background: theme.colors.bgColor,
-  color: theme.colors.bodyText,
-  top: theme.spacing.none,
-  left: theme.spacing.none,
-  right: theme.spacing.none,
-  bottom: theme.spacing.none,
-  overflow: "hidden",
-  "@media print": {
-    float: "none",
-    height: theme.sizes.full,
-    position: "static",
-    overflow: "visible",
-  },
-}))
+import { hasLightBackgroundColor } from "@streamlit/lib"
+
+export const StyledApp = styled.div(({ theme }) => {
+  const lightBackground = hasLightBackgroundColor(theme)
+
+  return {
+    position: "absolute",
+    background: theme.colors.bgColor,
+    color: theme.colors.bodyText,
+    top: theme.spacing.none,
+    left: theme.spacing.none,
+    right: theme.spacing.none,
+    bottom: theme.spacing.none,
+    colorScheme: lightBackground ? "light" : "dark",
+    overflow: "hidden",
+    "@media print": {
+      float: "none",
+      height: theme.sizes.full,
+      position: "static",
+      overflow: "visible",
+    },
+  }
+})
 
 /**
  * The glide-data-grid requires one root level portal element for rendering the cell overlays:
