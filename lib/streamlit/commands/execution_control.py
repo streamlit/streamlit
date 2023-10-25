@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import NoReturn
 
 import streamlit as st
 from streamlit.deprecation_util import make_deprecated_name_warning
@@ -23,7 +24,7 @@ _LOGGER = get_logger(__name__)
 
 
 @gather_metrics("stop")
-def stop() -> None:
+def stop() -> NoReturn:  # type: ignore[misc]
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
@@ -49,7 +50,7 @@ def stop() -> None:
 
 
 @gather_metrics("rerun")
-def rerun() -> None:
+def rerun() -> NoReturn:  # type: ignore[misc]
     """Rerun the script immediately.
 
     When `st.rerun()` is called, the script is halted - no more statements will
@@ -73,7 +74,7 @@ def rerun() -> None:
 
 
 @gather_metrics("experimental_rerun")
-def experimental_rerun() -> None:
+def experimental_rerun() -> NoReturn:
     """Rerun the script immediately.
 
     When `st.experimental_rerun()` is called, the script is halted - no
