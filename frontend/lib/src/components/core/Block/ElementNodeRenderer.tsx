@@ -292,7 +292,6 @@ const RawElementNodeRenderer = (
     case "deckGlJsonChart":
       return (
         <DeckGlJsonChart
-          sessionInfo={props.sessionInfo}
           width={width}
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
         />
