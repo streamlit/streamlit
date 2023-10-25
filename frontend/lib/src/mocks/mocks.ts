@@ -33,7 +33,6 @@ export function mockSessionInfoProps(
     installationIdV3: "mockInstallationIdV3",
     maxCachedMessageAge: 123,
     commandLine: "mockCommandLine",
-    userMapboxToken: "mockUserMapboxToken",
     ...overrides,
   }
 }
