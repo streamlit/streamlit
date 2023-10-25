@@ -146,7 +146,7 @@ def maybe_coerce_enum(register_widget_result, options, opt_sequence):
         coerce_class = options
     else:
         coerce_class = _extract_common_class_from_iter(opt_sequence)
-        if not isinstance(coerce_class, EnumMeta):
+        if coerce_class is None:
             return register_widget_result
 
     return RegisterWidgetResult(
@@ -190,7 +190,7 @@ def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
         coerce_class = options
     else:
         coerce_class = _extract_common_class_from_iter(opt_sequence)
-        if not isinstance(coerce_class, EnumMeta):
+        if coerce_class is None:
             return register_widget_result
 
     # Return a new RegisterWidgetResult with the coerced enum values sequence
@@ -205,12 +205,12 @@ def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
 
 def _extract_common_class_from_iter(iterable: Iterable[Any]) -> Any:
     """Return the common class of all elements in a iterable if they share one.
-    Otherwise, return the iterable itself."""
+    Otherwise, return None."""
     try:
         inner_iter = iter(iterable)
         first_class = type(next(inner_iter))
     except StopIteration:
-        return iterable
+        return None
     if all(type(item) is first_class for item in inner_iter):
         return first_class
-    return iterable
+    return None
