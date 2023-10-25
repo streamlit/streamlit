@@ -86,7 +86,7 @@ message Config {
   // See config option "global.maxCachedMessageAge".
   int32 max_cached_message_age = 3;
 
-  // See config option "mapbox.token".
+  // DEPRECATED: the mapbox token was moved to the DeckGlJsonChart message.
   string mapbox_token = 4;
 
   // See config option "server.allowRunOnSave".
