@@ -238,23 +238,7 @@ const RawElementNodeRenderer = (
 
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
   // since leaf elements are always direct children of a VerticalBlock, which always calculates
-  let width = props.width ?? 0
-
-  // Modify width using the value from the spec as passed with the message when applicable
-  if (node.metadata.elementDimensionSpec) {
-    if (
-      node.metadata.elementDimensionSpec.width &&
-      node.metadata.elementDimensionSpec.width > 0
-    ) {
-      width = Math.min(node.metadata.elementDimensionSpec.width, width)
-    }
-    if (
-      node.metadata.elementDimensionSpec.height &&
-      node.metadata.elementDimensionSpec.height > 0
-    ) {
-      height = node.metadata.elementDimensionSpec.height
-    }
-  }
+  const width = props.width ?? 0
 
   switch (node.element.type) {
     case "alert": {
