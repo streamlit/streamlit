@@ -31,4 +31,5 @@ message MultiSelect {
   LabelVisibilityMessage label_visibility = 10;
   int32 max_selections = 11;
   string placeholder = 12;
+  string partial_id = 13;
 }

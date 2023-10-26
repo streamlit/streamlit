@@ -325,6 +325,8 @@ class MultiSelectMixin:
         multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
+        if ctx and ctx.current_partial_id:
+            multiselect_proto.partial_id = ctx.current_partial_id
 
         if help is not None:
             multiselect_proto.help = dedent(help)
