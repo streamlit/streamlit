@@ -16,13 +16,20 @@
 CustomComponent for dataframe serialization.
 """
 
+from __future__ import annotations
+
+from typing import Any
+
 import pandas as pd
 
 from streamlit import type_util
 from streamlit.elements.lib import pandas_styler_utils
+from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 
 
-def marshall(proto, data, default_uuid=None):
+def marshall(
+    proto: ArrowTableProto, data: Any, default_uuid: str | None = None
+) -> None:
     """Marshall data into an ArrowTable proto.
 
     Parameters
@@ -35,7 +42,7 @@ def marshall(proto, data, default_uuid=None):
 
     """
     if type_util.is_pandas_styler(data):
-        pandas_styler_utils.marshall_styler(proto, data, default_uuid)
+        pandas_styler_utils.marshall_styler(proto, data, default_uuid)  # type: ignore
 
     df = type_util.convert_anything_to_df(data)
     _marshall_index(proto, df.index)
@@ -43,7 +50,7 @@ def marshall(proto, data, default_uuid=None):
     _marshall_data(proto, df)
 
 
-def _marshall_index(proto, index):
+def _marshall_index(proto: ArrowTableProto, index: pd.Index) -> None:
     """Marshall pandas.DataFrame index into an ArrowTable proto.
 
     Parameters
@@ -51,7 +58,7 @@ def _marshall_index(proto, index):
     proto : proto.ArrowTable
         Output. The protobuf for a Streamlit ArrowTable proto.
 
-    index : Index or array-like
+    index : pd.Index
         Index to use for resulting frame.
         Will default to RangeIndex (0, 1, 2, ..., n) if no index is provided.
 
@@ -61,7 +68,7 @@ def _marshall_index(proto, index):
     proto.index = type_util.data_frame_to_bytes(index_df)
 
 
-def _marshall_columns(proto, columns):
+def _marshall_columns(proto: ArrowTableProto, columns: pd.Series) -> None:
     """Marshall pandas.DataFrame columns into an ArrowTable proto.
 
     Parameters
@@ -69,7 +76,7 @@ def _marshall_columns(proto, columns):
     proto : proto.ArrowTable
         Output. The protobuf for a Streamlit ArrowTable proto.
 
-    columns : Index or array-like
+    columns : Series
         Column labels to use for resulting frame.
         Will default to RangeIndex (0, 1, 2, ..., n) if no column labels are provided.
 
@@ -79,7 +86,7 @@ def _marshall_columns(proto, columns):
     proto.columns = type_util.data_frame_to_bytes(columns_df)
 
 
-def _marshall_data(proto, df):
+def _marshall_data(proto: ArrowTableProto, df: pd.DataFrame) -> None:
     """Marshall pandas.DataFrame data into an ArrowTable proto.
 
     Parameters
@@ -94,7 +101,7 @@ def _marshall_data(proto, df):
     proto.data = type_util.serialize_anything_to_arrow_ipc(df)
 
 
-def arrow_proto_to_dataframe(proto):
+def arrow_proto_to_dataframe(proto: ArrowTableProto) -> pd.DataFrame:
     """Convert ArrowTable proto to pandas.DataFrame.
 
     Parameters
