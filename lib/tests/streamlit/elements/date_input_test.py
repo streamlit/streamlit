@@ -269,13 +269,13 @@ class DateInputTest(DeltaGeneratorTestCase):
 
 def test_date_input_interaction():
     """Test interactions with an empty date_input widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
 
-    st.date_input("the label", value=None)
-    """
-    ).run()
+    def script():
+        import streamlit as st
+
+        st.date_input("the label", value=None)
+
+    at = AppTest.from_function(script).run()
     date_input = at.date_input[0]
     assert date_input.value is None
 
