@@ -31,12 +31,19 @@ from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Generator, List, Literal, Protocol
+from typing import Any, Dict, Generator, List, Literal, Protocol
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import ElementHandle, Locator, Page
+from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    BrowserType,
+    ElementHandle,
+    Locator,
+    Page,
+)
 from pytest import FixtureRequest
 
 
@@ -239,6 +246,41 @@ def app(page: Page, app_port: int) -> Page:
     page.goto(f"http://localhost:{app_port}/")
     wait_for_app_loaded(page)
     return page
+
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args: Dict, browser_name: str):
+    """Fixture that adds the fake device and ui args to the browser type launch args."""
+    # The browser context fixture in pytest-playwright is defined in session scope, and
+    # depends on the browser_type_launch_args fixture. This means that we can't
+    # redefine the browser_type_launch_args fixture more narrow scope
+    # e.g. function or module scope.
+    # https://github.com/microsoft/playwright-pytest/blob/ef99541352b307411dbc15c627e50f95de30cc71/pytest_playwright/pytest_playwright.py#L128
+
+    # We need to extend browser launch args to support fake video stream for
+    # st.camera_input test.
+    # https://github.com/microsoft/playwright/issues/4532#issuecomment-1491761713
+
+    if browser_name == "chromium":
+        browser_type_launch_args = {
+            **browser_type_launch_args,
+            "args": [
+                "--use-fake-device-for-media-stream",
+                "--use-fake-ui-for-media-stream",
+            ],
+        }
+
+    elif browser_name == "firefox":
+        browser_type_launch_args = {
+            **browser_type_launch_args,
+            "firefox_user_prefs": {
+                "media.navigator.streams.fake": True,
+                "media.navigator.permission.disabled": True,
+                "permissions.default.microphone": 1,
+                "permissions.default.camera": 1,
+            },
+        }
+    return browser_type_launch_args
 
 
 @pytest.fixture(scope="function", params=["light_theme", "dark_theme"])

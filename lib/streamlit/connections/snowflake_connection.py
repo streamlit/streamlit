@@ -239,7 +239,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """Access the underlying Snowflake Python connector object.
 
         Information on how to use the Snowflake Python Connector can be found in the
-        `Snowflake Python Connector documentation<https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example>`_.
+        `Snowflake Python Connector documentation <https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example>`_.
         """
         return self._instance
 
