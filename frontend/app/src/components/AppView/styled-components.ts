@@ -89,7 +89,7 @@ export const StyledAppViewBlockContainer =
       events,
       theme,
     }) => {
-      let topEmbedPadding: string = showPadding ? "6rem" : "1rem"
+      let topEmbedPadding: string = showPadding ? "6rem" : "2rem"
       if (addPaddingForHeader && !showPadding) {
         topEmbedPadding = "3rem"
       }
