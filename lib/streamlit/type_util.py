@@ -40,9 +40,11 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 from pandas import DataFrame, Index, MultiIndex, Series
 from pandas.api.types import infer_dtype, is_dict_like, is_list_like
+from pyarrow import interchange as pa_interchange
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
@@ -215,6 +217,7 @@ _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
 _PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
+_POLARS_DF_TYPE_STR: Final = "polars.dataframe.frame.DataFrame"
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -268,6 +271,8 @@ class DataFormat(Enum):
     COLUMN_VALUE_MAPPING = auto()  # {column: List[values]}
     COLUMN_SERIES_MAPPING = auto()  # {column: Series(values)}
     KEY_VALUE_DICT = auto()  # {index: value}
+    POLARS_DATAFRAME = auto()  # polars.DataFrame
+    # POLARS_DATAFRAME = auto()  # polars.DataFrame
 
 
 def is_dataframe(obj: object) -> TypeGuard[DataFrame]:
@@ -506,7 +511,7 @@ def convert_anything_to_df(
     pandas.DataFrame
 
     """
-    if is_type(data, _PANDAS_DF_TYPE_STR):
+    if is_dataframe(data):
         return data.copy() if ensure_copy else cast(DataFrame, data)
 
     if is_pandas_styler(data):
@@ -531,11 +536,18 @@ def convert_anything_to_df(
             )
         return cast(DataFrame, data)
 
-    # This is inefficient when data is a pyarrow.Table as it will be converted
-    # back to Arrow when marshalled to protobuf, but area/bar/line charts need
-    # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
-        return cast(DataFrame, data.to_pandas())
+        return DataFrame(data.to_pandas())
+
+    if hasattr(data, "toPandas"):
+        return DataFrame(data.toPandas())
+
+    # Check for dataframe interchange protocol
+    # Only available in pandas >= 1.5.0
+    # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
+    if is_pandas_version_less_than("1.5.0") is False and hasattr(data, "__dataframe__"):
+        data_df = pd.api.interchange.from_dataframe(data)
+        return data_df.copy() if ensure_copy else data_df
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
@@ -557,12 +569,35 @@ Offending object:
         ) from ex
 
 
-def serialize_anything_to_arrow_ipc(data: Any) -> bytes:
+def serialize_anything_to_arrow_bytes(data: Any) -> bytes:
     if isinstance(data, pa.Table):
         return pyarrow_table_to_bytes(data)
 
-    df = convert_anything_to_df(data)
-    return data_frame_to_bytes(df)
+    # All pandas object should be converted to a Pandas DataFrame first
+    # and use our data_frame_to_bytes function. This allows us to apply
+    # some potential automatic fixes to the data.
+    if is_dataframe_like(data):
+        data_df = convert_anything_to_df(data)
+        return data_frame_to_bytes(data_df)
+
+    # Check for dataframe interchange protocol
+    if hasattr(data, "__dataframe__"):
+        arrow_table = pa_interchange.from_dataframe(data)
+        return pyarrow_table_to_bytes(arrow_table)
+
+    # Check if data structure supports to_arrow or to_pyarrow methods
+    # and assume that it is converting to a pyarrow.Table
+    if hasattr(data, "to_arrow"):
+        arrow_table = cast(pa.Table, data.to_arrow())
+        return pyarrow_table_to_bytes(arrow_table)
+
+    if hasattr(data, "to_pyarrow"):
+        arrow_table = cast(pa.Table, data.to_pyarrow())
+        return pyarrow_table_to_bytes(arrow_table)
+
+    # Fallback to convert to pandas.DataFrame and then to Arrow bytes
+    data_df = convert_anything_to_df(data)
+    return data_frame_to_bytes(data_df)
 
 
 @overload
@@ -823,6 +858,8 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.SNOWPARK_OBJECT
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
+    elif is_type(input_data, _POLARS_DF_TYPE_STR):
+        return DataFormat.POLARS_DATAFRAME
     elif isinstance(input_data, (list, tuple, set)):
         if is_list_of_scalars(input_data):
             # -> one-dimensional data structure

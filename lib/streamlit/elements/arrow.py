@@ -200,24 +200,21 @@ class ArrowMixin:
 
         proto.editing_mode = ArrowProto.EditingMode.READ_ONLY
 
-        if isinstance(data, pa.Table):
-            # For pyarrow tables, we can just serialize the table directly
-            proto.data = type_util.pyarrow_table_to_bytes(data)
-        else:
-            # For all other data formats, we need to convert them to a pandas.DataFrame
-            # thereby, we also apply some data specific configs
+        # Determine the input data format
+        data_format = type_util.determine_data_format(data)
 
-            # Determine the input data format
-            data_format = type_util.determine_data_format(data)
+        if type_util.is_pandas_styler(data):
+            # If pandas.Styler uuid is not provided, a hash of the position
+            # of the element will be used. This will cause a rerender of the table
+            # when the position of the element is changed.
+            delta_path = self.dg._get_delta_path_str()
+            default_uuid = str(hash(delta_path))
+            marshall_styler(proto, data, default_uuid)
 
-            if type_util.is_pandas_styler(data):
-                # If pandas.Styler uuid is not provided, a hash of the position
-                # of the element will be used. This will cause a rerender of the table
-                # when the position of the element is changed.
-                delta_path = self.dg._get_delta_path_str()
-                default_uuid = str(hash(delta_path))
-                marshall_styler(proto, data, default_uuid)
-
+        if data_format not in [
+            type_util.DataFormat.UNKNOWN,
+            type_util.DataFormat.PYARROW_TABLE,
+        ]:
             # Convert the input data into a pandas.DataFrame
             data_df = type_util.convert_anything_to_df(data, ensure_copy=False)
             apply_data_specific_configs(
@@ -228,6 +225,8 @@ class ArrowMixin:
             )
             # Serialize the data to bytes:
             proto.data = type_util.data_frame_to_bytes(data_df)
+        else:
+            proto.data = type_util.serialize_anything_to_arrow_bytes(data)
 
         if hide_index is not None:
             update_column_config(
@@ -367,4 +366,4 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
         ), "Default UUID must be a string for Styler data."
         marshall_styler(proto, data, default_uuid)
 
-    proto.data = type_util.serialize_anything_to_arrow_ipc(data)
+    proto.data = type_util.serialize_anything_to_arrow_bytes(data)

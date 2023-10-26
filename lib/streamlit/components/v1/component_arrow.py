@@ -98,7 +98,7 @@ def _marshall_data(proto: ArrowTableProto, df: pd.DataFrame) -> None:
         A dataframe to marshall.
 
     """
-    proto.data = type_util.serialize_anything_to_arrow_ipc(df)
+    proto.data = type_util.serialize_anything_to_arrow_bytes(df)
 
 
 def arrow_proto_to_dataframe(proto: ArrowTableProto) -> pd.DataFrame:

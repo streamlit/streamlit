@@ -194,7 +194,7 @@ def marshall(
     proto.theme = theme or ""
 
     if data is not None:
-        proto.data.data = type_util.serialize_anything_to_arrow_ipc(data)
+        proto.data.data = type_util.serialize_anything_to_arrow_bytes(data)
 
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
