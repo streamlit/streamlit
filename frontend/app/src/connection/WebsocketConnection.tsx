@@ -381,25 +381,28 @@ export class WebsocketConnection {
   }
 
   /**
-   * Get the session token to use to initialize a WebSocket connection.
+   * Get the session tokens to use to initialize a WebSocket connection.
    *
-   * There are two scenarios that are considered here:
-   *   1. If this Streamlit is embedded in a page that will be passing an
-   *      external, opaque auth token to it, we get it using claimHostAuthToken
-   *      and return it. This only occurs in deployment environments where
-   *      we're not connecting to the usual Tornado server, so we don't have to
-   *      worry about what this token actually is/does.
-   *   2. Otherwise, claimHostAuthToken will resolve immediately to undefined,
-   *      in which case we return the sessionId of the last session this
-   *      browser tab connected to (or undefined if this is the first time this
-   *      tab has connected to the Streamlit server). This sessionId is used to
-   *      attempt to reconnect to an existing session to handle transient
-   *      disconnects.
+   * This method returns an array containing either one or two elements:
+   *   1. The first element contains an auth token to be used in environments
+   *      where the parent frame of this app needs to pass down an external
+   *      auth token. If no token is provided, a placeholder is used.
+   *   2. The second element is the session ID to attempt to reconnect to if
+   *      one is available (that is, if this websocket has disconnected and is
+   *      reconnecting). On the initial connection attempt, this is unset and
+   *      the return value of this method is a singleton array.
    */
-  private async getSessionToken(): Promise<string | undefined> {
+  private async getSessionTokens(): Promise<Array<string>> {
     const hostAuthToken = await this.args.claimHostAuthToken()
     this.args.resetHostAuthToken()
-    return hostAuthToken || this.args.sessionInfo.last?.sessionId
+    return [
+      // NOTE: We have to set the auth token to some arbitrary placeholder if
+      // not provided since the empty string is an invalid protocol option.
+      hostAuthToken ?? "PLACEHOLDER_AUTH_TOKEN",
+      ...(this.args.sessionInfo.last?.sessionId
+        ? [this.args.sessionInfo.last?.sessionId]
+        : []),
+    ]
   }
 
   private async connectToWebSocket(): Promise<void> {
@@ -420,18 +423,16 @@ export class WebsocketConnection {
     // parameter to the WebSocket constructor) here in a slightly unfortunate
     // but necessary way. The browser WebSocket API doesn't allow us to set
     // arbitrary HTTP headers, and this header is the only one where we have
-    // the ability to set it to arbitrary values. Thus, we use it to pass an
-    // auth token from client to server as the *second* value in the list.
+    // the ability to set it to arbitrary values. Thus, we use it to pass auth
+    // and session tokens from client to server as the second/third values in
+    // the list.
     //
-    // The reason why the auth token is set as the second value is that, when
-    // Sec-WebSocket-Protocol is set, many clients expect the server to respond
-    // with a selected subprotocol to use. We don't want that reply to be the
-    // auth token, so we just hard-code it to "streamlit".
-    const sessionToken = await this.getSessionToken()
-    this.websocket = new WebSocket(uri, [
-      "streamlit",
-      ...(sessionToken ? [sessionToken] : []),
-    ])
+    // The reason why these tokens are set as the second/third values is that,
+    // when Sec-WebSocket-Protocol is set, many clients expect the server to
+    // respond with a selected subprotocol to use. We don't want that reply to
+    // contain sensitive data, so we just hard-code it to "streamlit".
+    const sessionTokens = await this.getSessionTokens()
+    this.websocket = new WebSocket(uri, ["streamlit", ...sessionTokens])
     this.websocket.binaryType = "arraybuffer"
 
     this.setConnectionTimeout(uri)

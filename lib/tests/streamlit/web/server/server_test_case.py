@@ -74,9 +74,9 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # See the comment in WebsocketConnection.tsx about how we repurpose the
         # Sec-WebSocket-Protocol header for more information on how this works.
         if existing_session_id is None:
-            subprotocols = ["streamlit"]
+            subprotocols = ["streamlit", "PLACEHOLDER_AUTH_TOKEN"]
         else:
-            subprotocols = ["streamlit", existing_session_id]
+            subprotocols = ["streamlit", "PLACEHOLDER_AUTH_TOKEN", existing_session_id]
 
         return await tornado.websocket.websocket_connect(
             self.get_ws_url("/_stcore/stream"),
