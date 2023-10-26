@@ -39,6 +39,7 @@ export interface Source {
 export interface WidgetInfo {
   id: string
   formId?: string
+  partialId?: string
 }
 
 /**
@@ -154,7 +155,7 @@ class FormState {
 
 interface Props {
   /** Callback to deliver a message to the server */
-  sendRerunBackMsg: (widgetStates: WidgetStates) => void
+  sendRerunBackMsg: (widgetStates: WidgetStates, partialId?: string) => void
 
   /**
    * Callback invoked whenever our FormsData changed. (Because FormsData
@@ -274,7 +275,7 @@ export class WidgetStateManager {
   ): void {
     this.createWidgetState(widget, source).stringTriggerValue =
       new StringTriggerValue({ data: value })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
     this.deleteWidgetState(widget.id)
   }
 
@@ -284,7 +285,7 @@ export class WidgetStateManager {
    */
   public setTriggerValue(widget: WidgetInfo, source: Source): void {
     this.createWidgetState(widget, source).triggerValue = true
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
     this.deleteWidgetState(widget.id)
   }
 
@@ -303,7 +304,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).boolValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getIntValue(widget: WidgetInfo): number | undefined {
@@ -321,7 +322,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).intValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
@@ -339,7 +340,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getStringValue(widget: WidgetInfo): string | undefined {
@@ -357,7 +358,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).stringValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public setStringArrayValue(
@@ -368,7 +369,7 @@ export class WidgetStateManager {
     this.createWidgetState(widget, source).stringArrayValue = new StringArray({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
@@ -407,7 +408,7 @@ export class WidgetStateManager {
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
@@ -432,7 +433,7 @@ export class WidgetStateManager {
     this.createWidgetState(widget, source).intArrayValue = new SInt64Array({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
@@ -446,7 +447,7 @@ export class WidgetStateManager {
 
   public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
     this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public setArrowValue(
@@ -455,7 +456,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).arrowValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
@@ -477,7 +478,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).bytesValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
@@ -495,7 +496,7 @@ export class WidgetStateManager {
     source: Source
   ): void {
     this.createWidgetState(widget, source).fileUploaderStateValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, widget.partialId)
   }
 
   public getFileUploaderStateValue(
@@ -520,12 +521,13 @@ export class WidgetStateManager {
    */
   private onWidgetValueChanged(
     formId: string | undefined,
-    source: Source
+    source: Source,
+    partialId?: string
   ): void {
     if (isValidFormId(formId)) {
       this.syncFormsWithPendingChanges()
     } else if (source.fromUi) {
-      this.sendUpdateWidgetsMessage()
+      this.sendUpdateWidgetsMessage(partialId)
     }
   }
 
@@ -546,8 +548,11 @@ export class WidgetStateManager {
     })
   }
 
-  public sendUpdateWidgetsMessage(): void {
-    this.props.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
+  public sendUpdateWidgetsMessage(partialId?: string): void {
+    this.props.sendRerunBackMsg(
+      this.widgetStates.createWidgetStatesMsg(),
+      partialId
+    )
   }
 
   /**
