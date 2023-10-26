@@ -29,7 +29,7 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.partials import PartialsStorage
+from streamlit.runtime.partials import load_partial
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
@@ -45,7 +45,6 @@ from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SafeSessionState,
     SessionState,
-    SessionStateProxy,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
@@ -539,11 +538,12 @@ class ScriptRunner:
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
-                partial_storage = PartialsStorage()
-                if rerun_data.partial_id and rerun_data.partial_id in partial_storage:
-                    partial_func = cloudpickle.loads(
-                        partial_storage[rerun_data.partial_id]
-                    )
+                if rerun_data.partial_id:
+                    partial_func = load_partial(rerun_data.partial_id)
+                    if not partial_func:
+                        raise RuntimeError(
+                            f"Could not find partial with id {rerun_data.partial_id}"
+                        )
                     partial_func()
                     partial_run = True
                 else:
