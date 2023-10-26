@@ -29,6 +29,7 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.partials import PartialsStorage
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
@@ -538,17 +539,11 @@ class ScriptRunner:
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
-                session_state = SessionStateProxy()
-                if (
-                    rerun_data.partial_id
-                    and "st_partials" in session_state
-                    and rerun_data.partial_id in session_state.st_partials
-                ):
+                partial_storage = PartialsStorage()
+                if rerun_data.partial_id and rerun_data.partial_id in partial_storage:
                     partial_func = cloudpickle.loads(
-                        session_state.st_partials[rerun_data.partial_id]
+                        partial_storage[rerun_data.partial_id]
                     )
-                    # Load dg stack
-                    # ctx.dg_stack = cloudpickle.loads(session_state.st_groups[rerun_data.group_id][1])
                     partial_func()
                     partial_run = True
                 else:
