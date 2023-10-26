@@ -30,6 +30,7 @@ import {
   Config,
   PageConfig,
 } from "@streamlit/lib"
+import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
@@ -310,7 +311,9 @@ function getPreferredMenuOrder(
     coreMenuItems.settings,
     coreMenuItems.DIVIDER,
     coreMenuItems.print,
-    coreMenuItems.recordScreencast,
+    ...(ScreenCastRecorder.isSupportedBrowser()
+      ? [coreMenuItems.recordScreencast]
+      : []),
     coreMenuItems.DIVIDER,
     coreMenuItems.report,
     coreMenuItems.community,
