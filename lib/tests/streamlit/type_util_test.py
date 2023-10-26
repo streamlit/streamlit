@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
 import unittest
 from collections import namedtuple
 from datetime import date
@@ -26,16 +27,7 @@ import pytest
 from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
-from streamlit import type_util
-from streamlit.type_util import (
-    DataFormat,
-    convert_anything_to_df,
-    data_frame_to_bytes,
-    fix_arrow_incompatible_column_types,
-    is_bytes_like,
-    is_snowpark_data_object,
-    to_bytes,
-)
+from streamlit import errors, type_util
 from tests.streamlit.data_mocks import (
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
@@ -51,7 +43,7 @@ from tests.streamlit.data_mocks import (
 )
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
-from tests.testutil import create_snowpark_session
+from tests.testutil import create_snowpark_session, patch_config_options
 
 
 class TypeUtilTest(unittest.TestCase):
@@ -109,24 +101,24 @@ class TypeUtilTest(unittest.TestCase):
 
     def test_to_bytes(self):
         bytes_obj = b"some bytes"
-        self.assertTrue(is_bytes_like(bytes_obj))
-        self.assertIsInstance(to_bytes(bytes_obj), bytes)
+        self.assertTrue(type_util.is_bytes_like(bytes_obj))
+        self.assertIsInstance(type_util.to_bytes(bytes_obj), bytes)
 
         bytearray_obj = bytearray("a bytearray string", "utf-8")
-        self.assertTrue(is_bytes_like(bytearray_obj))
-        self.assertIsInstance(to_bytes(bytearray_obj), bytes)
+        self.assertTrue(type_util.is_bytes_like(bytearray_obj))
+        self.assertIsInstance(type_util.to_bytes(bytearray_obj), bytes)
 
         string_obj = "a normal string"
-        self.assertFalse(is_bytes_like(string_obj))
+        self.assertFalse(type_util.is_bytes_like(string_obj))
         with self.assertRaises(RuntimeError):
-            to_bytes(string_obj)  # type: ignore
+            type_util.to_bytes(string_obj)  # type: ignore
 
     def test_data_frame_with_dtype_values_to_bytes(self):
         df1 = pd.DataFrame(["foo", "bar"])
         df2 = pd.DataFrame(df1.dtypes)
 
         try:
-            data_frame_to_bytes(df2)
+            type_util.data_frame_to_bytes(df2)
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
@@ -158,13 +150,13 @@ class TypeUtilTest(unittest.TestCase):
             index=[1.0, "foo", 3],
         )
 
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=True)
+        converted_df = type_util.convert_anything_to_df(orginal_df, ensure_copy=True)
         # Apply a change
         converted_df["integer"] = [4, 5, 6]
         # Ensure that the original dataframe is not changed
         self.assertEqual(orginal_df["integer"].to_list(), [1, 2, 3])
 
-        converted_df = convert_anything_to_df(orginal_df, ensure_copy=False)
+        converted_df = type_util.convert_anything_to_df(orginal_df, ensure_copy=False)
         # Apply a change
         converted_df["integer"] = [4, 5, 6]
         # The original dataframe should be changed here since ensure_copy is False
@@ -175,7 +167,7 @@ class TypeUtilTest(unittest.TestCase):
         key-value dicts to a dataframe.
         """
         data = {"a": 1, "b": 2}
-        df = convert_anything_to_df(data)
+        df = type_util.convert_anything_to_df(data)
         pd.testing.assert_frame_equal(df, pd.DataFrame.from_dict(data, orient="index"))
 
     def test_convert_anything_to_df_passes_styler_through(self):
@@ -191,7 +183,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(original_styler, allow_styler=True)
+        out = type_util.convert_anything_to_df(original_styler, allow_styler=True)
         self.assertEqual(original_styler, out)
         self.assertEqual(id(original_df), id(out.data))
 
@@ -208,7 +200,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(
+        out = type_util.convert_anything_to_df(
             original_styler, allow_styler=True, ensure_copy=True
         )
         self.assertNotEqual(original_styler, out)
@@ -230,7 +222,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(original_styler, allow_styler=False)
+        out = type_util.convert_anything_to_df(original_styler, allow_styler=False)
         self.assertNotEqual(id(original_styler), id(out))
         self.assertEqual(id(original_df), id(out))
         pd.testing.assert_frame_equal(original_df, out)
@@ -248,7 +240,7 @@ class TypeUtilTest(unittest.TestCase):
 
         original_styler = original_df.style.highlight_max(axis=0)
 
-        out = convert_anything_to_df(
+        out = type_util.convert_anything_to_df(
             original_styler, allow_styler=False, ensure_copy=True
         )
         self.assertNotEqual(id(original_styler), id(out))
@@ -260,7 +252,7 @@ class TypeUtilTest(unittest.TestCase):
             def to_pandas(self):
                 return pd.DataFrame([])
 
-        converted = convert_anything_to_df(DataFrameIsh())
+        converted = type_util.convert_anything_to_df(DataFrameIsh())
         assert isinstance(converted, pd.DataFrame)
         assert converted.empty
 
@@ -342,7 +334,7 @@ class TypeUtilTest(unittest.TestCase):
         leaves supported columns unchanged.
         """
         df = pd.DataFrame({"c1": column})
-        fixed_df = fix_arrow_incompatible_column_types(df)
+        fixed_df = type_util.fix_arrow_incompatible_column_types(df)
         col_dtype = fixed_df["c1"].dtype
         inferred_type = infer_dtype(fixed_df["c1"])
 
@@ -369,7 +361,7 @@ class TypeUtilTest(unittest.TestCase):
             }
         )
 
-        fixed_df = fix_arrow_incompatible_column_types(df)
+        fixed_df = type_util.fix_arrow_incompatible_column_types(df)
         pd.testing.assert_frame_equal(df, fixed_df)
 
     def test_fix_mixed_column_types(self):
@@ -387,7 +379,7 @@ class TypeUtilTest(unittest.TestCase):
             index=[1.0, "foo", 3],
         )
 
-        fixed_df = fix_arrow_incompatible_column_types(df)
+        fixed_df = type_util.fix_arrow_incompatible_column_types(df)
 
         # Check dtypes
         self.assertIsInstance(fixed_df["mixed-integer"].dtype, pd.StringDtype)
@@ -422,7 +414,7 @@ class TypeUtilTest(unittest.TestCase):
         )
 
         try:
-            data_frame_to_bytes(df)
+            type_util.data_frame_to_bytes(df)
         except Exception as ex:
             self.fail(
                 "No exception should have been thrown here. "
@@ -449,7 +441,7 @@ class TypeUtilTest(unittest.TestCase):
         DataFrames with a variety of types to Arrow.
         """
         try:
-            data_frame_to_bytes(input_df)
+            type_util.data_frame_to_bytes(input_df)
         except Exception as ex:
             self.fail(
                 "No exception should have been thrown here. "
@@ -470,47 +462,47 @@ class TypeUtilTest(unittest.TestCase):
         )
 
         # pandas dataframe should not be SnowparkDataFrame
-        self.assertFalse(is_snowpark_data_object(df))
+        self.assertFalse(type_util.is_snowpark_data_object(df))
 
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
-        self.assertTrue(is_snowpark_data_object(SnowparkDataFrame()))
+        self.assertTrue(type_util.is_snowpark_data_object(SnowparkDataFrame()))
 
         # any object should not be snowpark dataframe
-        self.assertFalse(is_snowpark_data_object("any text"))
-        self.assertFalse(is_snowpark_data_object(123))
+        self.assertFalse(type_util.is_snowpark_data_object("any text"))
+        self.assertFalse(type_util.is_snowpark_data_object(123))
 
         class DummyClass:
             """DummyClass for testing purposes"""
 
-        self.assertFalse(is_snowpark_data_object(DummyClass()))
+        self.assertFalse(type_util.is_snowpark_data_object(DummyClass()))
 
         # empty list should not be snowpark dataframe
-        self.assertFalse(is_snowpark_data_object(list()))
+        self.assertFalse(type_util.is_snowpark_data_object(list()))
 
         # list with items should not be snowpark dataframe
         self.assertFalse(
-            is_snowpark_data_object(
+            type_util.is_snowpark_data_object(
                 [
                     "any text",
                 ]
             )
         )
         self.assertFalse(
-            is_snowpark_data_object(
+            type_util.is_snowpark_data_object(
                 [
                     123,
                 ]
             )
         )
         self.assertFalse(
-            is_snowpark_data_object(
+            type_util.is_snowpark_data_object(
                 [
                     DummyClass(),
                 ]
             )
         )
         self.assertFalse(
-            is_snowpark_data_object(
+            type_util.is_snowpark_data_object(
                 [
                     df,
                 ]
@@ -519,7 +511,7 @@ class TypeUtilTest(unittest.TestCase):
 
         # list with SnowparkRow should be SnowparkDataframe
         self.assertTrue(
-            is_snowpark_data_object(
+            type_util.is_snowpark_data_object(
                 [
                     SnowparkRow(),
                 ]
@@ -530,15 +522,17 @@ class TypeUtilTest(unittest.TestCase):
     def test_is_snowpark_dataframe_integration(self):
         with create_snowpark_session() as snowpark_session:
             self.assertTrue(
-                is_snowpark_data_object(snowpark_session.sql("SELECT 40+2 as COL1"))
+                type_util.is_snowpark_data_object(
+                    snowpark_session.sql("SELECT 40+2 as COL1")
+                )
             )
             self.assertTrue(
-                is_snowpark_data_object(
+                type_util.is_snowpark_data_object(
                     snowpark_session.sql("SELECT 40+2 as COL1").collect()
                 )
             )
             self.assertTrue(
-                is_snowpark_data_object(
+                type_util.is_snowpark_data_object(
                     snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
                 )
             )
@@ -576,7 +570,7 @@ class TypeUtilTest(unittest.TestCase):
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
-        if metadata.expected_data_format == DataFormat.UNKNOWN:
+        if metadata.expected_data_format == type_util.DataFormat.UNKNOWN:
             with self.assertRaises(ValueError):
                 type_util.convert_df_to_data_format(
                     converted_df, metadata.expected_data_format
@@ -590,11 +584,11 @@ class TypeUtilTest(unittest.TestCase):
             # Some data formats are converted to DataFrames instead of
             # the original data type/structure.
             if metadata.expected_data_format in [
-                DataFormat.SNOWPARK_OBJECT,
-                DataFormat.PYSPARK_OBJECT,
-                DataFormat.PANDAS_INDEX,
-                DataFormat.PANDAS_STYLER,
-                DataFormat.EMPTY,
+                type_util.DataFormat.SNOWPARK_OBJECT,
+                type_util.DataFormat.PYSPARK_OBJECT,
+                type_util.DataFormat.PANDAS_INDEX,
+                type_util.DataFormat.PANDAS_STYLER,
+                type_util.DataFormat.EMPTY,
             ]:
                 assert isinstance(converted_data, pd.DataFrame)
                 self.assertEqual(converted_data.shape[0], metadata.expected_rows)
@@ -602,7 +596,7 @@ class TypeUtilTest(unittest.TestCase):
             else:
                 self.assertEqual(type(converted_data), type(input_data))
                 # Sets in python are unordered, so we can't compare them this way.
-                if metadata.expected_data_format != DataFormat.SET_OF_VALUES:
+                if metadata.expected_data_format != type_util.DataFormat.SET_OF_VALUES:
                     self.assertEqual(str(converted_data), str(input_data))
                     pd.testing.assert_frame_equal(
                         converted_df, type_util.convert_anything_to_df(converted_data)
@@ -614,7 +608,7 @@ class TypeUtilTest(unittest.TestCase):
         """
         with self.assertRaises(ValueError):
             type_util.convert_df_to_data_format(
-                pd.DataFrame({"a": [1, 2, 3]}), DataFormat.UNKNOWN
+                pd.DataFrame({"a": [1, 2, 3]}), type_util.DataFormat.UNKNOWN
             )
 
     def test_convert_df_with_missing_values(self):
@@ -630,19 +624,23 @@ class TypeUtilTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.LIST_OF_VALUES),
+            type_util.convert_df_to_data_format(
+                df, type_util.DataFormat.LIST_OF_VALUES
+            ),
             [None, None, None, None],
         )
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.TUPLE_OF_VALUES),
+            type_util.convert_df_to_data_format(
+                df, type_util.DataFormat.TUPLE_OF_VALUES
+            ),
             (None, None, None, None),
         )
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.SET_OF_VALUES),
+            type_util.convert_df_to_data_format(df, type_util.DataFormat.SET_OF_VALUES),
             {None},
         )
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.LIST_OF_ROWS),
+            type_util.convert_df_to_data_format(df, type_util.DataFormat.LIST_OF_ROWS),
             [
                 [None],
                 [None],
@@ -651,7 +649,9 @@ class TypeUtilTest(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.LIST_OF_RECORDS),
+            type_util.convert_df_to_data_format(
+                df, type_util.DataFormat.LIST_OF_RECORDS
+            ),
             [
                 {"missing": None},
                 {"missing": None},
@@ -660,16 +660,171 @@ class TypeUtilTest(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.COLUMN_VALUE_MAPPING),
+            type_util.convert_df_to_data_format(
+                df, type_util.DataFormat.COLUMN_VALUE_MAPPING
+            ),
             {
                 "missing": [None, None, None, None],
             },
         )
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.COLUMN_INDEX_MAPPING),
+            type_util.convert_df_to_data_format(
+                df, type_util.DataFormat.COLUMN_INDEX_MAPPING
+            ),
             {"missing": {0: None, 1: None, 2: None, 3: None}},
         )
         self.assertEqual(
-            type_util.convert_df_to_data_format(df, DataFormat.KEY_VALUE_DICT),
+            type_util.convert_df_to_data_format(
+                df, type_util.DataFormat.KEY_VALUE_DICT
+            ),
             {0: None, 1: None, 2: None, 3: None},
         )
+
+
+class TestEnumCoercion:
+    """Test class for Enum Coercion feature."""
+
+    @pytest.fixture
+    def EnumAOrig(self):
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            C = enum.auto()
+
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
+
+    @pytest.fixture
+    def EnumAEqual(self):
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            C = enum.auto()
+
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
+
+    @pytest.fixture
+    def EnumADiffMembers(self):
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            D = enum.auto()
+
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
+
+    @pytest.fixture
+    def EnumADiffValues(self):
+        class EnumA(enum.Enum):
+            A = "1"
+            B = "2"
+            C = "3"
+
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
+
+    @pytest.fixture
+    def EnumAExtraMembers(self):
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            C = enum.auto()
+            D = enum.auto()
+
+        EnumA.__qualname__ = "__main__.EnumA"
+        return EnumA
+
+    @pytest.fixture
+    def EnumADiffQualname(self):
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            C = enum.auto()
+
+        EnumA.__qualname__ = "foobar.EnumA"
+        return EnumA
+
+    @pytest.fixture
+    def EnumB(self):
+        class EnumB(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            C = enum.auto()
+
+        EnumB.__qualname__ = "__main__.EnumB"
+        return EnumB
+
+    def test_enum_uniqueness(
+        self,
+        EnumAOrig,
+        EnumAEqual,
+        EnumADiffMembers,
+        EnumADiffValues,
+        EnumADiffQualname,
+        EnumB,
+        EnumAExtraMembers,
+    ):
+        """A preliminary check, to ensure testing the others makes sense."""
+        assert all(
+            EnumAOrig.A not in enum
+            for enum in (
+                EnumAEqual,
+                EnumADiffMembers,
+                EnumADiffValues,
+                EnumADiffQualname,
+                EnumAExtraMembers,
+                EnumB,
+            )
+        )
+        assert EnumAOrig.A.value == EnumAEqual.A.value
+        assert EnumAOrig.__qualname__ == EnumAEqual.__qualname__
+
+    def test_coerce_enum_coercable(
+        self,
+        EnumAOrig,
+        EnumAEqual,
+        EnumADiffValues,
+    ):
+        assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAEqual.A
+        # Different values are coercable by default
+        assert type_util.coerce_enum(EnumAOrig.A, EnumADiffValues) is EnumADiffValues.A
+
+    def test_coerce_enum_not_coercable(
+        self,
+        EnumAOrig,
+        EnumADiffMembers,
+        EnumAExtraMembers,
+        EnumADiffQualname,
+        EnumB,
+    ):
+        # Things that are not coercable
+        assert type_util.coerce_enum(EnumAOrig.A, EnumADiffMembers) is EnumAOrig.A
+        assert type_util.coerce_enum(EnumAOrig.A, EnumAExtraMembers) is EnumAOrig.A
+        assert type_util.coerce_enum(EnumAOrig.A, EnumB) is EnumAOrig.A
+        assert type_util.coerce_enum(EnumAOrig.A, EnumADiffQualname) is EnumAOrig.A
+
+    def test_coerce_enum_noop(self, EnumAOrig):
+        assert type_util.coerce_enum(EnumAOrig.A, EnumAOrig) is EnumAOrig.A
+
+    def test_coerce_enum_errors(self, EnumAOrig, EnumAEqual):
+        with pytest.raises(ValueError, match="Expected an EnumMeta"):
+            type_util.coerce_enum(EnumAOrig.A, EnumAEqual.A)
+        with pytest.raises(ValueError, match="Expected an Enum"):
+            type_util.coerce_enum(EnumAOrig, EnumAEqual)
+
+    @patch_config_options({"runner.enumCoercion": "off"})
+    def test_coerce_enum_config_off(self, EnumAOrig, EnumAEqual):
+        assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAOrig.A
+
+    @patch_config_options({"runner.enumCoercion": "nameAndValue"})
+    def test_coerce_enum_config_name_and_value(
+        self, EnumAOrig, EnumAEqual, EnumADiffValues
+    ):
+        assert type_util.coerce_enum(EnumAOrig.A, EnumAEqual) is EnumAEqual.A
+        assert type_util.coerce_enum(EnumAOrig.A, EnumADiffValues) is EnumAOrig.A
+
+    @patch_config_options({"runner.enumCoercion": "badValue"})
+    def test_coerce_enum_bad_config_value(self, EnumAOrig, EnumAEqual):
+        with pytest.raises(errors.StreamlitAPIException):
+            type_util.coerce_enum(EnumAOrig.A, EnumAEqual)
