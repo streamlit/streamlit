@@ -1010,6 +1010,11 @@ def to_key(key: Optional[Key]) -> Optional[str]:
         return str(key)
 
 
+def maybe_tuple_to_list(item: Any) -> Any:
+    """Convert a tuple to a list. Leave as is if it's not a tuple."""
+    return list(item) if isinstance(item, tuple) else item
+
+
 def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[str]):
     if not label:
         _LOGGER.warning(
