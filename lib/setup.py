@@ -34,6 +34,7 @@ INSTALL_REQUIRES = [
     "altair>=4.0, <6",
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
+    "cloudpickle>=2.0, <4",
     "click>=7.0, <9",
     # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
     "importlib-metadata>=1.4, <7",
