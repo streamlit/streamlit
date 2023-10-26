@@ -46,10 +46,10 @@ message StringTriggerValue {
   optional string data = 1;
 }
 
-// TODO(vdonato / kajarenc): Finalize the next two proto types. We currently
-// have enough information here to support pure OS use cases, but we'll need to
-// coordinate with the SiS team to verify that we're passing enough file
-// metadata back for them.
+// NOTE: The FileURLsRequest, FileURLs, and FileURLsResponse message types
+// must remain stable as some external services rely on them to support
+// `st.file_uploader`. These types aren't completely set in stone, but changing
+// them requires a good amount of effort so should be avoided if possible.
 message FileURLsRequest {
   string request_id = 1;
   repeated string file_names = 2;
