@@ -91,6 +91,8 @@ from streamlit.commands.execution_control import (
     switch_page as switch_page,
 )
 
+from streamlit.runtime.partials import partial as _partial
+
 # We add the metrics tracking for caching here,
 # since the actual cache function calls itself recursively
 cache = _gather_metrics("cache", _cache)
@@ -234,3 +236,5 @@ experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(
     connection, "experimental_connection", "2024-04-01", name_override="connection"
 )
+
+partial = _partial

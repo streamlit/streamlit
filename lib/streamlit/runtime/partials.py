@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from functools import wraps
 from typing import (
     Any,
@@ -62,22 +63,24 @@ def partial(func: Optional[F] = None) -> Union[Callable[[F], F], F]:
         # To make mypy type narrow Optional[F] -> F
         non_optional_func = func
 
-    h = hashlib.new("md5")
-    # TODO: find something better to hash
-    h.update(f"{callable.__module__}.{callable.__qualname__}".encode("utf-8"))
-    partial_id = h.hexdigest()
-    partial_storage = PartialsStorage()
-
     @wraps(non_optional_func)
     def wrap(*args, **kwargs):
         ctx = get_script_run_ctx()
-        if ctx is None:
+        if ctx is None or len(ctx.dg_stack) == 0:
             return
         dg_stack = ctx.dg_stack
+        active_dg = ctx.dg_stack[-1]
 
-        def wrapped_group():
-            print("Start function")
-            # import streamlit as st
+        # TODO(lukasmasuch): Research more on what to include in the hash:
+        h = hashlib.new("md5")
+        h.update(
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__} {active_dg._get_delta_path_str()}".encode(
+                "utf-8"
+            )
+        )
+        partial_id = h.hexdigest()
+
+        def wrapped_partial():
             from streamlit.runtime.scriptrunner import get_script_run_ctx
 
             ctx = get_script_run_ctx(suppress_warning=True)
@@ -89,14 +92,14 @@ def partial(func: Optional[F] = None) -> Union[Callable[[F], F], F]:
             print(ctx.dg_stack)
             ctx.current_partial_id = partial_id
 
-            result = callable(*args, **kwargs)
+            result = non_optional_func(*args, **kwargs)
 
             # TODO: always reset to None -> otherwise problems with exceptions
             ctx.current_partial_id = None
             return result
 
-        save_partial(partial_id, wrapped_group)
-        return wrapped_group()
+        save_partial(partial_id, wrapped_partial)
+        return wrapped_partial()
 
     return wrap
 
@@ -111,7 +114,9 @@ def load_partial(partial_id: str) -> Callable[[], Any] | None:
 
 def save_partial(partial_id: str, partial_function: Callable[[], Any]) -> None:
     partial_storage = PartialsStorage()
-    partial_storage[partial_id] = cloudpickle.dumps(partial_function)
+    partial_bytes = cloudpickle.dumps(partial_function)
+    partial_storage[partial_id] = partial_bytes
+    print(f"Size of partial {partial_id}: {sys.getsizeof(partial_bytes)}")
 
 
 class PartialsStorage(MutableMapping[str, bytes]):
