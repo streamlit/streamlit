@@ -309,7 +309,7 @@ class Slider extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { disabled, element, theme, width, widgetMgr } = this.props
     const { colors, fonts, fontSizes, spacing } = theme
-    const style = { width }
+    const style = { width, backgroundColor: "purple" }
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -317,6 +317,8 @@ class Slider extends React.PureComponent<Props, State> {
       element.formId,
       this.onFormCleared
     )
+
+    console.log("trololo")
 
     return (
       <div ref={this.sliderRef} className="stSlider" style={style}>

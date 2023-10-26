@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const webpack = require('webpack');
+
 module.exports = {
   devServer: {
     static: {
@@ -44,7 +46,23 @@ module.exports = {
     },
   },
   webpack: {
+    plugins: {
+      add: [
+        new webpack.optimize.LimitChunkCountPlugin({
+          maxChunks: 1,
+        })
+      ]
+    },
     configure: webpackConfig => {
+      webpackConfig.optimization.minimize = false;
+      webpackConfig.optimization.runtimeChunk = false;
+      webpackConfig.optimization.splitChunks = {
+        cacheGroups: {
+          default: false
+        }
+      }
+      console.log('asdf optimization', webpackConfig.optimization)
+      
       webpackConfig.resolve.mainFields = ["module", "main"]
       // Webpack 5 requires polyfills. We don't need them, so resolve to an empty module
       webpackConfig.resolve.fallback ||= {}
