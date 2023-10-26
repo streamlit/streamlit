@@ -949,7 +949,7 @@ def _generate_chart(
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
-    df = type_util.convert_anything_to_pandas(data, ensure_copy=True)
+    df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
     # From now on, use "df" instead of "data". Deleting "data" to guarantee we follow this.
     del data

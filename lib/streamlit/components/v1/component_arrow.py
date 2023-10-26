@@ -37,7 +37,7 @@ def marshall(proto, data, default_uuid=None):
     if type_util.is_pandas_styler(data):
         pandas_styler_utils.marshall_styler(proto, data, default_uuid)
 
-    df = type_util.convert_anything_to_pandas(data)
+    df = type_util.convert_anything_to_df(data)
     _marshall_index(proto, df.index)
     _marshall_columns(proto, df.columns)
     _marshall_data(proto, df)

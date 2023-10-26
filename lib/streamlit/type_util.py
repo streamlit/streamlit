@@ -482,7 +482,7 @@ def is_sequence(seq: Any) -> bool:
     return True
 
 
-def convert_anything_to_pandas(
+def convert_anything_to_df(
     data: Any,
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
@@ -561,7 +561,7 @@ def serialize_anything_to_arrow_ipc(data: Any) -> bytes:
     if isinstance(data, pa.Table):
         return pyarrow_table_to_bytes(data)
 
-    df = convert_anything_to_pandas(data)
+    df = convert_anything_to_df(data)
     return data_frame_to_bytes(df)
 
 
@@ -592,7 +592,7 @@ def ensure_iterable(obj: Union[OptionSequence[V_co], Iterable[V_co]]) -> Iterabl
     """
 
     if is_snowpark_or_pyspark_data_object(obj):
-        obj = convert_anything_to_pandas(obj)
+        obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):
         # Return first column as a pd.Series

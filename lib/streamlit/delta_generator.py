@@ -778,7 +778,7 @@ def _prep_data_for_add_rows(
     if delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
         import pandas as pd
 
-        df = type_util.convert_anything_to_pandas(data, ensure_copy=True)
+        df = type_util.convert_anything_to_df(data, ensure_copy=True)
 
         # Make range indices start at last_index.
         if isinstance(df.index, pd.RangeIndex):
