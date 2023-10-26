@@ -567,6 +567,8 @@ class ButtonMixin:
         button_proto.type = type
         button_proto.use_container_width = use_container_width
         button_proto.disabled = disabled
+        if ctx and ctx.current_partial_id:
+            button_proto.partial_id = ctx.current_partial_id
 
         if help is not None:
             button_proto.help = dedent(help)
