@@ -152,7 +152,7 @@ class QueryParams:
     TODO(willhuang1997): Fill in these docs with examples and fix doc above. Above is just a stub for now.
     """
 
-    query_params: dict[str, List[Any]] = field(default_factory=dict)
+    query_params: Dict[str, List[Any]] = field(default_factory=dict)
 
     def __init__(self, query_params: Dict[str, List[Any]] = {}):
         self.query_params = query_params
@@ -170,9 +170,10 @@ class QueryParams:
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+        return ctx
 
     def _send_query_params(self):
-        ctx = get_script_run_ctx()
+        ctx = self._check_ctx()
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
             self.query_params, ctx.query_string
@@ -181,12 +182,10 @@ class QueryParams:
         ctx.enqueue(msg)
 
     def clear(self):
-        self._check_ctx()
         self.query_params.clear()
         self._send_query_params()
 
     def __delitem__(self, key: str) -> None:
-        self._check_ctx()
         if key in self.query_params:
             del self.query_params[key]
             self._send_query_params()
