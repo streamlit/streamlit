@@ -173,8 +173,6 @@ class QueryParams:
 
     def _send_query_params(self):
         ctx = get_script_run_ctx()
-        if ctx is None:
-            return
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
             self.query_params, ctx.query_string
