@@ -40,6 +40,8 @@ message Arrow {
   // Defines the order in which columns are displayed
   repeated string column_order = 11;
 
+  string partial_id = 12;
+
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.

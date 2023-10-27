@@ -310,6 +310,8 @@ class ChatMixin:
         chat_input_proto = ChatInputProto()
         chat_input_proto.id = id
         chat_input_proto.placeholder = str(placeholder)
+        if ctx and ctx.current_partial_id:
+            chat_input_proto.partial_id = ctx.current_partial_id
 
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars

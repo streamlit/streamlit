@@ -26,4 +26,5 @@ message DownloadButton {
   bool disabled = 7;
   bool use_container_width = 8;
   string type = 9;
+  string partial_id = 10;
 }

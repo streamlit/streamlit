@@ -417,6 +417,9 @@ class NumberInputMixin:
         if placeholder is not None:
             number_input_proto.placeholder = str(placeholder)
         number_input_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            number_input_proto.partial_id = ctx.current_partial_id
+
         number_input_proto.disabled = disabled
         number_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

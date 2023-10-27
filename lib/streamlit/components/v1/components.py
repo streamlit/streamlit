@@ -158,6 +158,11 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
         def marshall_component(dg, element: Element) -> Union[Any, Type[NoValue]]:
             element.component_instance.component_name = self.name
             element.component_instance.form_id = current_form_id(dg)
+
+            ctx = get_script_run_ctx()
+            if ctx and ctx.current_partial_id:
+                element.component_instance.partial_id = ctx.current_partial_id
+
             if self.url is not None:
                 element.component_instance.url = self.url
 

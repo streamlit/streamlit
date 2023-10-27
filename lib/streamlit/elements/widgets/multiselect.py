@@ -320,15 +320,15 @@ class MultiSelectMixin:
         multiselect_proto.default[:] = default_value
         multiselect_proto.options[:] = [str(format_func(option)) for option in opt]
         multiselect_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            multiselect_proto.partial_id = ctx.current_partial_id
+
         multiselect_proto.max_selections = max_selections or 0
         multiselect_proto.placeholder = placeholder
         multiselect_proto.disabled = disabled
         multiselect_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-        if ctx and ctx.current_partial_id:
-            multiselect_proto.partial_id = ctx.current_partial_id
-
         if help is not None:
             multiselect_proto.help = dedent(help)
 

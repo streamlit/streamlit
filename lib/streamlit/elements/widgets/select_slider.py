@@ -312,6 +312,9 @@ class SelectSliderMixin:
         slider_proto.data_type = SliderProto.INT
         slider_proto.options[:] = [str(format_func(option)) for option in opt]
         slider_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            slider_proto.partial_id = ctx.current_partial_id
+
         slider_proto.disabled = disabled
         slider_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

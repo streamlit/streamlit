@@ -36,6 +36,8 @@ message ComponentInstance {
   string url = 5;
 
   string form_id = 6;
+
+  string partial_id = 7;
 }
 
 message SpecialArg {

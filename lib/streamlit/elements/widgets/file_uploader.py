@@ -436,6 +436,9 @@ class FileUploaderMixin:
         )
         file_uploader_proto.multiple_files = accept_multiple_files
         file_uploader_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            file_uploader_proto.partial_id = ctx.current_partial_id
+
         file_uploader_proto.disabled = disabled
         file_uploader_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

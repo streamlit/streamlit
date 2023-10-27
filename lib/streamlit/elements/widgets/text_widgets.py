@@ -545,6 +545,9 @@ class TextWidgetsMixin:
         if value is not None:
             text_area_proto.default = value
         text_area_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            text_area_proto.partial_id = ctx.current_partial_id
+
         text_area_proto.disabled = disabled
         text_area_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

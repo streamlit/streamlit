@@ -209,6 +209,9 @@ class CameraInputMixin:
         camera_input_proto.id = id
         camera_input_proto.label = label
         camera_input_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            camera_input_proto.partial_id = ctx.current_partial_id
+
         camera_input_proto.disabled = disabled
         camera_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

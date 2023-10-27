@@ -265,13 +265,14 @@ class SelectboxMixin:
             selectbox_proto.default = index
         selectbox_proto.options[:] = [str(format_func(option)) for option in opt]
         selectbox_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            selectbox_proto.partial_id = ctx.current_partial_id
+
         selectbox_proto.placeholder = placeholder
         selectbox_proto.disabled = disabled
         selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
-        if ctx and ctx.current_partial_id:
-            selectbox_proto.partial_id = ctx.current_partial_id
 
         if help is not None:
             selectbox_proto.help = dedent(help)
