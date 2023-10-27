@@ -214,14 +214,12 @@ def extract_key_query_params(
     )
 
 
-def extract_single_element_lists_query_params(
-    query_params: Dict[str, List[Any]]
-) -> Dict[str, Any]:
+def extract_single_element_lists(d: Dict[str, List[Any]]) -> Dict[str, Any]:
     """Extracts the single element from lists in a dictionary if the list has a length of 1.
 
     Parameters
     ----------
-    query_params : dict
+    d : dict
         The dictionary containing lists.
 
     Returns
@@ -229,7 +227,4 @@ def extract_single_element_lists_query_params(
     dict
         The modified dictionary with single element lists extracted.
     """
-    return {
-        k: v[0] if isinstance(v, list) and len(v) == 1 else v
-        for k, v in query_params.items()
-    }
+    return {k: v[0] if isinstance(v, list) and len(v) == 1 else v for k, v in d.items()}
