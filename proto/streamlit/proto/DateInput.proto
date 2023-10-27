@@ -35,4 +35,5 @@ message DateInput {
   bool disabled = 11;
   LabelVisibilityMessage label_visibility = 12;
   string format = 13;
+  string partial_id = 14;
 }

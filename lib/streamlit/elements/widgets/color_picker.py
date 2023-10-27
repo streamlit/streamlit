@@ -213,6 +213,9 @@ class ColorPickerMixin:
         color_picker_proto.label = label
         color_picker_proto.default = str(value)
         color_picker_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            color_picker_proto.partial_id = ctx.current_partial_id
+
         color_picker_proto.disabled = disabled
         color_picker_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

@@ -881,6 +881,8 @@ class DataEditorMixin:
         )
 
         proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            proto.partial_id = ctx.current_partial_id
 
         if type_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.

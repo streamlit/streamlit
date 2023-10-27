@@ -296,6 +296,9 @@ class CheckboxMixin:
         checkbox_proto.default = bool(value)
         checkbox_proto.type = type
         checkbox_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            checkbox_proto.partial_id = ctx.current_partial_id
+
         checkbox_proto.disabled = disabled
         checkbox_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

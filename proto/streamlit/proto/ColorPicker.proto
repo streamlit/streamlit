@@ -31,4 +31,5 @@ message ColorPicker {
   bool set_value = 7;
   bool disabled = 8;
   LabelVisibilityMessage label_visibility = 9;
+  string partial_id = 10;
 }

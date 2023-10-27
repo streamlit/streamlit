@@ -296,6 +296,9 @@ class RadioMixin:
             radio_proto.default = index
         radio_proto.options[:] = [str(format_func(option)) for option in opt]
         radio_proto.form_id = current_form_id(self.dg)
+        if ctx and ctx.current_partial_id:
+            radio_proto.partial_id = ctx.current_partial_id
+
         radio_proto.horizontal = horizontal
         radio_proto.disabled = disabled
         radio_proto.label_visibility.value = get_label_visibility_proto_value(

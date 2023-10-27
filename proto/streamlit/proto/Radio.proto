@@ -34,4 +34,5 @@ message Radio {
   bool horizontal = 10;
   LabelVisibilityMessage label_visibility = 11;
   repeated string captions = 12;
+  string partial_id = 13;
 }
