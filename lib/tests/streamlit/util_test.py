@@ -203,5 +203,9 @@ class UtilTest(unittest.TestCase):
             ({"a": [1], "b": ["b"], "c": [True]}, {"a": 1, "b": "b", "c": True}),
         ]
     )
-    def test_extract_single_element_lists(self, input_dict, expected_output):
-        self.assertEqual(util.extract_single_element_lists(input_dict), expected_output)
+    def test_extract_single_element_lists_query_params(
+        self, input_dict, expected_output
+    ):
+        self.assertEqual(
+            util.extract_single_element_lists_query_params(input_dict), expected_output
+        )
