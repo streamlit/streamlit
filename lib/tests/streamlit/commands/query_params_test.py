@@ -85,9 +85,28 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test_get(self):
         assert self.query_params.get("baz") == "1"
 
+    def test__getattribute__(self):
+        assert self.query_params.baz == "1"
+
     def test__setitem__query_params(self):
         assert "test" not in self.query_params
         self.query_params["test"] = "test"
         assert self.query_params.get("test") == "test"
         message = self.get_message_from_queue(0)
-        assert (message.page_info_changed.query_string, "foo=bar")
+        assert (message.page_info_changed.query_string, "test=test")
+
+    def test__setitem_empty_string(self):
+        assert "test" not in self.query_params
+        self.query_params["test"] = ""
+        assert self.query_params["test"] == ""
+        message = self.get_message_from_queue(0)
+        assert (message.page_info_changed.query_string, "test=")
+
+    def test_getall_nonexistent(self):
+        assert self.query_params.get_all("nonexistent") == []
+
+    def test_getall_single_element(self):
+        assert self.query_params.get_all("foo") == ["bar"]
+
+    def test_getall_list(self):
+        assert self.query_params.get_all("two") == ["x", "y"]

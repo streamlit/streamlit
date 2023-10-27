@@ -206,3 +206,22 @@ class QueryParams:
             return False
         else:
             return True
+
+    def get_all(self, key: str) -> Dict[str, Any]:
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return {}
+        try:
+            if key not in self.query_params:
+                return []
+            query_params = self.query_params[key]
+            return (
+                query_params
+                if isinstance(query_params, list)
+                else [self.query_params[key]]
+            )
+        except:
+            raise KeyError(key)
+
+    def __getattr__(self, key: str) -> str:
+        return self._getitem(key)
