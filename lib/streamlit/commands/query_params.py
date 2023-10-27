@@ -166,14 +166,11 @@ class QueryParams:
     def __len__(self):
         return len(self.query_params)
 
-    def _check_ctx(self):
+    def clear(self):
         ctx = get_script_run_ctx()
         if ctx is None:
             return
-        return ctx
-
-    def _send_query_params(self):
-        ctx = self._check_ctx()
+        self.query_params.clear()
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
             self.query_params, ctx.query_string
@@ -181,11 +178,15 @@ class QueryParams:
         ctx.query_string = msg.page_info_changed.query_string
         ctx.enqueue(msg)
 
-    def clear(self):
-        self.query_params.clear()
-        self._send_query_params()
-
     def __delitem__(self, key: str) -> None:
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
         if key in self.query_params:
             del self.query_params[key]
-            self._send_query_params()
+            msg = ForwardMsg()
+            msg.page_info_changed.query_string = _ensure_no_embed_params(
+                self.query_params, ctx.query_string
+            )
+            ctx.query_string = msg.page_info_changed.query_string
+            ctx.enqueue(msg)
