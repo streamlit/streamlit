@@ -51,8 +51,7 @@ const getProps = (
     elementId: "1",
     ...elementProps,
   }),
-  width: 0,
-  height: undefined,
+  isFullScreen: false,
 })
 
 describe("GraphVizChart Element", () => {
@@ -75,32 +74,61 @@ describe("GraphVizChart Element", () => {
     expect(graphviz).toHaveBeenCalled()
   })
 
-  it("should call updateChart and log error when crashes", () => {
+  it("should update chart and log error when crashes", () => {
+    // Mock graphviz().renderDot() to throw an error for the "crash" spec
+    const mockRenderDot = jest.fn().mockImplementation(spec => {
+      if (spec === "crash") {
+        throw new Error("Simulated GraphViz crash")
+      }
+      return {
+        on: jest.fn(),
+      }
+    })
+
+    // Modify the graphviz mock to use the mockRenderDot
+    ;(graphviz as jest.Mock).mockReturnValue({
+      zoom: () => ({
+        fit: () => ({
+          scale: () => ({
+            engine: () => ({
+              renderDot: mockRenderDot,
+            }),
+          }),
+        }),
+      }),
+    })
+
     const props = getProps({
       spec: "crash",
     })
-    const { rerender } = render(<GraphVizChart {...props} />)
 
-    // @ts-expect-error
-    logError.mockClear()
-
-    const newProps = { ...props, height: 500, width: 400 }
-    rerender(<GraphVizChart {...newProps} />)
+    render(<GraphVizChart {...props} />)
 
     expect(logError).toHaveBeenCalledTimes(1)
-    expect(graphviz).toHaveBeenCalledTimes(2)
+    expect(mockRenderDot).toHaveBeenCalledWith("crash")
+    expect(graphviz).toHaveBeenCalledTimes(1)
   })
 
-  it("should render with height and width", () => {
+  it("shoud render with height and width set to auto", () => {
     const props = {
       ...getProps(),
-      height: 500,
-      width: 400,
     }
     render(<GraphVizChart {...props} />)
 
     expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
-      "height: 500px; width: 400px"
+      "height: auto; width: auto"
+    )
+  })
+
+  it("shoud render with height and width set to 100%", () => {
+    const props = {
+      ...getProps(),
+      isFullScreen: true,
+    }
+    render(<GraphVizChart {...props} />)
+
+    expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
+      "height: 100%; width: 100%"
     )
   })
 })
