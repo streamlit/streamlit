@@ -125,7 +125,6 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { isNullOrUndefined, notNullOrUndefined } from "lib/src/util/utils"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -848,7 +847,7 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    if (isNullOrUndefined(newSessionProto.partialId)) {
+    if (!newSessionProto.partialId) {
       // This is a normal rerun, remove all the auto reruns intervals
       this.state.autoReruns.forEach((value: NodeJS.Timer) => {
         clearInterval(value)
