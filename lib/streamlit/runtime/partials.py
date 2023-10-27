@@ -30,6 +30,7 @@ from typing import (
 
 import cloudpickle
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
@@ -39,6 +40,8 @@ F = TypeVar("F", bound=Callable[..., Any])
 @overload
 def partial(
     func: F,
+    *,
+    run_every: Optional[float] = None,
 ) -> F:
     ...
 
@@ -46,22 +49,31 @@ def partial(
 @overload
 def partial(
     func: None = None,
+    *,
+    run_every: Optional[float] = None,
 ) -> Callable[[F], F]:
     ...
 
 
-def partial(func: Optional[F] = None) -> Union[Callable[[F], F], F]:
+def partial(
+    func: Optional[F] = None,
+    *,
+    run_every: Optional[float] = None,
+) -> Union[Callable[[F], F], F]:
     if func is None:
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
             return partial(
                 func=f,
+                run_every=run_every,
             )
 
         return wrapper
     else:
         # To make mypy type narrow Optional[F] -> F
         non_optional_func = func
+
+    print(non_optional_func.__qualname__)
 
     @wraps(non_optional_func)
     def wrap(*args, **kwargs):
@@ -78,6 +90,7 @@ def partial(func: Optional[F] = None) -> Union[Callable[[F], F], F]:
                 "utf-8"
             )
         )
+        print(non_optional_func.__qualname__)
         partial_id = h.hexdigest()
 
         def wrapped_partial():
@@ -99,6 +112,13 @@ def partial(func: Optional[F] = None) -> Union[Callable[[F], F], F]:
             return result
 
         save_partial(partial_id, wrapped_partial)
+
+        if run_every:
+            print("Register rerun")
+            msg = ForwardMsg()
+            msg.auto_rerun.interval = run_every
+            msg.auto_rerun.partial_id = partial_id
+            ctx.enqueue(msg)
         return wrapped_partial()
 
     return wrap

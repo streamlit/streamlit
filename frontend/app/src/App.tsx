@@ -73,6 +73,7 @@ import {
   ensureError,
   LibContext,
   AppPage,
+  AutoRerun,
   BackMsg,
   Config,
   CustomThemeConfig,
@@ -124,7 +125,10 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
+import {
+  preserveEmbedQueryParams,
+  isNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -172,6 +176,7 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
+  autoReruns: NodeJS.Timer[]
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -285,6 +290,7 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
+      autoReruns: [],
     }
 
     this.connectionManager = null
@@ -630,6 +636,7 @@ export class App extends PureComponent<Props, State> {
           this.handleScriptFinished(status),
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
+        autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
@@ -737,6 +744,19 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
+  handleAutoRerun = (autoRerun: AutoRerun): void => {
+    const intervalId = setInterval(() => {
+      console.log("Rerun")
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.partialId)
+    }, autoRerun.interval * 1000)
+
+    this.setState((prevState: State) => {
+      return {
+        autoReruns: [...prevState.autoReruns, intervalId],
+      }
+    })
+  }
+
   /**
    * Handler for ForwardMsg.sessionStatusChanged messages
    * @param statusChangeProto a SessionStatus protobuf
@@ -840,6 +860,14 @@ export class App extends PureComponent<Props, State> {
     if (!this.sessionInfo.isSet) {
       // We're not initialized. Perform one-time initialization.
       this.handleOneTimeInitialization(newSessionProto)
+    }
+
+    if (isNullOrUndefined(newSessionProto.partialId)) {
+      // This is a normal rerun, remove all the auto reruns intervals
+      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+        clearInterval(value)
+      })
+      this.setState({ autoReruns: [] })
     }
 
     const config = newSessionProto.config as Config

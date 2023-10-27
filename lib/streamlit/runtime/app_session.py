@@ -463,6 +463,7 @@ class AppSession:
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
         page_script_hash: Optional[str] = None,
+        partial_id: Optional[str] = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -472,7 +473,13 @@ class AppSession:
         """
         self._event_loop.call_soon_threadsafe(
             lambda: self._handle_scriptrunner_event_on_event_loop(
-                sender, event, forward_msg, exception, client_state, page_script_hash
+                sender,
+                event,
+                forward_msg,
+                exception,
+                client_state,
+                page_script_hash,
+                partial_id,
             )
         )
 
@@ -484,6 +491,7 @@ class AppSession:
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
         page_script_hash: Optional[str] = None,
+        partial_id: Optional[str] = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -514,6 +522,9 @@ class AppSession:
         page_script_hash : str | None
             A hash of the script path corresponding to the page currently being
             run. Set only for the SCRIPT_STARTED event.
+
+        ≈ : str | None
+            The partial ID in case the run is based on a partial.
         """
 
         assert (
@@ -635,7 +646,9 @@ class AppSession:
         msg.session_event.script_changed_on_disk = True
         return msg
 
-    def _create_new_session_message(self, page_script_hash: str) -> ForwardMsg:
+    def _create_new_session_message(
+        self, page_script_hash: str, partial_id: str | None = None
+    ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
@@ -643,6 +656,8 @@ class AppSession:
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._script_data.main_script_path
         msg.new_session.page_script_hash = page_script_hash
+        if partial_id:
+            msg.new_session.partial_id = partial_id
 
         _populate_app_pages(msg.new_session, self._script_data.main_script_path)
         _populate_config_msg(msg.new_session.config)
