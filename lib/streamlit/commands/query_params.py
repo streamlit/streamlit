@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import urllib.parse as parse
+from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from streamlit import util
@@ -142,3 +143,66 @@ def _ensure_no_embed_params(
         separator = "&" if current_embed_params else ""
         return separator.join([query_string, current_embed_params])
     return current_embed_params
+
+
+@dataclass
+class QueryParams:
+    """A dict-like representation of query params that generally behaves like st.session.state.
+    The main difference is that it only stores and returns str and list[str].
+
+    TODO(willhuang1997): Fill in these docs with examples and fix doc above. Above is just a stub for now.
+    """
+
+    query_params: dict[str, List[Any]] = field(default_factory=dict)
+
+    def __repr__(self):
+        return util.repr_(self)
+
+    def _keys(self) -> set[str]:
+        return self.query_params.keys()
+
+    def get(self, key: str) -> Any:
+        return self._getitem(key)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._getitem(key)
+
+    def _getitem(self, key: str) -> str:
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return {}
+        try:
+            value = self.query_params[key]
+            # This should never happen as you can't set a key to an empty array
+            if isinstance(value, list) and len(value) == 0:
+                return ""
+            return str(value[-1]) if isinstance(value, list) else str(value)
+        except:
+            raise KeyError(key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+
+        msg = ForwardMsg()
+        self.query_params[key] = value
+        msg.page_info_changed.query_string = _ensure_no_embed_params(
+            self.query_params, ctx.query_string
+        )
+        ctx.query_string = msg.page_info_changed.query_string
+        self.query_params = util.extract_single_element_lists_query_params(
+            util.exclude_key_query_params(
+                parse.parse_qs(ctx.query_string, keep_blank_values=True),
+                keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
+            )
+        )
+        ctx.enqueue(msg)
+
+    def __contains__(self, key: str) -> bool:
+        try:
+            self.query_params[key]
+        except KeyError:
+            return False
+        else:
+            return True
