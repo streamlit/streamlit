@@ -14,7 +14,7 @@
 
 
 import random
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,7 @@ class _SnowparkDataLikeBaseClass:
     def __init__(
         self, is_map: bool = False, num_of_rows: int = 50000, num_of_cols: int = 4
     ):
-        self._data = None
+        self._data: Union[pd.DataFrame, List[List[int]], None] = None
         self._is_map = is_map
         self._num_of_rows = num_of_rows
         self._num_of_cols = num_of_cols
@@ -37,11 +37,13 @@ class _SnowparkDataLikeBaseClass:
         self._lazy_evaluation()
         if n > self._num_of_rows:
             n = self._num_of_rows
+        assert self._data is not None
         return self._data[:n]
 
     def collect(self) -> List[List[int]]:
         """Returns fake Data like, which imitates collection of snowflake.snowpark.dataframe.DataFrame"""
         self._lazy_evaluation()
+        assert self._data is not None
         return self._data
 
     def _lazy_evaluation(self):

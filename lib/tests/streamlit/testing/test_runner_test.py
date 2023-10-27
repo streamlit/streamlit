@@ -16,14 +16,13 @@ from streamlit.testing.v1 import AppTest
 
 
 def test_smoke():
-    at = AppTest.from_string(
-        """
+    def script():
         import streamlit as st
 
         st.radio("radio", options=["a", "b", "c"], key="r")
         st.radio("default index", options=["a", "b", "c"], index=2)
-        """
-    ).run()
+
+    at = AppTest.from_function(script).run()
     assert at.radio
     assert at.radio[0].value == "a"
     assert at.radio(key="r").value == "a"

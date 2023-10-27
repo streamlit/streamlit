@@ -23,98 +23,49 @@ import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
 import { StyledGraphVizChart } from "./styled-components"
 
 export interface GraphVizChartProps {
-  width: number
   element: GraphVizChartProto
-  height?: number
+  isFullScreen: boolean
 }
-
-interface Dimensions {
-  chartWidth: number
-  chartHeight: number
-}
-
-// Use d3Graphviz in a dummy expression so the library actually gets loaded.
-// This way it registers itself in d3 as a plugin at this point.
-const dummyGraphviz = graphviz
-dummyGraphviz // eslint-disable-line @typescript-eslint/no-unused-expressions
 
 export function GraphVizChart({
-  width: propWidth,
   element,
-  height: propHeight,
+  isFullScreen,
 }: GraphVizChartProps): ReactElement {
   const chartId = `graphviz-chart-${element.elementId}`
 
-  let originalHeight = 0
-  let originalWidth = 0
-
-  const getChartData = (): string => {
-    return element.spec
-  }
-
-  const getChartDimensions = (): Dimensions => {
-    let chartWidth = originalWidth
-    let chartHeight = originalHeight
-
-    if (propHeight) {
-      // fullscreen
-      chartWidth = propWidth
-      chartHeight = propHeight
-    } else if (element.useContainerWidth) {
-      chartWidth = propWidth
-    }
-    return { chartWidth, chartHeight }
-  }
-
-  const updateChart = (): void => {
+  useEffect(() => {
     try {
-      // Layout and render the graph
-      const graph = graphviz(`#${chartId}`)
+      graphviz(`#${chartId}`)
         .zoom(false)
         .fit(true)
         .scale(1)
         .engine(element.engine as Engine)
-        .renderDot(getChartData())
-        .on("end", () => {
-          const node = select(`#${chartId} > svg`).node() as SVGGraphicsElement
-          if (node) {
-            originalHeight = node.getBBox().height
-            originalWidth = node.getBBox().width
-          }
-        })
+        .renderDot(element.spec)
 
-      const { chartHeight, chartWidth } = getChartDimensions()
-      if (chartHeight > 0) {
-        // Override or reset the graph height
-        graph.height(chartHeight)
-      }
-      if (chartWidth > 0) {
-        // Override or reset the graph width
-        graph.width(chartWidth)
+      if (isFullScreen || element.useContainerWidth) {
+        const node = select(`#${chartId} > svg`).node() as SVGGraphicsElement
+        // We explicitly remove width and height to let CSS and the SVG viewBox
+        // define its dimensions
+        node.removeAttribute("width")
+        node.removeAttribute("height")
       }
     } catch (error) {
       logError(error)
     }
-  }
-
-  useEffect(() => {
-    updateChart()
-  })
-
-  const elementDimensions = getChartDimensions()
-  const width: number = elementDimensions.chartWidth
-    ? elementDimensions.chartWidth
-    : propWidth
-  const height: number | undefined = elementDimensions.chartHeight
-    ? elementDimensions.chartHeight
-    : propHeight
+  }, [
+    chartId,
+    element.engine,
+    element.spec,
+    element.useContainerWidth,
+    isFullScreen,
+  ])
 
   return (
     <StyledGraphVizChart
       className="graphviz stGraphVizChart"
       data-testid="stGraphVizChart"
       id={chartId}
-      style={{ width, height }}
+      isFullScreen={isFullScreen}
     />
   )
 }

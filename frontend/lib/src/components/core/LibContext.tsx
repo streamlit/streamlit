@@ -26,6 +26,11 @@ import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
  */
 export type LibConfig = {
   /**
+   * the mapbox token that can be configured by a platform
+   */
+  mapboxToken?: string
+
+  /**
    * Whether to disable the full screen mode all elements / widgets.
    */
   disableFullscreenMode?: boolean

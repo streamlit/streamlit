@@ -39,11 +39,8 @@ import { AppContext } from "@streamlit/app/src/components/AppContext"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewContainer,
-  StyledAppViewFooter,
-  StyledAppViewFooterLink,
   StyledAppViewMain,
   StyledIFrameResizerAnchor,
-  StyledAppViewBlockSpacer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
@@ -204,19 +201,6 @@ function AppView(props: AppViewProps): ReactElement {
             data-testid="IframeResizerAnchor"
             data-iframe-height
           />
-        )}
-        {/* Spacer fills up dead space to ensure the footer remains at the
-        bottom of the page in larger views */}
-        {(!embedded || showFooter) && (
-          <StyledAppViewBlockSpacer data-testid="AppViewBlockSpacer" />
-        )}
-        {(!embedded || showFooter) && !containsChatInput && (
-          <StyledAppViewFooter isWideMode={wideMode}>
-            Made with{" "}
-            <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
-              Streamlit
-            </StyledAppViewFooterLink>
-          </StyledAppViewFooter>
         )}
       </Component>
       {hasEventElements && (

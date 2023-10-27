@@ -58,7 +58,8 @@ def get_query_params() -> Dict[str, List[str]]:
         return {}
     # Return new query params dict, but without embed, embed_options query params
     return util.exclude_key_query_params(
-        parse.parse_qs(ctx.query_string), keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
+        parse.parse_qs(ctx.query_string, keep_blank_values=True),
+        keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
     )
 
 
@@ -115,7 +116,7 @@ def _ensure_no_embed_params(
             "Query param embed and embed_options (case-insensitive) cannot be set using set_query_params method."
         )
 
-    all_current_params = parse.parse_qs(query_string)
+    all_current_params = parse.parse_qs(query_string, keep_blank_values=True)
     current_embed_params = parse.urlencode(
         {
             EMBED_QUERY_PARAM: [
