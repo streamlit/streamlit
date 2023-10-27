@@ -391,6 +391,8 @@ class ConfigTest(unittest.TestCase):
                 "server.enableStaticServing",
                 "server.sslCertFile",
                 "server.sslKeyFile",
+                "server.ipHeader",
+                "server.userEmailHeader",
                 "ui.hideTopBar",
                 "ui.hideSidebarNav",
             ]

@@ -794,6 +794,22 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.ipHeader",
+    description="""When streamlit is deployed behind a reverse proxy, you can get user ip by request
+                header, for example 'X-Real-IP' or 'X-Forwarded-For'.""",
+    default_val="",
+    type_=str,
+)
+
+_create_option(
+    "server.userEmailHeader",
+    description="""When streamlit is deployed behind a reverse proxy for authentication,
+                eg. Oauth2, Nginx. You can get current user email by request header.""",
+    default_val="",
+    type_=str,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")

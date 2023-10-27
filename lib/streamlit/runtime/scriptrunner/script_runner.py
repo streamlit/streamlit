@@ -45,6 +45,7 @@ from streamlit.runtime.state import (
     SessionState,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+from streamlit.user_info import UserInfoProxy
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
 _LOGGER = get_logger(__name__)
@@ -470,6 +471,11 @@ class ScriptRunner:
                 ctx.enqueue(msg)
 
             code = self._script_cache.get_bytecode(script_path)
+
+            user = UserInfoProxy()
+            email = user.get("email", "anonymous")
+            ip = user.get("ip", "unknown ip")
+            _LOGGER.info(f"{email} [{ip}] access script {script_path}")
 
         except Exception as ex:
             # We got a compile error. Send an error event and bail immediately.

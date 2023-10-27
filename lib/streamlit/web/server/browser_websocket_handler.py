@@ -98,11 +98,23 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@example.com"
 
+        userEmailHeader = config.get_option("server.userEmailHeader")
+        if userEmailHeader:
+            email = self.request.headers.get(userEmailHeader)
+
         user_info: Dict[str, Optional[str]] = dict()
         if is_public_cloud_app:
             user_info["email"] = None
         else:
             user_info["email"] = email
+
+        ipheader = config.get_option("server.ipHeader")
+        if ipheader:
+            remote_ip = self.request.headers.get(ipheader)
+        else:
+            remote_ip = self.request.remote_ip
+
+        user_info["ip"] = remote_ip
 
         existing_session_id = None
         try:
