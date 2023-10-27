@@ -170,6 +170,7 @@ class QueryParams:
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+
         self.query_params.clear()
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
@@ -182,6 +183,7 @@ class QueryParams:
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+
         if key in self.query_params:
             del self.query_params[key]
             msg = ForwardMsg()
