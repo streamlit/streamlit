@@ -26,7 +26,6 @@ import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { IndexTypeName } from "./dataframes/Quiver"
 import { UNICODE } from "./mocks/arrow"
 import { Writer } from "protobufjs"
-import { screen } from "@testing-library/react"
 import { vectorFromArray } from "apache-arrow"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
@@ -799,7 +798,7 @@ describe("AppRoot.empty", () => {
 
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
-    expect(child.element.skeleton.show).toBe(true)
+    expect(child.element.skeleton).not.toBeNull
 
     expect(empty.sidebar.isEmpty).toBe(true)
   })

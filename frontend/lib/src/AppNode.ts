@@ -404,7 +404,7 @@ export class AppRoot {
   private readonly root: BlockNode
 
   /**
-   * Create an empty AppRoot with an optional placeholder "skeleton" element.
+   * Create an empty AppRoot with a placeholder "skeleton" element.
    */
   public static empty(): AppRoot {
     let mainNodes: AppNode[]

@@ -192,9 +192,7 @@ export function makeElementWithErrorText(text: string): Element {
 /** Return a special internal-only Element showing an app "skeleton". */
 export function makeSkeletonElement(): Element {
   return new Element({
-    skeleton: {
-      show: true,
-    },
+    skeleton: {},
   })
 }
 

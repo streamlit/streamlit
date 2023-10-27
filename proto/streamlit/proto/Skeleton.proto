@@ -18,5 +18,4 @@ syntax = "proto3";
 
 // An internal-only element that displays an app skeleton.
 message Skeleton {
-  bool show = 1;  // Dummy boolean because protos need to have something.
 }

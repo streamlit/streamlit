@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, useState, useEffect, memo } from "react"
+import React, { FC, memo } from "react"
 
 import { SquareSkeleton } from "./styled-components"
 
