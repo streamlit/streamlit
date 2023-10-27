@@ -515,7 +515,7 @@ class AppSession:
             A hash of the script path corresponding to the page currently being
             run. Set only for the SCRIPT_STARTED event.
 
-        ≈ : str | None
+        partial_id : str | None
             The partial ID in case the run is based on a partial.
         """
 
@@ -544,7 +544,7 @@ class AppSession:
 
             self._clear_queue()
             self._enqueue_forward_msg(
-                self._create_new_session_message(page_script_hash)
+                self._create_new_session_message(page_script_hash, partial_id)
             )
 
         elif (

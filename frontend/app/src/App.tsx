@@ -847,7 +847,7 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    if (!newSessionProto.partialId) {
+    if (newSessionProto.partialId === "") {
       // This is a normal rerun, remove all the auto reruns intervals
       this.state.autoReruns.forEach((value: NodeJS.Timer) => {
         clearInterval(value)
