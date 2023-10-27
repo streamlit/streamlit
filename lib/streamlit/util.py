@@ -214,7 +214,7 @@ def extract_key_query_params(
     )
 
 
-def extract_single_element_lists(d: Dict[str, List[Any]]) -> Dict[str, Any]:
+def unwrap_single_element_lists(d: Dict[str, List[Any]]) -> Dict[str, Any]:
     """Extracts the single element from lists in a dictionary if the list has a length of 1.
 
     Parameters
