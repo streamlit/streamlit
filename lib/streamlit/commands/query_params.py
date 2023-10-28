@@ -145,8 +145,7 @@ def _ensure_no_embed_params(
 
 @dataclass
 class QueryParams:
-    """
-    A dict-like representation of query params that generally behaves like st.session.state.
+    """A dict-like representation of query params that generally behaves like st.session.state.
     The main difference is that it only stores and returns str and list[str].
 
     TODO(willhuang1997): Fill in these docs with examples and fix doc above. Above is just a stub for now.
