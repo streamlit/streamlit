@@ -53,10 +53,10 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         self.assertEqual(p_get, p_set)
 
     def test_set_query_params_empty_str(self):
-        empty_str_params = {"x": ["a"]}
+        empty_str_params = {"x": [""]}
         st.experimental_set_query_params(**empty_str_params)
         params_get = st.experimental_get_query_params()
-        self.assertEqual(params_get, {"x": "a"})
+        self.assertEqual(params_get, {"x": ""})
 
 
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
