@@ -76,6 +76,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
 
     def test_del_invalid(self):
         del self.query_params["nonexistent"]
+
+        # no forward message should be sent
         with pytest.raises(IndexError):
-            # no forward message should be sent
             self.get_message_from_queue(0)
