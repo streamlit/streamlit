@@ -62,31 +62,38 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def setUp(self):
         super().setUp()
-        # internally, query_params sets the value to lists because of the parse.parse_qs method
-        self.q_params = {"foo": "bar", "baz": 1, "corge": 1.23, "two": ["x", "y"]}
+        # internally, query_params we cast them to str
+        self.q_params = {"foo": "bar", "two": ["x", "y"]}
         self.query_params = QueryParams(self.q_params)
 
     def test_getitem_nonexistent(self):
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError) as exception_message:
             self.query_params["nonexistent"]
+            assert (
+                exception_message
+                == 'st.query_params has no key "nonexistent". Did you forget to initialize it? '
+            )
 
     def test_getitem_list(self):
+        # get the last item in the array
         assert self.query_params["two"] == "y"
 
     def test_getitem_single_element_int(self):
+        self.query_params["baz"] = 1
         assert self.query_params["baz"] == "1"
 
     def test_getitem_single_element_float(self):
+        self.query_params["corge"] = 1.23
         assert self.query_params["corge"] == "1.23"
 
     def test__getitem__value(self):
         assert self.query_params["foo"] == "bar"
 
     def test_get(self):
-        assert self.query_params.get("baz") == "1"
+        assert self.query_params.get("foo") == "bar"
 
-    def test__getattribute__(self):
-        assert self.query_params.baz == "1"
+    def test__getattr__(self):
+        assert self.query_params.foo == "bar"
 
     def test__setitem__query_params(self):
         assert "test" not in self.query_params

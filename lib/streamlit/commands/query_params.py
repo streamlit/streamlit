@@ -155,6 +155,9 @@ class QueryParams:
 
     query_params: dict[str, List[Any]] = field(default_factory=dict)
 
+    def __init__(self, query_params={}):
+        self.query_params = query_params
+
     def __repr__(self):
         return util.repr_(self)
 
@@ -176,17 +179,17 @@ class QueryParams:
             # This should never happen as you can't set a key to an empty array
             if isinstance(value, list) and len(value) == 0:
                 return ""
-            return str(value[-1]) if isinstance(value, list) else str(value)
+            return value[-1] if isinstance(value, list) else value
         except:
-            raise KeyError(key)
+            raise KeyError
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def _setitem(self, key: str, value: Any) -> None:
         ctx = get_script_run_ctx()
         if ctx is None:
             return
 
         msg = ForwardMsg()
-        self.query_params[key] = value
+        self.query_params[key] = str(value)
         msg.page_info_changed.query_string = _ensure_no_embed_params(
             self.query_params, ctx.query_string
         )
@@ -199,6 +202,9 @@ class QueryParams:
         )
         ctx.enqueue(msg)
 
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._setitem(key, value)
+
     def __contains__(self, key: str) -> bool:
         try:
             self.query_params[key]
@@ -207,7 +213,7 @@ class QueryParams:
         else:
             return True
 
-    def get_all(self, key: str) -> Dict[str, Any]:
+    def get_all(self, key: str) -> List[str]:
         ctx = get_script_run_ctx()
         if ctx is None:
             return {}
@@ -220,8 +226,12 @@ class QueryParams:
                 if isinstance(query_params, list)
                 else [self.query_params[key]]
             )
-        except:
-            raise KeyError(key)
+        except KeyError:
+            raise KeyError()
 
     def __getattr__(self, key: str) -> str:
         return self._getitem(key)
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        # TODO(willhuang1997): This is currently bugged. Need to investigate
+        self._setitem(key, value)
