@@ -31,8 +31,8 @@ describe("st.experimental_get_query_string", () => {
     );
     cy.contains(
       "Current query string is: {" +
-        "'show_map': ['True'], " +
-        "'number_of_countries': ['2'], " +
+        "'show_map': 'True', " +
+        "'number_of_countries': '2', " +
         "'selected': ['asia', 'america']" +
         "}"
     );
