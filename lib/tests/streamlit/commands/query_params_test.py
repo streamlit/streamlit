@@ -62,7 +62,6 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def setUp(self):
         super().setUp()
-        # internally, query_params we cast them to str
         self.q_params = {"foo": "bar", "two": ["x", "y"]}
         self.query_params = QueryParams(self.q_params)
 
