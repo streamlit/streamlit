@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import urllib.parse as parse
+from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from streamlit import util
@@ -142,3 +143,46 @@ def _ensure_no_embed_params(
         separator = "&" if current_embed_params else ""
         return separator.join([query_string, current_embed_params])
     return current_embed_params
+
+
+@dataclass
+class QueryParams:
+    """A dict-like representation of query params.
+    The main difference is that it only stores and returns str and list[str].
+
+    TODO(willhuang1997): Fill in these docs with examples and fix doc above. Above is just a stub for now.
+    """
+
+    _query_params: Dict[str, List[Any]] = field(default_factory=dict)
+
+    def __init__(self, query_params: Dict[str, List[Any]] = {}):
+        self._query_params = query_params
+
+    def __repr__(self):
+        return util.repr_(self)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._query_params
+
+    def __len__(self):
+        return len(self._query_params)
+
+    def _send_query_param_msg(self):
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+        msg = ForwardMsg()
+        msg.page_info_changed.query_string = _ensure_no_embed_params(
+            self._query_params, ctx.query_string
+        )
+        ctx.query_string = msg.page_info_changed.query_string
+        ctx.enqueue(msg)
+
+    def clear(self):
+        self._query_params.clear()
+        self._send_query_param_msg()
+
+    def __delitem__(self, key: str) -> None:
+        if key in self._query_params:
+            del self._query_params[key]
+            self._send_query_param_msg()
