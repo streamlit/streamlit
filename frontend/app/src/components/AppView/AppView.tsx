@@ -142,6 +142,8 @@ function AppView(props: AppViewProps): ReactElement {
       addPaddingForHeader={showToolbar || showColoredLine}
       addPaddingForChatInput={containsChatInput}
       events={events}
+      isEmbedded={embedded}
+      hasSidebar={showSidebar}
     >
       <VerticalBlock
         node={node}
