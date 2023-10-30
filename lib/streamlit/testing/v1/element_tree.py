@@ -1556,30 +1556,38 @@ class Block:
         return self.root.run(timeout=timeout)
 
     def __repr__(self):
-        classname = self.__class__.__name__
+        return repr_(self)
 
-        defaults: list[Any] = [None, "", False, [], set(), dict()]
-        fields_vals = [
+
+def repr_(self) -> str:
+    classname = self.__class__.__name__
+
+    defaults: list[Any] = [None, "", False, [], set(), dict()]
+
+    if dataclasses.is_dataclass(self):
+        fields_vals = (
             (f.name, getattr(self, f.name))
             for f in dataclasses.fields(self)
             if f.repr
             and getattr(self, f.name) != f.default
             and getattr(self, f.name) not in defaults
-        ]
+        )
+    else:
+        fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
 
-        reprs = []
-        for field, value in fields_vals:
-            if isinstance(value, dict):
-                line = f"{field}={format_dict(value)}"
-            else:
-                line = f"{field}={value!r}"
-            reprs.append(line)
+    reprs = []
+    for field, value in fields_vals:
+        if isinstance(value, dict):
+            line = f"{field}={format_dict(value)}"
+        else:
+            line = f"{field}={value!r}"
+        reprs.append(line)
 
-        reprs[0] = "\n" + reprs[0]
-        field_reprs = ",\n".join(reprs)
+    reprs[0] = "\n" + reprs[0]
+    field_reprs = ",\n".join(reprs)
 
-        field_reprs = textwrap.indent(field_reprs, " " * 4)
-        return f"{classname}({field_reprs})"
+    field_reprs = textwrap.indent(field_reprs, " " * 4)
+    return f"{classname}({field_reprs})"
 
 
 def indent(lines: list[str]) -> list[str]:
