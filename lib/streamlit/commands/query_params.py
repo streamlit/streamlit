@@ -146,26 +146,26 @@ def _ensure_no_embed_params(
 
 
 @dataclass
-class QueryParams:
-    """A dict-like representation of query params that generally behaves like st.session.state.
+class QueryParamsProxy:
+    """A dict-like representation of query params.
     The main difference is that it only stores and returns str and list[str].
 
     TODO(willhuang1997): Fill in these docs with examples and fix doc above. Above is just a stub for now.
     """
 
-    query_params: Dict[str, List[Any]] = field(default_factory=dict)
+    _query_params: Dict[str, List[Any]] = field(default_factory=dict)
 
     def __init__(self, query_params: Dict[str, List[Any]] = {}):
-        self.query_params = query_params
+        self._query_params = query_params
 
     def __repr__(self):
         return util.repr_(self)
 
     def __contains__(self, key: str) -> bool:
-        return key in self.query_params
+        return key in self._query_params
 
     def __len__(self):
-        return len(self.query_params)
+        return len(self._query_params)
 
     def _send_query_param_msg(self):
         ctx = get_script_run_ctx()
@@ -173,16 +173,16 @@ class QueryParams:
             return
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
-            self.query_params, ctx.query_string
+            self._query_params, ctx.query_string
         )
         ctx.query_string = msg.page_info_changed.query_string
         ctx.enqueue(msg)
 
     def clear(self):
-        self.query_params.clear()
+        self._query_params.clear()
         self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
-        if key in self.query_params:
-            del self.query_params[key]
+        if key in self._query_params:
+            del self._query_params[key]
             self._send_query_param_msg()
