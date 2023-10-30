@@ -146,7 +146,7 @@ def _ensure_no_embed_params(
 
 
 @dataclass
-class QueryParamsProxy:
+class QueryParams:
     """A dict-like representation of query params.
     The main difference is that it only stores and returns str and list[str].
 
