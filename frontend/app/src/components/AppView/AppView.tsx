@@ -133,6 +133,12 @@ function AppView(props: AppViewProps): ReactElement {
     toastAdjustment,
   } = React.useContext(AppContext)
 
+  const layout = wideMode ? "wide" : "narrow"
+  const hasSidebarElements = !elements.sidebar.isEmpty
+  const showSidebar =
+    hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
+  const hasEventElements = !elements.event.isEmpty
+
   const renderBlock = (node: BlockNode, events = false): ReactElement => (
     <StyledAppViewBlockContainer
       className="block-container"
@@ -142,6 +148,8 @@ function AppView(props: AppViewProps): ReactElement {
       addPaddingForHeader={showToolbar || showColoredLine}
       addPaddingForChatInput={containsChatInput}
       events={events}
+      isEmbedded={embedded}
+      hasSidebar={showSidebar}
     >
       <VerticalBlock
         node={node}
@@ -157,12 +165,6 @@ function AppView(props: AppViewProps): ReactElement {
       />
     </StyledAppViewBlockContainer>
   )
-
-  const layout = wideMode ? "wide" : "narrow"
-  const hasSidebarElements = !elements.sidebar.isEmpty
-  const showSidebar =
-    hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
-  const hasEventElements = !elements.event.isEmpty
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
