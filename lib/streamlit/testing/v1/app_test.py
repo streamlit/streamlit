@@ -78,6 +78,7 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,
     WidgetList,
+    format_dict,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
@@ -932,4 +933,21 @@ class AppTest:
         return self._tree.get(element_type)
 
     def __repr__(self) -> str:
-        return util.repr_(self)
+        classname = self.__class__.__name__
+
+        defaults: list[Any] = [None, "", False, [], set(), dict()]
+        fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
+
+        reprs = []
+        for field, value in fields_vals:
+            if isinstance(value, dict):
+                line = f"{field}={format_dict(value)}"
+            else:
+                line = f"{field}={value!r}"
+            reprs.append(line)
+
+        reprs[0] = "\n" + reprs[0]
+        field_reprs = ",\n".join(reprs)
+
+        field_reprs = textwrap.indent(field_reprs, " " * 4)
+        return f"{classname}({field_reprs})"
