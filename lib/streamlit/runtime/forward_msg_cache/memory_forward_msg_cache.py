@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 from typing import TYPE_CHECKING, Dict, List, MutableMapping, Optional
 from weakref import WeakKeyDictionary
 
 from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.runtime.forward_msg_cache.protocol import ForwardMsgCacheProtocol
+from streamlit.runtime.runtime_util import populate_hash_if_needed
+from streamlit.runtime.stats import CacheStat
 
 if TYPE_CHECKING:
     from streamlit.runtime.app_session import AppSession
@@ -28,65 +28,7 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-def populate_hash_if_needed(msg: ForwardMsg) -> str:
-    """Computes and assigns the unique hash for a ForwardMsg.
-
-    If the ForwardMsg already has a hash, this is a no-op.
-
-    Parameters
-    ----------
-    msg : ForwardMsg
-
-    Returns
-    -------
-    string
-        The message's hash, returned here for convenience. (The hash
-        will also be assigned to the ForwardMsg; callers do not need
-        to do this.)
-
-    """
-    if msg.hash == "":
-        # Move the message's metadata aside. It's not part of the
-        # hash calculation.
-        metadata = msg.metadata
-        msg.ClearField("metadata")
-
-        # MD5 is good enough for what we need, which is uniqueness.
-        hasher = hashlib.md5(**HASHLIB_KWARGS)
-        hasher.update(msg.SerializeToString())
-        msg.hash = hasher.hexdigest()
-
-        # Restore metadata.
-        msg.metadata.CopyFrom(metadata)
-
-    return msg.hash
-
-
-def create_reference_msg(msg: ForwardMsg) -> ForwardMsg:
-    """Create a ForwardMsg that refers to the given message via its hash.
-
-    The reference message will also get a copy of the source message's
-    metadata.
-
-    Parameters
-    ----------
-    msg : ForwardMsg
-        The ForwardMsg to create the reference to.
-
-    Returns
-    -------
-    ForwardMsg
-        A new ForwardMsg that "points" to the original message via the
-        ref_hash field.
-
-    """
-    ref_msg = ForwardMsg()
-    ref_msg.ref_hash = populate_hash_if_needed(msg)
-    ref_msg.metadata.CopyFrom(msg.metadata)
-    return ref_msg
-
-
-class ForwardMsgCache(CacheStatsProvider):
+class MemoryForwardMsgCache(ForwardMsgCacheProtocol):
     """A cache of ForwardMsgs.
 
     Large ForwardMsgs (e.g. those containing big DataFrame payloads) are
@@ -158,15 +100,16 @@ class ForwardMsgCache(CacheStatsProvider):
             """
             return len(self._session_script_run_counts) > 0
 
-    def __init__(self):
-        self._entries: Dict[str, "ForwardMsgCache.Entry"] = {}
+    def __init__(self, base_url: str):
+        self.base_url = base_url
+        self._entries: Dict[str, "MemoryForwardMsgCache.Entry"] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def add_message(
         self, msg: ForwardMsg, session: "AppSession", script_run_count: int
-    ) -> None:
+    ) -> ForwardMsg:
         """Add a ForwardMsg to the cache.
 
         The cache will also record a reference to the given AppSession,
@@ -180,13 +123,33 @@ class ForwardMsgCache(CacheStatsProvider):
         script_run_count : int
             The number of times the session's script has run
 
+        Returns
+        -------
+        ForwardMsg
+
         """
+        msg.metadata.cacheable = self._is_cacheable_msg(msg)
         populate_hash_if_needed(msg)
-        entry = self._entries.get(msg.hash, None)
-        if entry is None:
-            entry = ForwardMsgCache.Entry(msg)
-            self._entries[msg.hash] = entry
-        entry.add_session_ref(session, script_run_count)
+        msg_to_send = msg
+        if msg.metadata.cacheable:
+            if self._has_message_reference(msg, session, script_run_count):
+                # This session has probably cached this message. Send
+                # a reference instead.
+                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
+                msg_to_send = self._create_reference_msg(msg)
+
+            # Cache the message so it can be referenced in the future.
+            # If the message is already cached, this will reset its
+            # age.
+            LOGGER.debug("Caching message (hash=%s)", msg.hash)
+
+            entry = self._entries.get(msg.hash, None)
+            if entry is None:
+                entry = MemoryForwardMsgCache.Entry(msg)
+                self._entries[msg.hash] = entry
+            entry.add_session_ref(session, script_run_count)
+
+        return msg_to_send
 
     def get_message(self, hash: str) -> Optional[ForwardMsg]:
         """Return the message with the given ID if it exists in the cache.
@@ -204,7 +167,7 @@ class ForwardMsgCache(CacheStatsProvider):
         entry = self._entries.get(hash, None)
         return entry.msg if entry else None
 
-    def has_message_reference(
+    def _has_message_reference(
         self, msg: ForwardMsg, session: "AppSession", script_run_count: int
     ) -> bool:
         """Return True if a session has a reference to a message."""
@@ -255,6 +218,11 @@ class ForwardMsgCache(CacheStatsProvider):
         """
         max_age = config.get_option("global.maxCachedMessageAge")
 
+        LOGGER.debug(
+            "Removing expired entries from MessageCache " "(max_age=%s)",
+            max_age,
+        )
+
         # Operate on a copy of our entries dict.
         # We may be deleting from it.
         for msg_hash, entry in self._entries.copy().items():
@@ -278,6 +246,27 @@ class ForwardMsgCache(CacheStatsProvider):
     def clear(self) -> None:
         """Remove all entries from the cache"""
         self._entries.clear()
+
+    def _create_reference_msg(self, msg: ForwardMsg) -> ForwardMsg:
+        if not msg.metadata.cacheable or not msg.hash:
+            raise RuntimeError("Cannot create reference for non-cacheable message!")
+        ref_msg = ForwardMsg()
+        ref_msg.forward_msg_ref.ref_url = f"{self.base_url}?hash={msg.hash}"
+        ref_msg.forward_msg_ref.ref_hash = msg.hash
+        ref_msg.metadata.CopyFrom(msg.metadata)
+        return ref_msg
+
+    @staticmethod
+    def _is_cacheable_msg(msg: ForwardMsg) -> bool:
+        """True if the given message qualifies for caching."""
+        if msg.WhichOneof("type") in {
+            "forward_msg_ref",
+            "initialize",
+            "script_finished",
+        }:
+            # Some message types never get cached
+            return False
+        return msg.ByteSize() >= int(config.get_option("global.minCachedMessageSize"))
 
     def get_stats(self) -> List[CacheStat]:
         stats: List[CacheStat] = []

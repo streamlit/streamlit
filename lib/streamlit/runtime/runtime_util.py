@@ -13,13 +13,13 @@
 # limitations under the License.
 
 """Runtime-related utility functions"""
-
+import hashlib
 from typing import Any, Optional
 
 from streamlit import config
 from streamlit.errors import MarkdownFormattedException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
+from streamlit.util import HASHLIB_KWARGS
 
 
 class MessageSizeError(MarkdownFormattedException):
@@ -50,14 +50,6 @@ of the client's browser and the Streamlit server._
             )
             .strip("\n")
         )
-
-
-def is_cacheable_msg(msg: ForwardMsg) -> bool:
-    """True if the given message qualifies for caching."""
-    if msg.WhichOneof("type") in {"ref_hash", "initialize"}:
-        # Some message types never get cached
-        return False
-    return msg.ByteSize() >= int(config.get_option("global.minCachedMessageSize"))
 
 
 def serialize_forward_msg(msg: ForwardMsg) -> bytes:
@@ -96,3 +88,37 @@ def get_max_message_size_bytes() -> int:
         _max_message_size_bytes = config.get_option("server.maxMessageSize") * int(1e6)
 
     return _max_message_size_bytes
+
+
+def populate_hash_if_needed(msg: ForwardMsg) -> str:
+    """Computes and assigns the unique hash for a ForwardMsg.
+
+    If the ForwardMsg already has a hash, this is a no-op.
+
+    Parameters
+    ----------
+    msg : ForwardMsg
+
+    Returns
+    -------
+    string
+        The message's hash, returned here for convenience. (The hash
+        will also be assigned to the ForwardMsg; callers do not need
+        to do this.)
+
+    """
+    if msg.hash == "":
+        # Move the message's metadata aside. It's not part of the
+        # hash calculation.
+        metadata = msg.metadata
+        msg.ClearField("metadata")
+
+        # MD5 is good enough for what we need, which is uniqueness.
+        hasher = hashlib.md5(**HASHLIB_KWARGS)
+        hasher.update(msg.SerializeToString())
+        msg.hash = hasher.hexdigest()
+
+        # Restore metadata.
+        msg.metadata.CopyFrom(metadata)
+
+    return msg.hash

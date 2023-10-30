@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, Awaitable, Dict, NamedTuple, Optional, Tuple, 
 
 from typing_extensions import Final
 
-from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -35,16 +34,11 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
-from streamlit.runtime.forward_msg_cache import (
-    ForwardMsgCache,
-    create_reference_msg,
-    populate_hash_if_needed,
-)
+from streamlit.runtime.forward_msg_cache.protocol import ForwardMsgCacheProtocol
 from streamlit.runtime.legacy_caching.caching import _mem_caches
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.media_file_storage import MediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
-from streamlit.runtime.runtime_util import is_cacheable_msg
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
@@ -92,6 +86,9 @@ class RuntimeConfig:
 
     # The upload file manager
     uploaded_file_manager: UploadedFileManager
+
+    # The forward message cache
+    forward_msg_cache: ForwardMsgCacheProtocol
 
     # The cache storage backend for Streamlit's st.cache_data.
     cache_storage_manager: CacheStorageManager = field(
@@ -188,7 +185,7 @@ class Runtime:
         self._state = RuntimeState.INITIAL
 
         # Initialize managers
-        self._message_cache = ForwardMsgCache()
+        self._message_cache = config.forward_msg_cache
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
         self._cache_storage_manager = config.cache_storage_manager
@@ -214,7 +211,7 @@ class Runtime:
         return self._state
 
     @property
-    def message_cache(self) -> ForwardMsgCache:
+    def message_cache(self) -> ForwardMsgCacheProtocol:
         return self._message_cache
 
     @property
@@ -655,26 +652,6 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        msg.metadata.cacheable = is_cacheable_msg(msg)
-        msg_to_send = msg
-        if msg.metadata.cacheable:
-            populate_hash_if_needed(msg)
-
-            if self._message_cache.has_message_reference(
-                msg, session_info.session, session_info.script_run_count
-            ):
-                # This session has probably cached this message. Send
-                # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
-                msg_to_send = create_reference_msg(msg)
-
-            # Cache the message so it can be referenced in the future.
-            # If the message is already cached, this will reset its
-            # age.
-            LOGGER.debug("Caching message (hash=%s)", msg.hash)
-            self._message_cache.add_message(
-                msg, session_info.session, session_info.script_run_count
-            )
 
         # If this was a `script_finished` message, we increment the
         # script_run_count for this session, and update the cache
@@ -682,16 +659,17 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             msg.WhichOneof("type") == "script_finished"
             and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
-            LOGGER.debug(
-                "Script run finished successfully; "
-                "removing expired entries from MessageCache "
-                "(max_age=%s)",
-                config.get_option("global.maxCachedMessageAge"),
-            )
+            LOGGER.debug("Script run finished successfully;")
             session_info.script_run_count += 1
             self._message_cache.remove_expired_entries_for_session(
                 session_info.session, session_info.script_run_count
             )
+
+        msg_to_send = self._message_cache.add_message(
+            msg,
+            session_info.session,
+            session_info.script_run_count,
+        )
 
         # Ship it off!
         session_info.client.write_forward_msg(msg_to_send)

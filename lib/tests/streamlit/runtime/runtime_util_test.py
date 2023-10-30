@@ -18,7 +18,7 @@ import unittest
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import runtime_util
-from streamlit.runtime.runtime_util import is_cacheable_msg, serialize_forward_msg
+from streamlit.runtime.runtime_util import serialize_forward_msg
 from tests.streamlit.message_mocks import create_dataframe_msg
 from tests.testutil import patch_config_options
 

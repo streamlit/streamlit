@@ -68,6 +68,11 @@ message FileURLsResponse {
   string error_msg = 3;
 }
 
+message ForwardMsgRef {
+  string ref_url = 1;
+  string ref_hash = 2;
+}
+
 // Information on a file uploaded via the file_uploader widget.
 message UploadedFileInfo {
   // DEPRECATED.

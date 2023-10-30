@@ -35,6 +35,7 @@ from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
+from streamlit.runtime.forward_msg_cache import MemoryForwardMsgCache
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime_util import get_max_message_size_bytes
@@ -84,7 +85,7 @@ MEDIA_ENDPOINT: Final = "/media"
 UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
 METRIC_ENDPOINT: Final = r"(?:st-metrics|_stcore/metrics)"
-MESSAGE_ENDPOINT: Final = r"_stcore/message"
+MESSAGE_ENDPOINT: Final = r"/_stcore/message"
 HEALTH_ENDPOINT: Final = r"(?:healthz|_stcore/health)"
 HOST_CONFIG_ENDPOINT: Final = r"_stcore/host-config"
 SCRIPT_HEALTH_CHECK_ENDPOINT: Final = (
@@ -229,12 +230,15 @@ class Server:
 
         uploaded_file_mgr = MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT)
 
+        forward_msg_cache = MemoryForwardMsgCache(MESSAGE_ENDPOINT)
+
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=command_line,
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
+                forward_msg_cache=forward_msg_cache,
                 cache_storage_manager=create_default_cache_storage_manager(),
             ),
         )
