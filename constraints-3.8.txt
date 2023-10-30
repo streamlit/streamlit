@@ -126,8 +126,8 @@ sniffio==1.3.0
 snowflake-connector-python==3.3.1
 snowflake-snowpark-python==1.9.0
 sortedcontainers==2.4.0
-SQLAlchemy==1.4.49
-sqlalchemy2-stubs==0.0.2a35
+SQLAlchemy==1.4.50
+sqlalchemy2-stubs==0.0.2a36
 tenacity==8.2.3
 testfixtures==7.2.2
 text-unidecode==1.3
