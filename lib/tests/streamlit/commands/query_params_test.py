@@ -63,11 +63,11 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def setUp(self):
         super().setUp()
         self.q_params = {"foo": "bar", "two": ["x", "y"]}
-        self.query_params = QueryParams(self.q_params)
+        self._query_params = QueryParams(self.q_params)
 
     def test_getitem_nonexistent(self):
         with pytest.raises(KeyError) as exception_message:
-            self.query_params["nonexistent"]
+            self._query_params["nonexistent"]
             assert (
                 exception_message
                 == 'st.query_params has no key "nonexistent". Did you forget to initialize it? '
@@ -75,44 +75,71 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
 
     def test_getitem_list(self):
         # get the last item in the array
-        assert self.query_params["two"] == "y"
+        assert self._query_params["two"] == "y"
 
     def test_getitem_single_element_int(self):
-        self.query_params["baz"] = 1
-        assert self.query_params["baz"] == "1"
+        self._query_params["baz"] = 1
+        assert self._query_params["baz"] == "1"
 
     def test_getitem_single_element_float(self):
-        self.query_params["corge"] = 1.23
-        assert self.query_params["corge"] == "1.23"
+        self._query_params["corge"] = 1.23
+        assert self._query_params["corge"] == "1.23"
 
     def test__getitem__value(self):
-        assert self.query_params["foo"] == "bar"
+        assert self._query_params["foo"] == "bar"
 
     def test_get(self):
-        assert self.query_params.get("foo") == "bar"
+        assert self._query_params.get("foo") == "bar"
 
     def test__getattr__(self):
-        assert self.query_params.foo == "bar"
+        assert self._query_params.foo == "bar"
 
     def test__setitem__query_params(self):
-        assert "test" not in self.query_params
-        self.query_params["test"] = "test"
-        assert self.query_params.get("test") == "test"
+        assert "test" not in self._query_params
+        self._query_params["test"] = "test"
+        assert self._query_params.get("test") == "test"
         message = self.get_message_from_queue(0)
         assert (message.page_info_changed.query_string, "test=test")
 
     def test__setitem_empty_string(self):
-        assert "test" not in self.query_params
-        self.query_params["test"] = ""
-        assert self.query_params["test"] == ""
+        assert "test" not in self._query_params
+        self._query_params["test"] = ""
+        assert self._query_params["test"] == ""
         message = self.get_message_from_queue(0)
         assert (message.page_info_changed.query_string, "test=")
 
     def test_getall_nonexistent(self):
-        assert self.query_params.get_all("nonexistent") == []
+        assert self._query_params.get_all("nonexistent") == []
 
     def test_getall_single_element(self):
-        assert self.query_params.get_all("foo") == ["bar"]
+        assert self._query_params.get_all("foo") == ["bar"]
 
     def test_getall_list(self):
-        assert self.query_params.get_all("two") == ["x", "y"]
+        assert self._query_params.get_all("two") == ["x", "y"]
+        self.q_params = {"foo": "bar", "a": "a"}
+        self._query_params = QueryParams(self.q_params)
+
+    def test_contains_valid(self):
+        assert "foo" in self._query_params
+
+    def test_contains_invalid(self):
+        assert "baz" not in self._query_params
+
+    def test_clear(self):
+        self._query_params.clear()
+        assert len(self._query_params) == 0
+        message = self.get_message_from_queue(0)
+        self.assertEqual(message.page_info_changed.query_string, "")
+
+    def test_del_valid(self):
+        del self._query_params["foo"]
+        assert "foo" not in self._query_params
+        message = self.get_message_from_queue(0)
+        self.assertEqual(message.page_info_changed.query_string, "two=x&two=y")
+
+    def test_del_invalid(self):
+        del self._query_params["nonexistent"]
+
+        # no forward message should be sent
+        with pytest.raises(IndexError):
+            self.get_message_from_queue(0)

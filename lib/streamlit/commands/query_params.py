@@ -147,22 +147,22 @@ def _ensure_no_embed_params(
 
 @dataclass
 class QueryParams:
-    """A dict-like representation of query params that generally behaves like st.session.state.
+    """A dict-like representation of query params.
     The main difference is that it only stores and returns str and list[str].
 
     TODO(willhuang1997): Fill in these docs with examples and fix doc above. Above is just a stub for now.
     """
 
-    query_params: dict[str, List[Any]] = field(default_factory=dict)
+    _query_params: Dict[str, List[Any]] = field(default_factory=dict)
 
-    def __init__(self, query_params={}):
-        self.query_params = query_params
+    def __init__(self, query_params: Dict[str, List[Any]] = {}):
+        self._query_params = query_params
 
     def __repr__(self):
         return util.repr_(self)
 
     def _keys(self) -> set[str]:
-        return self.query_params.keys()
+        return self._query_params.keys()
 
     def get(self, key: str) -> Any:
         return self._getitem(key)
@@ -175,7 +175,8 @@ class QueryParams:
         if ctx is None:
             return {}
         try:
-            value = self.query_params[key]
+            print(f"{self._query_params}=")
+            value = self._query_params[key]
             # This should never happen as you can't set a key to an empty array
             if isinstance(value, list) and len(value) == 0:
                 return ""
@@ -184,47 +185,24 @@ class QueryParams:
             raise KeyError
 
     def _setitem(self, key: str, value: Any) -> None:
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return
-
-        msg = ForwardMsg()
-        self.query_params[key] = str(value)
-        msg.page_info_changed.query_string = _ensure_no_embed_params(
-            self.query_params, ctx.query_string
-        )
-        ctx.query_string = msg.page_info_changed.query_string
-        self.query_params = util.extract_single_element_lists_query_params(
-            util.exclude_key_query_params(
-                parse.parse_qs(ctx.query_string, keep_blank_values=True),
-                keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
-            )
-        )
-        ctx.enqueue(msg)
+        self._query_params[key] = str(value)
+        self._send_query_param_msg()
 
     def __setitem__(self, key: str, value: Any) -> None:
         self._setitem(key, value)
-
-    def __contains__(self, key: str) -> bool:
-        try:
-            self.query_params[key]
-        except KeyError:
-            return False
-        else:
-            return True
 
     def get_all(self, key: str) -> List[str]:
         ctx = get_script_run_ctx()
         if ctx is None:
             return {}
         try:
-            if key not in self.query_params:
+            if key not in self._query_params:
                 return []
-            query_params = self.query_params[key]
+            query_params = self._query_params[key]
             return (
                 query_params
                 if isinstance(query_params, list)
-                else [self.query_params[key]]
+                else [self._query_params[key]]
             )
         except KeyError:
             raise KeyError()
@@ -232,6 +210,32 @@ class QueryParams:
     def __getattr__(self, key: str) -> str:
         return self._getitem(key)
 
-    def __setattr__(self, key: str, value: Any) -> None:
-        # TODO(willhuang1997): This is currently bugged. Need to investigate
-        self._setitem(key, value)
+    # def __setattr__(self, key: str, value: Any) -> None:
+    #     # TODO(willhuang1997): This is currently bugged. Need to investigate
+    #     self._setitem(key, value)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._query_params
+
+    def __len__(self):
+        return len(self._query_params)
+
+    def _send_query_param_msg(self):
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+        msg = ForwardMsg()
+        msg.page_info_changed.query_string = _ensure_no_embed_params(
+            self._query_params, ctx.query_string
+        )
+        ctx.query_string = msg.page_info_changed.query_string
+        ctx.enqueue(msg)
+
+    def clear(self):
+        self._query_params.clear()
+        self._send_query_param_msg()
+
+    def __delitem__(self, key: str) -> None:
+        if key in self._query_params:
+            del self._query_params[key]
+            self._send_query_param_msg()
