@@ -167,6 +167,24 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
   }
 
+  public componentDidMount(): void {
+    const newWidgetValue = this.createWidgetValue()
+    if (newWidgetValue === undefined) {
+      return
+    }
+
+    const { element, widgetMgr } = this.props
+
+    // Set the state value on mount, to avoid triggering an extra rerun after
+    // the first rerun.
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (prevWidgetValue === undefined) {
+      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
+        fromUi: false,
+      })
+    }
+  }
+
   private createWidgetValue(): FileUploaderStateProto | undefined {
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
