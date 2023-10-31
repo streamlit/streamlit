@@ -126,7 +126,6 @@ class LocalScriptRunner(ScriptRunner):
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
-        print("calling new on script finished")
         # Only call `_remove_stale_widgets`, so that the state of triggers is still
         # visible in the element tree.
         if not premature_stop:
