@@ -228,3 +228,7 @@ def unwrap_single_element_lists(d: Dict[str, List[Any]]) -> Dict[str, Any]:
         The modified dictionary with single element lists extracted.
     """
     return {k: v[0] if isinstance(v, list) and len(v) == 1 else v for k, v in d.items()}
+
+
+def convert_to_strings(items: list) -> list:
+    return [str(item) for item in items]

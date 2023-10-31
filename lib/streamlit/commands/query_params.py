@@ -175,7 +175,6 @@ class QueryParams:
         if ctx is None:
             return {}
         try:
-            print(f"{self._query_params}=")
             value = self._query_params[key]
             # This should never happen as you can't set a key to an empty array
             if isinstance(value, list) and len(value) == 0:
@@ -185,7 +184,10 @@ class QueryParams:
             raise KeyError
 
     def _setitem(self, key: str, value: Any) -> None:
-        self._query_params[key] = str(value)
+        if isinstance(value, list):
+            self._query_params[key] = util.convert_to_strings(value)
+        else:
+            self._query_params[key] = str(value)
         self._send_query_param_msg()
 
     def __setitem__(self, key: str, value: Any) -> None:

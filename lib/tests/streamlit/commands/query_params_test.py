@@ -78,10 +78,12 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         assert self._query_params["two"] == "y"
 
     def test_getitem_single_element_int(self):
+        # Internal state is always a string so we test setting it here
         self._query_params["baz"] = 1
         assert self._query_params["baz"] == "1"
 
     def test_getitem_single_element_float(self):
+        # Internal state is always a string so we test setting it here
         self._query_params["corge"] = 1.23
         assert self._query_params["corge"] == "1.23"
 
@@ -116,8 +118,10 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
 
     def test_getall_list(self):
         assert self._query_params.get_all("two") == ["x", "y"]
-        self.q_params = {"foo": "bar", "a": "a"}
-        self._query_params = QueryParams(self.q_params)
+
+    def test_getall_list_non_str_and_empty_str(self):
+        self._query_params["test"] = ["", "a", 1, 1.23]
+        assert self._query_params.get_all("test") == ["", "a", "1", "1.23"]
 
     def test_contains_valid(self):
         assert "foo" in self._query_params
