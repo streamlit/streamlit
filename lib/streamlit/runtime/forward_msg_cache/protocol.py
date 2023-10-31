@@ -22,32 +22,75 @@ if TYPE_CHECKING:
 
 
 class ForwardMsgCacheProtocol(CacheStatsProvider, Protocol):
-    """DOC HERE"""
+    """ForwardMsgCacheProtocol protocol, that should be implemented by the
+    concrete ForwardMessageCache.
+
+    It is responsible for:
+        - Caching ForwardMsgs, add_message could optionally return ForwardMsgRef instead
+            of original message to avoid sending large messages via websocket.
+        - Issuing URLs, which will be used by frontend for retrieving original
+            cached messages.
+        - Maintaining cached messages lifetime, removing expired messages from cache
+            based on script_run_count and global.maxCachedMessageAge config option.
+        - Optionally retrieving cached messages by hash to be served by
+            HTTP MESSAGE_ENDPOINT (only needed for Streamlit open source).
+        - Mark original messages as cacheable (in message metadata) to be cached
+            by frontend.
+
+    It should be created during Runtime initialization.
+    """
 
     @abstractmethod
     def add_message(
         self, msg: ForwardMsg, session: "AppSession", script_run_count: int
     ) -> ForwardMsg:
-        """DOC HERE"""
+        """Add a ForwardMsg to the cache.
+        Parameters
+        ----------
+        msg : ForwardMsg
+        session : AppSession
+        script_run_count : int
+            The number of times the session's script has run
+        Returns
+        -------
+        ForwardMsg
+            Either an original message, or ForwardMsg with type ForwardMsgRef
+        """
 
         raise NotImplementedError
 
     @abstractmethod
     def remove_refs_for_session(self, session: "AppSession") -> None:
-        """DOC HERE"""
+        """Remove refs for all entries for the given session.
+        This should be called when an AppSession is disconnected or closed.
+        Parameters
+        ----------
+        session : AppSession
+        """
         raise NotImplementedError
 
     @abstractmethod
     def remove_expired_entries_for_session(
         self, session: "AppSession", script_run_count: int
     ) -> None:
-        """DOC HERE"""
+        """Remove any cached messages that have expired from the given session.
+        This should be called each time a AppSession finishes executing.
+        Parameters
+        ----------
+        session : AppSession
+        script_run_count : int
+            The number of times the session's script has run
+        """
         raise NotImplementedError
 
-    def clear(self) -> None:
-        """DOC HERE"""
-        pass
-
     def get_message(self, hash: str) -> Optional[ForwardMsg]:  # noqa
-        """DOC HERE"""
+        """Return the message with the given ID if it exists in the cache.
+        Parameters
+        ----------
+        hash : str
+            The id of the message to retrieve.
+        Returns
+        -------
+        ForwardMsg | None
+        """
         return None
