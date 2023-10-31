@@ -42,7 +42,7 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         p_set = {"x": ["a"]}
         st.experimental_set_query_params(**p_set)
         p_get = st.experimental_get_query_params()
-        self.assertEqual(p_get, {"x": "a"})
+        self.assertEqual(p_get, p_set)
 
     def test_get_query_params_after_set_query_params_list(self):
         """Test valid st.set_query_params sends protobuf message."""
@@ -56,7 +56,7 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         empty_str_params = {"x": [""]}
         st.experimental_set_query_params(**empty_str_params)
         params_get = st.experimental_get_query_params()
-        self.assertEqual(params_get, {"x": ""})
+        self.assertEqual(params_get, empty_str_params)
 
 
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
