@@ -656,7 +656,7 @@ describe("WebsocketConnection auth token handling", () => {
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit"]
+      ["streamlit", "PLACEHOLDER_AUTH_TOKEN"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
@@ -679,7 +679,7 @@ describe("WebsocketConnection auth token handling", () => {
     )
   })
 
-  it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
+  it("sets third Sec-WebSocket-Protocol option to lastSessionId if available", async () => {
     // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(
@@ -696,11 +696,11 @@ describe("WebsocketConnection auth token handling", () => {
     // "lastSessionId" should be the WebSocket's session token
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit", "lastSessionId"]
+      ["streamlit", "PLACEHOLDER_AUTH_TOKEN", "lastSessionId"]
     )
   })
 
-  it("prioritizes host provided auth token over lastSessionId if both set", async () => {
+  it("sets both host provided auth token and lastSessionId if both set", async () => {
     // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(
@@ -723,7 +723,7 @@ describe("WebsocketConnection auth token handling", () => {
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit", "iAmAnAuthToken"]
+      ["streamlit", "iAmAnAuthToken", "lastSessionId"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
