@@ -538,6 +538,8 @@ class ScriptRunner:
             rerun_exception_data = e.rerun_data
             # Interruption due to a rerun is usually from `st.rerun()`, which
             # we want to count as a script completion so triggers reset.
+            # It is also possible for this to happen if fast reruns is off,
+            # but this is very rare.
             premature_stop = False
 
         except StopException:
