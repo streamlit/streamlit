@@ -77,3 +77,14 @@ def test_secrets():
     at.run()
     assert at.markdown[0].value == "bar"
     assert at.secrets["foo"] == "bar"
+
+
+def test_7636_regression():
+    def repro():
+        import streamlit as st
+
+        st.container()
+
+    at = AppTest.from_function(repro).run()
+
+    repr(at)
