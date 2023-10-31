@@ -1366,9 +1366,11 @@ class Block:
         self.proto = proto
         if proto:
             ty = proto.WhichOneof("type")
-            # TODO does not work for `st.container` which has no block proto
-            assert ty is not None
-            self.type = ty
+            if ty is not None:
+                self.type = ty
+            else:
+                # `st.container` has no sub-message
+                self.type = "container"
         else:
             self.type = "unknown"
         self.root = root
