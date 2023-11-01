@@ -22,6 +22,8 @@ message Audio {
   // The currentTime attribute of the HTML <audio> tag's <source> subtag.
   int32 start_time = 3;
 
+  bool autoplay = 6;
+
   reserved 1, 2, 4;
   reserved "data", "format";
 }

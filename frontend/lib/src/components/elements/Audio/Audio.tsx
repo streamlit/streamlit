@@ -44,6 +44,7 @@ export default function Audio({
       id="audio"
       ref={audioRef}
       controls
+      autoPlay={element.autoplay}
       src={uri}
       className="stAudio"
       style={{ width }}

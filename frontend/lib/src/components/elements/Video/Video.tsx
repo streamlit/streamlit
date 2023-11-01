@@ -35,7 +35,7 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
 
-  const { type, url, startTime } = element
+  const { type, url, startTime, autoplay } = element
 
   // Handle startTime changes
   useEffect(() => {
@@ -66,11 +66,19 @@ export default function Video({
   }, [element])
 
   const getYoutubeSrc = (url: string): string => {
-    const { startTime } = element
-    if (startTime) {
-      return `${url}?start=${startTime}`
+    const { startTime, autoplay } = element
+    let youtubeUrl = new URL(url)
+
+    if (startTime && !isNaN(startTime)) {
+      youtubeUrl.searchParams.append("start", startTime.toString())
     }
-    return url
+
+    if (autoplay) {
+      youtubeUrl.searchParams.append("autoplay", "1")
+    }
+
+    // Return the updated URL.
+    return youtubeUrl.toString()
   }
 
   /* Is this a YouTube link? If so we need a fancier tag.
@@ -104,6 +112,7 @@ export default function Video({
       data-testid="stVideo"
       ref={videoRef}
       controls
+      autoPlay={autoplay}
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}

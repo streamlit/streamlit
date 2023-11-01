@@ -47,6 +47,7 @@ class MediaMixin:
         start_time: int = 0,
         *,
         sample_rate: Optional[int] = None,
+        autoplay: bool = False,
     ) -> "DeltaGenerator":
         """Display an audio player.
 
@@ -68,6 +69,9 @@ class MediaMixin:
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
+        autoplay: bool
+            Whether the audio should start playing automatically.
+            Browsers will not autoplay audio files if the user has not interacted with the page yet.
 
         Example
         -------
@@ -109,7 +113,9 @@ class MediaMixin:
                 "array."
             )
 
-        marshall_audio(coordinates, audio_proto, data, format, start_time, sample_rate)
+        marshall_audio(
+            coordinates, audio_proto, data, format, start_time, sample_rate, autoplay
+        )
         return self.dg._enqueue("audio", audio_proto)
 
     @gather_metrics("video")
@@ -117,6 +123,7 @@ class MediaMixin:
         self,
         data: MediaData,
         format: str = "video/mp4",
+        autoplay: bool = False,
         start_time: int = 0,
     ) -> "DeltaGenerator":
         """Display a video player.
@@ -133,6 +140,9 @@ class MediaMixin:
             See https://tools.ietf.org/html/rfc4281 for more info.
         start_time: int
             The time from which this element should start playing.
+        autoplay: bool
+            Whether the video should start playing automatically.
+            Browsers will not autoplay video files if the user has not interacted with the page yet.
 
         Example
         -------
@@ -157,7 +167,7 @@ class MediaMixin:
         """
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
-        marshall_video(coordinates, video_proto, data, format, start_time)
+        marshall_video(coordinates, video_proto, data, format, start_time, autoplay)
         return self.dg._enqueue("video", video_proto)
 
     @property
@@ -261,6 +271,7 @@ def marshall_video(
     data: MediaData,
     mimetype: str = "video/mp4",
     start_time: int = 0,
+    autoplay: bool = False,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -279,10 +290,14 @@ def marshall_video(
         See https://tools.ietf.org/html/rfc4281 for more info.
     start_time : int
         The time from which this element should start playing. (default: 0)
+    autoplay : bool
+        Whether the video should start playing automatically.
+        Browsers will not autoplay video files if the user has not interacted with the page yet.
     """
     from validators import url
 
     proto.start_time = start_time
+    proto.autoplay = autoplay
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -385,6 +400,7 @@ def marshall_audio(
     mimetype: str = "audio/wav",
     start_time: int = 0,
     sample_rate: Optional[int] = None,
+    autoplay: bool = False,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -404,10 +420,14 @@ def marshall_audio(
         The time from which this element should start playing. (default: 0)
     sample_rate: int or None
         Optional param to provide sample_rate in case of numpy array
+    autoplay : bool
+        Whether the audio should start playing automatically.
+        Browsers will not autoplay audio files if the user has not interacted with the page yet.
     """
     from validators import url
 
     proto.start_time = start_time
+    proto.autoplay = autoplay
 
     if isinstance(data, str) and url(data):
         proto.url = data

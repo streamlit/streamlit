@@ -32,6 +32,8 @@ message Video {
   // Type affects how browser wraps the video in tags: plain HTML5, YouTube...
   Type type = 5;
 
+  bool autoplay = 7;
+
   reserved 1,2,4;
   reserved "format", "data";
 }
