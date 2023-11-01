@@ -73,6 +73,14 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
                 == 'st.query_params has no key "nonexistent". Did you forget to initialize it? '
             )
 
+    def test__getattr__nonexistent(self):
+        with pytest.raises(AttributeError) as exception_message:
+            self._query_params.nonexistent
+            assert (
+                exception_message
+                == 'st.query_params has no key "nonexistent". Did you forget to initialize it? '
+            )
+
     def test_getitem_list(self):
         # get the last item in the array
         assert self._query_params["two"] == "y"
