@@ -94,7 +94,6 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         assert self._query_params.get("foo") == "bar"
 
     def test__getattr__(self):
-        print(f"{self._query_params.foo}=")
         assert self._query_params.foo == "bar"
 
     def test__setitem__query_params(self):
