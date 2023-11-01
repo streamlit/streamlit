@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 
 from streamlit.testing.v1 import AppTest
 
@@ -88,3 +89,95 @@ def test_7636_regression():
     at = AppTest.from_function(repro).run()
 
     repr(at)
+
+
+def test_cached_widget_replay_rerun():
+    def script():
+        import streamlit as st
+
+        @st.cache_data(experimental_allow_widgets=True, show_spinner=False)
+        def foo(i):
+            options = ["foo", "bar", "baz", "qux"]
+            r = st.radio("radio", options, index=i)
+            return r
+
+        foo(1)
+
+    at = AppTest.from_function(script).run()
+
+    assert at.radio.len == 1
+    at.run()
+    assert at.radio.len == 1
+
+
+def test_cached_widget_replay_interaction():
+    def script():
+        import streamlit as st
+
+        @st.cache_data(experimental_allow_widgets=True, show_spinner=False)
+        def foo(i):
+            options = ["foo", "bar", "baz", "qux"]
+            r = st.radio("radio", options, index=i)
+            return r
+
+        foo(1)
+
+    at = AppTest.from_function(script).run()
+
+    assert at.radio.len == 1
+    assert at.radio[0].value == "bar"
+
+    at.radio[0].set_value("qux").run()
+    assert at.radio[0].value == "qux"
+
+
+def test_widget_added_removed():
+    """
+    Test that the value of a widget persists, disappears, and resets
+    appropriately, as the widget is added and removed from the script execution.
+    """
+
+    def script():
+        import streamlit as st
+
+        cb = st.radio("radio emulating a checkbox", options=["off", "on"], key="cb")
+        if cb == "on":
+            st.radio("radio", options=["a", "b", "c"], key="conditional")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.radio) == 1
+    with pytest.raises(KeyError):
+        at.radio(key="conditional")
+
+    at.radio(key="cb").set_value("on").run()
+    assert len(at.radio) == 2
+    assert at.radio(key="conditional").value == "a"
+
+    at.radio(key="conditional").set_value("c").run()
+    assert len(at.radio) == 2
+    assert at.radio(key="conditional").value == "c"
+
+    at.radio(key="cb").set_value("off").run()
+    assert len(at.radio) == 1
+    with pytest.raises(KeyError):
+        at.radio(key="conditional")
+
+    at.radio(key="cb").set_value("on").run()
+    assert len(at.radio) == 2
+    assert at.radio(key="conditional").value == "a"
+
+
+def test_query_narrowing():
+    def script():
+        import streamlit as st
+
+        st.text("1")
+        with st.expander("open"):
+            st.text("2")
+            st.text("3")
+        st.text("4")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.text) == 4
+    # querying elements via a block only returns the elements in that block
+    assert len(at.get("expandable")[0].text) == 2
