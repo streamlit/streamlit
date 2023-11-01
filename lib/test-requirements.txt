@@ -1,23 +1,23 @@
 # Packages used to test things users may do with Streamlit.
 # As of September 21, 2022, only the latest version of Bokeh (2.4.3) is supported.
 # NOTE: Python Bokeh and BokehJS versions must always match.
+
 anyio>=3.7.1, <4.0
-bokeh==2.4.3
+bokeh==2.4.4
 cffi>=1.14
 chart-studio>=1.1.0
 graphviz>=0.17
 langchain>=0.0.216
 matplotlib>=3.3.4
 opencv-python>=4.5.3
-plotly>=5.3.1
-pyspark>=3.1.1
+plotly>=5.7.0
+pyspark>=3.3.0
 pydot>=1.4.2
 scipy>=1.7.3
 seaborn>=0.11.2
 setuptools>=65.5.1
 watchdog>=2.1.5
-
-urllib3>=1.9
+urllib3>=1.26.8
 
 hypothesis>=6.17.4
 parameterized
