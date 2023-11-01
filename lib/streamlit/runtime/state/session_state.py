@@ -534,6 +534,7 @@ class SessionState:
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
         """
+        self._reset_triggers()
         self._remove_stale_widgets(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:

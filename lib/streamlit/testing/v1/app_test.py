@@ -80,7 +80,6 @@ from streamlit.testing.v1.element_tree import (
     WidgetList,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
-from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import HASHLIB_KWARGS
 from streamlit.web.bootstrap import _fix_matplotlib_crash
 
@@ -302,13 +301,12 @@ class AppTest:
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
 
-        with patch_config_options({"runner.postScriptGC": False}):
-            script_runner = LocalScriptRunner(self._script_path, self.session_state)
-            self._tree = script_runner.run(widget_state, self.query_params, timeout)
-            self._tree._runner = self
-            # Last event is SHUTDOWN, so the corresponding data includes query string
-            query_string = script_runner.event_data[-1]["client_state"].query_string
-            self.query_params = parse.parse_qs(query_string)
+        script_runner = LocalScriptRunner(self._script_path, self.session_state)
+        self._tree = script_runner.run(widget_state, self.query_params, timeout)
+        self._tree._runner = self
+        # Last event is SHUTDOWN, so the corresponding data includes query string
+        query_string = script_runner.event_data[-1]["client_state"].query_string
+        self.query_params = parse.parse_qs(query_string)
 
         # teardown
         with source_util._pages_cache_lock:
