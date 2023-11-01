@@ -45,7 +45,7 @@ export const TitleSkeleton = styled.div(({ theme }) => ({
   height: theme.fontSizes.fourXL,
   width: "17rem", // Picked because it looks good.
   maxWidth: "75%", // Picked because it looks good.
-  background: theme.colors.secondaryBg,
+  background: theme.colors.darkenedBgMix15,
   borderRadius: theme.radii.md,
   ...ANIMATION_STYLES,
 }))
@@ -64,7 +64,7 @@ export const TextLineSkeleton = styled.div<TextLineSkeletonProps>(
   ({ theme, width }) => ({
     height: theme.fontSizes.md,
     width,
-    background: theme.colors.secondaryBg,
+    background: theme.colors.darkenedBgMix15,
     borderRadius: theme.radii.md,
     ...ANIMATION_STYLES,
   })
@@ -79,7 +79,7 @@ export const SquareSkeleton = styled.div<SquareSkeletonProps>(
   ({ theme, height, width }) => ({
     height: height ?? theme.fontSizes.fourXL,
     width: width ?? "100%",
-    background: theme.colors.secondaryBg,
+    background: theme.colors.darkenedBgMix15,
     borderRadius: theme.radii.md,
     ...ANIMATION_STYLES,
   })
