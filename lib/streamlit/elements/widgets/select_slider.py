@@ -34,6 +34,8 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -45,7 +47,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -189,12 +191,12 @@ class SelectSliderMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the select slider if set to True.
-            The default is False. This argument can only be supplied by keyword.
+            The default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
         Returns
         -------
@@ -330,6 +332,12 @@ class SelectSliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        if isinstance(widget_state.value, tuple):
+            widget_state = maybe_coerce_enum_sequence(
+                cast(RegisterWidgetResult[Tuple[T, T]], widget_state), options, opt
+            )
+        else:
+            widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)

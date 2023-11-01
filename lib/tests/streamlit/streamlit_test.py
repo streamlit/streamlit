@@ -153,6 +153,7 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_connection",
                 "get_option",
                 "set_option",
+                "connection",
             },
         )
 

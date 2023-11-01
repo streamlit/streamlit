@@ -338,12 +338,12 @@ class TimeWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the time input if set to True.
-            The default is False. This argument can only be supplied by keyword.
+            The default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
         step : int or timedelta
             The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
             You can also pass a datetime.timedelta object.
@@ -568,12 +568,12 @@ class TimeWidgetsMixin:
             You may also use a period (.) or hyphen (-) as separators.
         disabled : bool
             An optional boolean, which disables the date input if set to True.
-            The default is False. This argument can only be supplied by keyword.
+            The default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
 
         Returns
@@ -688,7 +688,7 @@ class TimeWidgetsMixin:
         elif isinstance(value, (datetime, date)):
             parsed = parse_date_deterministic(value)
         else:
-            parsed = [parse_date_deterministic(v) for v in value]
+            parsed = [parse_date_deterministic(cast(SingleDateValue, v)) for v in value]
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 

@@ -52,10 +52,10 @@ def test_status_collapses_and_expands(app: Page):
     # Starts expanded:
     expect(running_status.get_by_text(expander_content)).to_be_visible()
 
-    expander_header = running_status.locator(".streamlit-expanderHeader")
+    expander_header = running_status.locator("summary")
     # Collapse:
     expander_header.click()
-    expect(running_status.get_by_text(expander_content)).not_to_be_attached()
+    expect(running_status.get_by_text(expander_content)).not_to_be_visible()
     # Expand:
     expander_header.click()
     expect(running_status.get_by_text(expander_content)).to_be_visible()

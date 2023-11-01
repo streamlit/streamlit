@@ -403,7 +403,7 @@ class DeltaGenerator(
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
     @overload
-    def _enqueue(  # type: ignore[misc]
+    def _enqueue(
         self,
         delta_type: str,
         element_proto: Message,
@@ -427,7 +427,7 @@ class DeltaGenerator(
         ...
 
     @overload
-    def _enqueue(  # type: ignore[misc]
+    def _enqueue(
         self,
         delta_type: str,
         element_proto: Message,

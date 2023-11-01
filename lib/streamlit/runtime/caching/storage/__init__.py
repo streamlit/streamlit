@@ -13,17 +13,17 @@
 # limitations under the License.
 
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorage as CacheStorage,
+    CacheStorage,
+    CacheStorageContext,
+    CacheStorageError,
+    CacheStorageKeyNotFoundError,
+    CacheStorageManager,
 )
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageContext as CacheStorageContext,
-)
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageError as CacheStorageError,
-)
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageKeyNotFoundError as CacheStorageKeyNotFoundError,
-)
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageManager as CacheStorageManager,
-)
+
+__all__ = [
+    "CacheStorage",
+    "CacheStorageContext",
+    "CacheStorageError",
+    "CacheStorageKeyNotFoundError",
+    "CacheStorageManager",
+]

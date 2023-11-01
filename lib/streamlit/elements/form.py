@@ -255,11 +255,11 @@ class FormMixin:
             An optional dict of kwargs to pass to the callback.
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
-            button with additional emphasis or "secondary" for a normal button. This
-            argument can only be supplied by keyword. Defaults to "secondary".
+            button with additional emphasis or "secondary" for a normal button. Defaults
+            to "secondary".
         disabled : bool
             An optional boolean, which disables the button if set to True. The
-            default is False. This argument can only be supplied by keyword.
+            default is False.
         use_container_width: bool
             An optional boolean, which makes the button stretch its width to match the parent container.
 

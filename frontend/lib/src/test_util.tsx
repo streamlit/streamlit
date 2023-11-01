@@ -115,7 +115,6 @@ export const customRenderLibContext = (
     setTheme: jest.fn(),
     availableThemes: [],
     addThemes: jest.fn(),
-    hideFullScreenButtons: false,
     libConfig: {},
   }
 

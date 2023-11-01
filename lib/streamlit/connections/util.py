@@ -21,7 +21,7 @@
 
 import configparser
 import os
-from typing import Any, Collection, Dict
+from typing import Any, Collection, Dict, cast
 
 SNOWSQL_CONNECTION_FILE = "~/.snowsql/config"
 
@@ -80,10 +80,9 @@ def load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 
 def running_in_sis() -> bool:
-    """Return whether this app seems to be running in SiS."""
-    import snowflake.connector.connection  # type: ignore
+    """Return whether this app is running in SiS."""
+    from snowflake.snowpark._internal.utils import (  # type: ignore[import]  # isort: skip
+        is_in_stored_procedure,
+    )
 
-    # snowflake.connector.connection.SnowflakeConnection does not exist inside a Stored
-    # Proc or Streamlit. It is only part of the external package. So this returns true
-    # only in SiS.
-    return not hasattr(snowflake.connector.connection, "SnowflakeConnection")
+    return cast(bool, is_in_stored_procedure())

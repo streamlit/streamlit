@@ -15,3 +15,4 @@
  */
 
 export { default } from "./FullScreenWrapper"
+export { default as withFullScreenWrapper } from "./withFullScreenWrapper"

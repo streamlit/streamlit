@@ -18,8 +18,10 @@ from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, cast
 
 from typing_extensions import Final
 
+from streamlit import config
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from pydeck import Deck
@@ -162,7 +164,7 @@ def marshall(
         spec = pydeck_obj.to_json()
         json_string = json.dumps(spec)
         json_bytes = json_string.encode("utf-8")
-        id = hashlib.md5(json_bytes).hexdigest()
+        id = hashlib.md5(json_bytes, **HASHLIB_KWARGS).hexdigest()
 
     pydeck_proto.json = spec
     pydeck_proto.use_container_width = use_container_width
@@ -172,3 +174,7 @@ def marshall(
     tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:
         pydeck_proto.tooltip = json.dumps(tooltip)
+
+    mapbox_token = config.get_option("mapbox.token")
+    if mapbox_token:
+        pydeck_proto.mapbox_token = mapbox_token

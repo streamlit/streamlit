@@ -56,7 +56,8 @@ IGNORE_PATTERN = re.compile(
     r"|/(fixtures|__snapshots__|test_data|data)/"
     # Exclude vendored files.
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
-    r"|proto/streamlit/proto/openmetrics_data_model\.proto",
+    r"|proto/streamlit/proto/openmetrics_data_model\.proto"
+    r"|^e2e_flaky/scripts/.*\.py",
     re.IGNORECASE,
 )
 

@@ -23,6 +23,7 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
@@ -157,12 +158,10 @@ class RadioMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the radio button if set to
-            True. The default is False. This argument can only be supplied by
-            keyword.
+            True. The default is False.
         horizontal : bool
             An optional boolean, which orients the radio group horizontally.
-            The default is false (vertical buttons). This argument can only
-            be supplied by keyword.
+            The default is false (vertical buttons).
         captions : iterable of str or None
             A list of captions to show below each radio button. If None (default),
             no captions are shown.
@@ -170,7 +169,7 @@ class RadioMixin:
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
         Returns
         -------
@@ -320,6 +319,7 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             if widget_state.value is not None:
