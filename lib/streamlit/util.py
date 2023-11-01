@@ -212,19 +212,3 @@ def extract_key_query_params(
             for item in sublist
         ]
     )
-
-
-def unwrap_single_element_lists(d: Dict[str, List[Any]]) -> Dict[str, Any]:
-    """Extracts the single element from lists in a dictionary if the list has a length of 1.
-
-    Parameters
-    ----------
-    d : dict
-        The dictionary containing lists.
-
-    Returns
-    -------
-    dict
-        The modified dictionary with single element lists extracted.
-    """
-    return {k: v[0] if isinstance(v, list) and len(v) == 1 else v for k, v in d.items()}
