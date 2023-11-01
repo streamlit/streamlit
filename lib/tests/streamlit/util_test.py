@@ -190,18 +190,14 @@ class UtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (
-                {"a": [1], "b": [2, 3], "c": 4, "d": ["hello"]},
-                {"a": 1, "b": [2, 3], "c": 4, "d": "hello"},
-            ),
-            (
-                {"a": [], "b": [2, 3], "c": 4, "d": ["hello"]},
-                {"a": [], "b": [2, 3], "c": 4, "d": "hello"},
-            ),
-            ({}, {}),
-            ({"a": 1, "b": 2, "c": 3}, {"a": 1, "b": 2, "c": 3}),
-            ({"a": [1], "b": ["b"], "c": [True]}, {"a": 1, "b": "b", "c": True}),
+            ([1, 2, 3], ["1", "2", "3"]),
+            (["apple", "banana", "cherry"], ["apple", "banana", "cherry"]),
+            ([True, False, None], ["True", "False", "None"]),
+            ([1.1, 2.2, 3.3], ["1.1", "2.2", "3.3"]),
+            ([], []),
+            ([{"a": 1}, {2: "b"}, ["c"]], ["{'a': 1}", "{2: 'b'}", "['c']"]),
         ]
     )
-    def test_unwrap_single_element_lists(self, input_dict, expected_output):
-        self.assertEqual(util.unwrap_single_element_lists(input_dict), expected_output)
+    def test_convert_to_strings_in_list(self, input_value, expected_output):
+        result = util.convert_to_strings_in_list(input_value)
+        assert result == expected_output

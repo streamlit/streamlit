@@ -187,9 +187,9 @@ def calc_md5(s: Union[bytes, str]) -> str:
 
 
 def exclude_key_query_params(
-    query_params: Dict[str, List[str]], keys_to_exclude: List[str]
-) -> Dict[str, List[str]]:
-    """Returns new object query_params : Dict[str, List[str]], but without keys defined with keys_to_drop : List[str]."""
+    query_params: Dict[str, Any], keys_to_exclude: List[str]
+) -> Dict[str, Any]:
+    """Returns new object query_params : Dict[str, Any], but without keys defined with keys_to_drop : Any."""
     return {
         key: value
         for key, value in query_params.items()
@@ -197,9 +197,7 @@ def exclude_key_query_params(
     }
 
 
-def extract_key_query_params(
-    query_params: Dict[str, List[str]], param_key: str
-) -> Set[str]:
+def extract_key_query_params(query_params: Dict[str, Any], param_key: str) -> Set[str]:
     """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
     return set(
         [
@@ -214,21 +212,5 @@ def extract_key_query_params(
     )
 
 
-def unwrap_single_element_lists(d: Dict[str, List[Any]]) -> Dict[str, Any]:
-    """Extracts the single element from lists in a dictionary if the list has a length of 1.
-
-    Parameters
-    ----------
-    d : dict
-        The dictionary containing lists.
-
-    Returns
-    -------
-    dict
-        The modified dictionary with single element lists extracted.
-    """
-    return {k: v[0] if isinstance(v, list) and len(v) == 1 else v for k, v in d.items()}
-
-
-def convert_to_strings(items: list) -> list:
+def convert_to_strings_in_list(items: List[Any]) -> List[str]:
     return [str(item) for item in items]

@@ -42,7 +42,7 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         p_set = {"x": ["a"]}
         st.experimental_set_query_params(**p_set)
         p_get = st.experimental_get_query_params()
-        self.assertEqual(p_get, {"x": "a"})
+        self.assertEqual(p_get, p_set)
 
     def test_get_query_params_after_set_query_params_list(self):
         """Test valid st.set_query_params sends protobuf message."""
@@ -56,7 +56,7 @@ class QueryParamsAPITest(DeltaGeneratorTestCase):
         empty_str_params = {"x": [""]}
         st.experimental_set_query_params(**empty_str_params)
         params_get = st.experimental_get_query_params()
-        self.assertEqual(params_get, {"x": ""})
+        self.assertEqual(params_get, empty_str_params)
 
 
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
@@ -94,6 +94,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         assert self._query_params.get("foo") == "bar"
 
     def test__getattr__(self):
+        print(f"{self._query_params.foo}=")
         assert self._query_params.foo == "bar"
 
     def test__setitem__query_params(self):
@@ -109,6 +110,10 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         assert self._query_params["test"] == ""
         message = self.get_message_from_queue(0)
         assert (message.page_info_changed.query_string, "test=")
+
+    def test__setattr__(self):
+        self._query_params.test = "test"
+        assert self._query_params.get("test") == "test"
 
     def test_getall_nonexistent(self):
         assert self._query_params.get_all("nonexistent") == []

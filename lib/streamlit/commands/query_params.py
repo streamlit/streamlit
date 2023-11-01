@@ -14,7 +14,7 @@
 
 import urllib.parse as parse
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List, Set, Union
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
@@ -58,11 +58,9 @@ def get_query_params() -> Dict[str, List[str]]:
     if ctx is None:
         return {}
     # Return new query params dict, but without embed, embed_options query params
-    return util.unwrap_single_element_lists(
-        util.exclude_key_query_params(
-            parse.parse_qs(ctx.query_string, keep_blank_values=True),
-            keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
-        )
+    return util.exclude_key_query_params(
+        parse.parse_qs(ctx.query_string, keep_blank_values=True),
+        keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
     )
 
 
@@ -106,7 +104,7 @@ def set_query_params(**query_params: Any) -> None:
 
 
 def _ensure_no_embed_params(
-    query_params: Dict[str, List[str]], query_string: str
+    query_params: Dict[str, Union[List[Any], str]], query_string: str
 ) -> str:
     """Ensures there are no embed params set (raises StreamlitAPIException) if there is a try,
     also makes sure old param values in query_string are preserved. Returns query_string : str."""
@@ -145,27 +143,36 @@ def _ensure_no_embed_params(
     return current_embed_params
 
 
+def _missing_key_error_message(key: str) -> str:
+    return f'st.query_params has no key "{key}". Did you forget to initialize it? '
+
+
 @dataclass
 class QueryParams:
     """A dict-like representation of query params.
-    The main difference is that it only stores and returns str and list[str].
+    The main difference is that it only stores and returns str and List[str].
 
     TODO(willhuang1997): Fill in these docs with examples and fix doc above. Above is just a stub for now.
     """
 
-    _query_params: Dict[str, List[Any]] = field(default_factory=dict)
+    _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
 
-    def __init__(self, query_params: Dict[str, List[Any]] = {}):
-        self._query_params = query_params
+    def __init__(self, query_params: Dict[str, Union[List[str], str]] = {}):
+        # avoid using ._query_params as that will use __setattr__
+        # and access _query_params which is None as _query_params isn't initialized
+        self.__dict__["_query_params"] = query_params
 
     def __repr__(self):
         return util.repr_(self)
 
-    def _keys(self) -> set[str]:
-        return self._query_params.keys()
+    def _keys(self) -> Set[str]:
+        return set(self._query_params.keys())
 
     def get(self, key: str) -> Any:
         return self._getitem(key)
+
+    def __iter__(self) -> Iterator[Any]:
+        return iter(self._keys())
 
     def __getitem__(self, key: str) -> Any:
         return self._getitem(key)
@@ -173,19 +180,22 @@ class QueryParams:
     def _getitem(self, key: str) -> str:
         ctx = get_script_run_ctx()
         if ctx is None:
-            return {}
+            return  # type: ignore
         try:
             value = self._query_params[key]
-            # This should never happen as you can't set a key to an empty array
-            if isinstance(value, list) and len(value) == 0:
-                return ""
-            return value[-1] if isinstance(value, list) else value
+            if isinstance(value, list):
+                # This should never happen as you can't set a key to an empty array
+                if len(value) == 0:
+                    return ""
+                else:
+                    return value[-1]
+            return value
         except:
-            raise KeyError
+            raise KeyError(_missing_key_error_message(key))
 
     def _setitem(self, key: str, value: Any) -> None:
         if isinstance(value, list):
-            self._query_params[key] = util.convert_to_strings(value)
+            self._query_params[key] = util.convert_to_strings_in_list(value)
         else:
             self._query_params[key] = str(value)
         self._send_query_param_msg()
@@ -196,7 +206,7 @@ class QueryParams:
     def get_all(self, key: str) -> List[str]:
         ctx = get_script_run_ctx()
         if ctx is None:
-            return {}
+            return  # type: ignore
         try:
             if key not in self._query_params:
                 return []
@@ -204,25 +214,30 @@ class QueryParams:
             return (
                 query_params
                 if isinstance(query_params, list)
-                else [self._query_params[key]]
+                else [self._query_params[key]]  # type: ignore
             )
         except KeyError:
-            raise KeyError()
+            raise KeyError(_missing_key_error_message(key))
 
     def __getattr__(self, key: str) -> str:
-        return self._getitem(key)
+        try:
+            return self._getitem(key)
+        except KeyError:
+            raise AttributeError(_missing_key_error_message(key))
 
-    # def __setattr__(self, key: str, value: Any) -> None:
-    #     # TODO(willhuang1997): This is currently bugged. Need to investigate
-    #     self._setitem(key, value)
+    def __setattr__(self, key: str, value: Any) -> None:
+        self._setitem(key, value)
+
+    def __delattr__(self, key: str) -> None:
+        self.__delitem__(key)
 
     def __contains__(self, key: str) -> bool:
         return key in self._query_params
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._query_params)
 
-    def _send_query_param_msg(self):
+    def _send_query_param_msg(self) -> None:
         ctx = get_script_run_ctx()
         if ctx is None:
             return
@@ -233,7 +248,7 @@ class QueryParams:
         ctx.query_string = msg.page_info_changed.query_string
         ctx.enqueue(msg)
 
-    def clear(self):
+    def clear(self) -> None:
         self._query_params.clear()
         self._send_query_param_msg()
 
