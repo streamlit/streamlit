@@ -16,17 +16,26 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock
 
-import langchain
 import pytest
+
 import semver
 from google.protobuf.json_format import MessageToDict
 
+try:
+    import langchain
+    from tests.streamlit.external.langchain.capturing_callback_handler import (
+        playback_callbacks,
+    )
+except ImportError:
+    langchain = MagicMock()
+    langchain.__version__ = "3.0.0"
+    playback_callbacks = None
+    pytestmark = pytest.mark.skip(reason="langchain not installed")
+
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.external.langchain.capturing_callback_handler import (
-    playback_callbacks,
-)
 
 
 class StreamlitCallbackHandlerAPITest(unittest.TestCase):
