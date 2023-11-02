@@ -162,19 +162,41 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
-        from snowflake.connector import Error as SnowflakeError
-        from tenacity import (
-            retry,
-            retry_if_exception_type,
-            stop_after_attempt,
-            wait_fixed,
+        from snowflake.connector.errors import ProgrammingError  # type: ignore[import]
+        from snowflake.connector.network import (  # type: ignore[import]
+            BAD_REQUEST_GS_CODE,
+            ID_TOKEN_EXPIRED_GS_CODE,
+            MASTER_TOKEN_EXPIRED_GS_CODE,
+            MASTER_TOKEN_INVALD_GS_CODE,
+            MASTER_TOKEN_NOTFOUND_GS_CODE,
+            SESSION_EXPIRED_GS_CODE,
         )
+        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+
+        retryable_error_codes = {
+            int(code)
+            for code in (
+                ID_TOKEN_EXPIRED_GS_CODE,
+                SESSION_EXPIRED_GS_CODE,
+                MASTER_TOKEN_NOTFOUND_GS_CODE,
+                MASTER_TOKEN_EXPIRED_GS_CODE,
+                MASTER_TOKEN_INVALD_GS_CODE,
+                BAD_REQUEST_GS_CODE,
+            )
+        }
 
         @retry(
             after=lambda _: self.reset(),
             stop=stop_after_attempt(3),
             reraise=True,
-            retry=retry_if_exception_type(SnowflakeError),
+            # We don't have to implement retries ourself for most error types as the
+            # `snowflake-connector-python` library already implements retries for
+            # retryable HTTP errors.
+            retry=retry_if_exception(
+                lambda e: isinstance(e, ProgrammingError)
+                and hasattr(e, "errno")
+                and e.errno in retryable_error_codes
+            ),
             wait=wait_fixed(1),
         )
         @cache_data(
