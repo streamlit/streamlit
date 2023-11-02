@@ -1591,7 +1591,7 @@ def repr_(self) -> str:
     field_reprs = ",\n".join(reprs)
 
     field_reprs = textwrap.indent(field_reprs, " " * 4)
-    return f"{classname}({field_reprs})"
+    return f"{classname}({field_reprs}\n)"
 
 
 def format_dict(d: dict[Any, Any]):
