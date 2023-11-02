@@ -1592,10 +1592,6 @@ def repr_(self) -> str:
     return f"{classname}({field_reprs})"
 
 
-def indent(lines: list[str]) -> list[str]:
-    return [" " * 4 + line for line in lines]
-
-
 def format_dict(d: dict[Any, Any]):
     lines = []
     for k, v in d.items():
