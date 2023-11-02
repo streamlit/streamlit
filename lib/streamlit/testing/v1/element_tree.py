@@ -13,10 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
-import dataclasses
 import textwrap
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
@@ -1566,10 +1565,10 @@ def repr_(self) -> str:
 
     defaults: list[Any] = [None, "", False, [], set(), dict()]
 
-    if dataclasses.is_dataclass(self):
+    if is_dataclass(self):
         fields_vals = (
             (f.name, getattr(self, f.name))
-            for f in dataclasses.fields(self)
+            for f in fields(self)
             if f.repr
             and getattr(self, f.name) != f.default
             and getattr(self, f.name) not in defaults
@@ -1773,7 +1772,6 @@ class ElementTree(Block):
         return self._runner._run(widget_states, timeout=timeout)
 
     def __repr__(self):
-        # return repr(self.children)
         return format_dict(self.children)
 
 

@@ -78,7 +78,6 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,
     WidgetList,
-    format_dict,
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
