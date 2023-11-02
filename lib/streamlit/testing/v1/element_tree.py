@@ -1561,6 +1561,9 @@ class Block:
 
 
 def repr_(self) -> str:
+    """A custom repr similar to `streamlit.util.repr_` but that shows tree
+    structure using indentation.
+    """
     classname = self.__class__.__name__
 
     defaults: list[Any] = [None, "", False, [], set(), dict()]
