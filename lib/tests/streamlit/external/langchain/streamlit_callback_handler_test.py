@@ -19,12 +19,12 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 import semver
 from google.protobuf.json_format import MessageToDict
 
 try:
     import langchain
+
     from tests.streamlit.external.langchain.capturing_callback_handler import (
         playback_callbacks,
     )

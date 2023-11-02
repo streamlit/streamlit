@@ -555,7 +555,9 @@ class HashTest(unittest.TestCase):
             ("mysql", "passwd"),
             ("oracle", "password"),
             ("mssql", "password"),
-        ] if sys.version_info < (3, 12) else [
+        ]
+        if sys.version_info < (3, 12)
+        else [
             ("postgresql", "password"),
             ("mysql", "passwd"),
             ("mssql", "password"),
