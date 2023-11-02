@@ -261,9 +261,6 @@ class CameraInput extends React.PureComponent<Props, State> {
     // If we have had no completed uploads, our widgetValue will be
     // undefined, and we can early-out of the state update.
     const newWidgetValue = this.createWidgetValue()
-    if (newWidgetValue === undefined) {
-      return
-    }
 
     const { element, widgetMgr } = this.props
 
@@ -276,7 +273,23 @@ class CameraInput extends React.PureComponent<Props, State> {
     }
   }
 
-  private createWidgetValue(): FileUploaderStateProto | undefined {
+  public componentDidMount(): void {
+    const newWidgetValue = this.createWidgetValue()
+    const { element, widgetMgr } = this.props
+
+    // Set the state value on mount, to avoid triggering an extra rerun after
+    // the first rerun.
+    // We use same primitives as in file uploader widget,
+    // since simanticly camera_input is just a special case of file uploader.
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (prevWidgetValue === undefined) {
+      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
+        fromUi: false,
+      })
+    }
+  }
+
+  private createWidgetValue(): FileUploaderStateProto {
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {

@@ -79,6 +79,7 @@ describe("CameraInput widget", () => {
   enableFetchMocks()
   it("renders without crashing", () => {
     const props = getProps()
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     const wrapper = shallow(<CameraInput {...props} />)
     const instance = wrapper.instance() as CameraInput
 
@@ -87,6 +88,8 @@ describe("CameraInput widget", () => {
 
     expect(wrapper.find(WebcamComponent)).toHaveLength(1)
     expect(wrapper.find(StyledBox)).toHaveLength(0)
+    // WidgetStateManager should have been called on mounting
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
   })
 
   it("sets initial value properly if non-empty", () => {
