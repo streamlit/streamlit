@@ -279,6 +279,8 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     // Set the state value on mount, to avoid triggering an extra rerun after
     // the first rerun.
+    // We use same primitives as in file uploader widget,
+    // since simanticly camera_input is just a special case of file uploader.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
       widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
