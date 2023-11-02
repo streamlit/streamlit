@@ -7,13 +7,13 @@ async-timeout==4.0.3
 attrs==23.1.0
 backports.zoneinfo==0.2.1
 black==23.10.1
-blinker==1.6.3
+blinker==1.7.0
 bokeh==2.4.3
 cachetools==5.3.2
 certifi==2023.7.22
 cffi==1.16.0
 cfgv==3.4.0
-charset-normalizer==3.3.1
+charset-normalizer==3.3.2
 chart-studio==1.1.0
 click==8.1.7
 cloudpickle==2.0.0
@@ -50,7 +50,7 @@ jsonschema-specifications==2023.7.1
 keyring==24.2.0
 kiwisolver==1.4.5
 langchain==0.0.327
-langsmith==0.0.54
+langsmith==0.0.56
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
 marshmallow==3.20.1
@@ -83,7 +83,7 @@ pre-commit==3.5.0
 protobuf==3.20.3
 psycopg2-binary==2.9.9
 py4j==0.10.9.7
-pyarrow==13.0.0
+pyarrow==14.0.0
 pycparser==2.21
 pycryptodomex==3.19.0
 pydantic==1.10.13
