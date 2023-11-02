@@ -162,14 +162,15 @@ class QueryParams:
         # and access _query_params which is None as _query_params isn't initialized
         self.__dict__["_query_params"] = query_params
 
-    def __repr__(self):
-        return util.repr_(self)
-
     def _keys(self) -> Set[str]:
         return set(self._query_params.keys())
 
-    def get(self, key: str) -> Any:
-        return self._getitem(key)
+    def get(self, key: str, default: Any = None) -> Any:
+        if key in self._query_params:
+            return self._getitem(key)
+        else:
+            if default != None:
+                self._setitem(key, default)
 
     def __iter__(self) -> Iterator[Any]:
         return iter(self._keys())

@@ -101,6 +101,12 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test_get(self):
         assert self._query_params.get("foo") == "bar"
 
+    def test_get_default(self):
+        self._query_params.get("dog", default="bark")
+        assert self._query_params["dog"] == "bark"
+        message = self.get_message_from_queue(0)
+        assert (message.page_info_changed.query_string, "dog=bark")
+
     def test__getattr__(self):
         assert self._query_params.foo == "bar"
 
