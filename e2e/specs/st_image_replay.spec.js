@@ -30,13 +30,13 @@ describe("st.image replay", () => {
 
   it("displays a caption for both calls", () => {
     cy.getIndexed(
-      ".element-container [data-testid='stImage'] [data-testid='caption']",
+      ".element-container [data-testid='stImage'] [data-testid='stImageCaption']",
       0
     )
       .should("contain", "Black Square")
       .should("have.css", "width", "100px");
     cy.getIndexed(
-      ".element-container [data-testid='stImage'] [data-testid='caption']",
+      ".element-container [data-testid='stImage'] [data-testid='stImageCaption']",
       1
     )
       .should("contain", "Black Square")
