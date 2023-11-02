@@ -109,87 +109,82 @@ repos:
         entry: "^\\s*from\\s+\\."
         pass_filenames: true
         files: \.py$
-  - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.2.0
-    hooks:
-      - id: insert-license
-        name: Add license for all (S)CSS/JS(X)/TS(X) files
-        language_version: python3.8
-        files: \.(s?css|jsx?|tsx?)$
-        args:
-          - --comment-style
-          - "/**| *| */"
-          - --license-filepath
-          - scripts/license-template.txt
-          - --fuzzy-match-generates-todo
-        exclude: |
-          (?x)
-          /vendor/
-          |^vendor/
-          |^component-lib/declarations/apache-arrow
-          |^frontend/app/src/assets/css/variables\.scss
-      - id: insert-license
-        name: Add license for all Proto files
-        language_version: python3.8
-        files: \.proto$
-        args:
-          - --comment-style
-          - "/**!| *| */"
-          - --license-filepath
-          - scripts/license-template.txt
-          - --fuzzy-match-generates-todo
-        exclude: |
-          (?x)
-          /vendor/
-          |^vendor/
-          |^component-lib/declarations/apache-arrow
-          |^proto/streamlit/proto/openmetrics_data_model\.proto
-      - id: insert-license
-        name: Add license for all shell files
-        language_version: python3.8
-        files: \.sh$
-        args:
-          - --comment-style
-          - "|#|"
-          - --license-filepath
-          - scripts/license-template.txt
-          - --fuzzy-match-generates-todo
-        exclude: |
-          (?x)
-          /vendor/
-          |^vendor/
-          |^component-lib/declarations/apache-arrow
-      - id: insert-license
-        name: Add license for all Python files
-        language_version: python3.8
-        files: \.py$|\.pyi$
-        args:
-          - --comment-style
-          - "|#|"
-          - --license-filepath
-          - scripts/license-template.txt
-          - --fuzzy-match-generates-todo
-        exclude: |
-          (?x)
-          /vendor/
-          |^vendor/
-          |^component-lib/declarations/apache-arrow
-          |^lib/tests/isolated_asyncio_test_case\.py$
-      - id: insert-license
-        name: Add license for all HTML files
-        language_version: python3.8
-        files: \.html$
-        args:
-          - --comment-style
-          - "<!--||-->"
-          - --license-filepath
-          - scripts/license-template.txt
-          - --fuzzy-match-generates-todo
-        exclude: |
-          (?x)
-          /vendor/
-          |^vendor/
-          |^component-lib/declarations/apache-arrow
+#  - repo: https://github.com/Lucas-C/pre-commit-hooks
+#    rev: v1.2.0
+#    hooks:
+#      - id: insert-license
+#        name: Add license for all (S)CSS/JS(X)/TS(X) files
+#        files: \.(s?css|jsx?|tsx?)$
+#        args:
+#          - --comment-style
+#          - "/**| *| */"
+#          - --license-filepath
+#          - scripts/license-template.txt
+#          - --fuzzy-match-generates-todo
+#        exclude: |
+#          (?x)
+#          /vendor/
+#          |^vendor/
+#          |^component-lib/declarations/apache-arrow
+#          |^frontend/app/src/assets/css/variables\.scss
+#      - id: insert-license
+#        name: Add license for all Proto files
+#        files: \.proto$
+#        args:
+#          - --comment-style
+#          - "/**!| *| */"
+#          - --license-filepath
+#          - scripts/license-template.txt
+#          - --fuzzy-match-generates-todo
+#        exclude: |
+#          (?x)
+#          /vendor/
+#          |^vendor/
+#          |^component-lib/declarations/apache-arrow
+#          |^proto/streamlit/proto/openmetrics_data_model\.proto
+#      - id: insert-license
+#        name: Add license for all shell files
+#        files: \.sh$
+#        args:
+#          - --comment-style
+#          - "|#|"
+#          - --license-filepath
+#          - scripts/license-template.txt
+#          - --fuzzy-match-generates-todo
+#        exclude: |
+#          (?x)
+#          /vendor/
+#          |^vendor/
+#          |^component-lib/declarations/apache-arrow
+#      - id: insert-license
+#        name: Add license for all Python files
+#        files: \.py$|\.pyi$
+#        args:
+#          - --comment-style
+#          - "|#|"
+#          - --license-filepath
+#          - scripts/license-template.txt
+#          - --fuzzy-match-generates-todo
+#        exclude: |
+#          (?x)
+#          /vendor/
+#          |^vendor/
+#          |^component-lib/declarations/apache-arrow
+#          |^lib/tests/isolated_asyncio_test_case\.py$
+#      - id: insert-license
+#        name: Add license for all HTML files
+#        files: \.html$
+#        args:
+#          - --comment-style
+#          - "<!--||-->"
+#          - --license-filepath
+#          - scripts/license-template.txt
+#          - --fuzzy-match-generates-todo
+#        exclude: |
+#          (?x)
+#          /vendor/
+#          |^vendor/
+#          |^component-lib/declarations/apache-arrow
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
     hooks:
