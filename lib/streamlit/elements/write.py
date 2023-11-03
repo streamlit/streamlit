@@ -22,6 +22,7 @@ import numpy as np
 from typing_extensions import Final
 
 from streamlit import type_util
+from streamlit.commands.query_params import QueryParams
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
@@ -204,6 +205,9 @@ class WriteMixin:
             elif isinstance(arg, Exception):
                 flush_buffer()
                 self.dg.exception(arg)
+            elif isinstance(arg, QueryParams):
+                flush_buffer()
+                self.dg.json(arg)
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 self.dg.help(arg)

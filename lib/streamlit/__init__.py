@@ -71,6 +71,7 @@ from streamlit.user_info import UserInfoProxy as _UserInfoProxy
 from streamlit.commands.query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
+    QueryParams as _QueryParams,
 )
 
 # Modules that the user should have access to. These are imported with "as"
@@ -191,6 +192,9 @@ set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
+
+# Query Params
+query_params = _QueryParams()
 
 # Caching
 cache_data = _cache_data
