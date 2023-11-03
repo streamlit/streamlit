@@ -14,7 +14,7 @@
 
 import urllib.parse as parse
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
@@ -185,5 +185,5 @@ class QueryParams:
             del self._query_params[key]
             self._send_query_param_msg()
 
-    def to_dict(self) -> Dict[str, Union[List[str], str]]:
+    def to_dict(self) -> Dict[str, List[Any]]:
         return self._query_params
