@@ -22,6 +22,9 @@ import pytest
 import semver
 from google.protobuf.json_format import MessageToDict
 
+import streamlit as st
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
 try:
     import langchain
 
@@ -29,13 +32,9 @@ try:
         playback_callbacks,
     )
 except ImportError:
-    langchain = MagicMock()
-    langchain.__version__ = "3.0.0"
+    langchain = MagicMock(__version__="0.0.0")
     playback_callbacks = None
-    pytestmark = pytest.mark.skip(reason="langchain not installed")
-
-import streamlit as st
-from tests.delta_generator_test_case import DeltaGeneratorTestCase
+    pytestmark = pytest.mark.skip(reason="Langchain doesn't support Python 3.12 yet.")
 
 
 class StreamlitCallbackHandlerAPITest(unittest.TestCase):
