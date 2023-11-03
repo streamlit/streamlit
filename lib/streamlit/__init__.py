@@ -62,7 +62,7 @@ from streamlit.runtime.caching import (
     experimental_memo as _experimental_memo,
 )
 from streamlit.runtime.connection_factory import (
-    connection_factory as connection,
+    connection_factory as _connection,
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
@@ -198,6 +198,9 @@ cache_resource = _cache_resource
 
 # Namespaces
 column_config = _column_config
+
+# Connection
+connection = _connection
 
 # Experimental APIs
 experimental_user = _UserInfoProxy()
