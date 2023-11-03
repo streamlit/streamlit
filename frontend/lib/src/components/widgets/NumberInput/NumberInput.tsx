@@ -476,6 +476,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
             <StyledInputControls>
               <StyledInputControl
                 className="step-down"
+                data-testid="stNumberInput-StepDown"
                 onClick={this.modifyValueUsingStep("decrement")}
                 disabled={disableDecrement}
                 tabIndex={-1}
@@ -488,6 +489,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
               </StyledInputControl>
               <StyledInputControl
                 className="step-up"
+                data-testid="stNumberInput-StepUp"
                 onClick={this.modifyValueUsingStep("increment")}
                 disabled={disableIncrement}
                 tabIndex={-1}

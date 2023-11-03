@@ -16,21 +16,18 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { screen, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   NumberInput as NumberInputProto,
 } from "@streamlit/lib/src/proto"
 
-import { mount, shallow, render } from "@streamlit/lib/src/test_util"
-import {
-  StyledInputControls,
-  StyledInstructionsContainer,
-} from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
-import { Input as UIInput } from "baseui/input"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import { NumberInput, Props, State } from "./NumberInput"
+import { NumberInput, Props } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
@@ -278,25 +275,22 @@ describe("NumberInput widget", () => {
       )
     })
 
-    // it("calls onChange", () => {
-    //   const props = getIntProps({ default: 10 })
-    //   render(<NumberInput {...props} />)
+    it("calls onChange", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 10, max: 20 })
+      render(<NumberInput {...props} />)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
 
-    // const wrapper = shallow(<NumberInput {...props} />)
+      // userEvent necessary to trigger dirty state
+      await user.click(numberInput)
+      await user.keyboard("{backspace}{backspace}15")
 
-    // const InputWrapper = wrapper.find(UIInput)
-
-    // // @ts-expect-error
-    // InputWrapper.props().onChange({
-    //   target: {
-    //     // @ts-expect-error
-    //     value: 1,
-    //   },
-    // })
-
-    // expect(wrapper.state("value")).toBe(1)
-    // expect(wrapper.state("dirty")).toBe(true)
-    // })
+      // Check that the value is updated & state dirty
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15)
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+    })
 
     it("sets value on Enter", () => {
       const props = getIntProps({ default: 10 })
@@ -321,153 +315,146 @@ describe("NumberInput widget", () => {
     })
   })
 
-  // describe("Step", () => {
-  //   function stepUpButton(
-  //     wrapper: ShallowWrapper<NumberInput>
-  //   ): ShallowWrapper<any, any> {
-  //     return wrapper.find("StyledInputControl").at(1)
-  //   }
+  describe("Step", () => {
+    it("passes the step prop", () => {
+      const props = getIntProps({ default: 10, step: 1 })
+      render(<NumberInput {...props} />)
 
-  //   function stepDownButton(
-  //     wrapper: ShallowWrapper<NumberInput>
-  //   ): ShallowWrapper<any, any> {
-  //     return wrapper.find("StyledInputControl").at(0)
-  //   }
+      // Increment
+      fireEvent.click(screen.getByTestId("stNumberInput-StepUp"))
 
-  //   it("passes the step prop", () => {
-  //     const props = getIntProps({ default: 10, step: 1 })
-  //     const wrapper = shallow(<NumberInput {...props} />)
+      // Check step properly enforced
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(11)
+    })
 
-  //     // @ts-expect-error
-  //     expect(wrapper.find(UIInput).props().overrides.Input.props.step).toBe(1)
-  //   })
+    it("changes state on ArrowUp", () => {
+      const props = getIntProps({
+        format: "%d",
+        default: 10,
+        step: 1,
+      })
+      render(<NumberInput {...props} />)
 
-  //   it("changes state on ArrowUp", () => {
-  //     const props = getIntProps({
-  //       format: "%d",
-  //       default: 10,
-  //       step: 1,
-  //     })
-  //     const wrapper = shallow(<NumberInput {...props} />)
-  //     const InputWrapper = wrapper.find(UIInput)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
+      fireEvent.keyDown(numberInput, {
+        key: "ArrowUp",
+      })
+      expect(numberInput).toHaveValue(11)
+    })
 
-  //     const preventDefault = jest.fn()
+    it("changes state on ArrowDown", () => {
+      const props = getIntProps({
+        format: "%d",
+        default: 10,
+        step: 1,
+      })
+      render(<NumberInput {...props} />)
 
-  //     // @ts-expect-error
-  //     InputWrapper.props().onKeyDown({
-  //       key: "ArrowUp",
-  //       preventDefault,
-  //     })
+      const numberInput = screen.getByTestId("stNumberInput-Input")
+      fireEvent.keyDown(numberInput, {
+        key: "ArrowDown",
+      })
+      expect(numberInput).toHaveValue(9)
+    })
 
-  //     expect(preventDefault).toHaveBeenCalled()
-  //     expect(wrapper.state("value")).toBe(11)
-  //     expect(wrapper.state("dirty")).toBe(false)
-  //   })
+    it("handles stepDown button clicks", () => {
+      const props = getIntProps({
+        format: "%d",
+        default: 10,
+        step: 1,
+      })
+      render(<NumberInput {...props} />)
 
-  //   it("changes state on ArrowDown", () => {
-  //     const props = getIntProps({
-  //       format: "%d",
-  //       default: 10,
-  //       step: 1,
-  //     })
-  //     const wrapper = shallow(<NumberInput {...props} />)
-  //     const InputWrapper = wrapper.find(UIInput)
+      // Increment
+      fireEvent.click(screen.getByTestId("stNumberInput-StepDown"))
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(9)
+    })
 
-  //     const preventDefault = jest.fn()
+    it("handles stepUp button clicks", () => {
+      const props = getIntProps({
+        format: "%d",
+        default: 10,
+        step: 1,
+      })
+      render(<NumberInput {...props} />)
 
-  //     // @ts-expect-error
-  //     InputWrapper.props().onKeyDown({
-  //       key: "ArrowDown",
-  //       preventDefault,
-  //     })
+      // Increment
+      fireEvent.click(screen.getByTestId("stNumberInput-StepUp"))
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(11)
+    })
 
-  //     expect(preventDefault).toHaveBeenCalled()
-  //     expect(wrapper.state("value")).toBe(9)
-  //     expect(wrapper.state("dirty")).toBe(false)
-  //   })
+    it("disables stepDown button when at min", () => {
+      const props = getIntProps({ default: 1, step: 1, min: 0, hasMin: true })
+      render(<NumberInput {...props} />)
 
-  //   it("handles stepDown button clicks", () => {
-  //     const props = getIntProps({
-  //       format: "%d",
-  //       default: 10,
-  //       step: 1,
-  //     })
-  //     const wrapper = shallow(<NumberInput {...props} />)
+      const stepDownButton = screen.getByTestId("stNumberInput-StepDown")
+      expect(stepDownButton).not.toBeDisabled()
 
-  //     stepDownButton(wrapper).simulate("click")
+      fireEvent.click(stepDownButton)
 
-  //     expect(wrapper.state("dirty")).toBe(false)
-  //     expect(wrapper.state("value")).toBe(9)
-  //   })
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(0)
+      expect(stepDownButton).toBeDisabled()
+    })
 
-  //   it("handles stepUp button clicks", () => {
-  //     const props = getIntProps({
-  //       format: "%d",
-  //       default: 10,
-  //       step: 1,
-  //     })
-  //     const wrapper = shallow(<NumberInput {...props} />)
+    it("disables stepUp button when at max", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      render(<NumberInput {...props} />)
 
-  //     stepUpButton(wrapper).simulate("click")
+      const stepUpButton = screen.getByTestId("stNumberInput-StepUp")
+      expect(stepUpButton).not.toBeDisabled()
 
-  //     expect(wrapper.state("dirty")).toBe(false)
-  //     expect(wrapper.state("value")).toBe(11)
-  //   })
+      fireEvent.click(stepUpButton)
 
-  //   it("disables stepDown button when at min", () => {
-  //     const props = getIntProps({ default: 1, step: 1, min: 0, hasMin: true })
-  //     const wrapper = shallow(<NumberInput {...props} />)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(2)
+      expect(stepUpButton).toBeDisabled()
+    })
 
-  //     expect(stepDownButton(wrapper).prop("disabled")).toBe(false)
+    it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      render(<NumberInput {...props} width={100} />)
 
-  //     stepDownButton(wrapper).simulate("click")
+      expect(
+        screen.queryByTestId("stNumberInput-StepUp")
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stNumberInput-StepDown")
+      ).not.toBeInTheDocument()
+    })
 
-  //     expect(wrapper.state("value")).toBe(0)
-  //     expect(stepDownButton(wrapper).prop("disabled")).toBe(true)
-  //   })
+    it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
+      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
+      render(<NumberInput {...props} width={185} />)
 
-  //   it("disables stepUp button when at max", () => {
-  //     const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-  //     const wrapper = shallow(<NumberInput {...props} />)
+      expect(screen.getByTestId("stNumberInput-StepUp")).toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInput-StepDown")).toBeInTheDocument()
+    })
 
-  //     expect(stepUpButton(wrapper).prop("disabled")).toBe(false)
+    it("hides Please enter to apply text when width is smaller than 120px", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 1, step: 1, max: 20, hasMax: true })
+      render(<NumberInput {...props} width={100} />)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
 
-  //     stepUpButton(wrapper).simulate("click")
+      // userEvent necessary to trigger dirty state
+      await user.click(numberInput)
+      await user.keyboard("20")
 
-  //     expect(wrapper.state("value")).toBe(2)
-  //     expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
-  //   })
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+    })
 
-  //   it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
-  //     const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-  //     const wrapper = shallow(<NumberInput {...props} width={100} />)
+    it("shows Please enter to apply text when width is bigger than 120px", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 1, step: 1, max: 20, hasMax: true })
+      render(<NumberInput {...props} width={185} />)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
 
-  //     expect(wrapper.find(StyledInputControls).exists()).toBe(false)
-  //   })
+      // userEvent necessary to trigger dirty state
+      await user.click(numberInput)
+      await user.keyboard("20")
 
-  //   it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
-  //     const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-  //     const wrapper = shallow(<NumberInput {...props} width={185} />)
-
-  //     expect(wrapper.find(StyledInputControls).exists()).toBe(true)
-  //   })
-
-  //   it("hides Please enter to apply text when width is smaller than 120px", () => {
-  //     const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-  //     const wrapper = shallow(<NumberInput {...props} width={100} />)
-
-  //     wrapper.setState({ dirty: true })
-
-  //     expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(false)
-  //   })
-
-  //   it("shows Please enter to apply text when width is bigger than 120px", () => {
-  //     const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-  //     const wrapper = shallow(<NumberInput {...props} width={185} />)
-
-  //     wrapper.setState({ dirty: true })
-
-  //     expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(true)
-  //   })
-  // })
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+    })
+  })
 })
