@@ -101,7 +101,7 @@ export function ImageList({
               alt={idx.toString()}
             />
             {image.caption && (
-              <StyledCaption data-testid="caption" style={imgStyle}>
+              <StyledCaption data-testid="stImageCaption" style={imgStyle}>
                 {` ${image.caption} `}
               </StyledCaption>
             )}
