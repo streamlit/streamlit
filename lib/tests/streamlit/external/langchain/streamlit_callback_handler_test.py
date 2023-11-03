@@ -32,6 +32,9 @@ try:
         playback_callbacks,
     )
 except ImportError:
+    # If langchain isn't installed (it doesn't work with Python 3.12 yet),
+    # we'll skip this test.
+    # TODO[kajarenc] Remove this once langchain supports Python 3.12.
     langchain = MagicMock(__version__="0.0.0")
     playback_callbacks = None
     pytestmark = pytest.mark.skip(reason="Langchain doesn't support Python 3.12 yet.")
