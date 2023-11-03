@@ -407,14 +407,12 @@ export class AppRoot {
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
   public static empty(): AppRoot {
-    const mainNodes: AppNode[]
-
     const waitNode = new ElementNode(
       makeSkeletonElement(),
       ForwardMsgMetadata.create({}),
       NO_SCRIPT_RUN_ID
     )
-    mainNodes = [waitNode]
+    const mainNodes: AppNode[] = [waitNode]
 
     const main = new BlockNode(
       mainNodes,
