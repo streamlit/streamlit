@@ -24,7 +24,7 @@ from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
 
-from streamlit import source_util, util
+from streamlit import source_util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -78,6 +78,7 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,
     WidgetList,
+    repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.util import HASHLIB_KWARGS
@@ -930,4 +931,4 @@ class AppTest:
         return self._tree.get(element_type)
 
     def __repr__(self) -> str:
-        return util.repr_(self)
+        return repr_(self)
