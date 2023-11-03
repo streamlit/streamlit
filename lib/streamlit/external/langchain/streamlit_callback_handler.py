@@ -35,10 +35,10 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
-from langchain.callbacks.base import (  # type: ignore[import-not-found]
+from langchain.callbacks.base import (  # type: ignore[import-not-found, unused-ignore]
     BaseCallbackHandler,
 )
-from langchain.schema import (  # type: ignore[import-not-found]
+from langchain.schema import (  # type: ignore[import-not-found, unused-ignore]
     AgentAction,
     AgentFinish,
     LLMResult,
