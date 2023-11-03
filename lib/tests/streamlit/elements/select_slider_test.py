@@ -24,6 +24,8 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -262,3 +264,71 @@ class SliderTest(DeltaGeneratorTestCase):
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
         )
+
+
+def test_select_slider_enum_coercion():
+    """Test E2E Enum Coercion on a select_slider."""
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected = st.select_slider("my_enum", EnumA, value=EnumA.A)
+        st.text(id(selected.__class__))
+        st.text(id(EnumA))
+        st.text(selected in EnumA)
+
+    at = AppTest.from_function(script).run()
+
+    def test_enum():
+        select_slider = at.select_slider[0]
+        original_class = select_slider.value.__class__
+        select_slider.set_value(original_class.C).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.
+
+
+def test_select_slider_enum_coercion_multivalue():
+    """Test E2E Enum Coercion on a selectbox."""
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected_list = st.select_slider("my_enum", EnumA, value=[EnumA.A, EnumA.C])
+        st.text(id(selected_list[0].__class__))
+        st.text(id(EnumA))
+        st.text(all(selected in EnumA for selected in selected_list))
+
+    at = AppTest.from_function(script).run()
+
+    def test_enum():
+        select_slider = at.select_slider[0]
+        original_class = select_slider.value[0].__class__
+        select_slider.set_value([original_class.A, original_class.B]).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.

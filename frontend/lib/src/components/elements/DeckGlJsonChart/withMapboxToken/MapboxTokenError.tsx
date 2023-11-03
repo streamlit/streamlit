@@ -19,7 +19,7 @@ import ErrorElement from "@streamlit/lib/src/components/shared/ErrorElement"
 import {
   MapboxTokenFetchingError,
   MapboxTokenNotProvidedError,
-} from "@streamlit/lib/src/hocs/withMapboxToken/MapboxToken"
+} from "./withMapboxToken"
 
 interface Props {
   error: Error | MapboxTokenFetchingError | MapboxTokenNotProvidedError

@@ -17,6 +17,16 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
+def get_first_graph_svg(app: Page):
+    return app.locator(".stGraphVizChart > svg").nth(0)
+
+
+def click_fullscreen(app: Page):
+    app.locator('[data-testid="StyledFullScreenButton"]').nth(0).click()
+    # Wait for the animation to finish
+    app.wait_for_timeout(1000)
+
+
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
 
@@ -31,6 +41,52 @@ def test_shows_left_and_right_graph(app: Page):
     left_text = app.locator(".stGraphVizChart > svg > g > title").nth(3).text_content()
     right_text = app.locator(".stGraphVizChart > svg > g > title").nth(4).text_content()
     assert "Left" in left_text and "Right" in right_text
+
+
+def test_first_graph_dimensions(app: Page):
+    """Test the dimensions of the first graph."""
+
+    first_graph_svg = get_first_graph_svg(app)
+    assert first_graph_svg.get_attribute("width") == "79pt"
+    assert first_graph_svg.get_attribute("height") == "116pt"
+
+
+def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test if the first graph shows in fullscreen."""
+
+    # Hover over the parent div
+    app.locator(".stGraphVizChart").nth(0).hover()
+
+    # Enter fullscreen
+    click_fullscreen(app)
+
+    first_graph_svg = get_first_graph_svg(app)
+    # The width and height unset on the element on fullscreen
+    expect(first_graph_svg).not_to_have_attribute("width", "79pt")
+    expect(first_graph_svg).not_to_have_attribute("height", "116pt")
+
+    svg_dimensions = first_graph_svg.bounding_box()
+    assert svg_dimensions["width"] == 1256
+    assert svg_dimensions["height"] == 662
+    assert_snapshot(first_graph_svg, name="graphviz_fullscreen")
+
+
+def test_first_graph_after_exit_fullscreen(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test if the first graph has correct size after exiting fullscreen."""
+
+    # Hover over the parent div
+    app.locator(".stGraphVizChart").nth(0).hover()
+
+    # Enter and exit fullscreen
+    click_fullscreen(app)
+    click_fullscreen(app)
+
+    first_graph_svg = get_first_graph_svg(app)
+    assert first_graph_svg.get_attribute("width") == "79pt"
+    assert first_graph_svg.get_attribute("height") == "116pt"
+    assert_snapshot(first_graph_svg, name="graphviz_after_exit_fullscreen")
 
 
 def test_renders_with_specified_engines(

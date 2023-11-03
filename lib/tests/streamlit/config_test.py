@@ -369,6 +369,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.fixMatplotlib",
                 "runner.postScriptGC",
                 "runner.fastReruns",
+                "runner.enumCoercion",
                 "magic.displayRootDocString",
                 "magic.displayLastExprIfNoSemicolon",
                 "mapbox.token",

@@ -13,8 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
+import textwrap
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
@@ -1556,7 +1557,52 @@ class Block:
         return self.root.run(timeout=timeout)
 
     def __repr__(self):
-        return util.repr_(self)
+        return repr_(self)
+
+
+def repr_(self) -> str:
+    """A custom repr similar to `streamlit.util.repr_` but that shows tree
+    structure using indentation.
+    """
+    classname = self.__class__.__name__
+
+    defaults: list[Any] = [None, "", False, [], set(), dict()]
+
+    if is_dataclass(self):
+        fields_vals = (
+            (f.name, getattr(self, f.name))
+            for f in fields(self)
+            if f.repr
+            and getattr(self, f.name) != f.default
+            and getattr(self, f.name) not in defaults
+        )
+    else:
+        fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
+
+    reprs = []
+    for field, value in fields_vals:
+        if isinstance(value, dict):
+            line = f"{field}={format_dict(value)}"
+        else:
+            line = f"{field}={value!r}"
+        reprs.append(line)
+
+    reprs[0] = "\n" + reprs[0]
+    field_reprs = ",\n".join(reprs)
+
+    field_reprs = textwrap.indent(field_reprs, " " * 4)
+    return f"{classname}({field_reprs}\n)"
+
+
+def format_dict(d: dict[Any, Any]):
+    lines = []
+    for k, v in d.items():
+        line = f"{k}: {v!r}"
+        lines.append(line)
+    r = ",\n".join(lines)
+    r = textwrap.indent(r, " " * 4)
+    r = f"{{\n{r}\n}}"
+    return r
 
 
 @dataclass(repr=False)
@@ -1729,7 +1775,7 @@ class ElementTree(Block):
         return self._runner._run(widget_states, timeout=timeout)
 
     def __repr__(self):
-        return repr(self.children)
+        return format_dict(self.children)
 
 
 def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
