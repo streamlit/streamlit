@@ -76,7 +76,6 @@ import {
 } from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 

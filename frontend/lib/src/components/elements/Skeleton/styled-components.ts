@@ -50,7 +50,7 @@ export const TitleSkeleton = styled.div(({ theme }) => ({
   ...ANIMATION_STYLES,
 }))
 
-export const ParagraphSkeleton = styled.div(({ theme }) => ({
+export const ParagraphSkeleton = styled.div(() => ({
   display: "flex",
   flexDirection: "column",
   gap: "0.5rem", // Picked because it looks good.

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"

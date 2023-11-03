@@ -407,7 +407,7 @@ export class AppRoot {
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
   public static empty(): AppRoot {
-    let mainNodes: AppNode[]
+    const mainNodes: AppNode[]
 
     const waitNode = new ElementNode(
       makeSkeletonElement(),
