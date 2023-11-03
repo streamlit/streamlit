@@ -395,7 +395,10 @@ export class NumberInput extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <StyledInputContainer className={isFocused ? "focused" : ""}>
+        <StyledInputContainer
+          className={isFocused ? "focused" : ""}
+          data-testid="stNumberInputContainer"
+        >
           <UIInput
             type="number"
             inputRef={this.inputRef}
@@ -434,6 +437,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
               },
               Input: {
                 props: {
+                  "data-testid": "stNumberInput-Input",
                   step: this.getStep(),
                   min: this.getMin(),
                   max: this.getMax(),
