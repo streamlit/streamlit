@@ -128,6 +128,12 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self._query_params.test = "test"
         assert self._query_params.get("test") == "test"
 
+    def test__setattr__list(self):
+        self._query_params.test = ["test", "test2"]
+        assert self._query_params.get("test") == "test2"
+        message = self.get_message_from_queue(0)
+        assert (message.page_info_changed.query_string, "test=test&test=test2")
+
     def test_getall_nonexistent(self):
         assert self._query_params.get_all("nonexistent") == []
 
