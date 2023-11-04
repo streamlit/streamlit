@@ -312,6 +312,22 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "global.useCustomCacheStorageManager",
+    description="""If True, use custom cache storage manager.""",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "global.customCacheStorageManagerClass",
+    description="""Custom cache storage manager class.""",
+    visibility="hidden",
+    default_val="",
+    type_=str,
+)
+
 
 @_create_option("global.developmentMode", visibility="hidden", type_=bool)
 def _global_development_mode() -> bool:
