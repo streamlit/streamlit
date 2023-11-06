@@ -15,10 +15,13 @@
 from importlib import import_module
 
 from streamlit import config
+from streamlit.logger import get_logger
 from streamlit.runtime.caching.storage import CacheStorageManager
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
+
+LOGGER = get_logger(__name__)
 
 
 def create_default_cache_storage_manager() -> CacheStorageManager:
@@ -46,7 +49,11 @@ def create_default_cache_storage_manager() -> CacheStorageManager:
             )
             cache_storage_manager_class = custom_cache_storage_manager_class
         except (AttributeError, ImportError):
-            # TODO[kajarenc] Add logging here
+            LOGGER.info(
+                "Failed to import custom cache storage manager class "
+                f"from {custom_cache_storage_manager_class_path}. "
+                "Falling back to default cache storage manager."
+            )
             cache_storage_manager_class = LocalDiskCacheStorageManager
 
     if hasattr(cache_storage_manager_class, "from_secrets"):
