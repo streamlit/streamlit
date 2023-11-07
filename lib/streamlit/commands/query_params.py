@@ -14,13 +14,13 @@
 
 import urllib.parse as parse
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Set, Union
+from typing import Any, Dict, Iterator, List, MutableMapping, Set, Union
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.type_util import Key
 
 EMBED_QUERY_PARAM = "embed"
 EMBED_OPTIONS_QUERY_PARAM = "embed_options"
@@ -54,6 +54,8 @@ def get_query_params() -> Dict[str, List[str]]:
     in a query string is potentially a 1-element array.
 
     """
+    # Avoid circular imports
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
     ctx = get_script_run_ctx()
     if ctx is None:
         return {}
@@ -91,6 +93,8 @@ def set_query_params(**query_params: Any) -> None:
     ... )
 
     """
+    # Avoid circular imports
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
     ctx = get_script_run_ctx()
     if ctx is None:
         return
@@ -104,7 +108,7 @@ def set_query_params(**query_params: Any) -> None:
 
 
 def _ensure_no_embed_params(
-    query_params: Dict[str, Union[List[Any], str]], query_string: str
+    query_params: Dict[str, Union[List[str], str]], query_string: str
 ) -> str:
     """Ensures there are no embed params set (raises StreamlitAPIException) if there is a try,
     also makes sure old param values in query_string are preserved. Returns query_string : str."""
@@ -148,7 +152,7 @@ def _missing_key_error_message(key: str) -> str:
 
 
 @dataclass
-class QueryParams:
+class QueryParams(MutableMapping[Key, Any]):
     """A dict-like representation of query params.
     The main difference is that it only stores and returns str and List[str].
 
@@ -157,31 +161,23 @@ class QueryParams:
 
     _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
 
-    def __init__(self, query_params: Dict[str, Union[List[str], str]] = {}):
-        # avoid using ._query_params as that will use __setattr__
-        # and access _query_params which is None as _query_params isn't initialized
-        self.__dict__["_query_params"] = query_params
-
-    def _keys(self) -> Set[str]:
-        return set(self._query_params.keys())
-
-    def get(self, key: str, default: Any = None) -> Any:
-        if key in self._query_params:
-            return self._getitem(key)
-        else:
-            if default != None:
-                self._setitem(key, default)
+    def __init__(self):
+        # avoid using ._query_params as that will use __setattr__,
+        # which itself relies on `_query_params` being defined
+        self.__dict__["_query_params"] = {}
 
     def __iter__(self) -> Iterator[Any]:
-        return iter(self._keys())
+        return iter(self._query_params.keys())
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: str) -> str:
         return self._getitem(key)
 
     def _getitem(self, key: str) -> str:
+        # Avoid circular imports
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
         ctx = get_script_run_ctx()
         if ctx is None:
-            return  # type: ignore
+            return ""
         try:
             value = self._query_params[key]
             if isinstance(value, list):
@@ -194,20 +190,22 @@ class QueryParams:
         except:
             raise KeyError(_missing_key_error_message(key))
 
-    def _setitem(self, key: str, value: Any) -> None:
+    def _setitem(self, key: str, value: str) -> None:
+        # Avoid circular imports
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return  # type: ignore
         if isinstance(value, list):
             self._query_params[key] = util.convert_to_strings_in_list(value)
         else:
             self._query_params[key] = str(value)
         self._send_query_param_msg()
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: str) -> None:
         self._setitem(key, value)
 
     def get_all(self, key: str) -> List[str]:
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return  # type: ignore
         try:
             if key not in self._query_params:
                 return []
@@ -215,7 +213,7 @@ class QueryParams:
             return (
                 query_params
                 if isinstance(query_params, list)
-                else [self._query_params[key]]  # type: ignore
+                else [query_params]
             )
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
@@ -226,11 +224,21 @@ class QueryParams:
         except KeyError:
             raise AttributeError(_missing_key_error_message(key))
 
-    def __setattr__(self, key: str, value: Any) -> None:
+    def __setattr__(self, key: str, value: str) -> None:
         self._setitem(key, value)
 
     def __delattr__(self, key: str) -> None:
-        self.__delitem__(key)
+        try:
+            self._delitem(key)
+        except KeyError:
+            raise AttributeError(_missing_key_error_message(key))
+
+    def _delitem(self, key):
+        if key in self._query_params:
+            del self._query_params[key]
+            self._send_query_param_msg()
+        else:
+            raise KeyError(_missing_key_error_message(key))
 
     def __contains__(self, key: str) -> bool:
         return key in self._query_params
@@ -239,6 +247,8 @@ class QueryParams:
         return len(self._query_params)
 
     def _send_query_param_msg(self) -> None:
+        # Avoid circular imports
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
         ctx = get_script_run_ctx()
         if ctx is None:
             return
@@ -254,6 +264,7 @@ class QueryParams:
         self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
-        if key in self._query_params:
-            del self._query_params[key]
-            self._send_query_param_msg()
+        self._delitem(key)
+
+    def to_dict(self) -> Dict[str, List[Any]]:
+        return self._query_params
