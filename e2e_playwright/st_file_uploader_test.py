@@ -218,8 +218,54 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
+def test_does_not_call_callback_when_not_changed(app: Page):
+    """Test that the file uploader does not call a callback when not changed."""
+    file_name1 = "example5.txt"
+    file_content1 = b"Hello world!"
+
+    uploader_index = 6
+
+    # Script contains counter variable stored in session_state with
+    # default value 0. We increment counter inside file_uploader callback
+    # Since callback did not called at this moment, counter value should
+    # be equal 0
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        "0", use_inner_text=True
+    )
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            {
+                "name": file_name1,
+                "mimeType": "application/json",
+                "buffer": file_content1,
+            }
+        ]
+    )
+
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
+
+    # Make sure callback called
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        "1", use_inner_text=True
+    )
+    app.get_by_test_id("stHeader").press("r")
+
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
+
+    # Counter should be still equal 1
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        "1", use_inner_text=True
+    )
+
+
 # TODO(kajarenc): Migrate missing test from cypress test spec st_file_uploader.spec.js
 #  to playwright:
 #  - uploads and deletes multiple files quickly / slowly
 #  - works inside st.form()
-#  - does not call a callback when not changed
