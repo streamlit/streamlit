@@ -17,14 +17,13 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { screen, fireEvent } from "@testing-library/react"
-import { render, shallow } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   TextArea as TextAreaProto,
 } from "@streamlit/lib/src/proto"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 
 import TextArea, { Props } from "./TextArea"
 
@@ -82,7 +81,7 @@ describe("TextArea widget", () => {
     const props = getProps()
     render(<TextArea {...props} />)
 
-    const widgetLabel = screen.queryByText(`${props.element.label}`)
+    const widgetLabel = screen.getByText(`${props.element.label}`)
     expect(widgetLabel).toBeInTheDocument()
   })
 
@@ -204,21 +203,15 @@ describe("TextArea widget", () => {
   })
 
   it("hides Please enter to apply text when width is smaller than 180px", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextArea {...props} width={100} />)
-
-    wrapper.setState({ dirty: true })
-
-    expect(wrapper.find(InputInstructions).exists()).toBe(false)
+    const props = getProps({}, { width: 100 })
+    render(<TextArea {...props} />)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextArea {...props} width={190} />)
-
-    wrapper.setState({ dirty: true })
-
-    expect(wrapper.find(InputInstructions).exists()).toBe(true)
+    const props = getProps({}, { width: 190 })
+    render(<TextArea {...props} />)
+    expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 
   it("resets its value when form is cleared", () => {

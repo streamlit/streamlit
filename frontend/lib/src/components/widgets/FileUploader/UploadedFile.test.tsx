@@ -16,10 +16,9 @@
 
 import { CancelTokenSource } from "axios"
 import React from "react"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
-
-import { Small } from "@streamlit/lib/src/components/shared/TextElements"
-import ProgressBar from "@streamlit/lib/src/components/shared/ProgressBar"
+import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import UploadedFile, { Props, UploadedFileStatus } from "./UploadedFile"
 import { FileStatus, UploadFileInfo } from "./UploadFileInfo"
@@ -30,27 +29,14 @@ const getProps = (fileStatus: FileStatus): Props => ({
 })
 
 describe("FileStatus widget", () => {
-  it("renders without crashing", () => {
-    const props = getProps({
-      type: "uploaded",
-      fileId: "fileId",
-      fileUrls: {},
-    })
-    const wrapper = shallow(<UploadedFileStatus {...props} />)
-
-    expect(wrapper).toBeDefined()
-  })
-
   it("shows progress bar when uploading", () => {
     const props = getProps({
       type: "uploading",
       cancelToken: null as unknown as CancelTokenSource,
       progress: 40,
     })
-    const wrapper = shallow(<UploadedFileStatus {...props} />)
-    const progressBarWrapper = wrapper.find(ProgressBar)
-
-    expect(progressBarWrapper.length).toBe(1)
+    render(<UploadedFileStatus {...props} />)
+    expect(screen.getByRole("progressbar")).toBeInTheDocument()
   })
 
   it("shows error status", () => {
@@ -58,9 +44,9 @@ describe("FileStatus widget", () => {
       type: "error",
       errorMessage: "Everything is terrible",
     })
-    const wrapper = shallow(<UploadedFileStatus {...props} />)
-    const errorMessageWrapper = wrapper.find("StyledErrorMessage")
-    expect(errorMessageWrapper.text()).toBe("Everything is terrible")
+    render(<UploadedFileStatus {...props} />)
+    const errorMessage = screen.getByTestId("stUploadedFileErrorMessage")
+    expect(errorMessage).toHaveTextContent("Everything is terrible")
   })
 
   it("show file size when uploaded", () => {
@@ -69,10 +55,8 @@ describe("FileStatus widget", () => {
       fileId: "fileId",
       fileUrls: {},
     })
-
-    const wrapper = shallow(<UploadedFileStatus {...props} />)
-    const statusWrapper = wrapper.find(Small)
-    expect(statusWrapper.text()).toBe("15.0B")
+    render(<UploadedFileStatus {...props} />)
+    expect(screen.getByText("15.0B")).toBeInTheDocument()
   })
 })
 
@@ -83,9 +67,10 @@ describe("UploadedFile widget", () => {
       fileId: "fileId",
       fileUrls: {},
     })
-    const wrapper = mount(<UploadedFile {...props} />)
-    const deleteBtn = wrapper.find("button")
-    deleteBtn.simulate("click")
-    expect(props.onDelete).toHaveBeenCalled()
+    render(<UploadedFile {...props} />)
+    expect(screen.getByTestId("stUploadedFile")).toBeInTheDocument()
+    const deleteBtn = screen.getByRole("button")
+    fireEvent.click(deleteBtn)
+    expect(props.onDelete).toHaveBeenCalledWith(1)
   })
 })

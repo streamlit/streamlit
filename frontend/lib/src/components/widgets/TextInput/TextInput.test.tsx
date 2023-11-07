@@ -19,7 +19,7 @@ import "@testing-library/jest-dom"
 
 import { screen, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { render, shallow } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import {
@@ -27,7 +27,6 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import TextInput, { Props } from "./TextInput"
-import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},
@@ -62,7 +61,7 @@ describe("TextInput widget", () => {
     const props = getProps()
     render(<TextInput {...props} />)
 
-    const widgetLabel = screen.queryByText(`${props.element.label}`)
+    const widgetLabel = screen.getByText(`${props.element.label}`)
     expect(widgetLabel).toBeInTheDocument()
   })
 
@@ -297,20 +296,14 @@ describe("TextInput widget", () => {
   })
 
   it("hides Please enter to apply text when width is smaller than 180px", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextInput {...props} width={100} />)
-
-    wrapper.setState({ dirty: true })
-
-    expect(wrapper.find(InputInstructions).exists()).toBe(false)
+    const props = getProps({}, { width: 100 })
+    render(<TextInput {...props} />)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextInput {...props} width={190} />)
-
-    wrapper.setState({ dirty: true })
-
-    expect(wrapper.find(InputInstructions).exists()).toBe(true)
+    const props = getProps({}, { width: 190 })
+    render(<TextInput {...props} />)
+    expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
 })
