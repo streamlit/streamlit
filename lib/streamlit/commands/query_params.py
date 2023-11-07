@@ -152,7 +152,7 @@ def _missing_key_error_message(key: str) -> str:
 
 
 @dataclass
-class QueryParams(MutableMapping[Key, Any]):
+class QueryParams(MutableMapping[str, Any]):
     """A dict-like representation of query params.
     The main difference is that it only stores and returns str and List[str].
 
@@ -173,11 +173,6 @@ class QueryParams(MutableMapping[Key, Any]):
         return self._getitem(key)
 
     def _getitem(self, key: str) -> str:
-        # Avoid circular imports
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return ""
         try:
             value = self._query_params[key]
             if isinstance(value, list):
@@ -190,14 +185,9 @@ class QueryParams(MutableMapping[Key, Any]):
         except:
             raise KeyError(_missing_key_error_message(key))
 
-    def _setitem(self, key: str, value: str) -> None:
-        # Avoid circular imports
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return  # type: ignore
+    def _setitem(self, key: str, value: Union[str, List]) -> None:
         if isinstance(value, list):
-            self._query_params[key] = util.convert_to_strings_in_list(value)
+            self._query_params[key] = [str(item) for item in self._query_params]
         else:
             self._query_params[key] = str(value)
         self._send_query_param_msg()

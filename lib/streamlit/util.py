@@ -189,7 +189,7 @@ def calc_md5(s: Union[bytes, str]) -> str:
 def exclude_key_query_params(
     query_params: Dict[str, Any], keys_to_exclude: List[str]
 ) -> Dict[str, Any]:
-    """Returns new object query_params : Dict[str, Any], but without keys defined with keys_to_drop : Any."""
+    """Returns new object query_params, but without keys defined with keys_to_drop."""
     return {
         key: value
         for key, value in query_params.items()
@@ -210,7 +210,3 @@ def extract_key_query_params(query_params: Dict[str, Any], param_key: str) -> Se
             for item in sublist
         ]
     )
-
-
-def convert_to_strings_in_list(items: List[Any]) -> List[str]:
-    return [str(item) for item in items]
