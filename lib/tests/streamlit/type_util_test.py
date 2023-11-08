@@ -281,8 +281,8 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
-            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
-            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), False),
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), False),
         ]
     )
     def test_is_colum_type_arrow_incompatible(
@@ -317,8 +317,8 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
-            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
-            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), False),
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), False),
         ]
     )
     def test_fix_arrow_incompatible_column_types(
