@@ -3039,19 +3039,6 @@ for PyArrow. Ibis is released under the Apache License, Version 2.0.
 
 --------------------------------------------------------------------------------
 
-This project includes code from the autobrew project.
-
-The following files are based on code from the autobrew project:
-* r/tools/autobrew
-* dev/tasks/homebrew-formulae/autobrew/apache-arrow.rb
-* dev/tasks/homebrew-formulae/autobrew/apache-arrow-static.rb 
-
-Copyright (c) 2019, Jeroen Ooms
-License: MIT
-Homepage: https://github.com/autobrew/
-
---------------------------------------------------------------------------------
-
 dev/tasks/homebrew-formulae/apache-arrow.rb has the following license:
 
 BSD 2-Clause License
