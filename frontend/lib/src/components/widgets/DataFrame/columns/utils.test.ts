@@ -279,6 +279,8 @@ describe("formatNumber", () => {
     [123456789, "scientific", "1.235E8"],
     [1000, "engineering", "1E3"],
     [123456789, "engineering", "123.457E6"],
+    [10, "duration[ns]", "a few seconds"],
+    [1234567891234, "duration[ns]", "21 minutes"],
     // sprintf format
     [10.123, "%d", "10"],
     [10.123, "%i", "10"],
