@@ -838,42 +838,43 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   /**
-   * Adjusts a timestamp to second based on the unit information in the field.
+   * Adjusts a time value to seconds based on the unit information in the field.
    */
-  public static adjustTimestamp(data: number | bigint, field?: Field): number {
-    let timeInSeconds
-
-    if (typeof data === "bigint") {
-      // TODO(lukasmasuch): We might need some special handling of nanoseconds since
-      // JavaScript's `Number` type can not represent those numbers accurately.
-      data = Number(data)
-    }
+  public static adjustTimeUnit(value: number | bigint, field?: Field): number {
+    let unitAdjustment = 1 // Interpret it as seconds as a fallback
 
     // Unit information:
     // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
     if (field?.type?.unit === 1) {
       // Milliseconds
-      timeInSeconds = data / 1000
+      unitAdjustment = 1000
     } else if (field?.type?.unit === 2) {
       // Microseconds
-      timeInSeconds = data / (1000 * 1000)
+      unitAdjustment = 1000 * 1000
     } else if (field?.type?.unit === 3) {
       // Nanoseconds
-      timeInSeconds = data / (1000 * 1000 * 1000)
-    } else {
-      // Interpret this as seconds as a fallback
-      timeInSeconds = data
+      unitAdjustment = 1000 * 1000 * 1000
     }
 
-    return timeInSeconds
+    if (typeof value === "bigint") {
+      return Number(value / BigInt(unitAdjustment))
+    }
+
+    return value / unitAdjustment
   }
 
   private static formatTime(data: number, field?: Field): string {
-    const timeInSeconds = Quiver.adjustTimestamp(data, field)
+    const timeInSeconds = Quiver.adjustTimeUnit(data, field)
     return moment
-      .unix(Quiver.adjustTimestamp(data))
+      .unix(timeInSeconds)
       .utc()
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
+  }
+
+  private static formatDuration(data: number | bigint, field?: Field): string {
+    return moment
+      .duration(Quiver.adjustTimeUnit(data, field), "seconds")
+      .humanize()
   }
 
   /**
@@ -1042,6 +1043,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         x as number | bigint | StructRow,
         field as Field
       )
+    }
+
+    if (typeName?.startsWith("timedelta")) {
+      return this.formatDuration(x as number | bigint, field)
     }
 
     if (typeName === "decimal") {
