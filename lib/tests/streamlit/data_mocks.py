@@ -405,7 +405,7 @@ SPECIAL_TYPES_DF = pd.DataFrame(
         "timedelta": pd.Series(
             [
                 pd.Timedelta("1 days"),
-                np.timedelta64(366, "D"),
+                np.timedelta64(100, "D"),
                 pd.Timedelta("2 hours"),
                 timedelta(seconds=5),
                 None,
