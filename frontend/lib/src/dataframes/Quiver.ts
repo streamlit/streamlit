@@ -845,7 +845,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
    * https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
    */
   public static adjustTimeUnit(value: number | bigint, unit: number): number {
-    let unitAdjustment = 1 // Interpret it as seconds as a fallback
+    let unitAdjustment
 
     if (unit === 1) {
       // Milliseconds
@@ -856,13 +856,20 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     } else if (unit === 3) {
       // Nanoseconds
       unitAdjustment = 1000 * 1000 * 1000
+    } else {
+      // Interpret it as seconds as a fallback
+      return Number(value)
     }
 
-    if (typeof value === "bigint") {
+    // Do the calculation based on bigints, if the value
+    // is a bigint and not safe for usage as number.
+    // This might lose some precision since it doesn't keep
+    // fractional parts.
+    if (typeof value === "bigint" && !Number.isSafeInteger(Number(value))) {
       return Number(value / BigInt(unitAdjustment))
     }
 
-    return value / unitAdjustment
+    return Number(value) / unitAdjustment
   }
 
   private static formatTime(data: number, field?: Field): string {
