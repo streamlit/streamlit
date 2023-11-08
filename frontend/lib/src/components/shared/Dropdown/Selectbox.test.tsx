@@ -127,7 +127,6 @@ describe("Selectbox widget", () => {
     // Open the dropdown
     fireEvent.click(selectbox)
     const options = screen.getAllByRole("option")
-    // Select the second option
     fireEvent.click(options[1])
 
     expect(props.onChange).toHaveBeenCalledWith(1)
@@ -195,7 +194,6 @@ describe("Selectbox widget", () => {
     // Original value passed is 0
     expect(screen.getByText(props.options[0])).toBeInTheDocument()
 
-    // Update prop value to 1
     props = getProps({ value: 1 })
     rerender(<Selectbox {...props} />)
     expect(screen.getByText(props.options[1])).toBeInTheDocument()
