@@ -80,7 +80,6 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    // Focus the number input
     fireEvent.focus(screen.getByTestId("stNumberInput-Input"))
     expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
   })
@@ -89,11 +88,9 @@ describe("NumberInput widget", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    // Focus the number input
     fireEvent.focus(screen.getByTestId("stNumberInput-Input"))
     expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
 
-    // Blur the number input
     fireEvent.blur(screen.getByTestId("stNumberInput-Input"))
     expect(screen.getByTestId("stNumberInputContainer")).not.toHaveClass(
       "focused"
@@ -275,7 +272,7 @@ describe("NumberInput widget", () => {
       )
     })
 
-    it("calls onChange", async () => {
+    it("handles changes properly", async () => {
       const user = userEvent.setup()
       const props = getIntProps({ default: 10, max: 20 })
       render(<NumberInput {...props} />)
@@ -365,7 +362,7 @@ describe("NumberInput widget", () => {
       })
       render(<NumberInput {...props} />)
 
-      // Increment
+      // Decrement
       fireEvent.click(screen.getByTestId("stNumberInput-StepDown"))
       expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(9)
     })
