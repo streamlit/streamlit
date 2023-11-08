@@ -844,7 +844,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
    * The unit numbers are specified here:
    * https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
    */
-  public static adjustTimeUnit(value: number | bigint, unit: number): number {
+  public static convertToSeconds(
+    value: number | bigint,
+    unit: number
+  ): number {
     let unitAdjustment
 
     if (unit === 1) {
@@ -873,7 +876,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   private static formatTime(data: number, field?: Field): string {
-    const timeInSeconds = Quiver.adjustTimeUnit(data, field?.type?.unit ?? 0)
+    const timeInSeconds = Quiver.convertToSeconds(data, field?.type?.unit ?? 0)
     return moment
       .unix(timeInSeconds)
       .utc()
@@ -882,7 +885,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   private static formatDuration(data: number | bigint, field?: Field): string {
     return moment
-      .duration(Quiver.adjustTimeUnit(data, field?.type?.unit ?? 3), "seconds")
+      .duration(
+        Quiver.convertToSeconds(data, field?.type?.unit ?? 3),
+        "seconds"
+      )
       .humanize()
   }
 

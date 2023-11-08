@@ -382,7 +382,7 @@ export function getCellFromArrow(
       // Time values needs to be adjusted to seconds based on the unit
       parsedDate = moment
         .unix(
-          Quiver.adjustTimeUnit(
+          Quiver.convertToSeconds(
             arrowCell.content,
             arrowCell.field?.type?.unit ?? 0
           )
