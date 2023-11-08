@@ -147,7 +147,7 @@ def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> Non
 
     t0 = time.time()
     while time.time() - t0 < timeout:
-        time.sleep(0.1)
+        time.sleep(0.001)
         if runner.script_stopped():
             return
 
