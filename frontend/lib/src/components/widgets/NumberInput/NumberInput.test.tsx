@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 import React from "react"
-import { ShallowWrapper } from "enzyme"
+import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   NumberInput as NumberInputProto,
 } from "@streamlit/lib/src/proto"
 
-import { mount, shallow } from "@streamlit/lib/src/test_util"
-import {
-  StyledInputControls,
-  StyledInstructionsContainer,
-} from "@streamlit/lib/src/components/widgets/NumberInput/styled-components"
-import { Input as UIInput } from "baseui/input"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import { NumberInput, Props, State } from "./NumberInput"
+import { NumberInput, Props } from "./NumberInput"
 
 const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
   element: NumberInputProto.create({
@@ -73,38 +71,29 @@ const getFloatProps = (
 describe("NumberInput widget", () => {
   it("renders without crashing", () => {
     const props = getIntProps()
-    const wrapper = shallow(<NumberInput {...props} />)
+    render(<NumberInput {...props} />)
 
-    expect(wrapper).toBeDefined()
+    expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
   })
 
   it("adds a focused class when running onFocus", () => {
     const props = getIntProps()
-    const wrapper = shallow(<NumberInput {...props} />)
-    const input = wrapper.find(UIInput)
+    render(<NumberInput {...props} />)
 
-    expect(wrapper).toBeDefined()
-
-    // @ts-expect-error
-    input.props().onFocus()
-
-    expect(wrapper.state("isFocused")).toBe(true)
-    expect(wrapper.find("StyledInputContainer").hasClass("focused")).toBe(true)
+    fireEvent.focus(screen.getByTestId("stNumberInput-Input"))
+    expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
   })
 
   it("removes the focused class when running onBlur", () => {
     const props = getIntProps()
-    const wrapper = shallow(<NumberInput {...props} />)
-    const input = wrapper.find(UIInput)
+    render(<NumberInput {...props} />)
 
-    expect(wrapper).toBeDefined()
+    fireEvent.focus(screen.getByTestId("stNumberInput-Input"))
+    expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
 
-    // @ts-expect-error
-    input.props().onBlur()
-
-    expect(wrapper.state("isFocused")).toBe(false)
-    expect(wrapper.find("StyledInputContainer").hasClass("focused")).toBe(
-      false
+    fireEvent.blur(screen.getByTestId("stNumberInput-Input"))
+    expect(screen.getByTestId("stNumberInputContainer")).not.toHaveClass(
+      "focused"
     )
   })
 
@@ -114,17 +103,19 @@ describe("NumberInput widget", () => {
       default: 5.0,
       format: "%0.2",
     })
-    const wrapper = shallow(<NumberInput {...props} />)
+    render(<NumberInput {...props} />)
 
-    expect(wrapper).toBeDefined()
-    expect(wrapper.state("value")).toBe(5.0)
+    expect(screen.getByTestId("stNumberInput")).toBeInTheDocument()
+    expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(5.0)
   })
 
   it("shows a label", () => {
     const props = getIntProps()
-    const wrapper = mount(<NumberInput {...props} />)
+    render(<NumberInput {...props} />)
 
-    expect(wrapper.find("StyledWidgetLabel").text()).toBe(props.element.label)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveTextContent(
+      props.element.label
+    )
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -133,9 +124,9 @@ describe("NumberInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<NumberInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    render(<NumberInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -145,20 +136,19 @@ describe("NumberInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<NumberInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
+    render(<NumberInput {...props} />)
+
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
   it("sets min/max defaults", () => {
     const props = getIntProps()
-    const wrapper = shallow(<NumberInput {...props} />)
+    render(<NumberInput {...props} />)
 
-    // @ts-expect-error
-    expect(wrapper.instance().getMin()).toBe(-Infinity)
-    // @ts-expect-error
-    expect(wrapper.instance().getMax()).toBe(+Infinity)
+    const numberInput = screen.getByTestId("stNumberInput-Input")
+
+    expect(numberInput).toHaveAttribute("min", "-Infinity")
+    expect(numberInput).toHaveAttribute("max", "Infinity")
   })
 
   it("sets min/max values", () => {
@@ -169,12 +159,11 @@ describe("NumberInput widget", () => {
       min: 0,
       max: 10,
     })
-    const wrapper = shallow(<NumberInput {...props} />)
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInput-Input")
 
-    // @ts-expect-error
-    expect(wrapper.instance().getMin()).toBe(0)
-    // @ts-expect-error
-    expect(wrapper.instance().getMax()).toBe(10)
+    expect(numberInput).toHaveAttribute("min", "0")
+    expect(numberInput).toHaveAttribute("max", "10")
   })
 
   it("resets its value when form is cleared", () => {
@@ -183,18 +172,19 @@ describe("NumberInput widget", () => {
     props.widgetMgr.setFormClearOnSubmit("form", true)
 
     jest.spyOn(props.widgetMgr, "setIntValue")
+    render(<NumberInput {...props} />)
 
-    const wrapper = shallow(<NumberInput {...props} />)
-
+    const numberInput = screen.getByTestId("stNumberInput-Input")
     // Change the widget value
-    wrapper.setState({ dirty: true, value: 15 })
+    fireEvent.change(numberInput, {
+      target: { value: 15 },
+    })
 
     // "Submit" the form
     props.widgetMgr.submitForm("form")
-    wrapper.update()
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(wrapper.state("value")).toBe(props.element.default)
+    expect(numberInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.default,
@@ -211,27 +201,22 @@ describe("NumberInput widget", () => {
         default: 11.0,
         step: 0.1,
       })
-      const wrapper = shallow(<NumberInput {...props} />)
-      const InputWrapper = wrapper.find(UIInput)
 
-      const preventDefault = jest.fn()
+      render(<NumberInput {...props} />)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
 
-      // @ts-expect-error
-      InputWrapper.props().onKeyDown({
+      fireEvent.keyDown(numberInput, {
         key: "ArrowDown",
-        preventDefault,
       })
 
-      expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(10.9)
-      expect(wrapper.state("dirty")).toBe(false)
+      expect(numberInput).toHaveValue(10.9)
     })
 
     it("sets widget value on mount", () => {
       const props = getFloatProps()
       jest.spyOn(props.widgetMgr, "setDoubleValue")
 
-      shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalledWith(
         props.element,
@@ -246,45 +231,37 @@ describe("NumberInput widget", () => {
       const props = getFloatProps({ default: 10 })
       jest.spyOn(props.widgetMgr, "setDoubleValue")
 
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      wrapper.setState({ dirty: true })
-
-      const InputWrapper = wrapper.find(UIInput)
-
-      // @ts-expect-error
-      InputWrapper.props().onKeyPress({
+      fireEvent.keyPress(screen.getByTestId("stNumberInput-Input"), {
         key: "Enter",
       })
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalled()
-      expect(wrapper.state("dirty")).toBe(false)
     })
 
     it("sets initialValue from widgetMgr", () => {
       const props = getFloatProps({ default: 10.0 })
       props.widgetMgr.getDoubleValue = jest.fn(() => 15.0)
+      render(<NumberInput {...props} />)
 
-      const wrapper = shallow<NumberInput, Props, State>(
-        <NumberInput {...props} />
-      )
-      expect(wrapper.state().value).toBe(15.0)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15.0)
     })
   })
 
   describe("IntData", () => {
     it("passes a default value", () => {
       const props = getIntProps({ default: 10 })
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      expect(wrapper.find(UIInput).props().value).toBe("10")
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(10)
     })
 
     it("sets widget value on mount", () => {
       const props = getIntProps()
       jest.spyOn(props.widgetMgr, "setIntValue")
 
-      shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
         props.element,
@@ -295,73 +272,56 @@ describe("NumberInput widget", () => {
       )
     })
 
-    it("calls onChange", () => {
-      const props = getIntProps({ default: 10 })
-      const wrapper = shallow(<NumberInput {...props} />)
+    it("handles changes properly", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 10, max: 20 })
+      render(<NumberInput {...props} />)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
 
-      const InputWrapper = wrapper.find(UIInput)
+      // userEvent necessary to trigger dirty state
+      await user.click(numberInput)
+      await user.keyboard("{backspace}{backspace}15")
 
-      // @ts-expect-error
-      InputWrapper.props().onChange({
-        target: {
-          // @ts-expect-error
-          value: 1,
-        },
-      })
-
-      expect(wrapper.state("value")).toBe(1)
-      expect(wrapper.state("dirty")).toBe(true)
+      // Check that the value is updated & state dirty
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15)
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
     })
 
     it("sets value on Enter", () => {
       const props = getIntProps({ default: 10 })
       jest.spyOn(props.widgetMgr, "setIntValue")
 
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      wrapper.setState({ dirty: true })
-
-      const InputWrapper = wrapper.find(UIInput)
-
-      // @ts-expect-error
-      InputWrapper.props().onKeyPress({
+      fireEvent.keyPress(screen.getByTestId("stNumberInput-Input"), {
         key: "Enter",
       })
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalled()
-      expect(wrapper.state("dirty")).toBe(false)
     })
 
     it("sets initialValue from widgetMgr", () => {
       const props = getIntProps({ default: 10 })
       props.widgetMgr.getIntValue = jest.fn(() => 15)
 
-      const wrapper = shallow<NumberInput, Props, State>(
-        <NumberInput {...props} />
-      )
-      expect(wrapper.state().value).toBe(15)
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15)
     })
   })
 
   describe("Step", () => {
-    function stepUpButton(
-      wrapper: ShallowWrapper<NumberInput>
-    ): ShallowWrapper<any, any> {
-      return wrapper.find("StyledInputControl").at(1)
-    }
-
-    function stepDownButton(
-      wrapper: ShallowWrapper<NumberInput>
-    ): ShallowWrapper<any, any> {
-      return wrapper.find("StyledInputControl").at(0)
-    }
-
     it("passes the step prop", () => {
       const props = getIntProps({ default: 10, step: 1 })
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      // @ts-expect-error
-      expect(wrapper.find(UIInput).props().overrides.Input.props.step).toBe(1)
+      // Increment
+      fireEvent.click(screen.getByTestId("stNumberInput-StepUp"))
+
+      // Check step properly enforced
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(11)
     })
 
     it("changes state on ArrowUp", () => {
@@ -370,20 +330,13 @@ describe("NumberInput widget", () => {
         default: 10,
         step: 1,
       })
-      const wrapper = shallow(<NumberInput {...props} />)
-      const InputWrapper = wrapper.find(UIInput)
+      render(<NumberInput {...props} />)
 
-      const preventDefault = jest.fn()
-
-      // @ts-expect-error
-      InputWrapper.props().onKeyDown({
+      const numberInput = screen.getByTestId("stNumberInput-Input")
+      fireEvent.keyDown(numberInput, {
         key: "ArrowUp",
-        preventDefault,
       })
-
-      expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(11)
-      expect(wrapper.state("dirty")).toBe(false)
+      expect(numberInput).toHaveValue(11)
     })
 
     it("changes state on ArrowDown", () => {
@@ -392,20 +345,13 @@ describe("NumberInput widget", () => {
         default: 10,
         step: 1,
       })
-      const wrapper = shallow(<NumberInput {...props} />)
-      const InputWrapper = wrapper.find(UIInput)
+      render(<NumberInput {...props} />)
 
-      const preventDefault = jest.fn()
-
-      // @ts-expect-error
-      InputWrapper.props().onKeyDown({
+      const numberInput = screen.getByTestId("stNumberInput-Input")
+      fireEvent.keyDown(numberInput, {
         key: "ArrowDown",
-        preventDefault,
       })
-
-      expect(preventDefault).toHaveBeenCalled()
-      expect(wrapper.state("value")).toBe(9)
-      expect(wrapper.state("dirty")).toBe(false)
+      expect(numberInput).toHaveValue(9)
     })
 
     it("handles stepDown button clicks", () => {
@@ -414,12 +360,11 @@ describe("NumberInput widget", () => {
         default: 10,
         step: 1,
       })
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      stepDownButton(wrapper).simulate("click")
-
-      expect(wrapper.state("dirty")).toBe(false)
-      expect(wrapper.state("value")).toBe(9)
+      // Decrement
+      fireEvent.click(screen.getByTestId("stNumberInput-StepDown"))
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(9)
     })
 
     it("handles stepUp button clicks", () => {
@@ -428,68 +373,85 @@ describe("NumberInput widget", () => {
         default: 10,
         step: 1,
       })
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      stepUpButton(wrapper).simulate("click")
-
-      expect(wrapper.state("dirty")).toBe(false)
-      expect(wrapper.state("value")).toBe(11)
+      // Increment
+      fireEvent.click(screen.getByTestId("stNumberInput-StepUp"))
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(11)
     })
 
     it("disables stepDown button when at min", () => {
       const props = getIntProps({ default: 1, step: 1, min: 0, hasMin: true })
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      expect(stepDownButton(wrapper).prop("disabled")).toBe(false)
+      const stepDownButton = screen.getByTestId("stNumberInput-StepDown")
+      expect(stepDownButton).not.toBeDisabled()
 
-      stepDownButton(wrapper).simulate("click")
+      fireEvent.click(stepDownButton)
 
-      expect(wrapper.state("value")).toBe(0)
-      expect(stepDownButton(wrapper).prop("disabled")).toBe(true)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(0)
+      expect(stepDownButton).toBeDisabled()
     })
 
     it("disables stepUp button when at max", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      const wrapper = shallow(<NumberInput {...props} />)
+      render(<NumberInput {...props} />)
 
-      expect(stepUpButton(wrapper).prop("disabled")).toBe(false)
+      const stepUpButton = screen.getByTestId("stNumberInput-StepUp")
+      expect(stepUpButton).not.toBeDisabled()
 
-      stepUpButton(wrapper).simulate("click")
+      fireEvent.click(stepUpButton)
 
-      expect(wrapper.state("value")).toBe(2)
-      expect(stepUpButton(wrapper).prop("disabled")).toBe(true)
+      expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(2)
+      expect(stepUpButton).toBeDisabled()
     })
 
     it("hides stepUp and stepDown buttons when width is smaller than 120px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      const wrapper = shallow(<NumberInput {...props} width={100} />)
+      render(<NumberInput {...props} width={100} />)
 
-      expect(wrapper.find(StyledInputControls).exists()).toBe(false)
+      expect(
+        screen.queryByTestId("stNumberInput-StepUp")
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stNumberInput-StepDown")
+      ).not.toBeInTheDocument()
     })
 
     it("shows stepUp and stepDown buttons when width is bigger than 120px", () => {
       const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      const wrapper = shallow(<NumberInput {...props} width={185} />)
+      render(<NumberInput {...props} width={185} />)
 
-      expect(wrapper.find(StyledInputControls).exists()).toBe(true)
+      expect(screen.getByTestId("stNumberInput-StepUp")).toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInput-StepDown")).toBeInTheDocument()
     })
 
-    it("hides Please enter to apply text when width is smaller than 120px", () => {
-      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      const wrapper = shallow(<NumberInput {...props} width={100} />)
+    it("hides Please enter to apply text when width is smaller than 120px", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 1, step: 1, max: 20, hasMax: true })
+      render(<NumberInput {...props} width={100} />)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
 
-      wrapper.setState({ dirty: true })
+      // userEvent necessary to trigger dirty state
+      await user.click(numberInput)
+      await user.keyboard("20")
 
-      expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(false)
+      expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
     })
 
-    it("shows Please enter to apply text when width is bigger than 120px", () => {
-      const props = getIntProps({ default: 1, step: 1, max: 2, hasMax: true })
-      const wrapper = shallow(<NumberInput {...props} width={185} />)
+    it("shows Please enter to apply text when width is bigger than 120px", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 1, step: 1, max: 20, hasMax: true })
+      render(<NumberInput {...props} width={185} />)
+      const numberInput = screen.getByTestId("stNumberInput-Input")
 
-      wrapper.setState({ dirty: true })
+      // userEvent necessary to trigger dirty state
+      await user.click(numberInput)
+      await user.keyboard("20")
 
-      expect(wrapper.find(StyledInstructionsContainer).exists()).toBe(true)
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
     })
   })
 })
