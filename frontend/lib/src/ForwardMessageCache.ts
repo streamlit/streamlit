@@ -18,6 +18,7 @@ import { ForwardMsg } from "./proto"
 import { logMessage } from "./util/log"
 import { ensureError } from "./util/ErrorHandling"
 import { StreamlitEndpoints } from "./StreamlitEndpoints"
+import CRC32 from "crc-32"
 
 class CacheEntry {
   public readonly encodedMsg: Uint8Array
@@ -109,7 +110,12 @@ export class ForwardMsgCache {
         msg.forwardMsgRef?.refUrl as string
       )
       try {
+        this.verifyChecksum(
+          encodedNewMsg,
+          msg.forwardMsgRef?.checksumCrc32 as number
+        )
         newMsg = ForwardMsg.decode(encodedNewMsg)
+        this.verifyHash(newMsg, msg.forwardMsgRef?.refHash as string)
       } catch (e) {
         throw new Error(
           `Failed to decode ForwardMsg (hash=${msg.forwardMsgRef?.refHash}): ${
@@ -159,6 +165,25 @@ export class ForwardMsgCache {
       msg.hash,
       new CacheEntry(encodedMsg, this.scriptRunCount)
     )
+  }
+
+  private verifyChecksum(buffer: Uint8Array, checksum: number): void {
+    console.log("VERYFI CHECKSUM")
+    console.log(CRC32.buf(buffer) >>> 0)
+    console.log(checksum)
+    if (CRC32.buf(buffer) >>> 0 !== checksum) {
+      console.log(CRC32.buf(buffer) >>> 0)
+      console.log(checksum)
+      throw new Error("Checksum mismatch")
+    }
+  }
+
+  private verifyHash(msg: ForwardMsg, refHash: string): void {
+    if (msg.hash !== refHash) {
+      console.log(msg.hash)
+      console.log(refHash)
+      throw new Error("Hash mismatch")
+    }
   }
 
   /**

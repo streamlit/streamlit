@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from binascii import crc32
 from typing import TYPE_CHECKING, Dict, List, MutableMapping, Optional
 from weakref import WeakKeyDictionary
 
@@ -253,6 +254,7 @@ class MemoryForwardMsgCache(ForwardMsgCacheProtocol):
         ref_msg = ForwardMsg()
         ref_msg.forward_msg_ref.ref_url = f"{self.base_url}?hash={msg.hash}"
         ref_msg.forward_msg_ref.ref_hash = msg.hash
+        ref_msg.forward_msg_ref.checksum_crc32 = crc32(msg.SerializeToString())
         ref_msg.metadata.CopyFrom(msg.metadata)
         return ref_msg
 

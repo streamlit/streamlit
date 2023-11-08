@@ -71,6 +71,7 @@ message FileURLsResponse {
 message ForwardMsgRef {
   string ref_url = 1;
   string ref_hash = 2;
+  uint32 checksum_crc32 = 3;
 }
 
 // Information on a file uploaded via the file_uploader widget.
