@@ -28,3 +28,9 @@ if st.button("Step 2: Press me"):
 c = st.container()
 if c.checkbox("Step 1: Check me"):
     c.title("Checked!")
+
+with st.container(border=True):
+    st.markdown(
+        "This is inside a container with a border. And it doesn't overflow the borders if the text requires multiple lines."
+    )
+    st.button("Stretch full width", use_container_width=True)

@@ -146,6 +146,21 @@ class ExpanderTest(DeltaGeneratorTestCase):
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
 
 
+class ContainerTest(DeltaGeneratorTestCase):
+    def test_border_parameter(self):
+        """Test that it can be called with border parameter"""
+        st.container(border=True)
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.border, True)
+
+    def test_without_parameters(self):
+        """Test that it can be called without any parameters."""
+        st.container()
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.border, False)
+        self.assertEqual(container_block.add_block.allow_empty, False)
+
+
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""

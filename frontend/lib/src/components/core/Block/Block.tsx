@@ -38,6 +38,7 @@ import {
   StyledHorizontalBlock,
   StyledVerticalBlock,
   StyledVerticalBlockWrapper,
+  StyledVerticalBlockBorderWrapper,
 } from "./styled-components"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
@@ -81,7 +82,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.type === "form") {
-    const { formId, clearOnSubmit } = node.deltaBlock.form as BlockProto.Form
+    const { formId, clearOnSubmit, border } = node.deltaBlock
+      .form as BlockProto.Form
     const submitButtons = props.formsData.submitButtons.get(formId)
     const hasSubmitButton =
       submitButtons !== undefined && submitButtons.length > 0
@@ -93,6 +95,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
         hasSubmitButton={hasSubmitButton}
         scriptRunState={props.scriptRunState}
         widgetMgr={props.widgetMgr}
+        border={border}
       >
         {child}
       </Form>
@@ -198,16 +201,25 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     }
   }, [wrapperElement, observer])
 
+  const border = props.node.deltaBlock.vertical?.border ?? false
   const propsWithNewWidth = { ...props, ...{ width } }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
+
+  // To apply a border, we need to wrap the StyledVerticalBlockWrapper again, otherwise the width
+  // calculation would not take the padding into consideration.
   return (
-    <StyledVerticalBlockWrapper ref={wrapperElement}>
-      <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
-        <ChildRenderer {...propsWithNewWidth} />
-      </StyledVerticalBlock>
-    </StyledVerticalBlockWrapper>
+    <StyledVerticalBlockBorderWrapper
+      border={border}
+      data-testid="stVerticalBlockBorderWrapper"
+    >
+      <StyledVerticalBlockWrapper ref={wrapperElement}>
+        <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
+          <ChildRenderer {...propsWithNewWidth} />
+        </StyledVerticalBlock>
+      </StyledVerticalBlockWrapper>
+    </StyledVerticalBlockBorderWrapper>
   )
 }
 

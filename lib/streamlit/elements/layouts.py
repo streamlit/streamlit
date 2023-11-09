@@ -29,7 +29,7 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 class LayoutsMixin:
     @gather_metrics("container")
-    def container(self) -> "DeltaGenerator":
+    def container(self, *, border: bool | None = None) -> "DeltaGenerator":
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -39,6 +39,12 @@ class LayoutsMixin:
         To add elements to the returned container, you can use "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
+
+        Parameters
+        ----------
+        border : bool or None
+            Whether to show a border around the container.
+
 
         Examples
         --------
@@ -73,7 +79,10 @@ class LayoutsMixin:
             https://doc-container2.streamlit.app/
             height: 480px
         """
-        return self.dg._block()
+        block_proto = BlockProto()
+        block_proto.vertical.border = border or False
+
+        return self.dg._block(block_proto)
 
     # TODO: Enforce that columns are not nested or in Sidebar
     @gather_metrics("columns")

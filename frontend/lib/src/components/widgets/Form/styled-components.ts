@@ -20,10 +20,16 @@ export const StyledFormSubmitContent = styled.div(() => ({
   display: "flex",
 }))
 
-export const StyledForm = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.colors.fadedText10}`,
-  borderRadius: theme.radii.lg,
-  padding: "calc(1em - 1px)", // 1px to account for border.
+export interface StyledFormProps {
+  border: boolean
+}
+
+export const StyledForm = styled.div<StyledFormProps>(({ theme, border }) => ({
+  ...(border && {
+    border: `1px solid ${theme.colors.fadedText10}`,
+    borderRadius: theme.radii.lg,
+    padding: "calc(1em - 1px)", // 1px to account for border.
+  }),
 }))
 
 export const StyledErrorContainer = styled.div(({ theme }) => ({
