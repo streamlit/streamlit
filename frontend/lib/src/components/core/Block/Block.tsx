@@ -202,6 +202,8 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   }, [wrapperElement, observer])
 
   const border = props.node.deltaBlock.vertical?.border ?? false
+  const height = props.node.deltaBlock.vertical?.height || undefined
+
   const propsWithNewWidth = { ...props, ...{ width } }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
@@ -212,6 +214,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   return (
     <StyledVerticalBlockBorderWrapper
       border={border}
+      height={height}
       data-testid="stVerticalBlockBorderWrapper"
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
