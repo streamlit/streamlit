@@ -33,7 +33,7 @@ describe("embedded app with chat input", () => {
     cy.get(".main .block-container").should(
       "have.css",
       "padding-top",
-      "32px" // == 2rem
+      "33.6px" // == 2.1rem
     );
   });
 
