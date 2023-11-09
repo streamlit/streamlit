@@ -66,7 +66,10 @@ from streamlit.runtime.connection_factory import (
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
-from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
+from streamlit.runtime.state import (
+    SessionStateProxy as _SessionStateProxy,
+    QueryParamsProxy as _QueryParamsProxy,
+)
 from streamlit.user_info import UserInfoProxy as _UserInfoProxy
 from streamlit.commands.query_params import (
     get_query_params as _get_query_params,
@@ -191,6 +194,8 @@ set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
+
+query_params = _QueryParamsProxy()
 
 # Caching
 cache_data = _cache_data
