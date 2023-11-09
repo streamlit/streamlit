@@ -231,6 +231,7 @@ export function getIndexFromArrow(
  *
  * @param data - The Arrow data.
  * @param columnPosition - The numeric position of the data column.
+ *        Starts with 0 at the first non-index column.
  *
  * @return the column props for the data column.
  */
@@ -380,7 +381,12 @@ export function getCellFromArrow(
     ) {
       // Time values needs to be adjusted to seconds based on the unit
       parsedDate = moment
-        .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
+        .unix(
+          Quiver.convertToSeconds(
+            arrowCell.content,
+            arrowCell.field?.type?.unit ?? 0
+          )
+        )
         .utc()
         .toDate()
     } else {
