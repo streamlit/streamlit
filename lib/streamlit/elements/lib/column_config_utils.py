@@ -73,6 +73,7 @@ _EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = 
         ColumnDataKind.FLOAT,
         ColumnDataKind.DECIMAL,
         ColumnDataKind.STRING,
+        ColumnDataKind.TIMEDELTA,
         ColumnDataKind.EMPTY,
     ],
     "checkbox": [

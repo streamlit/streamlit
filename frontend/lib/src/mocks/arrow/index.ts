@@ -40,6 +40,7 @@ import { VEGA_LITE } from "./vegaLite"
 import { TEN_BY_TEN } from "./tenByTen"
 import { TALL, VERY_TALL } from "./tall"
 import { SMALL, WIDE } from "./wide"
+import { TIMEDELTA } from "./types/timedelta"
 
 export {
   // Types
@@ -59,6 +60,7 @@ export {
   RANGE,
   UINT64,
   UNICODE,
+  TIMEDELTA,
   // Special cases
   EMPTY,
   MULTI,

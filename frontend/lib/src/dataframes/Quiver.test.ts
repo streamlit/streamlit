@@ -35,6 +35,7 @@ import {
   RANGE,
   UINT64,
   UNICODE,
+  TIMEDELTA,
   // Special cases
   EMPTY,
   MULTI,
@@ -215,6 +216,16 @@ describe("Quiver", () => {
           const firstColumnType = q.types.data[0]
 
           expect(Quiver.getTypeName(firstColumnType)).toEqual("decimal")
+        })
+
+        test("timedelta", () => {
+          const mockElement = { data: TIMEDELTA }
+          const q = new Quiver(mockElement)
+          const firstColumnType = q.types.data[0]
+
+          expect(Quiver.getTypeName(firstColumnType)).toEqual(
+            "timedelta64[ns]"
+          )
         })
 
         test("dictionary", () => {
@@ -508,6 +519,30 @@ describe("Quiver", () => {
         expect(
           Quiver.format(cell4.content, cell4.contentType, cell4.field)
         ).toEqual("-0.1")
+      })
+
+      test("timedelta", () => {
+        const mockElement = { data: TIMEDELTA }
+        const q = new Quiver(mockElement)
+        const cell1 = q.getCell(1, 1)
+        expect(
+          Quiver.format(cell1.content, cell1.contentType, cell1.field)
+        ).toEqual("a few seconds")
+
+        const cell2 = q.getCell(2, 1)
+        expect(
+          Quiver.format(cell2.content, cell2.contentType, cell2.field)
+        ).toEqual("4 hours")
+
+        const cell3 = q.getCell(1, 2)
+        expect(
+          Quiver.format(cell3.content, cell3.contentType, cell3.field)
+        ).toEqual("20 days")
+
+        const cell4 = q.getCell(2, 2)
+        expect(
+          Quiver.format(cell4.content, cell4.contentType, cell4.field)
+        ).toEqual("2 hours")
       })
 
       test("dictionary", () => {

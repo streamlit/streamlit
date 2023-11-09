@@ -402,6 +402,15 @@ SPECIAL_TYPES_DF = pd.DataFrame(
             ]
         ),
         "emojis 🌈": pd.Series(["Black ⚫", "Red 🔴", "White ⚪", "Red 🔴", None]),
+        "timedelta": pd.Series(
+            [
+                pd.Timedelta("1 days"),
+                np.timedelta64(100, "D"),
+                pd.Timedelta("2 hours"),
+                timedelta(seconds=5),
+                None,
+            ]
+        ),
     }
 )
 
@@ -413,14 +422,6 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         ]
         + [None],
         "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j, None]),
-        "timedelta": pd.Series(
-            [
-                pd.Timedelta("1 days"),
-                np.timedelta64(366, "D"),
-                pd.Timedelta("2 hours"),
-                None,
-            ]
-        ),
         "mixed_integer": pd.Series([1, 2, "3", None]),
         "mixed_types": pd.Series([2.1, "3", True, None]),
         "frozenset": pd.Series(

@@ -261,14 +261,10 @@ class TypeUtilTest(unittest.TestCase):
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex64), True),
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex128), True),
-            # Timedelta:
-            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
             (pd.Series([1, 2.1, "3", True]), True),
-            # timedelta64
-            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
             # Frozenset:
             (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
             # Dicts:
@@ -285,6 +281,8 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), False),
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), False),
         ]
     )
     def test_is_colum_type_arrow_incompatible(
@@ -300,15 +298,10 @@ class TypeUtilTest(unittest.TestCase):
         [
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
-            # Timedelta:
-            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
-            (pd.Series([1, 2.1, "3", True]), True),
-            # timedelta64
-            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
-            # Frozenset:
+            (pd.Series([1, 2.1, "3", True]), True),  # Frozenset:
             (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
             # Dicts:
             (pd.Series([{"a": 1}, {"b": 2}]), True),
@@ -324,6 +317,8 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), False),
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), False),
         ]
     )
     def test_fix_arrow_incompatible_column_types(

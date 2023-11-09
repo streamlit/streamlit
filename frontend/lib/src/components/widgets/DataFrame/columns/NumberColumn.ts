@@ -65,6 +65,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       step: isIntegerType(arrowTypeName) ? 1 : undefined,
       // if uint (unsigned int), only positive numbers are allowed
       min_value: arrowTypeName.startsWith("uint") ? 0 : undefined,
+      // Use duration formatting for timedelta64[ns] type:
+      format: arrowTypeName === "timedelta64[ns]" ? "duration[ns]" : undefined,
     } as NumberColumnParams,
     // User parameters:
     props.columnTypeOptions

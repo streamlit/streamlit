@@ -210,6 +210,9 @@ def _parse_value(
             # serialization, once you try to render the returned dataframe.
             return Decimal(str(value))
 
+        if column_data_kind == ColumnDataKind.TIMEDELTA:
+            return pd.Timedelta(value)
+
         if column_data_kind in [
             ColumnDataKind.DATETIME,
             ColumnDataKind.DATE,

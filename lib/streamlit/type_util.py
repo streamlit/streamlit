@@ -692,9 +692,6 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     if column.dtype.kind in [
-        # timedelta is supported by pyarrow but not in the Arrow JS:
-        # https://github.com/streamlit/streamlit/issues/4489
-        "m",  # timedelta64[ns]
         "c",  # complex64, complex128, complex256
     ]:
         return True
@@ -708,8 +705,6 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
         if inferred_type in [
             "mixed-integer",
             "complex",
-            "timedelta",
-            "timedelta64",
         ]:
             return True
         elif inferred_type == "mixed":

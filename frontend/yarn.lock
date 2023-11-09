@@ -4486,10 +4486,10 @@ anymatch@^3.0.3, anymatch@~3.1.2:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-apache-arrow@^13.0.0:
-  version "13.0.0"
-  resolved "https://registry.yarnpkg.com/apache-arrow/-/apache-arrow-13.0.0.tgz#8c8c69ca8ec53b804b4e10fe6b57483bda46dfbd"
-  integrity sha512-3gvCX0GDawWz6KFNC28p65U+zGh/LZ6ZNKWNu74N6CQlKzxeoWHpi4CgEQsgRSEMuyrIIXi1Ea2syja7dwcHvw==
+apache-arrow@^14.0.0:
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/apache-arrow/-/apache-arrow-14.0.0.tgz#da3f31ab74aba0d4447a2206504cf63f14adc9cc"
+  integrity sha512-9cKE24YxkaqAZWJddrVnjUJMLwq6CokOjK+AHpm145rMJNsBZXQkzqouemQyEX0+/iHYRnGym6X6ZgNcHHrcWA==
   dependencies:
     "@types/command-line-args" "5.2.0"
     "@types/command-line-usage" "5.0.2"
