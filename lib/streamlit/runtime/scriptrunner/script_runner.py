@@ -293,6 +293,7 @@ class ScriptRunner:
         client_state = ClientState()
         client_state.query_string = ctx.query_string
         client_state.page_script_hash = ctx.page_script_hash
+        print("sending shutdown event")
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
         )
@@ -318,6 +319,7 @@ class ScriptRunner:
             self._maybe_handle_execution_control_request()
 
         # Pass the message to our associated AppSession.
+        print("sending forward msg event")
         self.on_event.send(
             self, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
         )
@@ -443,6 +445,7 @@ class ScriptRunner:
             page_script_hash=page_script_hash,
         )
 
+        print("sending script started event")
         self.on_event.send(
             self,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
@@ -475,6 +478,7 @@ class ScriptRunner:
             # We got a compile error. Send an error event and bail immediately.
             _LOGGER.debug("Fatal script error: %s", ex)
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
+            print("sending script stoped with compile error event")
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
@@ -603,6 +607,7 @@ class ScriptRunner:
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
+        print(f"sending event when script finished, {event=}")
         self.on_event.send(self, event=event)
 
         # Remove orphaned files now that the script has run and files in use
