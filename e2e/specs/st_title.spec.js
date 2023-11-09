@@ -19,14 +19,17 @@ describe("st.title", () => {
     cy.loadApp("http://localhost:3000/");
   });
 
-  it("displays correct number of elements", () => {
-    cy.get(".element-container .stMarkdown h1").should("have.length", 2);
+  it("displays correct number of elements & anchor links", () => {
+    cy.get(".element-container .stMarkdown h1").should("have.length", 4);
+    cy.get(".element-container .stMarkdown h1 a").should("have.length", 4);
   });
 
   it("displays a title", () => {
     cy.get(".element-container .stMarkdown h1").then(els => {
       expect(els[0].textContent).to.eq("This title is awesome!");
       expect(els[1].textContent).to.eq("This title is awesome too!");
+      expect(els[2].textContent).to.eq("日本語タイトル");
+      expect(els[3].textContent).to.eq("その他の邦題");
     });
   });
 
@@ -34,6 +37,8 @@ describe("st.title", () => {
     cy.get(".element-container .stMarkdown h1").then(els => {
       cy.wrap(els[0]).should("have.attr", "id", "this-title-is-awesome");
       cy.wrap(els[1]).should("have.attr", "id", "awesome-title");
+      cy.wrap(els[2]).should("have.attr", "id", "d3b04b7a");
+      cy.wrap(els[3]).should("have.attr", "id", "アンカー");
     });
   });
 });

@@ -43,12 +43,16 @@ describe("st.camera_input", () => {
     cy.get("[data-testid='stCameraInputButton']")
       .should("have.length.at.least", 2)
       .first()
-      .wait(1000)
+      .should("not.be.disabled")
+
+    // Wait until the camera is ready, there some delay even between
+    // `onUserMedia` event and camera is ready.
+    cy.wait(2000)
+
+    cy.getIndexed("[data-testid='stCameraInputButton']", 0)
       .should("not.be.disabled")
       .contains("Take Photo")
       .click({force: true});
-
-    cy.get("img", {timeout}).should("have.length.at.least", 2);
 
     cy.get("[data-testid='stImage']", {timeout}).should("have.length.at.least", 1);
   });

@@ -25,7 +25,7 @@ import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.js_number import JSNumber
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -303,18 +303,15 @@ class SliderTest(DeltaGeneratorTestCase):
         )
 
 
-class SliderInteractiveTest(InteractiveScriptTests):
-    def test_id_stability(self):
-        script = self.script_from_string(
-            """
+def test_id_stability():
+    def script():
         import streamlit as st
 
         st.slider("slider", key="slider")
-        """
-        )
-        sr = script.run()
-        s1 = sr.slider[0]
-        sr2 = s1.set_value(5).run()
-        s2 = sr2.slider[0]
 
-        assert s1.id == s2.id
+    at = AppTest.from_function(script).run()
+    s1 = at.slider[0]
+    at = s1.set_value(5).run()
+    s2 = at.slider[0]
+
+    assert s1.id == s2.id

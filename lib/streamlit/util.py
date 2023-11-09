@@ -21,6 +21,7 @@ import functools
 import hashlib
 import os
 import subprocess
+import sys
 from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar, Union
 
 from typing_extensions import Final
@@ -30,6 +31,12 @@ from streamlit import env_util
 # URL of Streamlit's help page.
 HELP_DOC: Final = "https://docs.streamlit.io/"
 FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
+
+# Due to security issue in md5 and sha1, usedforsecurity
+# argument is added to hashlib for python versions higher than 3.8
+HASHLIB_KWARGS: Dict[str, Any] = (
+    {"usedforsecurity": False} if sys.version_info >= (3, 9) else {}
+)
 
 
 def memoize(func):
@@ -99,13 +106,6 @@ def _open_browser_with_command(command, url):
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
 
 
-def _maybe_tuple_to_list(item: Any) -> Any:
-    """Convert a tuple to a list. Leave as is if it's not a tuple."""
-    if isinstance(item, tuple):
-        return list(item)
-    return item
-
-
 def repr_(self: Any) -> str:
     """A clean repr for a class, excluding both values that are likely defaults,
     and those explicitly default for dataclasses.
@@ -171,7 +171,7 @@ class Error(Exception):
 
 def calc_md5(s: Union[bytes, str]) -> str:
     """Return the md5 hash of the given string."""
-    h = hashlib.new("md5")
+    h = hashlib.new("md5", **HASHLIB_KWARGS)
 
     b = s.encode("utf-8") if isinstance(s, str) else s
 

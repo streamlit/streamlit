@@ -17,17 +17,24 @@
 import styled from "@emotion/styled"
 import { Spinner } from "baseui/spinner"
 import isPropValid from "@emotion/is-prop-valid"
+interface ThemedStyledSpinnerProps {
+  usingCustomTheme: boolean
+}
 
 export const ThemedStyledSpinner = styled(Spinner, {
   shouldForwardProp: isPropValid,
-})(({ theme, $usingCustomTheme }) => {
+})<ThemedStyledSpinnerProps>(({ theme, usingCustomTheme }) => {
   return {
-    marginTop: theme.spacing.none,
-    marginBottom: theme.spacing.none,
-    marginRight: theme.spacing.none,
-    marginLeft: theme.spacing.none,
+    fontSize: theme.fontSizes.sm,
+    width: "1.375rem",
+    height: "1.375rem",
+    borderWidth: "3px",
+    radius: "4px",
+    justifyContents: "center",
+    padding: theme.spacing.none,
+    margin: theme.spacing.none,
     borderColor: theme.colors.fadedText10,
-    borderTopColor: $usingCustomTheme
+    borderTopColor: usingCustomTheme
       ? theme.colors.primary
       : theme.colors.blue70,
     flexGrow: 0,
@@ -35,9 +42,26 @@ export const ThemedStyledSpinner = styled(Spinner, {
   }
 })
 
+interface StyledSpinnerProps {
+  width: number
+  cache: boolean
+}
+
+export const StyledSpinner = styled.div<StyledSpinnerProps>(
+  ({ theme, width, cache }) => ({
+    width: width,
+    ...(cache
+      ? {
+          paddingBottom: "1rem",
+          background: `linear-gradient(to bottom, ${theme.colors.bgColor} 0%, ${theme.colors.bgColor} 80%, transparent 100%)`,
+        }
+      : null),
+  })
+)
+
 export const StyledSpinnerContainer = styled.div(({ theme }) => ({
   display: "flex",
-  gap: theme.spacing.lg,
+  gap: theme.spacing.sm,
   alignItems: "center",
   width: "100%",
 }))

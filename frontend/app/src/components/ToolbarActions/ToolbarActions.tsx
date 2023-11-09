@@ -25,6 +25,7 @@ import {
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
+  StyledToolbarActions,
 } from "./styled-components"
 
 export interface ActionButtonProps {
@@ -65,7 +66,7 @@ function ToolbarActions({
   hostToolbarItems,
 }: ToolbarActionsProps): ReactElement {
   return (
-    <div data-testid="stToolbarActions">
+    <StyledToolbarActions data-testid="stToolbarActions">
       {hostToolbarItems.map(({ key, label, icon }) => (
         <ActionButton
           key={key}
@@ -79,7 +80,7 @@ function ToolbarActions({
           }
         />
       ))}
-    </div>
+    </StyledToolbarActions>
   )
 }
 

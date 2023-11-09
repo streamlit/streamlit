@@ -15,7 +15,9 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
 import { ImageList as ImageListProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
@@ -42,72 +44,72 @@ describe("ImageList Element", () => {
 
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<ImageList {...props} />)
-
-    expect(wrapper.find("StyledImageContainer").length).toBe(2)
+    render(<ImageList {...props} />)
+    expect(screen.getAllByRole("img")).toHaveLength(2)
   })
 
   it("renders explicit width for each image", () => {
     const props = getProps({ width: 300 })
-    const wrapper = shallow(<ImageList {...props} />)
+    render(<ImageList {...props} />)
 
-    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
+    const images = screen.getAllByRole("img")
+    expect(images).toHaveLength(2)
+    images.forEach(image => {
+      expect(image).toHaveStyle("width: 300px")
+    })
   })
 
   it("creates its `src` attribute using buildMediaURL", () => {
     const props = getProps()
-    const wrapper = shallow(<ImageList {...props} />)
+    render(<ImageList {...props} />)
+    const images = screen.getAllByRole("img")
+    expect(images).toHaveLength(2)
 
-    expect(wrapper.find("StyledImageContainer").length).toEqual(2)
     expect(buildMediaURL).toHaveBeenNthCalledWith(1, "/media/mockImage1.jpeg")
     expect(buildMediaURL).toHaveBeenNthCalledWith(2, "/media/mockImage2.jpeg")
-    wrapper
-      .find("StyledImageContainer")
-      .find("img")
-      .forEach(imgWrapper => {
-        expect(imgWrapper.prop("src")).toBe("https://mock.media.url")
-      })
+
+    images.forEach(image => {
+      expect(image).toHaveAttribute("src", "https://mock.media.url")
+    })
   })
 
   it("has a caption", () => {
     const props = getProps()
-    const wrapper = shallow(<ImageList {...props} />)
+    render(<ImageList {...props} />)
 
-    const { imgs } = props.element
-    expect(wrapper.find("StyledCaption").length).toEqual(2)
-    wrapper.find("StyledCaption").forEach((captionWrapper, id) => {
-      expect(captionWrapper.text()).toBe(` ${imgs[id].caption} `)
-    })
+    const captions = screen.getAllByTestId("stImageCaption")
+    expect(captions).toHaveLength(2)
+    expect(captions[0]).toHaveTextContent("a")
+    expect(captions[1]).toHaveTextContent("b")
   })
 
   it("renders explicit width for each caption", () => {
     const props = getProps({ width: 300 })
-    const captionWidth = { width: 300 }
-    const wrapper = shallow(<ImageList {...props} />)
+    render(<ImageList {...props} />)
 
-    wrapper.find("StyledCaption").forEach(captionWrapper => {
-      expect(captionWrapper.prop("style")).toStrictEqual(captionWidth)
+    const captions = screen.getAllByTestId("stImageCaption")
+    expect(captions).toHaveLength(2)
+    captions.forEach(caption => {
+      expect(caption).toHaveStyle("width: 300px")
     })
   })
 
   describe("fullScreen", () => {
     const props = { ...getProps(), isFullScreen: true, height: 100 }
-    const wrapper = shallow(<ImageList {...props} />)
 
     it("has a caption", () => {
-      expect(wrapper.find("StyledCaption").length).toBe(2)
+      render(<ImageList {...props} />)
+      expect(screen.getAllByTestId("stImageCaption")).toHaveLength(2)
     })
 
     it("has the proper style", () => {
-      const fullScreenAppearance = { maxHeight: 100, "object-fit": "contain" }
+      render(<ImageList {...props} />)
+      const images = screen.getAllByRole("img")
 
-      expect(wrapper.find("StyledImageContainer").length).toEqual(2)
-      wrapper
-        .find("StyledImageContainer")
-        .find("img")
-        .forEach(imgWrapper => {
-          expect(imgWrapper.prop("style")).toStrictEqual(fullScreenAppearance)
-        })
+      expect(images).toHaveLength(2)
+      images.forEach(image => {
+        expect(image).toHaveStyle("max-height: 100px; object-fit: contain;")
+      })
     })
   })
 })

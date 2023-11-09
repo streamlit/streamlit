@@ -51,6 +51,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     replay_cached_messages,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
+from streamlit.util import HASHLIB_KWARGS
 
 _LOGGER = get_logger(__name__)
 
@@ -236,7 +237,7 @@ class CachedFunc:
             message = self._info.show_spinner
 
         if self._info.show_spinner or isinstance(self._info.show_spinner, str):
-            with spinner(message):
+            with spinner(message, cache=True):
                 return self._get_or_create_cached_value(args, kwargs)
         else:
             return self._get_or_create_cached_value(args, kwargs)
@@ -384,7 +385,7 @@ def _make_value_key(
     # Create the hash from each arg value, except for those args whose name
     # starts with "_". (Underscore-prefixed args are deliberately excluded from
     # hashing.)
-    args_hasher = hashlib.new("md5")
+    args_hasher = hashlib.new("md5", **HASHLIB_KWARGS)
     for arg_name, arg_value in arg_pairs:
         if arg_name is not None and arg_name.startswith("_"):
             _LOGGER.debug("Not hashing %s because it starts with _", arg_name)
@@ -422,7 +423,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
     A function's key is stable across reruns of the app, and changes when
     the function's source code changes.
     """
-    func_hasher = hashlib.new("md5")
+    func_hasher = hashlib.new("md5", **HASHLIB_KWARGS)
 
     # Include the function's __module__ and __qualname__ strings in the hash.
     # This means that two identical functions in different modules

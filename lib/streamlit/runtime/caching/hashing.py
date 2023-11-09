@@ -36,6 +36,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+from streamlit.util import HASHLIB_KWARGS
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
@@ -335,6 +336,8 @@ class _CacheFuncHasher:
         runs.
         """
 
+        h = hashlib.new("md5", **HASHLIB_KWARGS)
+
         if isinstance(obj, unittest.mock.Mock):
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
@@ -370,13 +373,11 @@ class _CacheFuncHasher:
             return obj.isoformat().encode()
 
         elif isinstance(obj, (list, tuple)):
-            h = hashlib.new("md5")
             for item in obj:
                 self.update(h, item)
             return h.digest()
 
         elif isinstance(obj, dict):
-            h = hashlib.new("md5")
             for item in obj.items():
                 self.update(h, item)
             return h.digest()
@@ -399,7 +400,6 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "pandas.core.series.Series"):
             import pandas as pd
 
-            h = hashlib.new("md5")
             self.update(h, obj.size)
             self.update(h, obj.dtype.name)
 
@@ -417,7 +417,6 @@ class _CacheFuncHasher:
         elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
             import pandas as pd
 
-            h = hashlib.new("md5")
             self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
@@ -436,7 +435,6 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "numpy.ndarray"):
-            h = hashlib.new("md5")
             self.update(h, obj.shape)
             self.update(h, str(obj.dtype))
 
@@ -471,7 +469,6 @@ class _CacheFuncHasher:
             # UploadedFile is a BytesIO (thus IOBase) but has a name.
             # It does not have a timestamp so this must come before
             # temporary files
-            h = hashlib.new("md5")
             self.update(h, obj.name)
             self.update(h, obj.tell())
             self.update(h, obj.getvalue())
@@ -487,7 +484,6 @@ class _CacheFuncHasher:
             # on-disk and in-memory StringIO/BytesIO file representations.
             # That means that this condition must come *before* the next
             # condition, which just checks for StringIO/BytesIO.
-            h = hashlib.new("md5")
             obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
@@ -500,7 +496,6 @@ class _CacheFuncHasher:
         elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
             # Hash in-memory StringIO/BytesIO by their full contents
             # and seek position.
-            h = hashlib.new("md5")
             self.update(h, obj.tell())
             self.update(h, obj.getvalue())
             return h.digest()
@@ -532,7 +527,6 @@ class _CacheFuncHasher:
             # The return value of functools.partial is not a plain function:
             # it's a callable object that remembers the original function plus
             # the values you pickled into it. So here we need to special-case it.
-            h = hashlib.new("md5")
             self.update(h, obj.args)
             self.update(h, obj.func)
             self.update(h, obj.keywords)
@@ -540,7 +534,6 @@ class _CacheFuncHasher:
 
         else:
             # As a last resort, hash the output of the object's __reduce__ method
-            h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
             except Exception as ex:

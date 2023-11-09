@@ -134,17 +134,15 @@ class ArrowAltairMixin:
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
-            This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
-            on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all remaining columns as data series.
-            This argument can only be supplied by keyword.
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
-            The color to use for different lines in this chart. This argument
-            can only be supplied by keyword.
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
+            The color to use for different lines in this chart.
 
             For a line chart with just one line, this can be:
 
@@ -175,7 +173,7 @@ class ArrowAltairMixin:
               colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
 
             For a line chart with multiple lines, where the dataframe is in
-            wide format (that is, y is a sequence of columns), this can be:
+            wide format (that is, y is a Sequence of columns), this can be:
 
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
@@ -185,16 +183,13 @@ class ArrowAltairMixin:
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
-            This argument can only be supplied by keyword.
 
         height : int
             The chart height in pixels. If 0, selects the height automatically.
-            This argument can only be supplied by keyword.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -297,17 +292,15 @@ class ArrowAltairMixin:
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
-            This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
-            on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all remaining columns as data series.
-            This argument can only be supplied by keyword.
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
-            The color to use for different series in this chart. This argument
-            can only be supplied by keyword.
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
+            The color to use for different series in this chart.
 
             For an area chart with just 1 series, this can be:
 
@@ -338,7 +331,7 @@ class ArrowAltairMixin:
               colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
 
             For an area chart with multiple series, where the dataframe is in
-            wide format (that is, y is a sequence of columns), this can be:
+            wide format (that is, y is a Sequence of columns), this can be:
 
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
@@ -348,16 +341,13 @@ class ArrowAltairMixin:
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
-            This argument can only be supplied by keyword.
 
         height : int
             The chart height in pixels. If 0, selects the height automatically.
-            This argument can only be supplied by keyword.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -461,17 +451,15 @@ class ArrowAltairMixin:
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
-            This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
-            on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all remaining columns as data series.
-            This argument can only be supplied by keyword.
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
-            The color to use for different series in this chart. This argument
-            can only be supplied by keyword.
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
+            The color to use for different series in this chart.
 
             For a bar chart with just one series, this can be:
 
@@ -502,7 +490,7 @@ class ArrowAltairMixin:
               colors would be "#ffaa00", "#f0f", "#0000ff" this time around.
 
             For a bar chart with multiple series, where the dataframe is in
-            wide format (that is, y is a sequence of columns), this can be:
+            wide format (that is, y is a Sequence of columns), this can be:
 
             * None, to use the default colors.
             * A list of string colors or color tuples to be used for each of
@@ -512,16 +500,13 @@ class ArrowAltairMixin:
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
-            This argument can only be supplied by keyword.
 
         height : int
             The chart height in pixels. If 0, selects the height automatically.
-            This argument can only be supplied by keyword.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-            This argument can only be supplied by keyword.
 
         Examples
         --------
@@ -628,17 +613,15 @@ class ArrowAltairMixin:
 
         x : str or None
             Column name to use for the x-axis. If None, uses the data index for the x-axis.
-            This argument can only be supplied by keyword.
 
-        y : str, sequence of str, or None
-            Column name(s) to use for the y-axis. If a sequence of strings, draws several series
-            on the same chart by melting your wide-format table into a long-format table behind
-            the scenes. If None, draws the data of all remaining columns as data series.
-            This argument can only be supplied by keyword.
+        y : str, Sequence of str, or None
+            Column name(s) to use for the y-axis. If a Sequence of strings,
+            draws several series on the same chart by melting your wide-format
+            table into a long-format table behind the scenes. If None, draws
+            the data of all remaining columns as data series.
 
-        color : str, tuple, sequence of str, sequence of tuple, or None
-            The color of the circles representing each datapoint. This argument
-            can only be supplied by keyword.
+        color : str, tuple, Sequence of str, Sequence of tuple, or None
+            The color of the circles representing each datapoint.
 
             This can be:
 
@@ -668,7 +651,7 @@ class ArrowAltairMixin:
               "#f0f", "#0000ff", then then each of those 1000 datapoints will
               be assigned "#ffaa00", "#f0f", or "#0000ff" as appropriate.
 
-            If the dataframe is in wide format (that is, y is a sequence of
+            If the dataframe is in wide format (that is, y is a Sequence of
             columns), this can also be:
 
             * A list of string colors or color tuples to be used for each of
@@ -677,8 +660,7 @@ class ArrowAltairMixin:
               for three series).
 
         size : str, float, int, or None
-            The size of the circles representing each point. This argument can
-            only be supplied by keyword.
+            The size of the circles representing each point.
 
             This can be:
 
@@ -689,16 +671,13 @@ class ArrowAltairMixin:
 
         width : int
             The chart width in pixels. If 0, selects the width automatically.
-            This argument can only be supplied by keyword.
 
         height : int
             The chart height in pixels. If 0, selects the height automatically.
-            This argument can only be supplied by keyword.
 
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-            This argument can only be supplied by keyword.
 
         Examples
         --------

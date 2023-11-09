@@ -32,6 +32,7 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
@@ -192,10 +193,12 @@ class MultiSelectMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        options : Sequence[V], numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
-            Labels for the select options. This will be cast to str internally
-            by default. For pandas.DataFrame, the first column is selected.
-        default: [V], V, or None
+        options : Iterable
+            Labels for the select options in an Iterable. For example, this can
+            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
+            pandas.Index. For pandas.DataFrame, the first column is used.
+            Each label will be cast to str internally by default.
+        default: Iterable of V, V, or None
             List of default values. Can also be a single value.
         format_func : function
             Function to modify the display of selectbox options. It receives
@@ -217,7 +220,6 @@ class MultiSelectMixin:
             An optional dict of kwargs to pass to the callback.
         max_selections : int
             The max selections that can be selected at a time.
-            This argument can only be supplied by keyword.
         placeholder : str
             A string to display when no options are selected. Defaults to 'Choose an option'.
         disabled : bool
@@ -228,7 +230,7 @@ class MultiSelectMixin:
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
         Returns
         -------
@@ -346,6 +348,7 @@ class MultiSelectMixin:
             raise StreamlitAPIException(
                 _get_over_max_options_message(default_count, max_selections)
             )
+        widget_state = maybe_coerce_enum_sequence(widget_state, options, opt)
 
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)

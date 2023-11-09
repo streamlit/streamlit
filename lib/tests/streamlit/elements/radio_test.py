@@ -18,12 +18,14 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -250,26 +252,58 @@ class RadioTest(DeltaGeneratorTestCase):
         self.assertEqual(c.captions, ["first caption", "", "", "last caption"])
 
 
-class RadioInteractiveTest(InteractiveScriptTests):
-    def test_radio_interaction(self):
-        """Test interactions with an empty radio widget."""
-        script = self.script_from_string(
-            """
+def test_radio_interaction():
+    """Test interactions with an empty radio widget."""
+
+    def script():
         import streamlit as st
 
         st.radio("the label", ("m", "f"), index=None)
-        """
-        )
-        sr = script.run()
-        radio = sr.radio[0]
-        assert radio.value is None
 
-        # Select option m
-        sr2 = radio.set_value("m").run()
-        radio = sr2.radio[0]
-        assert radio.value == "m"
+    at = AppTest.from_function(script).run()
+    radio = at.radio[0]
+    assert radio.value is None
 
-        # # Clear the value
-        sr3 = radio.set_value(None).run()
-        radio = sr3.radio[0]
-        assert radio.value is None
+    # Select option m
+    at = radio.set_value("m").run()
+    radio = at.radio[0]
+    assert radio.value == "m"
+
+    # # Clear the value
+    at = radio.set_value(None).run()
+    radio = at.radio[0]
+    assert radio.value is None
+
+
+def test_radio_enum_coercion():
+    """Test E2E Enum Coercion on a radio."""
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected = st.radio("my_enum", EnumA, index=0)
+        st.text(id(selected.__class__))
+        st.text(id(EnumA))
+        st.text(selected in EnumA)
+
+    at = AppTest.from_function(script).run()
+
+    def test_enum():
+        radio = at.radio[0]
+        original_class = radio.value.__class__
+        radio.set_value(original_class.C).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.

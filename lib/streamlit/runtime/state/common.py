@@ -55,6 +55,7 @@ from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.proto.TimeInput_pb2 import TimeInput
 from streamlit.type_util import ValueFieldName
+from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from builtins import ellipsis
@@ -189,7 +190,7 @@ def compute_widget_id(
     The widget id includes an easily identified prefix, and the user_key as a
     suffix, to make it easy to identify it and know if a key maps to it.
     """
-    h = hashlib.new("md5")
+    h = hashlib.new("md5", **HASHLIB_KWARGS)
     h.update(element_type.encode("utf-8"))
     # This will iterate in a consistent order when the provided arguments have
     # consistent order; dicts are always in insertion order.

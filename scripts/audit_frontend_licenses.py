@@ -79,8 +79,8 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
     (
         # Apache 2.0 license: https://github.com/google/flatbuffers
         "flatbuffers",
-        "2.0.4",
-        "SEE LICENSE IN LICENSE.txt",
+        "23.5.26",
+        "SEE LICENSE IN LICENSE",
         "git+https://github.com/google/flatbuffers.git",
         "https://google.github.io/flatbuffers/",
         "The FlatBuffers project",
@@ -102,15 +102,6 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "git://github.com/mapbox/mapbox-gl-js.git",
         "Unknown",
         "Unknown",
-    ),
-    (
-        # MIT license: https://github.com/dy/image-palette
-        "image-palette",
-        "2.1.0",
-        "MIT*",
-        "https://github.com/dy/image-palette.git",
-        "Unknown",
-        "Dmitry Yv",
     ),
     (
         # CC-BY-3.0 license: https://github.com/cartodb/cartocolor#licensing

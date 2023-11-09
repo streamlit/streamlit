@@ -14,9 +14,10 @@
 
 from typing import TYPE_CHECKING, Any, List, Mapping, TypeVar
 
-from pandas import DataFrame
+import pandas as pd
 
 from streamlit import type_util
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 if TYPE_CHECKING:
@@ -38,6 +39,16 @@ def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> N
         If pandas.Styler uuid is not provided, this value will be used.
 
     """
+    styler_data_df: pd.DataFrame = styler.data
+    if styler_data_df.size > int(pd.options.styler.render.max_elements):
+        raise StreamlitAPIException(
+            f"The dataframe has `{styler_data_df.size}` cells, but the maximum number "
+            "of cells allowed to be rendered by Pandas Styler is configured to "
+            f"`{pd.options.styler.render.max_elements}`. To allow more cells to be "
+            'styled, you can change the `"styler.render.max_elements"` config. For example: '
+            f'`pd.set_option("styler.render.max_elements", {styler_data_df.size})`'
+        )
+
     # pandas.Styler uuid should be set before _compute is called.
     _marshall_uuid(proto, styler, default_uuid)
 
@@ -45,17 +56,11 @@ def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> N
     # which is not ideal and could break if the interface changes.
     styler._compute()
 
-    # In Pandas 1.3.0, styler._translate() signature was changed.
-    # 2 arguments were added: sparse_index and sparse_columns.
-    # The functionality that they provide is not yet supported.
-    if type_util.is_pandas_version_less_than("1.3.0"):
-        pandas_styles = styler._translate()
-    else:
-        pandas_styles = styler._translate(False, False)
+    pandas_styles = styler._translate(False, False)
 
     _marshall_caption(proto, styler)
     _marshall_styles(proto, styler, pandas_styles)
-    _marshall_display_values(proto, styler.data, pandas_styles)
+    _marshall_display_values(proto, styler_data_df, pandas_styles)
 
 
 def _marshall_uuid(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
@@ -184,16 +189,6 @@ def _pandas_style_to_css(
 
     table_selector = f"#T_{uuid}"
 
-    # In pandas < 1.1.0
-    # translated_style["cellstyle"] has the following shape:
-    # [
-    #   {
-    #       "props": [["color", " black"], ["background-color", "orange"], ["", ""]],
-    #       "selector": "row0_col0"
-    #   }
-    #   ...
-    # ]
-    #
     # In pandas >= 1.1.0
     # translated_style["cellstyle"] has the following shape:
     # [
@@ -203,9 +198,7 @@ def _pandas_style_to_css(
     #   }
     #   ...
     # ]
-    if style_type == "table_styles" or (
-        style_type == "cell_style" and type_util.is_pandas_version_less_than("1.1.0")
-    ):
+    if style_type == "table_styles":
         cell_selectors = [style["selector"]]
     else:
         cell_selectors = style["selectors"]
@@ -222,7 +215,7 @@ def _pandas_style_to_css(
 
 
 def _marshall_display_values(
-    proto: ArrowProto, df: DataFrame, styles: Mapping[str, Any]
+    proto: ArrowProto, df: pd.DataFrame, styles: Mapping[str, Any]
 ) -> None:
     """Marshall pandas.Styler display values into an Arrow proto.
 
@@ -242,7 +235,7 @@ def _marshall_display_values(
     proto.styler.display_values = type_util.data_frame_to_bytes(new_df)
 
 
-def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
+def _use_display_values(df: pd.DataFrame, styles: Mapping[str, Any]) -> pd.DataFrame:
     """Create a new pandas.DataFrame where display values are used instead of original ones.
 
     Parameters
@@ -266,9 +259,9 @@ def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
         rows = styles["body"]
         for row in rows:
             for cell in row:
-                match = cell_selector_regex.match(cell["id"])
-                if match:
-                    r, c = map(int, match.groups())
-                    new_df.iat[r, c] = str(cell["display_value"])
+                if "id" in cell:
+                    if match := cell_selector_regex.match(cell["id"]):
+                        r, c = map(int, match.groups())
+                        new_df.iat[r, c] = str(cell["display_value"])
 
     return new_df

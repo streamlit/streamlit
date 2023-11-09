@@ -23,7 +23,8 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -203,25 +204,58 @@ class SelectboxTest(DeltaGeneratorTestCase):
         self.assertEqual(c.placeholder, "Please select")
 
 
-class SelectboxInteractiveTest(InteractiveScriptTests):
-    def test_selectbox_interaction(self):
-        """Test interactions with an empty selectbox widget."""
-        script = self.script_from_string(
-            """
+def test_selectbox_interaction():
+    """Test interactions with an empty selectbox widget."""
+
+    def script():
         import streamlit as st
+
         st.selectbox("the label", ("m", "f"), index=None)
-        """
-        )
-        sr = script.run()
-        selectbox = sr.selectbox[0]
-        assert selectbox.value is None
 
-        # Select option m
-        sr2 = selectbox.set_value("m").run()
-        selectbox = sr2.selectbox[0]
-        assert selectbox.value == "m"
+    at = AppTest.from_function(script).run()
+    selectbox = at.selectbox[0]
+    assert selectbox.value is None
 
-        # # Clear the value
-        sr3 = selectbox.set_value(None).run()
-        selectbox = sr3.selectbox[0]
-        assert selectbox.value is None
+    # Select option m
+    at = selectbox.set_value("m").run()
+    selectbox = at.selectbox[0]
+    assert selectbox.value == "m"
+
+    # # Clear the value
+    at = selectbox.set_value(None).run()
+    selectbox = at.selectbox[0]
+    assert selectbox.value is None
+
+
+def test_selectbox_enum_coercion():
+    """Test E2E Enum Coercion on a selectbox."""
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected = st.selectbox("my_enum", EnumA, index=0)
+        st.text(id(selected.__class__))
+        st.text(id(EnumA))
+        st.text(selected in EnumA)
+
+    at = AppTest.from_function(script).run()
+
+    def test_enum():
+        selectbox = at.selectbox[0]
+        original_class = selectbox.value.__class__
+        selectbox.set_value(original_class.C).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.

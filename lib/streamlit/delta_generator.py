@@ -403,7 +403,7 @@ class DeltaGenerator(
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
     @overload
-    def _enqueue(  # type: ignore[misc]
+    def _enqueue(
         self,
         delta_type: str,
         element_proto: Message,
@@ -427,7 +427,7 @@ class DeltaGenerator(
         ...
 
     @overload
-    def _enqueue(  # type: ignore[misc]
+    def _enqueue(
         self,
         delta_type: str,
         element_proto: Message,
@@ -475,11 +475,11 @@ class DeltaGenerator(
 
         Parameters
         ----------
-        delta_type: string
+        delta_type : str
             The name of the streamlit method being called
-        element_proto: proto
+        element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
-        return_value: any or None
+        return_value : any or None
             The value to return to the calling script (for widgets)
         element_width : int or None
             Desired width for the element

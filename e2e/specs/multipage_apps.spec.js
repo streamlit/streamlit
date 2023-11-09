@@ -83,4 +83,17 @@ describe("multipage apps", () => {
 
     cy.get('[role="dialog"]').should("contain", "Page not found");
   });
+
+  it("handles expand & collapse of MPA nav correctly (arrow does not disappear)", () => {
+    cy.loadApp("http://localhost:3000/page_7");
+
+    // Expand the nav
+    cy.get('[data-testid="stSidebarNavSeparator"] svg').click();
+
+    // Collapse the nav
+    cy.get('[data-testid="stSidebarNavSeparator"] svg').click();
+
+    // Expand the nav again
+    cy.get('[data-testid="stSidebarNavSeparator"] svg').click();
+  });
 });

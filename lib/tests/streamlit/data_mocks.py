@@ -33,7 +33,9 @@ class TestCaseMetadata(NamedTuple):
     expected_rows: int
     expected_cols: int
     expected_data_format: DataFormat
-    __test__ = False  # Tell pytest that this is not a test class
+
+    # Tell pytest this is not a TestClass despite having "Test" in the name.
+    __test__ = False
 
 
 SHARED_TEST_CASES = [
@@ -382,7 +384,13 @@ SPECIAL_TYPES_DF = pd.DataFrame(
     {
         "categorical": pd.Series(["a", "b", "c", "a", None]).astype("category"),
         "decimal": pd.Series(
-            [Decimal("1.1"), Decimal("2.2"), Decimal("1000"), Decimal("2.212"), None]
+            [
+                Decimal("1.1"),
+                Decimal("-0.03864734299516908213"),
+                Decimal("1000"),
+                Decimal("2.212"),
+                None,
+            ]
         ),
         "bytes": pd.Series(
             [

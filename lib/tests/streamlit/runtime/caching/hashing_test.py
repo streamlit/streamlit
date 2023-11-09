@@ -49,12 +49,13 @@ from streamlit.runtime.caching.hashing import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
+from streamlit.util import HASHLIB_KWARGS
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
 
 def get_hash(value, hash_funcs=None, cache_type=None):
-    hasher = hashlib.new("md5")
+    hasher = hashlib.new("md5", **HASHLIB_KWARGS)
     update_hash(
         value, hasher, cache_type=cache_type or MagicMock(), hash_funcs=hash_funcs
     )
@@ -266,7 +267,6 @@ class HashTest(unittest.TestCase):
         self.assertNotEqual(get_hash(p1), get_hash(p3))
 
     def test_pandas_large_dataframe(self):
-
         df1 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
         df2 = pd.DataFrame(np.ones((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
         df3 = pd.DataFrame(np.zeros((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))

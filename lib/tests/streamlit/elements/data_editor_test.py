@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime
 import json
 import unittest
+from decimal import Decimal
 from typing import Any, Dict, List, Mapping
 from unittest.mock import MagicMock, patch
 
@@ -148,6 +149,11 @@ class DataEditorUtilTest(unittest.TestCase):
                     datetime.datetime.now(),
                     datetime.datetime.now(),
                 ],
+                "col5": [
+                    Decimal("1.1"),
+                    Decimal("-12.3456"),
+                    Decimal("123456"),
+                ],
             }
         )
 
@@ -157,6 +163,7 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col2": "foo",
                 "col3": False,
                 "col4": "2020-03-20T14:28:23",
+                "col5": "2.3",
             },
             1: {"col2": None},
         }
@@ -170,6 +177,7 @@ class DataEditorUtilTest(unittest.TestCase):
         self.assertEqual(df.iat[1, 1], None)
         self.assertEqual(df.iat[0, 2], False)
         self.assertEqual(df.iat[0, 3], pd.Timestamp("2020-03-20T14:28:23"))
+        self.assertEqual(df.iat[0, 4], Decimal("2.3"))
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
@@ -446,7 +454,6 @@ class DataEditorTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (pd.CategoricalIndex(["a", "b", "c"]),),
-            (pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03"]),),
             (pd.PeriodIndex(["2020-01-01", "2020-01-02", "2020-01-03"], freq="D"),),
             (pd.TimedeltaIndex(["1 day", "2 days", "3 days"]),),
             (pd.MultiIndex.from_tuples([("a", "b"), ("c", "d"), ("e", "f")]),),
@@ -473,6 +480,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             (pd.Index([1, 2, 3], dtype="uint64"),),
             (pd.Index([1.0, 2.0, 3.0], dtype="float"),),
             (pd.Index(["a", "b", "c"]),),
+            (pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03"]),),
         ]
     )
     def test_with_supported_index(self, index: pd.Index):
@@ -557,6 +565,20 @@ class DataEditorTest(DeltaGeneratorTestCase):
             return_df = st.data_editor(df)
             self.assertIsInstance(return_df, pd.DataFrame)
 
+    def test_works_with_multiindex_column_headers(self):
+        """Test that it works with multiindex column headers."""
+        df = pd.DataFrame(
+            index=[0, 1],
+            columns=[[2, 3, 4], ["c1", "c2", "c3"]],
+            data=np.arange(0, 6, 1).reshape(2, 3),
+        )
+
+        return_df = st.data_editor(df)
+
+        proto = self.get_delta_from_queue().new_element.arrow_data_frame
+        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), return_df)
+        self.assertEqual(return_df.columns.to_list(), ["2_c1", "3_c2", "4_c3"])
+
     def test_pandas_styler_support(self):
         """Test that it supports Pandas styler styles."""
         df = pd.DataFrame(
@@ -597,6 +619,14 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # StreamlitAPIException should be raised
         with self.assertRaises(StreamlitAPIException):
             _check_column_names(df)
+
+    def test_non_string_column_names_are_converted_to_string(self):
+        """Test that non-string column names are converted to string."""
+        # create a dataframe with non-string columns
+        df = pd.DataFrame(0, ["John", "Sarah", "Jane"], list(range(1, 4)))
+        self.assertNotEqual(pd.api.types.infer_dtype(df.columns), "string")
+        return_df = st.data_editor(df)
+        self.assertEqual(pd.api.types.infer_dtype(return_df.columns), "string")
 
     def test_index_column_name_raises_exception(self):
         """Test that an index column name raises an exception."""

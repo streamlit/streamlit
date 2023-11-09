@@ -428,17 +428,17 @@ class CacheDataAPI:
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
 
-        show_spinner : boolean or string
+        show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
-        persist : "disk", boolean, or None
+        persist : "disk", bool, or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
             persistence. The default is None.
 
-        experimental_allow_widgets : boolean
+        experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the

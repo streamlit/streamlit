@@ -34,6 +34,8 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -45,7 +47,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -124,11 +126,11 @@ class SelectSliderMixin:
         Display a slider widget to select items from a list.
 
         This also allows you to render a range slider by passing a two-element
-        tuple or list as the `value`.
+        tuple or list as the ``value``.
 
-        The difference between `st.select_slider` and `st.slider` is that
-        `select_slider` accepts any datatype and takes an iterable set of
-        options, while `slider` only accepts numerical or date/time data and
+        The difference between ``st.select_slider`` and ``st.slider`` is that
+        ``select_slider`` accepts any datatype and takes an iterable set of
+        options, while ``st.slider`` only accepts numerical or date/time data and
         takes a range as input.
 
         Parameters
@@ -159,10 +161,11 @@ class SelectSliderMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        options : Sequence, numpy.ndarray, pandas.Series, pandas.DataFrame, or pandas.Index
-            Labels for the slider options. All options will be cast to str
-            internally by default. For pandas.DataFrame, the first column is
-            selected.
+        options : Iterable
+            Labels for the select options in an Iterable. For example, this can
+            be a list, numpy.ndarray, pandas.Series, pandas.DataFrame, or
+            pandas.Index. For pandas.DataFrame, the first column is used.
+            Each label will be cast to str internally by default.
         value : a supported type or a tuple/list of supported types or None
             The value of the slider when it first renders. If a tuple/list
             of two values is passed here, then a range slider with those lower
@@ -188,12 +191,12 @@ class SelectSliderMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the select slider if set to True.
-            The default is False. This argument can only be supplied by keyword.
+            The default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
         Returns
         -------
@@ -329,6 +332,12 @@ class SelectSliderMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        if isinstance(widget_state.value, tuple):
+            widget_state = maybe_coerce_enum_sequence(
+                cast(RegisterWidgetResult[Tuple[T, T]], widget_state), options, opt
+            )
+        else:
+            widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)

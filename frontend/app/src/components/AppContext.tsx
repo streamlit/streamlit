@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { PageConfig, IGitInfo } from "@streamlit/lib"
+import { PageConfig, IGitInfo, AppConfig } from "@streamlit/lib"
 
 export interface Props {
   /**
@@ -95,6 +95,11 @@ export interface Props {
    * The latest state of the git information related to the app.
    */
   gitInfo: IGitInfo | null
+
+  /** The app-specific configuration from the apps host which is requested via the
+   * _stcore/host-config endpoint.
+   */
+  appConfig: AppConfig
 }
 
 export const AppContext = React.createContext<Props>({
@@ -110,4 +115,5 @@ export const AppContext = React.createContext<Props>({
   sidebarChevronDownshift: 0,
   toastAdjustment: false,
   gitInfo: null,
+  appConfig: {},
 })

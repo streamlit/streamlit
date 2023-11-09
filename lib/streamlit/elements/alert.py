@@ -38,7 +38,7 @@ class AlertMixin:
         body : str
             The error text to display.
         icon : str or None
-            An optional, keyword-only argument that specifies an emoji to use as
+            An optional argument that specifies an emoji to use as
             the icon for the alert. Shortcodes are not allowed, please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to None, which means no icon is displayed.
@@ -70,7 +70,7 @@ class AlertMixin:
         body : str
             The warning text to display.
         icon : str or None
-            An optional, keyword-only argument that specifies an emoji to use as
+            An optional argument that specifies an emoji to use as
             the icon for the alert. Shortcodes are not allowed, please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to None, which means no icon is displayed.
@@ -102,7 +102,7 @@ class AlertMixin:
         body : str
             The info text to display.
         icon : str or None
-            An optional, keyword-only argument that specifies an emoji to use as
+            An optional argument that specifies an emoji to use as
             the icon for the alert. Shortcodes are not allowed, please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to None, which means no icon is displayed.
@@ -135,7 +135,7 @@ class AlertMixin:
         body : str
             The success text to display.
         icon : str or None
-            An optional, keyword-only argument that specifies an emoji to use as
+            An optional argument that specifies an emoji to use as
             the icon for the alert. Shortcodes are not allowed, please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to None, which means no icon is displayed.

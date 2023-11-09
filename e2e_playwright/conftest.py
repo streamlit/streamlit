@@ -18,7 +18,6 @@ This file is automatically run by pytest before tests are executed.
 """
 from __future__ import annotations
 
-import contextlib
 import os
 import re
 import shlex
@@ -29,14 +28,22 @@ import sys
 import time
 from io import BytesIO
 from pathlib import Path
+from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Generator, List, Literal, Protocol
+from typing import Any, Dict, Generator, List, Literal, Protocol
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import ElementHandle, Locator, Page
+from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    BrowserType,
+    ElementHandle,
+    Locator,
+    Page,
+)
 from pytest import FixtureRequest
 
 
@@ -102,12 +109,36 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
     return test_module.__file__.replace("_test.py", ".py")
 
 
-def find_available_port(host: str = "localhost") -> int:
+def is_port_available(port: int, host: str) -> bool:
+    """Check if a port is available on the given host."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        return sock.connect_ex((host, port)) != 0
+
+
+def find_available_port(
+    min_port: int = 10000,
+    max_port: int = 65535,
+    max_tries: int = 50,
+    host: str = "localhost",
+) -> int:
     """Find an available port on the given host."""
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind((host, 0))  # 0 means that the OS chooses a random port
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return int(s.getsockname()[1])  # [1] contains the randomly selected port number
+    for _ in range(max_tries):
+        selected_port = randint(min_port, max_port)
+        if is_port_available(selected_port, host):
+            return selected_port
+    raise RuntimeError("Unable to find an available port.")
+
+
+# TODO(lukasmasuch): This was the previous method to rely on the OS to find a free port.
+# but when running the tests in parallel, it can happen that the OS assigns the same port
+# to multiple tests. This is why we now use the find_available_port method above.
+
+# def find_available_port(host: str = "localhost") -> int:
+#     """Find an available port on the given host."""
+#     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+#         s.bind((host, 0))  # 0 means that the OS chooses a random port
+#         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+#         return int(s.getsockname()[1])  # [1] contains the randomly selected port number
 
 
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
@@ -215,6 +246,41 @@ def app(page: Page, app_port: int) -> Page:
     page.goto(f"http://localhost:{app_port}/")
     wait_for_app_loaded(page)
     return page
+
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args: Dict, browser_name: str):
+    """Fixture that adds the fake device and ui args to the browser type launch args."""
+    # The browser context fixture in pytest-playwright is defined in session scope, and
+    # depends on the browser_type_launch_args fixture. This means that we can't
+    # redefine the browser_type_launch_args fixture more narrow scope
+    # e.g. function or module scope.
+    # https://github.com/microsoft/playwright-pytest/blob/ef99541352b307411dbc15c627e50f95de30cc71/pytest_playwright/pytest_playwright.py#L128
+
+    # We need to extend browser launch args to support fake video stream for
+    # st.camera_input test.
+    # https://github.com/microsoft/playwright/issues/4532#issuecomment-1491761713
+
+    if browser_name == "chromium":
+        browser_type_launch_args = {
+            **browser_type_launch_args,
+            "args": [
+                "--use-fake-device-for-media-stream",
+                "--use-fake-ui-for-media-stream",
+            ],
+        }
+
+    elif browser_name == "firefox":
+        browser_type_launch_args = {
+            **browser_type_launch_args,
+            "firefox_user_prefs": {
+                "media.navigator.streams.fake": True,
+                "media.navigator.permission.disabled": True,
+                "permissions.default.microphone": 1,
+                "permissions.default.camera": 1,
+            },
+        }
+    return browser_type_launch_args
 
 
 @pytest.fixture(scope="function", params=["light_theme", "dark_theme"])
@@ -419,4 +485,4 @@ def assert_snapshot(
     yield compare
 
     if test_failure_messages:
-        pytest.fail("Snapshot test failed \n" + "\n".join(test_failure_messages))
+        pytest.fail("Missing snapshots: \n" + "\n".join(test_failure_messages))
