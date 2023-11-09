@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+// NOTE: This proto type is used by some external services so needs to remain
+// relatively stable. While it isn't entirely set in stone, changing it
+// may require a good amount of effort so should be avoided if possible.
 message Alert {
   // Content to display.
   string body = 1;
