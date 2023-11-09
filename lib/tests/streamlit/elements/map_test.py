@@ -392,4 +392,4 @@ class StMapTest(DeltaGeneratorTestCase):
         df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
         st.map(df)
         new_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
-        self.assertNotEquals(orig_id, new_id)
+        self.assertNotEqual(orig_id, new_id)
