@@ -115,11 +115,7 @@ class LocalScriptRunner(ScriptRunner):
 
     def script_stopped(self) -> bool:
         for e in self.events:
-            if e in (
-                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ):
+            if e == ScriptRunnerEvent.SHUTDOWN:
                 return True
         return False
 
