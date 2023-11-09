@@ -1385,7 +1385,8 @@ st.add_rows(my_styler.data)
   }
 
   private static parseFields(schema: ArrowSchema): Record<string, Field> {
-    // Normale data columns are listed first, and all index columns listed last.
+    // None-index data columns are listed first, and all index columns listed last
+    // within the fields array in arrow.
     return Object.fromEntries(
       (schema.fields || []).map((field, index) => [
         field.name.startsWith("__index_level_") ? field.name : String(index),

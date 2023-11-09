@@ -90,7 +90,7 @@ st.data_editor(
 #     num_rows="dynamic",
 # )
 
-# Timedelta Index are current not supported for editing:
+# Timedelta Index are currently not supported for editing:
 # st.subheader("Timedelta Index (pd.TimedeltaIndex)")
 # st.data_editor(
 #     SPECIAL_TYPES_DF.set_index("timedelta"),
