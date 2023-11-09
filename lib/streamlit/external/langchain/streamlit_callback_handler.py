@@ -35,8 +35,14 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
-from langchain.callbacks.base import BaseCallbackHandler
-from langchain.schema import AgentAction, AgentFinish, LLMResult
+from langchain.callbacks.base import (  # type: ignore[import-not-found, unused-ignore]
+    BaseCallbackHandler,
+)
+from langchain.schema import (  # type: ignore[import-not-found, unused-ignore]
+    AgentAction,
+    AgentFinish,
+    LLMResult,
+)
 
 from streamlit.runtime.metrics_util import gather_metrics
 

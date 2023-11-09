@@ -125,6 +125,11 @@ class DataEditorUtilTest(unittest.TestCase):
                 ColumnDataKind.DATE,
                 datetime.date(2021, 1, 1),
             ),
+            (
+                100000,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(100000),
+            ),
         ]
     )
     def test_parse_value(
