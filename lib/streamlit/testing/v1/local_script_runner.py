@@ -115,11 +115,7 @@ class LocalScriptRunner(ScriptRunner):
 
     def script_stopped(self) -> bool:
         for e in self.events:
-            if e in (
-                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
-                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-            ):
+            if e == ScriptRunnerEvent.SHUTDOWN:
                 return True
         return False
 
@@ -147,7 +143,7 @@ def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> Non
 
     t0 = time.time()
     while time.time() - t0 < timeout:
-        time.sleep(0.1)
+        time.sleep(0.001)
         if runner.script_stopped():
             return
 
