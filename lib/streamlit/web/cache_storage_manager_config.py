@@ -35,26 +35,28 @@ def create_default_cache_storage_manager() -> CacheStorageManager:
         The cache storage manager.
 
     """
-    cache_storage_manager_class = LocalDiskCacheStorageManager
 
-    if config.get_option("global.useCustomCacheStorageManager"):
-        custom_cache_storage_manager_class_path = config.get_option(
-            "global.customCacheStorageManagerClass"
+    custom_cache_storage_manager_class_path = config.get_option(
+        "global.customCacheStorageManagerClass"
+    )
+    module_name, class_name = custom_cache_storage_manager_class_path.rsplit(".", 1)
+    try:
+        custom_cache_storage_manager_module = import_module(module_name)
+        custom_cache_storage_manager_class = getattr(
+            custom_cache_storage_manager_module, class_name
         )
-        module_name, class_name = custom_cache_storage_manager_class_path.rsplit(".", 1)
-        try:
-            custom_cache_storage_manager_module = import_module(module_name)
-            custom_cache_storage_manager_class = getattr(
-                custom_cache_storage_manager_module, class_name
-            )
-            cache_storage_manager_class = custom_cache_storage_manager_class
-        except (AttributeError, ImportError):
-            LOGGER.info(
-                "Failed to import custom cache storage manager class "
-                f"from {custom_cache_storage_manager_class_path}. "
-                "Falling back to default cache storage manager."
-            )
-            cache_storage_manager_class = LocalDiskCacheStorageManager
+        cache_storage_manager_class = custom_cache_storage_manager_class
+        LOGGER.info(
+            f"Cache storage manager from {custom_cache_storage_manager_class_path} "
+            "imported successfully."
+        )
+    except (AttributeError, ImportError):
+        LOGGER.info(
+            "Failed to import custom cache storage manager class "
+            f"from {custom_cache_storage_manager_class_path}. "
+            "Falling back to default cache storage manager."
+        )
+        cache_storage_manager_class = LocalDiskCacheStorageManager
 
     if hasattr(cache_storage_manager_class, "from_secrets"):
         return cache_storage_manager_class.from_secrets()
