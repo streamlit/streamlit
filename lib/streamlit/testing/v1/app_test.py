@@ -306,8 +306,6 @@ class AppTest:
         self._tree = script_runner.run(widget_state, self.query_params, timeout)
         self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
-        print(script_runner.events)
-        print(script_runner.event_data)
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = parse.parse_qs(query_string)
 
