@@ -13,6 +13,10 @@
 # limitations under the License.
 
 from streamlit.runtime.state.common import WidgetArgs, WidgetCallback, WidgetKwargs
+from streamlit.runtime.state.query_params import (
+    QueryParams,
+    _missing_key_error_message_query_params,
+)
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
@@ -20,6 +24,7 @@ from streamlit.runtime.state.session_state import (
     SessionStateStatProvider,
 )
 from streamlit.runtime.state.session_state_proxy import (
+    QueryParamsProxy,
     SessionStateProxy,
     get_session_state,
 )
@@ -38,8 +43,11 @@ __all__ = [
     "SessionState",
     "SessionStateStatProvider",
     "SessionStateProxy",
+    "QueryParamsProxy",
     "get_session_state",
     "NoValue",
     "coalesce_widget_states",
     "register_widget",
+    "_missing_key_error_message_query_params",
+    "QueryParams",
 ]

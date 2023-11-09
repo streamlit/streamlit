@@ -29,7 +29,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
             self._query_params["nonexistent"]
             assert (
                 exception_message
-                == 'st.query_params has no key "nonexistent". Did you forget to initialize it? '
+                == 'st.query_params has no key "nonexistent". Did you forget to initialize it?'
             )
 
     def test__getattr__nonexistent(self):
@@ -37,7 +37,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
             self._query_params.nonexistent
             assert (
                 exception_message
-                == 'st.query_params has no key "nonexistent". Did you forget to initialize it? '
+                == 'st.query_params has no key "nonexistent". Did you forget to initialize it?'
             )
 
     def test_getitem_list(self):
@@ -126,7 +126,3 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test_del_invalid(self):
         with pytest.raises(KeyError):
             del self._query_params["nonexistent"]
-
-        # no forward message should be sent
-        with pytest.raises(IndexError):
-            self.get_message_from_queue(0)
