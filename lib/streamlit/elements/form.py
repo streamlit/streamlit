@@ -152,6 +152,12 @@ class FormMixin:
         border : bool
             Whether to show a border around the form. Defaults to True.
 
+            .. note::
+                Not showing a border can be confusing to viewers since interacting with a
+                widget in the form will do nothing. You should only remove the border if
+                there's another border (e.g. because of an expander) or the form is small
+                (e.g. just a text input and a submit button).
+
         Examples
         --------
         Inserting elements using "with" notation:
