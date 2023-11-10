@@ -70,6 +70,10 @@ def get_query_params() -> QueryParams:
 
 
 class QueryParamsProxy(MutableMapping[Key, Any]):
+    """A stateless singleton that proxies `st.query_params` interactions
+    to the current script thread's QueryParams instance. It stores str keys with str and List[str] values.
+    """
+
     def __iter__(self) -> Iterator[Any]:
         return iter(get_query_params())
 
