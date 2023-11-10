@@ -17,6 +17,7 @@ from streamlit.runtime.state.query_params import (
     QueryParams,
     _missing_key_error_message_query_params,
 )
+from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
@@ -24,7 +25,6 @@ from streamlit.runtime.state.session_state import (
     SessionStateStatProvider,
 )
 from streamlit.runtime.state.session_state_proxy import (
-    QueryParamsProxy,
     SessionStateProxy,
     get_session_state,
 )
