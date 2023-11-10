@@ -43,7 +43,7 @@ class QueryParamsProxy(MutableMapping[Key, Any]):
     def __len__(self) -> int:
         return len(get_query_params())
 
-    def __getitem__(self, key: str) -> str:
+    def __getitem__(self, key: str) -> str:  # type: ignore[override]
         return get_query_params()[key]
 
     def __getattr__(self, key: str) -> str:
@@ -52,10 +52,10 @@ class QueryParamsProxy(MutableMapping[Key, Any]):
         except KeyError:
             raise AttributeError(_missing_key_error_message_query_params(key))
 
-    def __delitem__(self, key: str) -> None:
+    def __delitem__(self, key: str) -> None:  # type: ignore[override]
         del get_query_params()[key]
 
-    def __delitem__(self, key: str) -> None:
+    def __delattr__(self, key: str) -> None:
         try:
             del get_query_params()[key]
         except KeyError:
@@ -67,26 +67,17 @@ class QueryParamsProxy(MutableMapping[Key, Any]):
         except KeyError:
             raise AttributeError(_missing_key_error_message_query_params(key))
 
-    def __setitem__(self, key: str, value: str) -> None:
+    def __setitem__(self, key: str, value: str) -> None:  # type: ignore[override]
         get_query_params()[key] = value
 
     def get_all(self, key: str) -> List[str]:
         return get_query_params().get_all(key)
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self, key: str) -> bool:  # type: ignore[override]
         return key in get_query_params()
-
-    def __len__(self) -> int:
-        return len(get_query_params())
 
     def clear(self) -> None:
         get_query_params().clear()
 
-    def __delattr__(self, key: str) -> None:
-        try:
-            del get_query_params()[key]
-        except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
-
-    def get(self, key: str, default: str = None):
+    def get(self, key: str, default: Any = None):  # type: ignore[override]
         return get_query_params().get(key, default)
