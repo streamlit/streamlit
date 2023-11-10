@@ -26,10 +26,10 @@ class QueryParams(MutableMapping[str, Any]):
 
     _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
 
-    def __init__(self, query_params: Dict[str, Union[List[str], str]] = {}):
+    def __init__(self):
         # avoid using ._query_params as that will use __setattr__,
         # which itself relies on `_query_params` being defined
-        self.__dict__["_query_params"] = query_params
+        self.__dict__["_query_params"] = {}
 
     def __iter__(self) -> Iterator[Any]:
         return iter(self._query_params.keys())

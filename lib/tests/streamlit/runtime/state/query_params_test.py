@@ -21,8 +21,9 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def setUp(self):
         super().setUp()
-        self.q_params = {"foo": "bar", "two": ["x", "y"]}
-        self._query_params = QueryParams(self.q_params)
+        self._query_params = QueryParams()
+        # avoid using ._query_params as that will use __setattr__
+        self._query_params.__dict__["_query_params"] = {"foo": "bar", "two": ["x", "y"]}
 
     def test_getitem_nonexistent(self):
         with pytest.raises(KeyError) as exception_message:
@@ -41,6 +42,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
             )
 
     def test_getitem_list(self):
+        print(self._query_params)
         # get the last item in the array
         assert self._query_params["two"] == "y"
 
