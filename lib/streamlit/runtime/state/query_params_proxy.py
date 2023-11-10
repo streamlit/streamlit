@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Iterator, List, MutableMapping
+from typing import Any, Dict, Iterator, List, MutableMapping
 
 from streamlit.runtime.state.query_params import (
     QueryParams,
@@ -88,5 +88,8 @@ class QueryParamsProxy(MutableMapping[Key, Any]):
         except KeyError:
             raise AttributeError(_missing_key_error_message_query_params(key))
 
-    def get(self, key: str, default: str = None):
+    def get(self, key: str, default: str = None) -> str:
         return get_query_params().get(key, default)
+
+    def to_dict(self) -> Dict[str, List[str] | str]:
+        return get_query_params().to_dict()

@@ -20,6 +20,7 @@ from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
 from typing import Callable, Dict, Optional
+from urllib import parse
 
 from blinker import Signal
 
@@ -442,6 +443,15 @@ class ScriptRunner:
             query_string=rerun_data.query_string,
             page_script_hash=page_script_hash,
         )
+        url = parse.parse_qs(rerun_data.query_string, keep_blank_values=True)
+        for key, val in url.items():
+            query_params = ctx.session_state._state._query_params
+            if len(val) == 0:
+                query_params[key] = ""
+            if len(val) == 1:
+                query_params[key] = val[-1]
+            else:
+                query_params[key] = val
 
         self.on_event.send(
             self,
