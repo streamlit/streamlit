@@ -34,3 +34,13 @@ with st.container(border=True):
         "This is inside a container with a border. And it doesn't overflow the borders if the text requires multiple lines."
     )
     st.button("Stretch full width", use_container_width=True)
+
+
+with st.container(height=200):
+    st.markdown("This is inside a scrolling container.")
+    st.text_input("Widget in scroll container")
+
+    st.chat_message("assistant").write("It can contain any element.")
+    st.chat_message("user").write("And a user can write any message.")
+
+st.container(height=100)

@@ -96,8 +96,11 @@ class LayoutsMixin:
             height: 480px
         """
         block_proto = BlockProto()
+        block_proto.allow_empty = False
         block_proto.vertical.border = border or False
         if height:
+            # Activate scrolling container behavior:
+            block_proto.allow_empty = True
             block_proto.vertical.height = height
             if border is None:
                 # If border is None, we activated the
