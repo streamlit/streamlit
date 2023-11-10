@@ -152,7 +152,7 @@ class UtilTest(unittest.TestCase):
         result: Dict[str, List[str]],
     ):
         self.assertDictEqual(
-            util.exclude_key_query_params(query_params, keys_to_drop), result
+            util.exclude_keys_in_dict(query_params, keys_to_drop), result
         )
 
     @parameterized.expand(

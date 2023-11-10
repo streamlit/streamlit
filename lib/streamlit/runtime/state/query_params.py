@@ -49,7 +49,7 @@ class QueryParams(MutableMapping[str, Any]):
         except:
             raise KeyError(_missing_key_error_message_query_params(key))
 
-    def _setitem(self, key: str, value: Union[str, List]) -> None:
+    def _setitem(self, key: str, value: Union[str, List[str]]) -> None:
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
@@ -90,7 +90,7 @@ class QueryParams(MutableMapping[str, Any]):
         else:
             raise KeyError(_missing_key_error_message_query_params(key))
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self, key: str) -> bool:  # type: ignore[override]
         return key in self._query_params
 
     def __len__(self) -> int:
@@ -118,7 +118,7 @@ class QueryParams(MutableMapping[str, Any]):
     def __delitem__(self, key: str) -> None:
         self._delitem(key)
 
-    def to_dict(self) -> Dict[str, List[Any]]:
+    def to_dict(self) -> Dict[str, Union[List[str], str]]:
         return self._query_params
 
 
