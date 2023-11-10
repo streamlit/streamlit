@@ -340,6 +340,12 @@ def arrow_proto_to_dataframe(proto):
         Output. pandas.DataFrame
 
     """
+    if _is_pyarrow_version_less_than("14.0.1"):
+        raise RuntimeError(
+            "The installed pyarrow version is not compatible with this component. "
+            "Please upgrade to 14.0.1 or higher: pip install -U pyarrow"
+        )
+
     data = _pybytes_to_dataframe(proto.data)
     index = _pybytes_to_dataframe(proto.index)
     columns = _pybytes_to_dataframe(proto.columns)
@@ -360,3 +366,18 @@ def _pybytes_to_dataframe(source):
     """
     reader = pa.RecordBatchStreamReader(source)
     return reader.read_pandas()
+
+
+def _is_pyarrow_version_less_than(v: str) -> bool:
+    """Return True if the current Pyarrow version is less than the input version.
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+    Returns
+    -------
+    bool
+    """
+    from packaging import version
+
+    return version.parse(pa.__version__) < version.parse(v)
