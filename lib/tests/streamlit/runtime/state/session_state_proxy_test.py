@@ -176,7 +176,7 @@ class TestQueryParamsProxy:
     def test_get(self, proxy):
         assert proxy.get("test") == "value"
 
-    def test_get(self, proxy):
+    def test_get_default(self, proxy):
         assert proxy.get("nonexistent", "bob") == "bob"
 
     def test_get_all(self, proxy):
