@@ -21,13 +21,10 @@ test_dicts = [{"x": "y"}, {"x": "y", "a": "b"}, {"x": ("y", 1, 2.34)}, {"x": ""}
 def test_app_with_params(app_with_params: Page):
     page, test_dict = app_with_params
     for key, value in test_dict.items():
-        # Check for the key
         assert page.get_by_text(key) is not None
 
-        # If value is a list or tuple, iterate through its elements
         if isinstance(value, (list, tuple)):
             for item in value:
                 assert page.get_by_text(item) is not None
         else:
-            # Check for the value
             assert page.get_by_text(value) is not None
