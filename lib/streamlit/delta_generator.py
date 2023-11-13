@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import sys
 from typing import (
     TYPE_CHECKING,
@@ -25,6 +26,7 @@ from typing import (
     Iterable,
     NoReturn,
     Optional,
+    Tuple,
     Type,
     TypeVar,
     cast,
@@ -145,6 +147,14 @@ def _maybe_print_use_warning() -> None:
             logger.get_logger("root").warning(
                 f"\n  {warning} to view this Streamlit app on a browser, run it with the following\n  command:\n\n    streamlit run {script_name} [ARGUMENTS]"
             )
+
+
+# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
+# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
+# so that different threads or async tasks can have their own stacks.
+dg_stack: contextvars.ContextVar[Tuple[DeltaGenerator, ...]] = contextvars.ContextVar(
+    "dg_stack", default=tuple()
+)
 
 
 class DeltaGenerator(
@@ -282,9 +292,7 @@ class DeltaGenerator(
 
     def __enter__(self) -> None:
         # with block started
-        ctx = get_script_run_ctx()
-        if ctx:
-            ctx.dg_stack.append(self)
+        dg_stack.set(dg_stack.get() + (self,))
 
     def __exit__(
         self,
@@ -293,9 +301,8 @@ class DeltaGenerator(
         traceback: Any,
     ) -> Literal[False]:
         # with block ended
-        ctx = get_script_run_ctx()
-        if ctx is not None:
-            ctx.dg_stack.pop()
+
+        dg_stack.set(dg_stack.get()[:-1])
 
         # Re-raise any exceptions
         return False
@@ -310,9 +317,9 @@ class DeltaGenerator(
         if self == self._main_dg:
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
-            ctx = get_script_run_ctx()
-            if ctx and len(ctx.dg_stack) > 0:
-                return ctx.dg_stack[-1]
+            current_stack = dg_stack.get()
+            if len(current_stack) > 0:
+                return current_stack[-1]
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
         # current `with` dg.
