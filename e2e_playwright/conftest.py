@@ -31,7 +31,7 @@ from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Dict, Generator, List, Literal, Protocol
+from typing import Any, Dict, Generator, List, Literal, Protocol, Tuple
 
 import pytest
 import requests
@@ -249,11 +249,11 @@ def app(page: Page, app_port: int) -> Page:
 
 
 @pytest.fixture(scope="function")
-def app_with_params(page: Page, app_port: int, request) -> Page:
+def app_with_params(page: Page, app_port: int, request) -> Tuple[Page, Dict]:
     """Fixture that opens the app with additional query parameters.
     The query parameters are passed as a dictionary in the 'query_params' key of the request.
     """
-    query_params = request.param.get("query_params", {})
+    query_params = request.param
 
     from urllib import parse
 
@@ -271,7 +271,7 @@ def app_with_params(page: Page, app_port: int, request) -> Page:
     page.goto(url)
     wait_for_app_loaded(page)
 
-    return page
+    return page, query_params
 
 
 @pytest.fixture(scope="session")
