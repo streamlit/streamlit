@@ -151,3 +151,16 @@ export const StyledVerticalBlockWrapper = styled.div<StyledVerticalBlockProps>(
     flex: 1,
   }
 )
+
+export interface StyledVerticalBlockBorderWrapperProps {
+  border: boolean
+}
+
+export const StyledVerticalBlockBorderWrapper =
+  styled.div<StyledVerticalBlockBorderWrapperProps>(({ theme, border }) => ({
+    ...(border && {
+      border: `1px solid ${theme.colors.fadedText10}`,
+      borderRadius: theme.radii.lg,
+      padding: "calc(1em - 1px)", // 1px to account for border.
+    }),
+  }))

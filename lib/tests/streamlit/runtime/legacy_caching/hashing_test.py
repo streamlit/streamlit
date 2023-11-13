@@ -19,6 +19,7 @@ import hashlib
 import os
 import re
 import socket
+import sys
 import tempfile
 import time
 import types
@@ -553,6 +554,12 @@ class HashTest(unittest.TestCase):
             ("postgresql", "password"),
             ("mysql", "passwd"),
             ("oracle", "password"),
+            ("mssql", "password"),
+        ]
+        if sys.version_info < (3, 12)
+        else [
+            ("postgresql", "password"),
+            ("mysql", "passwd"),
             ("mssql", "password"),
         ]
     )

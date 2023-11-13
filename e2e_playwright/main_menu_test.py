@@ -12,19 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+from playwright.sync_api import Page, expect
 
-container = st.container()
+from e2e_playwright.conftest import ImageCompareFunction
 
-st.write("Line 1")
-container.write("Line 2")
-with container:
-    "Line 3"
-st.write("Line 4")
 
-# Ensure widget states persist when React nodes shift
-if st.button("Step 2: Press me"):
-    st.header("Pressed!")
-c = st.container()
-if c.checkbox("Step 1: Check me"):
-    c.title("Checked!")
+def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    themed_app.get_by_test_id("stMainMenu").click()
+
+    element = themed_app.get_by_test_id("stMainMenuPopover")
+    assert_snapshot(element, name="main_menu")

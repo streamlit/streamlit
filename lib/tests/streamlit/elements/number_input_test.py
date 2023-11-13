@@ -373,13 +373,13 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
 def test_number_input_interaction():
     """Test interactions with an empty number input widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
 
-    st.number_input("the label", value=None)
-    """
-    ).run()
+    def script():
+        import streamlit as st
+
+        st.number_input("the label", value=None)
+
+    at = AppTest.from_function(script).run()
     number_input = at.number_input[0]
     assert number_input.value is None
 

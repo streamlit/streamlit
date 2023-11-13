@@ -182,12 +182,13 @@ class SomeObj(object):
 
 def test_text_input_interaction():
     """Test interactions with an empty text_area widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    st.text_area("the label", value=None)
-    """
-    ).run()
+
+    def script():
+        import streamlit as st
+
+        st.text_area("the label", value=None)
+
+    at = AppTest.from_function(script).run()
     text_area = at.text_area[0]
     assert text_area.value is None
 

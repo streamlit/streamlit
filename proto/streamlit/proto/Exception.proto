@@ -17,6 +17,10 @@
 syntax = "proto3";
 
 // A python exception.
+//
+// NOTE: This proto type is used by some external services so needs to remain
+// relatively stable. While it isn't entirely set in stone, changing it
+// may require a good amount of effort so should be avoided if possible.
 message Exception {
 
   // The type of the exception. This can be any string, but is usually a valid
