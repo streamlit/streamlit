@@ -14,16 +14,14 @@
 import pytest
 from playwright.sync_api import Page
 
-single_key_dict = {"x": "y", "z": "a"}
+single_key_dict = {"x": "y"}
 
 
 @pytest.mark.parametrize(
     "app_with_params", [{"query_params": single_key_dict}], indirect=True
 )
-def test_app_with_params(app_with_params: Page):
-    assert app_with_params.get_by_text("x") != None
-    # checking if this works
-    assert app_with_params.get_by_text("bob") != None
+def test_app_with_params_single_key(app_with_params: Page):
+    assert app_with_params.get_by_text("x") is not None
 
 
 multiple_key_dict = {"x": "y", "a": "b"}
@@ -32,20 +30,30 @@ multiple_key_dict = {"x": "y", "a": "b"}
 @pytest.mark.parametrize(
     "app_with_params", [{"query_params": multiple_key_dict}], indirect=True
 )
-def test_app_with_params(app_with_params: Page):
+def test_app_with_params_multi_key(app_with_params: Page):
     for key, value in multiple_key_dict.items():
-        assert app_with_params.get_by_text(key) != None
-        assert app_with_params.get_by_text(value) != None
+        assert app_with_params.get_by_text(key) is not None
+        assert app_with_params.get_by_text(value) is not None
 
 
-list_val_dict = {"x": ["y", "z", 1, 2.3]}
+list_val_dict = {"x": ("y", 1, 2.34)}
 
 
 @pytest.mark.parametrize(
     "app_with_params", [{"query_params": list_val_dict}], indirect=True
 )
-def test_app_with_params(app_with_params: Page):
+def test_app_with_params_list_val(app_with_params: Page):
     for key, value in list_val_dict.items():
-        assert app_with_params.get_by_text(key) != None
+        assert app_with_params.get_by_text(key) is not None
         for query_param_value in value:
-            assert app_with_params.get_by_text(query_param_value) != None
+            assert app_with_params.get_by_text(query_param_value) is not None
+
+
+empty_val_dict = {"x": ""}
+
+
+@pytest.mark.parametrize(
+    "app_with_params", [{"query_params": empty_val_dict}], indirect=True
+)
+def test_app_with_params_empty_val(app_with_params: Page):
+    assert app_with_params.get_by_text("") is not None

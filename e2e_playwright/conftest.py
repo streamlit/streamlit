@@ -257,7 +257,15 @@ def app_with_params(page: Page, app_port: int, request) -> Page:
 
     from urllib import parse
 
-    query_string = parse.urlencode(query_params)
+    query_parts = []
+    for key, value in query_params.items():
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                query_parts.append(f"{key}={parse.quote(str(item))}")
+        else:
+            query_parts.append(f"{key}={parse.quote(str(value))}")
+
+    query_string = "&".join(query_parts)
 
     url = f"http://localhost:{app_port}/?{query_string}"
     page.goto(url)
