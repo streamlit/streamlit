@@ -34,7 +34,7 @@ def get_query_params() -> QueryParams:
 
 class QueryParamsProxy:
     """A stateless singleton that proxies `st.query_params` interactions
-    to the current script thread's QueryParams instance. It stores str keys with str and List[str] values.
+    to the current script thread's QueryParams instance.
     """
 
     def __iter__(self) -> Iterator[Any]:
