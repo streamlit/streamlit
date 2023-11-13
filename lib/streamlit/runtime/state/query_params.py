@@ -121,7 +121,7 @@ class QueryParams(MutableMapping[str, Any]):
     def to_dict(self) -> Dict[str, Union[List[str], str]]:
         return self._query_params
 
-    def set_with_no_forward_msg(self, key: str, val: str) -> None:
+    def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
         self._query_params[key] = val
 
 
