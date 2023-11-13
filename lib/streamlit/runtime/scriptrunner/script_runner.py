@@ -447,11 +447,11 @@ class ScriptRunner:
         for key, val in url.items():
             query_params = ctx.session_state._state._query_params
             if len(val) == 0:
-                query_params[key] = ""
+                query_params.set_with_no_forward_msg(key, "")
             if len(val) == 1:
-                query_params[key] = val[-1]
+                query_params.set_with_no_forward_msg(key, val[-1])
             else:
-                query_params[key] = val
+                query_params.set_with_no_forward_msg(key, val)
 
         self.on_event.send(
             self,

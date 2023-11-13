@@ -121,6 +121,9 @@ class QueryParams(MutableMapping[str, Any]):
     def to_dict(self) -> Dict[str, Union[List[str], str]]:
         return self._query_params
 
+    def set_with_no_forward_msg(self, key: str, val: str) -> None:
+        self._query_params[key] = val
+
 
 def _missing_key_error_message_query_params(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'
