@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Iterator, List, MutableMapping
+from typing import Any, Dict, Iterator, List, Union
 
 from streamlit.runtime.state.query_params import (
     QueryParams,
@@ -32,9 +32,9 @@ def get_query_params() -> QueryParams:
     return get_session_state()._state._query_params
 
 
-class QueryParamsProxy(MutableMapping[Key, Any]):
+class QueryParamsProxy:
     """A stateless singleton that proxies `st.query_params` interactions
-    to the current script thread's QueryParams instance. It stores str keys with str and List[str] values.
+    to the current script thread's QueryParams instance.
     """
 
     def __iter__(self) -> Iterator[Any]:
@@ -55,7 +55,7 @@ class QueryParamsProxy(MutableMapping[Key, Any]):
     def __delitem__(self, key: str) -> None:
         del get_query_params()[key]
 
-    def __delitem__(self, key: str) -> None:
+    def __delattr__(self, key: str) -> None:
         try:
             del get_query_params()[key]
         except KeyError:
@@ -76,17 +76,11 @@ class QueryParamsProxy(MutableMapping[Key, Any]):
     def __contains__(self, key: str) -> bool:
         return key in get_query_params()
 
-    def __len__(self) -> int:
-        return len(get_query_params())
-
     def clear(self) -> None:
         get_query_params().clear()
 
-    def __delattr__(self, key: str) -> None:
-        try:
-            del get_query_params()[key]
-        except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
-
-    def get(self, key: str, default: str = None):
+    def get(self, key: str, default: Any = None) -> str:
         return get_query_params().get(key, default)
+
+    def to_dict(self) -> Dict[str, Union[List[str], str]]:
+        return get_query_params().to_dict()
