@@ -519,6 +519,13 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showPageNavigation",
+    description="""Controls whether the sidebar page navigation is displayed.""",
+    default_val=True,
+    type_=bool,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")

@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 
 from typing_extensions import Final, Literal, TypeAlias
 
+from streamlit import config
 from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
@@ -118,6 +119,8 @@ def set_page_config(
     layout: Layout = "centered",
     initial_sidebar_state: InitialSideBarState = "auto",
     menu_items: Optional[MenuItems] = None,
+    *,  # keyword-only args:
+    show_page_navigation: bool = True,
 ) -> None:
     """
     Configures the default settings of the page.
@@ -162,6 +165,9 @@ def set_page_config(
             If None, only shows Streamlit's default About text.
 
         The URL may also refer to an email address e.g. ``mailto:john@example.com``.
+    show_page_navigation: bool
+        Controls display of the page navigation menu in a multi-page app.
+        Defaults to True.
 
     Example
     -------
@@ -221,6 +227,14 @@ def set_page_config(
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)
 
+    # TODO: Order of precedence for show_page_navigation - config vs. set_page_config
+    msg.page_config_changed.show_page_navigation = show_page_navigation
+    if config.get_option("client.showPageNavigation") == False:
+        msg.page_config_changed.show_page_navigation = config.get_option(
+            "client.showPageNavigation"
+        )
+
+    print(msg.page_config_changed.show_page_navigation)
     ctx = get_script_run_ctx()
     if ctx is None:
         return
