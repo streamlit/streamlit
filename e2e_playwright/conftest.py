@@ -248,6 +248,24 @@ def app(page: Page, app_port: int) -> Page:
     return page
 
 
+@pytest.fixture(scope="function")
+def app_with_params(page: Page, app_port: int, request) -> Page:
+    """Fixture that opens the app with additional query parameters.
+    The query parameters are passed as a dictionary in the 'query_params' key of the request.
+    """
+    query_params = request.param.get("query_params", {})
+
+    from urllib import parse
+
+    query_string = parse.urlencode(query_params)
+
+    url = f"http://localhost:{app_port}/?{query_string}"
+    page.goto(url)
+    wait_for_app_loaded(page)
+
+    return page
+
+
 @pytest.fixture(scope="session")
 def browser_type_launch_args(browser_type_launch_args: Dict, browser_name: str):
     """Fixture that adds the fake device and ui args to the browser type launch args."""
