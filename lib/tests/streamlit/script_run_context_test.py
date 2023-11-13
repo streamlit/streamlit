@@ -14,6 +14,8 @@
 
 import unittest
 
+from parameterized import parameterized
+
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -121,3 +123,31 @@ class ScriptRunContextTest(unittest.TestCase):
             ctx.enqueue(msg)
         except StreamlitAPIException:
             self.fail("set_page_config should have succeeded after reset!")
+
+    @parameterized.expand(
+        [
+            (True, True, True),  # Both APIs used
+            (True, False, False),  # Only experimental API used
+            (False, True, False),  # Only final API used
+            (False, False, False),  # Neither API used
+        ]
+    )
+    def test_both_query_params_used(self, experimental_used, final_used, should_raise):
+        fake_enqueue = lambda msg: None
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=fake_enqueue,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            page_script_hash="",
+            user_info={"email": "test@test.com"},
+        )
+        ctx._experimental_query_params_used = experimental_used
+        ctx._final_query_params_used = final_used
+
+        if should_raise:
+            with self.assertRaises(StreamlitAPIException):
+                ctx.check_both_query_apis_called()
+        else:
+            ctx.check_both_query_apis_called()

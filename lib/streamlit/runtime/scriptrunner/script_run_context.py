@@ -69,6 +69,10 @@ class ScriptRunContext:
     )
     script_requests: Optional[ScriptRequests] = None
 
+    _experimental_query_params_used = False
+    # TODO(willhuang1997): the variable name of this may change as new api may be experimental too
+    _final_query_params_used = False
+
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
@@ -106,6 +110,12 @@ class ScriptRunContext:
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)
+
+    def check_both_query_apis_called(self):
+        if self._experimental_query_params_used and self._final_query_params_used:
+            raise StreamlitAPIException(
+                "Using `st.query_params` together with either `st.experimental_get_query_params` or `st.experimental_set_query_params` is not supported. Please convert your app to only use `st.query_params`"
+            )
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

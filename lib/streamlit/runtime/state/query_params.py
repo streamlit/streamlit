@@ -32,12 +32,15 @@ class QueryParams(MutableMapping[str, Any]):
         self.__dict__["_query_params"] = {}
 
     def __iter__(self) -> Iterator[Any]:
+        self.check_both_apis_used()
         return iter(self._query_params.keys())
 
     def __getitem__(self, key: str) -> str:
+        self.check_both_apis_used()
         return self._getitem(key)
 
     def _getitem(self, key: str) -> str:
+        self.check_both_apis_used()
         try:
             value = self._query_params[key]
             if isinstance(value, list):
@@ -50,6 +53,7 @@ class QueryParams(MutableMapping[str, Any]):
             raise KeyError(_missing_key_error_message_query_params(key))
 
     def _setitem(self, key: str, value: Union[str, List[str]]) -> None:
+        self.check_both_apis_used()
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
@@ -60,6 +64,7 @@ class QueryParams(MutableMapping[str, Any]):
         self._setitem(key, value)
 
     def get_all(self, key: str) -> List[str]:
+        self.check_both_apis_used()
         try:
             if key not in self._query_params:
                 return []
@@ -84,6 +89,7 @@ class QueryParams(MutableMapping[str, Any]):
             raise AttributeError(_missing_key_error_message_query_params(key))
 
     def _delitem(self, key):
+        self.check_both_apis_used()
         if key in self._query_params:
             del self._query_params[key]
             self._send_query_param_msg()
@@ -91,9 +97,11 @@ class QueryParams(MutableMapping[str, Any]):
             raise KeyError(_missing_key_error_message_query_params(key))
 
     def __contains__(self, key: str) -> bool:  # type: ignore[override]
+        self.check_both_apis_used()
         return key in self._query_params
 
     def __len__(self) -> int:
+        self.check_both_apis_used()
         return len(self._query_params)
 
     def _send_query_param_msg(self) -> None:
@@ -104,6 +112,9 @@ class QueryParams(MutableMapping[str, Any]):
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+        ctx._final_query_params_used = True
+        ctx.check_both_query_apis_called()
+
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
             self._query_params, ctx.query_string
@@ -112,6 +123,7 @@ class QueryParams(MutableMapping[str, Any]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
+        self.check_both_apis_used()
         self._query_params.clear()
         self._send_query_param_msg()
 
@@ -123,6 +135,16 @@ class QueryParams(MutableMapping[str, Any]):
 
     def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
         self._query_params[key] = val
+
+    def check_both_apis_used(self):
+        # Avoid circular imports
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+        ctx._final_query_params_used = True
+        ctx.check_both_query_apis_called()
 
 
 def _missing_key_error_message_query_params(key: str) -> str:
