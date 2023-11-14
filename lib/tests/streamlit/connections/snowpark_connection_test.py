@@ -133,8 +133,6 @@ class SnowparkConnectionTest(unittest.TestCase):
         MagicMock(),
     )
     def test_retry_fails_fast_for_most_errors(self):
-        from snowflake.snowpark.exceptions import SnowparkServerException
-
         mock_sql_return = MagicMock()
         mock_sql_return.to_pandas = MagicMock(side_effect=Exception("oh noes :("))
 

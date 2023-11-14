@@ -191,6 +191,8 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
             {
                 "allowedOrigins": _DEFAULT_ALLOWED_MESSAGE_ORIGINS,
                 "useExternalAuthToken": False,
+                # Default host configuration settings:
+                "enableCustomParentMessages": False,
             },
             response_body,
         )

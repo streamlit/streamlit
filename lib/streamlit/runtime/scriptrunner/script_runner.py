@@ -536,7 +536,11 @@ class ScriptRunner:
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
             rerun_exception_data = e.rerun_data
-            premature_stop = True
+            # Interruption due to a rerun is usually from `st.rerun()`, which
+            # we want to count as a script completion so triggers reset.
+            # It is also possible for this to happen if fast reruns is off,
+            # but this is very rare.
+            premature_stop = False
 
         except StopException:
             # This is thrown when the script executes `st.stop()`.

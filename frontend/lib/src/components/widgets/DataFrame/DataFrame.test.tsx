@@ -29,6 +29,11 @@ jest.mock("@glideapps/glide-data-grid", () => ({
   DataEditor: jest.fn(props => <div {...props} />),
 }))
 
+// The native-file-system-adapter creates some issues in the test environment
+// so we mock it out. The errors might be related to the missing typescript
+// distribution. But the file picker most likely wouldn't work anyways in jest-dom.
+jest.mock("native-file-system-adapter", () => ({}))
+
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
 const getProps = (
@@ -102,6 +107,17 @@ describe("DataFrame widget", () => {
     )
     expect(dfStyle.width).toBe("400px")
     expect(dfStyle.height).toBe("400px")
+  })
+
+  it("should have a toolbar", () => {
+    render(<DataFrame {...props} />)
+
+    const dataframeToolbar = screen.getByTestId("stElementToolbar")
+
+    expect(dataframeToolbar).toBeInTheDocument()
+
+    const toolbarButtons = screen.getAllByTestId("stElementToolbarButton")
+    expect(toolbarButtons).toHaveLength(3)
   })
 
   it("Touch detection correctly deactivates some features", () => {

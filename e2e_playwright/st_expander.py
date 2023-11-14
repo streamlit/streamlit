@@ -26,3 +26,20 @@ sidebar = st.sidebar.expander("Expand me!")
 sidebar.write("I am in the sidebar")
 
 st.expander("Empty expander")
+
+with st.expander("Expander with number input", expanded=True):
+    # We deliberately use a list to implement this for the screenshot
+    st.write("* Example list item")
+    value = st.number_input("number", value=1.0, key="number")
+
+
+def update_value():
+    st.session_state.number = 0
+
+
+update_button = st.button("Update Num Input", on_click=update_value)
+
+st.text(st.session_state.number)
+
+if st.button("Print State Value"):
+    st.text(st.session_state.number)

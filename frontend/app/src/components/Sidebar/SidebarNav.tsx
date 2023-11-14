@@ -61,7 +61,7 @@ const SidebarNav = ({
   const { pageLinkBaseUrl } = React.useContext(AppContext)
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef)
+  const isOverflowing = useIsOverflowing(navItemsRef, expanded)
 
   const onMouseOver = useCallback(() => {
     if (isOverflowing) {

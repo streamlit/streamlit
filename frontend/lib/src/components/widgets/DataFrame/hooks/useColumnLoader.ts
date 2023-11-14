@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
+
 import { merge } from "lodash"
 
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
@@ -152,18 +154,18 @@ export function applyColumnConfig(
 }
 
 /**
- * Extracts the user-defined column configuration from the proto message.
+ * Extracts the user-defined column configuration from the JSON config.
  *
- * @param element - The proto message of the dataframe element.
+ * @param configJson - the column config JSON from the proto.
  *
  * @returns the user-defined column configuration.
  */
-export function getColumnConfig(element: ArrowProto): Map<string, any> {
-  if (!element.columns) {
+export function getColumnConfig(configJson: string): Map<string, any> {
+  if (!configJson) {
     return new Map()
   }
   try {
-    return new Map(Object.entries(JSON.parse(element.columns)))
+    return new Map(Object.entries(JSON.parse(configJson)))
   } catch (error) {
     // This is not expected to happen, but if it does, we'll return an empty map
     // and log the error to the console.
@@ -217,86 +219,95 @@ function useColumnLoader(
   data: Quiver,
   disabled: boolean
 ): ColumnLoaderReturn {
-  // TODO(lukasmasuch): We might use state to store the column config as additional optimization?
-  const columnConfigMapping = getColumnConfig(element)
+  const columnConfigMapping = React.useMemo(() => {
+    return getColumnConfig(element.columns)
+  }, [element.columns])
 
   const stretchColumns: boolean =
     element.useContainerWidth ||
     (notNullOrUndefined(element.width) && element.width > 0)
 
   // Converts the columns from Arrow into columns compatible with glide-data-grid
-  let configuredColumns: BaseColumn[] = getAllColumnsFromArrow(data)
-    .map(column => {
-      // Apply column configurations
-      let updatedColumn = {
-        ...column,
-        ...applyColumnConfig(column, columnConfigMapping),
-        isStretched: stretchColumns,
-      } as BaseColumnProps
+  const columns: BaseColumn[] = React.useMemo(() => {
+    let configuredColumns = getAllColumnsFromArrow(data)
+      .map(column => {
+        // Apply column configurations
+        let updatedColumn = {
+          ...column,
+          ...applyColumnConfig(column, columnConfigMapping),
+          isStretched: stretchColumns,
+        } as BaseColumnProps
 
-      const ColumnType = getColumnType(updatedColumn)
+        const ColumnType = getColumnType(updatedColumn)
 
-      // Make sure editing is deactivated if the column is read-only, disabled,
-      // or a not editable type.
-      if (
-        element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
-        disabled ||
-        ColumnType.isEditableType === false
-      ) {
-        updatedColumn = {
-          ...updatedColumn,
-          isEditable: false,
+        // Make sure editing is deactivated if the column is read-only, disabled,
+        // or a not editable type.
+        if (
+          element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+          disabled ||
+          ColumnType.isEditableType === false
+        ) {
+          updatedColumn = {
+            ...updatedColumn,
+            isEditable: false,
+          }
         }
-      }
 
-      if (
-        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
-        updatedColumn.isEditable == true
-      ) {
-        // Set editable icon for all editable columns:
-        updatedColumn = {
-          ...updatedColumn,
-          icon: "editable",
+        if (
+          element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+          updatedColumn.isEditable == true
+        ) {
+          // Set editable icon for all editable columns:
+          updatedColumn = {
+            ...updatedColumn,
+            icon: "editable",
+          }
         }
-      }
 
-      return ColumnType(updatedColumn)
-    })
-    .filter(column => {
-      // Filter out all columns that are hidden
-      return !column.isHidden
-    })
+        return ColumnType(updatedColumn)
+      })
+      .filter(column => {
+        // Filter out all columns that are hidden
+        return !column.isHidden
+      })
 
-  // Reorder columns based on the user configuration:
-  if (element.columnOrder && element.columnOrder.length > 0) {
-    const orderedColumns: BaseColumn[] = []
+    // Reorder columns based on the user configuration:
+    if (element.columnOrder && element.columnOrder.length > 0) {
+      const orderedColumns: BaseColumn[] = []
 
-    // Add all index columns to the beginning of the list:
-    configuredColumns.forEach(column => {
-      if (column.isIndex) {
-        orderedColumns.push(column)
-      }
-    })
+      // Add all index columns to the beginning of the list:
+      configuredColumns.forEach(column => {
+        if (column.isIndex) {
+          orderedColumns.push(column)
+        }
+      })
 
-    // Reorder non-index columns based on the configured column order:
-    element.columnOrder.forEach(columnName => {
-      const column = configuredColumns.find(
-        column => column.name === columnName
-      )
-      if (column && !column.isIndex) {
-        orderedColumns.push(column)
-      }
-    })
+      // Reorder non-index columns based on the configured column order:
+      element.columnOrder.forEach(columnName => {
+        const column = configuredColumns.find(
+          column => column.name === columnName
+        )
+        if (column && !column.isIndex) {
+          orderedColumns.push(column)
+        }
+      })
 
-    configuredColumns = orderedColumns
-  }
+      configuredColumns = orderedColumns
+    }
 
-  // If all columns got filtered out, we add an empty index column
-  // to prevent errors from glide-data-grid.
-  const columns =
-    configuredColumns.length > 0
+    // If all columns got filtered out, we add an empty index column
+    // to prevent errors from glide-data-grid.
+    return configuredColumns.length > 0
       ? configuredColumns
       : [ObjectColumn(getEmptyIndexColumn())]
+  }, [
+    data,
+    columnConfigMapping,
+    stretchColumns,
+    disabled,
+    element.editingMode,
+    element.columnOrder,
+  ])
 
   return {
     columns,

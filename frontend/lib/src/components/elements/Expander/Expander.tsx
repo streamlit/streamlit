@@ -14,21 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState } from "react"
-import classNames from "classnames"
-import {
-  StatelessAccordion as Accordion,
-  Panel,
-  SharedStylePropsArg,
-} from "baseui/accordion"
-import { useTheme } from "@emotion/react"
+import React, { ReactElement, useEffect, useRef, useState } from "react"
 import {
   ExpandMore,
   ExpandLess,
   Check,
   ErrorOutline,
 } from "@emotion-icons/material-outlined"
-
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import {
   StyledSpinnerIcon,
@@ -40,8 +32,13 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { IconSize, isPresetTheme } from "@streamlit/lib/src/theme"
 
 import {
+  BORDER_SIZE,
   StyledExpandableContainer,
-  StyledIconContainer,
+  StyledSummary,
+  StyledSummaryHeading,
+  StyledDetailsPanel,
+  StyledEmptyDetailsPanel,
+  StyledDetails,
 } from "./styled-components"
 
 export interface ExpanderIconProps {
@@ -104,25 +101,35 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 
 export interface ExpanderProps {
   element: BlockProto.Expandable
-  widgetsDisabled: boolean
   isStale: boolean
   empty: boolean
 }
 
 const Expander: React.FC<ExpanderProps> = ({
   element,
-  widgetsDisabled,
   isStale,
   empty,
   children,
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
   const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const summaryRef = useRef<HTMLElement>(null)
+  const animationRef = useRef<Animation | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialExpanded)) {
       setExpanded(initialExpanded)
+
+      // We manage the open attribute via the detailsRef and not with React state
+      if (detailsRef.current) {
+        detailsRef.current.open = initialExpanded
+      }
     }
+
     // Having `label` in the dependency array here is necessary because
     // sometimes two distinct expanders look so similar that even the react
     // diffing algorithm decides that they're the same element with updated
@@ -133,147 +140,132 @@ const Expander: React.FC<ExpanderProps> = ({
     // expander's `expanded` state in this edge case.
   }, [label, initialExpanded])
 
-  const toggle = (): void => {
-    if (!empty) {
-      setExpanded(!expanded)
+  const onAnimationFinish = (open: boolean): void => {
+    if (!detailsRef.current) {
+      return
+    }
+
+    detailsRef.current.open = open
+    animationRef.current = null
+    detailsRef.current.style.height = ""
+    detailsRef.current.style.overflow = ""
+  }
+
+  const toggleAnimation = (
+    detailsEl: HTMLDetailsElement,
+    startHeight: number,
+    endHeight: number
+  ): void => {
+    const isOpen = endHeight > startHeight
+
+    if (animationRef.current) {
+      animationRef.current.cancel()
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+    }
+
+    const animation = detailsEl.animate(
+      {
+        height: [`${startHeight}px`, `${endHeight}px`],
+      },
+      {
+        duration: 500,
+        easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+      }
+    )
+
+    animation.onfinish = () => onAnimationFinish(isOpen)
+    animationRef.current = animation
+  }
+
+  const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
+    e.preventDefault()
+
+    setExpanded(!expanded)
+    const detailsEl = detailsRef.current
+    if (!detailsEl || !summaryRef.current) {
+      return
+    }
+
+    detailsEl.style.overflow = "hidden"
+    const detailsHeight = detailsEl.getBoundingClientRect().height
+    const summaryHeight = summaryRef.current.getBoundingClientRect().height
+
+    if (!expanded) {
+      detailsEl.style.height = `${detailsHeight}px`
+      detailsEl.open = true
+
+      window.requestAnimationFrame(() => {
+        // For expansion animations, we rely on the rendered width and height
+        // of the children content. However, in Safari, the children are not
+        // rendered because Safari doesn't paint elements that are not visible
+        // (in this case, the details element is not visible because it's
+        // not open). This operation produces inconsistent heights to animate.
+        // To work around this, we force a repaint by animating a tiny bit
+        // and animate the rest of it later.
+        toggleAnimation(
+          detailsEl,
+          detailsHeight,
+          summaryHeight + 2 * BORDER_SIZE + 5 // Arbitrary size of 5px
+        )
+
+        timeoutRef.current = setTimeout(() => {
+          if (!contentRef.current) {
+            return
+          }
+
+          const contentHeight =
+            contentRef.current.getBoundingClientRect().height
+          toggleAnimation(
+            detailsEl,
+            detailsHeight,
+            summaryHeight + contentHeight + 2 * BORDER_SIZE
+          )
+        }, 100)
+      })
+    } else {
+      toggleAnimation(
+        detailsEl,
+        detailsHeight,
+        summaryHeight + 2 * BORDER_SIZE
+      )
     }
   }
-  const { colors, radii, spacing, fontSizes } = useTheme()
 
   return (
-    <StyledExpandableContainer
-      data-testid="stExpander"
-      empty={empty}
-      disabled={widgetsDisabled}
-    >
-      <Accordion
-        onChange={toggle}
-        expanded={expanded && !empty ? ["panel"] : []}
-        disabled={widgetsDisabled}
-        overrides={{
-          Content: {
-            style: ({ $expanded }: SharedStylePropsArg) => ({
-              backgroundColor: colors.transparent,
-              marginLeft: spacing.none,
-              marginRight: spacing.none,
-              marginTop: spacing.none,
-              marginBottom: spacing.none,
-              overflow: "visible",
-              paddingLeft: spacing.lg,
-              paddingRight: spacing.lg,
-              paddingTop: 0,
-              paddingBottom: $expanded ? spacing.lg : 0,
-              borderTopStyle: "none",
-              borderBottomStyle: "none",
-              borderRightStyle: "none",
-              borderLeftStyle: "none",
-            }),
-            props: { className: "streamlit-expanderContent" },
-          },
-          // Allow fullscreen button to overflow the expander
-          ContentAnimationContainer: {
-            style: ({ $expanded }: SharedStylePropsArg) => ({
-              overflow: $expanded ? "visible" : "hidden",
-            }),
-          },
-          PanelContainer: {
-            style: () => ({
-              marginLeft: `${spacing.none} !important`,
-              marginRight: `${spacing.none} !important`,
-              marginTop: `${spacing.none} !important`,
-              marginBottom: `${spacing.none} !important`,
-              paddingLeft: `${spacing.none} !important`,
-              paddingRight: `${spacing.none} !important`,
-              paddingTop: `${spacing.none} !important`,
-              paddingBottom: `${spacing.none} !important`,
-              borderTopStyle: "none !important",
-              borderBottomStyle: "none !important",
-              borderRightStyle: "none !important",
-              borderLeftStyle: "none !important",
-            }),
-          },
-          Header: {
-            style: ({ $disabled }: SharedStylePropsArg) => ({
-              marginBottom: spacing.none,
-              marginLeft: spacing.none,
-              marginRight: spacing.none,
-              marginTop: spacing.none,
-              backgroundColor: colors.transparent,
-              color: $disabled ? colors.disabled : colors.bodyText,
-              fontSize: fontSizes.sm,
-              borderTopStyle: "none",
-              borderBottomStyle: "none",
-              borderRightStyle: "none",
-              borderLeftStyle: "none",
-              paddingBottom: spacing.md,
-              paddingTop: spacing.md,
-              paddingRight: spacing.lg,
-              paddingLeft: spacing.lg,
-              ...(isStale
-                ? {
-                    opacity: 0.33,
-                    transition: "opacity 1s ease-in 0.5s",
-                  }
-                : {}),
-            }),
-            props: {
-              className: "streamlit-expanderHeader",
-            },
-          },
-          ToggleIcon: {
-            style: ({ $disabled }: SharedStylePropsArg) => ({
-              color: $disabled ? colors.disabled : colors.bodyText,
-            }),
-            // eslint-disable-next-line react/display-name
-            component: () => {
-              if (empty) {
-                // Don't show then expand/collapse icon if there's no content.
-                return <></>
-              }
-              return (
-                <StyledIcon
-                  as={expanded ? ExpandLess : ExpandMore}
-                  color={"inherit"}
-                  aria-hidden="true"
-                  data-testid="stExpanderToggleIcon"
-                  size="lg"
-                  margin=""
-                  padding=""
-                />
-              )
-            },
-          },
-          Root: {
-            props: {
-              className: classNames("streamlit-expander"),
-            },
-            style: {
-              borderStyle: "solid",
-              borderWidth: "1px",
-              borderColor: colors.fadedText10,
-              borderRadius: radii.lg,
-              ...(isStale
-                ? {
-                    borderColor: colors.fadedText05,
-                    transition: "border 1s ease-in 0.5s",
-                  }
-                : {}),
-            },
-          },
-        }}
-      >
-        <Panel
-          title={
-            <StyledIconContainer>
-              {element.icon && <ExpanderIcon icon={element.icon} />}
-              <StreamlitMarkdown source={label} allowHTML={false} isLabel />
-            </StyledIconContainer>
-          }
-          key="panel"
-        >
-          {children}
-        </Panel>
-      </Accordion>
+    <StyledExpandableContainer data-testid="stExpander">
+      <StyledDetails isStale={isStale} ref={detailsRef}>
+        <StyledSummary onClick={toggle} ref={summaryRef}>
+          <StyledSummaryHeading>
+            {element.icon && <ExpanderIcon icon={element.icon} />}
+            <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+          </StyledSummaryHeading>
+          <StyledIcon
+            as={expanded ? ExpandLess : ExpandMore}
+            color={"inherit"}
+            aria-hidden="true"
+            data-testid="stExpanderToggleIcon"
+            size="lg"
+            margin=""
+            padding=""
+          />
+        </StyledSummary>
+        {!empty ? (
+          <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
+            {children}
+          </StyledDetailsPanel>
+        ) : (
+          <StyledEmptyDetailsPanel
+            data-testid="stExpanderDetails"
+            ref={contentRef}
+          >
+            empty
+          </StyledEmptyDetailsPanel>
+        )}
+      </StyledDetails>
     </StyledExpandableContainer>
   )
 }

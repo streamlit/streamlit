@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -33,7 +33,6 @@ const getProps = (
     expanded: true,
     ...elementProps,
   }),
-  widgetsDisabled: false,
   isStale: false,
   empty: false,
   ...props,
@@ -51,6 +50,17 @@ describe("Expander container", () => {
     expect(expanderContainer).toBeInTheDocument()
   })
 
+  it("does not render a list", () => {
+    const props = getProps()
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+    const list = screen.queryByRole("list")
+    expect(list).not.toBeInTheDocument()
+  })
+
   it("renders expander label as expected", () => {
     const props = getProps()
     render(
@@ -61,12 +71,10 @@ describe("Expander container", () => {
     expect(screen.getByText(props.element.label)).toBeInTheDocument()
   })
 
-  it("renders no collapse/expand icon if empty", () => {
+  it("does not render collapse/expand icon if empty", () => {
     const props = getProps({}, { empty: true })
     render(<Expander {...props}></Expander>)
-    expect(
-      screen.queryByTestId("stExpanderToggleIcon")
-    ).not.toBeInTheDocument()
+    expect(screen.getByTestId("stExpanderToggleIcon")).toBeInTheDocument()
   })
 
   it("renders expander with a spinner icon", () => {
@@ -116,6 +124,18 @@ describe("Expander container", () => {
         <div>test</div>
       </Expander>
     )
-    expect(screen.queryByText("test")).not.toBeInTheDocument()
+    expect(screen.getByText("test")).not.toBeVisible()
+  })
+
+  it("should render the text when expanded", () => {
+    const props = getProps({ expanded: false })
+    render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    fireEvent.click(screen.getByText("hi"))
+    expect(screen.getByText("test")).toBeVisible()
   })
 })

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import copy
+import enum
 import os
 import unittest
 from unittest.mock import MagicMock, patch
@@ -21,8 +22,14 @@ import pytest
 
 from streamlit import config
 from streamlit.elements import utils
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
+)
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.state.common import RegisterWidgetResult
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
@@ -147,3 +154,85 @@ class ElementUtilsTest(unittest.TestCase):
             check_session_state_rules(5, key="the key", writes_allowed=False)
 
         assert "cannot be set using st.session_state" in str(e.value)
+
+    def test_maybe_coerce_enum(self):
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            C = enum.auto()
+
+        EnumAOrig = EnumA
+
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+            C = enum.auto()
+
+        EnumAEqual = EnumA
+        EnumAEqualList = [EnumAEqual.A, EnumAEqual.C, EnumAEqual.B]
+
+        int_result = RegisterWidgetResult(1, False)
+        intlist_result = RegisterWidgetResult([1, 2, 3], False)
+
+        single_result = RegisterWidgetResult(EnumAOrig.A, False)
+        single_coerced = RegisterWidgetResult(EnumAEqual.A, False)
+
+        tuple_result = RegisterWidgetResult((EnumAOrig.A, EnumAOrig.C), True)
+        tuple_coerced = RegisterWidgetResult((EnumAEqual.A, EnumAEqual.C), True)
+
+        list_result = RegisterWidgetResult([EnumAOrig.A, EnumAOrig.C], True)
+        list_coerced = RegisterWidgetResult([EnumAEqual.A, EnumAEqual.C], True)
+
+        assert maybe_coerce_enum(single_result, EnumAEqual, []) == single_coerced
+        assert (
+            maybe_coerce_enum(single_result, EnumAEqualList, EnumAEqualList)
+            == single_coerced
+        )
+        assert (
+            maybe_coerce_enum(single_result, EnumAEqualList, [EnumAEqual.A])
+            == single_coerced
+        )
+        assert maybe_coerce_enum(single_result, [1, 2, 3], []) is single_result
+        assert maybe_coerce_enum(int_result, EnumAEqual, []) is int_result
+        assert (
+            maybe_coerce_enum(
+                single_result, EnumAEqualList, [EnumAEqual.A, EnumAOrig.B]
+            )
+            is single_result
+        )
+
+        assert maybe_coerce_enum_sequence(tuple_result, EnumAEqual, []) == tuple_coerced
+        assert (
+            maybe_coerce_enum_sequence(tuple_result, EnumAEqualList, EnumAEqualList)
+            == tuple_coerced
+        )
+        assert (
+            maybe_coerce_enum_sequence(tuple_result, EnumAEqualList, [EnumAEqual.A])
+            == tuple_coerced
+        )
+        assert maybe_coerce_enum_sequence(list_result, EnumAEqual, []) == list_coerced
+        assert (
+            maybe_coerce_enum_sequence(list_result, EnumAEqualList, EnumAEqualList)
+            == list_coerced
+        )
+        assert (
+            maybe_coerce_enum_sequence(list_result, EnumAEqualList, [EnumAEqual.A])
+            == list_coerced
+        )
+        assert maybe_coerce_enum_sequence(list_result, [1, 2, 3], []) is list_result
+        assert maybe_coerce_enum_sequence(tuple_result, [1, 2, 3], []) is tuple_result
+        assert (
+            maybe_coerce_enum_sequence(intlist_result, EnumAEqual, []) is intlist_result
+        )
+        assert (
+            maybe_coerce_enum_sequence(
+                list_result, EnumAEqualList, [EnumAEqual.A, EnumAOrig.B]
+            )
+            is list_result
+        )
+        assert (
+            maybe_coerce_enum_sequence(
+                tuple_result, EnumAEqualList, [EnumAEqual.A, EnumAOrig.B]
+            )
+            is tuple_result
+        )

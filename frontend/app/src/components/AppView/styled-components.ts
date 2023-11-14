@@ -72,6 +72,8 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
 )
 
 export interface StyledAppViewBlockContainerProps {
+  hasSidebar: boolean
+  isEmbedded: boolean
   isWideMode: boolean
   showPadding: boolean
   addPaddingForHeader: boolean
@@ -82,6 +84,8 @@ export interface StyledAppViewBlockContainerProps {
 export const StyledAppViewBlockContainer =
   styled.div<StyledAppViewBlockContainerProps>(
     ({
+      hasSidebar,
+      isEmbedded,
       isWideMode,
       showPadding,
       addPaddingForHeader,
@@ -89,8 +93,11 @@ export const StyledAppViewBlockContainer =
       events,
       theme,
     }) => {
-      let topEmbedPadding: string = showPadding ? "6rem" : "1rem"
-      if (addPaddingForHeader && !showPadding) {
+      let topEmbedPadding: string = showPadding ? "6rem" : "2.1rem"
+      if (
+        (addPaddingForHeader && !showPadding) ||
+        (isEmbedded && hasSidebar)
+      ) {
         topEmbedPadding = "3rem"
       }
       const bottomEmbedPadding =
@@ -122,13 +129,6 @@ export const StyledAppViewBlockContainer =
     }
   )
 
-export const StyledAppViewBlockSpacer = styled.div(({ theme }) => {
-  return {
-    width: theme.sizes.full,
-    flexGrow: 1,
-  }
-})
-
 export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   color: theme.colors.fadedText60,
   // We do not want to change the font for this based on theme.
@@ -140,33 +140,6 @@ export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
     textDecoration: "underline",
   },
 }))
-
-export interface StyledAppViewFooterProps {
-  isWideMode: boolean
-}
-
-export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
-  ({ isWideMode, theme }) => {
-    const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
-    return {
-      color: theme.colors.fadedText40,
-      fontSize: theme.fontSizes.sm,
-      height: theme.sizes.footerHeight,
-      minWidth: isWideMode ? "auto" : undefined,
-      maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
-      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-      // Increase side padding, if layout = wide and we're not on mobile
-      "@media (min-width: 576px)": {
-        paddingLeft: wideSidePadding,
-        paddingRight: wideSidePadding,
-      },
-      width: theme.sizes.full,
-      a: {
-        color: theme.colors.fadedText60,
-      },
-    }
-  }
-)
 
 export interface StyledIFrameResizerAnchorProps {
   hasFooter: boolean

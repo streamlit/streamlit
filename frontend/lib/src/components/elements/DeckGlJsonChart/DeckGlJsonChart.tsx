@@ -37,8 +37,8 @@ import { CSVLoader } from "@loaders.gl/csv"
 import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
-import withMapboxToken from "@streamlit/lib/src/hocs/withMapboxToken"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
+import withMapboxToken from "./withMapboxToken"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import {
@@ -264,7 +264,9 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
                 ? deck.mapStyle
                 : deck.mapStyle[0])
             }
-            mapboxApiAccessToken={this.props.mapboxToken}
+            mapboxApiAccessToken={
+              this.props.element.mapboxToken || this.props.mapboxToken
+            }
           />
           <StyledNavigationControlContainer>
             <NavigationControl className="zoomButton" showCompass={false} />

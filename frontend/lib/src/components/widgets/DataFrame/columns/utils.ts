@@ -457,6 +457,8 @@ export function formatNumber(
     return new Intl.NumberFormat(undefined, {
       notation: format as any,
     }).format(value)
+  } else if (format === "duration[ns]") {
+    return moment.duration(value / (1000 * 1000), "milliseconds").humanize()
   }
   return sprintf(format, value)
 }

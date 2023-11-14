@@ -92,7 +92,6 @@ class ArrowMixin:
         use_container_width : bool
             If True, set the dataframe width to the width of the parent container.
             This takes precedence over the width argument.
-            This argument can only be supplied by keyword.
 
         hide_index : bool or None
             Whether to hide the index column(s). If None (default), the visibility of

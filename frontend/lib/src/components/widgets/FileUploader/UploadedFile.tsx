@@ -91,7 +91,7 @@ export const UploadedFileStatus = ({
 
 const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
   return (
-    <StyledUploadedFile className="uploadedFile">
+    <StyledUploadedFile className="uploadedFile" data-testid="stUploadedFile">
       <StyledFileIcon>
         <Icon content={InsertDriveFile} size="twoXL" />
       </StyledFileIcon>

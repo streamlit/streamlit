@@ -21,7 +21,7 @@ import {
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "@streamlit/lib/src/proto"
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
 import {
@@ -101,7 +101,7 @@ export function ImageList({
               alt={idx.toString()}
             />
             {image.caption && (
-              <StyledCaption data-testid="caption" style={imgStyle}>
+              <StyledCaption data-testid="stImageCaption" style={imgStyle}>
                 {` ${image.caption} `}
               </StyledCaption>
             )}

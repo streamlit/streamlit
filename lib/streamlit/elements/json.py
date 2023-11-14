@@ -51,7 +51,6 @@ class JsonMixin:
         expanded : bool
             An optional boolean that allows the user to set whether the initial
             state of this json element should be expanded. Defaults to True.
-            This argument can only be supplied by keyword.
 
         Example
         -------
