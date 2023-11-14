@@ -14,6 +14,7 @@
 
 import pytest
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import QueryParams
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -143,3 +144,11 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(IndexError):
             # no forward message should be sent
             self.get_message_from_queue(0)
+
+    def test__setitem__query_params_embed(self):
+        with pytest.raises(StreamlitAPIException):
+            self._query_params["embed"] = True
+
+    def test__setitem__query_params_embed_options(self):
+        with pytest.raises(StreamlitAPIException):
+            self._query_params["embed_options"] = "show_toolbar"
