@@ -131,6 +131,7 @@ class QueryParams(MutableMapping[str, Any]):
         self._delitem(key)
 
     def to_dict(self) -> Dict[str, Union[List[str], str]]:
+        self.check_both_apis_used()
         return self._query_params
 
     def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
