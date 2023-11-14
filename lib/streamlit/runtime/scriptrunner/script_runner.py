@@ -25,7 +25,6 @@ from urllib import parse
 from blinker import Signal
 
 from streamlit import config, runtime, source_util, util
-from streamlit.commands.query_params import EMBED_QUERY_PARAMS_KEYS
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
@@ -447,8 +446,6 @@ class ScriptRunner:
         url = parse.parse_qs(rerun_data.query_string, keep_blank_values=True)
         query_params = ctx.session_state._state._query_params
         for key, val in url.items():
-            if key.lower() in EMBED_QUERY_PARAMS_KEYS:
-                pass
             if len(val) == 0:
                 query_params.set_with_no_forward_msg(key, val="")
             if len(val) == 1:
