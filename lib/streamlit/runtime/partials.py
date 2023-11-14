@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import hashlib
-import sys
+import pickle
 from functools import wraps
 from typing import (
     Any,
@@ -28,13 +28,12 @@ from typing import (
     overload,
 )
 
-import cloudpickle
-
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
 F = TypeVar("F", bound=Callable[..., Any])
+WrappedPartial = Callable[[], Any]
 
 
 @overload
@@ -80,7 +79,15 @@ def partial(
         ctx = get_script_run_ctx()
         if ctx is None or len(ctx.dg_stack) == 0:
             return
-        dg_stack = ctx.dg_stack
+
+        # HACK: FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
+        # The serialization/deserialization of the dg_stack here is essentially just
+        # being used to reset the stack before each partial rerun. This is necessary
+        # because dg_stack is mutated as the script runs, but we need to save its state
+        # at this point so that we can rewrite a specific part of the app in a partial
+        # rerun. We'll eventually want to make changes to the DeltaGenerator class
+        # itself to support this in a less hacky way.
+        dg_stack = pickle.dumps(ctx.dg_stack)
         active_dg = ctx.dg_stack[-1]
 
         # TODO(lukasmasuch): Research more on what to include in the hash:
@@ -99,7 +106,10 @@ def partial(
             ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
-            ctx.dg_stack = dg_stack
+            # HACK: See the corresponding comment above for an explanation of what's
+            # going on here.
+            ctx.dg_stack = pickle.loads(dg_stack)
+
             # Set dg stack to outside state
             print(type(ctx.dg_stack))
             print(ctx.dg_stack)
@@ -124,25 +134,23 @@ def partial(
     return wrap
 
 
-def load_partial(partial_id: str) -> Callable[[], Any] | None:
+def load_partial(partial_id: str) -> WrappedPartial | None:
     partial_storage = PartialsStorage()
     if partial_id not in partial_storage:
         return None
 
-    return cloudpickle.loads(partial_storage[partial_id])  # type: ignore
+    return partial_storage[partial_id]
 
 
-def save_partial(partial_id: str, partial_function: Callable[[], Any]) -> None:
+def save_partial(partial_id: str, partial_function: WrappedPartial) -> None:
     partial_storage = PartialsStorage()
-    partial_bytes = cloudpickle.dumps(partial_function)
-    partial_storage[partial_id] = partial_bytes
-    print(f"Size of partial {partial_id}: {sys.getsizeof(partial_bytes)}")
+    partial_storage[partial_id] = partial_function
 
 
-class PartialsStorage(MutableMapping[str, bytes]):
+class PartialsStorage(MutableMapping[str, WrappedPartial]):
     """A storage for partials that is backed by the session state."""
 
-    def _get_partials_state(self) -> MutableMapping[str, bytes]:
+    def _get_partials_state(self) -> MutableMapping[str, WrappedPartial]:
         # TODO(lukasmasuch): This is just a super hacky solution for storing partials
         # We should create a dedicated partials storage outside of the session state.
         session_state = get_session_state()
@@ -162,19 +170,19 @@ class PartialsStorage(MutableMapping[str, bytes]):
         """String representation of the partial state."""
         return str(self._get_partials_state())
 
-    def __getitem__(self, key: str) -> bytes:
+    def __getitem__(self, key: str) -> WrappedPartial:
         """Return a specific partial."""
         return self._get_partials_state()[key]
 
-    def __setitem__(self, key: str, value: bytes) -> None:
-        """Store the bytes for a given partial."""
+    def __setitem__(self, key: str, value: WrappedPartial) -> None:
+        """Store the WrappedPartial for a given partial."""
         self._get_partials_state()[key] = value
 
     def __delitem__(self, key: str) -> None:
-        """Delete the bytes of a given partial."""
+        """Delete the WrappedPartial of a given partial."""
         del self._get_partials_state()[key]
 
-    def __contains__(self, key: str) -> bool:
+    def __contains__(self, key: Any) -> bool:
         return key in self._get_partials_state()
 
     def clear(self) -> None:
