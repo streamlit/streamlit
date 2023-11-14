@@ -138,7 +138,7 @@ class QueryParams(MutableMapping[str, Any]):
 
     def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
         # Avoid circular imports
-        from streamlit.commands.query_params import EMBED_QUERY_PARAMS_KEYS
+        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
 
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             return
