@@ -109,8 +109,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                     "Missing Snowflake connection configuration. "
                     "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "
                     "or as kwargs to `st.connection`? "
-                    "See the [Snowflake Python Connector documentation](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example#connecting-using-the-connections-toml-file) "
-                    "for some options on how to set connection params."
+                    "See the [SnowflakeConnection configuration documentation](https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
+                    "for more details and examples."
                 )
             raise e
 
@@ -162,19 +162,41 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
-        from snowflake.connector import Error as SnowflakeError
-        from tenacity import (
-            retry,
-            retry_if_exception_type,
-            stop_after_attempt,
-            wait_fixed,
+        from snowflake.connector.errors import ProgrammingError  # type: ignore[import]
+        from snowflake.connector.network import (  # type: ignore[import]
+            BAD_REQUEST_GS_CODE,
+            ID_TOKEN_EXPIRED_GS_CODE,
+            MASTER_TOKEN_EXPIRED_GS_CODE,
+            MASTER_TOKEN_INVALD_GS_CODE,
+            MASTER_TOKEN_NOTFOUND_GS_CODE,
+            SESSION_EXPIRED_GS_CODE,
         )
+        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+
+        retryable_error_codes = {
+            int(code)
+            for code in (
+                ID_TOKEN_EXPIRED_GS_CODE,
+                SESSION_EXPIRED_GS_CODE,
+                MASTER_TOKEN_NOTFOUND_GS_CODE,
+                MASTER_TOKEN_EXPIRED_GS_CODE,
+                MASTER_TOKEN_INVALD_GS_CODE,
+                BAD_REQUEST_GS_CODE,
+            )
+        }
 
         @retry(
             after=lambda _: self.reset(),
             stop=stop_after_attempt(3),
             reraise=True,
-            retry=retry_if_exception_type(SnowflakeError),
+            # We don't have to implement retries ourself for most error types as the
+            # `snowflake-connector-python` library already implements retries for
+            # retryable HTTP errors.
+            retry=retry_if_exception(
+                lambda e: isinstance(e, ProgrammingError)
+                and hasattr(e, "errno")
+                and e.errno in retryable_error_codes
+            ),
             wait=wait_fixed(1),
         )
         @cache_data(

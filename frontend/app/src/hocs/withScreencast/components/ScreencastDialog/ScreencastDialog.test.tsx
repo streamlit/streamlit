@@ -15,10 +15,12 @@
  */
 
 import React from "react"
-import { BaseProvider, LightTheme } from "baseui"
-import { ReactWrapper } from "enzyme"
+import "@testing-library/jest-dom"
+import { screen, fireEvent } from "@testing-library/react"
 
-import { ModalHeader, ModalFooter, mount } from "@streamlit/lib"
+import { BaseProvider, LightTheme } from "baseui"
+
+import { render } from "@streamlit/lib"
 import ScreencastDialog, { Props } from "./ScreencastDialog"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
@@ -31,47 +33,49 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 
 describe("ScreencastDialog", () => {
   const props = getProps()
-  let wrapper: ReactWrapper
 
-  beforeEach(() => {
-    wrapper = mount(
+  it("renders without crashing", () => {
+    render(
       <BaseProvider theme={LightTheme}>
         <ScreencastDialog {...props} />
       </BaseProvider>
     )
-  })
-
-  afterEach(() => {
-    wrapper.unmount()
-  })
-
-  it("renders without crashing", () => {
-    expect(wrapper.html()).not.toBeNull()
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
   })
 
   it("should render a header", () => {
-    const headerWrapper = wrapper.find(ModalHeader)
-    expect(headerWrapper.props().children).toBe("Record a screencast")
+    render(
+      <BaseProvider theme={LightTheme}>
+        <ScreencastDialog {...props} />
+      </BaseProvider>
+    )
+    expect(screen.getByText("Record a screencast")).toBeInTheDocument()
   })
 
   describe("Modal body", () => {
     it("should have a record audio option to be selected", () => {
-      const labelWrapper = wrapper.find("StyledRecordAudioLabel")
-
-      labelWrapper.find("input").simulate("change", {
-        target: {
-          checked: true,
-        },
-      })
-      wrapper.update()
-
-      expect(labelWrapper.text()).toBe(" Also record audio")
-      expect(wrapper.find("input").props().checked).toBeTruthy()
+      render(
+        <BaseProvider theme={LightTheme}>
+          <ScreencastDialog {...props} />
+        </BaseProvider>
+      )
+      expect(
+        screen.getByTestId("stScreencastAudioCheckbox")
+      ).toHaveTextContent("Also record audio")
+      const audioCheckbox = screen.getByRole("checkbox")
+      fireEvent.click(audioCheckbox)
+      expect(audioCheckbox).toBeChecked()
       expect(props.toggleRecordAudio).toHaveBeenCalled()
     })
 
     it("should have the stop recording explanation message", () => {
-      expect(wrapper.find("StyledInstruction").text()).toBe(
+      render(
+        <BaseProvider theme={LightTheme}>
+          <ScreencastDialog {...props} />
+        </BaseProvider>
+      )
+      const instruction = screen.getByTestId("stScreencastInstruction")
+      expect(instruction).toHaveTextContent(
         "Press Esc any time to stop recording."
       )
     })
@@ -79,11 +83,14 @@ describe("ScreencastDialog", () => {
 
   describe("Modal footer", () => {
     it("should have an start button", () => {
-      const buttonWrapper = wrapper.find(ModalFooter).find("button")
-
-      buttonWrapper.simulate("click")
-
-      expect(buttonWrapper.props().children).toBe("Start recording!")
+      render(
+        <BaseProvider theme={LightTheme}>
+          <ScreencastDialog {...props} />
+        </BaseProvider>
+      )
+      const startButton = screen.getByText("Start recording!")
+      expect(startButton).toBeInTheDocument()
+      fireEvent.click(startButton)
       expect(props.startRecording).toHaveBeenCalled()
       expect(props.onClose).toHaveBeenCalled()
     })

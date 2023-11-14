@@ -29,7 +29,7 @@ describe("st.image", () => {
 
   it("displays a caption", () => {
     cy.get(
-      ".element-container [data-testid='stImage'] [data-testid='caption']"
+      ".element-container [data-testid='stImage'] [data-testid='stImageCaption']"
     )
       .should("contain", "Black Square")
       .should("have.css", "width", "100px");

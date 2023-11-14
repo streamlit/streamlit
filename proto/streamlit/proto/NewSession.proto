@@ -19,6 +19,10 @@ syntax = "proto3";
 import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionStatus.proto";
 
+// NOTE: These proto types are used by some external services so need to
+// remain relatively stable. While they aren't entirely set in stone, changing
+// them may require a good amount of effort so should be avoided if possible.
+
 // This is the first message that is sent when a new session starts.
 message NewSession {
   // Initialization data. This data does *not* change from rerun to rerun,
@@ -151,15 +155,15 @@ message FontFace {
 
 message Radii {
   // In pixels.
-  int32 baseWidgetRadius = 1;
-  int32 checkboxRadius = 2;
+  int32 base_widget_radius = 1;
+  int32 checkbox_radius = 2;
 }
 
 message FontSizes {
   // In pixels.
-  int32 tinyFontSize = 1;
-  int32 smallFontSize = 2;
-  int32 baseFontSize = 3;
+  int32 tiny_font_size = 1;
+  int32 small_font_size = 2;
+  int32 base_font_size = 3;
 }
 
 // Data that identifies the Streamlit app creator.
