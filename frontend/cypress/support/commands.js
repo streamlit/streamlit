@@ -136,27 +136,18 @@ Cypress.Commands.overwrite(
   }
 )
 
-Cypress.Commands.add("loadApp", appUrl => {
+Cypress.Commands.add("loadApp", (appUrl, timeout) => {
   cy.visit(appUrl)
 
-  cy.waitForScriptFinish()
+  cy.waitForScriptFinish(timeout)
 })
 
-Cypress.Commands.add("waitForScriptFinish", () => {
-  // Wait until we know the script has started. We have to do this
-  // because the status widget is initially hidden (so that it doesn't quickly
-  // appear and disappear if the user has it configured to be hidden). Without
-  // waiting here, it's possible to pass the status widget check below before
-  // it initially renders.
-  cy.get("[data-testid='stAppViewContainer']", { timeout: 20000 }).should(
-    "not.contain",
-    "Please wait..."
-  )
-
-  // Wait until the script is no longer running.
-  cy.get("[data-testid='stStatusWidget']", { timeout: 20000 }).should(
-    "not.exist"
-  )
+Cypress.Commands.add("waitForScriptFinish", (timeout = 20000) => {
+  // Wait until we know the script has started. We determin this by checking
+  // whether the app skeleton (i.e. a placeholder while the app loads) has
+  // appeared and then disappeared.
+  cy.get("[data-testid='stAppSkeleton']", { timeout }).should("exist")
+  cy.get("[data-testid='stAppSkeleton']", { timeout }).should("not.exist")
 })
 
 // Indexing into a list of elements produced by `cy.get()` may fail if not enough
