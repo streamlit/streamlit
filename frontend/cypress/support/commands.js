@@ -143,11 +143,14 @@ Cypress.Commands.add("loadApp", (appUrl, timeout) => {
 })
 
 Cypress.Commands.add("waitForScriptFinish", (timeout = 20000) => {
-  // Wait until we know the script has started. We determin this by checking
-  // whether the app skeleton (i.e. a placeholder while the app loads) has
-  // appeared and then disappeared.
-  cy.get("[data-testid='stAppSkeleton']", { timeout }).should("exist")
-  cy.get("[data-testid='stAppSkeleton']", { timeout }).should("not.exist")
+  // Wait until we know the script has started. We determine this by checking
+  // whether the app ran then stopped running.
+  cy.get("[data-testid='stApp'][data-teststate='running']", {
+    timeout,
+  }).should("exist")
+  cy.get("[data-testid='stApp'][data-teststate='notRunning']", {
+    timeout,
+  }).should("not.exist")
 })
 
 // Indexing into a list of elements produced by `cy.get()` may fail if not enough

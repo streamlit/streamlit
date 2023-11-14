@@ -1683,7 +1683,11 @@ export class App extends PureComponent<Props, State> {
             attach={window}
             focused={true}
           >
-            <StyledApp className={outerDivClass}>
+            <StyledApp
+              className={outerDivClass}
+              data-testid="stApp"
+              data-teststate={scriptRunState}
+            >
               {/* The tabindex below is required for testing. */}
               <Header>
                 {!hideTopBar && (
