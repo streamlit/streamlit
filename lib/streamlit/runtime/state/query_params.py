@@ -53,7 +53,6 @@ class QueryParams(MutableMapping[str, Any]):
             raise KeyError(_missing_key_error_message_query_params(key))
 
     def _setitem(self, key: str, value: Union[str, List[str]]) -> None:
-        self.check_both_apis_used()
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
