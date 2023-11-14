@@ -241,7 +241,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty(),
+      elements: AppRoot.empty(true),
       isFullScreen: false,
       scriptName: "",
       scriptRunId: "<null>",
@@ -1108,7 +1108,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(),
+        elements: AppRoot.empty(false),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements

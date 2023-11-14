@@ -27,6 +27,7 @@ import { IndexTypeName } from "./dataframes/Quiver"
 import { UNICODE } from "./mocks/arrow"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
+import { screen } from "@testing-library/react"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -793,13 +794,81 @@ describe("ElementNode.arrowAddRows", () => {
 })
 
 describe("AppRoot.empty", () => {
-  it("creates a empty tree except for a skeleton", async () => {
+  let windowSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    windowSpy = jest.spyOn(window, "window", "get")
+  })
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+  })
+
+  it("creates empty tree except for a skeleton", async () => {
     const empty = AppRoot.empty()
 
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
     expect(child.element.skeleton).not.toBeNull()
 
+    expect(empty.sidebar.isEmpty).toBe(true)
+  })
+
+  it("creates empty tree with no loading screen if query param is set", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=hide_loading_screen",
+      },
+    }))
+
+    const empty = AppRoot.empty()
+
+    expect(empty.main.isEmpty).toBe(true)
+    expect(empty.sidebar.isEmpty).toBe(true)
+  })
+
+  it("creates empty tree with v1 loading screen if query param is set", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v1",
+      },
+    }))
+
+    const empty = AppRoot.empty()
+
+    expect(empty.main.children.length).toBe(1)
+    const child = empty.main.getIn([0]) as ElementNode
+    expect(child.element.info).not.toBeNull()
+
+    expect(empty.sidebar.isEmpty).toBe(true)
+  })
+
+  it("creates empty tree with v2 loading screen if query param is set", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v2",
+      },
+    }))
+
+    const empty = AppRoot.empty()
+
+    expect(empty.main.children.length).toBe(1)
+    const child = empty.main.getIn([0]) as ElementNode
+    expect(child.element.skeleton).not.toBeNull()
+
+    expect(empty.sidebar.isEmpty).toBe(true)
+  })
+
+  it("creates empty tree with no loading screen if query param is v1 and it's not first load", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v1",
+      },
+    }))
+
+    const empty = AppRoot.empty(false)
+
+    expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 })

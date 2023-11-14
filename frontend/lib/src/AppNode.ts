@@ -33,8 +33,11 @@ import {
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 import {
-  makeSkeletonElement,
+  getLoadingScreenType,
+  LoadingScreenType,
   makeElementWithErrorText,
+  makeElementWithInfoText,
+  makeSkeletonElement,
   notUndefined,
 } from "./util/utils"
 
@@ -406,13 +409,37 @@ export class AppRoot {
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(): AppRoot {
-    const waitNode = new ElementNode(
-      makeSkeletonElement(),
-      ForwardMsgMetadata.create({}),
-      NO_SCRIPT_RUN_ID
-    )
-    const mainNodes: AppNode[] = [waitNode]
+  public static empty(isInitialRender: boolean = true): AppRoot {
+    const mainNodes: AppNode[] = []
+
+    let waitElement: Element | undefined
+
+    switch (getLoadingScreenType()) {
+      case LoadingScreenType.NONE:
+        break
+
+      case LoadingScreenType.V1:
+        // Only show the v1 loading state when it's the initial render.
+        // This is how v1 used to work, and we don't want any backward
+        // incompatibility.
+        if (isInitialRender) {
+          waitElement = makeElementWithInfoText("Please wait...")
+        }
+        break
+
+      default:
+        waitElement = makeSkeletonElement()
+    }
+
+    if (waitElement) {
+      mainNodes.push(
+        new ElementNode(
+          waitElement,
+          ForwardMsgMetadata.create({}),
+          NO_SCRIPT_RUN_ID
+        )
+      )
+    }
 
     const main = new BlockNode(
       mainNodes,
