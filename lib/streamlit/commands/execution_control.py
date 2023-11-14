@@ -15,10 +15,12 @@
 from typing import NoReturn
 
 import streamlit as st
+from streamlit import source_util
 from streamlit.deprecation_util import make_deprecated_name_warning
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
+from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
 
 _LOGGER = get_logger(__name__)
 
@@ -87,3 +89,54 @@ def experimental_rerun() -> NoReturn:
     # be seen.
     _LOGGER.warning(msg)
     rerun()
+
+
+@gather_metrics("switch_page")
+def switch_page(page_name: str) -> NoReturn:  # type: ignore[misc]
+    """Switch the current programmatically page in a multi-page app.
+
+    When `st.switch_page()` is called with a page_path, the current page script is halted
+    and the requested page script will be queued to run from the top.
+
+    Parameters
+    ----------
+    page_name: str
+        The name of the page to switch to.
+    """
+
+    requested_path = page_name.lower()
+    requested_page = page_name.lower().replace("_", " ")
+    ctx = get_script_run_ctx()
+
+    # TODO: Figure out what a query string does / if its necessary
+    if ctx and ctx.script_requests:
+        query_string = ctx.query_string
+
+    # TODO: Figure out best way to retrieve app's page data
+    # - streamlit.source_util.get_pages requires the main script path (used by streamlit extras)
+    # - is using the global _cached_pages hacky/problematic ?
+
+    pages_cache = source_util._cached_pages
+    page_data = pages_cache.values()
+    page_names = [page["page_name"].replace("_", " ") for page in page_data]
+
+    for page in page_data:
+        app_page_name = page["page_name"].lower().replace("_", " ")
+        script_path = (
+            page["script_path"].lower().split("/")[-1][:-3]
+        )  # path after pages directory, removes .py
+        print("================")
+        print(app_page_name)
+        print(script_path)
+        print("================")
+        if requested_page == app_page_name or requested_path == script_path:
+            raise RerunException(
+                RerunData(
+                    query_string=query_string,
+                    page_script_hash=page["page_script_hash"],
+                )
+            )
+
+    raise StreamlitAPIException(
+        f"Could not find page: {page_name}. Must be one of the following: {', '.join(page_names)}."
+    )
