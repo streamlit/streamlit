@@ -98,7 +98,7 @@ class QueryParams(MutableMapping[str, Any]):
 
     def _send_query_param_msg(self) -> None:
         # Avoid circular imports
-        from streamlit.commands.query_params import _ensure_no_embed_params
+        from streamlit.commands.experimental_query_params import _ensure_no_embed_params
         from streamlit.runtime.scriptrunner import get_script_run_ctx
 
         ctx = get_script_run_ctx()
