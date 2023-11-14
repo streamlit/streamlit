@@ -49,15 +49,13 @@ class QueryParams(MutableMapping[str, Any]):
         except:
             raise KeyError(_missing_key_error_message_query_params(key))
 
-    def _setitem(
-        self, key: str, value: Union[str, List[str]], send_query_param_msg: bool = True
-    ) -> None:
+    def _setitem(self, key: str, value: Union[str, List[str]]) -> None:
+        self.check_both_apis_used()
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
-        if send_query_param_msg:
-            self._send_query_param_msg()
+        self._send_query_param_msg()
 
     def __setitem__(self, key: str, value: str) -> None:
         self._setitem(key, value)
@@ -130,7 +128,10 @@ class QueryParams(MutableMapping[str, Any]):
 
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             return
-        self._setitem(key, val, send_query_param_msg=False)
+        if isinstance(val, list):
+            self._query_params[key] = [str(item) for item in val]
+        else:
+            self._query_params[key] = str(val)
 
 
 def _missing_key_error_message_query_params(key: str) -> str:
