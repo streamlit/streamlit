@@ -71,7 +71,7 @@ from streamlit.runtime.state import (
     QueryParamsProxy as _QueryParamsProxy,
 )
 from streamlit.user_info import UserInfoProxy as _UserInfoProxy
-from streamlit.commands.query_params import (
+from streamlit.commands.experimental_query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
 )
