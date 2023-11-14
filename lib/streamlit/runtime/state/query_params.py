@@ -49,12 +49,15 @@ class QueryParams(MutableMapping[str, Any]):
         except:
             raise KeyError(_missing_key_error_message_query_params(key))
 
-    def _setitem(self, key: str, value: Union[str, List[str]]) -> None:
+    def _setitem(
+        self, key: str, value: Union[str, List[str]], send_query_param_msg: bool = True
+    ) -> None:
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
-        self._send_query_param_msg()
+        if send_query_param_msg:
+            self._send_query_param_msg()
 
     def __setitem__(self, key: str, value: str) -> None:
         self._setitem(key, value)
@@ -122,7 +125,12 @@ class QueryParams(MutableMapping[str, Any]):
         return self._query_params
 
     def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
-        self._query_params[key] = val
+        # Avoid circular imports
+        from streamlit.commands.query_params import EMBED_QUERY_PARAMS_KEYS
+
+        if key.lower() in EMBED_QUERY_PARAMS_KEYS:
+            return
+        self._setitem(key, val, send_query_param_msg=False)
 
 
 def _missing_key_error_message_query_params(key: str) -> str:

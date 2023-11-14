@@ -128,3 +128,18 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test_del_invalid(self):
         with pytest.raises(KeyError):
             del self._query_params["nonexistent"]
+
+    def test_set_with_no_forward_msg_embed(self):
+        self._query_params.set_with_no_forward_msg("embed", True)
+        self._query_params.set_with_no_forward_msg("embed_options", "show_toolbar")
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+        assert "embed" not in self._query_params
+        assert "embed_options" not in self._query_params
+
+    def test_set_with_no_forward_msg(self):
+        self._query_params.set_with_no_forward_msg("test", "test")
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
