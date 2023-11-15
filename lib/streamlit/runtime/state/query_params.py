@@ -71,7 +71,10 @@ class QueryParams(MutableMapping[str, Any]):
             raise AttributeError(_missing_key_error_message(key))
 
     def __setattr__(self, key: str, value: str) -> None:
-        self.__setitem__(key, value)
+        try:
+            self.__setitem__(key, value)
+        except KeyError:
+            raise AttributeError(_missing_key_error_message(key))
 
     def __delattr__(self, key: str) -> None:
         try:

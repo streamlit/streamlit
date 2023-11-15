@@ -188,15 +188,17 @@ def exclude_keys_in_dict(
     }
 
 
-def extract_key_query_params(d: Dict[str, List[str]], param_key: str) -> Set[str]:
+def extract_key_query_params(
+    query_params: Dict[str, List[str]], param_key: str
+) -> Set[str]:
     """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
     return set(
         [
             item.lower()
             for sublist in [
-                [value.lower() for value in d[key]]
-                for key in d.keys()
-                if key.lower() == param_key and d.get(key)
+                [value.lower() for value in query_params[key]]
+                for key in query_params.keys()
+                if key.lower() == param_key and query_params.get(key)
             ]
             for item in sublist
         ]
