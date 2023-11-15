@@ -30,11 +30,11 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(KeyError):
             self._query_params["nonexistent"]
 
-    def test_getattr_raises_AttributeError_for_nonexistent_attribute(self):
+    def test_getattr_raises_AttributeError_for_nonexistent_key(self):
         with pytest.raises(AttributeError):
             self._query_params.nonexistent
 
-    def test_getitem_returns_last_element_of_list_for_list_key(self):
+    def test_getitem_returns_last_element_of_list(self):
         assert self._query_params["two"] == "y"
 
     def test_getitem_converts_int_value_to_string(self):
@@ -45,7 +45,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self._query_params["corge"] = 1.23
         assert self._query_params["corge"] == "1.23"
 
-    def test_getitem_retrieves_string_value(self):
+    def test__getitem__retrieves_existing_key(self):
         assert self._query_params["foo"] == "bar"
 
     def test_get_method_retrieves_existing_key(self):
@@ -55,7 +55,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         return_val = self._query_params.get("dog", default="bark")
         assert return_val == "bark"
 
-    def test_getattr_retrieves_string_value(self):
+    def test__getitem__retrieves_existing_key(self):
         assert self._query_params.foo == "bar"
 
     def test_setitem_adds_new_query_param(self):
@@ -80,7 +80,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self._query_params.foo = "test"
         assert self._query_params.get("foo") == "test"
 
-    def test_setattr_handles_list_value(self):
+    def test_setattr_adds_list_value(self):
         self._query_params.test = ["test", "test2"]
         assert self._query_params["test"] == "test2"
         message = self.get_message_from_queue(0)
@@ -99,7 +99,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self._query_params["test"] = ["", "a", 1, 1.23]
         assert self._query_params.get_all("test") == ["", "a", "1", "1.23"]
 
-    def test_contains_checks_for_key_presence(self):
+    def test_contains_returns_true_for_present_key(self):
         assert "foo" in self._query_params
 
     def test_contains_returns_false_for_absent_key(self):
