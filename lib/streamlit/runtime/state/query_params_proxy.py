@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Iterator, List, Union
+from typing import Any, Dict, Iterator, List, MutableMapping, Union
 
-from streamlit.runtime.state.query_params import (
-    QueryParams,
-    _missing_key_error_message_query_params,
-)
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.state.session_state_proxy import get_session_state
-from streamlit.type_util import Key
 
 
 def get_query_params() -> QueryParams:
@@ -32,40 +28,31 @@ def get_query_params() -> QueryParams:
     return get_session_state()._state._query_params
 
 
-class QueryParamsProxy:
+class QueryParamsProxy(MutableMapping[str, Any]):
     """A stateless singleton that proxies `st.query_params` interactions
     to the current script thread's QueryParams instance.
     """
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[Union[str, List[str]]]:
         return iter(get_query_params())
 
     def __len__(self) -> int:
         return len(get_query_params())
 
-    def __getitem__(self, key: str) -> str:
+    def __getitem__(self, key: str) -> Union[str, List[str]]:
         return get_query_params()[key]
 
-    def __getattr__(self, key: str) -> str:
-        try:
-            return get_query_params()[key]
-        except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
+    def __getattr__(self, key: str) -> Union[str, List[str]]:
+        get_query_params().__getattr__(key)
 
     def __delitem__(self, key: str) -> None:
         del get_query_params()[key]
 
     def __delattr__(self, key: str) -> None:
-        try:
-            del get_query_params()[key]
-        except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
+        get_query_params().__delattr__(key)
 
     def __setattr__(self, key: str, value: Any) -> None:
-        try:
-            get_query_params()[key] = value
-        except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
+        get_query_params().__setattr__(key, value)
 
     def __setitem__(self, key: str, value: str) -> None:
         get_query_params()[key] = value
@@ -73,13 +60,15 @@ class QueryParamsProxy:
     def get_all(self, key: str) -> List[str]:
         return get_query_params().get_all(key)
 
-    def __contains__(self, key: str) -> bool:
-        return key in get_query_params()
+    def __contains__(self, key: Any) -> bool:
+        if isinstance(key, str):
+            return key in get_query_params()
+        return False
 
     def clear(self) -> None:
         get_query_params().clear()
 
-    def get(self, key: str, default: Any = None) -> str:
+    def get(self, key: str, default: Any = None) -> Union[str, List[str]]:
         return get_query_params().get(key, default)
 
     def to_dict(self) -> Dict[str, Union[List[str], str]]:
