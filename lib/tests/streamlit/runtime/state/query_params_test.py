@@ -143,6 +143,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(IndexError):
             # no forward message should be sent
             self.get_message_from_queue(0)
+        assert self._query_params.test == "test"
 
     def test__setitem__raises_exception_for_embed_key(self):
         with pytest.raises(StreamlitAPIException):
