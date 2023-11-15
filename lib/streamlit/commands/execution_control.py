@@ -92,7 +92,7 @@ def experimental_rerun() -> NoReturn:
 
 
 @gather_metrics("switch_page")
-def switch_page(page_name: str) -> NoReturn:  # type: ignore[misc]
+def switch_page(page_path: str) -> NoReturn:  # type: ignore[misc]
     """Switch the current programmatically page in a multi-page app.
 
     When `st.switch_page()` is called with a page_path, the current page script is halted
@@ -100,12 +100,13 @@ def switch_page(page_name: str) -> NoReturn:  # type: ignore[misc]
 
     Parameters
     ----------
-    page_name: str
-        The name of the page to switch to.
+    page_path: str
+        The label of the page to switch to, or the page's file path within the pages directory
+        (omits .py extension).
     """
 
-    requested_path = page_name.lower()
-    requested_page = page_name.lower().replace("_", " ")
+    requested_path = page_path.lower()
+    requested_page = page_path.lower().replace("_", " ").replace("-", " ")
     ctx = get_script_run_ctx()
 
     # TODO: Figure out what a query string does / if its necessary
@@ -121,15 +122,15 @@ def switch_page(page_name: str) -> NoReturn:  # type: ignore[misc]
     page_names = [page["page_name"].replace("_", " ") for page in page_data]
 
     for page in page_data:
-        app_page_name = page["page_name"].lower().replace("_", " ")
+        page_name = page["page_name"].lower().replace("_", " ")
         script_path = (
             page["script_path"].lower().split("/")[-1][:-3]
         )  # path after pages directory, removes .py
         print("================")
-        print(app_page_name)
+        print(page_name)
         print(script_path)
         print("================")
-        if requested_page == app_page_name or requested_path == script_path:
+        if requested_page == page_name or requested_path == script_path:
             raise RerunException(
                 RerunData(
                     query_string=query_string,
@@ -138,5 +139,5 @@ def switch_page(page_name: str) -> NoReturn:  # type: ignore[misc]
             )
 
     raise StreamlitAPIException(
-        f"Could not find page: {page_name}. Must be one of the following: {', '.join(page_names)}."
+        f"Could not find page: {page_path}. Must be one of the following: {', '.join(page_names)}."
     )
