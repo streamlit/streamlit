@@ -27,7 +27,6 @@ import { IndexTypeName } from "./dataframes/Quiver"
 import { UNICODE } from "./mocks/arrow"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
-import { screen } from "@testing-library/react"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -807,6 +806,8 @@ describe("AppRoot.empty", () => {
   it("creates empty tree except for a skeleton", async () => {
     const empty = AppRoot.empty()
 
+    // The linter is misfiring here. We're not accessing a DOM node.
+    // eslint-disable-next-line testing-library/no-node-access
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
     expect(child.element.skeleton).not.toBeNull()
@@ -836,6 +837,8 @@ describe("AppRoot.empty", () => {
 
     const empty = AppRoot.empty()
 
+    // The linter is misfiring here. We're not accessing a DOM node.
+    // eslint-disable-next-line testing-library/no-node-access
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
     expect(child.element.alert).toBeDefined()
@@ -852,6 +855,8 @@ describe("AppRoot.empty", () => {
 
     const empty = AppRoot.empty()
 
+    // The linter is misfiring here. We're not accessing a DOM node.
+    // eslint-disable-next-line testing-library/no-node-access
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
     expect(child.element.skeleton).not.toBeNull()

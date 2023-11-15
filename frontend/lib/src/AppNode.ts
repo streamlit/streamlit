@@ -409,7 +409,7 @@ export class AppRoot {
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(isInitialRender: boolean = true): AppRoot {
+  public static empty(isInitialRender = true): AppRoot {
     const mainNodes: AppNode[] = []
 
     let waitElement: Element | undefined
