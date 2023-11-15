@@ -838,7 +838,7 @@ describe("AppRoot.empty", () => {
 
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
-    expect(child.element.info).not.toBeNull()
+    expect(child.element.alert).toBeDefined()
 
     expect(empty.sidebar.isEmpty).toBe(true)
   })
