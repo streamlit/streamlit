@@ -701,19 +701,19 @@ class SessionStateMethodTests(unittest.TestCase):
 
 
 @given(state=stst.session_state())
-@settings(deadline=None)
+@settings(deadline=400)
 def test_compact_idempotent(state):
     assert _compact_copy(state) == _compact_copy(_compact_copy(state))
 
 
 @given(state=stst.session_state())
-@settings(deadline=None)
+@settings(deadline=400)
 def test_compact_len(state):
     assert len(state) >= len(_compact_copy(state))
 
 
 @given(state=stst.session_state())
-@settings(deadline=None)
+@settings(deadline=400)
 def test_compact_presence(state):
     assert _sorted_items(state) == _sorted_items(_compact_copy(state))
 

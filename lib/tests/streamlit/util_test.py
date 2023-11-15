@@ -145,15 +145,13 @@ class UtilTest(unittest.TestCase):
             ),
         ]
     )
-    def test_drop_key_query_params(
+    def test_drop_key_in_dict(
         self,
-        query_params: Dict[str, List[str]],
+        d: Dict[str, List[str]],
         keys_to_drop: List[str],
         result: Dict[str, List[str]],
     ):
-        self.assertDictEqual(
-            util.exclude_keys_in_dict(query_params, keys_to_drop), result
-        )
+        self.assertDictEqual(util.exclude_keys_in_dict(d, keys_to_drop), result)
 
     @parameterized.expand(
         [
