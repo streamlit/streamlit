@@ -46,7 +46,7 @@ class QueryParams(MutableMapping[str, Any]):
         except:
             raise KeyError(_missing_key_error_message(key))
 
-    def __setitem__(self, key: str, value: str) -> None:
+    def __setitem__(self, key: str, value: Union[str, List[Any]]) -> None:
         # Even though the typing of this function accepts a str,
         # a developer may do st.query_params['foo'] = 5 or st.query_params['foo'] = [1, 1.23]
         # so we need to make sure we cast them to str
