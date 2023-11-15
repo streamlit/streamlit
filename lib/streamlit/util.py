@@ -180,13 +180,11 @@ def calc_md5(s: Union[bytes, str]) -> str:
 
 
 def exclude_keys_in_dict(
-    query_params: Dict[str, Any], keys_to_exclude: List[str]
+    d: Dict[str, Any], keys_to_exclude: List[str]
 ) -> Dict[str, Any]:
     """Returns new object but without keys defined in keys_to_exclude"""
     return {
-        key: value
-        for key, value in query_params.items()
-        if key.lower() not in keys_to_exclude
+        key: value for key, value in d.items() if key.lower() not in keys_to_exclude
     }
 
 
