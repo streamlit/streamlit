@@ -148,6 +148,6 @@ class ScriptRunContextTest(unittest.TestCase):
 
         if should_raise:
             with self.assertRaises(StreamlitAPIException):
-                ctx.check_both_query_apis_called()
+                ctx.ensure_single_query_api_used()
         else:
-            ctx.check_both_query_apis_called()
+            ctx.ensure_single_query_api_used()
