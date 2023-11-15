@@ -673,6 +673,24 @@ def is_pandas_version_less_than(v: str) -> bool:
     return version.parse(pd.__version__) < version.parse(v)
 
 
+def is_pyarrow_version_less_than(v: str) -> bool:
+    """Return True if the current Pyarrow version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+    """
+    from packaging import version
+
+    return version.parse(pa.__version__) < version.parse(v)
+
+
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to bytes using Apache Arrow.
 
@@ -804,6 +822,9 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
     """Convert bytes to pandas.DataFrame.
+
+    Using this function in production needs to make sure that
+    the pyarrow version >= 14.0.1.
 
     Parameters
     ----------
