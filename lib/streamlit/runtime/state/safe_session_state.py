@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+from streamlit.runtime.state import QueryParams
 from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
 from streamlit.runtime.state.session_state import SessionState
 
@@ -124,6 +125,6 @@ class SafeSessionState:
         s = ", ".join(f"{k}: {v!r}" for k, v in kv)
         return f"{{{s}}}"
 
-    def get_query_params(self):
+    def get_query_params(self) -> QueryParams:
         with self._lock:
             return self._state._query_params

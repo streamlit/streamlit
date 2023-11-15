@@ -33,7 +33,7 @@ class QueryParamsProxy(MutableMapping[str, Any]):
     to the current script thread's QueryParams instance.
     """
 
-    def __iter__(self) -> Iterator[Union[str, List[str]]]:
+    def __iter__(self) -> Iterator[Any]:
         return iter(get_query_params())
 
     def __len__(self) -> int:
@@ -43,7 +43,7 @@ class QueryParamsProxy(MutableMapping[str, Any]):
         return get_query_params()[key]
 
     def __getattr__(self, key: str) -> Union[str, List[str]]:
-        get_query_params().__getattr__(key)
+        return get_query_params().__getattr__(key)
 
     def __delitem__(self, key: str) -> None:
         del get_query_params()[key]
