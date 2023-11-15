@@ -46,7 +46,7 @@ class QueryParams(MutableMapping[str, Any]):
         except:
             raise KeyError(_missing_key_error_message(key))
 
-    def __setitem__(self, key: str, value: Union[str, List[Any]]) -> None:
+    def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
         # Handle non-string inputs like integers or lists by converting them to
         # strings for consistent query parameter handling.
         if isinstance(value, list):
@@ -70,7 +70,7 @@ class QueryParams(MutableMapping[str, Any]):
         except KeyError:
             raise AttributeError(_missing_key_error_message(key))
 
-    def __setattr__(self, key: str, value: str) -> None:
+    def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
         try:
             self.__setitem__(key, value)
         except KeyError:

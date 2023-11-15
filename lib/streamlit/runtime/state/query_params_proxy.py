@@ -51,19 +51,17 @@ class QueryParamsProxy(MutableMapping[str, Any]):
     def __delattr__(self, key: str) -> None:
         get_query_params().__delattr__(key)
 
-    def __setattr__(self, key: str, value: Any) -> None:
+    def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
         get_query_params().__setattr__(key, value)
 
-    def __setitem__(self, key: str, value: str) -> None:
+    def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
         get_query_params()[key] = value
 
     def get_all(self, key: str) -> List[str]:
         return get_query_params().get_all(key)
 
     def __contains__(self, key: Any) -> bool:
-        if isinstance(key, str):
-            return key in get_query_params()
-        return False
+        return key in get_query_params()
 
     def clear(self) -> None:
         get_query_params().clear()
