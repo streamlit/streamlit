@@ -25,7 +25,7 @@ def get_query_params() -> QueryParams:
 
     if ctx is None:
         return QueryParams()
-    return get_session_state()._state._query_params
+    return get_session_state().get_query_params()
 
 
 class QueryParamsProxy(MutableMapping[str, Any]):

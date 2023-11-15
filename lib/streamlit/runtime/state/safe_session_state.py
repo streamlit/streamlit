@@ -123,3 +123,7 @@ class SafeSessionState:
         kv = ((k, self._state[k]) for k in self._state._keys())
         s = ", ".join(f"{k}: {v!r}" for k, v in kv)
         return f"{{{s}}}"
+
+    def get_query_params(self):
+        with self._lock:
+            return self._state._query_params
