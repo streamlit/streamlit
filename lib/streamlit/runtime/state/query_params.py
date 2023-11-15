@@ -35,9 +35,6 @@ class QueryParams(MutableMapping[str, Any]):
         return iter(self._query_params.keys())
 
     def __getitem__(self, key: str) -> str:
-        return self._getitem(key)
-
-    def _getitem(self, key: str) -> str:
         try:
             value = self._query_params[key]
             if isinstance(value, list):
@@ -47,17 +44,17 @@ class QueryParams(MutableMapping[str, Any]):
                     return value[-1]
             return value
         except:
-            raise KeyError(_missing_key_error_message_query_params(key))
+            raise KeyError(_missing_key_error_message(key))
 
-    def _setitem(self, key: str, value: Union[str, List[str]]) -> None:
+    def __setitem__(self, key: str, value: str) -> None:
+        # Even though the typing of this function accepts a str,
+        # a developer may do st.query_params['foo'] = 5 or st.query_params['foo'] = [1, 1.23]
+        # so we need to make sure we cast them to str
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
         self._send_query_param_msg()
-
-    def __setitem__(self, key: str, value: str) -> None:
-        self._setitem(key, value)
 
     def get_all(self, key: str) -> List[str]:
         try:
@@ -66,32 +63,27 @@ class QueryParams(MutableMapping[str, Any]):
             query_params = self._query_params[key]
             return query_params if isinstance(query_params, list) else [query_params]
         except KeyError:
-            raise KeyError(_missing_key_error_message_query_params(key))
+            raise KeyError(_missing_key_error_message(key))
 
     def __getattr__(self, key: str) -> str:
         try:
-            return self._getitem(key)
+            return self.__getitem__(key)
         except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
+            raise AttributeError(_missing_key_error_message(key))
 
     def __setattr__(self, key: str, value: str) -> None:
-        self._setitem(key, value)
+        self.__setitem__(key, value)
 
     def __delattr__(self, key: str) -> None:
         try:
-            self._delitem(key)
+            self.__delitem__(key)
         except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
+            raise AttributeError(_missing_key_error_message(key))
 
-    def _delitem(self, key):
-        if key in self._query_params:
-            del self._query_params[key]
-            self._send_query_param_msg()
-        else:
-            raise KeyError(_missing_key_error_message_query_params(key))
-
-    def __contains__(self, key: str) -> bool:  # type: ignore[override]
-        return key in self._query_params
+    def __contains__(self, key: Any) -> bool:
+        if isinstance(key, str):
+            return key in self._query_params
+        return False
 
     def __len__(self) -> int:
         return len(self._query_params)
@@ -116,11 +108,15 @@ class QueryParams(MutableMapping[str, Any]):
         self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
-        self._delitem(key)
+        if key in self._query_params:
+            del self._query_params[key]
+            self._send_query_param_msg()
+        else:
+            raise KeyError(_missing_key_error_message(key))
 
     def to_dict(self) -> Dict[str, Union[List[str], str]]:
         return self._query_params
 
 
-def _missing_key_error_message_query_params(key: str) -> str:
+def _missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'
