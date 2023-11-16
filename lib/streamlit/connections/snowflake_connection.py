@@ -199,14 +199,16 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ),
             wait=wait_fixed(1),
         )
-        @cache_data(
-            show_spinner=show_spinner,
-            ttl=ttl,
-        )
         def _query(sql: str) -> pd.DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()
+
+        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl}"
+        _query = cache_data(
+            show_spinner=show_spinner,
+            ttl=ttl,
+        )(_query)
 
         return _query(sql)
 

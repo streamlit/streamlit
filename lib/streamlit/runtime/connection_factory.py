@@ -90,11 +90,11 @@ def _create_connection(
         f"{__create_connection.__qualname__}_{ttl}_{max_entries}"
     )
     __create_connection = cache_resource(
-        __create_connection,
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
-    )
+    )(__create_connection)
+
     return __create_connection(name, connection_class, **kwargs)
 
 
