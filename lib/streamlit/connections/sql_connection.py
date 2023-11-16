@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import hashlib
 from collections import ChainMap
 from copy import deepcopy
 from datetime import timedelta
@@ -200,10 +201,6 @@ class SQLConnection(BaseConnection["Engine"]):
             ),
             wait=wait_fixed(1),
         )
-        @cache_data(
-            show_spinner=show_spinner,
-            ttl=ttl,
-        )
         def _query(
             sql: str,
             index_col=None,
@@ -220,6 +217,17 @@ class SQLConnection(BaseConnection["Engine"]):
                 params=params,
                 **kwargs,
             )
+
+        dsn_hash = hashlib.md5(
+            self._instance.url.render_as_string(hide_password=True).encode()
+        ).hexdigest()
+        _query.__qualname__ = f"{_query.__qualname__}_{ttl}_{dsn_hash}"
+
+        _query = cache_data(
+            _query,
+            show_spinner=show_spinner,
+            ttl=ttl,
+        )
 
         return _query(
             sql,

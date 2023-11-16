@@ -76,11 +76,6 @@ def _create_connection(
       * Allow the user to specify ttl and max_entries when calling st.connection.
     """
 
-    @cache_resource(
-        max_entries=max_entries,
-        show_spinner="Running `st.connection(...)`.",
-        ttl=ttl,
-    )
     def __create_connection(
         name: str, connection_class: Type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
@@ -91,6 +86,15 @@ def _create_connection(
             f"{connection_class} is not a subclass of BaseConnection!"
         )
 
+    __create_connection.__qualname__ = (
+        f"{__create_connection.__qualname__}_{ttl}_{max_entries}"
+    )
+    __create_connection = cache_resource(
+        __create_connection,
+        max_entries=max_entries,
+        show_spinner="Running `st.connection(...)`.",
+        ttl=ttl,
+    )
     return __create_connection(name, connection_class, **kwargs)
 
 
