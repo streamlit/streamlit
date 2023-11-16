@@ -34,7 +34,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # "<post_match>" named group. Text between these pre- and post-match
 # groups will be replaced with the specified project_name text.
 FILES_AND_REGEXES = {
-    "lib/setup.py": r"(?P<pre_match>.*NAME = \").*(?P<post_match>\")",
+    "lib/setup.py": r"(?P<pre_match>.*name=\").*(?P<post_match>\")",
     "lib/streamlit/version.py": r"(?P<pre_match>.*_version\(\").*(?P<post_match>\"\)$)",
 }
 

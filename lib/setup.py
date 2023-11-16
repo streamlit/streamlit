@@ -23,8 +23,6 @@ THIS_DIRECTORY = Path(__file__).parent
 
 VERSION = "1.28.2"  # PEP-440
 
-NAME = "streamlit"
-
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
 # - Include relevant lower bound for any features we use from our dependencies
@@ -113,7 +111,7 @@ else:
     long_description = ""
 
 setuptools.setup(
-    name=NAME,
+    name="streamlit",
     version=VERSION,
     description="A faster way to build and share data apps",
     long_description=long_description,
