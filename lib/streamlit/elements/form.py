@@ -14,17 +14,20 @@
 from __future__ import annotations
 
 import textwrap
-from typing import NamedTuple, cast
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 from typing_extensions import Literal
 
 from streamlit import runtime
-from streamlit.delta_generator import DeltaGenerator, dg_stack
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 class FormData(NamedTuple):

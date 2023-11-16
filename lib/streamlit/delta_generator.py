@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import contextvars
 import sys
 from typing import (
     TYPE_CHECKING,
@@ -26,7 +25,6 @@ from typing import (
     Iterable,
     NoReturn,
     Optional,
-    Tuple,
     Type,
     TypeVar,
     cast,
@@ -89,6 +87,7 @@ from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
@@ -147,14 +146,6 @@ def _maybe_print_use_warning() -> None:
             logger.get_logger("root").warning(
                 f"\n  {warning} to view this Streamlit app on a browser, run it with the following\n  command:\n\n    streamlit run {script_name} [ARGUMENTS]"
             )
-
-
-# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
-# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
-# so that different threads or async tasks can have their own stacks.
-dg_stack: contextvars.ContextVar[Tuple[DeltaGenerator, ...]] = contextvars.ContextVar(
-    "dg_stack", default=tuple()
-)
 
 
 class DeltaGenerator(
