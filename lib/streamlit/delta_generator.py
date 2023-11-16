@@ -415,7 +415,7 @@ class DeltaGenerator(
         ...
 
     @overload
-    def _enqueue(  # type: ignore[misc]
+    def _enqueue(  # type: ignore[overload-overlap]
         self,
         delta_type: str,
         element_proto: Message,
@@ -824,7 +824,7 @@ def _value_or_dg(value: None, dg: DG) -> DG:
 
 
 @overload
-def _value_or_dg(value: Type[NoValue], dg: DG) -> None:  # type: ignore[misc]
+def _value_or_dg(value: Type[NoValue], dg: DG) -> None:  # type: ignore[overload-overlap]
     ...
 
 

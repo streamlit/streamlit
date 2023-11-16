@@ -235,7 +235,13 @@ _DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
     type(None),
 )
 
-_DataFrameCompatible: TypeAlias = Union[dict, list, set, Tuple[Any], None]
+_DataFrameCompatible: TypeAlias = Union[
+    Dict[Any, Any],
+    List[Any],
+    Set[Any],
+    Tuple[Any],
+    None,
+]
 DataFrameCompatible: TypeAlias = Union[_DataFrameCompatible, DataFrameLike]
 
 _BYTES_LIKE_TYPES: Final[tuple[type, ...]] = (

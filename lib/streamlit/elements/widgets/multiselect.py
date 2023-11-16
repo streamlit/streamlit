@@ -62,7 +62,7 @@ if TYPE_CHECKING:
 
 
 @overload
-def _check_and_convert_to_indices(  # type: ignore[misc]
+def _check_and_convert_to_indices(  # type: ignore[overload-overlap]
     opt: Sequence[Any], default_values: None
 ) -> Optional[List[int]]:
     ...

@@ -147,7 +147,7 @@ def _get_pydeck_tooltip(pydeck_obj: Optional["Deck"]) -> Optional[Dict[str, str]
     # For details, see: https://github.com/visgl/deck.gl/pull/7125/files
     tooltip = getattr(pydeck_obj, "_tooltip", None)
     if tooltip is not None and isinstance(tooltip, dict):
-        return tooltip
+        return cast(Dict[str, str], tooltip)
 
     return None
 
