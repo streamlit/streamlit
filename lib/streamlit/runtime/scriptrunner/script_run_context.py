@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import collections
+import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, List, Optional, Set
+from typing import Callable, Counter, Dict, List, Optional, Set, Tuple
 
 from typing_extensions import Final, TypeAlias
 
@@ -33,6 +34,14 @@ LOGGER: Final = get_logger(__name__)
 UserInfo: TypeAlias = Dict[str, Optional[str]]
 
 
+# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
+# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
+# so that different threads or async tasks can have their own stacks.
+dg_stack: contextvars.ContextVar[
+    Tuple["streamlit.delta_generator.DeltaGenerator", ...]
+] = contextvars.ContextVar("dg_stack", default=tuple())
+
+
 @dataclass
 class ScriptRunContext:
     """A context object that contains data for a "script run" - that is,
@@ -40,7 +49,9 @@ class ScriptRunContext:
     scoped to a single connected "session").
 
     ScriptRunContext is used internally by virtually every `st.foo()` function.
-    It is accessed only from the script thread that's created by ScriptRunner.
+    It is accessed only from the script thread that's created by ScriptRunner,
+    or from app-created helper threads that have been "attached" to the
+    ScriptRunContext via `add_script_run_ctx`.
 
     Streamlit code typically retrieves the active ScriptRunContext via the
     `get_script_run_ctx` function.
@@ -64,9 +75,6 @@ class ScriptRunContext:
     widget_user_keys_this_run: Set[str] = field(default_factory=set)
     form_ids_this_run: Set[str] = field(default_factory=set)
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
-    dg_stack: List["streamlit.delta_generator.DeltaGenerator"] = field(
-        default_factory=list
-    )
     script_requests: Optional[ScriptRequests] = None
 
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:

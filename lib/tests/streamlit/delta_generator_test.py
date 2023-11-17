@@ -14,11 +14,13 @@
 
 """DeltaGenerator Unittest."""
 
+import asyncio
 import functools
 import inspect
 import json
 import logging
 import re
+import threading
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -38,6 +40,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.widgets import _build_duplicate_widget_message
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -475,6 +478,121 @@ class DeltaGeneratorWithTest(DeltaGeneratorTestCase):
                 make_delta_path(RootContainer.MAIN, (0,), 1),
                 msg.metadata.delta_path,
             )
+
+    def test_threads_with(self):
+        """
+        Tests that with statements work correctly when multiple threads are involved.
+
+        The test sequence is as follows:
+
+              Main Thread       |       Worker Thread
+        -----------------------------------------------------
+        with container1:        |
+                                | with container2:
+        st.markdown("Object 1") |
+                                | st.markdown("Object 2")
+
+
+        We check that Object1 is created in container1 and object2 is created in container2.
+        """
+        container1 = st.container()
+        container2 = st.container()
+
+        with_1 = threading.Event()
+        with_2 = threading.Event()
+        object_1 = threading.Event()
+
+        def thread():
+            with_1.wait()
+            with container2:
+                with_2.set()
+                object_1.wait()
+
+                st.markdown("Object 2")
+                msg = self.get_message_from_queue()
+                self.assertEqual(
+                    make_delta_path(RootContainer.MAIN, (1,), 0),
+                    msg.metadata.delta_path,
+                )
+
+        worker_thread = threading.Thread(target=thread)
+        add_script_run_ctx(worker_thread)
+        worker_thread.start()
+
+        with container1:
+            with_1.set()
+            with_2.wait()
+
+            st.markdown("Object in container 1")
+            msg = self.get_message_from_queue()
+            self.assertEqual(
+                make_delta_path(RootContainer.MAIN, (0,), 0),
+                msg.metadata.delta_path,
+            )
+
+            object_1.set()
+            worker_thread.join()
+
+    def test_asyncio_with(self):
+        """
+        Tests that with statements work correctly when multiple async tasks are involved.
+
+        The test sequence is as follows:
+
+              Task 1             |       Task 2
+        -----------------------------------------------------
+        with container1:
+        asyncio.create_task()   ->
+                                 | st.markdown("Object 1a")
+                                 | with container2:
+        st.markdown("Object 1b") |
+                                 | st.markdown("Object 2")
+
+        In this scenario, Task 2 should inherit the container1 context from Task 1 when it is created, so Objects 1a and 1b
+        will both go in container 1, and object 2 will go in container 2.
+        """
+        container1 = st.container()
+        container2 = st.container()
+
+        with_2 = asyncio.Event()
+        object_1 = asyncio.Event()
+
+        async def task1():
+            with container1:
+                task = asyncio.create_task(task2())
+
+                await with_2.wait()
+
+                st.markdown("Object 1b")
+                msg = self.get_message_from_queue()
+                self.assertEqual(
+                    make_delta_path(RootContainer.MAIN, (0,), 1),
+                    msg.metadata.delta_path,
+                )
+
+                object_1.set()
+                await task
+
+        async def task2():
+            st.markdown("Object 1a")
+            msg = self.get_message_from_queue()
+            self.assertEqual(
+                make_delta_path(RootContainer.MAIN, (0,), 0),
+                msg.metadata.delta_path,
+            )
+
+            with container2:
+                with_2.set()
+                st.markdown("Object 2")
+                msg = self.get_message_from_queue()
+                self.assertEqual(
+                    make_delta_path(RootContainer.MAIN, (1,), 0),
+                    msg.metadata.delta_path,
+                )
+
+                await object_1.wait()
+
+        asyncio.get_event_loop().run_until_complete(task1())
 
 
 class DeltaGeneratorWriteTest(DeltaGeneratorTestCase):
