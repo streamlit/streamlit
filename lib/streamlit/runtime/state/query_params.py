@@ -27,8 +27,9 @@ class QueryParams(MutableMapping[str, str]):
     _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
 
     def __init__(self):
-        # avoid using ._query_params as that will use __setattr__,
-        # which itself relies on `_query_params` being defined
+        # avoid using ._query_params = {} as that will use __setattr__
+        # and __setattr__ accesses ._query_params and ._query_params is not defined yet.
+        # https://stackoverflow.com/a/25179980
         self.__dict__["_query_params"] = {}
 
     def __iter__(self) -> Iterator[str]:
@@ -36,8 +37,8 @@ class QueryParams(MutableMapping[str, str]):
 
     def __getitem__(self, key: str) -> str:
         try:
-            # avoid using ._query_params as that will use __getattr__,
-            # which itself relies on __getitem__
+            # avoid using ._query_params[key] as that will use __getattr__
+            # which relies on __getitem__ as that causes an infinite loop
             value = self.__dict__["_query_params"][key]
             if isinstance(value, list):
                 if len(value) == 0:
