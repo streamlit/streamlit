@@ -23,8 +23,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def setUp(self):
         super().setUp()
         self.query_params = QueryParams()
-        # avoid using ._query_params as that will use the overridden __setattr__
-        self.query_params.__dict__["_query_params"] = {"foo": "bar", "two": ["x", "y"]}
+        self.query_params._query_params = {"foo": "bar", "two": ["x", "y"]}
 
     def test__getitem__raises_KeyError_for_nonexistent_key(self):
         with pytest.raises(KeyError):
