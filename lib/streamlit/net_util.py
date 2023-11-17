@@ -44,10 +44,8 @@ def get_external_ip() -> Optional[str]:
     if _external_ip is not None:
         return _external_ip
 
-    # try to get external IP from Amazon http url
     response = _make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
 
-    # try to get external IP from Amazon https url
     if response is None:
         response = _make_blocking_http_get(_AWS_CHECK_IP_HTTPS, timeout=5)
 
