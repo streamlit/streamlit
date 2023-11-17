@@ -80,6 +80,7 @@ class AppSession:
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         user_info: Dict[str, Optional[str]],
+        session_id_override: Optional[str] = None,
     ) -> None:
         """Initialize the AppSession.
 
@@ -113,9 +114,13 @@ class AppSession:
             Information about the current user is optionally provided when a
             websocket connection is initialized via the "X-Streamlit-User" header.
 
+        session_id_override
+            The ID to assign to this session. Setting this can be useful when the
+            service that a Streamlit Runtime is running in wants to tie the lifecycle of
+            a Streamlit session to some other session-like object that it manages.
         """
         # Each AppSession has a unique string ID.
-        self.id = str(uuid.uuid4())
+        self.id = session_id_override or str(uuid.uuid4())
 
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
