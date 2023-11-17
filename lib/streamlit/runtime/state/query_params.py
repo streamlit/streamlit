@@ -36,7 +36,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def __getitem__(self, key: str) -> str:
         try:
-            # avoid using ._query_params as that will use __setattr__,
+            # avoid using ._query_params as that will use __getattr__,
             # which itself relies on __getitem__
             value = self.__dict__["_query_params"][key]
             if isinstance(value, list):
