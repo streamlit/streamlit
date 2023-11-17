@@ -85,31 +85,6 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(KeyError):
             del self.query_params["nonexistent"]
 
-    def test__getattr__retrieves_existing_key(self):
-        assert self.query_params.foo == "bar"
-
-    def test__getattr__raises_AttributeError_for_nonexistent_key(self):
-        with pytest.raises(AttributeError):
-            self.query_params.nonexistent
-
-    def test__setattr__adds_new_str_query_param(self):
-        assert "test" not in self.query_params
-        self.query_params.test = "test"
-        assert self.query_params.get("test") == "test"
-        message = self.get_message_from_queue(0)
-        assert "test=test" in message.page_info_changed.query_string
-
-    def test__delattr__removes_existing_key(self):
-        del self.query_params.foo
-        assert "foo" not in self.query_params
-        message = self.get_message_from_queue(0)
-        assert "two=x&two=y" in message.page_info_changed.query_string
-        assert "foo" not in message.page_info_changed.query_string
-
-    def test__delattr__raises_AttributeError_for_nonexistent_key(self):
-        with pytest.raises(AttributeError):
-            del self.query_params.nonexistent
-
     def test_get_all_returns_empty_list_for_nonexistent_key(self):
         assert self.query_params.get_all("nonexistent") == []
 
