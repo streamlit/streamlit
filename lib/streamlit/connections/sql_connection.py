@@ -217,6 +217,9 @@ class SQLConnection(BaseConnection["Engine"]):
                 **kwargs,
             )
 
+        # We modify our helper function's `__qualname__` here to work around default
+        # `@st.cache_data` behavior. Otherwise, `.query()` being called with different
+        # `ttl` values will reset the cache with each call.
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl}"
         _query = cache_data(
             show_spinner=show_spinner,

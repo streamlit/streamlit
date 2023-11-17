@@ -86,6 +86,9 @@ def _create_connection(
             f"{connection_class} is not a subclass of BaseConnection!"
         )
 
+    # We modify our helper function's `__qualname__` here to work around default
+    # `@st.cache_resource` behavior. Otherwise, `st.connection` being called with
+    # different `ttl` or `max_entries` values will reset the cache with each call.
     __create_connection.__qualname__ = (
         f"{__create_connection.__qualname__}_{ttl}_{max_entries}"
     )
