@@ -38,7 +38,7 @@ class QueryParams(MutableMapping[str, str]):
     def __getitem__(self, key: str) -> str:
         try:
             # avoid using ._query_params[key] as that will use __getattr__
-            # which relies on __getitem__ as that causes an infinite loop
+            # which relies on __getitem__ and that causes an infinite loop
             value = self.__dict__["_query_params"][key]
             if isinstance(value, list):
                 if len(value) == 0:
@@ -50,7 +50,7 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(_missing_key_error_message(key))
 
     # Type checking users should handle the string serialization themselves
-    # We will accept any type for the list and serialize to str
+    # We will accept any type for the list and serialize to str just in case
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
@@ -68,8 +68,8 @@ class QueryParams(MutableMapping[str, str]):
     def get_all(self, key: str) -> List[str]:
         if key not in self._query_params:
             return []
-        query_params = self._query_params[key]
-        return query_params if isinstance(query_params, list) else [query_params]
+        value = self._query_params[key]
+        return value if isinstance(value, list) else [value]
 
     def __getattr__(self, key: str) -> str:
         try:
