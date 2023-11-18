@@ -187,7 +187,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       new ResizeObserver(([entry]) => {
         // We need to determine the available width here to be able to set
         // an explicit width for the `StyledVerticalBlock`.
-        setWidth(entry.target.getBoundingClientRect().width)
+        setWidth(Math.round(entry.target.getBoundingClientRect().width))
       }),
     [setWidth]
   )
