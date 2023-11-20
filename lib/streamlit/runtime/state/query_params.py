@@ -30,12 +30,18 @@ class QueryParams(MutableMapping[str, str]):
         return iter(self._query_params.keys())
 
     def __getitem__(self, key: str) -> str:
+        """Retrieves a value for a given key in query parameters.
+        Returns the last item in a list or an empty string if empty.
+        If the key is not present, raise KeyError.
+        """
         try:
             value = self._query_params[key]
             if isinstance(value, list):
                 if len(value) == 0:
                     return ""
                 else:
+                    # Return the last value to mimic Tornado's behavior
+                    # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
                     return value[-1]
             return value
         except KeyError:
