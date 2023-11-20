@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import {
-  notNullOrUndefined,
-  isNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,
@@ -28,6 +25,7 @@ import {
   getErrorCell,
   ColumnCreator,
 } from "./utils"
+import { LinkCell } from "./cells/LinkCell"
 
 export interface LinkColumnParams {
   // The maximum number of characters the user can enter into the text input.
@@ -58,44 +56,45 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   }
 
   const cellTemplate = {
-    kind: GridCellKind.Uri,
-    data: "",
+    kind: GridCellKind.Custom,
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
-  } as UriCell
+    data: {
+      kind: "link-cell",
+      link: {
+        displayText: "",
+        href: "",
+      },
+    },
+  } as LinkCell
 
-  const validateInput = (data?: any): boolean | string => {
-    if (isNullOrUndefined(data)) {
+  const validateInput = (data?: any): boolean => {
+    if (isNullOrUndefined(data) || isNullOrUndefined(data.href)) {
       if (props.isRequired) {
         return false
       }
       return true
     }
 
-    let cellData = toSafeString(data)
-    // A flag to indicate whether the value has been auto-corrected.
-    // This is used to decide if we should return the corrected value or true.
-    // But we still run all other validations on the corrected value below.
-    let corrected = false
+    const { href } = data
 
-    if (parameters.max_chars) {
-      if (cellData.length > parameters.max_chars) {
-        // Correct the value
-        cellData = cellData.slice(0, parameters.max_chars)
-        corrected = true
-      }
+    const cellHref = toSafeString(href)
+
+    if (parameters.max_chars && cellHref.length > parameters.max_chars) {
+      // value is too long
+      return false
     }
 
     if (
       validateRegex instanceof RegExp &&
-      validateRegex.test(cellData) === false
+      validateRegex.test(cellHref) === false
     ) {
       return false
     }
 
-    return corrected ? cellData : true
+    return true
   }
 
   return {
@@ -104,10 +103,18 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     validateInput,
     getCell(data?: any, validate?: boolean): GridCell {
+      if (!data) {
+        return {
+          ...cellTemplate,
+          isMissingValue: true,
+        } as LinkCell
+      }
+
+      const { href } = data
       if (typeof validateRegex === "string") {
         // The regex is invalid, we return an error to indicate this
         // to the developer:
-        return getErrorCell(toSafeString(data), validateRegex)
+        return getErrorCell(toSafeString(href), validateRegex)
       }
 
       if (validate) {
@@ -118,21 +125,25 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
           // This cell should never be actually displayed to the user.
           // It's mostly used internally to prevent invalid input to be
           // inserted into the table.
-          return getErrorCell(toSafeString(data), "Invalid input.")
-        } else if (typeof validationResult === "string") {
-          // Apply corrections:
-          data = validationResult
+          return getErrorCell(toSafeString(href), "Invalid input.")
         }
       }
 
       return {
         ...cellTemplate,
-        data: notNullOrUndefined(data) ? toSafeString(data) : null,
-        isMissingValue: isNullOrUndefined(data),
-      } as UriCell
+        data: {
+          kind: "link-cell",
+          link: data,
+        },
+        copyData: href,
+        isMissingValue: isNullOrUndefined(href),
+      } as LinkCell
     },
-    getCellValue(cell: UriCell): string | null {
-      return cell.data === undefined ? null : cell.data
+    getCellValue(cell: LinkCell): {
+      readonly displayText: string
+      readonly href: string
+    } | null {
+      return cell.data?.link === undefined ? null : cell.data.link
     },
   }
 }

@@ -248,15 +248,27 @@ function useDataEditor(
           const column = columns[colIndex]
           // Only add to columns that are editable:
           if (column.isEditable) {
-            const newCell = column.getCell(pasteDataValue, true)
+            const currentValue = column.getCellValue(
+              getCellContent([colIndex, rowIndex])
+            )
+
+            let newCell
+            if (column.kind === "link") {
+              newCell = column.getCell(
+                {
+                  href: pasteDataValue,
+                  displayText: currentValue.displayText,
+                },
+                true
+              )
+            } else {
+              newCell = column.getCell(pasteDataValue, true)
+            }
             // We are not editing cells if the pasted value leads to an error:
             if (notNullOrUndefined(newCell) && !isErrorCell(newCell)) {
               const originalCol = column.indexNumber
               const originalRow = editingState.current.getOriginalRowIndex(
                 getOriginalIndex(rowIndex)
-              )
-              const currentValue = column.getCellValue(
-                getCellContent([colIndex, rowIndex])
               )
               const newValue = column.getCellValue(newCell)
               // Edit the cell only if the value actually changed:

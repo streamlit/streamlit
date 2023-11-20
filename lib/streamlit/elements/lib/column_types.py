@@ -70,6 +70,7 @@ class LinkColumnConfig(TypedDict):
     type: Literal["link"]
     max_chars: NotRequired[int | None]
     validate: NotRequired[str | None]
+    display_text: NotRequired[str | None]
 
 
 class BarChartColumnConfig(TypedDict):
@@ -474,6 +475,7 @@ def LinkColumn(
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
+    display_text: str | None = None,
 ) -> ColumnConfig:
     """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -514,6 +516,12 @@ def LinkColumn(
         A regular expression (JS flavor, e.g. ``"^https://.+$"``) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
+    display_text: str or None
+        If the string value is a regular expression (JS flavor, e.g. ``"^https://.+$"``), then the displayed
+        value in each cell will be the first matching group from the cell's uri value. If the string value is
+        not a regular expression (e.g. "Download"), then it will simply be displayed in each cell.
+
+
     Examples
     --------
 
@@ -539,6 +547,7 @@ def LinkColumn(
     >>>             help="The top trending Streamlit apps",
     >>>             validate="^https://[a-z]+\.streamlit\.app$",
     >>>             max_chars=100,
+    >>>             display_text="https:\/\/(.*?)\.streamlit\.app"
     >>>         )
     >>>     },
     >>>     hide_index=True,
@@ -557,7 +566,10 @@ def LinkColumn(
         required=required,
         default=default,
         type_config=LinkColumnConfig(
-            type="link", max_chars=max_chars, validate=validate
+            type="link",
+            max_chars=max_chars,
+            validate=validate,
+            display_text=display_text,
         ),
     )
 

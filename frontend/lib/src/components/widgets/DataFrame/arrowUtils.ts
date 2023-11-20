@@ -407,6 +407,11 @@ export function getCellFromArrow(
           arrowCell.field
         )
     cellTemplate = column.getCell(decimalStr)
+  } else if (column.kind === "link") {
+    cellTemplate = column.getCell({
+      href: arrowCell.content,
+      displayText: column.columnTypeOptions?.display_text,
+    })
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }
