@@ -116,8 +116,8 @@ class QueryParams(MutableMapping[str, Any]):
         else:
             raise KeyError(_missing_key_error_message(key))
 
-    def to_dict(self) -> Dict[str, Union[List[str], str]]:
-        return self._query_params
+    def to_dict(self) -> Dict[str, str]:
+        return {key: self[key] for key in self._query_params}
 
 
 def _missing_key_error_message(key: str) -> str:
