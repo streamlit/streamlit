@@ -24,7 +24,7 @@ gitdb==4.0.11
 GitPython==3.1.40
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.89.0
+hypothesis==6.90.0
 identify==2.5.32
 idna==3.4
 importlib-metadata==6.8.0
@@ -70,7 +70,7 @@ pydantic==1.10.13
 pydeck==0.8.1b0
 pydot==1.4.2
 pyee==11.0.1
-Pygments==2.17.0
+Pygments==2.17.1
 pyodbc==5.0.1
 pyparsing==3.1.1
 pyspark==3.5.0
