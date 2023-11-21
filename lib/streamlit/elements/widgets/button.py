@@ -428,8 +428,8 @@ class ButtonMixin:
         label: str,
         page_path: str,
         *,
-        icon: str = None,
-        active: bool | str = "auto",
+        icon: Optional[str] = None,
+        active: Optional[Union[bool, str]] = "auto",
         indent: bool = False,
         help: Optional[str] = None,
         disabled: bool = False,
@@ -547,8 +547,8 @@ class ButtonMixin:
         label: str,
         page_path: str,
         *,  # keyword-only arguments:
-        icon: str = None,
-        active: bool | str = "auto",
+        icon: Optional[str] = None,
+        active: Optional[Union[bool, str]] = "auto",
         indent: bool = False,
         help: Optional[str] = None,
         disabled: bool = False,
@@ -558,7 +558,6 @@ class ButtonMixin:
         page_link_proto = PageLinkProto()
         page_link_proto.label = label
         page_link_proto.page_path = page_path
-        page_link_proto.icon = icon
         page_link_proto.active = str(active).lower()
         page_link_proto.indent = indent
         page_link_proto.disabled = disabled
@@ -566,7 +565,7 @@ class ButtonMixin:
 
         # Handle retrieving the page_script_hash & page_path
         pages_cache = source_util._cached_pages
-        page_data = pages_cache.values()
+        page_data = pages_cache.values()  # type: ignore[union-attr]
 
         for page in page_data:
             # path after pages directory, removes .py
@@ -575,6 +574,9 @@ class ButtonMixin:
             if compare_path == path:
                 page_link_proto.page_script_hash = page["page_script_hash"]
                 page_link_proto.page_path = path
+
+        if icon is not None:
+            page_link_proto.icon = icon
 
         if help is not None:
             page_link_proto.help = dedent(help)

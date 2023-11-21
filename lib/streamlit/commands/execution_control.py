@@ -92,7 +92,7 @@ def experimental_rerun() -> NoReturn:
 
 
 @gather_metrics("switch_page")
-def switch_page(page_path: str) -> NoReturn:  # type: ignore[misc]
+def switch_page(page_path: str) -> NoReturn:
     """Switch the current programmatically page in a multi-page app.
 
     When `st.switch_page()` is called with a page_path, the current page script is halted
@@ -118,7 +118,7 @@ def switch_page(page_path: str) -> NoReturn:  # type: ignore[misc]
     # - is using the global _cached_pages hacky/problematic ?
 
     mpa_pages = source_util._cached_pages
-    page_data = mpa_pages.values()
+    page_data = mpa_pages.values()  # type: ignore[union-attr]
     page_names = [page["page_name"].replace("_", " ") for page in page_data]
 
     for page in page_data:

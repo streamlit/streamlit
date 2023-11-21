@@ -37,7 +37,6 @@ function checkIfActive(
   element: PageLinkProto,
   currentPageScriptHash: string
 ): boolean {
-  console.log(currentPageScriptHash, element.pageScriptHash)
   if (element.active === "auto") {
     return currentPageScriptHash === element.pageScriptHash
   } else if (element.active === "true") {
@@ -50,7 +49,6 @@ function PageLink(props: Props): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
   const { disabled, element, width } = props
   const style = { width }
-  console.log(element.label)
   const isActive = checkIfActive(element, currentPageScriptHash)
 
   return (
