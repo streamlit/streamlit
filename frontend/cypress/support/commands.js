@@ -148,7 +148,7 @@ Cypress.Commands.add("waitForScriptFinish", (timeout = 20000) => {
   // through the sequence "initial" -> "running" -> "notRunning")
   cy.get("[data-testid='stApp'][data-teststate='notRunning']", {
     timeout,
-  }).should("not.exist")
+  }).should("exist")
 })
 
 // Indexing into a list of elements produced by `cy.get()` may fail if not enough
