@@ -64,12 +64,10 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
     data: {
-      kind: "link-cell",
-      link: {
-        displayText: "",
-        href: "",
-      },
+      href: "",
+      displayText: "",
     },
+    copyData: "",
   } as LinkCell
 
   const validateInput = (href?: string): boolean => {
@@ -110,7 +108,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         } as LinkCell
       }
 
-      const href = data
+      const href: string = data
       if (typeof validateRegex === "string") {
         // The regex is invalid, we return an error to indicate this
         // to the developer:
@@ -133,20 +131,15 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         ...cellTemplate,
         data: {
           kind: "link-cell",
-          link: {
-            href: href,
-            displayText: parameters.display_text,
-          },
+          displayText: parameters.display_text,
+          href: href,
         },
         copyData: href,
         isMissingValue: isNullOrUndefined(href),
       } as LinkCell
     },
-    getCellValue(cell: LinkCell): {
-      readonly displayText: string
-      readonly href: string
-    } | null {
-      return cell.data?.link === undefined ? null : cell.data.link
+    getCellValue(cell: LinkCell): string | null {
+      return cell.data?.href === undefined ? null : cell.data.href
     },
   }
 }

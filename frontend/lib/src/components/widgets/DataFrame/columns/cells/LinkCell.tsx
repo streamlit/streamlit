@@ -29,22 +29,15 @@ const UNDERLINE_OFFSET = 5
 
 export interface LinkCellProps {
   readonly kind: "link-cell"
-  readonly link: {
-    readonly displayText: string
-    readonly href: string
-  }
+  readonly href: string
+  readonly displayText?: string
 }
 
 export type LinkCell = CustomCell<LinkCellProps>
 
 function onClickSelect(
   e: Parameters<NonNullable<CustomRenderer<LinkCell>["onSelect"]>>[0]
-):
-  | {
-      readonly displayText: string
-      readonly href: string
-    }
-  | undefined {
+): string | undefined {
   const canvas = document.createElement("canvas")
   const ctx = canvas.getContext("2d", { alpha: false })
   if (ctx === null) return
@@ -53,18 +46,18 @@ function onClickSelect(
   const font = `${theme.baseFontStyle} ${theme.fontFamily}`
   ctx.font = font
 
-  const { link } = cell.data
+  const { href, displayText } = cell.data
 
   const rectHoverX = rect.x + hoverX
 
   const textWidth =
-    ctx.measureText(getLinkDisplayValue(link.href, link.displayText)).width +
+    ctx.measureText(getLinkDisplayValue(href, displayText)).width +
     theme.cellHorizontalPadding * 2
 
   const isHovered = rectHoverX > rect.x && rectHoverX < rect.x + textWidth
 
   if (isHovered) {
-    return link
+    return href
   }
 
   return undefined
@@ -106,10 +99,10 @@ export function getLinkDisplayValue(
 export const linkCellRenderer: CustomRenderer<LinkCell> = {
   draw: (args, cell) => {
     const { ctx, rect, theme, hoverX = -100, highlighted } = args
-    const { link } = cell.data
-    if (link === undefined) return
+    const { href, displayText } = cell.data
+    if (href === undefined) return
 
-    const displayValue = getLinkDisplayValue(link.href, link.displayText)
+    const displayValue = getLinkDisplayValue(href, displayText)
 
     const xPad = theme.cellHorizontalPadding
 
@@ -158,11 +151,11 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     (c.data as LinkCellProps).kind === "link-cell",
   kind: GridCellKind.Custom,
   measure: (ctx, cell, theme) => {
-    const { link } = cell.data
-    if (link === undefined) return 0
+    const { href, displayText } = cell.data
+    if (href === undefined) return 0
 
     return (
-      ctx.measureText(getLinkDisplayValue(link.displayText, link.href)).width +
+      ctx.measureText(getLinkDisplayValue(href, displayText)).width +
       theme.cellHorizontalPadding * 2
     )
   },
@@ -172,29 +165,25 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     const redirectLink = onClickSelect(e)
 
     if (redirectLink !== undefined) {
-      window.open(redirectLink.href, "_blank")
+      window.open(redirectLink, "_blank")
     }
   },
   onDelete: c => ({
     ...c,
     data: {
       ...c.data,
-      link: {
-        displayText: "",
-        href: "",
-      },
+      displayText: "",
+      href: "",
     },
   }),
   provideEditor: () => p => {
     const { onChange, value, forceEditMode, validatedSelection } = p
+    const { href, displayText } = value.data
     return (
       <UriOverlayEditor
         forceEditMode={forceEditMode}
-        uri={value.data.link.href}
-        preview={getLinkDisplayValue(
-          value.data.link.href,
-          value.data.link.displayText
-        )}
+        uri={value.data.href}
+        preview={getLinkDisplayValue(href, displayText)}
         validatedSelection={validatedSelection}
         readonly={value.readonly === true}
         onChange={e =>
@@ -203,17 +192,17 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
             copyData: e.target.value,
             data: {
               ...value.data,
-              link: {
-                displayText: value.data.link.displayText,
-                href: e.target.value,
-              },
+              href: e.target.value,
+              displayText: value.data.displayText,
             },
           })
         }
       />
     )
   },
-  onPaste: (toPaste, cell) => {
-    return toPaste === cell.link.href ? undefined : { ...cell, data: toPaste }
+  onPaste: (toPaste, cellData) => {
+    return toPaste === cellData.href
+      ? undefined
+      : { ...cellData, href: toPaste }
   },
 }

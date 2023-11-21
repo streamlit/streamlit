@@ -39,8 +39,6 @@ const MOCK_LINK_COLUMN_PROPS = {
   },
 }
 
-const EMPTY_LINK_RESULT = { displayText: "", href: "" }
-
 describe("LinkColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
@@ -49,22 +47,21 @@ describe("LinkColumn", () => {
     expect(mockColumn.id).toEqual(MOCK_LINK_COLUMN_PROPS.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    const mockCell = mockColumn.getCell("https://streamlit.io")
+    const mockCell = mockColumn.getCell("https://streamlit.io") as LinkCell
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect((mockCell as LinkCell).data).toEqual({
+      href: "https://streamlit.io",
       kind: "link-cell",
-      link: {
-        href: "https://streamlit.io",
-      },
+      displayText: undefined,
     })
   })
 
   it.each([
-    ["foo", { href: "foo" }],
-    ["https://streamlit.io", { href: "https://streamlit.io" }],
-    ["/path/to/file", { href: "/path/to/file" }],
-    [null, EMPTY_LINK_RESULT],
-    [undefined, EMPTY_LINK_RESULT],
+    ["foo", "foo"],
+    ["https://streamlit.io", "https://streamlit.io"],
+    ["/path/to/file", "/path/to/file"],
+    [null, ""],
+    [undefined, ""],
     // All the values that are supported by the TextColumn
     // should also be supported by the UrlColumn.
   ])(
@@ -165,10 +162,10 @@ describe("LinkColumn", () => {
       columnTypeOptions: { display_text: "Click me" },
     })
 
-    const cell = mockColumn.getCell("https://streamlit.io", true)
+    const cell = mockColumn.getCell("https://streamlit.io", true) as LinkCell
 
     const cellValue = mockColumn.getCellValue(cell)
-    expect(cellValue.href).toBe("https://streamlit.io")
-    expect(cellValue.displayText).toBe("Click me")
+    expect(cellValue).toBe("https://streamlit.io")
+    expect(cell.data.displayText).toBe("Click me")
   })
 })
