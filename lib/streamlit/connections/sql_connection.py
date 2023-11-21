@@ -200,10 +200,6 @@ class SQLConnection(BaseConnection["Engine"]):
             ),
             wait=wait_fixed(1),
         )
-        @cache_data(
-            show_spinner=show_spinner,
-            ttl=ttl,
-        )
         def _query(
             sql: str,
             index_col=None,
@@ -220,6 +216,19 @@ class SQLConnection(BaseConnection["Engine"]):
                 params=params,
                 **kwargs,
             )
+
+        # We modify our helper function's `__qualname__` here to work around default
+        # `@st.cache_data` behavior. Otherwise, `.query()` being called with different
+        # `ttl` values will reset the cache with each call, and the query caches won't
+        # be scoped by connection.
+        ttl_str = str(  # Avoid adding extra `.` characters to `__qualname__`
+            ttl
+        ).replace(".", "_")
+        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
+        _query = cache_data(
+            show_spinner=show_spinner,
+            ttl=ttl,
+        )(_query)
 
         return _query(
             sql,

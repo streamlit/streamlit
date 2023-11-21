@@ -104,6 +104,49 @@ class SnowparkConnectionTest(unittest.TestCase):
         "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
         MagicMock(),
     )
+    def test_does_not_reset_cache_when_ttl_changes(self):
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+        mock_sql_return = MagicMock()
+        mock_sql_return.to_pandas = MagicMock(return_value="i am a dataframe")
+        conn = SnowparkConnection("my_snowpark_connection")
+        conn._instance.sql.return_value = mock_sql_return
+
+        conn.query("SELECT 1;", ttl=10)
+        conn.query("SELECT 2;", ttl=20)
+        conn.query("SELECT 1;", ttl=10)
+        conn.query("SELECT 2;", ttl=20)
+
+        assert conn._instance.sql.call_count == 2
+
+    @patch(
+        "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
+        MagicMock(),
+    )
+    def test_scopes_caches_by_connection_name(self):
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_sql_return = MagicMock()
+        mock_sql_return.to_pandas = MagicMock(return_value="i am a dataframe")
+
+        conn1 = SnowparkConnection("my_snowpark_connection1")
+        conn1._instance.sql.return_value = mock_sql_return
+        conn2 = SnowparkConnection("my_snowpark_connection2")
+        conn2._instance.sql.return_value = mock_sql_return
+
+        conn1.query("SELECT 1;")
+        conn1.query("SELECT 1;")
+        conn2.query("SELECT 1;")
+        conn2.query("SELECT 1;")
+
+        assert conn1._instance.sql is conn2._instance.sql
+        assert conn1._instance.sql.call_count == 2
+
+    @patch(
+        "streamlit.connections.snowpark_connection.SnowparkConnection._connect",
+        MagicMock(),
+    )
     def test_retry_behavior(self):
         from snowflake.snowpark.exceptions import SnowparkServerException
 

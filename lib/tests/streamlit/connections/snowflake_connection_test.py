@@ -93,7 +93,6 @@ class SnowflakeConnectionTest(unittest.TestCase):
 
         mock_cursor = MagicMock()
         mock_cursor.fetch_pandas_all = MagicMock(return_value="i am a dataframe")
-
         conn = SnowflakeConnection("my_snowflake_connection")
         conn._instance.cursor.return_value = mock_cursor
 
@@ -102,6 +101,51 @@ class SnowflakeConnectionTest(unittest.TestCase):
 
         conn._instance.cursor.assert_called_once()
         mock_cursor.execute.assert_called_once_with("SELECT 1;", params=None)
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+        MagicMock(),
+    )
+    def test_does_not_reset_cache_when_ttl_changes(self):
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetch_pandas_all = MagicMock(return_value="i am a dataframe")
+        conn = SnowflakeConnection("my_snowflake_connection")
+        conn._instance.cursor.return_value = mock_cursor
+
+        conn.query("SELECT 1;", ttl=10)
+        conn.query("SELECT 2;", ttl=20)
+        conn.query("SELECT 1;", ttl=10)
+        conn.query("SELECT 2;", ttl=20)
+
+        assert conn._instance.cursor.call_count == 2
+        assert mock_cursor.execute.call_count == 2
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",
+        MagicMock(),
+    )
+    def test_scopes_caches_by_connection_name(self):
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        mock_cursor = MagicMock()
+        mock_cursor.fetch_pandas_all = MagicMock(return_value="i am a dataframe")
+
+        conn1 = SnowflakeConnection("my_snowflake_connection1")
+        conn1._instance.cursor.return_value = mock_cursor
+        conn2 = SnowflakeConnection("my_snowflake_connection2")
+        conn2._instance.cursor.return_value = mock_cursor
+
+        conn1.query("SELECT 1;")
+        conn1.query("SELECT 1;")
+        conn2.query("SELECT 1;")
+        conn2.query("SELECT 1;")
+
+        assert conn1._instance.cursor is conn2._instance.cursor
+        assert conn1._instance.cursor.call_count == 2
+        assert mock_cursor.execute.call_count == 2
 
     @patch(
         "streamlit.connections.snowflake_connection.SnowflakeConnection._connect",

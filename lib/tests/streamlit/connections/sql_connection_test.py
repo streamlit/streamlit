@@ -142,6 +142,39 @@ class SQLConnectionTest(unittest.TestCase):
         patched_read_sql.assert_called_once()
 
     @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+    @patch("streamlit.connections.sql_connection.pd.read_sql")
+    def test_does_not_reset_cache_when_ttl_changes(self, patched_read_sql):
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        patched_read_sql.return_value = "i am a dataframe"
+
+        conn = SQLConnection("my_sql_connection")
+
+        conn.query("SELECT 1;", ttl=10)
+        conn.query("SELECT 2;", ttl=20)
+        conn.query("SELECT 1;", ttl=10)
+        conn.query("SELECT 2;", ttl=20)
+
+        assert patched_read_sql.call_count == 2
+
+    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
+    @patch("streamlit.connections.sql_connection.pd.read_sql")
+    def test_scopes_caches_by_connection_name(self, patched_read_sql):
+        # Caching functions rely on an active script run ctx
+        add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
+        patched_read_sql.return_value = "i am a dataframe"
+
+        conn1 = SQLConnection("my_sql_connection1")
+        conn2 = SQLConnection("my_sql_connection2")
+
+        conn1.query("SELECT 1;")
+        conn1.query("SELECT 1;")
+        conn2.query("SELECT 1;")
+        conn2.query("SELECT 1;")
+
+        assert patched_read_sql.call_count == 2
+
+    @patch("streamlit.connections.sql_connection.SQLConnection._connect", MagicMock())
     def test_repr_html_(self):
         conn = SQLConnection("my_sql_connection")
         with conn.session as s:

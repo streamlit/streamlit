@@ -184,6 +184,28 @@ type="snowpark"
         conn = connection_factory("my_connection", MockConnection)
         assert connection_factory("my_connection", MockConnection) is conn
 
+    def test_does_not_clear_cache_when_ttl_changes(self):
+        with patch.object(
+            MockConnection, "__init__", return_value=None
+        ) as patched_init:
+            connection_factory("my_connection1", MockConnection, ttl=10)
+            connection_factory("my_connection2", MockConnection, ttl=20)
+            connection_factory("my_connection1", MockConnection, ttl=10)
+            connection_factory("my_connection2", MockConnection, ttl=20)
+
+        assert patched_init.call_count == 2
+
+    def test_does_not_clear_cache_when_max_entries_changes(self):
+        with patch.object(
+            MockConnection, "__init__", return_value=None
+        ) as patched_init:
+            connection_factory("my_connection1", MockConnection, max_entries=10)
+            connection_factory("my_connection2", MockConnection, max_entries=20)
+            connection_factory("my_connection1", MockConnection, max_entries=10)
+            connection_factory("my_connection2", MockConnection, max_entries=20)
+
+        assert patched_init.call_count == 2
+
     @parameterized.expand(
         [
             ("MySQLdb", "mysqlclient"),
