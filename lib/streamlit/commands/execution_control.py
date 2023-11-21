@@ -117,8 +117,8 @@ def switch_page(page_path: str) -> NoReturn:  # type: ignore[misc]
     # - streamlit.source_util.get_pages requires the main script path (used by streamlit extras)
     # - is using the global _cached_pages hacky/problematic ?
 
-    pages_cache = source_util._cached_pages
-    page_data = pages_cache.values()
+    mpa_pages = source_util._cached_pages
+    page_data = mpa_pages.values()
     page_names = [page["page_name"].replace("_", " ") for page in page_data]
 
     for page in page_data:

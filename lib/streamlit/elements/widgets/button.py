@@ -19,13 +19,14 @@ from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
 
 from typing_extensions import Final, Literal
 
-from streamlit import runtime
+from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
+from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -421,6 +422,35 @@ class ButtonMixin:
             use_container_width=use_container_width,
         )
 
+    @gather_metrics("page_link")
+    def page_link(
+        self,
+        label: str,
+        page_path: str,
+        *,
+        icon: str = None,
+        active: bool | str = "auto",
+        indent: bool = False,
+        help: Optional[str] = None,
+        disabled: bool = False,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
+        """Display a link to another page in a multi-page app.
+
+        When clicked, the page will be switched to the specified page.
+        """
+
+        return self._page_link(
+            label=label,
+            page_path=page_path,
+            icon=icon,
+            active=active,
+            indent=indent,
+            help=help,
+            disabled=disabled,
+            use_container_width=use_container_width,
+        )
+
     def _download_button(
         self,
         label: str,
@@ -511,6 +541,45 @@ class ButtonMixin:
             link_button_proto.help = dedent(help)
 
         return self.dg._enqueue("link_button", link_button_proto)
+
+    def _page_link(
+        self,
+        label: str,
+        page_path: str,
+        *,  # keyword-only arguments:
+        icon: str = None,
+        active: bool | str = "auto",
+        indent: bool = False,
+        help: Optional[str] = None,
+        disabled: bool = False,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
+
+        page_link_proto = PageLinkProto()
+        page_link_proto.label = label
+        page_link_proto.page_path = page_path
+        page_link_proto.icon = icon
+        page_link_proto.active = str(active).lower()
+        page_link_proto.indent = indent
+        page_link_proto.disabled = disabled
+        page_link_proto.use_container_width = use_container_width
+
+        # Handle retrieving the page_script_hash & page_path
+        pages_cache = source_util._cached_pages
+        page_data = pages_cache.values()
+
+        for page in page_data:
+            # path after pages directory, removes .py
+            path = page["script_path"].split("/")[-1][:-3]
+            compare_path = page_path.split("/")[-1][:-3]
+            if compare_path == path:
+                page_link_proto.page_script_hash = page["page_script_hash"]
+                page_link_proto.page_path = path
+
+        if help is not None:
+            page_link_proto.help = dedent(help)
+
+        return self.dg._enqueue("page_link", page_link_proto)
 
     def _button(
         self,

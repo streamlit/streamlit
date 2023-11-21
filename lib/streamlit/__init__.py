@@ -156,6 +156,7 @@ markdown = _main.markdown
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
+page_link = _main.page_link
 plotly_chart = _main.plotly_chart
 progress = _main.progress
 pyplot = _main.pyplot

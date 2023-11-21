@@ -49,6 +49,7 @@ import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/Metric.proto";
 import "streamlit/proto/MultiSelect.proto";
+import "streamlit/proto/PageLink.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Components.proto";
 import "streamlit/proto/Progress.proto";
@@ -108,6 +109,7 @@ message Element {
     NumberInput number_input = 32;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
+    PageLink page_link = 52;
     Radio radio = 23;
     Selectbox selectbox = 25;
     Skeleton skeleton = 52;  // Internal-only.

@@ -59,6 +59,7 @@ NONWIDGET_ELEMENTS = [
     "link_button",
     "markdown",
     "metric",
+    "page_link",
     "plotly_chart",
     "progress",
     "pyplot",
