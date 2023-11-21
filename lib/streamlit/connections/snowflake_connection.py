@@ -208,7 +208,10 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         # `@st.cache_data` behavior. Otherwise, `.query()` being called with different
         # `ttl` values will reset the cache with each call, and the query caches won't
         # be scoped by connection.
-        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl}"
+        ttl_str = str(  # Avoid adding extra `.` characters to `__qualname__`
+            ttl
+        ).replace(".", "_")
+        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
         _query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,

@@ -89,8 +89,11 @@ def _create_connection(
     # We modify our helper function's `__qualname__` here to work around default
     # `@st.cache_resource` behavior. Otherwise, `st.connection` being called with
     # different `ttl` or `max_entries` values will reset the cache with each call.
+    ttl_str = str(ttl).replace(  # Avoid adding extra `.` characters to `__qualname__`
+        ".", "_"
+    )
     __create_connection.__qualname__ = (
-        f"{__create_connection.__qualname__}_{ttl}_{max_entries}"
+        f"{__create_connection.__qualname__}_{ttl_str}_{max_entries}"
     )
     __create_connection = cache_resource(
         max_entries=max_entries,
