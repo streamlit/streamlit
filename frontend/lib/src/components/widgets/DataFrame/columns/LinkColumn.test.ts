@@ -49,7 +49,7 @@ describe("LinkColumn", () => {
     expect(mockColumn.id).toEqual(MOCK_LINK_COLUMN_PROPS.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    const mockCell = mockColumn.getCell({ href: "https://streamlit.io" })
+    const mockCell = mockColumn.getCell("https://streamlit.io")
     expect(mockCell.kind).toEqual(GridCellKind.Custom)
     expect((mockCell as LinkCell).data).toEqual({
       kind: "link-cell",
@@ -60,10 +60,9 @@ describe("LinkColumn", () => {
   })
 
   it.each([
-    [{ href: "foo" }, { href: "foo" }],
-    [{ href: "https://streamlit.io" }, { href: "https://streamlit.io" }],
-    [{ href: "/path/to/file" }, { href: "/path/to/file" }],
-    [{ href: null }, { href: null }],
+    ["foo", { href: "foo" }],
+    ["https://streamlit.io", { href: "https://streamlit.io" }],
+    ["/path/to/file", { href: "/path/to/file" }],
     [null, EMPTY_LINK_RESULT],
     [undefined, EMPTY_LINK_RESULT],
     // All the values that are supported by the TextColumn
@@ -83,9 +82,9 @@ describe("LinkColumn", () => {
       columnTypeOptions: { max_chars: 5 },
     })
 
-    expect(mockColumn.validateInput!({ href: "12345" })).toBe(true)
-    expect(mockColumn.validateInput!({ href: "123456" })).toBe(false)
-    expect(mockColumn.validateInput!({ href: "1234567890" })).toBe(false)
+    expect(mockColumn.validateInput!("12345")).toBe(true)
+    expect(mockColumn.validateInput!("123456")).toBe(false)
+    expect(mockColumn.validateInput!("1234567890")).toBe(false)
   })
 
   it("validates input based on validate regex", () => {
@@ -97,20 +96,18 @@ describe("LinkColumn", () => {
       },
     })
 
-    expect(
-      mockColumn.validateInput!({ href: "https://issues.streamlit.app/" })
-    ).toBe(true)
+    expect(mockColumn.validateInput!("https://issues.streamlit.app/")).toBe(
+      true
+    )
     expect(
       mockColumn.validateInput!(
         "https://issues.streamlit.app/Streamlit_Issues_Leaderboard?issue=10"
       )
     ).toBe(true)
-    expect(mockColumn.validateInput!({ href: "issues.streamlit.app/" })).toBe(
+    expect(mockColumn.validateInput!("issues.streamlit.app/")).toBe(false)
+    expect(mockColumn.validateInput!("https://issues.streamlit.io/")).toBe(
       false
     )
-    expect(
-      mockColumn.validateInput!({ href: "https://issues.streamlit.io/" })
-    ).toBe(false)
   })
 
   it("applies input validation in the getCell call based on max_chars and validate regex", () => {
@@ -124,23 +121,17 @@ describe("LinkColumn", () => {
     })
 
     expect(
-      isErrorCell(
-        mockColumn.getCell({ href: "https://issues.streamlit.app/" }, true)
-      )
+      isErrorCell(mockColumn.getCell("https://issues.streamlit.app/", true))
     ).toBe(false)
     expect(
-      isErrorCell(
-        mockColumn.getCell({ href: "https://issues.streamlit.io/" }, true)
-      )
+      isErrorCell(mockColumn.getCell("https://issues.streamlit.io/", true))
     ).toBe(true)
 
     // We do not auto fix a link cell that's too long
     expect(
       isErrorCell(
         mockColumn.getCell(
-          {
-            href: "https://issues.streamlit.app/Streamlit_Issues_Leaderboard?issue=10",
-          },
+          "https://issues.streamlit.app/Streamlit_Issues_Leaderboard?issue=10",
           true
         )
       )
@@ -153,7 +144,7 @@ describe("LinkColumn", () => {
       columnTypeOptions: { validate: "[" }, // Invalid regex
     })
 
-    const cell = mockColumn.getCell({ href: "test" }, true)
+    const cell = mockColumn.getCell("test", true)
     expect(isErrorCell(cell)).toEqual(true)
     expect((cell as LinkCell).data).toContain("Invalid validate regex")
   })
@@ -164,20 +155,17 @@ describe("LinkColumn", () => {
       columnTypeOptions: { validate: "" },
     })
 
-    const cell = mockColumn.getCell({ href: "test" }, true)
+    const cell = mockColumn.getCell("test", true)
     expect(isErrorCell(cell)).toEqual(false)
   })
 
   it("sets the href and displayText values correctly", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
-      columnTypeOptions: { displayText: "Click me" },
+      columnTypeOptions: { display_text: "Click me" },
     })
 
-    const cell = mockColumn.getCell(
-      { href: "https://streamlit.io", displayText: "Click me" },
-      true
-    )
+    const cell = mockColumn.getCell("https://streamlit.io", true)
 
     const cellValue = mockColumn.getCellValue(cell)
     expect(cellValue.href).toBe("https://streamlit.io")

@@ -32,6 +32,8 @@ export interface LinkColumnParams {
   readonly max_chars?: number
   // Regular expression that the input's value must match for the value to pass
   readonly validate?: string
+  // a value to display in the link cell. Can be a regex to parse out a specific substring of the url to be displayed
+  readonly display_text?: string
 }
 
 /**
@@ -70,15 +72,13 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     },
   } as LinkCell
 
-  const validateInput = (data?: any): boolean => {
-    if (isNullOrUndefined(data) || isNullOrUndefined(data.href)) {
+  const validateInput = (href?: string): boolean => {
+    if (isNullOrUndefined(href)) {
       if (props.isRequired) {
         return false
       }
       return true
     }
-
-    const { href } = data
 
     const cellHref = toSafeString(href)
 
@@ -110,7 +110,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         } as LinkCell
       }
 
-      const { href } = data
+      const href = data
       if (typeof validateRegex === "string") {
         // The regex is invalid, we return an error to indicate this
         // to the developer:
@@ -118,7 +118,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       }
 
       if (validate) {
-        const validationResult = validateInput(data)
+        const validationResult = validateInput(href)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will
           // prevent this cell to be inserted into the table.
@@ -133,7 +133,10 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         ...cellTemplate,
         data: {
           kind: "link-cell",
-          link: data,
+          link: {
+            href: href,
+            displayText: parameters.display_text,
+          },
         },
         copyData: href,
         isMissingValue: isNullOrUndefined(href),
