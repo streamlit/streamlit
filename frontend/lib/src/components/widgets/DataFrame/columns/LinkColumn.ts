@@ -64,6 +64,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
     data: {
+      kind: "link-cell",
       href: "",
       displayText: "",
     },
