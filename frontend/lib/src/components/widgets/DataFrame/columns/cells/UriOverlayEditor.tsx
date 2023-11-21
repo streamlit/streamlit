@@ -16,7 +16,7 @@
 
 import { SelectionRange, TextCellEntry } from "@glideapps/glide-data-grid"
 import React from "react"
-import { UriOverlayEditorStyle } from "./uri-overlay-editor-style"
+import { UriOverlayEditorStyle } from "../../uri-overlay-editor-style"
 import { Edit } from "@emotion-icons/material-rounded"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 

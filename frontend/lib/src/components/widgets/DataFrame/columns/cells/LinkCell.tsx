@@ -23,7 +23,7 @@ import {
   blend,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
-import UriOverlayEditor from "../../UriOverlayEditor"
+import UriOverlayEditor from "./UriOverlayEditor"
 
 const UNDERLINE_OFFSET = 5
 

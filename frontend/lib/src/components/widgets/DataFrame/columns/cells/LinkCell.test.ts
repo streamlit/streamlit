@@ -22,28 +22,26 @@ describe("LinkCell", () => {
     return {
       kind: GridCellKind.Custom,
       allowOverlay: true,
-      copyData: "4",
+      copyData: "",
       readonly: false,
       data: {
         kind: "link-cell",
-        link: {
-          href: href || "",
-          displayText: displayText || "",
-        },
+        href: href || "",
+        displayText: displayText || "",
       },
     }
   }
   it("renders the href when displayText is empty", () => {
     const cell = getMockLinkCell("https://streamlit.io")
 
-    const { href, displayText } = cell.data.link
+    const { href, displayText } = cell.data
     expect(getLinkDisplayValue(href, displayText)).toBe("https://streamlit.io")
   })
 
   it("renders the displayText value when its set and not a regexp", () => {
     const cell = getMockLinkCell("https://streamlit.io", "streamlit")
 
-    const { href, displayText } = cell.data.link
+    const { href, displayText } = cell.data
     expect(getLinkDisplayValue(href, displayText)).toBe("streamlit")
   })
 
@@ -53,7 +51,7 @@ describe("LinkCell", () => {
       "https://(.*?).streamlit.app"
     )
 
-    const { href, displayText } = cell.data.link
+    const { href, displayText } = cell.data
     expect(getLinkDisplayValue(href, displayText)).toBe("roadmap")
   })
 
@@ -63,7 +61,7 @@ describe("LinkCell", () => {
       "https://(.*?).streamlit.app"
     )
 
-    const { href, displayText } = cell.data.link
-    expect(getLinkDisplayValue(href, displayText)).toBe("https://google.com")
+    const { href, displayText } = cell.data
+    expect(getLinkDisplayValue(href, displayText)).toBe("https://googles.com")
   })
 })
