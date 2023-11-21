@@ -1,7 +1,0 @@
-{
-  "integrationFolder": "../e2e/specs",
-  "trashAssetsBeforeRuns": false,
-  "viewportWidth": 1366,
-  "viewportHeight": 768,
-  "chromeWebSecurity": false
-}
