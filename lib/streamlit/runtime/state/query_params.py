@@ -26,31 +26,29 @@ class QueryParams(MutableMapping[str, str]):
 
     _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
 
-    def __init__(self):
-        # avoid using ._query_params = {} as that will use __setattr__
-        # and __setattr__ accesses ._query_params and ._query_params is not defined yet.
-        # https://stackoverflow.com/a/25179980
-        self.__dict__["_query_params"] = {}
-
     def __iter__(self) -> Iterator[str]:
         return iter(self._query_params.keys())
 
     def __getitem__(self, key: str) -> str:
+        """Retrieves a value for a given key in query parameters.
+        Returns the last item in a list or an empty string if empty.
+        If the key is not present, raise KeyError.
+        """
         try:
-            # avoid using ._query_params[key] as that will use __getattr__
-            # which relies on __getitem__ as that causes an infinite loop
-            value = self.__dict__["_query_params"][key]
+            value = self._query_params[key]
             if isinstance(value, list):
                 if len(value) == 0:
                     return ""
                 else:
-                    return value[-1]  # type: ignore
-            return value  # type: ignore
+                    # Return the last value to mimic Tornado's behavior
+                    # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
+                    return value[-1]
+            return value
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
     # Type checking users should handle the string serialization themselves
-    # We will accept any type for the list and serialize to str
+    # We will accept any type for the list and serialize to str just in case
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
@@ -68,26 +66,8 @@ class QueryParams(MutableMapping[str, str]):
     def get_all(self, key: str) -> List[str]:
         if key not in self._query_params:
             return []
-        query_params = self._query_params[key]
-        return query_params if isinstance(query_params, list) else [query_params]
-
-    def __getattr__(self, key: str) -> str:
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(_missing_key_error_message(key))
-
-    def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
-        try:
-            self[key] = value
-        except KeyError:
-            raise AttributeError(_missing_key_error_message(key))
-
-    def __delattr__(self, key: str) -> None:
-        try:
-            del self[key]
-        except KeyError:
-            raise AttributeError(_missing_key_error_message(key))
+        value = self._query_params[key]
+        return value if isinstance(value, list) else [value]
 
     def __len__(self) -> int:
         return len(self._query_params)
