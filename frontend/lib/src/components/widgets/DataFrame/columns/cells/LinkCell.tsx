@@ -72,23 +72,19 @@ export function getLinkDisplayValue(
   }
 
   try {
-    if (displayText.includes("(.*?)")) {
-      // u flag allows unicode characters
-      // s flag allows . to match newlines
-      const displayTextRegex = new RegExp(displayText, "us")
+    // assume displayText is a regex first and attempt to find a pattern match in the url
+    // u flag allows unicode characters
+    // s flag allows . to match newlines
+    const displayTextRegex = new RegExp(displayText, "us")
 
-      // apply the regex pattern to display the value
-      const patternMatch = href.match(displayTextRegex)
-      if (patternMatch) {
-        // return the first matching group
-        return patternMatch[1]
-      }
-
-      // if the regex doesn't find a match with the url, just use the url as display value
-      return href
+    // apply the regex pattern to display the value
+    const patternMatch = href.match(displayTextRegex)
+    if (patternMatch) {
+      // return the first matching group
+      return patternMatch[1]
     }
 
-    // displayText was not a regexp, so just return it
+    // if the regex doesn't find a match with the url (or it wasn't a regex pattern at all), return the displayText value
     return displayText
   } catch (error) {
     // if there was any error return displayText
