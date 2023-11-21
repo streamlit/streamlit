@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { EmojiIcon } from "@streamlit/lib"
+import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
 import { BaseButtonTooltip } from "@streamlit/lib/src/components/shared/BaseButton"
 
