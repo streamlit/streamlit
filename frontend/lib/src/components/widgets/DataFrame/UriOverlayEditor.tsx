@@ -17,7 +17,8 @@
 import { SelectionRange, TextCellEntry } from "@glideapps/glide-data-grid"
 import React from "react"
 import { UriOverlayEditorStyle } from "./uri-overlay-editor-style"
-import { EditPencil } from "./EditPencil"
+import { Edit } from "@emotion-icons/material-rounded"
+import Icon from "@streamlit/lib/src/components/shared/Icon"
 
 interface Props {
   readonly uri: string
@@ -72,7 +73,7 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
       </a>
       {!readonly && (
         <div className="edit-icon" onClick={onEditClick}>
-          <EditPencil />
+          <Icon content={Edit} size="lg" />
         </div>
       )}
       <textarea className="gdg-input" autoFocus={true} />

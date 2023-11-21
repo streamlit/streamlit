@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+// copied from glide's implementation for use with our LinkCell
+// https://github.com/glideapps/glide-data-grid/blob/0ea52f371a5e2aaa8595aceefa40722d35410b1a/packages/core/src/data-grid-overlay-editor/data-grid-overlay-editor-style.tsx
 export const UriOverlayEditorStyle = styled.div`
   display: flex;
 
@@ -50,11 +52,6 @@ export const UriOverlayEditorStyle = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
-
-    > * {
-      width: 24px;
-      height: 24px;
-    }
   }
 
   textarea {
