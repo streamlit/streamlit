@@ -102,7 +102,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
 
     const xPad = theme.cellHorizontalPadding
 
-    let drawX = rect.x + xPad
+    const drawX = rect.x + xPad
 
     const rectHoverX = rect.x + hoverX
 
@@ -111,12 +111,12 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     const middleCenterBias = getMiddleCenterBias(ctx, font)
     const drawY = rect.y + rect.height / 2 + middleCenterBias
 
-    const metrics = measureTextCached(displayValue, ctx, font)
-
     const isHovered = rectHoverX > rect.x && rectHoverX < rect.x + rect.width
 
     if (isHovered) {
       // draw the underline only when the cell is hovered
+      const metrics = measureTextCached(displayValue, ctx, font)
+
       ctx.moveTo(drawX, Math.floor(drawY + UNDERLINE_OFFSET) + 0.5)
       ctx.lineTo(
         drawX + metrics.width,
@@ -139,7 +139,6 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     ctx.fillStyle = theme.linkColor
     ctx.fillText(displayValue, drawX, drawY)
     ctx.closePath()
-    drawX += metrics.width + 4
 
     return true
   },
