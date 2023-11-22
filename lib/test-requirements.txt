@@ -25,6 +25,9 @@ pytest-cov
 requests>=2.27, <3
 requests-mock
 testfixtures
+# Playwright 1.40 installs a broken webkit version.
+# Eventually unpin once a fixed version is rolled out.
+playwright<1.40
 pytest-playwright>=0.1.2
 pixelmatch>=0.3.0
 pytest-xdist
