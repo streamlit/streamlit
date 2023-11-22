@@ -34,7 +34,7 @@
     "@emotion/serialize": "^1.1.1",
     "@emotion/styled": "^11.10.5",
     "@streamlit/lib": "1.28.2",
-    "axios": "^0.27.2",
+    "axios": "^1.6.0",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",
     "color2k": "^2.0.2",
