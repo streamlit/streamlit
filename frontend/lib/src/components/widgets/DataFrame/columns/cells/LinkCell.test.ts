@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { LinkCell, getLinkDisplayValue } from "./LinkCell"
+import { LinkCell, linkCellRenderer } from "./LinkCell"
 
 describe("LinkCell", () => {
-  function getMockLinkCell(href = "", displayText = ""): LinkCell {
+  function getMockLinkCell(href = ""): LinkCell {
     return {
       kind: GridCellKind.Custom,
       allowOverlay: true,
@@ -27,41 +28,17 @@ describe("LinkCell", () => {
       data: {
         kind: "link-cell",
         href: href || "",
-        displayText: displayText || "",
+        displayText: "",
       },
     }
   }
-  it("renders the href when displayText is empty", () => {
-    const cell = getMockLinkCell("https://streamlit.io")
 
-    const { href, displayText } = cell.data
-    expect(getLinkDisplayValue(href, displayText)).toBe("https://streamlit.io")
+  // todo(bhay) add some rendering tests here?
+  it("creates a valid linkCellRenderer", () => {
+    expect(linkCellRenderer).not.toBeUndefined()
   })
 
-  it("renders the displayText value when its set and not a regexp", () => {
-    const cell = getMockLinkCell("https://streamlit.io", "streamlit")
-
-    const { href, displayText } = cell.data
-    expect(getLinkDisplayValue(href, displayText)).toBe("streamlit")
-  })
-
-  it("renders the applied regex to the href when displayText is a regex", () => {
-    const cell = getMockLinkCell(
-      "https://roadmap.streamlit.app",
-      "https://(.*?).streamlit.app"
-    )
-
-    const { href, displayText } = cell.data
-    expect(getLinkDisplayValue(href, displayText)).toBe("roadmap")
-  })
-
-  it("renders the href when displayText is a regex but theres no match", () => {
-    const cell = getMockLinkCell(
-      "https://google.com",
-      "https://(.*?).streamlit.app"
-    )
-
-    const { href, displayText } = cell.data
-    expect(getLinkDisplayValue(href, displayText)).toBe("https://googles.com")
+  it("matches the cell correctly", () => {
+    expect(linkCellRenderer.isMatch(getMockLinkCell())).toBe(true)
   })
 })

@@ -24,6 +24,7 @@ import {
   toSafeString,
   getErrorCell,
   ColumnCreator,
+  getLinkDisplayValue,
 } from "./utils"
 import { LinkCell } from "./cells/LinkCell"
 
@@ -132,8 +133,8 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         ...cellTemplate,
         data: {
           kind: "link-cell",
-          displayText: parameters.display_text,
           href: href,
+          displayText: getLinkDisplayValue(href, parameters.display_text),
         },
         copyData: href,
         isMissingValue: isNullOrUndefined(href),

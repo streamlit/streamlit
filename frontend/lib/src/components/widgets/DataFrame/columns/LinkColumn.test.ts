@@ -52,7 +52,7 @@ describe("LinkColumn", () => {
     expect((mockCell as LinkCell).data).toEqual({
       href: "https://streamlit.io",
       kind: "link-cell",
-      displayText: undefined,
+      displayText: "https://streamlit.io",
     })
   })
 
@@ -167,5 +167,41 @@ describe("LinkColumn", () => {
     const cellValue = mockColumn.getCellValue(cell)
     expect(cellValue).toBe("https://streamlit.io")
     expect(cell.data.displayText).toBe("Click me")
+  })
+
+  it("sets displayed value to be the href when displayText is empty", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: undefined },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as LinkCell
+
+    expect(cell.data.displayText).toBe("https://streamlit.io")
+  })
+
+  it("sets displayed value to be displayText when displayText is defined and not a regexp", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: "streamlit" },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as LinkCell
+
+    expect(cell.data.displayText).toBe("streamlit")
+  })
+
+  it("sets displayed value as the applied regex to the href when displayText is a regex", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: "https://(.*?).streamlit.app" },
+    })
+
+    const cell = mockColumn.getCell(
+      "https://roadmap.streamlit.app",
+      true
+    ) as LinkCell
+
+    expect(cell.data.displayText).toBe("roadmap")
   })
 })

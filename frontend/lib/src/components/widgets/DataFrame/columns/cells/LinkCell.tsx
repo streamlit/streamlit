@@ -51,7 +51,7 @@ function onClickSelect(
   const rectHoverX = rect.x + hoverX
 
   const textWidth =
-    ctx.measureText(getLinkDisplayValue(href, displayText)).width +
+    ctx.measureText(displayText || href).width +
     theme.cellHorizontalPadding * 2
 
   const isHovered = rectHoverX > rect.x && rectHoverX < rect.x + textWidth
@@ -63,42 +63,13 @@ function onClickSelect(
   return undefined
 }
 
-export function getLinkDisplayValue(
-  href: string,
-  displayText?: string
-): string {
-  if (!displayText) {
-    return href
-  }
-
-  try {
-    // assume displayText is a regex first and attempt to find a pattern match in the url
-    // u flag allows unicode characters
-    // s flag allows . to match newlines
-    const displayTextRegex = new RegExp(displayText, "us")
-
-    // apply the regex pattern to display the value
-    const patternMatch = href.match(displayTextRegex)
-    if (patternMatch) {
-      // return the first matching group
-      return patternMatch[1]
-    }
-
-    // if the regex doesn't find a match with the url (or it wasn't a regex pattern at all), return the displayText value
-    return displayText
-  } catch (error) {
-    // if there was any error return displayText
-    return displayText
-  }
-}
-
 export const linkCellRenderer: CustomRenderer<LinkCell> = {
   draw: (args, cell) => {
     const { ctx, rect, theme, hoverX = -100, highlighted } = args
     const { href, displayText } = cell.data
     if (href === undefined) return
 
-    const displayValue = getLinkDisplayValue(href, displayText)
+    const displayValue = displayText || href
 
     const xPad = theme.cellHorizontalPadding
 
@@ -150,7 +121,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     if (href === undefined) return 0
 
     return (
-      ctx.measureText(getLinkDisplayValue(href, displayText)).width +
+      ctx.measureText(displayText || href).width +
       theme.cellHorizontalPadding * 2
     )
   },
@@ -178,7 +149,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
       <UriOverlayEditor
         forceEditMode={forceEditMode}
         uri={value.data.href}
-        preview={getLinkDisplayValue(href, displayText)}
+        preview={displayText || href}
         validatedSelection={validatedSelection}
         readonly={value.readonly === true}
         onChange={e =>
