@@ -46,7 +46,7 @@ jsonschema==4.20.0
 jsonschema-specifications==2023.11.1
 keyring==24.3.0
 kiwisolver==1.4.5
-langchain==0.0.339
+langchain==0.0.340
 langsmith==0.0.66
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
