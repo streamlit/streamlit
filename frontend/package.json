@@ -24,7 +24,7 @@
     "testApp": "yarn workspace @streamlit/app testWatch",
     "cy:open": "unset NODE_OPTIONS && cypress open --env devicePixelRatio=1",
     "cy:run": "unset NODE_OPTIONS && cypress run",
-    "cy:run-flaky": "yarn cy:run --config integrationFolder=../e2e_flaky/specs"
+    "cy:run-flaky": "yarn cy:run --config-file=./cypress.config.js --config e2e.specPattern=../e2e_flaky/specs/**/*.spec.{js,jsx,ts,tsx}"
   },
   "browserslist": [
     ">0.2%",
