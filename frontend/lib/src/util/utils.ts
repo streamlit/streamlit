@@ -57,6 +57,9 @@ export const EMBED_SHOW_FOOTER = "show_footer"
 export const EMBED_LIGHT_THEME = "light_theme"
 export const EMBED_DARK_THEME = "dark_theme"
 export const EMBED_TRUE = "true"
+export const EMBED_HIDE_LOADING_SCREEN = "hide_loading_screen"
+export const EMBED_SHOW_LOADING_SCREEN_V1 = "show_loading_screen_v1"
+export const EMBED_SHOW_LOADING_SCREEN_V2 = "show_loading_screen_v2"
 export const EMBED_QUERY_PARAM_VALUES = [
   EMBED_SHOW_COLORED_LINE,
   EMBED_SHOW_TOOLBAR,
@@ -65,8 +68,17 @@ export const EMBED_QUERY_PARAM_VALUES = [
   EMBED_SHOW_FOOTER,
   EMBED_LIGHT_THEME,
   EMBED_DARK_THEME,
+  EMBED_HIDE_LOADING_SCREEN,
+  EMBED_SHOW_LOADING_SCREEN_V1,
+  EMBED_SHOW_LOADING_SCREEN_V2,
   EMBED_TRUE,
 ]
+
+export enum LoadingScreenType {
+  NONE,
+  V1,
+  V2,
+}
 
 /**
  * Returns list of defined in EMBED_QUERY_PARAM_VALUES url params of given key
@@ -169,6 +181,20 @@ export function isInChildFrame(): boolean {
   return window.parent !== window
 }
 
+/**
+ * Returns a string with the type of loading screen to use while the app is
+ * waiting for the backend to send displayable protos.
+ */
+export function getLoadingScreenType(): LoadingScreenType {
+  const params = getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY)
+
+  return params.has(EMBED_HIDE_LOADING_SCREEN)
+    ? LoadingScreenType.NONE
+    : params.has(EMBED_SHOW_LOADING_SCREEN_V1)
+    ? LoadingScreenType.V1
+    : LoadingScreenType.V2
+}
+
 /** Return an info Element protobuf with the given text. */
 export function makeElementWithInfoText(text: string): Element {
   return new Element({
@@ -186,6 +212,13 @@ export function makeElementWithErrorText(text: string): Element {
       body: text,
       format: AlertProto.Format.ERROR,
     },
+  })
+}
+
+/** Return a special internal-only Element showing an app "skeleton". */
+export function makeSkeletonElement(): Element {
+  return new Element({
+    skeleton: {},
   })
 }
 

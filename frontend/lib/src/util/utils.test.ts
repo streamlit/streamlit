@@ -15,12 +15,14 @@
  */
 
 import {
-  getCookie,
-  setCookie,
-  isEmbed,
-  getEmbedUrlParams,
-  EMBED_QUERY_PARAM_VALUES,
   EMBED_QUERY_PARAM_KEY,
+  EMBED_QUERY_PARAM_VALUES,
+  LoadingScreenType,
+  getCookie,
+  getEmbedUrlParams,
+  getLoadingScreenType,
+  isEmbed,
+  setCookie,
 } from "./utils"
 
 describe("getCookie", () => {
@@ -113,6 +115,9 @@ describe("embedParamValues", () => {
     "show_footer",
     "light_theme",
     "dark_theme",
+    "hide_loading_screen",
+    "show_loading_screen_v1",
+    "show_loading_screen_v2",
     "true",
   ]
   it("embedParamValues have correct values", () => {
@@ -263,5 +268,68 @@ describe("isEmbed", () => {
       },
     }))
     expect(isEmbed()).toBe(false)
+  })
+})
+
+describe("getLoadingScreenType", () => {
+  let windowSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    windowSpy = jest.spyOn(window, "window", "get")
+  })
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+  })
+
+  it("should return v2 by default", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: null,
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
+  })
+
+  it("should give precendence to 'hide'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search:
+          "?embed_options=hide_loading_screen&show_loading_screen_v1&show_loading_screen_v2",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.NONE)
+  })
+
+  it("should support 'hide'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=hide_loading_screen",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.NONE)
+  })
+
+  it("should support 'v1'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v1",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.V1)
+  })
+
+  it("should support 'v2'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v2",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
   })
 })

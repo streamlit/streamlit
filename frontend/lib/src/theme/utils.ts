@@ -142,8 +142,9 @@ export const createEmotionTheme = (
     backgroundColor: bgColor,
     primaryColor: primary,
     textColor: bodyText,
-    widgetBackgroundColor: widgetBackgroundColor,
-    widgetBorderColor: widgetBorderColor,
+    skeletonBackgroundColor,
+    widgetBackgroundColor,
+    widgetBorderColor,
   } = parsedColors
 
   const newGenericColors = { ...genericColors }
@@ -155,6 +156,8 @@ export const createEmotionTheme = (
   if (widgetBackgroundColor)
     newGenericColors.widgetBackgroundColor = widgetBackgroundColor
   if (widgetBorderColor) newGenericColors.widgetBorderColor = widgetBorderColor
+  if (skeletonBackgroundColor)
+    newGenericColors.skeletonBackgroundColor = skeletonBackgroundColor
 
   const conditionalOverrides: any = {}
 

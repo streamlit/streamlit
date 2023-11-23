@@ -14,14 +14,21 @@
  * limitations under the License.
  */
 
-export enum ScriptRunState {
-  // TODO: Add INITIAL state here and clean up data-teststate in App.tsx.
-  // But before we do this, we need to make sure Snowflake hosts that use this
-  // state will not break. And that's a bigger project...
-  //INITIAL = "initial",
-  NOT_RUNNING = "notRunning",
-  RUNNING = "running",
-  RERUN_REQUESTED = "rerunRequested", // script *not* running, but user requested it be re-run
-  STOP_REQUESTED = "stopRequested", // script *is* running, but user requested it be stopped
-  COMPILATION_ERROR = "compilationError", // script failed with a compilation error
-}
+import React from "react"
+import { render } from "@streamlit/lib/src/test_util"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
+
+import { AppSkeleton } from "./AppSkeleton"
+
+describe("AppSkeleton element", () => {
+  it("renders after a delay", async () => {
+    render(<AppSkeleton />)
+
+    // At first, the skeleton should not appear on screen.
+    expect(screen.queryAllByTestId("stAppSkeleton")).toEqual([])
+
+    // Then, a few ms later (500ms at time of writing) we show the skeleton.
+    expect(await screen.findByTestId("stAppSkeleton")).toBeVisible()
+  })
+})

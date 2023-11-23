@@ -376,6 +376,7 @@ describe("HostCommunicationManager messaging", () => {
       textColor: "#1A1D21",
       widgetBackgroundColor: "#FFFFFF",
       widgetBorderColor: "#D3DAE8",
+      skeletonBackgroundColor: "#CCDDEE",
     }
     dispatchEvent(
       "message",

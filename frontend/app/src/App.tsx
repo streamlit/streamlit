@@ -175,6 +175,8 @@ interface State {
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
+const INITIAL_SCRIPT_RUN_ID = "<null>"
+
 // eslint-disable-next-line
 declare global {
   interface Window {
@@ -241,10 +243,10 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(true),
       isFullScreen: false,
       scriptName: "",
-      scriptRunId: "<null>",
+      scriptRunId: INITIAL_SCRIPT_RUN_ID,
       appHash: null,
       scriptRunState: ScriptRunState.NOT_RUNNING,
       userSettings: {
@@ -1108,7 +1110,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(),
+        elements: AppRoot.empty(false),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1683,7 +1685,15 @@ export class App extends PureComponent<Props, State> {
             attach={window}
             focused={true}
           >
-            <StyledApp className={outerDivClass}>
+            <StyledApp
+              className={outerDivClass}
+              data-testid="stApp"
+              data-teststate={
+                scriptRunId == INITIAL_SCRIPT_RUN_ID
+                  ? "initial"
+                  : scriptRunState
+              }
+            >
               {/* The tabindex below is required for testing. */}
               <Header>
                 {!hideTopBar && (

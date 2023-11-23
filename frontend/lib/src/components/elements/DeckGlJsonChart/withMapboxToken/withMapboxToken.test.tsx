@@ -96,8 +96,7 @@ describe("withMapboxToken", () => {
       axios.get = jest.fn().mockReturnValue(new Promise(() => {}))
       render(<WrappedComponent element={emptyElement} width={500} />)
 
-      const loadingTextElement = screen.getByText("Loading...")
-      expect(loadingTextElement).toBeInTheDocument()
+      expect(screen.getByTestId("stSkeleton")).toBeInTheDocument()
     })
 
     it("should fetch the token if userMapboxToken is not present in config.toml and libConfig", async () => {

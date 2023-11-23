@@ -144,6 +144,7 @@ message CustomThemeConfig {
   string code_font = 14;
   repeated FontFace font_faces = 15;
   FontSizes font_sizes = 16;
+  string skeleton_background_color = 17;
 }
 
 message FontFace {

@@ -85,10 +85,30 @@ Cypress.Commands.add("changeTheme", theme => {
   cy.get('[data-baseweb="modal"] [aria-label="Close"]').click()
 })
 
+/**
+ * Normal usage:
+ *
+ *   cy.get("my selector").first().matchImageSnapshot("my filename")
+ *
+ * This means the "subject" in the matchThemedSnapshots function will be the
+ * result of cy.get("my selector").first(). However, in some cases the subject
+ * detaches from the DOM when we change themes (this seems to happen with the
+ * image in the staticfiles_app test, for example), causing Cypress to fail.
+ * When that happens, you can fix the issue by passing a getSubject function
+ * to this command to get the subject from the DOM again, like this:
+ *
+ *   cy.get("body").matchImageSnapshot(
+ *     "my filename", {},
+ *     () => cy.get("my selector").first()
+ *   )
+ *
+ * Note that the example above uses cy.get("body") because that part of the
+ * incantation doesn't actually matter. It just needs to exist.
+ */
 Cypress.Commands.add(
   "matchThemedSnapshots",
   { prevSubject: true },
-  (subject, name, options) => {
+  (subject, name, options, getSubject) => {
     const testName = name || Cypress.mocha.getRunner().suite.ctx.test.title
     const setStates = () => {
       const { focus } = _.pick(options, ["focus"])
@@ -99,11 +119,15 @@ Cypress.Commands.add(
       }
     }
 
+    if (!getSubject) {
+      getSubject = () => cy.wrap(subject)
+    }
+
     // Get dark mode snapshot first. Taking light mode snapshot first
     // for some reason ends up comparing dark with light
     cy.changeTheme("Dark")
     setStates()
-    cy.wrap(subject).matchImageSnapshot(`${testName}-dark`, {
+    getSubject().matchImageSnapshot(`${testName}-dark`, {
       ...options,
       force: false,
     })
@@ -111,7 +135,7 @@ Cypress.Commands.add(
     // Revert back to light mode
     cy.changeTheme("Light")
     setStates()
-    cy.wrap(subject).matchImageSnapshot(name, { ...options, force: false })
+    getSubject().matchImageSnapshot(testName, { ...options, force: false })
     cy.screenshot()
   }
 )
@@ -136,27 +160,19 @@ Cypress.Commands.overwrite(
   }
 )
 
-Cypress.Commands.add("loadApp", appUrl => {
+Cypress.Commands.add("loadApp", (appUrl, timeout) => {
   cy.visit(appUrl)
 
-  cy.waitForScriptFinish()
+  cy.waitForScriptFinish(timeout)
 })
 
-Cypress.Commands.add("waitForScriptFinish", () => {
-  // Wait until we know the script has started. We have to do this
-  // because the status widget is initially hidden (so that it doesn't quickly
-  // appear and disappear if the user has it configured to be hidden). Without
-  // waiting here, it's possible to pass the status widget check below before
-  // it initially renders.
-  cy.get("[data-testid='stAppViewContainer']", { timeout: 20000 }).should(
-    "not.contain",
-    "Please wait..."
-  )
-
-  // Wait until the script is no longer running.
-  cy.get("[data-testid='stStatusWidget']", { timeout: 20000 }).should(
-    "not.exist"
-  )
+Cypress.Commands.add("waitForScriptFinish", (timeout = 20000) => {
+  // Wait until we know the script has started. We determine this by checking
+  // whether the app is in notRunning state. (The data-teststate attribute goes
+  // through the sequence "initial" -> "running" -> "notRunning")
+  cy.get("[data-testid='stApp'][data-teststate='notRunning']", {
+    timeout,
+  }).should("exist")
 })
 
 // Indexing into a list of elements produced by `cy.get()` may fail if not enough
