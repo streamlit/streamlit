@@ -119,13 +119,7 @@ class Context:
     @property
     def cypress_flags(self) -> List[str]:
         """Flags to pass to Cypress"""
-        specPattern = join(self.tests_dir, "specs", "**", "*.spec.{js,jsx,ts,tsx}")
-        flags = [
-            "--config-file",
-            join(FRONTEND_DIR, "cypress.config.js"),
-            "--config",
-            f"e2e.specPattern={specPattern}",
-        ]
+        flags = ["--config", f"integrationFolder={self.tests_dir}/specs"]
         if self.record_results:
             flags.append("--record")
         if self.update_snapshots:
