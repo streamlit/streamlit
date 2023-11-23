@@ -41,7 +41,10 @@ import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import { getMarkdownTextColors } from "@streamlit/lib/src/theme"
+import {
+  getMarkdownTextColors,
+  getMarkdownBgColors,
+} from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
@@ -291,6 +294,16 @@ export function RenderedMarkdown({
   const theme = useTheme()
   const { red, orange, yellow, green, blue, violet, purple, gray } =
     getMarkdownTextColors(theme)
+  const {
+    redbg,
+    orangebg,
+    yellowbg,
+    greenbg,
+    bluebg,
+    violetbg,
+    purplebg,
+    graybg,
+  } = getMarkdownBgColors(theme)
   const colorMapping = new Map(
     Object.entries({
       red: `color: ${red}`,
@@ -303,6 +316,42 @@ export function RenderedMarkdown({
       // Gradient from red, orange, yellow, green, blue, violet, purple
       rainbow: `color: transparent; background-clip: text; -webkit-background-clip: text; background-image: linear-gradient(to right,
         ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple});`,
+      redbg: `background-color: ${redbg}`,
+      "background-red": `background-color: ${redbg}`,
+      "red-bg": `background-color: ${redbg}`,
+      "red-background": `background-color: ${redbg}`,
+      bluebg: `background-color: ${bluebg}`,
+      "background-blue": `background-color: ${bluebg}`,
+      "blue-bg": `background-color: ${bluebg}`,
+      "blue-background": `background-color: ${bluebg}`,
+      greenbg: `background-color: ${greenbg}`,
+      "background-green": `background-color: ${greenbg}`,
+      "green-bg": `background-color: ${greenbg}`,
+      "green-background": `background-color: ${greenbg}`,
+      violetbg: `background-color: ${violetbg}`,
+      "background-violet": `background-color: ${violetbg}`,
+      "violet-bg": `background-color: ${violetbg}`,
+      "violet-background": `background-color: ${violetbg}`,
+      orangebg: `background-color: ${orangebg}`,
+      "background-orange": `background-color: ${orangebg}`,
+      "orange-bg": `background-color: ${orangebg}`,
+      "orange-background": `background-color: ${orangebg}`,
+      graybg: `background-color: ${graybg}`,
+      "background-gray": `background-color: ${graybg}`,
+      "gray-bg": `background-color: ${graybg}`,
+      "gray-background": `background-color: ${graybg}`,
+      greybg: `background-color: ${graybg}`,
+      "background-grey": `background-color: ${graybg}`,
+      "grey-bg": `background-color: ${graybg}`,
+      // Gradient from red, orange, yellow, green, blue, violet, purple
+      rainbowbg: `background: linear-gradient(to right,
+        ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
+      "background-rainbow": `background: linear-gradient(to right,
+        ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
+      "rainbow-bg": `background: linear-gradient(to right,
+        ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
+      "rainbow-background": `background: linear-gradient(to right,
+        ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
     })
   )
   function remarkColoring() {
