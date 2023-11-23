@@ -321,12 +321,43 @@ export function RenderedMarkdown({
       })
     }
   }
+  function remarkSmartTypography() {
+    const replacements = [
+      { pattern: /<-->/g, replacement: "⟷" }, // long left-right arrow
+      { pattern: /<->/g, replacement: "↔" }, // left-right arrow
+      { pattern: /<--/g, replacement: "⟵" }, // long left arrow
+      { pattern: /-->/g, replacement: "⟶" }, // long right arrow
+      { pattern: />=/g, replacement: "≥" }, // greater than or equal to
+      { pattern: /<=/g, replacement: "≤" }, // less than or equal to
+      { pattern: /~=/g, replacement: "≈" }, // approximately equal to
+      { pattern: /->/g, replacement: "→" }, // right arrow
+      { pattern: /<-/g, replacement: "←" }, // left arrow
+      { pattern: /--/g, replacement: "—" }, // em dashes
+    ]
+
+    return (tree: any) => {
+      visit(tree, "text", (node, index, parent) => {
+        // Skip replacements in code blocks or inline code
+        if (parent && (parent.type === "code" || parent.tagName === "code")) {
+          return
+        }
+
+        if (typeof node.value === "string") {
+          replacements.forEach(({ pattern, replacement }) => {
+            node.value = node.value.replace(pattern, replacement)
+          })
+        }
+      })
+    }
+  }
+
   const plugins = [
     remarkMathPlugin,
     remarkEmoji,
     remarkGfm,
     remarkDirective,
     remarkColoring,
+    remarkSmartTypography,
   ]
 
   const rehypePlugins: PluggableList = [
