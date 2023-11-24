@@ -794,6 +794,13 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.allowedStaticFileExtensions",
+    description="File extensions that are allowed to be served with the correct MIME type.",
+    default_val=[],
+    type_=list,
+)
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")
