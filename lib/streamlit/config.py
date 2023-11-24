@@ -794,6 +794,15 @@ _create_option(
     type_=bool,
 )
 
+
+_create_option(
+    "server.maxStaticFileSize",
+    description="The maximum file size in MB that is allowed to be served from the static directory",
+    default_val=200,
+    type_=int,
+)
+
+
 _create_option(
     "server.allowedStaticFileExtensions",
     description="File extensions that are allowed to be served with the correct MIME type.",
