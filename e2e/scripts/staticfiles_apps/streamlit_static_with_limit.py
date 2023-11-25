@@ -17,11 +17,12 @@ from streamlit import runtime
 
 st.header("Main Page with static files")
 
-if not st.get_option("server.enableStaticServing") or not st.get_option("server.maxStaticFileSize"):
+if not st.get_option("server.enableStaticServing") or \
+    not st.get_option("server.maxStaticFileSize"):
     st.error(
         """
-        **ERROR**. This test needs to be run with `--server.enableStaticServing` and `--server.maxStaticFileSize`, like
-        this:
+        **ERROR**. This test needs to be run with `--server.enableStaticServing` 
+        and `--server.maxStaticFileSize`, like this:
 
         ```
         streamlit run
