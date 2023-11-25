@@ -459,7 +459,18 @@ def run_e2e_tests(
                         show_output=verbose,
                     )
             elif basename(spec_path) == "staticfiles_with_limit_app.spec.js":
-                # TODO artificially create a .png file that's too big in the static directory
+                static_path = join(
+                    ctx.tests_dir,
+                    "scripts",
+                    "staticfiles_apps",
+                    "static"
+                )
+                with open(join(static_path, 'too-large.png'), 'wb') as w:
+                    with open(join(static_path, 'streamlit-mark-color.png'), 'rb') as f:
+                        w.write(f.read())
+                    # add 2 MB of trailing zero bytes to exceed the limit for files 
+                    # in the static directory
+                    w.write(b'\x00' * 2 * 1024 * 1024)
                 test_name, _ = splitext(basename(spec_path))
                 test_name, _ = splitext(test_name)
                 test_path = join(

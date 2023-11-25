@@ -15,13 +15,6 @@
 import streamlit as st
 from streamlit import runtime
 
-# TODO the better place to set this up is probably in `run_e2e_tests.py`
-with open('static/too-large.png', 'wb') as w:
-    with open('static/streamlit-mark-color.png', 'rb') as f:
-        w.write(f.read())
-    # add 2 MB of trailing zero bytes to exceed the limit for files 
-    # in the static directory
-    w.write(b'\x00' * 2 * 1024 * 1024)
 
 st.header("Main Page with static files")
 
