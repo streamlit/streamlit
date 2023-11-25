@@ -28,7 +28,7 @@ _LOGGER = get_logger(__name__)
 # We agreed on these limitations for the initial release of static file sharing,
 # based on security concerns from the SiS and Community Cloud teams
 # The maximum possible size of single serving static file.
-MAX_APP_STATIC_FILE_SIZE = (config.get_option("server.maxStaticFileSize") or 200) * 1024 * 1024  # 200 MB
+MAX_APP_STATIC_FILE_SIZE = (config.get_option("server.maxStaticFileSize") or 0) * 1024 * 1024
 
 SAFE_APP_STATIC_FILE_EXTENSIONS = tuple(config.get_option("server.allowedStaticFileExtensions"))
 if not SAFE_APP_STATIC_FILE_EXTENSIONS:  # if undefined or an empty list, use the default
