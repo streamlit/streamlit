@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Iterator, List, MutableMapping, Union
+from typing import Dict, Iterator, List, MutableMapping, Union
 
 from streamlit.runtime.state.query_params import _missing_key_error_message
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
 
-class QueryParamsProxy(MutableMapping[str, Any]):
+class QueryParamsProxy(MutableMapping[str, str]):
     """A stateless singleton that proxies `st.query_params` interactions
     to the current script thread's QueryParams instance.
     """
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[str]:
         with get_session_state().query_params() as qp:
             return iter(qp)
 
@@ -31,7 +31,7 @@ class QueryParamsProxy(MutableMapping[str, Any]):
         with get_session_state().query_params() as qp:
             return len(qp)
 
-    def __getitem__(self, key: str) -> Union[str, str]:
+    def __getitem__(self, key: str) -> str:
         with get_session_state().query_params() as qp:
             return qp[key]
 
