@@ -26,7 +26,7 @@ graphviz==0.20.1
 greenlet==3.0.0
 hypothesis==6.90.0
 identify==2.5.32
-idna==3.4
+idna==3.5
 importlib-metadata==6.8.0
 iniconfig==2.0.0
 jaraco.classes==3.3.0
