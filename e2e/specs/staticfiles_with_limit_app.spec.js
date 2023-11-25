@@ -43,7 +43,7 @@ describe("static files", () => {
   it("does not serve any files that are too large", () => {
     cy.request(
       {
-        url: 'http://localhost:8501/app/static/too_large.jpeg',
+        url: 'http://localhost:8501/app/static/too-large.png',
         failOnStatusCode: false
       }).its('status').should('equal', 404)
   });
