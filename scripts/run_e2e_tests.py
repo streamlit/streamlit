@@ -458,6 +458,29 @@ def run_e2e_tests(
                         ],
                         show_output=verbose,
                     )
+            elif basename(spec_path) == "staticfiles_with_limit_app.spec.js":
+                # TODO artificially create a .png file that's too big in the static directory
+                test_name, _ = splitext(basename(spec_path))
+                test_name, _ = splitext(test_name)
+                test_path = join(
+                    ctx.tests_dir,
+                    "scripts",
+                    "staticfiles_apps",
+                    "streamlit_static_with_limit.py",
+                )
+                if os.path.exists(test_path):
+                    run_test(
+                        ctx,
+                        str(spec_path),
+                        [
+                            "streamlit",
+                            "run",
+                            "--server.enableStaticServing=true",
+                            "--server.maxStaticFileSize=1",
+                            test_path,
+                        ],
+                        show_output=verbose,
+                    )
             elif basename(spec_path) == "hostframe.spec.js":
                 test_name, _ = splitext(basename(spec_path))
                 test_name, _ = splitext(test_name)
