@@ -14,9 +14,8 @@
 
 import mimetypes
 import os
-from collections.abc import Collection
 from pathlib import Path
-from typing import Optional
+from typing import Collection, Optional
 
 import tornado.web
 
