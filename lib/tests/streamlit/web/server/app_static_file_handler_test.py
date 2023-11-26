@@ -21,10 +21,7 @@ import tornado.testing
 import tornado.web
 import tornado.websocket
 
-from streamlit.web.server.app_static_file_handler import (
-    MAX_APP_STATIC_FILE_SIZE,
-    AppStaticFileHandler,
-)
+from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
 
 
 class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
@@ -115,9 +112,9 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         assert response.headers["Content-Type"] == "image/webp"
         assert response.headers["X-Content-Type-Options"] == "nosniff"
 
-    @patch("os.path.getsize", MagicMock(return_value=MAX_APP_STATIC_FILE_SIZE + 1))
+    @patch("os.path.getsize", MagicMock(return_value=200 * 1024 * 1024 + 1))
     def test_big_file_404(self):
-        """Files with size greater than MAX_APP_STATIC_FILE_SIZE should return 404."""
+        """Files with size greater than the default maximum file size should return 404."""
         response = self.fetch(f"/app/static/{self._png_image_filename}")
         assert response.code == 404
         self.assertEqual(

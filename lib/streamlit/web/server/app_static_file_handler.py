@@ -30,7 +30,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         path: str,
         default_filename: Optional[str] = None,
         max_static_file_size: Optional[int] = None,
-        allowed_static_file_extensions: Optional[Collection] = None,
+        allowed_static_file_extensions: Optional[Collection[str]] = None,
     ) -> None:
         super().initialize(path, default_filename)
         mimetypes.add_type("image/webp", ".webp")
