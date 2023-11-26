@@ -69,7 +69,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         if (
             os.path.exists(full_path)
             and self.max_static_file_size  # if 0, there's no limit
-            and os.stat(full_path).st_size > self.max_static_file_size
+            and os.path.getsize(full_path) > self.max_static_file_size
         ):
             raise tornado.web.HTTPError(
                 404,
