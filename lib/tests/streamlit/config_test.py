@@ -389,6 +389,8 @@ class ConfigTest(unittest.TestCase):
                 "server.maxUploadSize",
                 "server.maxMessageSize",
                 "server.enableStaticServing",
+                "server.allowedStaticFileExtensions",
+                "server.maxStaticFileSize",
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "ui.hideTopBar",
