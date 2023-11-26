@@ -15,32 +15,35 @@
 import mimetypes
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import tornado.web
 
-from streamlit import config
 from streamlit.logger import get_logger
 
 _LOGGER = get_logger(__name__)
 
 
-# We agreed on these limitations for the initial release of static file sharing,
-# based on security concerns from the SiS and Community Cloud teams
-# The maximum possible size of single serving static file.
-MAX_APP_STATIC_FILE_SIZE = int((config.get_option("server.maxStaticFileSize") or 0) * 1024 * 1024)
-
-SAFE_APP_STATIC_FILE_EXTENSIONS = tuple(config.get_option("server.allowedStaticFileExtensions"))
-if not SAFE_APP_STATIC_FILE_EXTENSIONS:  # if undefined or an empty list, use the default
-    # The list of file extensions that we serve with the corresponding Content-Type header.
-    # All files with other extensions will be served with Content-Type: text/plain
-    SAFE_APP_STATIC_FILE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp")
-
-
 class AppStaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(self, path: str, default_filename: Optional[str] = None) -> None:
+    def initialize(self, 
+                   path: str, 
+                   default_filename: Optional[str] = None,
+                   max_app_static_file_size: Optional[int] = None,
+                   allowed_static_file_extensions: Optional[List] None) -> None:
         super().initialize(path, default_filename)
         mimetypes.add_type("image/webp", ".webp")
+
+        # We agreed on these limitations for the initial release of static file sharing,
+        # based on security concerns from the SiS and Community Cloud teams
+        # The maximum possible size of single serving static file.
+        self.max_app_static_file_size = max_app_static_file_size
+
+        # The list of file extensions that we serve with the corresponding Content-Type header.
+        # All files with other extensions will be served with Content-Type: text/plain
+        if allowed_static_file_extensions:
+            self.allowed_static_file_extensions = allowed_static_file_extensions
+        else:
+            self.allowed_static_file_extensions = (".jpg", ".jpeg", ".png", ".gif", ".webp")
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> Optional[str]:
         full_path = os.path.realpath(absolute_path)
@@ -55,16 +58,15 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
                 "Serving files outside of the static directory is not supported"
             )
             raise tornado.web.HTTPError(404)
-
         if (
             os.path.exists(full_path) 
-            and MAX_APP_STATIC_FILE_SIZE  # if 0, there's no limit
-            and os.path.getsize(full_path) > MAX_APP_STATIC_FILE_SIZE
+            and self.max_app_static_file_size  # if 0, there's no limit
+            and os.stat(full_path).st_size > self.max_app_static_file_size
         ):
             raise tornado.web.HTTPError(
                 404,
                 "File is too large, its size should not exceed "
-                f"{MAX_APP_STATIC_FILE_SIZE} bytes",
+                f"{self.max_app_static_file_size} bytes",
                 reason="File is too large",
             )
 
@@ -76,6 +78,6 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         self.set_header("Access-Control-Allow-Origin", "*")
 
     def set_extra_headers(self, path: str) -> None:
-        if Path(path).suffix not in SAFE_APP_STATIC_FILE_EXTENSIONS:
+        if Path(path).suffix not in self.allowed_static_file_extensions:
             self.set_header("Content-Type", "text/plain")
         self.set_header("X-Content-Type-Options", "nosniff")

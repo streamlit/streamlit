@@ -798,7 +798,7 @@ _create_option(
 _create_option(
     "server.maxStaticFileSize",
     description="The maximum file size in MB that is allowed to be served from the static directory.",
-    default_val=200,
+    default_val=None,
     type_=int,
 )
 
