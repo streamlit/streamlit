@@ -38,7 +38,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         # We agreed on these limitations for the initial release of static file sharing,
         # based on security concerns from the SiS and Community Cloud teams
         # The maximum possible size of single serving static file.
-        self.max_static_file_size = (max_static_file_size or 0) * 1024 * 1024
+        self.max_static_file_size = (max_static_file_size or 200) * 1024 * 1024
 
         # The list of file extensions that we serve with the corresponding Content-Type header.
         # All files with other extensions will be served with Content-Type: text/plain
