@@ -806,7 +806,7 @@ _create_option(
 _create_option(
     "server.allowedStaticFileExtensions",
     description="File extensions that are allowed to be served with the correct MIME type. "
-                "Everything else will be served with MIME type text/plain.",
+    "Everything else will be served with MIME type text/plain.",
     default_val=[".jpg", ".jpeg", ".png", ".gif", ".webp"],
     type_=list,
 )

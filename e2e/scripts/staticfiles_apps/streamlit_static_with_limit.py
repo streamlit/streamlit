@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2023) Snowflake Inc. (2023)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,14 +15,14 @@
 import streamlit as st
 from streamlit import runtime
 
-
 st.header("Main Page with static files")
 
-if not st.get_option("server.enableStaticServing") or \
-    not st.get_option("server.maxStaticFileSize"):
+if not st.get_option("server.enableStaticServing") or not st.get_option(
+    "server.maxStaticFileSize"
+):
     st.error(
         """
-        **ERROR**. This test needs to be run with `--server.enableStaticServing` 
+        **ERROR**. This test needs to be run with `--server.enableStaticServing`
         and `--server.maxStaticFileSize`, like this:
 
         ```

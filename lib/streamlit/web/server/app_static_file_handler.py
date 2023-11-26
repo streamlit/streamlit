@@ -15,7 +15,7 @@
 import mimetypes
 import os
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 
 import tornado.web
 
@@ -25,11 +25,13 @@ _LOGGER = get_logger(__name__)
 
 
 class AppStaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(self, 
-                   path: str, 
-                   default_filename: Optional[str] = None,
-                   max_static_file_size: Optional[int] = None,
-                   allowed_static_file_extensions: Optional[List] = None) -> None:
+    def initialize(
+        self,
+        path: str,
+        default_filename: Optional[str] = None,
+        max_static_file_size: Optional[int] = None,
+        allowed_static_file_extensions: Optional[List] = None,
+    ) -> None:
         super().initialize(path, default_filename)
         mimetypes.add_type("image/webp", ".webp")
 
@@ -43,7 +45,13 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         if allowed_static_file_extensions:
             self.allowed_static_file_extensions = allowed_static_file_extensions
         else:
-            self.allowed_static_file_extensions = (".jpg", ".jpeg", ".png", ".gif", ".webp")
+            self.allowed_static_file_extensions = (
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".gif",
+                ".webp",
+            )
 
     def validate_absolute_path(self, root: str, absolute_path: str) -> Optional[str]:
         full_path = os.path.realpath(absolute_path)
@@ -59,7 +67,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
             )
             raise tornado.web.HTTPError(404)
         if (
-            os.path.exists(full_path) 
+            os.path.exists(full_path)
             and self.max_static_file_size  # if 0, there's no limit
             and os.stat(full_path).st_size > self.max_static_file_size
         ):
