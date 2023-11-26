@@ -341,7 +341,7 @@ class Server:
                         make_url_path_regex(base, "app/static/(.*)"),
                         AppStaticFileHandler,
                         {"path": file_util.get_app_static_dir(self.main_script_path),
-                         "max_app_static_file_size": config.get_option("server.maxAppStaticFileSize"),
+                         "max_static_file_size": config.get_option("server.maxStaticFileSize"),
                          "allowed_static_file_extensions": config.get_option("server.allowedStaticFileExtensions")},
                     ),
                 ]

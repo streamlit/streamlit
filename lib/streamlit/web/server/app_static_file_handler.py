@@ -28,7 +28,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
     def initialize(self, 
                    path: str, 
                    default_filename: Optional[str] = None,
-                   max_app_static_file_size: Optional[int] = None,
+                   max_static_file_size: Optional[int] = None,
                    allowed_static_file_extensions: Optional[List] None) -> None:
         super().initialize(path, default_filename)
         mimetypes.add_type("image/webp", ".webp")
@@ -36,7 +36,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         # We agreed on these limitations for the initial release of static file sharing,
         # based on security concerns from the SiS and Community Cloud teams
         # The maximum possible size of single serving static file.
-        self.max_app_static_file_size = max_app_static_file_size
+        self.max_static_file_size = max_static_file_size
 
         # The list of file extensions that we serve with the corresponding Content-Type header.
         # All files with other extensions will be served with Content-Type: text/plain
@@ -60,13 +60,13 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
             raise tornado.web.HTTPError(404)
         if (
             os.path.exists(full_path) 
-            and self.max_app_static_file_size  # if 0, there's no limit
-            and os.stat(full_path).st_size > self.max_app_static_file_size
+            and self.max_static_file_size  # if 0, there's no limit
+            and os.stat(full_path).st_size > self.max_static_file_size
         ):
             raise tornado.web.HTTPError(
                 404,
                 "File is too large, its size should not exceed "
-                f"{self.max_app_static_file_size} bytes",
+                f"{self.max_static_file_size} bytes",
                 reason="File is too large",
             )
 
