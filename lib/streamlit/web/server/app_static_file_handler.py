@@ -14,8 +14,9 @@
 
 import mimetypes
 import os
+from collections.abc import Collection
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import tornado.web
 
@@ -30,7 +31,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
         path: str,
         default_filename: Optional[str] = None,
         max_static_file_size: Optional[int] = None,
-        allowed_static_file_extensions: Optional[List] = None,
+        allowed_static_file_extensions: Optional[Collection] = None,
     ) -> None:
         super().initialize(path, default_filename)
         mimetypes.add_type("image/webp", ".webp")
