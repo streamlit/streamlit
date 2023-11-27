@@ -450,7 +450,7 @@ class ScriptRunner:
             for key, val in parsed_query_params.items():
                 if len(val) == 0:
                     qp.set_with_no_forward_msg(key, val="")
-                if len(val) == 1:
+                elif len(val) == 1:
                     qp.set_with_no_forward_msg(key, val=val[-1])
                 else:
                     qp.set_with_no_forward_msg(key, val)
