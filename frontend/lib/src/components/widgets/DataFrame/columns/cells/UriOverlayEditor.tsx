@@ -18,7 +18,7 @@ import { SelectionRange, TextCellEntry } from "@glideapps/glide-data-grid"
 import React from "react"
 import { Edit } from "@emotion-icons/material-rounded"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { UriOverlayEditorStyle } from "@streamlit/lib/src/components/widgets/DataFrame/uri-overlay-editor-style"
+import { UriOverlayEditorStyle } from "@streamlit/lib/src/components/widgets/DataFrame/columns/cells/uri-overlay-editor-style"
 
 interface Props {
   readonly uri?: string | null
