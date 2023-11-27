@@ -168,8 +168,10 @@ class SQLConnection(BaseConnection["Engine"]):
             paramstyle <https://peps.python.org/pep-0249/#paramstyle>`_, is supported.
             Default is None.
         **kwargs: dict
-            Additional keyword arguments are passed to `pandas.read_sql
-            <https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html>`_.
+            Additional keyword arguments are passed to |pandas.read_sql|_.
+
+            .. |pandas.read_sql| replace:: ``pandas.read_sql``
+            .. _pandas.read_sql: https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html
 
         Returns
         -------
