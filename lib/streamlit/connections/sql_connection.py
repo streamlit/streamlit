@@ -133,14 +133,17 @@ class SQLConnection(BaseConnection["Engine"]):
         """Run a read-only query.
 
         This method implements both query result caching (with caching behavior
-        identical to that of using @st.cache_data) as well as simple error handling/retries.
+        identical to that of using ``@st.cache_data``) as well as simple error handling/retries.
 
         .. note::
             Queries that are run without a specified ttl are cached indefinitely.
 
         Aside from the ``ttl`` kwarg, all kwargs passed to this function are passed down
-        to `pd.read_sql <https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html>`_
+        to |pandas.read_sql|_
         and have the behavior described in the pandas documentation.
+
+        .. |pandas.read_sql| replace:: ``pandas.read_sql``
+        .. _pandas.read_sql: https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html
 
         Parameters
         ----------
@@ -165,12 +168,14 @@ class SQLConnection(BaseConnection["Engine"]):
             paramstyle <https://peps.python.org/pep-0249/#paramstyle>`_, is supported.
             Default is None.
         **kwargs: dict
-            Additional keyword arguments are passed to `pd.read_sql
-            <https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html>`_.
+            Additional keyword arguments are passed to |pandas.read_sql|_.
+
+            .. |pandas.read_sql| replace:: ``pandas.read_sql``
+            .. _pandas.read_sql: https://pandas.pydata.org/docs/reference/api/pandas.read_sql.html
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
 
         Example
@@ -239,12 +244,12 @@ class SQLConnection(BaseConnection["Engine"]):
         )
 
     def connect(self) -> "SQLAlchemyConnection":
-        """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new
-        sqlalchemy.engine.Connection object.
+        """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new\
+        ``sqlalchemy.engine.Connection`` object.
 
         Calling this method is equivalent to calling ``self._instance.connect()``.
 
-        NOTE: This method should not be confused with the internal _connect method used
+        NOTE: This method should not be confused with the internal ``_connect`` method used
         to implement a Streamlit Connection.
         """
         return self._instance.connect()
