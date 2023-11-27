@@ -647,11 +647,14 @@ export function removeLineBreaks(text: string): string {
  * getLinkDisplayValue("https://roadmap.streamlit.app", undefined); // returns ""https://roadmap.streamlit.app""
  */
 export function getLinkDisplayValue(
-  href: string,
-  displayText?: string
+  href?: string | null,
+  displayText?: string | null
 ): string {
-  if (!displayText) {
-    return href
+  if (isNullOrUndefined(displayText)) {
+    return href ?? ""
+  }
+  if (isNullOrUndefined(href)) {
+    return ""
   }
 
   try {
