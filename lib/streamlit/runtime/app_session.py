@@ -80,6 +80,7 @@ class AppSession:
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         user_info: Dict[str, Optional[str]],
+        session_id_override: Optional[str] = None,
     ) -> None:
         """Initialize the AppSession.
 
@@ -113,9 +114,13 @@ class AppSession:
             Information about the current user is optionally provided when a
             websocket connection is initialized via the "X-Streamlit-User" header.
 
+        session_id_override
+            The ID to assign to this session. Setting this can be useful when the
+            service that a Streamlit Runtime is running in wants to tie the lifecycle of
+            a Streamlit session to some other session-like object that it manages.
         """
         # Each AppSession has a unique string ID.
-        self.id = str(uuid.uuid4())
+        self.id = session_id_override or str(uuid.uuid4())
 
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
@@ -284,6 +289,8 @@ class AppSession:
                 self._handle_git_information_request()
             elif msg_type == "clear_cache":
                 self._handle_clear_cache_request()
+            elif msg_type == "app_heartbeat":
+                self._handle_app_heartbeat_request()
             elif msg_type == "set_run_on_save":
                 self._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_script":
@@ -731,6 +738,17 @@ class AppSession:
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()
+
+    def _handle_app_heartbeat_request(self) -> None:
+        """Handle an incoming app heartbeat.
+
+        The heartbeat indicates the frontend is active and keeps the
+        websocket from going idle and disconnecting.
+
+        The actual handler here is a noop
+
+        """
+        pass
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
