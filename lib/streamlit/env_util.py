@@ -54,6 +54,6 @@ def is_repl():
 
 def is_executable_in_path(name):
     """Check if executable is in OS path."""
-    from distutils.spawn import find_executable
+    from shutil import which
 
-    return find_executable(name) is not None
+    return which(name) is not None
