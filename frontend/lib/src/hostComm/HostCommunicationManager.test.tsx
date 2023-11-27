@@ -51,6 +51,7 @@ describe("HostCommunicationManager messaging", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),
@@ -177,6 +178,22 @@ describe("HostCommunicationManager messaging", () => {
     expect(hostCommunicationMgr.props.pageChanged).toHaveBeenCalledWith(
       "hash1"
     )
+  })
+
+  it("can process a received SEND_APP_HEARTBEAT message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith()
   })
 
   it("should respond to SET_IS_OWNER message", () => {
@@ -410,6 +427,7 @@ describe("Test different origins", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),
@@ -503,6 +521,7 @@ describe("HostCommunicationManager external auth token handling", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),

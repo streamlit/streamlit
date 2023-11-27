@@ -1505,14 +1505,15 @@ describe("handles HostCommunication messaging", () => {
     )
   })
 
-  it("fires clearCache function when cacheClearRequested message has been received", () => {
+  it("fires clearCache BackMsg when CLEAR_CACHE window message has been received", () => {
     instance.isServerConnected = jest.fn().mockReturnValue(true)
 
-    const clearCacheFunc = jest.spyOn(
+    const sendMessageFunc = jest.spyOn(
       // @ts-expect-error
-      instance.hostCommunicationMgr.props,
-      "clearCache"
+      instance.connectionManager,
+      "sendMessage"
     )
+
     // the clearCache function in App.tsx calls closeDialog
     const closeDialogFunc = jest.spyOn(instance, "closeDialog")
 
@@ -1527,8 +1528,31 @@ describe("handles HostCommunication messaging", () => {
       })
     )
 
-    expect(clearCacheFunc).toHaveBeenCalledWith()
+    expect(sendMessageFunc).toHaveBeenCalledWith({ clearCache: true })
     expect(closeDialogFunc).toHaveBeenCalledWith()
+  })
+
+  it("fires appHeartbeat BackMsg when SEND_APP_HEARTBEAT window message has been received", () => {
+    instance.isServerConnected = jest.fn().mockReturnValue(true)
+
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.connectionManager,
+      "sendMessage"
+    )
+
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({ appHeartbeat: true })
   })
 
   it("does not prevent a modal from opening when closure message is set", () => {
