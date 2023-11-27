@@ -13,8 +13,9 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, MutableMapping, Union
+from typing import Dict, Iterator, List, MutableMapping, Set, Tuple, Union
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
@@ -49,8 +50,15 @@ class QueryParams(MutableMapping[str, str]):
 
     # Type checking users should handle the string serialization themselves
     # We will accept any type for the list and serialize to str just in case
-    def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
-        if isinstance(value, list):
+    def __setitem__(
+        self, key: str, value: Union[str, Set[str], Tuple[str], List[str]]
+    ) -> None:
+        if isinstance(value, dict):
+            raise StreamlitAPIException(
+                f"You cannot set a query params key `{key}` to a dictionary `{value}`."
+            )
+
+        if isinstance(value, (tuple, set, list)):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
