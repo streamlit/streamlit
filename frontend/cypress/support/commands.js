@@ -155,6 +155,8 @@ Cypress.Commands.overwrite(
         top: -1 * headerHeight * fontSizeMedium,
       },
     })
+    // Wait for eventual animations to finish:
+    cy.wait(100)
 
     return originalFn(subject, name, options)
   }
