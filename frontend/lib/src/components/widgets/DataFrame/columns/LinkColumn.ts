@@ -59,11 +59,16 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   }
 
   // Determine if the user's provided display text is a regexp pattern or not.
-  let displayTextIsRegex = false
+  let displayTextRegex: RegExp | undefined = undefined
   if (!isNullOrUndefined(parameters.display_text)) {
-    displayTextIsRegex =
+    if (
       parameters.display_text.includes("(") &&
       parameters.display_text.includes(")")
+    ) {
+      // u flag allows unicode characters
+      // s flag allows . to match newlines
+      displayTextRegex = new RegExp(parameters.display_text, "us")
+    }
   }
 
   const cellTemplate = {
@@ -142,12 +147,9 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       }
 
       let displayText = ""
-      if (displayTextIsRegex) {
+      if (displayTextRegex !== undefined) {
         // Set display value to be the regex extracted portion of the href.
-        displayText = getLinkDisplayValueFromRegex(
-          href,
-          parameters.display_text
-        )
+        displayText = getLinkDisplayValueFromRegex(displayTextRegex, href)
       } else {
         // Use user provided display_text unless it's null, undefined, or an empty string.
         // If it's any of those falsy values, use the href.

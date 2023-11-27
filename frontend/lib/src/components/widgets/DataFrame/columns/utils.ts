@@ -638,29 +638,24 @@ export function removeLineBreaks(text: string): string {
  * Determines the correct value to display in a link cell based on the `href` and `regexPattern` parameters.
  *
  * @param href - The raw url value.
- * @param regexPattern - The regex pattern string which will be applied to the `href`. If no match is found, then we return the `href`.
+ * @param displayTextRegex - The regex pattern which will be applied to the `href`. If no match is found, then we return the `href`.
  * @returns - The string value to be displayed in the cell.
  *
  * * @example
- * getLinkDisplayValueFromRegex("https://roadmap.streamlit.app", "https:\/\/(.*?)\.streamlit\.app"); // returns "roadmap"
- * getLinkDisplayValueFromRegex("https://roadmap.streamlit.app", undefined); // returns ""https://roadmap.streamlit.app""
+ * const regex = new RegExp("https:\/\/(.*?)\.streamlit\.app")
+ * const regex2 = new RegExp("https:\/\/roadmap\.(.*?)\.app")
+ * getLinkDisplayValueFromRegex(regex, "https://roadmap.streamlit.app"); // returns "roadmap"
+ * getLinkDisplayValueFromRegex(regex, "https://roadmap.streamlit.app"); // returns "streamlit"
  */
 export function getLinkDisplayValueFromRegex(
-  href?: string | null,
-  regexPattern?: string | null
+  displayTextRegex: RegExp,
+  href?: string | null
 ): string {
-  if (isNullOrUndefined(regexPattern)) {
-    return href ?? ""
-  }
   if (isNullOrUndefined(href)) {
     return ""
   }
 
   try {
-    // u flag allows unicode characters
-    // s flag allows . to match newlines
-    const displayTextRegex = new RegExp(regexPattern, "us")
-
     // apply the regex pattern to display the value
     const patternMatch = href.match(displayTextRegex)
     if (patternMatch && patternMatch[1] !== undefined) {
