@@ -638,7 +638,8 @@ export function removeLineBreaks(text: string): string {
  * Determines the correct value to display in a link cell based on the `href` and `displayText` parameters.
  *
  * @param href - The raw url value.
- * @param displayText - The display text, which can either be a regex pattern that will be applied the `href` or a string to be displayed.
+ * @param displayText - The display text, which can either be a regex pattern that will be applied to the `href` or a string to be displayed.
+ * If the value is a regex, but no match is found in the href, then we display the href in the cell.
  * @returns - The string value to be displayed in the cell.
  *
  * * @example
@@ -654,19 +655,25 @@ export function getLinkDisplayValue(
   }
 
   try {
-    // assume displayText is a regex first and attempt to find a pattern match in the url
-    // u flag allows unicode characters
-    // s flag allows . to match newlines
-    const displayTextRegex = new RegExp(displayText, "us")
+    // we assume that the minimum acceptable regex pattern should include "(" and ")"
+    // so if that is the case, we try to match the url with the string pattern as a regex.
+    if (displayText.includes("(") && displayText.includes(")")) {
+      // u flag allows unicode characters
+      // s flag allows . to match newlines
+      const displayTextRegex = new RegExp(displayText, "us")
 
-    // apply the regex pattern to display the value
-    const patternMatch = href.match(displayTextRegex)
-    if (patternMatch && patternMatch[1] !== undefined) {
-      // return the first matching group
-      return patternMatch[1]
+      // apply the regex pattern to display the value
+      const patternMatch = href.match(displayTextRegex)
+      if (patternMatch && patternMatch[1] !== undefined) {
+        // return the first matching group
+        return patternMatch[1]
+      }
+
+      // if the regex doesn't find a match with the url, just use the url as display value
+      return href
     }
 
-    // if the regex doesn't find a match with the url (or it wasn't a regex pattern at all), return the displayText value
+    // displayText was not a regexp, so just return it
     return displayText
   } catch (error) {
     // if there was any error return displayText

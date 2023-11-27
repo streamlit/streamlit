@@ -204,4 +204,18 @@ describe("LinkColumn", () => {
 
     expect(cell.data.displayText).toBe("roadmap")
   })
+
+  it("sets displayed value as the href, when displayText is a regex but there is no match", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: "https://(.*?).google.com" },
+    })
+
+    const cell = mockColumn.getCell(
+      "https://roadmap.streamlit.app",
+      true
+    ) as LinkCell
+
+    expect(cell.data.displayText).toBe("https://roadmap.streamlit.app")
+  })
 })
