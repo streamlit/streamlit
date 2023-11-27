@@ -114,7 +114,9 @@ class ScriptRunContext:
     def ensure_single_query_api_used(self):
         if self._experimental_query_params_used and self._final_query_params_used:
             raise StreamlitAPIException(
-                "Using `st.query_params` together with either `st.experimental_get_query_params` or `st.experimental_set_query_params` is not supported. Please convert your app to only use `st.query_params`"
+                "Using `st.query_params` together with either `st.experimental_get_query_params` "
+                + "or `st.experimental_set_query_params` is not supported. Please convert your app "
+                + "to only use `st.query_params`"
             )
 
 
