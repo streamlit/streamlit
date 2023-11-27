@@ -13,79 +13,61 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, MutableMapping, Union
+from typing import Dict, Iterator, List, MutableMapping, Union
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 @dataclass
-class QueryParams(MutableMapping[str, Any]):
+class QueryParams(MutableMapping[str, str]):
     """A lightweight wrapper of a dict that sends forwardMsgs when state changes.
     It stores str keys with str and List[str] values.
     """
 
     _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
 
-    def __init__(self):
-        # avoid using ._query_params as that will use __setattr__,
-        # which itself relies on `_query_params` being defined
-        self.__dict__["_query_params"] = {}
-
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[str]:
         return iter(self._query_params.keys())
 
     def __getitem__(self, key: str) -> str:
+        """Retrieves a value for a given key in query parameters.
+        Returns the last item in a list or an empty string if empty.
+        If the key is not present, raise KeyError.
+        """
         try:
             value = self._query_params[key]
             if isinstance(value, list):
                 if len(value) == 0:
                     return ""
                 else:
+                    # Return the last value to mimic Tornado's behavior
+                    # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
                     return value[-1]
             return value
-        except:
+        except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
+    # Type checking users should handle the string serialization themselves
+    # We will accept any type for the list and serialize to str just in case
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
-        # Handle non-string inputs like integers or lists by converting them to
-        # strings for consistent query parameter handling.
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
         self._send_query_param_msg()
 
-    def get_all(self, key: str) -> List[str]:
-        try:
-            if key not in self._query_params:
-                return []
-            query_params = self._query_params[key]
-            return query_params if isinstance(query_params, list) else [query_params]
-        except KeyError:
+    def __delitem__(self, key: str) -> None:
+        if key in self._query_params:
+            del self._query_params[key]
+            self._send_query_param_msg()
+        else:
             raise KeyError(_missing_key_error_message(key))
 
-    def __getattr__(self, key: str) -> str:
-        try:
-            return self.__getitem__(key)
-        except KeyError:
-            raise AttributeError(_missing_key_error_message(key))
-
-    def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
-        try:
-            self.__setitem__(key, value)
-        except KeyError:
-            raise AttributeError(_missing_key_error_message(key))
-
-    def __delattr__(self, key: str) -> None:
-        try:
-            self.__delitem__(key)
-        except KeyError:
-            raise AttributeError(_missing_key_error_message(key))
-
-    def __contains__(self, key: Any) -> bool:
-        if isinstance(key, str):
-            return key in self._query_params
-        return False
+    def get_all(self, key: str) -> List[str]:
+        if key not in self._query_params:
+            return []
+        value = self._query_params[key]
+        return value if isinstance(value, list) else [value]
 
     def __len__(self) -> int:
         return len(self._query_params)
@@ -109,15 +91,8 @@ class QueryParams(MutableMapping[str, Any]):
         self._query_params.clear()
         self._send_query_param_msg()
 
-    def __delitem__(self, key: str) -> None:
-        if key in self._query_params:
-            del self._query_params[key]
-            self._send_query_param_msg()
-        else:
-            raise KeyError(_missing_key_error_message(key))
-
-    def to_dict(self) -> Dict[str, Union[List[str], str]]:
-        return self._query_params
+    def to_dict(self) -> Dict[str, str]:
+        return {key: self[key] for key in self._query_params}
 
     def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
         # Avoid circular imports

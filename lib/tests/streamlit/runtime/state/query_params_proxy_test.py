@@ -12,61 +12,92 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import unittest
+from typing import Dict, List, Union
+from unittest.mock import MagicMock, patch
+
 import pytest
 
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
+from streamlit.runtime.state.safe_session_state import SafeSessionState
+from streamlit.runtime.state.session_state import SessionState
 
 
-class TestQueryParamsProxy:
-    @pytest.fixture
-    def proxy(self):
-        """Fixture to create a QueryParamsProxy instance."""
-        proxy = QueryParamsProxy()
-        proxy["test"] = "value"
-        return proxy
+def _create_mock_session_state(
+    initial_query_params_values: Dict[str, Union[List[str], str]]
+) -> SafeSessionState:
+    """Return a new SafeSessionState instance populated with the
+    given query param values.
+    """
+    session_state = SessionState()
+    query_params = QueryParams()
+    for key, value in initial_query_params_values.items():
+        query_params[key] = value
+    session_state.query_params = query_params
+    return SafeSessionState(session_state, lambda: None)
 
-    def test_get_item(self, proxy):
-        assert proxy["test"] == "value"
 
-    def test_set_item(self, proxy):
-        assert "test" in proxy
+@patch(
+    "streamlit.runtime.state.query_params_proxy.get_session_state",
+    MagicMock(
+        return_value=_create_mock_session_state(
+            initial_query_params_values={"test": "value"}
+        )
+    ),
+)
+class TestQueryParamsProxy(unittest.TestCase):
+    def setUp(self):
+        self.query_params_proxy = QueryParamsProxy()
 
-    def test_del_item(self, proxy):
-        del proxy["test"]
-        assert "test" not in proxy
+    def test__getitem__returns_correct_value(self):
+        assert self.query_params_proxy["test"] == "value"
 
-    def test_len(self, proxy):
-        assert len(proxy) == 1
+    def test__setitem__sets_entry(self):
+        self.query_params_proxy["new_value"] = "value"
+        assert self.query_params_proxy["new_value"] == "value"
 
-    def test_iter(self, proxy):
-        keys = list(iter(proxy))
+    def test__delitem__deletes_entry(self):
+        del self.query_params_proxy["test"]
+        assert "test" not in self.query_params_proxy
+
+        # reset query params proxy to avoid issues with mutability
+        self.query_params_proxy["test"] = "value"
+
+    def test__len__returns_correct_len(self):
+        assert len(self.query_params_proxy) == 1
+
+    def test__iter__returns_correct_iter(self):
+        keys = list(iter(self.query_params_proxy))
         assert keys == ["test"]
 
-    def test_contains(self, proxy):
-        assert "test" in proxy
+    def test_clear_removes_all_entries(self):
+        self.query_params_proxy.clear()
+        assert len(self.query_params_proxy) == 0
 
-    def test_clear(self, proxy):
-        proxy.clear()
-        assert len(proxy) == 0
+    def test_get_all_returns_correct_list(self):
+        self.query_params_proxy["test"] = ["value1", "value2"]
+        assert self.query_params_proxy.get_all("test") == ["value1", "value2"]
 
-    def test_get(self, proxy):
-        assert proxy.get("test") == "value"
+    def test__getattr__returns_correct_value(self):
+        self.query_params_proxy.test = "value"
+        assert self.query_params_proxy.test == "value"
 
-    def test_get_default(self, proxy):
-        assert proxy.get("nonexistent", "bob") == "bob"
+    def test__setattr__(self):
+        self.query_params_proxy.test = "value"
+        assert self.query_params_proxy["test"] == "value"
 
-    def test_get_all(self, proxy):
-        proxy["test"] = ["value1", "value2"]
-        assert proxy.get_all("test") == ["value1", "value2"]
+    def test__delattr__deletes_entry(self):
+        del self.query_params_proxy.test
+        assert "test" not in self.query_params_proxy
 
-    def test_getattr(self, proxy):
-        proxy["test"] = "value"
-        assert proxy.test == "value"
+        # reset query params proxy to avoid issues with mutability
+        self.query_params_proxy["test"] = "value"
 
-    def test_setattr(self, proxy):
-        proxy.test = "value"
-        assert proxy["test"] == "value"
+    def test__getattr__raises_Attribute_exception(self):
+        with pytest.raises(AttributeError):
+            self.query_params_proxy.nonexistent
 
-    def test_delattr(self, proxy):
-        del proxy.test
-        assert "test" not in proxy
+    def test__delattr__raises_Attribute_exception(self):
+        with pytest.raises(AttributeError):
+            del self.query_params_proxy.nonexistent
