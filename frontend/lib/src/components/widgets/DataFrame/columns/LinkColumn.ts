@@ -24,7 +24,7 @@ import {
   toSafeString,
   getErrorCell,
   ColumnCreator,
-  getLinkDisplayValue,
+  getLinkDisplayValueFromRegex,
 } from "./utils"
 import { LinkCell } from "./cells/LinkCell"
 
@@ -56,6 +56,14 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       // Put error message in validateRegex so we can display it in the cell
       validateRegex = `Invalid validate regex: ${parameters.validate}.\nError: ${error}`
     }
+  }
+
+  // Determine if the user's provided display text is a regexp pattern or not.
+  let displayTextIsRegex = false
+  if (!isNullOrUndefined(parameters.display_text)) {
+    displayTextIsRegex =
+      parameters.display_text.includes("(") &&
+      parameters.display_text.includes(")")
   }
 
   const cellTemplate = {
@@ -133,12 +141,25 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         }
       }
 
+      let displayText = ""
+      if (displayTextIsRegex) {
+        // Set display value to be the regex extracted portion of the href.
+        displayText = getLinkDisplayValueFromRegex(
+          href,
+          parameters.display_text
+        )
+      } else {
+        // Use user provided display_text unless it's null, undefined, or an empty string.
+        // If it's any of those falsy values, use the href.
+        displayText = parameters.display_text || href
+      }
+
       return {
         ...cellTemplate,
         data: {
           kind: "link-cell",
           href: href,
-          displayText: getLinkDisplayValue(href, parameters.display_text),
+          displayText: displayText,
         },
         copyData: href,
         cursor: "pointer",

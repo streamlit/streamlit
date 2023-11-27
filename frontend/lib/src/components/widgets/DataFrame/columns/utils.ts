@@ -635,22 +635,21 @@ export function removeLineBreaks(text: string): string {
 }
 
 /**
- * Determines the correct value to display in a link cell based on the `href` and `displayText` parameters.
+ * Determines the correct value to display in a link cell based on the `href` and `regexPattern` parameters.
  *
  * @param href - The raw url value.
- * @param displayText - The display text, which can either be a regex pattern that will be applied to the `href` or a string to be displayed.
- * If the value is a regex, but no match is found in the href, then we display the href in the cell.
+ * @param regexPattern - The regex pattern string which will be applied to the `href`. If no match is found, then we return the `href`.
  * @returns - The string value to be displayed in the cell.
  *
  * * @example
- * getLinkDisplayValue("https://roadmap.streamlit.app", "https:\/\/(.*?)\.streamlit\.app"); // returns "roadmap"
- * getLinkDisplayValue("https://roadmap.streamlit.app", undefined); // returns ""https://roadmap.streamlit.app""
+ * getLinkDisplayValueFromRegex("https://roadmap.streamlit.app", "https:\/\/(.*?)\.streamlit\.app"); // returns "roadmap"
+ * getLinkDisplayValueFromRegex("https://roadmap.streamlit.app", undefined); // returns ""https://roadmap.streamlit.app""
  */
-export function getLinkDisplayValue(
+export function getLinkDisplayValueFromRegex(
   href?: string | null,
-  displayText?: string | null
+  regexPattern?: string | null
 ): string {
-  if (isNullOrUndefined(displayText)) {
+  if (isNullOrUndefined(regexPattern)) {
     return href ?? ""
   }
   if (isNullOrUndefined(href)) {
@@ -658,28 +657,21 @@ export function getLinkDisplayValue(
   }
 
   try {
-    // we assume that the minimum acceptable regex pattern should include "(" and ")"
-    // so if that is the case, we try to match the url with the string pattern as a regex.
-    if (displayText.includes("(") && displayText.includes(")")) {
-      // u flag allows unicode characters
-      // s flag allows . to match newlines
-      const displayTextRegex = new RegExp(displayText, "us")
+    // u flag allows unicode characters
+    // s flag allows . to match newlines
+    const displayTextRegex = new RegExp(regexPattern, "us")
 
-      // apply the regex pattern to display the value
-      const patternMatch = href.match(displayTextRegex)
-      if (patternMatch && patternMatch[1] !== undefined) {
-        // return the first matching group
-        return patternMatch[1]
-      }
-
-      // if the regex doesn't find a match with the url, just use the url as display value
-      return href
+    // apply the regex pattern to display the value
+    const patternMatch = href.match(displayTextRegex)
+    if (patternMatch && patternMatch[1] !== undefined) {
+      // return the first matching group
+      return patternMatch[1]
     }
 
-    // displayText was not a regexp, so just return it
-    return displayText
+    // if the regex doesn't find a match with the url, just use the url as display value
+    return href
   } catch (error) {
-    // if there was any error return displayText
-    return displayText
+    // if there was any error return the href
+    return href
   }
 }
