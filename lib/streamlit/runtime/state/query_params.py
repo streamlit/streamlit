@@ -147,7 +147,7 @@ class QueryParams(MutableMapping[str, Any]):
         ctx = get_script_run_ctx()
         if ctx is None:
             return
-        ctx._final_query_params_used = True
+        ctx._production_query_params_used = True
         ctx.ensure_single_query_api_used()
 
 

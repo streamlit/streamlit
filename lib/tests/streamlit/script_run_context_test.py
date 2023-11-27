@@ -132,7 +132,9 @@ class ScriptRunContextTest(unittest.TestCase):
             (False, False, False),  # Neither API used
         ]
     )
-    def test_both_query_params_used(self, experimental_used, final_used, should_raise):
+    def test_both_query_params_used(
+        self, experimental_used, production_used, should_raise
+    ):
         fake_enqueue = lambda msg: None
         ctx = ScriptRunContext(
             session_id="TestSessionID",
@@ -144,7 +146,7 @@ class ScriptRunContextTest(unittest.TestCase):
             user_info={"email": "test@test.com"},
         )
         ctx._experimental_query_params_used = experimental_used
-        ctx._final_query_params_used = final_used
+        ctx._production_query_params_used = production_used
 
         if should_raise:
             with self.assertRaises(StreamlitAPIException):
