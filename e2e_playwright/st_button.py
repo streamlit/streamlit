@@ -42,20 +42,22 @@ if runtime.exists():
 
 i2 = st.checkbox("reset button return value")
 
-i3 = st.button("button 2", disabled=True)
+i3 = st.button("button 2 (disabled)", disabled=True)
 st.write("value 2:", i3)
 
-i4 = st.button("button 3", type="primary")
+i4 = st.button("button 3 (primary)", type="primary")
 st.write("value 3:", i4)
 
-i5 = st.button("button 4", type="primary", disabled=True)
+i5 = st.button("button 4 (primary + disabled)", type="primary", disabled=True)
 st.write("value 4:", i5)
 
-st.button("button 5 - containerWidth", use_container_width=True)
+st.button("button 5 (container_width)", use_container_width=True)
 
 st.button(
-    "button 6 - containerWidth + help", use_container_width=True, help="help text"
+    "button 6 (container_width + help)", use_container_width=True, help="help text"
 )
+
+st.button("_button 7_ (**styled** :green[label])")
 
 cols = st.columns(3)
 
