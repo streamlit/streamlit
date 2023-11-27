@@ -289,6 +289,8 @@ class AppSession:
                 self._handle_git_information_request()
             elif msg_type == "clear_cache":
                 self._handle_clear_cache_request()
+            elif msg_type == "app_heartbeat":
+                self._handle_app_heartbeat_request()
             elif msg_type == "set_run_on_save":
                 self._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_script":
@@ -736,6 +738,17 @@ class AppSession:
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()
+
+    def _handle_app_heartbeat_request(self) -> None:
+        """Handle an incoming app heartbeat.
+
+        The heartbeat indicates the frontend is active and keeps the
+        websocket from going idle and disconnecting.
+
+        The actual handler here is a noop
+
+        """
+        pass
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.

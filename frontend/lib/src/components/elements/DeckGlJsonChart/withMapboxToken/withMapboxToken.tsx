@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
 import MapboxTokenError from "./MapboxTokenError"
 import axios from "axios"
 import { DeckGlJsonChart } from "@streamlit/lib/src/proto"
+import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 interface InjectedProps {
@@ -147,11 +146,10 @@ const withMapboxToken =
           )
         }
 
-        // If our mapboxToken hasn't been retrieved yet, show a loading alert.
+        // If our mapboxToken hasn't been retrieved yet, show a loading
+        // skeleton.
         if (isFetching) {
-          return (
-            <AlertElement body={"Loading..."} kind={Kind.INFO} width={width} />
-          )
+          return <Skeleton />
         }
 
         // We have the mapbox token. Pass it through to our component.
