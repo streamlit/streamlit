@@ -21,7 +21,7 @@ import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { UriOverlayEditorStyle } from "@streamlit/lib/src/components/widgets/DataFrame/uri-overlay-editor-style"
 
 interface Props {
-  readonly uri: string
+  readonly uri?: string | null
   readonly onChange: (ev: React.ChangeEvent<HTMLTextAreaElement>) => void
   readonly forceEditMode: boolean
   readonly readonly: boolean
@@ -55,7 +55,7 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
         validatedSelection={validatedSelection}
         highlight={true}
         autoFocus={true}
-        value={uri}
+        value={uri ?? ""}
         onChange={onChange}
       />
     )
@@ -65,7 +65,7 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
     <UriOverlayEditorStyle>
       <a
         className="link-area"
-        href={uri}
+        href={uri ?? ""}
         target="_blank"
         rel="noopener noreferrer"
       >

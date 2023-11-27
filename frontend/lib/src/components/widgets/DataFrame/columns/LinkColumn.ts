@@ -103,9 +103,13 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     validateInput,
     getCell(data?: any, validate?: boolean): GridCell {
-      if (!data) {
+      if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
+          data: {
+            ...cellTemplate.data,
+            href: null,
+          },
           isMissingValue: true,
         } as LinkCell
       }
@@ -141,7 +145,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       } as LinkCell
     },
     getCellValue(cell: LinkCell): string | null {
-      return cell.data?.href === undefined ? null : cell.data.href
+      return isNullOrUndefined(cell.data?.href) ? null : cell.data.href
     },
   }
 }

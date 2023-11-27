@@ -24,20 +24,21 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 import UriOverlayEditor from "./UriOverlayEditor"
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 const UNDERLINE_OFFSET = 5
 
 export interface LinkCellProps {
   readonly kind: "link-cell"
-  readonly href: string
-  readonly displayText?: string
+  readonly href?: string | null
+  readonly displayText?: string | null
 }
 
 export type LinkCell = CustomCell<LinkCellProps>
 
 function onClickSelect(
   e: Parameters<NonNullable<CustomRenderer<LinkCell>["onSelect"]>>[0]
-): string | undefined {
+): string | null | undefined {
   const canvas = document.createElement("canvas")
   const ctx = canvas.getContext("2d", { alpha: false })
   if (ctx === null) return
@@ -51,7 +52,7 @@ function onClickSelect(
   const rectHoverX = rect.x + hoverX
 
   const textWidth =
-    ctx.measureText(displayText || href).width +
+    ctx.measureText((displayText || href) ?? "").width +
     theme.cellHorizontalPadding * 2
 
   const isHovered = rectHoverX > rect.x && rectHoverX < rect.x + textWidth
@@ -67,7 +68,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
   draw: (args, cell) => {
     const { ctx, rect, theme, hoverX = -100, highlighted } = args
     const { href, displayText } = cell.data
-    if (href === undefined) return
+    if (isNullOrUndefined(href)) return
 
     const displayValue = displayText || href
 
@@ -118,7 +119,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
   kind: GridCellKind.Custom,
   measure: (ctx, cell, theme) => {
     const { href, displayText } = cell.data
-    if (href === undefined) return 0
+    if (isNullOrUndefined(href)) return 0
 
     return (
       ctx.measureText(displayText || href).width +
@@ -130,7 +131,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
   onSelect: e => {
     const redirectLink = onClickSelect(e)
 
-    if (redirectLink !== undefined) {
+    if (!isNullOrUndefined(redirectLink)) {
       window.open(redirectLink, "_blank")
     }
   },
@@ -149,7 +150,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
       <UriOverlayEditor
         forceEditMode={forceEditMode}
         uri={value.data.href}
-        preview={displayText || href}
+        preview={(displayText || href) ?? ""}
         validatedSelection={validatedSelection}
         readonly={value.readonly === true}
         onChange={e =>

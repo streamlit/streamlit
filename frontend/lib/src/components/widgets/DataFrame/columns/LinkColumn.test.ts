@@ -60,8 +60,8 @@ describe("LinkColumn", () => {
     ["foo", "foo"],
     ["https://streamlit.io", "https://streamlit.io"],
     ["/path/to/file", "/path/to/file"],
-    [null, ""],
-    [undefined, ""],
+    [null, null],
+    [undefined, null],
     // All the values that are supported by the TextColumn
     // should also be supported by the UrlColumn.
   ])(
