@@ -83,7 +83,7 @@ class QueryParams(MutableMapping[str, str]):
         ctx = get_script_run_ctx()
         if ctx is None:
             return
-        self._ensure_single_query_api_used
+        self._ensure_single_query_api_used()
 
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
