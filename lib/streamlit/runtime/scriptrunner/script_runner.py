@@ -443,9 +443,11 @@ class ScriptRunner:
             query_string=rerun_data.query_string,
             page_script_hash=page_script_hash,
         )
-        url = parse.parse_qs(rerun_data.query_string, keep_blank_values=True)
+        parsed_query_params = parse.parse_qs(
+            rerun_data.query_string, keep_blank_values=True
+        )
         with ctx.session_state.query_params() as qp:
-            for key, val in url.items():
+            for key, val in parsed_query_params.items():
                 if len(val) == 0:
                     qp.set_with_no_forward_msg(key, val="")
                 if len(val) == 1:
