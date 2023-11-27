@@ -13,12 +13,13 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Callable, Dict, List, Optional, Set
+from contextlib import contextmanager
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.state import QueryParams
 from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.state.session_state import SessionState
 
 
@@ -125,6 +126,8 @@ class SafeSessionState:
         s = ", ".join(f"{k}: {v!r}" for k, v in kv)
         return f"{{{s}}}"
 
-    def get_query_params(self) -> QueryParams:
+    @contextmanager
+    def query_params(self) -> Iterator[QueryParams]:
+        self._yield_callback()
         with self._lock:
-            return self._state._query_params
+            yield self._state.query_params

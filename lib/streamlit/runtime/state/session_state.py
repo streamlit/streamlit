@@ -300,7 +300,7 @@ class SessionState:
     _key_id_mapping: dict[str, str] = field(default_factory=dict)
 
     # query params are stored in session state because query params will be tied with widget state at one point.
-    _query_params: QueryParams = field(default_factory=QueryParams)
+    query_params: QueryParams = field(default_factory=QueryParams)
 
     def __repr__(self):
         return util.repr_(self)
