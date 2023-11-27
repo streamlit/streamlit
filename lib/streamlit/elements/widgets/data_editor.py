@@ -606,8 +606,10 @@ class DataEditorMixin:
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
                   complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
-                  datetime.timedelta, decimal.Decimal, fractions.Fraction, pandas.Interval,
-                  pandas.Period, pandas.Timedelta.
+                  fractions.Fraction, pandas.Interval, and pandas.Period.
+                - To prevent overflow in JavaScript, columns containing datetime.timedelta
+                  and pandas.Timedelta values will default to uneditable but this can be
+                  changed through column configuration.
 
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width will
@@ -680,7 +682,7 @@ class DataEditorMixin:
         pandas.DataFrame, pandas.Series, pyarrow.Table, numpy.ndarray, list, set, tuple, or dict.
             The edited data. The edited data is returned in its original data type if
             it corresponds to any of the supported return types. All other data types
-            are returned as a ``pd.DataFrame``.
+            are returned as a ``pandas.DataFrame``.
 
         Examples
         --------

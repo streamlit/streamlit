@@ -116,7 +116,7 @@ class SnowparkConnection(BaseConnection["Session"]):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
 
         Example
