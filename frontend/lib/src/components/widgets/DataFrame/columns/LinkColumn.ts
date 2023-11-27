@@ -141,6 +141,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
           displayText: getLinkDisplayValue(href, parameters.display_text),
         },
         copyData: href,
+        cursor: "pointer",
         isMissingValue: isNullOrUndefined(href),
       } as LinkCell
     },
