@@ -51,11 +51,11 @@ function onClickSelect(
 
   const rectHoverX = rect.x + hoverX
 
-  const textWidth =
-    ctx.measureText((displayText || href) ?? "").width +
-    theme.cellHorizontalPadding * 2
+  const textWidth = ctx.measureText((displayText || href) ?? "").width
+  const textStart = rect.x + theme.cellHorizontalPadding
 
-  const isHovered = rectHoverX > rect.x && rectHoverX < rect.x + textWidth
+  const isHovered =
+    rectHoverX > textStart && rectHoverX < textStart + textWidth
 
   if (isHovered) {
     return href
