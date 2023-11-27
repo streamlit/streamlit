@@ -544,6 +544,10 @@ export class WidgetStateManager {
     this.props.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
   }
 
+  public createWidgetStatesMsg(): WidgetStates {
+    return this.widgetStates.createWidgetStatesMsg()
+  }
+
   /**
    * Remove the state of widgets that are not contained in `activeIds`.
    * This is called when a script finishes running, so that we don't retain

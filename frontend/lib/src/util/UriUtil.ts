@@ -94,6 +94,53 @@ export function getPossibleBaseUris(): Array<BaseUriParts> {
   return take(possibleBaseUris, 2)
 }
 
+export function getPossibleBaseUrisForConnection(
+  urlStr: string
+): BaseUriParts[] {
+  const url = new URL(urlStr)
+  // If dev, always connect to 8501, since window.location.port is the Node
+  // server's port 3000.
+  // If changed, also change config.py
+  const host = url.hostname
+
+  let port
+  if (IS_DEV_ENV) {
+    port = WEBSOCKET_PORT_DEV
+  } else if (url.port) {
+    port = Number(url.port)
+  } else {
+    port = url.protocol === "https:" ? 443 : 80
+  }
+
+  const basePath = url.pathname
+    .replace(FINAL_SLASH_RE, "")
+    .replace(INITIAL_SLASH_RE, "")
+
+  const baseUriParts = { host, port, basePath }
+
+  if (!basePath) {
+    return [baseUriParts]
+  }
+
+  const parts = basePath.split("/")
+  const possibleBaseUris: BaseUriParts[] = []
+
+  while (parts.length > 0) {
+    possibleBaseUris.push({
+      ...baseUriParts,
+      basePath: parts.join("/"),
+    })
+    parts.pop()
+  }
+
+  possibleBaseUris.push({
+    ...baseUriParts,
+    basePath: "",
+  })
+
+  return take(possibleBaseUris, 2)
+}
+
 /**
  * Create a ws:// or wss:// URI for the given path.
  */
