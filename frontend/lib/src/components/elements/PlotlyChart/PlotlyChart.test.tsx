@@ -25,6 +25,9 @@ import mock from "./mock"
 
 import { PlotlyChart, DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
 
+const DEFAULT_PLOTLY_WIDTH = "700"
+const DEFAULT_PLOTLY_HEIGHT = "450"
+
 const getProps = (
   elementProps: Partial<PlotlyChartProto> = {}
 ): PlotlyChartProps => ({
@@ -94,9 +97,8 @@ async function testEnterAndExitFullscreen(
   // eslint-disable-next-line testing-library/no-node-access
   const svg = getPlotlyRoot(label)?.querySelector("svg")
 
-  // 700x450 is the default size for Plotly charts
-  expect(svg).toHaveAttribute("width", "700")
-  expect(svg).toHaveAttribute("height", "450")
+  expect(svg).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
+  expect(svg).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test verifies this
   expect(setWidth!).toBeDefined()
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test verifies this
@@ -125,9 +127,9 @@ async function testEnterAndExitFullscreen(
   if (useContainerWidth) {
     expect(svg3).toHaveAttribute("width", "300")
   } else {
-    expect(svg3).toHaveAttribute("width", "700")
+    expect(svg3).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
   }
-  expect(svg3).toHaveAttribute("height", "450")
+  expect(svg3).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
 }
 
 describe("PlotlyChart Element", () => {
@@ -167,9 +169,9 @@ describe("PlotlyChart Element", () => {
       const label = screen.getByText("Group 1")
       // eslint-disable-next-line testing-library/no-node-access
       const svg = getPlotlyRoot(label)?.querySelector("svg")
-      // 700x450 is the default size for Plotly charts
-      expect(svg).toHaveAttribute("width", "700")
-      expect(svg).toHaveAttribute("height", "450")
+
+      expect(svg).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
+      expect(svg).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
     })
 
     it("useContainerWidth false", async () => {
@@ -183,9 +185,9 @@ describe("PlotlyChart Element", () => {
       const label = screen.getByText("Group 1")
       // eslint-disable-next-line testing-library/no-node-access
       const svg = getPlotlyRoot(label)?.querySelector("svg")
-      // 700x450 is the default size for Plotly charts
-      expect(svg).toHaveAttribute("width", "700")
-      expect(svg).toHaveAttribute("height", "450")
+
+      expect(svg).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
+      expect(svg).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
     })
 
     // eslint-disable-next-line jest/expect-expect -- underlying testEnterAndExitFullscreen function has expect statements
