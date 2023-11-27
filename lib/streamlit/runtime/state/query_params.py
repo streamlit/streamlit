@@ -37,10 +37,6 @@ class QueryParams(MutableMapping[str, Any]):
 
     def __getitem__(self, key: str) -> str:
         self._ensure_single_query_api_used()
-        return self._getitem(key)
-
-    def _getitem(self, key: str) -> str:
-        self._ensure_single_query_api_used()
         try:
             value = self._query_params[key]
             if isinstance(value, list):
@@ -50,9 +46,11 @@ class QueryParams(MutableMapping[str, Any]):
                     return value[-1]
             return value
         except:
-            raise KeyError(_missing_key_error_message_query_params(key))
+            raise KeyError(_missing_key_error_message(key))
 
-    def _setitem(self, key: str, value: Union[str, List[str]]) -> None:
+    def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
+        # Handle non-string inputs like integers or lists by converting them to
+        # strings for consistent query parameter handling.
         self._ensure_single_query_api_used()
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
@@ -60,8 +58,13 @@ class QueryParams(MutableMapping[str, Any]):
             self._query_params[key] = str(value)
         self._send_query_param_msg()
 
-    def __setitem__(self, key: str, value: str) -> None:
-        self._setitem(key, value)
+    def __delitem__(self, key: str) -> None:
+        self._ensure_single_query_api_used()
+        if key in self._query_params:
+            del self._query_params[key]
+            self._send_query_param_msg()
+        else:
+            raise KeyError(_missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
         self._ensure_single_query_api_used()
@@ -71,34 +74,30 @@ class QueryParams(MutableMapping[str, Any]):
             query_params = self._query_params[key]
             return query_params if isinstance(query_params, list) else [query_params]
         except KeyError:
-            raise KeyError(_missing_key_error_message_query_params(key))
+            raise KeyError(_missing_key_error_message(key))
 
     def __getattr__(self, key: str) -> str:
         try:
-            return self._getitem(key)
+            return self.__getitem__(key)
         except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
+            raise AttributeError(_missing_key_error_message(key))
 
-    def __setattr__(self, key: str, value: str) -> None:
-        self._setitem(key, value)
+    def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
+        try:
+            self.__setitem__(key, value)
+        except KeyError:
+            raise AttributeError(_missing_key_error_message(key))
 
     def __delattr__(self, key: str) -> None:
         try:
-            self._delitem(key)
+            self.__delitem__(key)
         except KeyError:
-            raise AttributeError(_missing_key_error_message_query_params(key))
+            raise AttributeError(_missing_key_error_message(key))
 
-    def _delitem(self, key):
-        self._ensure_single_query_api_used()
-        if key in self._query_params:
-            del self._query_params[key]
-            self._send_query_param_msg()
-        else:
-            raise KeyError(_missing_key_error_message_query_params(key))
-
-    def __contains__(self, key: str) -> bool:  # type: ignore[override]
-        self._ensure_single_query_api_used()
-        return key in self._query_params
+    def __contains__(self, key: Any) -> bool:
+        if isinstance(key, str):
+            return key in self._query_params
+        return False
 
     def __len__(self) -> int:
         self._ensure_single_query_api_used()
@@ -126,9 +125,6 @@ class QueryParams(MutableMapping[str, Any]):
         self._query_params.clear()
         self._send_query_param_msg()
 
-    def __delitem__(self, key: str) -> None:
-        self._delitem(key)
-
     def to_dict(self) -> Dict[str, Union[List[str], str]]:
         self._ensure_single_query_api_used()
         return self._query_params
@@ -155,5 +151,5 @@ class QueryParams(MutableMapping[str, Any]):
         ctx.ensure_single_query_api_used()
 
 
-def _missing_key_error_message_query_params(key: str) -> str:
+def _missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'
