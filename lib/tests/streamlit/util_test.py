@@ -145,7 +145,7 @@ class UtilTest(unittest.TestCase):
             ),
         ]
     )
-    def test_drop_key_in_dict(
+    def test_exclude_keys_in_dict(
         self,
         d: Dict[str, List[str]],
         keys_to_drop: List[str],

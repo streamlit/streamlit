@@ -12,62 +12,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Iterator, List, MutableMapping, Union
+from typing import Dict, Iterator, List, MutableMapping, Union
 
-from streamlit.runtime.state.query_params import QueryParams
+from streamlit.runtime.state.query_params import _missing_key_error_message
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
 
-def get_query_params() -> QueryParams:
-    from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-    ctx = get_script_run_ctx()
-
-    if ctx is None:
-        return QueryParams()
-    return get_session_state().get_query_params()
-
-
-class QueryParamsProxy(MutableMapping[str, Any]):
+class QueryParamsProxy(MutableMapping[str, str]):
     """A stateless singleton that proxies `st.query_params` interactions
     to the current script thread's QueryParams instance.
     """
 
-    def __iter__(self) -> Iterator[Any]:
-        return iter(get_query_params())
+    def __iter__(self) -> Iterator[str]:
+        with get_session_state().query_params() as qp:
+            return iter(qp)
 
     def __len__(self) -> int:
-        return len(get_query_params())
+        with get_session_state().query_params() as qp:
+            return len(qp)
 
-    def __getitem__(self, key: str) -> Union[str, List[str]]:
-        return get_query_params()[key]
-
-    def __getattr__(self, key: str) -> Union[str, List[str]]:
-        return get_query_params().__getattr__(key)
+    def __getitem__(self, key: str) -> str:
+        with get_session_state().query_params() as qp:
+            return qp[key]
 
     def __delitem__(self, key: str) -> None:
-        del get_query_params()[key]
-
-    def __delattr__(self, key: str) -> None:
-        get_query_params().__delattr__(key)
-
-    def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
-        get_query_params().__setattr__(key, value)
+        with get_session_state().query_params() as qp:
+            del qp[key]
 
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
-        get_query_params()[key] = value
+        with get_session_state().query_params() as qp:
+            qp[key] = value
+
+    def __getattr__(self, key: str) -> str:
+        with get_session_state().query_params() as qp:
+            try:
+                return qp[key]
+            except KeyError:
+                raise AttributeError(_missing_key_error_message(key))
+
+    def __delattr__(self, key: str) -> None:
+        with get_session_state().query_params() as qp:
+            try:
+                del qp[key]
+            except KeyError:
+                raise AttributeError(_missing_key_error_message(key))
+
+    def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
+        with get_session_state().query_params() as qp:
+            try:
+                qp[key] = value
+            except KeyError:
+                raise AttributeError(_missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
-        return get_query_params().get_all(key)
-
-    def __contains__(self, key: Any) -> bool:
-        return key in get_query_params()
+        with get_session_state().query_params() as qp:
+            return qp.get_all(key)
 
     def clear(self) -> None:
-        get_query_params().clear()
+        with get_session_state().query_params() as qp:
+            qp.clear()
 
-    def get(self, key: str, default: Any = None) -> Union[str, List[str]]:
-        return get_query_params().get(key, default)
-
-    def to_dict(self) -> Dict[str, Union[List[str], str]]:
-        return get_query_params().to_dict()
+    def to_dict(self) -> Dict[str, str]:
+        with get_session_state().query_params() as qp:
+            return qp.to_dict()
