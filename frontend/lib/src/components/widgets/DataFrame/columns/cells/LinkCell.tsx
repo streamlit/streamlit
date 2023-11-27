@@ -160,7 +160,6 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
             data: {
               ...value.data,
               href: e.target.value,
-              displayText: value.data.displayText,
             },
           })
         }
