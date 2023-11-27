@@ -116,7 +116,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         result_dict = {"foo": "bar", "two": "y", "baz": ""}
         assert self.query_params.to_dict() == result_dict
 
-    def test_set_with_no_forward_msg(self):
+    def test_set_with_no_forward_msg_sends_no_msg_and_sets_query_params(self):
         self.query_params.set_with_no_forward_msg("test", "test")
         assert self.query_params["test"] == "test"
         with pytest.raises(IndexError):
