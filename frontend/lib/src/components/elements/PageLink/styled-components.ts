@@ -42,12 +42,9 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
       alignItems: "center",
       gap: theme.spacing.sm,
       borderRadius: theme.spacing.twoXS,
-      border: `1px solid ${theme.colors.fadedText20}`,
 
       paddingLeft: theme.spacing.sm,
-      paddingRight: theme.spacing.sm,
-      marginLeft: theme.spacing.lg,
-      marginRight: theme.spacing.lg,
+      paddingRight: theme.spacing.threeXL,
       marginTop: theme.spacing.threeXS,
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
