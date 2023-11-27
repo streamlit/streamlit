@@ -607,9 +607,9 @@ class DataEditorMixin:
                 - Additionally, the following data types are not yet supported for editing:
                   complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
                   fractions.Fraction, pandas.Interval, and pandas.Period.
-                - To prevent overflow in JavaScript, datetime.timedelta and pandas.Timedelta
-                  columns will default to uneditable but this can be changed through column
-                  configuration.
+                - To prevent overflow in JavaScript, columns containing datetime.timedelta
+                  and pandas.Timedelta values will default to uneditable but this can be
+                  changed through column configuration.
 
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width will
@@ -682,7 +682,7 @@ class DataEditorMixin:
         pandas.DataFrame, pandas.Series, pyarrow.Table, numpy.ndarray, list, set, tuple, or dict.
             The edited data. The edited data is returned in its original data type if
             it corresponds to any of the supported return types. All other data types
-            are returned as a ``pd.DataFrame``.
+            are returned as a ``pandas.DataFrame``.
 
         Examples
         --------
