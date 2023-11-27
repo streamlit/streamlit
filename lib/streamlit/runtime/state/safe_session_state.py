@@ -14,11 +14,12 @@
 
 import threading
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.state.session_state import SessionState
 
 
@@ -126,7 +127,7 @@ class SafeSessionState:
         return f"{{{s}}}"
 
     @contextmanager
-    def query_params(self):
+    def query_params(self) -> Iterator[QueryParams]:
         self._yield_callback()
         with self._lock:
             yield self._state.query_params

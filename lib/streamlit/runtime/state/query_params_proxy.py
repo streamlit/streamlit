@@ -42,7 +42,6 @@ class QueryParamsProxy(MutableMapping[str, str]):
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
-            print(f"{qp[key]=}")
 
     def __getattr__(self, key: str) -> str:
         with get_session_state().query_params() as qp:
