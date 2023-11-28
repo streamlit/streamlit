@@ -1,4 +1,4 @@
-altair==5.1.2
+altair==5.2.0
 anyio==3.7.1
 attrs==23.1.0
 black==23.11.0
@@ -13,7 +13,7 @@ chart-studio==1.1.0
 click==8.1.7
 contourpy==1.2.0
 coverage==7.3.2
-cryptography==41.0.6
+cryptography==41.0.7
 cycler==0.12.1
 distlib==0.3.7
 docutils==0.20.1
