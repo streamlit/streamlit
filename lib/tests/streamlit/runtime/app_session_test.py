@@ -60,7 +60,10 @@ def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
 
 
-def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppSession:
+def _create_test_session(
+    event_loop: Optional[AbstractEventLoop] = None,
+    session_id_override: Optional[str] = None,
+) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
         event_loop = MagicMock()
@@ -76,6 +79,7 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
             message_enqueued_callback=None,
             local_sources_watcher=MagicMock(),
             user_info={"email": "test@test.com"},
+            session_id_override=session_id_override,
         )
 
 
@@ -96,6 +100,19 @@ class AppSessionTest(unittest.TestCase):
     def tearDown(self) -> None:
         super().tearDown()
         Runtime._instance = None
+
+    @patch(
+        "streamlit.runtime.app_session.uuid.uuid4", MagicMock(return_value="some_uuid")
+    )
+    def test_generates_uuid_for_session_id_if_no_override(self):
+        session = _create_test_session()
+
+        assert session.id == "some_uuid"
+
+    def test_uses_session_id_override_if_set(self):
+        session = _create_test_session(session_id_override="some_custom_session_id")
+
+        assert session.id == "some_custom_session_id"
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"
@@ -783,6 +800,22 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         )
         session.handle_backmsg(msg)
         self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
+
+    @patch("streamlit.runtime.app_session.LOGGER")
+    async def test_handles_app_heartbeat_backmsg(self, patched_logger):
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(
+            session, "handle_backmsg_exception"
+        ) as handle_backmsg_exception, patch.object(
+            session, "_handle_app_heartbeat_request"
+        ) as handle_app_heartbeat_request:
+            msg = BackMsg()
+            msg.app_heartbeat = True
+            session.handle_backmsg(msg)
+
+            handle_app_heartbeat_request.assert_called_once()
+            handle_backmsg_exception.assert_not_called()
+            patched_logger.warning.assert_not_called()
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):

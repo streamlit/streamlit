@@ -16,17 +16,28 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock
 
-import langchain
 import pytest
 import semver
 from google.protobuf.json_format import MessageToDict
 
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.external.langchain.capturing_callback_handler import (
-    playback_callbacks,
-)
+
+try:
+    import langchain
+
+    from tests.streamlit.external.langchain.capturing_callback_handler import (
+        playback_callbacks,
+    )
+except ImportError:
+    # If langchain isn't installed (it doesn't work with Python 3.12 yet),
+    # we'll skip this test.
+    # TODO[kajarenc] Remove this once langchain supports Python 3.12.
+    langchain = MagicMock(__version__="0.0.0")
+    playback_callbacks = None
+    pytestmark = pytest.mark.skip(reason="Langchain doesn't support Python 3.12 yet.")
 
 
 class StreamlitCallbackHandlerAPITest(unittest.TestCase):
