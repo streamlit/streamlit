@@ -228,7 +228,7 @@ def _int_to_bytes(i: int) -> bytes:
 def _float_to_bytes(f: float) -> bytes:
     # Floats are 64bit in Python, so we need to use the "d" format.
     return struct.pack("<d", f)
-    
+
 
 def _key(obj: Optional[Any]) -> Any:
     """Return key for memoization."""
