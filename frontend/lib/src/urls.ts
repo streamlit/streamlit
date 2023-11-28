@@ -22,7 +22,7 @@ export const COMMUNITY_URL = "https://discuss.streamlit.io"
 
 /** The URL customers are directed to for troubleshooting components. */
 export const COMPONENT_DEVELOPER_URL =
-  "https://docs.streamlit.iorary/components"
+  "https://docs.streamlit.io/library/components"
 
 /** The URL customers are directed to for troubleshooting camera permissions. */
 export const CAMERA_PERMISSION_URL =
