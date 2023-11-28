@@ -82,6 +82,7 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
             color: theme.colors.fadedText40,
             cursor: "not-allowed",
             "&:hover": {
+              color: theme.colors.fadedText40,
               backgroundColor: theme.colors.transparent,
             },
           }
