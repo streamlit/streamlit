@@ -175,6 +175,8 @@ interface State {
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
+const INITIAL_SCRIPT_RUN_ID = "<null>"
+
 // eslint-disable-next-line
 declare global {
   interface Window {
@@ -241,10 +243,10 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(true),
       isFullScreen: false,
       scriptName: "",
-      scriptRunId: "<null>",
+      scriptRunId: INITIAL_SCRIPT_RUN_ID,
       appHash: null,
       scriptRunState: ScriptRunState.NOT_RUNNING,
       userSettings: {
@@ -297,6 +299,7 @@ export class App extends PureComponent<Props, State> {
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
+      sendAppHeartbeat: this.sendAppHeartbeat,
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
@@ -1108,7 +1111,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(),
+        elements: AppRoot.empty(false),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1415,6 +1418,19 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Sends an app heartbeat message through the websocket
+   */
+  sendAppHeartbeat = (): void => {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ appHeartbeat: true })
+      backMsg.type = "appHeartbeat"
+      this.sendBackMsg(backMsg)
+    } else {
+      logError("Cannot send app heartbeat: disconnected from server")
+    }
+  }
+
+  /**
    * Sends a message back to the server.
    */
   private sendBackMsg = (msg: BackMsg): void => {
@@ -1683,7 +1699,15 @@ export class App extends PureComponent<Props, State> {
             attach={window}
             focused={true}
           >
-            <StyledApp className={outerDivClass}>
+            <StyledApp
+              className={outerDivClass}
+              data-testid="stApp"
+              data-teststate={
+                scriptRunId == INITIAL_SCRIPT_RUN_ID
+                  ? "initial"
+                  : scriptRunState
+              }
+            >
               {/* The tabindex below is required for testing. */}
               <Header>
                 {!hideTopBar && (
