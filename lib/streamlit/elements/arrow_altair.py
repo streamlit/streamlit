@@ -1484,14 +1484,14 @@ def _get_x_encoding_type(
     if chart_type == ChartType.BAR and not _is_date_column(df, x_column):
         return "ordinal"
 
-    return cast(type_util.VegaLiteType, type_util.infer_vegalite_type(df[x_column]))
+    return type_util.infer_vegalite_type(df[x_column])
 
 
 def _get_y_encoding_type(
     df: pd.DataFrame, y_column: str | None
 ) -> type_util.VegaLiteType:
     if y_column:
-        return cast(type_util.VegaLiteType, type_util.infer_vegalite_type(df[y_column]))
+        return type_util.infer_vegalite_type(df[y_column])
 
     return "quantitative"  # Pick anything. If undefined, Vega-Lite may hide the axis.
 

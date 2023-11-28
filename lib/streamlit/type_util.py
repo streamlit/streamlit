@@ -1058,7 +1058,7 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # return that in some situations.
 def infer_vegalite_type(
     data: Series[Any],
-) -> VegaLiteType | Tuple[VegaLiteType, List[Any]]:
+) -> VegaLiteType:
     """
     From an array-like input, infer the correct vega typecode
     ('ordinal', 'nominal', 'quantitative', or 'temporal')
@@ -1082,7 +1082,7 @@ def infer_vegalite_type(
     elif typ == "categorical" and data.cat.ordered:
         # TODO(lukasmasuch): Is this correct, I cannot find any reference that
         # altair supports a tuple here. It seems to be supported via sort instead?
-        return ("ordinal", data.cat.categories.tolist())
+        return ("ordinal", data.cat.categories.tolist())  # type: ignore[return-value]
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [
