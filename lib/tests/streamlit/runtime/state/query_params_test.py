@@ -74,7 +74,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         assert "test=1&test=2&test=3" in message.page_info_changed.query_string
 
     def test__setitem__adds_set_value(self):
-        self.query_params["test"] = set((1, 2, 3))
+        self.query_params["test"] = set({1, 2, 3})
         assert self.query_params["test"] == "3"
         message = self.get_message_from_queue(0)
         assert "test=1&test=2&test=3" in message.page_info_changed.query_string

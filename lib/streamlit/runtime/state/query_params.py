@@ -55,7 +55,7 @@ class QueryParams(MutableMapping[str, str]):
     ) -> None:
         if isinstance(value, dict):
             raise StreamlitAPIException(
-                f"You cannot set a query params key `{key}` to a dictionary `{value}`."
+                f"You cannot set a query params key `{key}` to a dictionary."
             )
 
         if isinstance(value, (tuple, set, list)):
