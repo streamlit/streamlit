@@ -79,7 +79,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
     // We do not want the chat input to be faded out.
     // TODO: Reconsider this when we implement fixed-sized chat containers
-    ...(isStale && elementType !== "chatInput"
+    ...(isStale && elementType !== "chatInput" && elementType !== "skeleton"
       ? {
           opacity: 0.33,
           transition: "opacity 1s ease-in 0.5s",
@@ -151,3 +151,16 @@ export const StyledVerticalBlockWrapper = styled.div<StyledVerticalBlockProps>(
     flex: 1,
   }
 )
+
+export interface StyledVerticalBlockBorderWrapperProps {
+  border: boolean
+}
+
+export const StyledVerticalBlockBorderWrapper =
+  styled.div<StyledVerticalBlockBorderWrapperProps>(({ theme, border }) => ({
+    ...(border && {
+      border: `1px solid ${theme.colors.fadedText10}`,
+      borderRadius: theme.radii.lg,
+      padding: "calc(1em - 1px)", // 1px to account for border.
+    }),
+  }))

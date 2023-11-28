@@ -144,11 +144,7 @@ class ImageMixin:
         Example
         -------
         >>> import streamlit as st
-        >>> from PIL import Image
-        >>>
-        >>> image = Image.open('sunrise.jpg')
-        >>>
-        >>> st.image(image, caption='Sunrise by the mountains')
+        >>> st.image('sunrise.jpg', caption='Sunrise by the mountains')
 
         .. output::
            https://doc-image.streamlit.app/

@@ -31,6 +31,7 @@ message Block {
   bool allow_empty = 8;
 
   message Vertical {
+    bool border = 1;
   }
 
   message Horizontal {
@@ -51,6 +52,7 @@ message Block {
   message Form {
     string form_id = 1;
     bool clear_on_submit = 2;
+    bool border = 3;
   }
 
   message TabContainer {
