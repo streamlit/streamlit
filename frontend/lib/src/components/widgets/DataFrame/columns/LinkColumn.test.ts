@@ -208,7 +208,7 @@ describe("LinkColumn", () => {
   it("sets displayed value as the href, when displayText is a regex but there is no match", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
-      columnTypeOptions: { display_text: "https://(.*?).google.com" },
+      columnTypeOptions: { display_text: "https://(.*?)/.google.com" },
     })
 
     const cell = mockColumn.getCell(
