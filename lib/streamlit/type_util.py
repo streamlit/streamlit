@@ -1079,10 +1079,13 @@ def infer_vegalite_type(
         "complex",
     ]:
         return "quantitative"
-    elif typ == "categorical" and data.cat.ordered:
-        # TODO(lukasmasuch): Is this correct, I cannot find any reference that
-        # altair supports a tuple here. It seems to be supported via sort instead?
-        return ("ordinal", data.cat.categories.tolist())  # type: ignore[return-value]
+    # TODO(lukasmasuch): Our built-in chart implementation doesn't correctly support
+    # handling ordered categorical data yet so we just fall back to nominal for now.
+    # To support it, we would need to check if the return value from infer_vegalite_type
+    # is a tuple, and split it up into type and sort. But ordered categorical data
+    # are probably very rare, so we can just handling it as nominal might be fine.
+    # elif typ == "categorical" and data.cat.ordered:
+    #     return ("ordinal", data.cat.categories.tolist())
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [
