@@ -52,17 +52,26 @@ def test_renders_container_with_border(
 def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.container(height=<pixels>) renders a scroll container."""
 
+    expect(app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4)).to_have_css(
+        "overflow", "auto"
+    )
     assert_snapshot(
         app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4),
         name="st_container-scroll_container",
     )
 
     # This one should be pinned to the bottom:
+    expect(app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5)).to_have_css(
+        "overflow", "auto"
+    )
     assert_snapshot(
         app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5),
         name="st_container-scroll_container_chat",
     )
 
+    expect(app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)).to_have_css(
+        "overflow", "auto"
+    )
     assert_snapshot(
         app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6),
         name="st_container-scroll_container_empty",
