@@ -99,7 +99,9 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       render(<ElementNodeRenderer {...props} />)
 
-      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      await waitFor(() =>
+        expect(screen.queryByTestId("stSkeleton")).toBeNull()
+      )
       const elementNodeRenderer = screen.getByTestId("element-container")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
@@ -114,7 +116,9 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       render(<ElementNodeRenderer {...props} />)
 
-      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      await waitFor(() =>
+        expect(screen.queryByTestId("stSkeleton")).toBeNull()
+      )
       const elementNodeRenderer = screen.getByTestId("element-container")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
@@ -133,7 +137,9 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       render(<ElementNodeRenderer {...props} />)
 
-      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      await waitFor(() =>
+        expect(screen.queryByTestId("stSkeleton")).toBeNull()
+      )
       const elementNodeRenderer = screen.getByTestId("element-container")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
@@ -148,7 +154,9 @@ describe("ElementNodeRenderer Block Component", () => {
       })
       render(<ElementNodeRenderer {...props} />)
 
-      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull())
+      await waitFor(() =>
+        expect(screen.queryByTestId("stSkeleton")).toBeNull()
+      )
       const elementNodeRenderer = screen.getByTestId("element-container")
       expect(elementNodeRenderer).toBeInTheDocument()
       // eslint-disable-next-line testing-library/no-node-access
