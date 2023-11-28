@@ -574,6 +574,13 @@ class ButtonMixin:
             if compare_path == path:
                 page_link_proto.page_script_hash = page["page_script_hash"]
                 page_link_proto.page_path = path
+                break
+
+        # TODO: Update warning message once page_path input options confirmed.
+        if page_link_proto.page_script_hash == "":
+            raise StreamlitAPIException(
+                f"Page path {page_path} not found. Please check the path and try again."
+            )
 
         if icon is not None:
             page_link_proto.icon = icon

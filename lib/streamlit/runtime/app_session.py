@@ -815,6 +815,8 @@ def _populate_config_msg(msg: Config) -> None:
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
     msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
+    if config.get_option("client.showPageNavigation") == False:
+        msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
 
 
