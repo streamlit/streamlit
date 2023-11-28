@@ -52,27 +52,18 @@ def test_renders_container_with_border(
 def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.container(height=<pixels>) renders a scroll container."""
 
-    expect(app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4)).to_have_css(
-        "overflow", "auto"
-    )
-    assert_snapshot(
-        app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4),
-        name="st_container-scroll_container",
-    )
+    scroll_container_chat = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4)
+    expect(scroll_container_chat).to_have_css("overflow", "auto")
+    expect(scroll_container_chat).to_have_css("height", "200px")
+    assert_snapshot(scroll_container_chat, name="st_container-scroll_container")
+
+    scroll_container_empty = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5)
+    expect(scroll_container_chat).to_have_css("overflow", "auto")
+    expect(scroll_container_empty).to_have_css("height", "100px")
+    assert_snapshot(scroll_container_empty, name="st_container-scroll_container_empty")
 
     # This one should be pinned to the bottom:
-    expect(app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5)).to_have_css(
-        "overflow", "auto"
-    )
-    assert_snapshot(
-        app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5),
-        name="st_container-scroll_container_chat",
-    )
-
-    expect(app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)).to_have_css(
-        "overflow", "auto"
-    )
-    assert_snapshot(
-        app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6),
-        name="st_container-scroll_container_empty",
-    )
+    scroll_container_chat = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)
+    expect(scroll_container_chat).to_have_css("overflow", "auto")
+    expect(scroll_container_chat).to_have_css("height", "200px")
+    assert_snapshot(scroll_container_chat, name="st_container-scroll_container_chat")
