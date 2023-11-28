@@ -55,12 +55,12 @@ const getProps = (
 })
 
 const triggerChangeEvent = (
-  elmement: Element,
+  element: Element,
   key: "ArrowLeft" | "ArrowRight"
 ): void => {
-  fireEvent.focus(elmement)
-  fireEvent.keyDown(elmement, { key })
-  fireEvent.keyUp(elmement, { key })
+  fireEvent.focus(element)
+  fireEvent.keyDown(element, { key })
+  fireEvent.keyUp(element, { key })
 }
 
 describe("Slider widget", () => {
