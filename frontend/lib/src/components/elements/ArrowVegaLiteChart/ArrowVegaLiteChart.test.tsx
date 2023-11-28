@@ -15,7 +15,10 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import "jest-canvas-mock"
+import { render } from "@streamlit/lib/src/test_util"
 import {
   CATEGORICAL,
   DATETIME,
@@ -60,30 +63,36 @@ const getProps = (props: Partial<PropsWithHeight> = {}): PropsWithHeight => ({
   ...props,
 })
 
-describe("VegaLiteChart Element", () => {
-  it("renders without crashing", () => {
-    const props = getProps()
-    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
+const getCanvasContext = (): CanvasRenderingContext2D => {
+  const canvas = screen
+    .getByTestId("stArrowVegaLiteChart")
+    // eslint-disable-next-line testing-library/no-node-access
+    .querySelector("canvas") as HTMLCanvasElement
 
-    expect(wrapper.find("StyledVegaLiteChartContainer").length).toBe(1)
+  return canvas.getContext("2d") as CanvasRenderingContext2D
+}
+
+describe("VegaLiteChart Element", () => {
+  it("renders without crashing", async () => {
+    const props = getProps()
+
+    await render(<ArrowVegaLiteChart {...props} />)
+    expect(screen.getByTestId("stArrowVegaLiteChart")).toBeInTheDocument()
   })
 
-  it("pulls default config values from theme", () => {
+  it("pulls default config values from theme", async () => {
     const props = getProps({ theme: mockTheme.emotion })
 
-    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
-    // @ts-expect-error
-    const generatedSpec = wrapper.instance().generateSpec()
+    render(<ArrowVegaLiteChart {...props} />)
 
-    expect(generatedSpec.config.background).toBe(
-      mockTheme.emotion.colors.bgColor
-    )
-    expect(generatedSpec.config.axis.labelColor).toBe(
-      mockTheme.emotion.colors.bodyText
-    )
+    await new Promise(process.nextTick)
+
+    const ctx = getCanvasContext()
+    // We can simplify by using snapshots to determine if the right theme is used
+    expect(ctx.__getEvents()).toMatchSnapshot()
   })
 
-  it("applies Steramlit theme if specified", () => {
+  it("applies Streamlit theme if specified", async () => {
     const props = getProps({
       element: {
         ...MOCK,
@@ -100,14 +109,15 @@ describe("VegaLiteChart Element", () => {
       },
     })
 
-    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
-    // @ts-expect-error
-    const generatedSpec = wrapper.instance().generateSpec()
-    // Should have 10 colors defined in range.diverging
-    expect(generatedSpec.config.range?.diverging?.length).toBe(10)
+    render(<ArrowVegaLiteChart {...props} />)
+    await new Promise(process.nextTick)
+
+    const ctx = getCanvasContext()
+    // We can simplify by using snapshots to determine if the right theme is used
+    expect(ctx.__getEvents()).toMatchSnapshot()
   })
 
-  it("has user specified config take priority", () => {
+  it("has user specified config take priority", async () => {
     const props = getProps({ theme: mockTheme.emotion })
 
     const spec = JSON.parse(props.element.spec)
@@ -118,17 +128,12 @@ describe("VegaLiteChart Element", () => {
       spec: JSON.stringify(spec),
     }
 
-    const wrapper = mount(<ArrowVegaLiteChart {...props} />)
-    // @ts-expect-error
-    const generatedSpec = wrapper.instance().generateSpec()
+    render(<ArrowVegaLiteChart {...props} />)
+    await new Promise(process.nextTick)
 
-    expect(generatedSpec.config.background).toBe("purple")
-    expect(generatedSpec.config.axis.labelColor).toBe("blue")
-    // Verify that things not overwritten by the user still fall back to the
-    // theme default.
-    expect(generatedSpec.config.axis.titleColor).toBe(
-      mockTheme.emotion.colors.bodyText
-    )
+    const ctx = getCanvasContext()
+    // We can simplify by using snapshots to determine if the right theme is used
+    expect(ctx.__getEvents()).toMatchSnapshot()
   })
 
   describe("Types of dataframe indexes as x axis", () => {
