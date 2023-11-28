@@ -109,7 +109,7 @@ message Element {
     NumberInput number_input = 32;
     PlotlyChart plotly_chart = 16;
     Progress progress = 5;
-    PageLink page_link = 52;
+    PageLink page_link = 53;
     Radio radio = 23;
     Selectbox selectbox = 25;
     Skeleton skeleton = 52;  // Internal-only.
@@ -126,7 +126,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 53
+    // Next ID: 54
   }
 
   reserved 9;
