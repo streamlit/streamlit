@@ -24,6 +24,7 @@ import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
+import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 
 import {
   BaseBlockProps,
@@ -204,6 +205,16 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const border = props.node.deltaBlock.vertical?.border ?? false
   const height = props.node.deltaBlock.vertical?.height || undefined
 
+  const scrollContainerRef = useScrollToBottom()
+
+  const activateScrollToBottom =
+    height &&
+    props.node.children.find(node => {
+      return (
+        node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
+      )
+    }) !== undefined
+
   const propsWithNewWidth = { ...props, ...{ width } }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
@@ -216,6 +227,11 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       border={border}
       height={height}
       data-testid="stVerticalBlockBorderWrapper"
+      ref={
+        activateScrollToBottom
+          ? (scrollContainerRef as React.RefObject<HTMLDivElement>)
+          : undefined
+      }
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
         <StyledVerticalBlock width={width} data-testid="stVerticalBlock">

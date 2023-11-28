@@ -47,3 +47,23 @@ def test_renders_container_with_border(
         "stVerticalBlockBorderWrapper"
     ).nth(3)
     assert_snapshot(container_with_border, name="st_container-has_border")
+
+
+def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.container(height=<pixels>) renders a scroll container."""
+
+    assert_snapshot(
+        app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4),
+        name="st_container-scroll_container",
+    )
+
+    # This one should be pinned to the bottom:
+    assert_snapshot(
+        app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5),
+        name="st_container-scroll_container_chat",
+    )
+
+    assert_snapshot(
+        app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6),
+        name="st_container-scroll_container_empty",
+    )
