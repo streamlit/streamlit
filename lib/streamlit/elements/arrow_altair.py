@@ -1521,13 +1521,13 @@ def marshall(
         datasets[name] = data
         return {"name": name}
 
-    alt.data_transformers.register("id", id_transform)  # type: ignore
+    alt.data_transformers.register("id", id_transform)  # type: ignore[attr-defined,unused-ignore]
 
     # The default altair theme has some width/height defaults defined
     # which are not useful for Streamlit. Therefore, we change the theme to
     # "none" to avoid those defaults.
-    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():  # type: ignore
-        with alt.data_transformers.enable("id"):  # type: ignore
+    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():  # type: ignore[attr-defined,unused-ignore]
+        with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
             # Put datasets back into the chart dict but note how they weren't
