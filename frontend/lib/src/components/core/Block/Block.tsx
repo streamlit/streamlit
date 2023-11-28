@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useMemo, useRef } from "react"
+import React, {
+  ReactElement,
+  useEffect,
+  useMemo,
+  useRef,
+  ReactNode,
+} from "react"
 import { useTheme } from "@emotion/react"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
@@ -40,6 +46,7 @@ import {
   StyledVerticalBlock,
   StyledVerticalBlockWrapper,
   StyledVerticalBlockBorderWrapper,
+  StyledVerticalBlockBorderWrapperProps,
 } from "./styled-components"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
@@ -177,6 +184,30 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 }
 
+export interface ScrollToBottomVerticalBlockWrapperProps
+  extends StyledVerticalBlockBorderWrapperProps {
+  children: ReactNode
+}
+
+// A wrapper for Vertical Block that adds scrolling with pinned to bottom behavior.
+function ScrollToBottomVerticalBlockWrapper(
+  props: ScrollToBottomVerticalBlockWrapperProps
+): ReactElement {
+  const { border, height, children } = props
+  const scrollContainerRef = useScrollToBottom()
+
+  return (
+    <StyledVerticalBlockBorderWrapper
+      border={border}
+      height={height}
+      data-testid="stVerticalBlockBorderWrapper"
+      ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
+    >
+      {children}
+    </StyledVerticalBlockBorderWrapper>
+  )
+}
+
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
@@ -205,8 +236,6 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const border = props.node.deltaBlock.vertical?.border ?? false
   const height = props.node.deltaBlock.vertical?.height || undefined
 
-  const scrollContainerRef = useScrollToBottom()
-
   const activateScrollToBottom =
     height &&
     props.node.children.find(node => {
@@ -214,6 +243,13 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
       )
     }) !== undefined
+
+  // Decide which wrapper to use based on whether we need to activate scrolling to bottom
+  // This is done for performance reasons, to prevent the usage of useScrollToBottom
+  // if it is not needed.
+  const VerticalBlockBorderWrapper = activateScrollToBottom
+    ? ScrollToBottomVerticalBlockWrapper
+    : StyledVerticalBlockBorderWrapper
 
   const propsWithNewWidth = { ...props, ...{ width } }
   // Widths of children autosizes to container width (and therefore window width).
@@ -223,22 +259,17 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   // To apply a border, we need to wrap the StyledVerticalBlockWrapper again, otherwise the width
   // calculation would not take the padding into consideration.
   return (
-    <StyledVerticalBlockBorderWrapper
+    <VerticalBlockBorderWrapper
       border={border}
       height={height}
       data-testid="stVerticalBlockBorderWrapper"
-      ref={
-        activateScrollToBottom
-          ? (scrollContainerRef as React.RefObject<HTMLDivElement>)
-          : undefined
-      }
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
         <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>
       </StyledVerticalBlockWrapper>
-    </StyledVerticalBlockBorderWrapper>
+    </VerticalBlockBorderWrapper>
   )
 }
 
