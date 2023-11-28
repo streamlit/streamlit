@@ -149,7 +149,7 @@ def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> Non
 
     # If we get here, the runner hasn't yet completed before our
     # timeout. Create an error string for debugging.
-    err_string = f"AppTest script run timed out after {timeout}s)"
+    err_string = f"AppTest script run timed out after {timeout}(s)"
 
     # Shutdown the runner before throwing an error, so that the script
     # doesn't hang forever.
