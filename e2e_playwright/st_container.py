@@ -14,9 +14,6 @@
 
 import streamlit as st
 
-if "messages" not in st.session_state:
-    st.session_state.messages = 0
-
 container = st.container()
 
 st.write("Line 1")
@@ -43,13 +40,10 @@ with st.container(height=200):
     st.markdown("This is inside a scrolling container.")
     st.text_input("Widget in scroll container")
 
-    for i in range(st.session_state.messages):
+    for i in range(10):
         st.markdown(f"Message {i}")
 
 with st.container(height=200):
-    st.chat_message("assistant").write("It can contain any element.")
-    st.chat_message("user").write("And a user can write any message.")
-
     for i in range(10):
         st.chat_message("user").write(f"Message {i}")
 
