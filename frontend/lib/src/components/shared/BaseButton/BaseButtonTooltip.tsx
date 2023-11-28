@@ -22,16 +22,21 @@ import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
 interface Props {
   children: ReactElement
   help?: string
+  placement?: Placement
 }
 
-export function BaseButtonTooltip({ children, help }: Props): ReactElement {
+export function BaseButtonTooltip({
+  children,
+  help,
+  placement,
+}: Props): ReactElement {
   if (!help) {
     return children
   }
   return (
     <div className="stTooltipIcon">
       <StyledTooltipNormal>
-        <TooltipIcon content={help} placement={Placement.TOP}>
+        <TooltipIcon content={help} placement={placement || Placement.TOP}>
           {children}
         </TooltipIcon>
       </StyledTooltipNormal>

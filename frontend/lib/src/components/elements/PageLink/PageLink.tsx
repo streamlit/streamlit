@@ -16,6 +16,7 @@
 
 import React, { ReactElement } from "react"
 import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
+import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
 import { BaseButtonTooltip } from "@streamlit/lib/src/components/shared/BaseButton"
 
@@ -57,13 +58,14 @@ function PageLink(props: Props): ReactElement {
       data-testid="stPageLink"
       style={style}
     >
-      <BaseButtonTooltip help={element.help}>
+      <BaseButtonTooltip help={element.help} placement={Placement.TOP_RIGHT}>
         <StyledNavLinkContainer>
           <StyledNavLink
             data-testid="stPageNavLink"
             disabled={disabled}
             isActive={isActive}
-            useContainerWidth={element.useContainerWidth}
+            indent={element.indent}
+            fluidWidth={element.useContainerWidth ? width : false}
             href={element.pagePath}
             onClick={e => {
               e.preventDefault()

@@ -24,11 +24,13 @@ export const StyledNavLinkContainer = styled.div(() => ({
 export interface StyledNavLinkProps {
   disabled: boolean
   isActive: boolean
-  useContainerWidth?: boolean
+  // If true or number, the button should take up container's full width
+  fluidWidth?: boolean | number
+  indent?: boolean
 }
 
 export const StyledNavLink = styled.a<StyledNavLinkProps>(
-  ({ disabled, isActive, useContainerWidth, theme }) => {
+  ({ disabled, isActive, fluidWidth, indent, theme }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? 600 : 400,
@@ -36,14 +38,14 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
 
     return {
       ...defaultPageLinkStyles,
-      width: useContainerWidth ? "auto" : "fit-content",
+      width: typeof fluidWidth == "number" ? `${fluidWidth}px` : "fit-content",
       display: "flex",
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
       borderRadius: theme.spacing.twoXS,
 
-      paddingLeft: theme.spacing.sm,
+      paddingLeft: indent ? theme.spacing.threeXL : theme.spacing.sm,
       paddingRight: theme.spacing.threeXL,
       marginTop: theme.spacing.threeXS,
       marginBottom: theme.spacing.threeXS,
