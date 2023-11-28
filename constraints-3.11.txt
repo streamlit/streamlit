@@ -15,10 +15,10 @@ chart-studio==1.1.0
 click==8.1.7
 contourpy==1.2.0
 coverage==7.3.2
-cryptography==41.0.5
+cryptography==41.0.6
 cx-Oracle==7.3.0
 cycler==0.12.1
-dataclasses-json==0.6.2
+dataclasses-json==0.6.3
 distlib==0.3.7
 docutils==0.20.1
 execnet==2.0.2
