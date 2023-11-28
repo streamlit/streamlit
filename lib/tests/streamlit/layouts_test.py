@@ -166,7 +166,7 @@ class ContainerTest(DeltaGeneratorTestCase):
 
         container_block = self.get_delta_from_queue()
         self.assertEqual(container_block.add_block.vertical.height, 100)
-        # Should not have a border as default and allow empty:
+        # Should allow empty and have a border as default:
         self.assertEqual(container_block.add_block.vertical.border, True)
         self.assertEqual(container_block.add_block.allow_empty, True)
 
