@@ -712,7 +712,7 @@ _create_option(
     "server.scriptHealthCheckEnabled",
     visibility="hidden",
     description="""
-    Flag for enabling the script health check endpoint. It used for checking if
+    Flag for enabling the script health check endpoint. It's used for checking if
     a script loads successfully. On success, the endpoint will return a 200
     HTTP status code. On failure, the endpoint will return a 503 HTTP status code.
 

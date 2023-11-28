@@ -151,7 +151,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
 
         Example

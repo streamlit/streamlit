@@ -299,6 +299,7 @@ export class App extends PureComponent<Props, State> {
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
+      sendAppHeartbeat: this.sendAppHeartbeat,
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
@@ -1413,6 +1414,19 @@ export class App extends PureComponent<Props, State> {
       this.sendBackMsg(backMsg)
     } else {
       logError("Cannot clear cache: disconnected from server")
+    }
+  }
+
+  /**
+   * Sends an app heartbeat message through the websocket
+   */
+  sendAppHeartbeat = (): void => {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ appHeartbeat: true })
+      backMsg.type = "appHeartbeat"
+      this.sendBackMsg(backMsg)
+    } else {
+      logError("Cannot send app heartbeat: disconnected from server")
     }
   }
 
