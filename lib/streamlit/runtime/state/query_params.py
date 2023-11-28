@@ -92,6 +92,7 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def to_dict(self) -> Dict[str, str]:
+        # return the last query param if multiple keys are set
         return {key: self[key] for key in self._query_params}
 
 
