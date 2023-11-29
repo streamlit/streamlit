@@ -68,7 +68,7 @@ from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
 from streamlit.user_info import UserInfoProxy as _UserInfoProxy
-from streamlit.commands.query_params import (
+from streamlit.commands.experimental_query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
 )

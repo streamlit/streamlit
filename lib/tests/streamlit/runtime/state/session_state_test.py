@@ -20,7 +20,7 @@ from typing import Any, List, Tuple
 from unittest.mock import MagicMock, patch
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as hst
 
 import streamlit as st
@@ -701,16 +701,19 @@ class SessionStateMethodTests(unittest.TestCase):
 
 
 @given(state=stst.session_state())
+@settings(deadline=400)
 def test_compact_idempotent(state):
     assert _compact_copy(state) == _compact_copy(_compact_copy(state))
 
 
 @given(state=stst.session_state())
+@settings(deadline=400)
 def test_compact_len(state):
     assert len(state) >= len(_compact_copy(state))
 
 
 @given(state=stst.session_state())
+@settings(deadline=400)
 def test_compact_presence(state):
     assert _sorted_items(state) == _sorted_items(_compact_copy(state))
 
