@@ -141,6 +141,8 @@ Key: TypeAlias = Union[str, int]
 
 LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
+VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
+
 
 class SupportsStr(Protocol):
     def __str__(self) -> str:
@@ -673,6 +675,24 @@ def is_pandas_version_less_than(v: str) -> bool:
     return version.parse(pd.__version__) < version.parse(v)
 
 
+def is_pyarrow_version_less_than(v: str) -> bool:
+    """Return True if the current Pyarrow version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+    """
+    from packaging import version
+
+    return version.parse(pa.__version__) < version.parse(v)
+
+
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to bytes using Apache Arrow.
 
@@ -692,9 +712,6 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     if column.dtype.kind in [
-        # timedelta is supported by pyarrow but not in the Arrow JS:
-        # https://github.com/streamlit/streamlit/issues/4489
-        "m",  # timedelta64[ns]
         "c",  # complex64, complex128, complex256
     ]:
         return True
@@ -708,8 +725,6 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
         if inferred_type in [
             "mixed-integer",
             "complex",
-            "timedelta",
-            "timedelta64",
         ]:
             return True
         elif inferred_type == "mixed":
@@ -809,6 +824,9 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
     """Convert bytes to pandas.DataFrame.
+
+    Using this function in production needs to make sure that
+    the pyarrow version >= 14.0.1.
 
     Parameters
     ----------
@@ -1038,7 +1056,9 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does
 # return that in some situations.
-def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
+def infer_vegalite_type(
+    data: Series[Any],
+) -> VegaLiteType:
     """
     From an array-like input, infer the correct vega typecode
     ('ordinal', 'nominal', 'quantitative', or 'temporal')
@@ -1060,7 +1080,9 @@ def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
     ]:
         return "quantitative"
     elif typ == "categorical" and data.cat.ordered:
-        return ("ordinal", data.cat.categories.tolist())
+        # TODO(lukasmasuch): Is this correct, I cannot find any reference that
+        # altair supports a tuple here. It seems to be supported via sort instead?
+        return ("ordinal", data.cat.categories.tolist())  # type: ignore[return-value]
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [

@@ -18,6 +18,10 @@ syntax = "proto3";
 
 // A page in the app. Includes both the name of the page as well as the full
 // path to the corresponding script file.
+//
+// NOTE: This proto type is used by some external services so needs to remain
+// relatively stable. While it isn't entirely set in stone, changing it
+// may require a good amount of effort so should be avoided if possible.
 message AppPage {
   string page_script_hash = 1;
   string page_name = 2;

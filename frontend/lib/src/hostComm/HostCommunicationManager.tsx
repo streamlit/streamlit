@@ -41,6 +41,7 @@ export interface HostCommunicationProps {
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
+  readonly sendAppHeartbeat: () => void
   readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
@@ -178,6 +179,10 @@ export default class HostCommunicationManager {
 
     if (message.type === "REQUEST_PAGE_CHANGE") {
       this.props.pageChanged(message.pageScriptHash)
+    }
+
+    if (message.type === "SEND_APP_HEARTBEAT") {
+      this.props.sendAppHeartbeat()
     }
 
     if (message.type === "SET_AUTH_TOKEN") {

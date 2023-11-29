@@ -77,7 +77,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     endpoints: endpoints,
-    elements: AppRoot.empty(),
+    elements: AppRoot.empty(true),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
