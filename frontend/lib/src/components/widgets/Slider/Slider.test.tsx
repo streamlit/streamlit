@@ -16,8 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { Slider as UISlider } from "baseui/slider"
-import { screen } from "@testing-library/react"
+import { screen, fireEvent } from "@testing-library/react"
 
 import TimezoneMock from "timezone-mock"
 
@@ -25,7 +24,7 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Slider as SliderProto,
 } from "@streamlit/lib/src/proto"
-import { render, mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import Slider, { Props } from "./Slider"
@@ -54,6 +53,15 @@ const getProps = (
   theme: mockTheme.emotion,
   ...props,
 })
+
+const triggerChangeEvent = (
+  element: Element,
+  key: "ArrowLeft" | "ArrowRight"
+): void => {
+  fireEvent.focus(element)
+  fireEvent.keyDown(element, { key })
+  fireEvent.keyUp(element, { key })
+}
 
 describe("Slider widget", () => {
   jest.useFakeTimers()
@@ -150,23 +158,22 @@ describe("Slider widget", () => {
 
     it("handles value changes", async () => {
       const props = getProps()
+
+      render(<Slider {...props} />)
       jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
-      const wrapper = mount(<Slider {...props} />)
-      // @ts-expect-error
-      wrapper.find(UISlider).prop("onChange")({ value: [10] })
-
+      const slider = screen.getByRole("slider")
+      triggerChangeEvent(slider, "ArrowRight")
       // We need to do this as we are using a debounce when the widget value is set
       jest.runAllTimers()
-      wrapper.update()
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
-        [10],
+        [6],
         { fromUi: true }
       )
 
-      expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
+      expect(slider).toHaveAttribute("aria-valuenow", "6")
     })
 
     it("resets its value when form is cleared", async () => {
@@ -174,28 +181,25 @@ describe("Slider widget", () => {
       const props = getProps({ formId: "form" })
       props.widgetMgr.setFormClearOnSubmit("form", true)
 
+      render(<Slider {...props} />)
+
       jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
-      const wrapper = mount(<Slider {...props} />)
-
-      // Change the widget value
-      // @ts-expect-error
-      wrapper.find(UISlider).prop("onChange")({ value: [10] })
+      const slider = screen.getByRole("slider")
+      triggerChangeEvent(slider, "ArrowRight")
 
       jest.runAllTimers()
-      wrapper.update()
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
         props.element,
-        [10],
+        [6],
         { fromUi: true }
       )
 
-      expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
+      expect(slider).toHaveAttribute("aria-valuenow", "6")
 
       // "Submit" the form
       props.widgetMgr.submitForm("form")
-      wrapper.update()
 
       // Our widget should be reset, and the widgetMgr should be updated
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
@@ -206,9 +210,7 @@ describe("Slider widget", () => {
         }
       )
 
-      expect(wrapper.find(UISlider).prop("value")).toStrictEqual(
-        props.element.default
-      )
+      expect(slider).toHaveAttribute("aria-valuenow", "5")
     })
   })
 
@@ -263,74 +265,71 @@ describe("Slider widget", () => {
     })
 
     describe("value should be within bounds", () => {
-      const props = getProps({ default: [1, 9] })
-      const wrapper = mount(<Slider {...props} />)
-
       it("start > end", () => {
-        // @ts-expect-error
-        wrapper.find(UISlider).prop("onChange")({
-          value: [11, 10],
-        })
-        wrapper.update()
+        const props = getProps({ default: [5, 5] })
+        render(<Slider {...props} />)
 
-        expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10, 10])
+        const firstSlider = screen.getAllByRole("slider")[0]
+        triggerChangeEvent(firstSlider, "ArrowRight")
+
+        expect(screen.getAllByRole("slider")[0]).toHaveAttribute(
+          "aria-valuenow",
+          "5"
+        )
       })
 
       it("start < min", () => {
-        // @ts-expect-error
-        wrapper.find(UISlider).prop("onChange")({
-          value: [-1, 10],
-        })
-        wrapper.update()
+        const props = getProps({ default: [0, 10] })
+        render(<Slider {...props} />)
 
-        expect(wrapper.find(UISlider).prop("value")).toStrictEqual([0, 10])
+        const firstSlider = screen.getAllByRole("slider")[0]
+        triggerChangeEvent(firstSlider, "ArrowLeft")
+
+        expect(firstSlider).toHaveAttribute("aria-valuenow", "0")
       })
 
       it("start > max", () => {
-        // @ts-expect-error
-        wrapper.find(UISlider).prop("onChange")({
-          value: [11],
-        })
-        wrapper.update()
+        const props = getProps({ default: [10] })
+        render(<Slider {...props} />)
 
-        expect(wrapper.find(UISlider).prop("value")).toStrictEqual([10])
+        const slider = screen.getByRole("slider")
+        triggerChangeEvent(slider, "ArrowRight")
+
+        expect(slider).toHaveAttribute("aria-valuenow", "10")
       })
 
       it("end < min", () => {
-        // @ts-expect-error
-        wrapper.find(UISlider).prop("onChange")({
-          value: [1, -1],
-        })
-        wrapper.update()
+        const props = getProps({ default: [0] })
+        render(<Slider {...props} />)
 
-        expect(wrapper.find(UISlider).prop("value")).toStrictEqual([0, 0])
+        const slider = screen.getByRole("slider")
+        triggerChangeEvent(slider, "ArrowLeft")
+
+        expect(slider).toHaveAttribute("aria-valuenow", "0")
       })
 
       it("end > max", () => {
-        // @ts-expect-error
-        wrapper.find(UISlider).prop("onChange")({
-          value: [1, 11],
-        })
-        wrapper.update()
+        const props = getProps({ default: [0, 10] })
+        render(<Slider {...props} />)
 
-        expect(wrapper.find(UISlider).prop("value")).toStrictEqual([1, 10])
+        const secondSlider = screen.getAllByRole("slider")[1]
+        triggerChangeEvent(secondSlider, "ArrowRight")
+
+        expect(secondSlider).toHaveAttribute("aria-valuenow", "10")
       })
     })
 
     it("handles value changes", async () => {
       const props = getProps({ default: [1, 9] })
+
+      render(<Slider {...props} />)
       jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
-      const wrapper = mount(<Slider {...props} />)
-
-      // @ts-expect-error
-      wrapper.find(UISlider).prop("onChange")({
-        value: [1, 10],
-      })
+      const sliders = screen.getAllByRole("slider")
+      triggerChangeEvent(sliders[1], "ArrowRight")
 
       // We need to do this as we are using a debounce when the widget value is set
       jest.runAllTimers()
-      wrapper.update()
 
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
@@ -339,7 +338,8 @@ describe("Slider widget", () => {
           fromUi: true,
         }
       )
-      expect(wrapper.find(UISlider).prop("value")).toStrictEqual([1, 10])
+      expect(sliders[0]).toHaveAttribute("aria-valuenow", "1")
+      expect(sliders[1]).toHaveAttribute("aria-valuenow", "10")
     })
   })
 
@@ -436,20 +436,12 @@ describe("Slider widget", () => {
         ],
       }
       const props = getProps(originalProps)
-      const wrapper = mount(<Slider {...props} />)
+      render(<Slider {...props} />)
 
-      // @ts-expect-error
-      wrapper.find(UISlider).prop("onChange")({
-        value: [4],
-      })
-      wrapper.update()
+      const slider = screen.getByRole("slider")
+      triggerChangeEvent(slider, "ArrowRight")
 
-      const sliderDOMNodes = wrapper.find("div[role='slider']")
-      sliderDOMNodes.forEach(node => {
-        expect(node.getDOMNode().getAttribute("aria-valuetext")).toEqual(
-          "blue"
-        )
-      })
+      expect(slider).toHaveAttribute("aria-valuetext", "yellow")
     })
 
     it("sets aria-valuetext correctly for a range", () => {
