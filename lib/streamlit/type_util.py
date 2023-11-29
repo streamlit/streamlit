@@ -1079,15 +1079,15 @@ def infer_vegalite_type(
         "complex",
     ]:
         return "quantitative"
-    # TODO(lukasmasuch): Our built-in chart implementation doesn't correctly support
-    # handling ordered categorical data yet so we just fall back to nominal for now.
-    # To support it, we would need to check if the return value from infer_vegalite_type
-    # is a tuple, and split it up into type and sort. But ordered categorical data
-    # are probably very rare, so we can just handling it as nominal might be fine.
-    # Related issue: https://github.com/streamlit/streamlit/issues/7776
 
-    # elif typ == "categorical" and data.cat.ordered:
-    #     return ("ordinal", data.cat.categories.tolist())
+    elif typ == "categorical" and data.cat.ordered:
+        # STREAMLIT MOD: The original code returns a tuple here:
+        # return ("ordinal", data.cat.categories.tolist())
+        # But returning the tuple here isn't compatible with our
+        # built-in chart implementation. And it also doesn't seem to be necessary.
+        # Altair already extracts the correct sort order somewhere else.
+        # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
+        return "ordinal"
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [

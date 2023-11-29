@@ -585,6 +585,32 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_chart_with_ordered_categorical_data(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that built-in charts support ordered categorical data."""
+        df = df = pd.DataFrame(
+            {
+                "categorical": pd.Series(
+                    pd.Categorical(
+                        ["b", "c", "a", "a"], categories=["c", "b", "a"], ordered=True
+                    )
+                ),
+                "numbers": pd.Series([1, 2, 3, 4]),
+            }
+        )
+
+        chart_command(df, x="categorical", y="numbers")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        print(chart_spec)
+        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
+        self.assertEqual(chart_spec["encoding"]["x"]["type"], "ordinal")
+        self.assertEqual(chart_spec["encoding"]["y"]["type"], "quantitative")
+
     def test_line_chart_with_named_index(self):
         """Test st.line_chart with a named index."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
