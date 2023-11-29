@@ -24,7 +24,7 @@ module.exports = {
     "!src/**/*.min.js",
   ],
   // needed for vegalite tests as vega uses canvas
-  setupFiles: ["jest-canvas-mock"],
+  setupFiles: ["jest-canvas-mock", "<rootDir>/src/setupTestEnv.js"],
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.js"],
   testMatch: ["<rootDir>/src/**/*.{test,}.{js,jsx,ts,tsx}"],
   // for things such as global window and more. https://github.com/jsdom/jsdom
