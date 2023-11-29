@@ -14,6 +14,7 @@
 
 from typing import Dict, Iterator, List, MutableMapping, Set, Tuple, Union
 
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.query_params import _missing_key_error_message
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
@@ -31,6 +32,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             return len(qp)
 
+    @gather_metrics("query_params.get_item")
     def __getitem__(self, key: str) -> str:
         with get_session_state().query_params() as qp:
             return qp[key]
@@ -39,12 +41,14 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             del qp[key]
 
+    @gather_metrics("query_params.set_item")
     def __setitem__(
         self, key: str, value: Union[str, Set[str], Tuple[str], List[str]]
     ) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
+    @gather_metrics("query_params.get_attr")
     def __getattr__(self, key: str) -> str:
         with get_session_state().query_params() as qp:
             try:
@@ -59,6 +63,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
             except KeyError:
                 raise AttributeError(_missing_key_error_message(key))
 
+    @gather_metrics("query_params.set_attr")
     def __setattr__(
         self, key: str, value: Union[str, Set[str], Tuple[str], List[str]]
     ) -> None:
@@ -68,10 +73,12 @@ class QueryParamsProxy(MutableMapping[str, str]):
             except KeyError:
                 raise AttributeError(_missing_key_error_message(key))
 
+    @gather_metrics("query_params.get_all")
     def get_all(self, key: str) -> List[str]:
         with get_session_state().query_params() as qp:
             return qp.get_all(key)
 
+    @gather_metrics("query_params.clear")
     def clear(self) -> None:
         with get_session_state().query_params() as qp:
             qp.clear()
