@@ -42,7 +42,7 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
   } = p
 
   const [editMode, setEditMode] = React.useState<boolean>(
-    uri === "" || forceEditMode
+    !readonly && (!uri || forceEditMode)
   )
 
   const onEditClick = React.useCallback(() => {
