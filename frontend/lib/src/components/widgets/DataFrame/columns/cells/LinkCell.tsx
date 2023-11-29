@@ -97,15 +97,6 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
 
       ctx.strokeStyle = theme.linkColor
       ctx.stroke()
-
-      ctx.fillStyle = highlighted
-        ? blend(theme.accentLight, theme.bgCell)
-        : theme.bgCell
-      ctx.fillText(displayValue, drawX - 1, drawY)
-      ctx.fillText(displayValue, drawX + 1, drawY)
-
-      ctx.fillText(displayValue, drawX - 2, drawY)
-      ctx.fillText(displayValue, drawX + 2, drawY)
     }
 
     ctx.fillStyle = theme.linkColor
