@@ -27,6 +27,7 @@ import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
 import { LineChartColumn, BarChartColumn } from "./ChartColumn"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
+export type { LinkCell } from "./cells/LinkCell"
 
 import { ColumnCreator } from "./utils"
 import { linkCellRenderer } from "./cells/LinkCell"
