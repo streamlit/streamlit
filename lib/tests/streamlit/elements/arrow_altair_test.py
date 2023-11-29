@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import unittest
 from datetime import date
 from functools import reduce
 from typing import Any, Callable
@@ -26,7 +27,7 @@ import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.type_util import bytes_to_data_frame, is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks, snowpark_mocks
 
@@ -585,6 +586,10 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
+    @unittest.skipIf(
+        is_pandas_version_less_than("2.0.0") is True,
+        "This test only runs if Pandas is >= 2.0.0",
+    )
     @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_ordered_categorical_data(
         self, chart_command: Callable, altair_type: str
