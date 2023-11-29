@@ -141,6 +141,8 @@ Key: TypeAlias = Union[str, int]
 
 LabelVisibility = Literal["visible", "hidden", "collapsed"]
 
+VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
+
 
 class SupportsStr(Protocol):
     def __str__(self) -> str:
@@ -1054,7 +1056,9 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does
 # return that in some situations.
-def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
+def infer_vegalite_type(
+    data: Series[Any],
+) -> VegaLiteType:
     """
     From an array-like input, infer the correct vega typecode
     ('ordinal', 'nominal', 'quantitative', or 'temporal')
@@ -1075,8 +1079,15 @@ def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
         "complex",
     ]:
         return "quantitative"
+
     elif typ == "categorical" and data.cat.ordered:
-        return ("ordinal", data.cat.categories.tolist())
+        # STREAMLIT MOD: The original code returns a tuple here:
+        # return ("ordinal", data.cat.categories.tolist())
+        # But returning the tuple here isn't compatible with our
+        # built-in chart implementation. And it also doesn't seem to be necessary.
+        # Altair already extracts the correct sort order somewhere else.
+        # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
+        return "ordinal"
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [
