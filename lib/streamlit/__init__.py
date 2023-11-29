@@ -211,8 +211,13 @@ connection = _connection
 experimental_user = _UserInfoProxy()
 experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
-experimental_get_query_params = _get_query_params
-experimental_set_query_params = _set_query_params
+# TODO(willhuang1997): Make sure this date is correct. A placeholder is here for now
+experimental_get_query_params = _deprecate_func_name(
+    _get_query_params, "experimental_get_query_params", "2024-02-13"
+)
+experimental_set_query_params = _deprecate_func_name(
+    _set_query_params, "experimental_set_query_params", "2024-02-13"
+)
 experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(
