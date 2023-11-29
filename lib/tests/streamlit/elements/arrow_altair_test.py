@@ -609,6 +609,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         print(chart_spec)
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["type"], "ordinal")
+        self.assertEqual(chart_spec["encoding"]["x"]["sort"], ["c", "b", "a"])
         self.assertEqual(chart_spec["encoding"]["y"]["type"], "quantitative")
 
     def test_line_chart_with_named_index(self):
