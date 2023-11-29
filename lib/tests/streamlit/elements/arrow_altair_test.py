@@ -21,6 +21,7 @@ from typing import Any, Callable
 import altair as alt
 import pandas as pd
 import pytest
+from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
@@ -586,11 +587,11 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
-    @unittest.skipIf(
-        is_pandas_version_less_than("2.0.0") is True,
-        "This test only runs if Pandas is >= 2.0.0",
-    )
     @parameterized.expand(ST_CHART_ARGS)
+    @unittest.skipIf(
+        version.parse(alt.__version__) < version.parse("5.0.0"),
+        "This test only runs if Pandas is >= 5.0.0",
+    )
     def test_chart_with_ordered_categorical_data(
         self, chart_command: Callable, altair_type: str
     ):
