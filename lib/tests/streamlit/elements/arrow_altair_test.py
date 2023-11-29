@@ -606,7 +606,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         chart_spec = json.loads(proto.spec)
 
-        print(chart_spec)
         self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
         self.assertEqual(chart_spec["encoding"]["x"]["type"], "ordinal")
         self.assertEqual(chart_spec["encoding"]["x"]["sort"], ["c", "b", "a"])
