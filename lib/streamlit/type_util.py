@@ -1084,6 +1084,8 @@ def infer_vegalite_type(
     # To support it, we would need to check if the return value from infer_vegalite_type
     # is a tuple, and split it up into type and sort. But ordered categorical data
     # are probably very rare, so we can just handling it as nominal might be fine.
+    # Related issue: https://github.com/streamlit/streamlit/issues/7776
+
     # elif typ == "categorical" and data.cat.ordered:
     #     return ("ordinal", data.cat.categories.tolist())
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
