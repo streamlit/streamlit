@@ -22,7 +22,8 @@ def test_arrow_vega_lite_chart(themed_app: Page):
     arrow_vega_lite_charts = themed_app.locator("[data-testid=stArrowVegaLiteChart]")
     expect(arrow_vega_lite_charts).to_have_count(13)
 
-    for chart in arrow_vega_lite_charts:
+    for idx in range(13):
+        chart = arrow_vega_lite_charts.nth(idx)
         canvas = chart.locator("canvas").nth(0)
         expect(canvas).to_be_visible()
         expect(canvas).to_have_class("marks")
