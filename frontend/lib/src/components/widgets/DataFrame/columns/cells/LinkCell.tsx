@@ -132,7 +132,7 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     const redirectLink = onClickSelect(e)
 
     if (!isNullOrUndefined(redirectLink)) {
-      window.open(redirectLink, "_blank")
+      window.open(redirectLink, "_blank", "noopener,noreferrer")
     }
   },
   onDelete: c => ({
