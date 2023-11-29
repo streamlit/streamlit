@@ -163,3 +163,17 @@ st.vega_lite_chart(df, spec, use_container_width=True, theme="streamlit")
 
 st.write("Show default theme:")
 st.vega_lite_chart(df, spec, use_container_width=True, theme=None)
+
+st.write("Show custom colors:")
+st.vega_lite_chart(
+    df,
+    {
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
+        "config": {"background": "purple", "axis": {"labelColor": "blue"}},
+    },
+    use_container_width=True,
+)
