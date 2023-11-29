@@ -590,7 +590,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
     @parameterized.expand(ST_CHART_ARGS)
     @unittest.skipIf(
         version.parse(alt.__version__) < version.parse("5.0.0"),
-        "This test only runs if Pandas is >= 5.0.0",
+        "This test only runs if Altair is >= 5.0.0",
     )
     def test_chart_with_ordered_categorical_data(
         self, chart_command: Callable, altair_type: str
