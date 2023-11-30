@@ -24,18 +24,18 @@ class ScriptDataTest(unittest.TestCase):
     def test_script_folder_and_name_set(self):
         script_data = ScriptData(
             "/path/to/some/script.py",
-            "streamlit run /path/to/some/script.py",
+            False,
         )
 
         assert script_data.main_script_path == "/path/to/some/script.py"
-        assert script_data.command_line == "streamlit run /path/to/some/script.py"
+        assert script_data.is_hello == False
         assert script_data.script_folder == "/path/to/some"
         assert script_data.name == "script"
 
     def test_is_frozen(self):
         script_data = ScriptData(
             "/path/to/some/script.py",
-            "streamlit run /path/to/some/script.py",
+            False,
         )
 
         with pytest.raises(FrozenInstanceError):
