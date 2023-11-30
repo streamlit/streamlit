@@ -100,10 +100,7 @@ class QueryParams(MutableMapping[str, str]):
 
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             return
-        if isinstance(val, list):
-            self._query_params[key] = [str(item) for item in val]
-        else:
-            self._query_params[key] = str(val)
+        self._query_params[key] = val
 
 
 def _missing_key_error_message(key: str) -> str:
