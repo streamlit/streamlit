@@ -69,6 +69,6 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             qp.clear()
 
-    def to_dict(self) -> Dict[str, Union[List[str], str]]:
+    def to_dict(self) -> Dict[str, str]:
         with get_session_state().query_params() as qp:
             return qp.to_dict()

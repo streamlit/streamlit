@@ -110,3 +110,8 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test__setitem__raises_exception_for_embed_options_key(self):
         with pytest.raises(StreamlitAPIException):
             self.query_params["embed_options"] = "show_toolbar"
+
+    def test_to_dict(self):
+        self.query_params["baz"] = ""
+        result_dict = {"foo": "bar", "two": "y", "baz": ""}
+        assert self.query_params.to_dict() == result_dict
