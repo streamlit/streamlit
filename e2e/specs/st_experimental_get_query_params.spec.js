@@ -29,19 +29,18 @@ describe("st.experimental_get_query_string", () => {
       "have.length",
       2
     );
-    cy.getIndexed(".element-container [data-testid='stMarkdownContainer']", 0)
-      .contains(
-        "Please replace st.experimental_get_query_params with st.query_params. " +
-        "st.experimental_get_query_params will be removed after 2024-04-13. " +
-        "Please refer to our docs page to replace experimental_get_query_params."
-      );
+    cy.getIndexed(".element-container [data-testid='stMarkdownContainer']", 0).contains(
+      "Please replace st.experimental_get_query_params with st.query_params. " +
+      "st.experimental_get_query_params will be removed after 2024-04-13. " +
+      "Please refer to our docs page to replace experimental_get_query_params."
+    );
 
     cy.getIndexed(".element-container [data-testid='stMarkdownContainer']", 1).contains(
       "Current query string is: {" +
-        "'show_map': ['True'], " +
-        "'number_of_countries': ['2'], " +
-        "'selected': ['asia', 'america']" +
-        "}"
+      "'show_map': ['True'], " +
+      "'number_of_countries': ['2'], " +
+      "'selected': ['asia', 'america']" +
+      "}"
     );
   });
 });
