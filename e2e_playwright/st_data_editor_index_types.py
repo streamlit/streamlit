@@ -89,3 +89,11 @@ st.data_editor(
 #     use_container_width=True,
 #     num_rows="dynamic",
 # )
+
+# Timedelta Index are currently not supported for editing:
+# st.subheader("Timedelta Index (pd.TimedeltaIndex)")
+# st.data_editor(
+#     SPECIAL_TYPES_DF.set_index("timedelta"),
+#     use_container_width=True,
+#     num_rows="dynamic",
+# )

@@ -31,6 +31,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def __getitem__(self, key: str) -> str:
         """Retrieves a value for a given key in query parameters.
+
         Returns the last item in a list or an empty string if empty.
         If the key is not present, raise KeyError.
         """
@@ -45,11 +46,11 @@ class QueryParams(MutableMapping[str, str]):
                     return value[-1]
             return value
         except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+            raise KeyError(missing_key_error_message(key))
 
-    # Type checking users should handle the string serialization themselves
-    # We will accept any type for the list and serialize to str just in case
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
+        # Type checking users should handle the string serialization themselves
+        # We will accept any type for the list and serialize to str just in case
         if isinstance(value, list):
             self._query_params[key] = [str(item) for item in value]
         else:
@@ -57,11 +58,11 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
-        if key in self._query_params:
+        try:
             del self._query_params[key]
             self._send_query_param_msg()
-        else:
-            raise KeyError(_missing_key_error_message(key))
+        except KeyError:
+            raise KeyError(missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
         if key not in self._query_params:
@@ -80,6 +81,7 @@ class QueryParams(MutableMapping[str, str]):
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
             self._query_params, ctx.query_string
@@ -96,5 +98,5 @@ class QueryParams(MutableMapping[str, str]):
         return {key: self[key] for key in self._query_params}
 
 
-def _missing_key_error_message(key: str) -> str:
+def missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'

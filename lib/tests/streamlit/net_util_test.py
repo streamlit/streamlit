@@ -37,6 +37,20 @@ class UtilTest(unittest.TestCase):
             m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
             self.assertEqual(None, net_util.get_external_ip())
 
+    def test_get_external_ip_use_http_by_default(self):
+        with requests_mock.mock() as m:
+            m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
+            m.get(net_util._AWS_CHECK_IP_HTTPS, text="5.6.7.8")
+            self.assertEqual("1.2.3.4", net_util.get_external_ip())
+            self.assertEqual(m.call_count, 1)
+
+    def test_get_external_ip_https_if_http_fails(self):
+        with requests_mock.mock() as m:
+            m.get(net_util._AWS_CHECK_IP, exc=requests.exceptions.ConnectTimeout)
+            m.get(net_util._AWS_CHECK_IP_HTTPS, text="5.6.7.8")
+            self.assertEqual("5.6.7.8", net_util.get_external_ip())
+            self.assertEqual(m.call_count, 2)
+
     def test_get_external_ip_html(self):
         # This tests the case where the external URL returns a web page.
         # https://github.com/streamlit/streamlit/issues/554#issuecomment-604847244
