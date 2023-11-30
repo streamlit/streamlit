@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactElement } from "react"
+
+import "@testing-library/jest-dom"
+
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { render } from "@streamlit/lib/src/test_util"
 import { screen } from "@testing-library/react"
@@ -47,31 +50,68 @@ function makeHorizontalBlock(numColumns: number): BlockNode {
   )
 }
 
-function makeVerticalBlock(children: BlockNode[] = []): BlockNode {
-  return new BlockNode(children, new BlockProto({ allowEmpty: true }))
+function makeVerticalBlock(
+  children: BlockNode[] = [],
+  additionalProps: Partial<BlockProto> = {}
+): BlockNode {
+  return new BlockNode(
+    children,
+    new BlockProto({ allowEmpty: true, ...additionalProps })
+  )
+}
+
+function makeVerticalBlockComponent(node: BlockNode): ReactElement {
+  return (
+    <VerticalBlock
+      node={node}
+      scriptRunId={""}
+      scriptRunState={ScriptRunState.NOT_RUNNING}
+      widgetsDisabled={false}
+      // @ts-expect-error
+      widgetMgr={undefined}
+      // @ts-expect-error
+      uploadClient={undefined}
+      // @ts-expect-error
+      componentRegistry={undefined}
+      // @ts-expect-error
+      formsData={undefined}
+    />
+  )
 }
 
 describe("Vertical Block Component", () => {
   window.ResizeObserver = ResizeObserver
   it("should render a horizontal block with empty columns", () => {
     const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)])
-    render(
-      <VerticalBlock
-        node={block}
-        scriptRunId={""}
-        scriptRunState={ScriptRunState.NOT_RUNNING}
-        widgetsDisabled={false}
-        // @ts-expect-error
-        widgetMgr={undefined}
-        // @ts-expect-error
-        uploadClient={undefined}
-        // @ts-expect-error
-        componentRegistry={undefined}
-        // @ts-expect-error
-        formsData={undefined}
-      />
-    )
+    render(makeVerticalBlockComponent(block))
 
     expect(screen.getAllByTestId("column")).toHaveLength(4)
+    expect(
+      screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
+    ).not.toHaveStyle("overflow: auto")
+  })
+
+  it("should activate scrolling when height is set", () => {
+    const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)], {
+      vertical: { height: 100 },
+    })
+
+    render(makeVerticalBlockComponent(block))
+
+    expect(
+      screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
+    ).toHaveStyle("overflow: auto")
+  })
+
+  it("should show border when border is True", () => {
+    const block: BlockNode = makeVerticalBlock([makeHorizontalBlock(4)], {
+      vertical: { border: true },
+    })
+
+    render(makeVerticalBlockComponent(block))
+
+    expect(
+      screen.getAllByTestId("stVerticalBlockBorderWrapper")[0]
+    ).toHaveStyle("border: 1px solid rgba(49, 51, 63, 0.2);")
   })
 })
