@@ -154,13 +154,20 @@ export const StyledVerticalBlockWrapper = styled.div<StyledVerticalBlockProps>(
 
 export interface StyledVerticalBlockBorderWrapperProps {
   border: boolean
+  height?: number
 }
 
 export const StyledVerticalBlockBorderWrapper =
-  styled.div<StyledVerticalBlockBorderWrapperProps>(({ theme, border }) => ({
-    ...(border && {
-      border: `1px solid ${theme.colors.fadedText10}`,
-      borderRadius: theme.radii.lg,
-      padding: "calc(1em - 1px)", // 1px to account for border.
-    }),
-  }))
+  styled.div<StyledVerticalBlockBorderWrapperProps>(
+    ({ theme, border, height }) => ({
+      ...(border && {
+        border: `1px solid ${theme.colors.fadedText10}`,
+        borderRadius: theme.radii.lg,
+        padding: "calc(1em - 1px)", // 1px to account for border.
+      }),
+      ...(height && {
+        height: `${height}px`,
+        overflow: "auto",
+      }),
+    })
+  )

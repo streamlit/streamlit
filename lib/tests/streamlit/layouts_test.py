@@ -160,6 +160,16 @@ class ContainerTest(DeltaGeneratorTestCase):
         self.assertEqual(container_block.add_block.vertical.border, False)
         self.assertEqual(container_block.add_block.allow_empty, False)
 
+    def test_height_parameter(self):
+        """Test that it can be called with height parameter"""
+        st.container(height=100)
+
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.height, 100)
+        # Should allow empty and have a border as default:
+        self.assertEqual(container_block.add_block.vertical.border, True)
+        self.assertEqual(container_block.add_block.allow_empty, True)
+
 
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
