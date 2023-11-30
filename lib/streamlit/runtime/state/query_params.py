@@ -46,7 +46,7 @@ class QueryParams(MutableMapping[str, str]):
                     return value[-1]
             return value
         except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+            raise KeyError(missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
         # Type checking users should handle the string serialization themselves
@@ -62,7 +62,7 @@ class QueryParams(MutableMapping[str, str]):
             del self._query_params[key]
             self._send_query_param_msg()
         except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+            raise KeyError(missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
         if key not in self._query_params:
@@ -97,5 +97,5 @@ class QueryParams(MutableMapping[str, str]):
         return self._query_params
 
 
-def _missing_key_error_message(key: str) -> str:
+def missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'

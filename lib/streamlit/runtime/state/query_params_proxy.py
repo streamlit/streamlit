@@ -59,10 +59,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
     def __setattr__(self, key: str, value: Union[str, List[str]]) -> None:
         with get_session_state().query_params() as qp:
-            try:
-                qp[key] = value
-            except KeyError:
-                raise AttributeError(_missing_key_error_message(key))
+            qp[key] = value
 
     def get_all(self, key: str) -> List[str]:
         with get_session_state().query_params() as qp:
