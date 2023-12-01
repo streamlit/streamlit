@@ -102,6 +102,9 @@ class QueryParams(MutableMapping[str, str]):
             return
         self._query_params[key] = val
 
+    def clear_with_no_forward_msg(self) -> None:
+        self._query_params.clear()
+
 
 def _missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'

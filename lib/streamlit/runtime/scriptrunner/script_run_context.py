@@ -16,6 +16,7 @@ import collections
 import threading
 from dataclasses import dataclass, field
 from typing import Callable, Counter, Dict, List, Optional, Set
+from urllib import parse
 
 from typing_extensions import Final, TypeAlias
 
@@ -82,6 +83,17 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
+
+        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
+        with self.session_state.query_params() as qp:
+            qp.clear_with_no_forward_msg()
+            for key, val in parsed_query_params.items():
+                if len(val) == 0:
+                    qp.set_with_no_forward_msg(key, val="")
+                elif len(val) == 1:
+                    qp.set_with_no_forward_msg(key, val=val[-1])
+                else:
+                    qp.set_with_no_forward_msg(key, val)
 
     def on_script_start(self) -> None:
         self._has_script_started = True
