@@ -148,7 +148,6 @@ interface State {
   dialog?: DialogProps | null
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
-  showPageNavigation: boolean
   menuItems?: PageConfig.IMenuItems | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
@@ -256,7 +255,6 @@ export class App extends PureComponent<Props, State> {
       },
       layout: PageConfig.Layout.CENTERED,
       initialSidebarState: PageConfig.SidebarState.AUTO,
-      showPageNavigation: true,
       menuItems: undefined,
       allowRunOnSave: true,
       scriptFinishedHandlers: [],
@@ -681,9 +679,9 @@ export class App extends PureComponent<Props, State> {
 
     this.setState({ menuItems })
 
-    if (showPageNavigation !== this.state.showPageNavigation) {
+    if (showPageNavigation === this.state.hideSidebarNav) {
       this.setState(() => ({
-        showPageNavigation,
+        hideSidebarNav: !showPageNavigation,
       }))
     }
   }
@@ -1634,7 +1632,6 @@ export class App extends PureComponent<Props, State> {
       dialog,
       elements,
       initialSidebarState,
-      showPageNavigation,
       menuItems,
       isFullScreen,
       scriptRunId,
@@ -1785,9 +1782,7 @@ export class App extends PureComponent<Props, State> {
                 appPages={this.state.appPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
-                hideSidebarNav={
-                  hideSidebarNav || hostHideSidebarNav || !showPageNavigation
-                }
+                hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
               />
               {renderedDialog}
             </StyledApp>

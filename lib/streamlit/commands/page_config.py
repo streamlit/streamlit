@@ -120,7 +120,7 @@ def set_page_config(
     initial_sidebar_state: InitialSideBarState = "auto",
     menu_items: Optional[MenuItems] = None,
     *,  # keyword-only args:
-    show_page_navigation: bool = True,
+    show_page_navigation: Optional[bool] = None,
 ) -> None:
     """
     Configures the default settings of the page.
@@ -227,14 +227,17 @@ def set_page_config(
         menu_items_proto = msg.page_config_changed.menu_items
         set_menu_items_proto(lowercase_menu_items, menu_items_proto)
 
-    # TODO: Order of precedence for show_page_navigation - config vs. set_page_config
-    msg.page_config_changed.show_page_navigation = show_page_navigation
-    if config.get_option("client.showPageNavigation") == False:
-        msg.page_config_changed.show_page_navigation = config.get_option(
-            "client.showPageNavigation"
-        )
+    # Setting show_page_navigation in set_page_config takes precedence over config.toml setting
+    if show_page_navigation is not None:
+        msg.page_config_changed.show_page_navigation = show_page_navigation
+    else:
+        if config.get_option("client.showPageNavigation") == False:
+            msg.page_config_changed.show_page_navigation = config.get_option(
+                "client.showPageNavigation"
+            )
+        else:
+            msg.page_config_changed.show_page_navigation = True
 
-    print(msg.page_config_changed.show_page_navigation)
     ctx = get_script_run_ctx()
     if ctx is None:
         return
