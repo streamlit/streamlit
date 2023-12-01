@@ -122,3 +122,10 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(IndexError):
             # no forward message should be sent
             self.get_message_from_queue(0)
+
+    def test_clear_with_no_forward_msg_sends_no_msg_and_clears_query_params(self):
+        self.query_params.clear_with_no_forward_msg()
+        assert len(self.query_params) == 0
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
