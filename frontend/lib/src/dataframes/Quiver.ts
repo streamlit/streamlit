@@ -549,25 +549,26 @@ export class Quiver {
   }
 
   /**
-   * Returns the categorical options defined for a given column.
+   * Returns the categorical options defined for a given data column.
    * Returns undefined if the column is not categorical.
+   *
+   * This function only works for non-index columns and expects the index at 0
+   * for the first non-index data column.
    */
-  public getCategoricalOptions(columnIndex: number): string[] | undefined {
-    // TODO(lukasmasuch): Also support headcolumns here to support
-    // categorical index columns in the future.
-    const { columns: numColumns } = this.dimensions
+  public getCategoricalOptions(dataColumnIndex: number): string[] | undefined {
+    const { dataColumns: numDataColumns } = this.dimensions
 
-    if (columnIndex < 0 || columnIndex >= numColumns) {
-      throw new Error(`Column index is out of range: ${columnIndex}`)
+    if (dataColumnIndex < 0 || dataColumnIndex >= numDataColumns) {
+      throw new Error(`Column index is out of range: ${dataColumnIndex}`)
     }
 
-    if (!(this._fields[columnIndex].type instanceof Dictionary)) {
+    if (!(this._fields[String(dataColumnIndex)].type instanceof Dictionary)) {
       // This is not a categorical column
       return undefined
     }
 
     const categoricalDict =
-      this._data.getChildAt(columnIndex)?.data[0]?.dictionary
+      this._data.getChildAt(dataColumnIndex)?.data[0]?.dictionary
     if (categoricalDict) {
       // get all values into a list
       const values = []
@@ -838,42 +839,57 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   /**
-   * Adjusts a timestamp to second based on the unit information in the field.
+   * Adjusts a time value to seconds based on the unit information in the field.
+   *
+   * The unit numbers are specified here:
+   * https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
    */
-  public static adjustTimestamp(data: number | bigint, field?: Field): number {
-    let timeInSeconds
+  public static convertToSeconds(
+    value: number | bigint,
+    unit: number
+  ): number {
+    let unitAdjustment
 
-    if (typeof data === "bigint") {
-      // TODO(lukasmasuch): We might need some special handling of nanoseconds since
-      // JavaScript's `Number` type can not represent those numbers accurately.
-      data = Number(data)
-    }
-
-    // Unit information:
-    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
-    if (field?.type?.unit === 1) {
+    if (unit === 1) {
       // Milliseconds
-      timeInSeconds = data / 1000
-    } else if (field?.type?.unit === 2) {
+      unitAdjustment = 1000
+    } else if (unit === 2) {
       // Microseconds
-      timeInSeconds = data / (1000 * 1000)
-    } else if (field?.type?.unit === 3) {
+      unitAdjustment = 1000 * 1000
+    } else if (unit === 3) {
       // Nanoseconds
-      timeInSeconds = data / (1000 * 1000 * 1000)
+      unitAdjustment = 1000 * 1000 * 1000
     } else {
-      // Interpret this as seconds as a fallback
-      timeInSeconds = data
+      // Interpret it as seconds as a fallback
+      return Number(value)
     }
 
-    return timeInSeconds
+    // Do the calculation based on bigints, if the value
+    // is a bigint and not safe for usage as number.
+    // This might lose some precision since it doesn't keep
+    // fractional parts.
+    if (typeof value === "bigint" && !Number.isSafeInteger(Number(value))) {
+      return Number(value / BigInt(unitAdjustment))
+    }
+
+    return Number(value) / unitAdjustment
   }
 
   private static formatTime(data: number, field?: Field): string {
-    const timeInSeconds = Quiver.adjustTimestamp(data, field)
+    const timeInSeconds = Quiver.convertToSeconds(data, field?.type?.unit ?? 0)
     return moment
-      .unix(Quiver.adjustTimestamp(data))
+      .unix(timeInSeconds)
       .utc()
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
+  }
+
+  private static formatDuration(data: number | bigint, field?: Field): string {
+    return moment
+      .duration(
+        Quiver.convertToSeconds(data, field?.type?.unit ?? 3),
+        "seconds"
+      )
+      .humanize()
   }
 
   /**
@@ -1042,6 +1058,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
         x as number | bigint | StructRow,
         field as Field
       )
+    }
+
+    if (typeName?.startsWith("timedelta")) {
+      return this.formatDuration(x as number | bigint, field)
     }
 
     if (typeName === "decimal") {
@@ -1234,8 +1254,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
       const contentType = this._types.index[columnIndex]
       const content = this.getIndexValue(dataRowIndex, columnIndex)
-      const field = this._fields[`__index_level_${String(columnIndex)}__`]
-
+      let field = this._fields[`__index_level_${String(columnIndex)}__`]
+      if (field === undefined) {
+        // If the index column has a name, we need to get it differently:
+        field = this._fields[String(columns - headerColumns)]
+      }
       return {
         type: DataFrameCellType.INDEX,
         cssId,
@@ -1362,6 +1385,8 @@ st.add_rows(my_styler.data)
   }
 
   private static parseFields(schema: ArrowSchema): Record<string, Field> {
+    // None-index data columns are listed first, and all index columns listed last
+    // within the fields array in arrow.
     return Object.fromEntries(
       (schema.fields || []).map((field, index) => [
         field.name.startsWith("__index_level_") ? field.name : String(index),

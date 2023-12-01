@@ -67,6 +67,9 @@ message BackMsg {
     // Requests that the server generate URLs for getting/uploading/deleting
     // files for the `st.file_uploader` widget
     FileURLsRequest file_urls_request = 16;
+
+    // Sends an app heartbeat message through the websocket
+    bool app_heartbeat = 17;
   }
 
   // An ID used to associate this BackMsg with the corresponding ForwardMsgs
@@ -76,5 +79,5 @@ message BackMsg {
 
   reserved 1, 2, 3, 4, 8, 9, 10;
 
-  // Next: 17
+  // Next: 18
 }

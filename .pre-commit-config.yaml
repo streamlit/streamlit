@@ -110,7 +110,7 @@ repos:
         pass_filenames: true
         files: \.py$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.2.0
+    rev: v1.5.4
     hooks:
       - id: insert-license
         name: Add license for all (S)CSS/JS(X)/TS(X) files
