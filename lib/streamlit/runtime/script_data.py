@@ -21,7 +21,7 @@ class ScriptData:
     """Contains parameters related to running a script."""
 
     main_script_path: str
-    command_line: str
+    is_hello: bool = False
     script_folder: str = field(init=False)
     name: str = field(init=False)
 

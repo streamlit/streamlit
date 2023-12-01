@@ -653,7 +653,7 @@ class AppSession:
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
-        imsg.command_line = self._script_data.command_line
+        imsg.is_hello = self._script_data.is_hello
         imsg.session_id = self.id
 
         return msg

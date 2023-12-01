@@ -46,19 +46,15 @@ describe("SessionInfo.setCurrent", () => {
 })
 
 describe("SessionInfo.isHello", () => {
-  test("is true only when initialized with `streamlit hello` commandline", () => {
+  test("is true only when `isHello` is true in current SessionInfo", () => {
     const sessionInfo = new SessionInfo()
     expect(sessionInfo.isHello).toBe(false)
 
-    sessionInfo.setCurrent(
-      mockSessionInfoProps({ commandLine: "random command line" })
-    )
-    expect(sessionInfo.isHello).toBe(false)
-
-    sessionInfo.setCurrent(
-      mockSessionInfoProps({ commandLine: "streamlit hello" })
-    )
+    sessionInfo.setCurrent(mockSessionInfoProps({ isHello: true }))
     expect(sessionInfo.isHello).toBe(true)
+
+    sessionInfo.setCurrent(mockSessionInfoProps({ isHello: false }))
+    expect(sessionInfo.isHello).toBe(false)
   })
 })
 
@@ -84,7 +80,7 @@ test("Props can be initialized from a protobuf", () => {
         scriptIsRunning: false,
       },
       sessionId: "sessionId",
-      commandLine: "commandLine",
+      isHello: false,
     },
   })
 
@@ -95,5 +91,6 @@ test("Props can be initialized from a protobuf", () => {
   expect(props.installationId).toEqual("installationId")
   expect(props.installationIdV3).toEqual("installationIdV3")
   expect(props.maxCachedMessageAge).toEqual(31)
-  expect(props.commandLine).toEqual("commandLine")
+  expect(props.commandLine).toBeUndefined()
+  expect(props.isHello).toBeFalsy()
 })

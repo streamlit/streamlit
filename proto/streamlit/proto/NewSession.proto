@@ -72,13 +72,17 @@ message Initialize {
   // The session status at the time the connection was established
   SessionStatus session_status = 4;
 
-  // the actual command line as a string
+  // DEPRECATED: We no longer send this to the frontend for security reasons.
+  // The actual command line as a string
   string command_line = 5;
 
   // The AppSession.id for this connection's AppSession.
   // This is used to associate uploaded files with the client that uploaded
   // them.
   string session_id = 6;
+
+  // True if the command used to start this app was `streamlit hello`.
+  bool is_hello = 7;
 }
 
 // App configuration options, initialized mainly from the

@@ -35,7 +35,8 @@ export interface Props {
   readonly installationId: string
   readonly installationIdV3: string
   readonly maxCachedMessageAge: number
-  readonly commandLine: string
+  readonly commandLine?: string // Unused, but kept around for compatibility
+  readonly isHello: boolean
 }
 
 export class SessionInfo {
@@ -82,9 +83,7 @@ export class SessionInfo {
 
   /** True if `SessionInfo.current` refers to a "streamlit hello" session. */
   public get isHello(): boolean {
-    return (
-      this._current != null && this._current.commandLine === "streamlit hello"
-    )
+    return this._current != null && this._current.isHello
   }
 
   /** Create SessionInfo Props from the relevant bits of an initialize message. */
@@ -101,7 +100,7 @@ export class SessionInfo {
       installationId: userInfo.installationId,
       installationIdV3: userInfo.installationIdV3,
       maxCachedMessageAge: config.maxCachedMessageAge,
-      commandLine: initialize.commandLine,
+      isHello: initialize.isHello,
     }
   }
 }

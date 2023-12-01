@@ -105,12 +105,13 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         config = RuntimeConfig(
             script_path="mock/script/path.py",
-            command_line="",
+            command_line=None,
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
             session_manager_class=MockSessionManager,
             session_storage=mock.MagicMock(),
             cache_storage_manager=MemoryCacheStorageManager(),
+            is_hello=False,
         )
         self.runtime = Runtime(config)
 

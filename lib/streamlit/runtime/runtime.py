@@ -83,8 +83,8 @@ class RuntimeConfig:
     # The filesystem path of the Streamlit script to run.
     script_path: str
 
-    # The (optional) command line that Streamlit was started with
-    # (e.g. "streamlit run app.py")
+    # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
+    # longer use this anywhere.
     command_line: Optional[str]
 
     # The storage backend for Streamlit's MediaFileManager.
@@ -103,6 +103,9 @@ class RuntimeConfig:
 
     # The SessionStorage instance for the SessionManager to use.
     session_storage: SessionStorage = field(default_factory=MemorySessionStorage)
+
+    # True if the command used to start Streamlit was `streamlit hello`.
+    is_hello: bool = False
 
 
 class RuntimeState(Enum):
@@ -183,7 +186,7 @@ class Runtime:
         self._loop_coroutine_task: Optional[asyncio.Task[None]] = None
 
         self._main_script_path = config.script_path
-        self._command_line = config.command_line or ""
+        self._is_hello = config.is_hello
 
         self._state = RuntimeState.INITIAL
 
@@ -367,7 +370,7 @@ class Runtime:
 
         session_id = self._session_mgr.connect_session(
             client=client,
-            script_data=ScriptData(self._main_script_path, self._command_line or ""),
+            script_data=ScriptData(self._main_script_path, self._is_hello),
             user_info=user_info,
             existing_session_id=existing_session_id,
             session_id_override=session_id_override,
@@ -540,7 +543,7 @@ class Runtime:
         # SessionManager intentionally. This isn't a "real" session and is only being
         # used to test that the script runs without error.
         session = AppSession(
-            script_data=ScriptData(self._main_script_path, self._command_line),
+            script_data=ScriptData(self._main_script_path, self._is_hello),
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,

@@ -620,12 +620,13 @@ class ScriptCheckTest(RuntimeTestCase):
         # to specify a non-mocked path.)
         config = RuntimeConfig(
             script_path=self._path,
-            command_line="mock command line",
+            command_line=None,
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
             session_manager_class=MagicMock,
             session_storage=MagicMock(),
             cache_storage_manager=MagicMock(),
+            is_hello=False,
         )
         self.runtime = Runtime(config)
         await self.runtime.start()
