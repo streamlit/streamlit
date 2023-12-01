@@ -517,9 +517,20 @@ def LinkColumn(
         If the input is invalid, it will not be submitted.
 
     display_text: str or None
-        If the string value is a regular expression (JS flavor, e.g. ``"^https://.+$"``), then the displayed
-        value in each cell will be the first matching group from the cell's uri value. If the string value is
-        not a regular expression (e.g. "Download"), then it will simply be displayed in each cell.
+        The text that is displayed in the cell. Can be one of:
+
+        * None (default) to display the URL itself.
+
+        * A string that is displayed in every cell, e.g. “Open link”.
+
+        * A regular expression (JS flavor, detected by usage of parentheses)
+          to extract a part of the URL via a capture group, e.g. "https:\/\/(.*?)\.streamlit\.app”
+          to extract the display text “foo” from the URL “https://foo.streamlit.app”.
+
+        For more complex cases, you may use [Pandas Styler's format function on the underlying
+        dataframe](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html).
+        Note that this makes the app slow, doesn't work with editable columns, and might 
+        be removed in the future.
 
 
     Examples
