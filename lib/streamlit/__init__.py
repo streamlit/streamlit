@@ -102,12 +102,9 @@ def _update_logger() -> None:
 
 
 # TODO(willhuang1997): Make sure this docs link gets updated for get and set query params.
-_experimental_query_params_deprecate_msg = (
-    "Please refer to our [docs page](%SOME_DOC_LINK%) to replace"
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
+    "Refer to our [docs page](%SOME_DOC_LINK%) for more information."
 )
-_EXPERIMENTAL_GET_QUERY_PARAMS = "experimental_get_query_params"
-_EXPERIMENTAL_SET_QUERY_PARAMS = "experimental_set_query_params"
-
 
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
@@ -221,18 +218,18 @@ experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
-    _EXPERIMENTAL_GET_QUERY_PARAMS,
+    "experimental_get_query_params",
     # TODO(willhuang1997): Make sure this date is correct for get and set query params. A placeholder is here for now.
     "2024-04-13",
-    f"{_experimental_query_params_deprecate_msg} {_EXPERIMENTAL_GET_QUERY_PARAMS}.",
+    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
 experimental_set_query_params = _deprecate_func_name(
     _set_query_params,
-    _EXPERIMENTAL_SET_QUERY_PARAMS,
+    "experimental_set_query_params",
     # TODO(willhuang1997): Make sure this date is correct for get and set query params. A placeholder is here for now.
     "2024-04-13",
-    f"{_experimental_query_params_deprecate_msg} {_EXPERIMENTAL_SET_QUERY_PARAMS}.",
+    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
 experimental_rerun = _experimental_rerun
