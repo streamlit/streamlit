@@ -254,7 +254,7 @@ def app_with_query_params(
     page: Page, app_port: int, request: FixtureRequest
 ) -> Tuple[Page, Dict]:
     """Fixture that opens the app with additional query parameters.
-    The query parameters are passed as a dictionary in the 'query_params' key of the request.
+    The query parameters are passed as a dictionary in the 'param' key of the request.
     """
     query_params = request.param
     query_string = parse.urlencode(query_params, doseq=True)
