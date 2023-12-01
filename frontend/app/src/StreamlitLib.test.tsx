@@ -137,6 +137,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       installationId: "",
       installationIdV3: "",
       commandLine: "",
+      isHello: false,
     })
 
     // Initialize React state
