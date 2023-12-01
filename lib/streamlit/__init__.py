@@ -101,11 +101,6 @@ def _update_logger() -> None:
     _logger.init_tornado_logs()
 
 
-# TODO(willhuang1997): Make sure this docs link gets updated for get and set query params.
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
-    "Refer to our [docs page](%SOME_DOC_LINK%) for more information."
-)
-
 # Make this file only depend on config option in an asynchronous manner. This
 # avoids a race condition when another file (such as a test file) tries to pass
 # in an alternative config.
@@ -216,6 +211,12 @@ connection = _connection
 experimental_user = _UserInfoProxy()
 experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
+
+# TODO(willhuang1997): Make sure this docs link gets updated for get and set query params.
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
+    "Refer to our [docs page](%SOME_DOC_LINK%) for more information."
+)
+
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
     "experimental_get_query_params",
