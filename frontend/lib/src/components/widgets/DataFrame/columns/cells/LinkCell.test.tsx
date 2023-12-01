@@ -16,11 +16,10 @@
 
 import * as React from "react"
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { LinkCell, linkCellRenderer } from "./LinkCell"
-import { fireEvent, screen } from "@testing-library/react"
+import { LinkCell, LinkCellProps, linkCellRenderer } from "./LinkCell"
+import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
-import userEvent from "@testing-library/user-event"
 
 const LINK_CELL_TEST_ID = "link-cell"
 
@@ -113,5 +112,16 @@ describe("LinkCell", () => {
     const element = screen.getByTestId(LINK_CELL_TEST_ID)
 
     expect(element).toHaveTextContent("Click here")
+  })
+
+  it("should allow pasting in an href value", async () => {
+    const cell = getMockLinkCell("https://streamlit.io")
+    // @ts-expect-error
+    const value = linkCellRenderer.onPaste(
+      "https://pasted-link.com",
+      cell.data
+    ) as LinkCellProps
+
+    expect(value.href).toStrictEqual("https://pasted-link.com")
   })
 })
