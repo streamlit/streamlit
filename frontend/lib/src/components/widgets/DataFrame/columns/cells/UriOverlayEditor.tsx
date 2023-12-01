@@ -29,7 +29,7 @@ interface Props {
   readonly validatedSelection?: SelectionRange
 }
 
-// this is essentially just copying the UriOverlayEditor from glide's implementation: https://github.com/glideapps/glide-data-grid/blob/0ea52f371a5e2aaa8595aceefa40722d35410b1a/packages/core/src/data-grid-overlay-editor/private/uri-overlay-editor.tsx#L16
+// this is essentially just copying the UriOverlayEditor from glide's implementation: https://github.com/glideapps/glide-data-grid/blob/0ea52f371a5e2aaa8595aceefa40722d35410b1a/packages/core/src/data-grid-overlay-editor/private/uri-overlay-editor-style.tsx
 // we use it in LinkCell.tsx which is our custom version of the UriCell.
 const UriOverlayEditor: React.FunctionComponent<Props> = p => {
   const {
@@ -64,7 +64,8 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
   return (
     <UriOverlayEditorStyle>
       <a
-        className="link-area"
+        data-testid={"link-cell"}
+        className="gdg-link-area"
         href={uri ?? ""}
         target="_blank"
         rel="noopener noreferrer"
@@ -72,7 +73,11 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
         {preview}
       </a>
       {!readonly && (
-        <div className="edit-icon" onClick={onEditClick}>
+        <div
+          className="gdg-edit-icon"
+          data-testid="gdg-edit-icon"
+          onClick={onEditClick}
+        >
           <Icon content={Edit} size="lg" />
         </div>
       )}

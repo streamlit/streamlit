@@ -20,7 +20,6 @@ import {
   CustomRenderer,
   getMiddleCenterBias,
   measureTextCached,
-  blend,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 import UriOverlayEditor from "./UriOverlayEditor"
@@ -66,7 +65,7 @@ function onClickSelect(
 
 export const linkCellRenderer: CustomRenderer<LinkCell> = {
   draw: (args, cell) => {
-    const { ctx, rect, theme, hoverX = -100, highlighted } = args
+    const { ctx, rect, theme, hoverX = -100 } = args
     const { href, displayText } = cell.data
     if (isNullOrUndefined(href)) return
 
