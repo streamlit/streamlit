@@ -16,10 +16,20 @@
 
 import styled from "@emotion/styled"
 
-export const StyledNavLinkContainer = styled.div(() => ({
-  display: "flex",
-  flexDirection: "column",
-}))
+export interface StyledNavLinkContainerProps {
+  useContainerWidth: boolean
+  center: boolean
+}
+
+export const StyledNavLinkContainer = styled.div<StyledNavLinkContainerProps>(
+  ({ useContainerWidth, center }) => ({
+    display: "flex",
+    flexDirection: "column",
+    ...(useContainerWidth
+      ? {}
+      : { alignItems: center ? "center" : "flex-start" }),
+  })
+)
 
 export interface StyledNavLinkProps {
   disabled: boolean
@@ -27,10 +37,11 @@ export interface StyledNavLinkProps {
   // If true or number, the button should take up container's full width
   fluidWidth?: boolean | number
   indent?: boolean
+  center?: boolean
 }
 
 export const StyledNavLink = styled.a<StyledNavLinkProps>(
-  ({ disabled, isActive, fluidWidth, indent, theme }) => {
+  ({ disabled, isActive, fluidWidth, indent, center, theme }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? 600 : 400,
@@ -42,10 +53,11 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
       display: "flex",
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: center ? "center" : "flex-start",
       gap: theme.spacing.sm,
       borderRadius: theme.spacing.twoXS,
 
-      paddingLeft: indent ? theme.spacing.threeXL : theme.spacing.sm,
+      paddingLeft: indent || center ? theme.spacing.threeXL : theme.spacing.sm,
       paddingRight: theme.spacing.threeXL,
       marginTop: theme.spacing.threeXS,
       marginBottom: theme.spacing.threeXS,

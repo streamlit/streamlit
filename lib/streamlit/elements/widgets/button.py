@@ -431,6 +431,7 @@ class ButtonMixin:
         icon: Optional[str] = None,
         active: Optional[Union[bool, str]] = "auto",
         indent: bool = False,
+        align: Optional[Literal["left", "center"]] = None,
         help: Optional[str] = None,
         disabled: bool = False,
         use_container_width: bool = False,
@@ -446,6 +447,7 @@ class ButtonMixin:
             icon=icon,
             active=active,
             indent=indent,
+            align=align,
             help=help,
             disabled=disabled,
             use_container_width=use_container_width,
@@ -550,6 +552,7 @@ class ButtonMixin:
         icon: Optional[str] = None,
         active: Optional[Union[bool, str]] = "auto",
         indent: bool = False,
+        align: Optional[Literal["left", "center"]] = None,
         help: Optional[str] = None,
         disabled: bool = False,
         use_container_width: bool = False,
@@ -562,6 +565,15 @@ class ButtonMixin:
         page_link_proto.indent = indent
         page_link_proto.disabled = disabled
         page_link_proto.use_container_width = use_container_width
+
+        if align is not None:
+            align = align.lower()
+            if align not in ["left", "center"]:
+                raise StreamlitAPIException(
+                    'The align argument to st.page_link must be "left" or "center". \n'
+                    f'The argument passed was "{align}".'
+                )
+            page_link_proto.align = align
 
         # Handle retrieving the page_script_hash & page_path
         pages_cache = source_util._cached_pages

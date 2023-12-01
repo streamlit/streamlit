@@ -21,12 +21,14 @@ import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
 import { BaseButtonTooltip } from "@streamlit/lib/src/components/shared/BaseButton"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import {
   StyledNavLink,
   StyledNavLinkText,
   StyledNavLinkContainer,
 } from "./styled-components"
+import { el } from "date-fns/locale"
 
 export interface Props {
   disabled: boolean
@@ -46,11 +48,26 @@ function checkIfActive(
   return false
 }
 
+function checkCenterAlign(
+  element: PageLinkProto,
+  isInSidebar: boolean
+): boolean {
+  if (element.align) {
+    return element.align === "center" ? true : false
+  } else if (element.useContainerWidth) {
+    return isInSidebar ? false : true
+  } else {
+    return false
+  }
+}
+
 function PageLink(props: Props): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
   const { disabled, element, width } = props
   const style = { width }
   const isActive = checkIfActive(element, currentPageScriptHash)
+  const center = checkCenterAlign(element, isInSidebar)
 
   return (
     <div
@@ -59,12 +76,16 @@ function PageLink(props: Props): ReactElement {
       style={style}
     >
       <BaseButtonTooltip help={element.help} placement={Placement.TOP_RIGHT}>
-        <StyledNavLinkContainer>
+        <StyledNavLinkContainer
+          useContainerWidth={element.useContainerWidth}
+          center={center}
+        >
           <StyledNavLink
             data-testid="stPageNavLink"
             disabled={disabled}
             isActive={isActive}
             indent={element.indent}
+            center={center}
             fluidWidth={element.useContainerWidth ? width : false}
             href={element.pagePath}
             onClick={e => {
