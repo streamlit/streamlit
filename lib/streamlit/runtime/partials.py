@@ -76,8 +76,10 @@ def partial(
 
     @wraps(non_optional_func)
     def wrap(*args, **kwargs):
+        import streamlit as st
+
         ctx = get_script_run_ctx()
-        if ctx is None or len(ctx.dg_stack) == 0:
+        if ctx is None:
             return
 
         # HACK: FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
@@ -87,8 +89,13 @@ def partial(
         # at this point so that we can rewrite a specific part of the app in a partial
         # rerun. We'll eventually want to make changes to the DeltaGenerator class
         # itself to support this in a less hacky way.
-        dg_stack = pickle.dumps(ctx.dg_stack)
-        active_dg = ctx.dg_stack[-1]
+        if not len(ctx.dg_stack):
+            with st.container():
+                dg_stack = pickle.dumps(ctx.dg_stack)
+                active_dg = ctx.dg_stack[-1]
+        else:
+            dg_stack = pickle.dumps(ctx.dg_stack)
+            active_dg = ctx.dg_stack[-1]
 
         # TODO(lukasmasuch): Research more on what to include in the hash:
         h = hashlib.new("md5")
