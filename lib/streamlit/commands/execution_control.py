@@ -101,15 +101,21 @@ def switch_page(page_path: str) -> NoReturn:
     Parameters
     ----------
     page_path: str
-        The label of the page to switch to, or the page's file path within the pages directory
-        (omits .py extension).
+        The label of the page to switch to, or the page's file path relative to the main script.
     """
 
-    requested_path = page_path.lower()
-    requested_page = page_path.lower().replace("_", " ").replace("-", " ")
+    if page_path.startswith("."):
+        requested_page_path = page_path.replace("./", "/")
+    else:
+        requested_page_path = page_path
+
+    # option to pass in the label as the page_path
+    requested_page_name = (
+        requested_page_path.lower().replace("_", " ").replace("-", " ")
+    )
+
     ctx = get_script_run_ctx()
 
-    # TODO: Figure out what a query string does / if its necessary
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
 
@@ -123,14 +129,8 @@ def switch_page(page_path: str) -> NoReturn:
 
     for page in page_data:
         page_name = page["page_name"].lower().replace("_", " ")
-        script_path = (
-            page["script_path"].lower().split("/")[-1][:-3]
-        )  # path after pages directory, removes .py
-        print("================")
-        print(page_name)
-        print(script_path)
-        print("================")
-        if requested_page == page_name or requested_path == script_path:
+        path = page["script_path"]
+        if requested_page_path in path or requested_page_name == page_name:
             raise RerunException(
                 RerunData(
                     query_string=query_string,
@@ -138,6 +138,7 @@ def switch_page(page_path: str) -> NoReturn:
                 )
             )
 
+    # TODO: Update warning message once page_path input options confirmed.
     raise StreamlitAPIException(
-        f"Could not find page: {page_path}. Must be one of the following: {', '.join(page_names)}."
+        f"Could not find page_path: {page_path}.  Must be the file path relative to the main script, or one of the following page names: {', '.join(page_names)}."
     )

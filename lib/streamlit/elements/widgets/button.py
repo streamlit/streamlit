@@ -558,6 +558,16 @@ class ButtonMixin:
         use_container_width: bool = False,
     ) -> "DeltaGenerator":
 
+        if page_path.startswith("./"):
+            requested_page_path = page_path.replace("./", "/")
+        else:
+            requested_page_path = page_path
+
+        # option to pass in the label as the page_path
+        requested_page_name = (
+            requested_page_path.lower().replace("_", " ").replace("-", " ")
+        )
+
         page_link_proto = PageLinkProto()
         page_link_proto.label = label
         page_link_proto.page_path = page_path
@@ -576,14 +586,14 @@ class ButtonMixin:
             page_link_proto.align = align
 
         # Handle retrieving the page_script_hash & page_path
-        pages_cache = source_util._cached_pages
-        page_data = pages_cache.values()  # type: ignore[union-attr]
+        mpa_pages = source_util._cached_pages
+        page_data = mpa_pages.values()  # type: ignore[union-attr]
+        page_names = [page["page_name"].replace("_", " ") for page in page_data]
 
         for page in page_data:
-            # path after pages directory, removes .py
-            path = page["script_path"].split("/")[-1][:-3]
-            compare_path = page_path.split("/")[-1][:-3]
-            if compare_path == path:
+            page_name = page["page_name"].lower().replace("_", " ")
+            path = page["script_path"]
+            if requested_page_path in path or requested_page_name == page_name:
                 page_link_proto.page_script_hash = page["page_script_hash"]
                 page_link_proto.page_path = path
                 break
@@ -591,7 +601,7 @@ class ButtonMixin:
         # TODO: Update warning message once page_path input options confirmed.
         if page_link_proto.page_script_hash == "":
             raise StreamlitAPIException(
-                f"Page path {page_path} not found. Please check the path and try again."
+                f"Could not find page_path: {page_path}. Must be the file path relative to the main script, or one of the following page names: {', '.join(page_names)}."
             )
 
         if icon is not None:
