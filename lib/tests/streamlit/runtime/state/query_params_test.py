@@ -73,6 +73,14 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         message = self.get_message_from_queue(0)
         assert "foo=test" in message.page_info_changed.query_string
 
+    def test__setitem__raises_exception_for_embed_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params["embed"] = True
+
+    def test__setitem__raises_exception_for_embed_options_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params["embed_options"] = "show_toolbar"
+
     def test__delitem__removes_existing_key(self):
         del self.query_params["foo"]
         assert "foo" not in self.query_params
@@ -103,15 +111,21 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         message = self.get_message_from_queue(0)
         assert "" == message.page_info_changed.query_string
 
-    def test__setitem__raises_exception_for_embed_key(self):
-        with pytest.raises(StreamlitAPIException):
-            self.query_params["embed"] = True
-
-    def test__setitem__raises_exception_for_embed_options_key(self):
-        with pytest.raises(StreamlitAPIException):
-            self.query_params["embed_options"] = "show_toolbar"
-
     def test_to_dict(self):
         self.query_params["baz"] = ""
         result_dict = {"foo": "bar", "two": "y", "baz": ""}
         assert self.query_params.to_dict() == result_dict
+
+    def test_set_with_no_forward_msg_sends_no_msg_and_sets_query_params(self):
+        self.query_params.set_with_no_forward_msg("test", "test")
+        assert self.query_params["test"] == "test"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_clear_with_no_forward_msg_sends_no_msg_and_clears_query_params(self):
+        self.query_params.clear_with_no_forward_msg()
+        assert len(self.query_params) == 0
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)

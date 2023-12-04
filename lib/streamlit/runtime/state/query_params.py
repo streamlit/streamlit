@@ -97,6 +97,17 @@ class QueryParams(MutableMapping[str, str]):
         # return the last query param if multiple keys are set
         return {key: self[key] for key in self._query_params}
 
+    def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
+        # Avoid circular imports
+        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
+
+        if key.lower() in EMBED_QUERY_PARAMS_KEYS:
+            return
+        self._query_params[key] = val
+
+    def clear_with_no_forward_msg(self) -> None:
+        self._query_params.clear()
+
 
 def missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'
