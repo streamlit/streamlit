@@ -59,7 +59,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params["test"] = ""
         assert self.query_params["test"] == ""
         message = self.get_message_from_queue(0)
-        assert "test=" in message.page_info_changed.query_string
+        assert "foo=bar&two=x&two=y&test=" == message.page_info_changed.query_string
 
     def test__setitem__adds_list_value(self):
         self.query_params["test"] = ["test", "test2"]
@@ -125,7 +125,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params.clear()
         assert len(self.query_params) == 0
         message = self.get_message_from_queue(0)
-        assert "" in message.page_info_changed.query_string
+        assert "" == message.page_info_changed.query_string
 
     def test_to_dict(self):
         self.query_params["baz"] = ""
@@ -135,6 +135,13 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test_set_with_no_forward_msg_sends_no_msg_and_sets_query_params(self):
         self.query_params.set_with_no_forward_msg("test", "test")
         assert self.query_params["test"] == "test"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_clear_with_no_forward_msg_sends_no_msg_and_clears_query_params(self):
+        self.query_params.clear_with_no_forward_msg()
+        assert len(self.query_params) == 0
         with pytest.raises(IndexError):
             # no forward message should be sent
             self.get_message_from_queue(0)
