@@ -77,7 +77,6 @@ describe("doInitPings", () => {
     maxTimeoutMs: 100,
     retryCallback: jest.fn(),
     setAllowedOrigins: jest.fn(),
-    userCommandLine: "streamlit run not-a-real-script.py",
   }
 
   let originalAxiosGet: any
@@ -112,8 +111,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
     expect(uriIndex).toEqual(0)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
@@ -131,8 +129,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
     expect(uriIndex).toEqual(0)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
@@ -151,8 +148,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
     expect(uriIndex).toEqual(1)
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
@@ -174,8 +170,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -199,8 +194,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -228,8 +222,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -255,8 +248,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -288,9 +280,7 @@ describe("doInitPings", () => {
           just restart it in your terminal:
         </p>
         <pre>
-          <StyledBashCode>
-            {MOCK_PING_DATA_LOCALHOST.userCommandLine}
-          </StyledBashCode>
+          <StyledBashCode>streamlit run yourscript.py</StyledBashCode>
         </pre>
       </Fragment>
     )
@@ -306,8 +296,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA_LOCALHOST.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA_LOCALHOST.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA_LOCALHOST.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA_LOCALHOST.retryCallback).toHaveBeenCalledWith(
@@ -346,8 +335,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -376,8 +364,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -405,8 +392,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledTimes(5)
@@ -439,8 +425,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(timeouts.length).toEqual(5)
@@ -482,8 +467,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(timeouts.length).toEqual(5)
@@ -521,8 +505,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     const timeouts2: number[] = []
@@ -539,8 +522,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback2,
-      MOCK_PING_DATA.setAllowedOrigins,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(timeouts[0]).toEqual(10)

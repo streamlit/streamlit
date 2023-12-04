@@ -32,7 +32,7 @@ export function mockSessionInfoProps(
     installationId: "mockInstallationId",
     installationIdV3: "mockInstallationIdV3",
     maxCachedMessageAge: 123,
-    commandLine: "mockCommandLine",
+    isHello: false,
     ...overrides,
   }
 }

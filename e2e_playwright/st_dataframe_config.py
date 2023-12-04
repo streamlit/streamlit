@@ -218,7 +218,7 @@ st.dataframe(
             "Link with display text",
             width="medium",
             help="This is a link column with a displayText value",
-            display_text="https:\\/\\/(.*?)\\.streamlit\\.app",
+            display_text="https://(.*?)\.streamlit\.app",
         ),
     },
 )
