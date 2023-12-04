@@ -23,7 +23,7 @@ import {
   GridMouseEventArgs,
   GridCell,
 } from "@glideapps/glide-data-grid"
-// import { Resizable } from "re-resizable"
+import { Resizable } from "re-resizable"
 import {
   Delete,
   Add,
@@ -58,7 +58,7 @@ import {
   useDataExporter,
 } from "./hooks"
 import {
-  // BORDER_THRESHOLD,
+  BORDER_THRESHOLD,
   MIN_COLUMN_WIDTH,
   MAX_COLUMN_WIDTH,
   MAX_COLUMN_AUTO_WIDTH,
@@ -119,7 +119,7 @@ function DataFrame({
   expand,
   collapse,
 }: DataFrameProps): ReactElement {
-  // const resizableRef = React.useRef<Resizable>(null)
+  const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
@@ -332,12 +332,12 @@ function DataFrame({
   )
 
   const {
-    // minHeight,
-    // maxHeight,
-    // minWidth,
-    // maxWidth,
+    minHeight,
+    maxHeight,
+    minWidth,
+    maxWidth,
     resizableSize,
-    // setResizableSize,
+    setResizableSize,
   } = useTableSizer(
     element,
     numRows,
@@ -515,7 +515,7 @@ function DataFrame({
           />
         )}
       </Toolbar>
-      {/* <Resizable
+      <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         defaultSize={resizableSize}
@@ -554,152 +554,152 @@ function DataFrame({
             })
           }
         }}
-      > */}
-      <GlideDataEditor
-        className="glideDataEditor"
-        ref={dataEditorRef}
-        columns={glideColumns}
-        rows={isEmptyTable ? 1 : numRows}
-        minColumnWidth={MIN_COLUMN_WIDTH}
-        maxColumnWidth={MAX_COLUMN_WIDTH}
-        maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
-        rowHeight={ROW_HEIGHT}
-        headerHeight={ROW_HEIGHT}
-        getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
-        onColumnResize={onColumnResize}
-        // Freeze all index columns:
-        freezeColumns={freezeColumns}
-        smoothScrollX={true}
-        smoothScrollY={true}
-        // Show borders between cells:
-        verticalBorder={(col: number) =>
-          // Show no border for last column in certain situations
-          // This is required to prevent the cell selection border to not be cut off
-          !(
-            col >= columns.length &&
-            (element.useContainerWidth || resizableSize.width === "100%")
-          )
-        }
-        // Activate copy to clipboard functionality:
-        getCellsForSelection={true}
-        // Deactivate row markers and numbers:
-        rowMarkers={"none"}
-        // Deactivate selections:
-        rangeSelect={isTouchDevice ? "none" : "rect"}
-        columnSelect={"none"}
-        rowSelect={"none"}
-        // Enable tooltips on hover of a cell or column header:
-        onItemHovered={onItemHovered}
-        // Activate keybindings:
-        keybindings={{ downFill: true }}
-        // Search needs to be activated manually, to support search
-        // via the toolbar:
-        onKeyDown={event => {
-          if ((event.ctrlKey || event.metaKey) && event.key === "f") {
-            setShowSearch(cv => !cv)
-            event.stopPropagation()
-            event.preventDefault()
+      >
+        <GlideDataEditor
+          className="glideDataEditor"
+          ref={dataEditorRef}
+          columns={glideColumns}
+          rows={isEmptyTable ? 1 : numRows}
+          minColumnWidth={MIN_COLUMN_WIDTH}
+          maxColumnWidth={MAX_COLUMN_WIDTH}
+          maxColumnAutoWidth={MAX_COLUMN_AUTO_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          headerHeight={ROW_HEIGHT}
+          getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
+          onColumnResize={onColumnResize}
+          // Freeze all index columns:
+          freezeColumns={freezeColumns}
+          smoothScrollX={true}
+          smoothScrollY={true}
+          // Show borders between cells:
+          verticalBorder={(col: number) =>
+            // Show no border for last column in certain situations
+            // This is required to prevent the cell selection border to not be cut off
+            !(
+              col >= columns.length &&
+              (element.useContainerWidth || resizableSize.width === "100%")
+            )
           }
-        }}
-        showSearch={showSearch}
-        onSearchClose={() => {
-          setShowSearch(false)
-          clearTooltip()
-        }}
-        // Header click is used for column sorting:
-        onHeaderClicked={
-          // Deactivate sorting for empty state and for large dataframes:
-          isEmptyTable || isLargeTable ? undefined : sortColumn
-        }
-        gridSelection={gridSelection}
-        onGridSelectionChange={(newSelection: GridSelection) => {
-          if (isFocused || isTouchDevice) {
-            // Only allow selection changes if the grid is focused.
-            // This is mainly done because there is a bug when overlay click actions
-            // are outside of the bounds of the table (e.g. select dropdown or date picker).
-            // This results in the first cell being selected for a short period of time
-            // But for touch devices, preventing this can cause issues to select cells.
-            // So we allow selection changes for touch devices even when it is not focused.
-            setGridSelection(newSelection)
-            if (tooltip !== undefined) {
-              // Remove the tooltip on every grid selection change:
-              clearTooltip()
+          // Activate copy to clipboard functionality:
+          getCellsForSelection={true}
+          // Deactivate row markers and numbers:
+          rowMarkers={"none"}
+          // Deactivate selections:
+          rangeSelect={isTouchDevice ? "none" : "rect"}
+          columnSelect={"none"}
+          rowSelect={"none"}
+          // Enable tooltips on hover of a cell or column header:
+          onItemHovered={onItemHovered}
+          // Activate keybindings:
+          keybindings={{ downFill: true }}
+          // Search needs to be activated manually, to support search
+          // via the toolbar:
+          onKeyDown={event => {
+            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+              setShowSearch(cv => !cv)
+              event.stopPropagation()
+              event.preventDefault()
             }
+          }}
+          showSearch={showSearch}
+          onSearchClose={() => {
+            setShowSearch(false)
+            clearTooltip()
+          }}
+          // Header click is used for column sorting:
+          onHeaderClicked={
+            // Deactivate sorting for empty state and for large dataframes:
+            isEmptyTable || isLargeTable ? undefined : sortColumn
           }
-        }}
-        theme={theme}
-        onMouseMove={(args: GridMouseEventArgs) => {
-          // Determine if the dataframe is focused or not
-          if (args.kind === "out-of-bounds" && isFocused) {
-            setIsFocused(false)
-          } else if (args.kind !== "out-of-bounds" && !isFocused) {
-            setIsFocused(true)
-          }
-        }}
-        // Add shadow for index columns and header on scroll:
-        fixedShadowX={true}
-        fixedShadowY={true}
-        experimental={{
-          // Prevent the cell border from being cut off at the bottom and right:
-          scrollbarWidthOverride: 1,
-          ...(hasCustomizedScrollbars && {
-            // Add negative padding to the right and bottom to allow the scrollbars in
-            // webkit to overlay the table:
-            paddingBottom: hasHorizontalScroll
-              ? -WEBKIT_SCROLLBAR_SIZE
-              : undefined,
-            paddingRight: hasVerticalScroll
-              ? -WEBKIT_SCROLLBAR_SIZE
-              : undefined,
-          }),
-        }}
-        // Apply custom rendering (e.g. for missing or required cells):
-        drawCell={drawCell}
-        // Add support for additional cells:
-        customRenderers={customRenderers}
-        // Custom image editor to render single images:
-        imageEditorOverride={ImageCellEditor}
-        // Add our custom SVG header icons:
-        headerIcons={theme.headerIcons}
-        // Add support for user input validation:
-        validateCell={validateCell}
-        // The default setup is read only, and therefore we deactivate paste here:
-        onPaste={false}
-        // If element is editable, enable editing features:
-        {...(!isEmptyTable &&
-          element.editingMode !== READ_ONLY &&
-          !disabled && {
-            // Support fill handle for bulk editing:
-            fillHandle: !isTouchDevice,
-            // Support editing:
-            onCellEdited,
-            // Support pasting data for bulk editing:
-            onPaste,
-            // Support deleting cells & rows:
-            onDelete,
-          })}
-        // If element is dynamic, enable adding & deleting rows:
-        {...(!isEmptyTable &&
-          element.editingMode === DYNAMIC && {
-            // Support adding rows:
-            trailingRowOptions: {
-              sticky: false,
-              tint: true,
-            },
-            rowMarkerTheme: {
-              bgCell: theme.bgHeader,
-              bgCellMedium: theme.bgHeader,
-            },
-            rowMarkers: "checkbox",
-            rowSelectionMode: "multi",
-            rowSelect: disabled ? "none" : "multi",
-            // Support adding rows:
-            onRowAppended: disabled ? undefined : onRowAppended,
-            // Deactivate sorting, since it is not supported with dynamic editing:
-            onHeaderClicked: undefined,
-          })}
-      />
-      {/* </Resizable> */}
+          gridSelection={gridSelection}
+          onGridSelectionChange={(newSelection: GridSelection) => {
+            if (isFocused || isTouchDevice) {
+              // Only allow selection changes if the grid is focused.
+              // This is mainly done because there is a bug when overlay click actions
+              // are outside of the bounds of the table (e.g. select dropdown or date picker).
+              // This results in the first cell being selected for a short period of time
+              // But for touch devices, preventing this can cause issues to select cells.
+              // So we allow selection changes for touch devices even when it is not focused.
+              setGridSelection(newSelection)
+              if (tooltip !== undefined) {
+                // Remove the tooltip on every grid selection change:
+                clearTooltip()
+              }
+            }
+          }}
+          theme={theme}
+          onMouseMove={(args: GridMouseEventArgs) => {
+            // Determine if the dataframe is focused or not
+            if (args.kind === "out-of-bounds" && isFocused) {
+              setIsFocused(false)
+            } else if (args.kind !== "out-of-bounds" && !isFocused) {
+              setIsFocused(true)
+            }
+          }}
+          // Add shadow for index columns and header on scroll:
+          fixedShadowX={true}
+          fixedShadowY={true}
+          experimental={{
+            // Prevent the cell border from being cut off at the bottom and right:
+            scrollbarWidthOverride: 1,
+            ...(hasCustomizedScrollbars && {
+              // Add negative padding to the right and bottom to allow the scrollbars in
+              // webkit to overlay the table:
+              paddingBottom: hasHorizontalScroll
+                ? -WEBKIT_SCROLLBAR_SIZE
+                : undefined,
+              paddingRight: hasVerticalScroll
+                ? -WEBKIT_SCROLLBAR_SIZE
+                : undefined,
+            }),
+          }}
+          // Apply custom rendering (e.g. for missing or required cells):
+          drawCell={drawCell}
+          // Add support for additional cells:
+          customRenderers={customRenderers}
+          // Custom image editor to render single images:
+          imageEditorOverride={ImageCellEditor}
+          // Add our custom SVG header icons:
+          headerIcons={theme.headerIcons}
+          // Add support for user input validation:
+          validateCell={validateCell}
+          // The default setup is read only, and therefore we deactivate paste here:
+          onPaste={false}
+          // If element is editable, enable editing features:
+          {...(!isEmptyTable &&
+            element.editingMode !== READ_ONLY &&
+            !disabled && {
+              // Support fill handle for bulk editing:
+              fillHandle: !isTouchDevice,
+              // Support editing:
+              onCellEdited,
+              // Support pasting data for bulk editing:
+              onPaste,
+              // Support deleting cells & rows:
+              onDelete,
+            })}
+          // If element is dynamic, enable adding & deleting rows:
+          {...(!isEmptyTable &&
+            element.editingMode === DYNAMIC && {
+              // Support adding rows:
+              trailingRowOptions: {
+                sticky: false,
+                tint: true,
+              },
+              rowMarkerTheme: {
+                bgCell: theme.bgHeader,
+                bgCellMedium: theme.bgHeader,
+              },
+              rowMarkers: "checkbox",
+              rowSelectionMode: "multi",
+              rowSelect: disabled ? "none" : "multi",
+              // Support adding rows:
+              onRowAppended: disabled ? undefined : onRowAppended,
+              // Deactivate sorting, since it is not supported with dynamic editing:
+              onHeaderClicked: undefined,
+            })}
+        />
+      </Resizable>
       {tooltip && tooltip.content && (
         <Tooltip
           top={tooltip.top}
