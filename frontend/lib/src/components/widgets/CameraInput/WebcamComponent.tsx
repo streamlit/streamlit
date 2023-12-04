@@ -49,6 +49,7 @@ export interface Props {
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
   facingMode: FacingMode
   setFacingMode: () => void
+  testOverride?: WebcamPermission
 }
 
 export enum WebcamPermission {
@@ -89,9 +90,10 @@ const WebcamComponent = ({
   setClearPhotoInProgress,
   facingMode,
   setFacingMode,
+  testOverride,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamPermissionState] = useState(
-    WebcamPermission.PENDING
+    testOverride || WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
 
@@ -117,7 +119,7 @@ const WebcamComponent = ({
   const theme: EmotionTheme = useTheme()
 
   return (
-    <StyledCameraInput width={debouncedWidth}>
+    <StyledCameraInput width={debouncedWidth} data-testid="stWebcamComponent">
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
       !clearPhotoInProgress ? (
@@ -126,6 +128,7 @@ const WebcamComponent = ({
         isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
       )}
       <StyledBox
+        data-testid="stWebcamStyledBox"
         hidden={
           webcamPermission !== WebcamPermission.SUCCESS &&
           !disabled &&

@@ -15,12 +15,13 @@
  */
 
 import React from "react"
-import { act } from "react-dom/test-utils"
+import "@testing-library/jest-dom"
 
-import { mount } from "@streamlit/lib/src/test_util"
-import { StyledBox } from "./styled-components"
+import { screen } from "@testing-library/react"
+
+import { render } from "@streamlit/lib/src/test_util"
 import { FacingMode } from "./SwitchFacingModeButton"
-import WebcamComponent, { Props } from "./WebcamComponent"
+import WebcamComponent, { WebcamPermission, Props } from "./WebcamComponent"
 
 jest.mock("react-webcam")
 const getProps = (props: Partial<Props> = {}): Props => {
@@ -32,6 +33,7 @@ const getProps = (props: Partial<Props> = {}): Props => {
     clearPhotoInProgress: false,
     facingMode: FacingMode.USER,
     setFacingMode: jest.fn(),
+    testOverride: WebcamPermission.PENDING,
     ...props,
   }
 }
@@ -39,60 +41,47 @@ const getProps = (props: Partial<Props> = {}): Props => {
 describe("Test Webcam Component", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<WebcamComponent {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<WebcamComponent {...props} />)
+    expect(screen.getByTestId("stWebcamComponent")).toBeInTheDocument()
   })
 
   it("renders ask permission screen when pending state", () => {
     const props = getProps()
-    // automatically put in pending state
-    const wrapper = mount(<WebcamComponent {...props} />)
-    expect(wrapper).toBeDefined()
-    expect(wrapper.find(StyledBox).at(0).text()).toEqual(
-      "This app would like to use your camera.Learn how to allow access."
+    render(<WebcamComponent {...props} />)
+    expect(screen.getByTestId("stWebcamComponent")).toBeInTheDocument()
+    expect(
+      screen.getByText("This app would like to use your camera.")
+    ).toBeInTheDocument()
+    expect(screen.getByRole("link")).toHaveTextContent(
+      "Learn how to allow access."
     )
     // hidden style should be there and webcam should not show
-    expect(wrapper.find(StyledBox).at(1).props().hidden).toEqual(true)
+    expect(screen.getByTestId("stWebcamStyledBox")).toHaveAttribute("hidden")
   })
 
   it("renders ask permission screen when error state", () => {
-    const props = getProps()
-    // automatically put in pending state
-    const wrapper = mount(<WebcamComponent {...props} />)
-    expect(wrapper).toBeDefined()
+    const props = getProps({ testOverride: WebcamPermission.ERROR })
+    render(<WebcamComponent {...props} />)
+    expect(screen.getByTestId("stWebcamComponent")).toBeInTheDocument()
 
-    act(() => {
-      wrapper
-        .find("Webcam")
-        .props()
-        // @ts-expect-error
-        .onUserMediaError(null)
-    })
-    wrapper.update()
-
-    expect(wrapper.find(StyledBox).at(0).text()).toEqual(
-      "This app would like to use your camera.Learn how to allow access."
+    expect(
+      screen.getByText("This app would like to use your camera.")
+    ).toBeInTheDocument()
+    expect(screen.getByRole("link")).toHaveTextContent(
+      "Learn how to allow access."
     )
-
-    expect(wrapper.find(StyledBox).at(1).props().hidden).toEqual(true)
+    // hidden style should be there and webcam should not show
+    expect(screen.getByTestId("stWebcamStyledBox")).toHaveAttribute("hidden")
   })
 
   it("does not render ask permission screen in success state", () => {
-    const props = getProps()
-    // automatically put in pending state
-    const wrapper = mount(<WebcamComponent {...props} />)
-    expect(wrapper).toBeDefined()
-
-    act(() => {
-      wrapper
-        .find("Webcam")
-        .props()
-        // @ts-expect-error
-        .onUserMedia(null)
-    })
-    wrapper.update()
+    const props = getProps({ testOverride: WebcamPermission.SUCCESS })
+    render(<WebcamComponent {...props} />)
+    expect(screen.getByTestId("stWebcamComponent")).toBeInTheDocument()
 
     // hidden style should not be there and webcam should show
-    expect(wrapper.find(StyledBox).props().hidden).toEqual(false)
+    expect(screen.getByTestId("stWebcamStyledBox")).not.toHaveAttribute(
+      "hidden"
+    )
   })
 })
