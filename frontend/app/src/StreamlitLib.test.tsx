@@ -18,7 +18,7 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import "@testing-library/jest-dom"
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import {
   AppRoot,
   VerticalBlock,
@@ -137,11 +137,12 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       installationId: "",
       installationIdV3: "",
       commandLine: "",
+      isHello: false,
     })
 
     // Initialize React state
     this.state = {
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(),
       formsData: createFormsData(),
       scriptRunState: ScriptRunState.NOT_RUNNING,
       // ScriptRunID should get a new unique ID every time the
@@ -214,12 +215,14 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 }
 
 describe("StreamlitLibExample", () => {
-  it("can be rendered without crashing", () => {
+  it("can be rendered without crashing", async () => {
     render(<StreamlitLibExample />)
 
     // Before any Elements are explicitly added, our example class
-    // will show a placeholder "Please wait..." info message
-    expect(screen.getByText("Please wait...")).toBeInTheDocument()
+    // will show placeholder skeleton.
+    await waitFor(() =>
+      expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+    )
   })
 
   it("handles Delta messages", () => {

@@ -32,6 +32,8 @@ message Block {
 
   message Vertical {
     bool border = 1;
+    // Height of the container, activates scrolling
+    uint32 height = 2;
   }
 
   message Horizontal {

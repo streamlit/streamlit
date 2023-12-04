@@ -262,11 +262,11 @@ def _main_run(
     if flag_options is None:
         flag_options = {}
 
-    command_line = _get_command_line_as_string()
+    is_hello = _get_command_line_as_string() == "streamlit hello"
 
     check_credentials()
 
-    bootstrap.run(file, command_line, args, flag_options)
+    bootstrap.run(file, is_hello, args, flag_options)
 
 
 # SUBCOMMAND: cache

@@ -68,6 +68,7 @@ FD = FieldDescriptor
                 ("session_status", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("command_line", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("session_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
             },
         ),
         (
@@ -98,6 +99,7 @@ FD = FieldDescriptor
                 ("code_font", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("font_faces", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("font_sizes", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
+                ("skeleton_background_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (

@@ -256,11 +256,7 @@ export class WebsocketConnection {
     // Perform pre-callback actions when entering certain states.
     switch (this.state) {
       case ConnectionState.PINGING_SERVER:
-        this.pingServer(
-          this.args.sessionInfo.isSet
-            ? this.args.sessionInfo.current.commandLine
-            : undefined
-        )
+        this.pingServer()
         break
 
       default:
@@ -367,14 +363,13 @@ export class WebsocketConnection {
     )
   }
 
-  private async pingServer(userCommandLine?: string): Promise<void> {
+  private async pingServer(): Promise<void> {
     this.uriIndex = await doInitPings(
       this.args.baseUriPartsList,
       PING_MINIMUM_RETRY_PERIOD_MS,
       PING_MAXIMUM_RETRY_PERIOD_MS,
       this.args.onRetry,
-      this.args.onHostConfigResp,
-      userCommandLine
+      this.args.onHostConfigResp
     )
 
     this.stepFsm("SERVER_PING_SUCCEEDED")
@@ -612,8 +607,7 @@ export function doInitPings(
   minimumTimeoutMs: number,
   maximumTimeoutMs: number,
   retryCallback: OnRetry,
-  onHostConfigResp: (resp: IHostConfigResponse) => void,
-  userCommandLine?: string
+  onHostConfigResp: (resp: IHostConfigResponse) => void
 ): Promise<number> {
   const resolver = new Resolver<number>()
   let totalTries = 0
@@ -652,7 +646,6 @@ export function doInitPings(
     const uri = new URL(buildHttpUri(uriParts, ""))
 
     if (uri.hostname === "localhost") {
-      const commandLine = userCommandLine || "streamlit run yourscript.py"
       retry(
         <Fragment>
           <p>
@@ -660,7 +653,7 @@ export function doInitPings(
             just restart it in your terminal:
           </p>
           <pre>
-            <StyledBashCode>{commandLine}</StyledBashCode>
+            <StyledBashCode>streamlit run yourscript.py</StyledBashCode>
           </pre>
         </Fragment>
       )
