@@ -203,12 +203,10 @@ class Checkbox extends React.PureComponent<Props, State> {
                 $checked: boolean
                 $isHovered: boolean
               }) => {
-                let backgroundColor = lightTheme
-                  ? colors.gray50
-                  : colors.gray80
+                let backgroundColor = colors.fadedText40
 
                 if ($isHovered && !disabled) {
-                  backgroundColor = lightTheme ? colors.gray60 : colors.gray70
+                  backgroundColor = colors.fadedText20
                 }
 
                 if ($checked && !disabled) {

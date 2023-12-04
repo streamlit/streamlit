@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
-import Plot from "react-plotly.js"
+import React, { useState, ReactElement, ReactNode } from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
+import { act } from "react-dom/test-utils"
 
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/lib/src/proto"
-import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import mock from "./mock"
-import { DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
 
-jest.mock("react-plotly.js", () => jest.fn(() => null))
+import { PlotlyChart, DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { PlotlyChart } = require("./PlotlyChart")
+const DEFAULT_PLOTLY_WIDTH = "700"
+const DEFAULT_PLOTLY_HEIGHT = "450"
 
 const getProps = (
   elementProps: Partial<PlotlyChartProto> = {}
@@ -40,170 +39,227 @@ const getProps = (
   height: 0,
 })
 
-function testEnterAndExitFullscreen(useContainerWidth: boolean): void {
-  const nonFullScreenProps = {
-    ...getProps({
-      useContainerWidth,
-    }),
-    height: undefined,
+// eslint-disable-next-line testing-library/no-node-access -- There's no other way to get the parent element
+const getParent = (wrapper: Element): Element | null => wrapper.parentElement
+
+const getPlotlyRoot = (wrapper: Element): Element | null => {
+  let root = getParent(wrapper)
+  while (root && !root.classList.contains("stPlotlyChart")) {
+    root = getParent(root)
   }
-  const wrapper = mount(<PlotlyChart {...nonFullScreenProps} />)
+  return root
+}
 
-  const initialHeight = wrapper.find(Plot).props().layout.height
-  const initialWidth = wrapper.find(Plot).props().layout.width
+type Setter<T> = React.Dispatch<React.SetStateAction<T>>
+interface DimensionsSetterProps {
+  width: number
+  height: number | undefined
+  setWidth: Setter<number>
+  setHeight: Setter<number | undefined>
+}
 
-  const fullScreenProps = {
-    ...getProps(),
-    height: 400,
-    width: 400,
+interface ChildrenFunction {
+  children: (props: DimensionsSetterProps) => ReactNode
+}
+
+function DimensionsSetter({ children }: ChildrenFunction): ReactElement {
+  const [width, setWidth] = useState<number>(0)
+  const [height, setHeight] = useState<number | undefined>(undefined)
+
+  return <div>{children({ width, height, setWidth, setHeight })}</div>
+}
+
+async function testEnterAndExitFullscreen(
+  useContainerWidth: boolean
+): Promise<void> {
+  let setWidth: Setter<number>, setHeight: Setter<number | undefined>
+  render(
+    <DimensionsSetter>
+      {({ width, height, setWidth: w, setHeight: h }) => {
+        setWidth = w
+        setHeight = h
+
+        const nonFullScreenProps = {
+          ...getProps({
+            useContainerWidth,
+          }),
+          height: undefined,
+        }
+
+        return (
+          <PlotlyChart {...nonFullScreenProps} width={width} height={height} />
+        )
+      }}
+    </DimensionsSetter>
+  )
+  await new Promise(process.nextTick)
+  const label = screen.getByText("Group 1")
+  // eslint-disable-next-line testing-library/no-node-access
+  const svg = getPlotlyRoot(label)?.querySelector("svg")
+
+  expect(svg).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
+  expect(svg).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test verifies this
+  expect(setWidth!).toBeDefined()
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test verifies this
+  expect(setHeight!).toBeDefined()
+
+  act(() => {
+    setWidth(800)
+    setHeight(800)
+  })
+  await new Promise(process.nextTick)
+  const label2 = screen.getByText("Group 1")
+  // eslint-disable-next-line testing-library/no-node-access
+  const svg2 = getPlotlyRoot(label2)?.querySelector("svg")
+  expect(svg2).toHaveAttribute("width", "800")
+  expect(svg2).toHaveAttribute("height", "800")
+
+  act(() => {
+    setWidth(300)
+    setHeight(undefined)
+  })
+  await new Promise(process.nextTick)
+
+  const label3 = screen.getByText("Group 1")
+  // eslint-disable-next-line testing-library/no-node-access
+  const svg3 = getPlotlyRoot(label3)?.querySelector("svg")
+  if (useContainerWidth) {
+    expect(svg3).toHaveAttribute("width", "300")
+  } else {
+    expect(svg3).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
   }
-
-  wrapper.setProps(fullScreenProps)
-  wrapper.update()
-
-  wrapper.setProps(nonFullScreenProps)
-  wrapper.update()
-
-  expect(wrapper.find(Plot).props().layout.width).toEqual(initialWidth)
-  expect(wrapper.find(Plot).props().layout.height).toEqual(initialHeight)
-
-  // an explicit value because useContainerWidth is passed
-  if (useContainerWidth)
-    expect(wrapper.find(Plot).props().layout.width).not.toBeUndefined()
-  else expect(wrapper.find(Plot).props().layout.width).toBeUndefined()
-  // undefined because plotly will render its own default height
-  expect(wrapper.find(Plot).props().layout.height).toBeUndefined()
+  expect(svg3).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
 }
 
 describe("PlotlyChart Element", () => {
-  it("renders without crashing", () => {
+  it("renders without crashing", async () => {
     const props = getProps()
-    const wrapper = mount(<PlotlyChart {...props} />)
+    render(<PlotlyChart {...props} />)
+    await new Promise(process.nextTick)
 
-    expect(wrapper.find(Plot).length).toBe(1)
+    // Group 1 is just a label
+    expect(screen.getByText("Group 1")).toBeInTheDocument()
   })
 
   describe("Dimensions", () => {
-    it("fullscreen", () => {
+    it("fullscreen", async () => {
       const props = {
         ...getProps(),
         height: 400,
         width: 400,
       }
-      const wrapper = mount(<PlotlyChart {...props} />)
-
-      expect(wrapper.find(Plot).props().layout.width).toBe(400)
-      expect(wrapper.find(Plot).props().layout.height).toBe(400)
+      render(<PlotlyChart {...props} />)
+      await new Promise(process.nextTick)
+      const label = screen.getByText("Group 1")
+      // eslint-disable-next-line testing-library/no-node-access
+      const svg = getPlotlyRoot(label)?.querySelector("svg")
+      expect(svg).toHaveAttribute("width", "400")
+      expect(svg).toHaveAttribute("height", "400")
     })
 
-    it("useContainerWidth true", () => {
+    it("useContainerWidth true", async () => {
       const props = {
         ...getProps({
           useContainerWidth: true,
         }),
       }
-      const wrapper = mount(<PlotlyChart {...props} />)
+      render(<PlotlyChart {...props} />)
+      await new Promise(process.nextTick)
+      const label = screen.getByText("Group 1")
+      // eslint-disable-next-line testing-library/no-node-access
+      const svg = getPlotlyRoot(label)?.querySelector("svg")
 
-      // an explicit value because useContainerWidth is passed
-      expect(wrapper.find(Plot).props().layout.width).not.toBeUndefined()
-      expect(wrapper.find(Plot).props().layout.height).toBeUndefined()
+      expect(svg).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
+      expect(svg).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
     })
 
-    it("useContainerWidth false", () => {
+    it("useContainerWidth false", async () => {
       const props = {
         ...getProps({
           useContainerWidth: false,
         }),
       }
-      const wrapper = mount(<PlotlyChart {...props} />)
+      render(<PlotlyChart {...props} />)
+      await new Promise(process.nextTick)
+      const label = screen.getByText("Group 1")
+      // eslint-disable-next-line testing-library/no-node-access
+      const svg = getPlotlyRoot(label)?.querySelector("svg")
 
-      expect(wrapper.find(Plot).props().layout.width).toBeUndefined()
-      expect(wrapper.find(Plot).props().layout.height).toBeUndefined()
+      expect(svg).toHaveAttribute("width", DEFAULT_PLOTLY_WIDTH)
+      expect(svg).toHaveAttribute("height", DEFAULT_PLOTLY_HEIGHT)
     })
 
     // eslint-disable-next-line jest/expect-expect -- underlying testEnterAndExitFullscreen function has expect statements
-    it("renders properly when entering fullscreen and out of fullscreen and useContainerWidth is false", () => {
-      testEnterAndExitFullscreen(false)
+    it("renders properly when entering fullscreen and out of fullscreen and useContainerWidth is false", async () => {
+      await testEnterAndExitFullscreen(false)
     })
-
     // eslint-disable-next-line jest/expect-expect -- underlying testEnterAndExitFullscreen function has expect statements
-    it("renders properly when entering fullscreen and out of fullscreen and useContainerWidth is true", () => {
-      testEnterAndExitFullscreen(true)
+    it("renders properly when entering fullscreen and out of fullscreen and useContainerWidth is true", async () => {
+      await testEnterAndExitFullscreen(true)
     })
   })
-
   describe("Render iframe", () => {
     const props = getProps({
       chart: "url",
       url: "http://url.test",
       figure: undefined,
     })
-
     it("should render an iframe", () => {
-      const wrapper = mount(<PlotlyChart {...props} />)
-
-      expect(wrapper.find("iframe").length).toBe(1)
-      expect(wrapper.find("iframe").props()).toMatchSnapshot()
-      // @ts-expect-error
-      expect(wrapper.find("iframe").prop("style").height).toBe(DEFAULT_HEIGHT)
+      render(<PlotlyChart {...props} />)
+      const iframe = screen.getByTitle("Plotly")
+      expect(iframe).toBeInTheDocument()
+      expect(iframe).toMatchSnapshot()
+      expect(iframe).toHaveStyle(`height: ${DEFAULT_HEIGHT}px`)
     })
-
     it("should render with an specific height", () => {
       const propsWithHeight = {
         ...props,
         height: 400,
         width: 500,
       }
-      const wrapper = mount(<PlotlyChart {...propsWithHeight} />)
-
-      // @ts-expect-error
-      expect(wrapper.find("iframe").prop("style").height).toBe(400)
+      render(<PlotlyChart {...propsWithHeight} />)
+      const iframe = screen.getByTitle("Plotly")
+      expect(iframe).toBeInTheDocument()
+      expect(iframe).toHaveStyle("height: 400px")
     })
   })
-
   describe("Theming", () => {
-    it("pulls default config values from theme", () => {
+    it("pulls default config values from theme", async () => {
       const props = getProps()
-      const wrapper = mount(
-        <ThemeProvider
-          theme={mockTheme.emotion}
-          baseuiTheme={mockTheme.basewebTheme}
-        >
-          <PlotlyChart {...props} />
-        </ThemeProvider>
-      )
+      render(<PlotlyChart {...props} />)
+      await new Promise(process.nextTick)
 
-      const { layout } = wrapper.find(Plot).first().props()
-      expect(layout.paper_bgcolor).toBe(mockTheme.emotion.colors.bgColor)
-      expect(layout.font?.color).toBe(mockTheme.emotion.colors.bodyText)
+      const label = screen.getByText("Group 1")
+      // Verify that things not overwritten by the user still fall back to the
+      // theme default. Note that labels are converted from hex to rgb.
+      expect(label).toHaveStyle("fill: rgb(49, 51, 63)")
+
+      // eslint-disable-next-line testing-library/no-node-access -- There's no other way to get the SVG
+      const svg = getPlotlyRoot(label)?.querySelector("svg")
+      // Note that labels are converted from hex to rgb.
+      expect(svg).toHaveStyle("background: rgb(255, 255, 255)")
     })
-
-    it("has user specified config take priority", () => {
+    it("has user specified config take priority", async () => {
       const props = getProps()
-
       const spec = JSON.parse(props.element.figure?.spec || "") || {}
       spec.layout = {
         ...spec?.layout,
         paper_bgcolor: "orange",
       }
-
       props.element.figure = props.element.figure || {}
       props.element.figure.spec = JSON.stringify(spec)
+      render(<PlotlyChart {...props} />)
+      await new Promise(process.nextTick)
 
-      const wrapper = mount(
-        <ThemeProvider
-          theme={mockTheme.emotion}
-          baseuiTheme={mockTheme.basewebTheme}
-        >
-          <PlotlyChart {...props} />
-        </ThemeProvider>
-      )
-
-      const { layout } = wrapper.find(Plot).first().props()
-      expect(layout.paper_bgcolor).toBe("orange")
+      const label = screen.getByText("Group 1")
       // Verify that things not overwritten by the user still fall back to the
-      // theme default.
-      expect(layout.font?.color).toBe(mockTheme.emotion.colors.bodyText)
+      // theme default. Note that labels are converted from hex to rgb.
+      expect(label).toHaveStyle("fill: rgb(49, 51, 63)")
+
+      // eslint-disable-next-line testing-library/no-node-access -- There's no other way to get the SVG
+      const svg = getPlotlyRoot(label)?.querySelector("svg")
+      expect(svg).toHaveStyle("background: orange")
     })
   })
 })

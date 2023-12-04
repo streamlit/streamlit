@@ -73,7 +73,7 @@ def _create_test_session(
         return_value=event_loop,
     ):
         return AppSession(
-            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
@@ -800,6 +800,22 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         )
         session.handle_backmsg(msg)
         self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
+
+    @patch("streamlit.runtime.app_session.LOGGER")
+    async def test_handles_app_heartbeat_backmsg(self, patched_logger):
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(
+            session, "handle_backmsg_exception"
+        ) as handle_backmsg_exception, patch.object(
+            session, "_handle_app_heartbeat_request"
+        ) as handle_app_heartbeat_request:
+            msg = BackMsg()
+            msg.app_heartbeat = True
+            session.handle_backmsg(msg)
+
+            handle_app_heartbeat_request.assert_called_once()
+            handle_backmsg_exception.assert_not_called()
+            patched_logger.warning.assert_not_called()
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
