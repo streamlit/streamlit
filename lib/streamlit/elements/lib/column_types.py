@@ -558,7 +558,7 @@ def LinkColumn(
     >>>             help="The top trending Streamlit apps",
     >>>             validate="^https://[a-z]+\.streamlit\.app$",
     >>>             max_chars=100,
-    >>>             display_text="https:\/\/(.*?)\.streamlit\.app"
+    >>>             display_text="https://(.*?)\.streamlit\.app"
     >>>         )
     >>>     },
     >>>     hide_index=True,
