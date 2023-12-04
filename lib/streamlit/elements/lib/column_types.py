@@ -529,7 +529,7 @@ def LinkColumn(
 
         For more complex cases, you may use [Pandas Styler's format function on the underlying
         dataframe](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html).
-        Note that this makes the app slow, doesn't work with editable columns, and might 
+        Note that this makes the app slow, doesn't work with editable columns, and might
         be removed in the future.
 
 
