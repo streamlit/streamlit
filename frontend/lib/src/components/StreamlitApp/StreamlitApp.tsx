@@ -15,7 +15,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react"
-import type { Context, ReactNode } from "react"
+import type { Context, ReactElement, ReactNode } from "react"
 import { BackMsg, type WidgetStates } from "../../proto"
 import { useConnectionManager } from "./hooks/useConnectionManager"
 import { useMessageQueue } from "./hooks/useMessageQueue"
@@ -60,7 +60,7 @@ import {
 } from "./stores/AppCommandsContext"
 import { type AppUrl, AppUrlContext } from "./stores/AppUrlContext"
 
-interface StreamlitAppProps {
+export interface StreamlitAppProps {
   children: ReactNode
   endpoint: string
   pageConfig?: PageConfig
@@ -83,7 +83,7 @@ export function StreamlitApp({
   endpoint,
   pageConfig,
   onPageConfigChange,
-}: StreamlitAppProps): ReactNode {
+}: StreamlitAppProps): ReactElement {
   const connectionContextValue = useConnectionManager(endpoint)
 
   // There's an unfortunate situation where we do not know the "official" url
@@ -296,5 +296,5 @@ export function StreamlitApp({
       <Context.Provider value={value}>{node}</Context.Provider>
     ),
     children
-  )
+  ) as ReactElement
 }

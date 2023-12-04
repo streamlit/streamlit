@@ -25,11 +25,13 @@ import type { MessageQueue } from "../lib/MessageQueue"
 import { type StreamlitInstallation } from "../stores/StreamlitInstallationContext"
 import { ScriptRunState, type ScriptRunInfo } from "../stores/ScriptRunContext"
 
+const INITIAL_SCRIPT_RUN_ID = "<null>"
+
 export function useStreamlitScriptRunState(
   messageQueue: MessageQueue,
   streamlitInstallation: StreamlitInstallation | null
 ): ScriptRunInfo {
-  const [scriptRunId, setScriptRunId] = useState<string>("")
+  const [scriptRunId, setScriptRunId] = useState<string>(INITIAL_SCRIPT_RUN_ID)
   const [scriptName, setScriptName] = useState<string>("")
   const [scriptRunState, setScriptRunState] = useState<ScriptRunState>(
     ScriptRunState.NOT_RUNNING
