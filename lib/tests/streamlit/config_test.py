@@ -357,6 +357,7 @@ class ConfigTest(unittest.TestCase):
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",
                 "global.showWarningOnDirectExecution",
+                "global.storeCacheMessagesInMemory",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
                 "global.dataFrameSerialization",
