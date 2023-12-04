@@ -228,6 +228,10 @@ class MessageCacheHandler(tornado.web.RequestHandler):
 
     def get(self):
         msg_hash = self.get_argument("hash", None)
+        if not config.get_option("global.storeCacheMessagesInMemory"):
+            self.set_status(418)
+            self.finish()
+            return
         if msg_hash is None:
             # Hash is missing! This is a malformed request.
             _LOGGER.error(

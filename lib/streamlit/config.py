@@ -376,6 +376,14 @@ _create_option(
 )
 
 _create_option(
+    "global.storeCacheMessagesInMemory",
+    description="""If True, store cached ForwardMsgs in backend memory.""",
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
     "global.dataFrameSerialization",
     description="""
         DataFrame serialization.
