@@ -49,9 +49,14 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
+        if isinstance(value, dict):
+            raise StreamlitAPIException(
+                f"You cannot set a query params key `{key}` to a dictionary."
+            )
+
         # Type checking users should handle the string serialization themselves
         # We will accept any type for the list and serialize to str just in case
-        if isinstance(value, list):
+        if isinstance(value, (tuple, set, list)):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
