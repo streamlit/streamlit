@@ -209,7 +209,7 @@ describe("LinkColumn", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
       // eslint-disable-next-line prettier/prettier
-      columnTypeOptions: { display_text: "https://(.*?).google.com" },
+      columnTypeOptions: { display_text: "https://(.*?)\\.google.com" },
     })
 
     const cell = mockColumn.getCell(
