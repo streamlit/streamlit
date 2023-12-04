@@ -78,6 +78,9 @@ class ScriptRunContext:
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: Optional[ScriptRequests] = None
 
+    _experimental_query_params_used = False
+    _production_query_params_used = False
+
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
@@ -126,6 +129,14 @@ class ScriptRunContext:
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)
+
+    def ensure_single_query_api_used(self):
+        if self._experimental_query_params_used and self._production_query_params_used:
+            raise StreamlitAPIException(
+                "Using `st.query_params` together with either `st.experimental_get_query_params` "
+                + "or `st.experimental_set_query_params` is not supported. Please convert your app "
+                + "to only use `st.query_params`"
+            )
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

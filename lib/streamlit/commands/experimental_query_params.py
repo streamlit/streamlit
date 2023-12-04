@@ -56,6 +56,9 @@ def get_query_params() -> Dict[str, List[str]]:
     ctx = get_script_run_ctx()
     if ctx is None:
         return {}
+    ctx._experimental_query_params_used = True
+    ctx.ensure_single_query_api_used()
+
     # Return new query params dict, but without embed, embed_options query params
     return util.exclude_keys_in_dict(
         parse.parse_qs(ctx.query_string, keep_blank_values=True),
@@ -93,6 +96,8 @@ def set_query_params(**query_params: Any) -> None:
     ctx = get_script_run_ctx()
     if ctx is None:
         return
+    ctx._experimental_query_params_used = True
+    ctx.ensure_single_query_api_used()
 
     msg = ForwardMsg()
     msg.page_info_changed.query_string = _ensure_no_embed_params(

@@ -15,6 +15,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, Iterator, List, MutableMapping, Union
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
@@ -31,7 +32,6 @@ class QueryParams(MutableMapping[str, str]):
 
     def __getitem__(self, key: str) -> str:
         """Retrieves a value for a given key in query parameters.
-
         Returns the last item in a list or an empty string if empty.
         If the key is not present, raise KeyError.
         """
@@ -58,6 +58,7 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
+        self._ensure_single_query_api_used()
         try:
             del self._query_params[key]
             self._send_query_param_msg()
@@ -65,12 +66,14 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
+        self._ensure_single_query_api_used()
         if key not in self._query_params:
             return []
         value = self._query_params[key]
         return value if isinstance(value, list) else [value]
 
     def __len__(self) -> int:
+        self._ensure_single_query_api_used()
         return len(self._query_params)
 
     def _send_query_param_msg(self) -> None:
@@ -81,6 +84,7 @@ class QueryParams(MutableMapping[str, str]):
         ctx = get_script_run_ctx()
         if ctx is None:
             return
+        self._ensure_single_query_api_used()
 
         msg = ForwardMsg()
         msg.page_info_changed.query_string = _ensure_no_embed_params(
@@ -90,10 +94,12 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
+        self._ensure_single_query_api_used()
         self._query_params.clear()
         self._send_query_param_msg()
 
     def to_dict(self) -> Dict[str, str]:
+        self._ensure_single_query_api_used()
         # return the last query param if multiple keys are set
         return {key: self[key] for key in self._query_params}
 
@@ -107,6 +113,16 @@ class QueryParams(MutableMapping[str, str]):
 
     def clear_with_no_forward_msg(self) -> None:
         self._query_params.clear()
+
+    def _ensure_single_query_api_used(self):
+        # Avoid circular imports
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+        ctx._production_query_params_used = True
+        ctx.ensure_single_query_api_used()
 
 
 def missing_key_error_message(key: str) -> str:
