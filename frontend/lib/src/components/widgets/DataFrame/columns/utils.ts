@@ -633,3 +633,40 @@ export function removeLineBreaks(text: string): string {
   }
   return text
 }
+
+/**
+ * Determines the correct value to display in a link cell based on the `href` and `regexPattern` parameters.
+ *
+ * @param href - The raw url value.
+ * @param displayTextRegex - The regex pattern which will be applied to the `href`. If no match is found, then we return the `href`.
+ * @returns - The string value to be displayed in the cell.
+ *
+ * * @example
+ * const regex = new RegExp("https:\/\/(.*?)\.streamlit\.app")
+ * const regex2 = new RegExp("https:\/\/roadmap\.(.*?)\.app")
+ * getLinkDisplayValueFromRegex(regex, "https://roadmap.streamlit.app"); // returns "roadmap"
+ * getLinkDisplayValueFromRegex(regex, "https://roadmap.streamlit.app"); // returns "streamlit"
+ */
+export function getLinkDisplayValueFromRegex(
+  displayTextRegex: RegExp,
+  href?: string | null
+): string {
+  if (isNullOrUndefined(href)) {
+    return ""
+  }
+
+  try {
+    // apply the regex pattern to display the value
+    const patternMatch = href.match(displayTextRegex)
+    if (patternMatch && patternMatch[1] !== undefined) {
+      // return the first matching group
+      return patternMatch[1]
+    }
+
+    // if the regex doesn't find a match with the url, just use the url as display value
+    return href
+  } catch (error) {
+    // if there was any error return the href
+    return href
+  }
+}

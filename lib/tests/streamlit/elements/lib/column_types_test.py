@@ -444,6 +444,7 @@ class ColumnTypesTest(unittest.TestCase):
                     default="https://streamlit.io/",
                     max_chars=100,
                     validate="^[a-zA-Z]+$",
+                    display_text="streamlit",
                 )
             ),
             {
@@ -457,6 +458,7 @@ class ColumnTypesTest(unittest.TestCase):
                     "type": "link",
                     "max_chars": 100,
                     "validate": "^[a-zA-Z]+$",
+                    "display_text": "streamlit",
                 },
             },
             "Should have all the properties defined.",

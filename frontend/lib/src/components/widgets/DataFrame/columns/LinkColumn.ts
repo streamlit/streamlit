@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-import { GridCell, UriCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import {
-  notNullOrUndefined,
-  isNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,
@@ -27,13 +24,17 @@ import {
   toSafeString,
   getErrorCell,
   ColumnCreator,
+  getLinkDisplayValueFromRegex,
 } from "./utils"
+import { LinkCell } from "./cells/LinkCell"
 
 export interface LinkColumnParams {
   // The maximum number of characters the user can enter into the text input.
   readonly max_chars?: number
   // Regular expression that the input's value must match for the value to pass
   readonly validate?: string
+  // a value to display in the link cell. Can be a regex to parse out a specific substring of the url to be displayed
+  readonly display_text?: string
 }
 
 /**
@@ -57,45 +58,56 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     }
   }
 
+  // Determine if the user's provided display text is a regexp pattern or not.
+  let displayTextRegex: RegExp | undefined = undefined
+  if (!isNullOrUndefined(parameters.display_text)) {
+    if (
+      parameters.display_text.includes("(") &&
+      parameters.display_text.includes(")")
+    ) {
+      // u flag allows unicode characters
+      // s flag allows . to match newlines
+      displayTextRegex = new RegExp(parameters.display_text, "us")
+    }
+  }
+
   const cellTemplate = {
-    kind: GridCellKind.Uri,
-    data: "",
+    kind: GridCellKind.Custom,
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
-  } as UriCell
+    data: {
+      kind: "link-cell",
+      href: "",
+      displayText: "",
+    },
+    copyData: "",
+  } as LinkCell
 
-  const validateInput = (data?: any): boolean | string => {
-    if (isNullOrUndefined(data)) {
+  const validateInput = (href?: string): boolean => {
+    if (isNullOrUndefined(href)) {
       if (props.isRequired) {
         return false
       }
       return true
     }
 
-    let cellData = toSafeString(data)
-    // A flag to indicate whether the value has been auto-corrected.
-    // This is used to decide if we should return the corrected value or true.
-    // But we still run all other validations on the corrected value below.
-    let corrected = false
+    const cellHref = toSafeString(href)
 
-    if (parameters.max_chars) {
-      if (cellData.length > parameters.max_chars) {
-        // Correct the value
-        cellData = cellData.slice(0, parameters.max_chars)
-        corrected = true
-      }
+    if (parameters.max_chars && cellHref.length > parameters.max_chars) {
+      // value is too long
+      return false
     }
 
     if (
       validateRegex instanceof RegExp &&
-      validateRegex.test(cellData) === false
+      validateRegex.test(cellHref) === false
     ) {
       return false
     }
 
-    return corrected ? cellData : true
+    return true
   }
 
   return {
@@ -104,35 +116,60 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     validateInput,
     getCell(data?: any, validate?: boolean): GridCell {
+      if (isNullOrUndefined(data)) {
+        return {
+          ...cellTemplate,
+          data: {
+            ...cellTemplate.data,
+            href: null,
+          },
+          isMissingValue: true,
+        } as LinkCell
+      }
+
+      const href: string = data
       if (typeof validateRegex === "string") {
         // The regex is invalid, we return an error to indicate this
         // to the developer:
-        return getErrorCell(toSafeString(data), validateRegex)
+        return getErrorCell(toSafeString(href), validateRegex)
       }
 
       if (validate) {
-        const validationResult = validateInput(data)
+        const validationResult = validateInput(href)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will
           // prevent this cell to be inserted into the table.
           // This cell should never be actually displayed to the user.
           // It's mostly used internally to prevent invalid input to be
           // inserted into the table.
-          return getErrorCell(toSafeString(data), "Invalid input.")
-        } else if (typeof validationResult === "string") {
-          // Apply corrections:
-          data = validationResult
+          return getErrorCell(toSafeString(href), "Invalid input.")
         }
+      }
+
+      let displayText = ""
+      if (displayTextRegex !== undefined) {
+        // Set display value to be the regex extracted portion of the href.
+        displayText = getLinkDisplayValueFromRegex(displayTextRegex, href)
+      } else {
+        // Use user provided display_text unless it's null, undefined, or an empty string.
+        // If it's any of those falsy values, use the href.
+        displayText = parameters.display_text || href
       }
 
       return {
         ...cellTemplate,
-        data: notNullOrUndefined(data) ? toSafeString(data) : null,
-        isMissingValue: isNullOrUndefined(data),
-      } as UriCell
+        data: {
+          kind: "link-cell",
+          href: href,
+          displayText: displayText,
+        },
+        copyData: href,
+        cursor: "pointer",
+        isMissingValue: isNullOrUndefined(href),
+      } as LinkCell
     },
-    getCellValue(cell: UriCell): string | null {
-      return cell.data === undefined ? null : cell.data
+    getCellValue(cell: LinkCell): string | null {
+      return isNullOrUndefined(cell.data?.href) ? null : cell.data.href
     },
   }
 }

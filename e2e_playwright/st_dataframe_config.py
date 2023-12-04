@@ -194,6 +194,12 @@ st.dataframe(
                 None,
             ],
             "col_1": ["/a", "/b", "", None],
+            "col_2": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "https://issues.streamlit.app",
+                None,
+            ],
         }
     ),
     column_config={
@@ -208,6 +214,12 @@ st.dataframe(
             validate="^[0-9]+$",  # Should be ignored
         ),
         "col_1": st.column_config.LinkColumn(),
+        "col_2": st.column_config.LinkColumn(
+            "Link with display text",
+            width="medium",
+            help="This is a link column with a displayText value",
+            display_text="https://(.*?)\.streamlit\.app",
+        ),
     },
 )
 
