@@ -49,6 +49,7 @@ export interface Props {
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
   facingMode: FacingMode
   setFacingMode: () => void
+  // Allow for unit testing
   testOverride?: WebcamPermission
 }
 

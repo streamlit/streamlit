@@ -17,13 +17,20 @@
 import React from "react"
 import "@testing-library/jest-dom"
 
-import { screen } from "@testing-library/react"
+import { screen, fireEvent, within } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { WebcamPermission, Props } from "./WebcamComponent"
 
 jest.mock("react-webcam")
+
+jest.mock("react-device-detect", () => {
+  return {
+    isMobile: true,
+  }
+})
+
 const getProps = (props: Partial<Props> = {}): Props => {
   return {
     handleCapture: jest.fn(),
@@ -83,5 +90,37 @@ describe("Test Webcam Component", () => {
     expect(screen.getByTestId("stWebcamStyledBox")).not.toHaveAttribute(
       "hidden"
     )
+  })
+
+  it("shows a SwitchFacingMode button", () => {
+    const props = getProps({ testOverride: WebcamPermission.SUCCESS })
+    render(<WebcamComponent {...props} />)
+    expect(screen.getByTestId("stWebcamComponent")).toBeInTheDocument()
+    expect(screen.getByTestId("stCameraSwitchButton")).toBeInTheDocument()
+  })
+
+  it("changes `facingMode` when SwitchFacingMode button clicked", () => {
+    const props = getProps({ testOverride: WebcamPermission.SUCCESS })
+    render(<WebcamComponent {...props} />)
+
+    expect(screen.getByTestId("stCameraSwitchButton")).toBeInTheDocument()
+
+    const switchButton = within(
+      screen.getByTestId("stCameraSwitchButton")
+    ).getByRole("button")
+
+    fireEvent.click(switchButton)
+
+    expect(props.setFacingMode).toHaveBeenCalledTimes(1)
+  })
+
+  it("test handle capture function", async () => {
+    const props = getProps({ testOverride: WebcamPermission.SUCCESS })
+    render(<WebcamComponent {...props} />)
+    expect(screen.getByTestId("stWebcamComponent")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Take Photo" }))
+
+    expect(props.handleCapture).toHaveBeenCalled()
   })
 })
