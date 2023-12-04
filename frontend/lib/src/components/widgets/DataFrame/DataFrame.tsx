@@ -398,12 +398,23 @@ function DataFrame({
       const scrollAreaBounds = resizableContainerRef.current
         ?.querySelector(".dvn-stack")
         ?.getBoundingClientRect()
+
+      const urlParams = new URLSearchParams(window.location.search)
+      urlParams.get("scrollType")
+      const f =
+        urlParams.get("scrollType") === "round"
+          ? Math.round
+          : urlParams.get("scrollType") === "ceil"
+          ? Math.ceil
+          : (n: number) => n
+
       if (scrollAreaBounds) {
         setHasVerticalScroll(
-          scrollAreaBounds.height > resizableContainerRef.current.clientHeight
+          f(scrollAreaBounds.height) >
+            resizableContainerRef.current.clientHeight
         )
         setHasHorizontalScroll(
-          scrollAreaBounds.width > resizableContainerRef.current.clientWidth
+          f(scrollAreaBounds.width) > resizableContainerRef.current.clientWidth
         )
       }
     }
