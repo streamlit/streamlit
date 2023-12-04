@@ -21,7 +21,7 @@ from typing import Callable, Dict, List, Optional, Set
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
-from streamlit.source_util import get_pages
+from streamlit.source_util import get_pages, register_pages_changed_callback
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
     get_default_path_watcher_class,
@@ -50,12 +50,32 @@ class LocalSourcesWatcher:
         )
 
         self._watched_modules: Dict[str, WatchedModule] = {}
+        self.watched_pages = set()
 
         for page_info in get_pages(self._main_script_path).values():
+            self.watched_pages.add(page_info["script_path"])
             self._register_watcher(
                 page_info["script_path"],
                 module_name=None,  # Only root scripts have their modules set to None
             )
+
+    def update_watched_pages(self) -> None:
+        old_watched_pages = self.watched_pages
+        new_pages_paths = set()
+
+        for page_info in get_pages(self._main_script_path).values():
+            new_pages_paths.add(page_info["script_path"])
+            if page_info["script_path"] not in old_watched_pages:
+                self._register_watcher(
+                    page_info["script_path"],
+                    module_name=None,
+                )
+
+        for old_page_path in old_watched_pages:
+            if old_page_path not in new_pages_paths:
+                self._deregister_watcher(old_page_path)
+
+        self.watched_pages = new_pages_paths
 
     def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)
