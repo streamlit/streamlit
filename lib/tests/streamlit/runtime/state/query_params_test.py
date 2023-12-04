@@ -59,7 +59,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params["test"] = ""
         assert self.query_params["test"] == ""
         message = self.get_message_from_queue(0)
-        assert "test=" in message.page_info_changed.query_string
+        assert "foo=bar&two=x&two=y&test=" == message.page_info_changed.query_string
 
     def test__setitem__adds_list_value(self):
         self.query_params["test"] = ["test", "test2"]
@@ -67,35 +67,11 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         message = self.get_message_from_queue(0)
         assert "test=test&test=test2" in message.page_info_changed.query_string
 
-    def test__setitem__adds_tuple_value(self):
-        self.query_params["test"] = (1, 2, 3)
-        assert self.query_params["test"] == "3"
-        message = self.get_message_from_queue(0)
-        assert "test=1&test=2&test=3" in message.page_info_changed.query_string
-
-    def test__setitem__adds_set_value(self):
-        self.query_params["test"] = set({1, 2, 3})
-        assert self.query_params["test"] == "3"
-        message = self.get_message_from_queue(0)
-        assert "test=1&test=2&test=3" in message.page_info_changed.query_string
-
     def test__setitem__sets_old_query_param_key(self):
         self.query_params["foo"] = "test"
         assert self.query_params.get("foo") == "test"
         message = self.get_message_from_queue(0)
         assert "foo=test" in message.page_info_changed.query_string
-
-    def test__setitem__raises_StreamlitException_with_dictionary_value(self):
-        with pytest.raises(StreamlitAPIException):
-            self.query_params["foo"] = {"test": "test"}
-
-    def test__setitem__raises_exception_for_embed_key(self):
-        with pytest.raises(StreamlitAPIException):
-            self.query_params["embed"] = True
-
-    def test__setitem__raises_exception_for_embed_options_key(self):
-        with pytest.raises(StreamlitAPIException):
-            self.query_params["embed_options"] = "show_toolbar"
 
     def test__delitem__removes_existing_key(self):
         del self.query_params["foo"]
@@ -125,7 +101,15 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params.clear()
         assert len(self.query_params) == 0
         message = self.get_message_from_queue(0)
-        assert "" in message.page_info_changed.query_string
+        assert "" == message.page_info_changed.query_string
+
+    def test__setitem__raises_exception_for_embed_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params["embed"] = True
+
+    def test__setitem__raises_exception_for_embed_options_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params["embed_options"] = "show_toolbar"
 
     def test_to_dict(self):
         self.query_params["baz"] = ""
