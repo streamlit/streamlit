@@ -14,7 +14,7 @@
 
 from typing import Dict, Iterator, List, MutableMapping, Set, Tuple, Union
 
-from streamlit.runtime.state.query_params import _missing_key_error_message
+from streamlit.runtime.state.query_params import missing_key_error_message
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
 
@@ -50,23 +50,20 @@ class QueryParamsProxy(MutableMapping[str, str]):
             try:
                 return qp[key]
             except KeyError:
-                raise AttributeError(_missing_key_error_message(key))
+                raise AttributeError(missing_key_error_message(key))
 
     def __delattr__(self, key: str) -> None:
         with get_session_state().query_params() as qp:
             try:
                 del qp[key]
             except KeyError:
-                raise AttributeError(_missing_key_error_message(key))
+                raise AttributeError(missing_key_error_message(key))
 
     def __setattr__(
         self, key: str, value: Union[str, Set[str], Tuple[str], List[str]]
     ) -> None:
         with get_session_state().query_params() as qp:
-            try:
-                qp[key] = value
-            except KeyError:
-                raise AttributeError(_missing_key_error_message(key))
+            qp[key] = value
 
     def get_all(self, key: str) -> List[str]:
         with get_session_state().query_params() as qp:

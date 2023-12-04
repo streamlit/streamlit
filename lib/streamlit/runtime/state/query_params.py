@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, MutableMapping, Set, Tuple, Union
+from typing import Dict, Iterator, List, MutableMapping, Union
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -46,18 +46,16 @@ class QueryParams(MutableMapping[str, str]):
                     return value[-1]
             return value
         except KeyError:
-            raise KeyError(_missing_key_error_message(key))
+            raise KeyError(missing_key_error_message(key))
 
-    # Type checking users should handle the string serialization themselves
-    # We will accept any type for the list and serialize to str just in case
-    def __setitem__(
-        self, key: str, value: Union[str, Set[str], Tuple[str], List[str]]
-    ) -> None:
+    def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
         if isinstance(value, dict):
             raise StreamlitAPIException(
                 f"You cannot set a query params key `{key}` to a dictionary."
             )
 
+        # Type checking users should handle the string serialization themselves
+        # We will accept any type for the list and serialize to str just in case
         if isinstance(value, (tuple, set, list)):
             self._query_params[key] = [str(item) for item in value]
         else:
@@ -66,11 +64,11 @@ class QueryParams(MutableMapping[str, str]):
 
     def __delitem__(self, key: str) -> None:
         self._ensure_single_query_api_used()
-        if key in self._query_params:
+        try:
             del self._query_params[key]
             self._send_query_param_msg()
-        else:
-            raise KeyError(_missing_key_error_message(key))
+        except KeyError:
+            raise KeyError(missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
         self._ensure_single_query_api_used()
@@ -107,6 +105,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def to_dict(self) -> Dict[str, str]:
         self._ensure_single_query_api_used()
+        # return the last query param if multiple keys are set
         return {key: self[key] for key in self._query_params}
 
     def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
@@ -115,10 +114,10 @@ class QueryParams(MutableMapping[str, str]):
 
         if key.lower() in EMBED_QUERY_PARAMS_KEYS:
             return
-        if isinstance(val, list):
-            self._query_params[key] = [str(item) for item in val]
-        else:
-            self._query_params[key] = str(val)
+        self._query_params[key] = val
+
+    def clear_with_no_forward_msg(self) -> None:
+        self._query_params.clear()
 
     def _ensure_single_query_api_used(self):
         # Avoid circular imports
@@ -131,5 +130,5 @@ class QueryParams(MutableMapping[str, str]):
         ctx.ensure_single_query_api_used()
 
 
-def _missing_key_error_message(key: str) -> str:
+def missing_key_error_message(key: str) -> str:
     return f'st.query_params has no key "{key}". Did you forget to initialize it?'

@@ -38,31 +38,32 @@ def _create_mock_session_state(
     return SafeSessionState(session_state, lambda: None)
 
 
-@patch(
-    "streamlit.runtime.state.query_params_proxy.get_session_state",
-    MagicMock(
-        return_value=_create_mock_session_state(
-            initial_query_params_values={"test": "value"}
-        )
-    ),
-)
 class TestQueryParamsProxy(unittest.TestCase):
     def setUp(self):
+        self.patcher = patch(
+            "streamlit.runtime.state.query_params_proxy.get_session_state",
+            MagicMock(
+                return_value=_create_mock_session_state(
+                    initial_query_params_values={"test": "value"}
+                )
+            ),
+        )
+        self.mock_get_session_state = self.patcher.start()
         self.query_params_proxy = QueryParamsProxy()
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test__getitem__returns_correct_value(self):
         assert self.query_params_proxy["test"] == "value"
 
     def test__setitem__sets_entry(self):
-        self.query_params_proxy["new_value"] = "value"
-        assert self.query_params_proxy["new_value"] == "value"
+        self.query_params_proxy["key"] = "value"
+        assert self.query_params_proxy["key"] == "value"
 
     def test__delitem__deletes_entry(self):
         del self.query_params_proxy["test"]
         assert "test" not in self.query_params_proxy
-
-        # reset query params proxy to avoid issues with mutability
-        self.query_params_proxy["test"] = "value"
 
     def test__len__returns_correct_len(self):
         assert len(self.query_params_proxy) == 1
@@ -80,19 +81,15 @@ class TestQueryParamsProxy(unittest.TestCase):
         assert self.query_params_proxy.get_all("test") == ["value1", "value2"]
 
     def test__getattr__returns_correct_value(self):
-        self.query_params_proxy.test = "value"
         assert self.query_params_proxy.test == "value"
 
-    def test__setattr__(self):
-        self.query_params_proxy.test = "value"
-        assert self.query_params_proxy["test"] == "value"
+    def test__setattr__sets_entry(self):
+        self.query_params_proxy.key = "value"
+        assert self.query_params_proxy["key"] == "value"
 
     def test__delattr__deletes_entry(self):
         del self.query_params_proxy.test
         assert "test" not in self.query_params_proxy
-
-        # reset query params proxy to avoid issues with mutability
-        self.query_params_proxy["test"] = "value"
 
     def test__getattr__raises_Attribute_exception(self):
         with pytest.raises(AttributeError):
