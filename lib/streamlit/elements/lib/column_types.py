@@ -524,7 +524,7 @@ def LinkColumn(
         * A string that is displayed in every cell, e.g. “Open link”.
 
         * A regular expression (JS flavor, detected by usage of parentheses)
-          to extract a part of the URL via a capture group, e.g. "https:\/\/(.*?)\.streamlit\.app”
+          to extract a part of the URL via a capture group, e.g. "https://(.*?)\.streamlit\.app”
           to extract the display text “foo” from the URL “https://foo.streamlit.app”.
 
         For more complex cases, you may use [Pandas Styler's format function on the underlying
