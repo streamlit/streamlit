@@ -36,7 +36,7 @@ def highlight_first(value):
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.dataframe(df.style.applymap(highlight_first))
+st.dataframe(df.style.map(highlight_first))
 
 st.header("Pandas Styler: Background and font styling")
 
@@ -52,7 +52,7 @@ def highlight_max(s, props=""):
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.applymap(style_negative, props="color:#FF0000;").applymap(
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
@@ -93,3 +93,18 @@ def make_pretty(styler):
 styled_df = weather_df.style.pipe(make_pretty)
 
 st.dataframe(styled_df)
+
+st.header("LinkColumn with display value:")
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "https://streamlit.io",
+                "https://docs.streamlit.io",
+                "https://streamlit.io/gallery",
+                None,
+            ]
+        }
+    ).style.format(lambda url: url.replace("https://", "Website: ") if url else ""),
+    column_config={"col_0": st.column_config.LinkColumn()},
+)

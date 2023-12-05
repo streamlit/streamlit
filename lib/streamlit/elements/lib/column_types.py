@@ -547,6 +547,12 @@ def LinkColumn(
     >>>             "https://issues.streamlit.app",
     >>>             "https://30days.streamlit.app",
     >>>         ],
+    >>>         "creator": [
+    >>>             "https://github.com/streamlit",
+    >>>             "https://github.com/arnaudmiribel",
+    >>>             "https://github.com/streamlit",
+    >>>             "https://github.com/streamlit",
+    >>>         ],
     >>>     }
     >>> )
     >>>
@@ -559,7 +565,10 @@ def LinkColumn(
     >>>             validate="^https://[a-z]+\.streamlit\.app$",
     >>>             max_chars=100,
     >>>             display_text="https://(.*?)\.streamlit\.app"
-    >>>         )
+    >>>         ),
+    >>>         "creator": st.column_config.LinkColumn(
+    >>>             "App Creator", display_text="Open profile"
+    >>>         ),
     >>>     },
     >>>     hide_index=True,
     >>> )

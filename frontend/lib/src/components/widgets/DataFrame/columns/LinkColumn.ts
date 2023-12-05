@@ -60,14 +60,16 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
   // Determine if the user's provided display text is a regexp pattern or not.
   let displayTextRegex: RegExp | undefined = undefined
-  if (!isNullOrUndefined(parameters.display_text)) {
-    if (
-      parameters.display_text.includes("(") &&
-      parameters.display_text.includes(")")
-    ) {
-      // u flag allows unicode characters
-      // s flag allows . to match newlines
+  if (
+    !isNullOrUndefined(parameters.display_text) &&
+    parameters.display_text.includes("(") &&
+    parameters.display_text.includes(")")
+  ) {
+    try {
       displayTextRegex = new RegExp(parameters.display_text, "us")
+    } catch (error) {
+      // The regex is invalid, interpret it as static display text.
+      displayTextRegex = undefined
     }
   }
 
@@ -147,13 +149,15 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       }
 
       let displayText = ""
-      if (displayTextRegex !== undefined) {
-        // Set display value to be the regex extracted portion of the href.
-        displayText = getLinkDisplayValueFromRegex(displayTextRegex, href)
-      } else {
-        // Use user provided display_text unless it's null, undefined, or an empty string.
-        // If it's any of those falsy values, use the href.
-        displayText = parameters.display_text || href
+      if (href) {
+        if (displayTextRegex !== undefined) {
+          // Set display value to be the regex extracted portion of the href.
+          displayText = getLinkDisplayValueFromRegex(displayTextRegex, href)
+        } else {
+          // Use user provided display_text unless it's null, undefined, or an empty string.
+          // If it's any of those falsy values, use the href.
+          displayText = parameters.display_text || href
+        }
       }
 
       return {
