@@ -32,6 +32,7 @@ from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
 from typing import Any, Dict, Generator, List, Literal, Protocol, Tuple
+from urllib import parse
 
 import pytest
 import requests
@@ -249,24 +250,14 @@ def app(page: Page, app_port: int) -> Page:
 
 
 @pytest.fixture(scope="function")
-def app_with_params(page: Page, app_port: int, request) -> Tuple[Page, Dict]:
+def app_with_query_params(
+    page: Page, app_port: int, request: FixtureRequest
+) -> Tuple[Page, Dict]:
     """Fixture that opens the app with additional query parameters.
-    The query parameters are passed as a dictionary in the 'query_params' key of the request.
+    The query parameters are passed as a dictionary in the 'param' key of the request.
     """
     query_params = request.param
-
-    from urllib import parse
-
-    query_parts = []
-    for key, value in query_params.items():
-        if isinstance(value, (list, tuple)):
-            for item in value:
-                query_parts.append(f"{key}={parse.quote(str(item))}")
-        else:
-            query_parts.append(f"{key}={parse.quote(str(value))}")
-
-    query_string = "&".join(query_parts)
-
+    query_string = parse.urlencode(query_params, doseq=True)
     url = f"http://localhost:{app_port}/?{query_string}"
     page.goto(url)
     wait_for_app_loaded(page)
