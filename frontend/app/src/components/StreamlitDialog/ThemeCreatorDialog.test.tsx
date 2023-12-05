@@ -18,9 +18,6 @@ import React from "react"
 import "@testing-library/jest-dom"
 import { screen, fireEvent, within } from "@testing-library/react"
 import {
-  UISelectbox,
-  BaseColorPicker,
-  baseTheme,
   darkTheme,
   lightTheme,
   toThemeInput,
