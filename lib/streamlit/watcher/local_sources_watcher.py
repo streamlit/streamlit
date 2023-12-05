@@ -21,7 +21,7 @@ from typing import Callable, Dict, List, Optional, Set
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
-from streamlit.source_util import get_pages, register_pages_changed_callback
+from streamlit.source_util import get_pages
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
     get_default_path_watcher_class,

@@ -447,7 +447,9 @@ class AppSession:
         msg = ForwardMsg()
         _populate_app_pages(msg.pages_changed, self._script_data.main_script_path)
         self._enqueue_forward_msg(msg)
-        self._local_sources_watcher.update_watched_pages()
+
+        if self._local_sources_watcher is not None:
+            self._local_sources_watcher.update_watched_pages()
 
     def _clear_queue(self) -> None:
         self._browser_queue.clear()
