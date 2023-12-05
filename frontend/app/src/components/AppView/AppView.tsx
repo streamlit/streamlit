@@ -29,6 +29,7 @@ import {
   SessionInfo,
   IGuestToHostMessage,
   StreamlitEndpoints,
+  LibContext,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -83,6 +84,21 @@ export interface AppViewProps {
  */
 function AppView(props: AppViewProps): ReactElement {
   const {
+    wideMode,
+    initialSidebarState,
+    embedded,
+    showPadding,
+    disableScrolling,
+    showFooter,
+    showToolbar,
+    showColoredLine,
+    toastAdjustment,
+  } = React.useContext(AppContext)
+
+  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
+    React.useContext(LibContext)
+
+  const {
     elements,
     sessionInfo,
     scriptRunId,
@@ -99,6 +115,16 @@ function AppView(props: AppViewProps): ReactElement {
     sendMessageToHost,
     endpoints,
   } = props
+
+  const layout = wideMode ? "wide" : "narrow"
+  const hasSidebarElements = !elements.sidebar.isEmpty
+  const hasEventElements = !elements.event.isEmpty
+  const [sidebarOverride, setSidebarOverride] = React.useState(false)
+
+  const showSidebar =
+    hasSidebarElements ||
+    (!hideSidebarNav && appPages.length > 1) ||
+    sidebarOverride
 
   // TODO: This works for scroll to bottom, but we will need
   // to revisit this when we support multiple position options
@@ -121,23 +147,28 @@ function AppView(props: AppViewProps): ReactElement {
     return () => window.removeEventListener("hashchange", listener, false)
   }, [sendMessageToHost])
 
-  const {
-    wideMode,
-    initialSidebarState,
-    embedded,
-    showPadding,
-    disableScrolling,
-    showFooter,
-    showToolbar,
-    showColoredLine,
-    toastAdjustment,
-  } = React.useContext(AppContext)
+  React.useEffect(() => {
+    if (showSidebar && hideSidebarNav && !sidebarOverride) {
+      setSidebarOverride(true)
+    }
+  }, [showSidebar, hideSidebarNav, sidebarOverride])
 
-  const layout = wideMode ? "wide" : "narrow"
-  const hasSidebarElements = !elements.sidebar.isEmpty
-  const showSidebar =
-    hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
-  const hasEventElements = !elements.event.isEmpty
+  const scriptFinishedHandler = React.useCallback(() => {
+    if (!hasSidebarElements && sidebarOverride) {
+      setSidebarOverride(false)
+    }
+  }, [hasSidebarElements, sidebarOverride])
+
+  React.useEffect(() => {
+    addScriptFinishedHandler(scriptFinishedHandler)
+    return () => {
+      removeScriptFinishedHandler(scriptFinishedHandler)
+    }
+  }, [
+    scriptFinishedHandler,
+    addScriptFinishedHandler,
+    removeScriptFinishedHandler,
+  ])
 
   const renderBlock = (node: BlockNode, events = false): ReactElement => (
     <StyledAppViewBlockContainer
