@@ -48,6 +48,7 @@ import {
   DateTimeColumn,
   TimeColumn,
   DateColumn,
+  LinkCell,
   removeLineBreaks,
 } from "./columns"
 
@@ -445,6 +446,17 @@ export function getCellFromArrow(
             displayDate: displayData,
           },
         } as DatePickerType
+      } else if (
+        cellTemplate.kind === GridCellKind.Custom &&
+        (cellTemplate as LinkCell).data?.kind === "link-cell"
+      ) {
+        cellTemplate = {
+          ...cellTemplate,
+          data: {
+            ...(cellTemplate as LinkCell).data,
+            displayText: displayData,
+          },
+        } as LinkCell
       }
     }
 
