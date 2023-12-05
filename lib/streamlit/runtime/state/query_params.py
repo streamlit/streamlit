@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, MutableMapping, Union
+from typing import Dict, Iterator, List, MutableMapping, Set, Tuple, Union
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -48,7 +48,9 @@ class QueryParams(MutableMapping[str, str]):
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
-    def __setitem__(self, key: str, value: Union[str, List[str]]) -> None:
+    def __setitem__(
+        self, key: str, value: Union[str, Set[str], Tuple[str], List[str]]
+    ) -> None:
         if isinstance(value, dict):
             raise StreamlitAPIException(
                 f"You cannot set a query params key `{key}` to a dictionary."
