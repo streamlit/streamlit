@@ -60,14 +60,16 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
   // Determine if the user's provided display text is a regexp pattern or not.
   let displayTextRegex: RegExp | undefined = undefined
-  if (!isNullOrUndefined(parameters.display_text)) {
-    if (
-      parameters.display_text.includes("(") &&
-      parameters.display_text.includes(")")
-    ) {
-      // u flag allows unicode characters
-      // s flag allows . to match newlines
+  if (
+    !isNullOrUndefined(parameters.display_text) &&
+    parameters.display_text.includes("(") &&
+    parameters.display_text.includes(")")
+  ) {
+    try {
       displayTextRegex = new RegExp(parameters.display_text, "us")
+    } catch (error) {
+      // The regex is invalid, interpret it as static display text.
+      displayTextRegex = undefined
     }
   }
 
