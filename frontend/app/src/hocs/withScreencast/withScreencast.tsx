@@ -185,7 +185,7 @@ function withScreencast<P extends InjectedProps>(
       }: WithScreenCastState = this.state
 
       return (
-        <div className="withScreencast">
+        <div className="withScreencast" data-testid="stScreencast">
           <WrappedComponent
             {...(this.props as P)}
             screenCast={this.getScreenCastProps()}
