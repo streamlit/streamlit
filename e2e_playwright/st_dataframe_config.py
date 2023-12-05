@@ -197,7 +197,13 @@ st.dataframe(
             "col_2": [
                 "https://roadmap.streamlit.app",
                 "https://extras.streamlit.app",
-                "https://issues.streamlit.app",
+                "",
+                None,
+            ],
+            "col_3": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
                 None,
             ],
         }
@@ -215,10 +221,12 @@ st.dataframe(
         ),
         "col_1": st.column_config.LinkColumn(),
         "col_2": st.column_config.LinkColumn(
-            "Link with display text",
-            width="medium",
-            help="This is a link column with a displayText value",
+            "Display text via Regex",
             display_text="https://(.*?)\.streamlit\.app",
+        ),
+        "col_3": st.column_config.LinkColumn(
+            "Static display text",
+            display_text="Open link",
         ),
     },
 )
