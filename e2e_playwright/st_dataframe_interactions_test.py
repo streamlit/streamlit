@@ -200,7 +200,7 @@ def test_clicking_on_fullscreen_toolbar_button(
 
     dataframe_element = app.get_by_test_id("stDataFrame").nth(0)
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
-    fullscreen_wrapper = app.get_by_test_id("stStyledFullScreenFrame").nth(0)
+    fullscreen_wrapper = app.get_by_test_id("stFullScreenFrame").nth(0)
 
     fullscreen_toolbar_button = dataframe_toolbar.get_by_test_id(
         "stElementToolbarButton"

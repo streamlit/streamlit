@@ -15,9 +15,10 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { fireEvent, screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 
-import FullScreenWrapper from "./FullScreenWrapper"
 import withFullScreenWrapper from "./withFullScreenWrapper"
 
 interface TestProps {
@@ -30,7 +31,14 @@ interface TestProps {
 }
 
 class TestComponent extends PureComponent<TestProps> {
-  public render = (): ReactNode => this.props.label
+  public render = (): ReactNode => (
+    <>
+      <div>{this.props.label}</div>
+      <div>
+        {this.props.isFullScreen ? "isFullScreen" : "NOT isFullScreen"}
+      </div>
+    </>
+  )
 }
 
 const getProps = (props: Partial<TestProps> = {}): TestProps => ({
@@ -46,46 +54,50 @@ const WrappedTestComponent = withFullScreenWrapper(TestComponent)
 
 describe("withFullScreenWrapper HOC", () => {
   it("renders without crashing", () => {
-    const wrapper = mount(<WrappedTestComponent {...getProps()} />)
+    render(<WrappedTestComponent {...getProps()} />)
 
-    expect(wrapper.find(FullScreenWrapper).exists()).toBe(true)
+    expect(screen.getByTestId("stFullScreenFrame")).toBeInTheDocument()
   })
 
   it("renders a component wrapped with FullScreenWrapper", () => {
     const props = getProps()
-    const wrapper = mount(<WrappedTestComponent {...props} />)
-    const fullScreenWrapper = wrapper.find(FullScreenWrapper)
+    render(<WrappedTestComponent {...props} />)
 
-    expect(fullScreenWrapper.props().width).toBe(props.width)
-    expect(fullScreenWrapper.props().height).toBeUndefined()
+    expect(screen.getByTestId("stFullScreenFrame")).toHaveStyle(
+      `width: ${props.width}`
+    )
   })
 
   it("renders FullScreenWrapper with specified height", () => {
     const props = getProps({ width: 123, label: "label", height: 455 })
-    const wrapper = mount(<WrappedTestComponent {...props} />)
-    const fullScreenWrapper = wrapper.find(FullScreenWrapper)
+    render(<WrappedTestComponent {...props} />)
 
-    expect(fullScreenWrapper.props().width).toBe(props.width)
-    expect(fullScreenWrapper.props().height).toBe(props.height)
+    expect(screen.getByTestId("stFullScreenFrame")).toHaveStyle(
+      `width: ${props.width}`
+    )
+    expect(screen.getByTestId("stFullScreenFrame")).toHaveStyle(
+      `height: ${props.height}`
+    )
   })
 
   it("passes unrelated props to wrapped component", () => {
     const props = getProps()
-    const wrapper = mount(<WrappedTestComponent {...props} />)
-    const componentInstance = wrapper.find(TestComponent)
-    expect(componentInstance.props().label).toBe("label")
+    render(<WrappedTestComponent {...props} />)
+
+    expect(screen.getByTestId("stFullScreenFrame")).toBeInTheDocument()
+    expect(screen.getByText(`${props.label}`)).toBeInTheDocument()
   })
 
   it("passes `isFullScreen` to wrapped component", () => {
     const props = getProps()
-    const wrapper = mount(<WrappedTestComponent {...props} />)
+    render(<WrappedTestComponent {...props} />)
 
     // by default, isFullScreen == false
-    expect(wrapper.find(TestComponent).props().isFullScreen).toBe(false)
+    expect(screen.getByText("NOT isFullScreen")).toBeInTheDocument()
 
-    // when FullScreenWrapper.expanded == true, then isFullScreen == true
-    wrapper.find("FullScreenWrapper").setState({ expanded: true })
-    expect(wrapper.find(TestComponent).props().isFullScreen).toBe(true)
+    // zoomIn sets FullScreenWrapper.expanded == true & isFullScreen == true
+    fireEvent.click(screen.getByTestId("StyledFullScreenButton"))
+    expect(screen.getByText("isFullScreen")).toBeInTheDocument()
   })
 
   it("works if wrapped component does not have `isFullScreen` prop", () => {
@@ -103,8 +115,8 @@ describe("withFullScreenWrapper HOC", () => {
     )
 
     const props = getProps()
-    const wrapper = mount(<WrappedNoFullScreenPropComponent {...props} />)
-    expect(wrapper.find(NoFullScreenPropComponent).props().label).toBe("label")
+    render(<WrappedNoFullScreenPropComponent {...props} />)
+    expect(screen.getByText(`${props.label}`)).toBeInTheDocument()
   })
 
   it("defines `displayName`", () => {
