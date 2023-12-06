@@ -52,7 +52,9 @@ describe("LinkCell", () => {
   })
 
   it("renders into the dom with correct value", async () => {
-    const cell = getMockLinkCell("https://streamlit.io")
+    const cell = getMockLinkCell("https://streamlit.io", "", {
+      readonly: true,
+    })
     const Editor = linkCellRenderer.provideEditor?.(cell)
 
     render(
