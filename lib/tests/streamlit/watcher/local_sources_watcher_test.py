@@ -384,6 +384,41 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         args3, _ = fob.call_args_list[2]
         assert args3[0] == "streamlit_app3.py"
 
+    @patch(
+        "streamlit.watcher.local_sources_watcher.get_pages",
+        MagicMock(
+            side_effect=[
+                {
+                    "someHash1": {
+                        "page_name": "page1",
+                        "script_path": "page1.py",
+                    },
+                    "someHash2": {
+                        "page_name": "page2",
+                        "script_path": "page2.py",
+                    },
+                },
+                {
+                    "someHash1": {
+                        "page_name": "page1",
+                        "script_path": "page1.py",
+                    },
+                    "someHash3": {
+                        "page_name": "page3",
+                        "script_path": "page3.py",
+                    },
+                },
+            ]
+        ),
+    )
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher", MagicMock())
+    def test_not_watches_removed_page_scripts(self):
+        lsw = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        assert lsw._watched_pages == {"page1.py", "page2.py"}
+
+        lsw.update_watched_pages()
+        assert lsw._watched_pages == {"page1.py", "page3.py"}
+
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_passes_filepath_to_callback(self, fob):
         saved_filepath = None
