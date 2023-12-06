@@ -161,6 +161,7 @@ interface State {
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
+  currentPartialId: string
   // host communication info
   isOwner: boolean
   hostMenuItems: IMenuItem[]
@@ -273,6 +274,7 @@ export class App extends PureComponent<Props, State> {
       hideSidebarNav: true,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
+      currentPartialId: "",
       // Information sent from the host
       isOwner: false,
       hostMenuItems: [],
@@ -909,6 +911,7 @@ export class App extends PureComponent<Props, State> {
         appPages: newSessionProto.appPages,
         currentPageScriptHash: newPageScriptHash,
         latestRunTime: performance.now(),
+        currentPartialId: newSessionProto.partialId || "",
       },
       () => {
         this.hostCommunicationMgr.sendMessageToHost({
@@ -1709,6 +1712,7 @@ export class App extends PureComponent<Props, State> {
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
             libConfig,
+            currentPartialId: this.state.currentPartialId,
           }}
         >
           <HotKeys

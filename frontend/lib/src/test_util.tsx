@@ -116,6 +116,7 @@ export const customRenderLibContext = (
     availableThemes: [],
     addThemes: jest.fn(),
     libConfig: {},
+    currentPartialId: "",
   }
 
   return reactTestingLibraryRender(component, {

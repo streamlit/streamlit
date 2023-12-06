@@ -21,6 +21,7 @@ import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
 import { BlockPropsWithoutWidth } from "@streamlit/lib/src/components/core/Block"
 import { isElementStale } from "@streamlit/lib/src/components/core/Block/utils"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { StyledTabContainer } from "./styled-components"
@@ -34,6 +35,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
 
 function Tabs(props: TabProps): ReactElement {
   const { widgetsDisabled, node, isStale, scriptRunState, scriptRunId } = props
+  const { currentPartialId } = React.useContext(LibContext)
 
   let allTabLabels: string[] = []
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
@@ -142,7 +144,8 @@ function Tabs(props: TabProps): ReactElement {
           const isStaleTab = isElementStale(
             appNode,
             scriptRunState,
-            scriptRunId
+            scriptRunId,
+            currentPartialId
           )
           const disabled = widgetsDisabled || isStaleTab
 

@@ -36,7 +36,8 @@ export function shouldComponentBeEnabled(
 export function isElementStale(
   node: AppNode,
   scriptRunState: ScriptRunState,
-  scriptRunId: string
+  scriptRunId: string,
+  currentPartialId: string
 ): boolean {
   if (scriptRunState === ScriptRunState.RERUN_REQUESTED) {
     // If a rerun was just requested, all of our current elements
@@ -44,7 +45,11 @@ export function isElementStale(
     return true
   }
   if (scriptRunState === ScriptRunState.RUNNING) {
-    return node.scriptRunId !== scriptRunId
+    if (currentPartialId) {
+      return node.partialId === currentPartialId
+    } else {
+      return node.scriptRunId !== scriptRunId
+    }
   }
   return false
 }
@@ -53,9 +58,13 @@ export function isComponentStale(
   enable: boolean,
   node: AppNode,
   scriptRunState: ScriptRunState,
-  scriptRunId: string
+  scriptRunId: string,
+  currentPartialId: string
 ): boolean {
-  return !enable || isElementStale(node, scriptRunState, scriptRunId)
+  return (
+    !enable ||
+    isElementStale(node, scriptRunState, scriptRunId, currentPartialId)
+  )
 }
 
 export function assignDividerColor(

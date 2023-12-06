@@ -37,4 +37,9 @@ message Delta {
     NamedDataSet add_rows = 5;
     ArrowNamedDataSet arrow_add_rows = 7;
   }
+
+  // TODO(vdonato): Potentially get rid of partial_id fields in widget protos
+  // as well as setting them in widget code in favor of doing so as deltas get
+  // enqueued.
+  string partial_id = 8;
 }
