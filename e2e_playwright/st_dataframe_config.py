@@ -194,6 +194,18 @@ st.dataframe(
                 None,
             ],
             "col_1": ["/a", "/b", "", None],
+            "col_2": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
+                None,
+            ],
+            "col_3": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
+                None,
+            ],
         }
     ),
     column_config={
@@ -208,6 +220,14 @@ st.dataframe(
             validate="^[0-9]+$",  # Should be ignored
         ),
         "col_1": st.column_config.LinkColumn(),
+        "col_2": st.column_config.LinkColumn(
+            "Display text via Regex",
+            display_text="https://(.*?)\.streamlit\.app",
+        ),
+        "col_3": st.column_config.LinkColumn(
+            "Static display text",
+            display_text="Open link",
+        ),
     },
 )
 
