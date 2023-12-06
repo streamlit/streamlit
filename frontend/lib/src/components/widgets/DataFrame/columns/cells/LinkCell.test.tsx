@@ -21,7 +21,7 @@ import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
 
-const LINK_CELL_TEST_ID = "link-cell"
+const LINK_CELL_TEST_ID = "stLinkCell"
 
 describe("LinkCell", () => {
   function getMockLinkCell(

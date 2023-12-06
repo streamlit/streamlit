@@ -46,7 +46,7 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
   return (
     <UriOverlayEditorStyle>
       <a
-        data-testid="link-cell"
+        data-testid="stLinkCell"
         className="gdg-link-area"
         href={uri ?? ""}
         target="_blank"
