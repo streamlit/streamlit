@@ -228,7 +228,8 @@ class MessageCacheHandler(tornado.web.RequestHandler):
 
     def get(self):
         msg_hash = self.get_argument("hash", None)
-        if not config.get_option("global.storeCacheMessagesInMemory"):
+        if not config.get_option("global.storeCachedForwardMessagesInMemory"):
+            # We use rare status code here, to distinguish between normal 404s.
             self.set_status(418)
             self.finish()
             return

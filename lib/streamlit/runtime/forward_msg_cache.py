@@ -184,7 +184,7 @@ class ForwardMsgCache(CacheStatsProvider):
         populate_hash_if_needed(msg)
         entry = self._entries.get(msg.hash, None)
         if entry is None:
-            if config.get_option("global.storeCacheMessagesInMemory"):
+            if config.get_option("global.storeCachedForwardMessagesInMemory"):
                 entry = ForwardMsgCache.Entry(msg)
             else:
                 entry = ForwardMsgCache.Entry(None)

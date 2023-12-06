@@ -376,7 +376,7 @@ _create_option(
 )
 
 _create_option(
-    "global.storeCacheMessagesInMemory",
+    "global.storeCachedForwardMessagesInMemory",
     description="""If True, store cached ForwardMsgs in backend memory.""",
     visibility="hidden",
     default_val=True,
