@@ -40,7 +40,9 @@ function onClickSelect(
 ): string | null | undefined {
   const canvas = document.createElement("canvas")
   const ctx = canvas.getContext("2d", { alpha: false })
-  if (ctx === null) return
+  if (ctx === null) {
+    return
+  }
 
   const { posX: hoverX, bounds: rect, cell, theme } = e
   const font = `${theme.baseFontStyle} ${theme.fontFamily}`
@@ -67,7 +69,9 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
   draw: (args, cell) => {
     const { ctx, rect, theme, hoverX = -100 } = args
     const { href, displayText } = cell.data
-    if (isNullOrUndefined(href)) return
+    if (isNullOrUndefined(href)) {
+      return
+    }
 
     const displayValue = displayText || href
 
@@ -109,7 +113,9 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
   kind: GridCellKind.Custom,
   measure: (ctx, cell, theme) => {
     const { href, displayText } = cell.data
-    if (isNullOrUndefined(href)) return 0
+    if (isNullOrUndefined(href)) {
+      return 0
+    }
 
     return (
       ctx.measureText(displayText || href).width +
@@ -134,11 +140,10 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     },
   }),
   provideEditor: () => p => {
-    const { onChange, value, forceEditMode, validatedSelection } = p
+    const { onChange, value, validatedSelection } = p
     const { href, displayText } = value.data
     return (
       <UriOverlayEditor
-        forceEditMode={forceEditMode}
         uri={value.data.href}
         preview={(displayText || href) ?? ""}
         validatedSelection={validatedSelection}
