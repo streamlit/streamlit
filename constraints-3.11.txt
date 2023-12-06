@@ -139,5 +139,5 @@ urllib3==2.1.0
 validators==0.22.0
 virtualenv==20.25.0
 watchdog==3.0.0
-yarl==1.9.3
+yarl==1.9.4
 zipp==3.17.0
