@@ -74,6 +74,8 @@ export interface LibContextProps {
    * _stcore/host-config endpoint.
    */
   libConfig: LibConfig
+
+  currentPartialId: string
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -86,4 +88,5 @@ export const LibContext = React.createContext<LibContextProps>({
   availableThemes: [],
   addThemes: () => {},
   libConfig: {},
+  currentPartialId: "",
 })

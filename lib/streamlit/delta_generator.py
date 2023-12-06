@@ -874,4 +874,7 @@ def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
+    if msg.WhichOneof("type") == "delta" and ctx.current_partial_id:
+        msg.delta.partial_id = ctx.current_partial_id
+
     ctx.enqueue(msg)

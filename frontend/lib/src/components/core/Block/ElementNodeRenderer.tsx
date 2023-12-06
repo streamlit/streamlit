@@ -707,7 +707,7 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen } = React.useContext(LibContext)
+  const { isFullScreen, currentPartialId } = React.useContext(LibContext)
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -716,7 +716,8 @@ const ElementNodeRenderer = (
     enable,
     node,
     props.scriptRunState,
-    props.scriptRunId
+    props.scriptRunId,
+    currentPartialId
   )
 
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero

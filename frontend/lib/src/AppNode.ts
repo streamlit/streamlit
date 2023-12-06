@@ -90,6 +90,8 @@ export interface AppNode {
    */
   readonly scriptRunId: string
 
+  readonly partialId?: string
+
   /**
    * Return the AppNode for the given index path, or undefined if the path
    * is invalid.
@@ -126,6 +128,8 @@ export class ElementNode implements AppNode {
 
   public readonly scriptRunId: string
 
+  public readonly partialId?: string
+
   private lazyQuiverElement?: Quiver
 
   private lazyVegaLiteChartElement?: VegaLiteChartElement
@@ -134,11 +138,13 @@ export class ElementNode implements AppNode {
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
-    scriptRunId: string
+    scriptRunId: string,
+    partialId?: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
+    this.partialId = partialId
   }
 
   public get quiverElement(): Quiver {
@@ -308,14 +314,18 @@ export class BlockNode implements AppNode {
 
   public readonly scriptRunId: string
 
+  public readonly partialId?: string
+
   public constructor(
     children?: AppNode[],
     deltaBlock?: BlockProto,
-    scriptRunId?: string
+    scriptRunId?: string,
+    partialId?: string
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
+    this.partialId = partialId
   }
 
   /** True if this Block has no children. */
@@ -504,14 +514,21 @@ export class AppRoot {
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
-        return this.addElement(deltaPath, scriptRunId, element, metadata)
+        return this.addElement(
+          deltaPath,
+          scriptRunId,
+          element,
+          metadata,
+          delta.partialId
+        )
       }
 
       case "addBlock": {
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
-          scriptRunId
+          scriptRunId,
+          delta.partialId
         )
       }
 
@@ -571,16 +588,23 @@ export class AppRoot {
     deltaPath: number[],
     scriptRunId: string,
     element: Element,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    partialId?: string
   ): AppRoot {
-    const elementNode = new ElementNode(element, metadata, scriptRunId)
+    const elementNode = new ElementNode(
+      element,
+      metadata,
+      scriptRunId,
+      partialId
+    )
     return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private addBlock(
     deltaPath: number[],
     block: BlockProto,
-    scriptRunId: string
+    scriptRunId: string,
+    partialId?: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -590,7 +614,7 @@ export class AppRoot {
     const children: AppNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const blockNode = new BlockNode(children, block, scriptRunId)
+    const blockNode = new BlockNode(children, block, scriptRunId, partialId)
     return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
   }
 

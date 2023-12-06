@@ -26,6 +26,7 @@ import { useTheme } from "@emotion/react"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
@@ -61,6 +62,7 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 // Render BlockNodes (i.e. container nodes).
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
+  const { currentPartialId } = React.useContext(LibContext)
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
@@ -71,7 +73,8 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     enable,
     node,
     props.scriptRunState,
-    props.scriptRunId
+    props.scriptRunId,
+    currentPartialId
   )
 
   const childProps = { ...props, ...{ node } }
