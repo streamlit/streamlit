@@ -33,6 +33,16 @@ const moveUp = keyframes`
   }
 `
 
+const moveDown = keyframes`
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(100vh + ${IMAGE_HEIGHT}px));
+  }
+`
+
 export const StyledBalloon = styled.img(({ theme }) => ({
   position: "fixed",
   top: `${-IMAGE_HEIGHT}px`,
@@ -45,7 +55,7 @@ export const StyledBalloon = styled.img(({ theme }) => ({
   pointerEvents: "none",
 
   animationDuration: "750ms",
-  animationName: moveUp,
+  animationName: moveDown,
   animationTimingFunction: "ease-in",
   animationDirection: "normal",
   animationIterationCount: 1,
