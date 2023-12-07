@@ -21,7 +21,7 @@ import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import "@testing-library/jest-dom"
 
-const LINK_CELL_TEST_ID = "link-cell"
+const LINK_CELL_TEST_ID = "stLinkCell"
 
 describe("LinkCell", () => {
   function getMockLinkCell(
@@ -52,7 +52,9 @@ describe("LinkCell", () => {
   })
 
   it("renders into the dom with correct value", async () => {
-    const cell = getMockLinkCell("https://streamlit.io")
+    const cell = getMockLinkCell("https://streamlit.io", "", {
+      readonly: true,
+    })
     const Editor = linkCellRenderer.provideEditor?.(cell)
 
     render(
@@ -70,38 +72,10 @@ describe("LinkCell", () => {
     expect(linkCell).toHaveTextContent("https://streamlit.io")
   })
 
-  it("should render the pencil edit icon", async () => {
-    const cell = getMockLinkCell("https://streamlit.io")
-    const Editor = linkCellRenderer.provideEditor?.(cell)
-
-    render(
-      // @ts-expect-error
-      <Editor isHighlighted={false} value={cell} />
-    )
-
-    const element = await screen.findByTestId("gdg-edit-icon")
-
-    expect(element).toBeDefined()
-  })
-
-  it("should not render the pencil icon when cell is readonly", async () => {
-    const cell = getMockLinkCell("https://streamlit.io", undefined, {
+  it("should render the displayText", async () => {
+    const cell = getMockLinkCell("https://streamlit.io", "Click here", {
       readonly: true,
     })
-    const Editor = linkCellRenderer.provideEditor?.(cell)
-
-    render(
-      // @ts-expect-error
-      <Editor isHighlighted={false} value={cell} />
-    )
-
-    const element = screen.queryByTestId("gdg-edit-icon")
-
-    expect(element).toBeNull()
-  })
-
-  it("should render the displayText", async () => {
-    const cell = getMockLinkCell("https://streamlit.io", "Click here")
     const Editor = linkCellRenderer.provideEditor?.(cell)
 
     render(
