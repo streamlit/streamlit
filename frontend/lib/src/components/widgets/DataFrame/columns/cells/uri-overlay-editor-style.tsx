@@ -42,26 +42,4 @@ export const UriOverlayEditorStyle = styled.div`
     text-decoration: underline !important;
     padding-bottom: 3px;
   }
-
-  .gdg-edit-icon {
-    flex-shrink: 0;
-    width: 32px;
-    color: var(--gdg-accent-color);
-
-    cursor: pointer;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  textarea {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    width: 0px;
-    height: 0px;
-
-    opacity: 0;
-  }
 `

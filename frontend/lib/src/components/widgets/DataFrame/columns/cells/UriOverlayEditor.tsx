@@ -16,14 +16,11 @@
 
 import { SelectionRange, TextCellEntry } from "@glideapps/glide-data-grid"
 import React from "react"
-import { Edit } from "@emotion-icons/material-rounded"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
 import { UriOverlayEditorStyle } from "@streamlit/lib/src/components/widgets/DataFrame/columns/cells/uri-overlay-editor-style"
 
 interface Props {
   readonly uri?: string | null
   readonly onChange: (ev: React.ChangeEvent<HTMLTextAreaElement>) => void
-  readonly forceEditMode: boolean
   readonly readonly: boolean
   readonly preview: string
   readonly validatedSelection?: SelectionRange
@@ -32,24 +29,9 @@ interface Props {
 // this is essentially just copying the UriOverlayEditor from glide's implementation: https://github.com/glideapps/glide-data-grid/blob/0ea52f371a5e2aaa8595aceefa40722d35410b1a/packages/core/src/data-grid-overlay-editor/private/uri-overlay-editor-style.tsx
 // we use it in LinkCell.tsx which is our custom version of the UriCell.
 const UriOverlayEditor: React.FunctionComponent<Props> = p => {
-  const {
-    uri,
-    onChange,
-    forceEditMode,
-    readonly,
-    validatedSelection,
-    preview,
-  } = p
+  const { uri, onChange, readonly, validatedSelection, preview } = p
 
-  const [editMode, setEditMode] = React.useState<boolean>(
-    !readonly && (!uri || forceEditMode)
-  )
-
-  const onEditClick = React.useCallback(() => {
-    setEditMode(true)
-  }, [])
-
-  if (editMode) {
+  if (!readonly) {
     return (
       <TextCellEntry
         validatedSelection={validatedSelection}
@@ -64,7 +46,7 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
   return (
     <UriOverlayEditorStyle>
       <a
-        data-testid={"link-cell"}
+        data-testid="stLinkCell"
         className="gdg-link-area"
         href={uri ?? ""}
         target="_blank"
@@ -72,16 +54,6 @@ const UriOverlayEditor: React.FunctionComponent<Props> = p => {
       >
         {preview}
       </a>
-      {!readonly && (
-        <div
-          className="gdg-edit-icon"
-          data-testid="gdg-edit-icon"
-          onClick={onEditClick}
-        >
-          <Icon content={Edit} size="lg" />
-        </div>
-      )}
-      <textarea className="gdg-input" autoFocus={true} />
     </UriOverlayEditorStyle>
   )
 }

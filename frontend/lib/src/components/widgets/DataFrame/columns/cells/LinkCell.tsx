@@ -134,11 +134,10 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
     },
   }),
   provideEditor: () => p => {
-    const { onChange, value, forceEditMode, validatedSelection } = p
+    const { onChange, value, validatedSelection } = p
     const { href, displayText } = value.data
     return (
       <UriOverlayEditor
-        forceEditMode={forceEditMode}
         uri={value.data.href}
         preview={(displayText || href) ?? ""}
         validatedSelection={validatedSelection}
