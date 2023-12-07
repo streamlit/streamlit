@@ -1152,6 +1152,35 @@ describe("App.sendRerunBackMsg", () => {
       },
     })
   })
+
+  it("removes the query params if a new page is selected", () => {
+    wrapper.setState({
+      currentPageScriptHash: "current_page_hash",
+      queryParams: "foo=bar",
+    })
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
+
+    instance.sendRerunBackMsg(undefined, "some_other_page_hash")
+
+    // @ts-expect-error
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "some_other_page_hash",
+        pageName: "",
+        // must be reset to an empty string
+        queryString: "",
+      },
+    })
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_QUERY_PARAM",
+      queryParams: "",
+    })
+  })
 })
 
 //   * handlePageNotFound has branching error messages depending on pageName
