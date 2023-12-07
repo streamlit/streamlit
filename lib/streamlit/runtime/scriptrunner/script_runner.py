@@ -472,10 +472,11 @@ class ScriptRunner:
 
             code = self._script_cache.get_bytecode(script_path)
 
-            user = UserInfoProxy()
-            email = user.get("email", "anonymous")
-            ip = user.get("ip", "unknown ip")
-            _LOGGER.info(f"{email} [{ip}] access script {script_path}")
+            if config.get_option("server.logPageAccess"):
+                user = UserInfoProxy()
+                email = user.get("email", "anonymous")
+                ip = user.get("ip", "unknown ip")
+                _LOGGER.info(f"{email} [{ip}] access script {script_path}")
 
         except Exception as ex:
             # We got a compile error. Send an error event and bail immediately.

@@ -814,6 +814,16 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.logPageAccess",
+    description="""
+        Log access to the app pages. The log level is set to 'info'.
+        """,
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: Browser #
 
 _create_section("browser", "Configuration of non-UI browser options.")

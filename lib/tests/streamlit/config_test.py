@@ -393,6 +393,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslKeyFile",
                 "server.ipHeader",
                 "server.userEmailHeader",
+                "server.logPageAccess",
                 "ui.hideTopBar",
                 "ui.hideSidebarNav",
             ]
