@@ -18,6 +18,7 @@ import { useMemo, useState } from "react"
 import { ConnectionState } from "../stores/ConnectionContext"
 import type { ConnectionContextValue } from "../stores/ConnectionContext"
 import { ConnectionManager } from "../lib/ConnectionManager"
+import type { BaseUriParts } from "@streamlit/lib/src/util/UriUtil"
 
 export function useConnectionManager(
   endpoint: string
@@ -25,6 +26,12 @@ export function useConnectionManager(
   const [connectionState, setConnectionState] = useState(
     ConnectionState.INITIAL
   )
+  // There's an unfortunate situation where we do not know the "official" url
+  // So we let the connectionManager figure it out and let us know.
+  const [workingEndpoint, setWorkingEndpoint] = useState<BaseUriParts | null>(
+    null
+  )
+
   const connectionManager = useMemo(() => {
     const manager = new ConnectionManager(endpoint)
 
@@ -32,10 +39,14 @@ export function useConnectionManager(
       setConnectionState(state)
     })
 
+    manager.on("connectionEndpointIdentified", (uri: BaseUriParts) => {
+      setWorkingEndpoint(uri)
+    })
+
     manager.connect()
 
     return manager
   }, [endpoint])
 
-  return { connectionState, connectionManager }
+  return { connectionState, connectionManager, workingEndpoint }
 }

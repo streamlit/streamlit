@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo } from "react"
 import type { Context, ReactElement, ReactNode } from "react"
+import { Client as Styletron } from "styletron-engine-atomic"
+import { Provider as StyletronProvider } from "styletron-react"
 import { BackMsg, type WidgetStates } from "../../proto"
 import { useConnectionManager } from "./hooks/useConnectionManager"
 import { useMessageQueue } from "./hooks/useMessageQueue"
@@ -30,7 +32,6 @@ import {
   useAppUrlManager,
 } from "./hooks/useAppUrlManager"
 import type { AppRoot } from "../../AppNode"
-import type { BaseUriParts } from "../../util/UriUtil"
 import { useStreamlitScriptRunState } from "./hooks/useStreamlitScriptRunState"
 import { useStreamlitAppSettingsState } from "./hooks/useStreamlitAppSettingsState"
 import { useGitState } from "./hooks/useGitState"
@@ -62,14 +63,18 @@ import {
 } from "./stores/AppCommandsContext"
 import { type AppUrl, AppUrlContext } from "./stores/AppUrlContext"
 import { StreamlitElementTreeContext } from "./stores/StreamlitElementTreeContext"
+import { ThemeConfig, lightTheme } from "../../theme"
+import { RootStyleProvider } from "../../RootStyleProvider"
 
 export interface StreamlitAppProps {
   children: ReactNode
   endpoint: string
+  theme?: ThemeConfig
   pageConfig?: PageConfig
   onPageConfigChange?: (pageConfig: PageConfig) => void
 }
 
+const engine = new Styletron({ prefix: "st-" })
 type ContextPair<T> = [Context<T>, T]
 
 // Host Communication
@@ -83,28 +88,13 @@ type ContextPair<T> = [Context<T>, T]
 
 export function StreamlitApp({
   children,
+  theme,
   endpoint,
   pageConfig,
   onPageConfigChange,
 }: StreamlitAppProps): ReactElement {
   const connectionContextValue = useConnectionManager(endpoint)
-
-  // There's an unfortunate situation where we do not know the "official" url
-  // So we let the connectionManager figure it out and let us know.
-  const [workingEndpoint, setWorkingEndpoint] = useState<BaseUriParts | null>(
-    null
-  )
-  const { connectionManager } = connectionContextValue
-
-  useEffect(() => {
-    connectionManager.on(
-      "connectionEndpointIdentified",
-      (uri: BaseUriParts) => {
-        setWorkingEndpoint(uri)
-      }
-    )
-  }, [connectionManager])
-
+  const { workingEndpoint, connectionManager } = connectionContextValue
   const messageQueue = useMessageQueue(connectionManager)
   const streamlitInstallation = useStreamlitInstallationState(messageQueue)
   const appSettings = useStreamlitAppSettingsState(messageQueue)
@@ -319,11 +309,17 @@ export function StreamlitApp({
     [StreamlitElementTreeContext, elementTree] as ContextPair<AppRoot>,
   ]
 
-  return contexts.reduce(
-    (node, [Context, value]) => (
-      // @ts-expect-error We hit difficulty typing this
-      <Context.Provider value={value}>{node}</Context.Provider>
-    ),
-    children
-  ) as ReactElement
+  return (
+    <StyletronProvider value={engine}>
+      <RootStyleProvider theme={theme ?? lightTheme}>
+        {contexts.reduce(
+          (node, [Context, value]) => (
+            // @ts-expect-error We hit difficulty typing this
+            <Context.Provider value={value}>{node}</Context.Provider>
+          ),
+          children
+        )}
+      </RootStyleProvider>
+    </StyletronProvider>
+  )
 }

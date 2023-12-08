@@ -861,16 +861,6 @@ export class Dashboard extends Component {
     gradientBar4.addColorStop(1, "rgba(110,123,247,0.7)")
     gradientBar4.addColorStop(0, "rgba(255,255,255,0)")
 
-    var ctx5 = document.getElementById("salesStatisticsChart").getContext("2d")
-    var gradientBar5 = ctx5.createLinearGradient(0, 0, 0, 450)
-    gradientBar5.addColorStop(1, "rgba(255,255,255, 0.0)")
-    gradientBar5.addColorStop(0, "rgba(102,78,235, 0.2)")
-
-    var ctx6 = document.getElementById("salesStatisticsChart").getContext("2d")
-    var gradientBar6 = ctx6.createLinearGradient(0, 0, 0, 400)
-    gradientBar6.addColorStop(1, "rgba(255, 255, 255, 0.01)")
-    gradientBar6.addColorStop(0, "#14c671")
-
     var ctx7 = document
       .getElementById("totaltransactionChart")
       .getContext("2d")
@@ -987,75 +977,6 @@ export class Dashboard extends Component {
       ],
     }
 
-    var Datas = [60, 75, 65, 130, 130, 145, 110, 145, 155, 149, 170]
-    var Datas1 = [0, 25, 20, 40, 70, 52, 49, 90, 70, 94, 110, 135]
-
-    const salesStatisticsData = {
-      labels: [
-        "Jan 1",
-        "Jan 7",
-        "Jan 14",
-        "Jan 21",
-        "Jan 28",
-        "Feb 4",
-        "Feb 11",
-        "Feb 18",
-      ],
-      datasets: [
-        {
-          label: "Revenue",
-          data: Datas,
-          borderColor: "#8862e0",
-          backgroundColor: gradientBar5,
-          borderWidth: 2,
-          fill: true,
-        },
-        {
-          label: "Sales",
-          data: Datas1,
-          borderColor: "#5ed2a1",
-          backgroundColor: gradientBar6,
-          borderWidth: 2,
-          fill: true,
-        },
-      ],
-    }
-
-    this.setState(salesStatisticsData)
-
-    const netProfitData = {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
-      datasets: [
-        {
-          label: "Sales",
-          backgroundColor: "rgba(88, 208, 222,0.8)",
-          borderColor: "rgba(88, 208, 222,0.8)",
-          borderWidth: 0,
-          fill: true,
-          radius: 0,
-          pointRadius: 0,
-          pointBorderWidth: 0,
-          pointBackgroundColor: "rgba(88, 208, 222,0.8)",
-          pointHoverRadius: 10,
-          pointHitRadius: 5,
-          data: [54, 45, 60, 70, 54, 75, 60, 54],
-        },
-        {
-          label: "Orders",
-          backgroundColor: "rgba(150, 77, 247,1)",
-          borderColor: "rgba(150, 77, 247,1)",
-          borderWidth: 0,
-          fill: true,
-          radius: 0,
-          pointRadius: 0,
-          pointBorderWidth: 0,
-          pointBackgroundColor: "rgba(150, 77, 247,1)",
-          pointHoverRadius: 10,
-          pointHitRadius: 5,
-          data: [65, 75, 70, 80, 60, 80, 36, 60],
-        },
-      ],
-    }
     const totaltransactionData = {
       labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
       datasets: [
@@ -1082,8 +1003,6 @@ export class Dashboard extends Component {
       impressionChartData: impressionData,
       conversionChartData: conversionData,
       downloadChartData: downloadData,
-      salesStatisticsChartData: salesStatisticsData,
-      netProfitChartData: netProfitData,
       totaltransactionChartData: totaltransactionData,
     })
   }
@@ -1322,122 +1241,7 @@ export class Dashboard extends Component {
           <div className="col-md-8 grid-margin stretch-card">
             <div className="card">
               <div className="card-body">
-                <h4 className="card-title mb-0">Sales Statistics Overview</h4>
                 <StreamlitView />
-                <div className="d-xl-flex flex-column flex-lg-row">
-                  <p>Lorem ipsum is placeholder text commonly used</p>
-                  <ul
-                    className="nav nav-tabs sales-mini-tabs ml-lg-auto mb-4 mb-md-0"
-                    role="tablist"
-                  >
-                    <li className="nav-item">
-                      <button
-                        className={`nav-link ${
-                          this.state.active === "sales-statistics_switch_1"
-                            ? "active"
-                            : ""
-                        }`}
-                        id="sales-statistics_switch_1"
-                        onClick={this.changeChartOneData}
-                        data-toggle="tab"
-                        role="tab"
-                        aria-selected="false"
-                      >
-                        1D
-                      </button>
-                    </li>
-                    <li className="nav-item">
-                      <button
-                        className={`nav-link ${
-                          this.state.active === "sales-statistics_switch_2"
-                            ? "active"
-                            : ""
-                        }`}
-                        id="sales-statistics_switch_2"
-                        onClick={this.changeChartTwoData}
-                        data-toggle="tab"
-                        role="tab"
-                        aria-selected="false"
-                      >
-                        5D
-                      </button>
-                    </li>
-                    <li className="nav-item">
-                      <button
-                        className={`nav-link ${
-                          this.state.active === "sales-statistics_switch_3"
-                            ? "active"
-                            : ""
-                        }`}
-                        id="sales-statistics_switch_3"
-                        onClick={this.changeChartThreeData}
-                        data-toggle="tab"
-                        role="tab"
-                        aria-selected="false"
-                      >
-                        1M
-                      </button>
-                    </li>
-                    <li className="nav-item">
-                      <button
-                        className={`nav-link ${
-                          this.state.active === "sales-statistics_switch_4"
-                            ? "active"
-                            : ""
-                        }`}
-                        id="sales-statistics_switch_4"
-                        onClick={this.changeChartFourData}
-                        data-toggle="tab"
-                        role="tab"
-                        aria-selected="false"
-                      >
-                        1Y
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-                <div className="d-xl-flex flex-column flex-lg-row">
-                  <div className="data-wrapper d-flex mt-2 mt-lg-0">
-                    <div className="wrapper pr-5">
-                      <h5 className="mb-0">Total Cost</h5>
-                      <div className="d-xl-flex align-items-center">
-                        <h4 className="font-weight-semibold mb-0">15,263</h4>
-                        <small className="ml-2 text-gray d-none d-lg-block">
-                          <b>89.5%</b> of 20,000 Total
-                        </small>
-                      </div>
-                    </div>
-                    <div className="wrapper">
-                      <h5 className="mb-0">Total Revenue</h5>
-                      <div className="d-xl-flex align-items-center">
-                        <h4 className="font-weight-semibold mb-0">$753,098</h4>
-                        <small className="ml-2 text-gray d-none d-lg-block">
-                          <b>10.5%</b> of 20,000 Total
-                        </small>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="ml-lg-auto" id="sales-statistics-legend">
-                    <div className="chartjs-legend line-legend">
-                      <ul>
-                        <li>
-                          <span className="bg-info"></span>Revenue
-                        </li>
-                        <li>
-                          <span className="bg-success"></span>Sales
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <Line
-                  data={this.state}
-                  options={this.state.salesStaticsOptions}
-                  datasetKeyProvider={this.datasetKeyProvider}
-                  height={50}
-                  width={100}
-                  id="salesStatisticsChart"
-                />
               </div>
             </div>
           </div>
@@ -1445,18 +1249,7 @@ export class Dashboard extends Component {
             <div className="card">
               <div className="card-body d-flex flex-column">
                 <div className="wrapper">
-                  <h4 className="card-title mb-0">Net Profit Margin</h4>
-                  <p>Started collecting data from February 2019</p>
-                  <div className="mb-4 rounded-legend" id="net-profit-legend">
-                    <ul>
-                      <li>
-                        <span className="bg-success"></span>Sales
-                      </li>
-                      <li>
-                        <span className="bg-info"></span>Orders
-                      </li>
-                    </ul>
-                  </div>
+                  <StreamlitView namespace="sidebar" />
                 </div>
                 <Radar
                   data={this.state.netProfitChartData}

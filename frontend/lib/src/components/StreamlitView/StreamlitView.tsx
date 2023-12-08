@@ -18,7 +18,6 @@ import React, { ReactElement, useMemo } from "react"
 
 import VerticalBlock from "../core/Block"
 import { useStreamlitScriptRun } from "../StreamlitApp/stores/ScriptRunContext"
-import { useStreamlitInstallation } from "../StreamlitApp/stores/StreamlitInstallationContext"
 import { useWidgetStateManager } from "../StreamlitApp/stores/WidgetStateManagerContext"
 import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
 import {
@@ -28,15 +27,38 @@ import {
 import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { ComponentRegistry } from "../widgets/CustomComponent"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { BaseUriParts, buildHttpUri } from "@streamlit/lib/src/util/UriUtil"
+
 import { useStreamlitElementTree } from "../StreamlitApp/stores/StreamlitElementTreeContext"
 
+const COMPONENT_ENDPOINT_BASE = "/component"
+const MEDIA_ENDPOINT = "/media"
 class DummyEndpoints implements StreamlitEndpoints {
-  public buildComponentURL(): string {
-    throw new Error("Unimplemented")
+  serverUri: BaseUriParts | null
+
+  constructor(serverUri: BaseUriParts | null) {
+    this.serverUri = serverUri
+  }
+
+  public buildComponentURL(componentName: string, path: string): string {
+    if (this.serverUri === null) {
+      return ""
+    }
+
+    return buildHttpUri(
+      this.serverUri,
+      `${COMPONENT_ENDPOINT_BASE}/${componentName}/${path}`
+    )
   }
 
   public buildMediaURL(url: string): string {
-    return url
+    if (this.serverUri === null) {
+      return ""
+    }
+
+    return url.startsWith(MEDIA_ENDPOINT)
+      ? buildHttpUri(this.serverUri, url)
+      : url
   }
 
   public buildAppPageURL(): string {
@@ -59,12 +81,15 @@ export interface StreamlitViewProps {
 export function StreamlitView({
   namespace,
 }: StreamlitViewProps): ReactElement {
-  const { connectionState } = useStreamlitConnection()
+  const { connectionState, workingEndpoint } = useStreamlitConnection()
   const { widgetManager, formsData } = useWidgetStateManager()
   const { scriptRunState, scriptRunId } = useStreamlitScriptRun()
   const elementTree = useStreamlitElementTree()
 
-  const endpoints = useMemo(() => new DummyEndpoints(), [])
+  const endpoints = useMemo(
+    () => new DummyEndpoints(workingEndpoint),
+    [workingEndpoint]
+  )
   const sessionInfo = useMemo(() => new SessionInfo(), [])
   const uploadClient = useMemo(
     () =>

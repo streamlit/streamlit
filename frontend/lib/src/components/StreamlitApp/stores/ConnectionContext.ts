@@ -16,6 +16,7 @@
 
 import { createContext, useContext } from "react"
 import type { ConnectionManager } from "../lib/ConnectionManager"
+import { BaseUriParts } from "@streamlit/lib/src/util/UriUtil"
 
 export enum ConnectionState {
   CONNECTED = "CONNECTED",
@@ -28,6 +29,7 @@ export enum ConnectionState {
 export interface ConnectionContextValue {
   connectionState: ConnectionState
   connectionManager: ConnectionManager
+  workingEndpoint: BaseUriParts | null
 }
 
 export const ConnectionContext = createContext<ConnectionContextValue | null>(
