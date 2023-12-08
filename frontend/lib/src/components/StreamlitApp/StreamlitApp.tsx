@@ -21,6 +21,7 @@ import { useConnectionManager } from "./hooks/useConnectionManager"
 import { useMessageQueue } from "./hooks/useMessageQueue"
 import {
   ConnectionContext,
+  ConnectionState,
   type ConnectionContextValue,
 } from "./stores/ConnectionContext"
 import { GitContext, type GitInfo } from "./stores/GitContext"
@@ -264,6 +265,31 @@ export function StreamlitApp({
     appUrlManager.queryParams,
     workingEndpoint,
   ])
+
+  // TODO not great, but I don't want to update every widget
+  // right now
+  useEffect(() => {
+    const prevRerun = widgetManager.sendUpdateWidgetsMessage
+
+    widgetManager.sendUpdateWidgetsMessage = () => {
+      commands.rerunScript()
+    }
+
+    return () => {
+      widgetManager.sendUpdateWidgetsMessage = prevRerun
+    }
+  }, [widgetManager, commands])
+
+  useEffect(() => {
+    return connectionManager.on(
+      "connectionStateChanged",
+      (newState: ConnectionState) => {
+        if (newState === ConnectionState.CONNECTED) {
+          commands.rerunScript()
+        }
+      }
+    )
+  }, [connectionManager, commands])
 
   // We essentially have a bunch of contexts that we want to nest
   // We it's a bit of a pain to do this manually, so we use a reduce

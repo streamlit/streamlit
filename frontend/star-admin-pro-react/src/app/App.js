@@ -23,7 +23,7 @@ import Sidebar from "./shared/Sidebar"
 import SettingsPanel from "./shared/SettingsPanel"
 import Footer from "./shared/Footer"
 import { withTranslation } from "react-i18next"
-import { StreamlitApp } from "@streamlit/lib"
+import { lightTheme, RootStyleProvider, StreamlitApp } from "@streamlit/lib"
 
 class App extends Component {
   state = {}
@@ -40,21 +40,23 @@ class App extends Component {
     )
     let footerComponent = !this.state.isFullPageLayout ? <Footer /> : ""
     return (
-      <StreamlitApp endpoint={window.location.href}>
-        <div className="container-scroller">
-          {navbarComponent}
-          <div className="container-fluid page-body-wrapper">
-            {sidebarComponent}
-            <div className="main-panel">
-              <div className="content-wrapper">
-                <AppRoutes />
-                {SettingsPanelComponent}
+      <RootStyleProvider theme={lightTheme}>
+        <StreamlitApp endpoint={window.location.href}>
+          <div className="container-scroller">
+            {navbarComponent}
+            <div className="container-fluid page-body-wrapper">
+              {sidebarComponent}
+              <div className="main-panel">
+                <div className="content-wrapper">
+                  <AppRoutes />
+                  {SettingsPanelComponent}
+                </div>
+                {footerComponent}
               </div>
-              {footerComponent}
             </div>
           </div>
-        </div>
-      </StreamlitApp>
+        </StreamlitApp>
+      </RootStyleProvider>
     )
   }
 
