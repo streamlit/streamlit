@@ -188,7 +188,7 @@ function Sidebar({ location }) {
               >
                 <i className="mdi mdi-television menu-icon"></i>
                 <span className="menu-title">
-                  <Trans>{page.pageName}</Trans>
+                  <Trans>{page.pageName.replace(/_/g, " ")}</Trans>
                 </span>
               </Link>
             </li>
