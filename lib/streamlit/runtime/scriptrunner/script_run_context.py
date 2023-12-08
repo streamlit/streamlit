@@ -84,6 +84,7 @@ class ScriptRunContext:
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
         self.current_partial_id = None
+        self.dg_stack = []
 
     def on_script_start(self) -> None:
         self._has_script_started = True
