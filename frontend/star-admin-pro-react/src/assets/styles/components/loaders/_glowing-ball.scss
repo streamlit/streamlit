@@ -1,0 +1,153 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.glowing-loader {
+	position: relative;
+}
+.s2 {
+  position: absolute;
+  height: 70px;
+	width: 70px;
+	top: 50px;
+  background-color: transparent;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.s1 {
+  position: absolute;
+  height: 70px;
+  width: 70px;
+	left: 50%;
+	top: 50px;
+  transform-origin: center;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background-color: transparent;
+}
+
+.bigcon {
+  position: absolute;
+  height: 75px;
+  width: 75px;
+	left: 50%;
+	top: 50px;
+  transform-origin: center;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  background-color: transparent;
+  animation: bigcon 2s infinite linear;
+  animation-delay: 0.25s;
+}
+
+.b {
+  border-radius: 50%;
+  position: absolute;
+}
+
+.s {
+  width: 15px;
+  height: 15px;
+  animation: small 2s infinite ease;
+  box-shadow: 0px 2px rgba($black, .3);
+   background-color: theme-color(primary);
+}
+
+.s:nth-child(1) {
+  top: 0%;
+  left: 0%;
+}
+
+.s:nth-child(2) {
+  top: 0%;
+  right: 0%;
+}
+
+.s:nth-child(3) {
+  right: 0%;
+  bottom: 0%;
+}
+
+.s:nth-child(4) {
+  bottom: 0%;
+  left: 0%;
+}
+
+.big {
+  width: 15px;
+  height: 15px;
+  border-radius: 15px;
+  box-shadow:0px 0px 10px theme-color(primary), 0px 0px 20px theme-color(primary), 0px 0px 30px theme-color(primary), 0px 0px 50px theme-color(primary), 0px 0px 60px theme-color(primary) ;
+  z-index: 1;
+  background-color: theme-color(primary);
+  animation: bigball 1s infinite linear;
+}
+
+.sb1{
+  animation-delay: -1.75s;
+}
+.sb6{
+  animation-delay: -1.5s;
+}
+.sb2{
+  animation-delay: -1.25s;
+}
+.sb7{
+  animation-delay: -1s;
+}
+.sb3{
+  animation-delay: -0.75s;
+}
+.sb8{
+  animation-delay: -0.5s;
+}
+.sb4{
+  animation-delay: -0.25s;
+}
+.sb5{
+  animation-delay: -0s;
+}
+
+@keyframes bigcon {
+  0% {
+    transform-origin: center;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  100% {
+    transform-origin: center;
+    transform: translate(-50%, -50%) rotate(405deg);
+  }
+}
+
+@keyframes small {
+  0% {
+    transform: scale(1);
+     background-color: lighten(theme-color(primary), 20%);
+  }
+  10% {
+    transform: scale(1.3);
+    background-color: theme-color(primary);
+  }
+  15% {
+    transform: scale(1);
+  }
+  25%{
+transform: scale(1);
+     background-color: theme-color(primary);
+  }
+  100%{
+    transform: scale(1);
+     background-color: theme-color(primary);
+  }
+}

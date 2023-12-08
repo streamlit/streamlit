@@ -1,0 +1,70 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Square path loader */
+
+.square-path-loader {
+    width: 100px;
+    height: 100px;
+    border-radius: 100%;
+    position: relative;
+    margin: 0 auto;
+}
+.square-path-loader:before, .square-path-loader:after{
+    content: "";
+    width: 15px;
+    height: 15px;
+    position: absolute;
+    top: 0;
+    left: calc(50% - 10px);
+    background-color: rgba(theme-color(success), .7);
+    animation: squaremove 1s ease-in-out infinite;
+  }
+
+  .square-path-loader:after{
+    bottom: 0;
+    animation-delay: 0.5s;
+  }
+
+  @keyframes squaremove{
+    0%, 100%{
+      -webkit-transform: translate(0,0) rotate(0);
+      -ms-transform: translate(0,0) rotate(0);
+      -o-transform: translate(0,0) rotate(0);
+      transform: translate(0,0) rotate(0);
+    }
+
+    25%{
+      -webkit-transform: translate(40px,40px) rotate(45deg);
+      -ms-transform: translate(40px,40px) rotate(45deg);
+      -o-transform: translate(40px,40px) rotate(45deg);
+      transform: translate(40px,40px) rotate(45deg);
+    }
+
+    50%{
+      -webkit-transform: translate(0px,80px) rotate(0deg);
+      -ms-transform: translate(0px,80px) rotate(0deg);
+      -o-transform: translate(0px,80px) rotate(0deg);
+      transform: translate(0px,80px) rotate(0deg);
+    }
+
+    75%{
+      -webkit-transform: translate(-40px,40px) rotate(45deg);
+      -ms-transform: translate(-40px,40px) rotate(45deg);
+      -o-transform: translate(-40px,40px) rotate(45deg);
+      transform: translate(-40px,40px) rotate(45deg);
+    }
+  }

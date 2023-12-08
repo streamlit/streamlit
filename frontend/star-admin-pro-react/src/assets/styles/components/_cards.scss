@@ -1,0 +1,98 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Cards */
+
+.card {
+  border: none;
+  box-shadow: $card-shadow-color;
+  .card-body {
+    padding: $card-padding-y $card-padding-x;
+    + .card-body {
+      padding-top: 1rem;
+    }
+    .card-icon-indicator {
+      width: 45px;
+      height: 45px;
+      font-size: 20px;
+      color: $white;
+      border-radius: 50px;
+      text-align: center;
+      line-height: 2.2;
+    }
+  }
+  .card-title {
+    font-weight: 500;
+    color: $card-title-color;
+    margin-bottom: 15px;
+    text-transform: capitalize;
+    font-family: $type1;
+    font-size: 14px;
+  }
+  .card-subtitle {
+    @extend .text-gray;
+    font-family: $type1;
+    margin-top: 0.625rem;
+    margin-bottom: 0.625rem;
+
+  }
+  .card-description {
+    color: $card-description-color;
+    margin-bottom: 1.5rem;
+    font-family: $type1;
+    font-weight: 400;
+    color: $card-description-color;
+  }
+  &.card-outline-success {
+		border: 1px solid theme-color("success");
+	}
+	&.card-outline-primary {
+		border: 1px solid theme-color("primary");
+	}
+	&.card-outline-warning {
+		border: 1px solid theme-color("warning");
+	}
+	&.card-outline-danger {
+		border: 1px solid theme-color("danger");
+	}
+	&.card-rounded {
+		@include border-radius(5px);
+	}
+
+  &.card-faded {
+    background: #b5b0b2;
+    border-color: #b5b0b2;
+  }
+  &.card-circle-progress {
+    color: $white;
+    text-align: center;
+  }
+  &.card-img-holder {
+    position: relative;
+    .card-img-absolute {
+      position: absolute;
+      top:0;
+      right: 0;
+      height: 100%;
+    }
+  }
+}
+
+@each $color, $value in $theme-colors {
+  .card-inverse-#{$color} {
+    @include card-inverse-variant(rgba(theme-color($color), .2), theme-color-level($color, 1), theme-color-level($color, 3));
+  }
+}

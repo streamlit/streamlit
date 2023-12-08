@@ -4,11 +4,14 @@
   "private": true,
   "workspaces": [
     "app",
-    "lib"
+    "lib",
+    "star-admin-pro-react"
   ],
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
+    "start1": "yarn workspace star-admin-pro-react start",
     "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
+    "build1": "yarn workspace  star-admin-pro-react start build && yarn workspace  star-admin-pro-react start build",
     "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
     "buildLib": "yarn workspace @streamlit/lib build",
     "buildLibProd": "yarn workspace @streamlit/lib build:prod",

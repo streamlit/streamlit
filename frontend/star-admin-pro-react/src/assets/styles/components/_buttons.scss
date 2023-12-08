@@ -1,0 +1,230 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Buttons */
+
+.btn {
+  font-size: $btn-font-size;
+  line-height: 1;
+  font-family: $type1;
+
+  i {
+    margin-right: 0.3125rem;
+    font-size: inherit;
+  }
+
+  .btn-label {
+    &:before {
+      font-size: 1rem;
+      line-height: 5px;
+      vertical-align: middle;
+    }
+
+    &.btn-label-left {
+      margin-right: 5px;
+    }
+
+    &.btn-label-right {
+      margin-left: 5px;
+    }
+  }
+
+  &.btn-rounded {
+    border-radius: 50px;
+  }
+
+  &.btn-square {
+    border-radius: 0px;
+  }
+
+  &.btn-icons {
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+    text-align: center;
+    vertical-align: middle;
+
+    i {
+      margin: auto;
+      line-height: initial;
+    }
+  }
+
+  &.btn-fw {
+    min-width: $button-fixed-width;
+  }
+
+  &.icon-btn {
+    i {
+      margin-right: 0;
+    }
+  }
+
+  &.social-btn {
+    padding: $social-btn-padding;
+
+    i {
+      margin-right: 0;
+      font-size: $social-btn-icon-size;
+    }
+  }
+
+  &.btn-sm {
+    font-size: $btn-font-size-sm;
+    line-height: 1.45;
+  }
+
+  &.btn-lg {
+    font-size: $btn-font-size-lg;
+  }
+
+  &.btn-xs {
+    padding: $btn-padding-y-xs $btn-padding-x-xs;
+    font-size: $btn-font-size-xs;
+  }
+
+  &.btn-transparent {
+    background: transparent;
+  }
+
+  &.btn-danger,
+  &.btn-info,
+  &.btn-success,
+  &.btn-teal,
+  &.btn-warning {
+    color: $white;
+  }
+
+  &.btn-outline-light {
+    border-color: darken(theme-color(light), 15%);
+    color: darken(theme-color(light), 15%);
+  }
+
+  &.btn-outline-secondary {
+    color: rgba($black, 0.5);
+  }
+
+  &.btn-inverse-secondary {
+    background-color: rgba(theme-color(secondary), 0.5);
+    color: rgba($black, 0.5);
+
+    &:hover {
+      color: rgba($black, 0.5);
+    }
+  }
+
+  &.btn-inverse-light {
+    background-color: $white;
+    color: rgba($black, 0.5);
+    border-color: lighten($black, 85%);
+
+    &:hover {
+      color: rgba($black, 0.5);
+      border-color: lighten($black, 85%);
+    }
+  }
+}
+
+.btn-group {
+  border: $border-width solid $border-color;
+  border-radius: $btn-border-radius;
+
+  .btn {
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &.btn-primary {
+      border-color: darken(theme-color(primary), 3%);
+    }
+
+    &.btn-secondary {
+      border-color: darken(theme-color(secondary), 3%);
+    }
+
+    &.btn-info {
+      border-color: darken(theme-color(info), 3%);
+    }
+
+    &.btn-warning {
+      border-color: darken(theme-color(warning), 3%);
+    }
+
+    &.btn-success {
+      border-color: darken(theme-color(success), 3%);
+    }
+
+    &.btn-danger {
+      border-color: darken(theme-color(danger), 3%);
+    }
+
+    &.btn-dark {
+      border-color: darken(theme-color(dark), 3%);
+    }
+
+    &.btn-light {
+      border-color: darken(theme-color(light), 3%);
+    }
+  }
+}
+
+.btn-toolbar {
+  .btn-group {
+    +.btn-group {
+      @extend .ml-2;
+    }
+  }
+}
+
+/*social buttons*/
+
+@each $color,
+$value in $social-colors {
+  .btn-#{$color} {
+    @include social-button(social-color($color));
+  }
+}
+
+/*social buttons*/
+
+@each $color,
+$value in $social-colors {
+  .btn-social-outline-#{$color} {
+    @include btn-social-outline-variant(social-color($color));
+  }
+}
+
+/* inverse buttons */
+
+@each $color,
+$value in $theme-colors {
+  .btn-inverse-#{$color} {
+    @include button-inverse-variant($value);
+  }
+}
+
+/* Inverse Outlined Buttons */
+
+@each $color,
+$value in $theme-colors {
+  .btn-inverse-outline-#{$color} {
+    @include button-inverse-outline-variant($value);
+  }
+}

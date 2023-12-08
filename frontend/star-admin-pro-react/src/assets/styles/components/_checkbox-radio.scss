@@ -1,0 +1,251 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Checkboxes and Radios */
+
+.form-check {
+  position: relative;
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding-left: 0;
+
+  .form-check-label {
+    min-height: 18px;
+    display: block;
+    margin-left: 1.75rem;
+    font-size: $default-font-size;
+    line-height: 1.5;
+    .rtl & {
+      margin-left: 0;
+      margin-right: 1.75rem;
+    }
+
+    input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      .rtl & {
+        left: auto;
+        right: 0;
+      }
+      margin-left: 0;
+      margin-top: 0;
+      z-index: 1;
+      cursor: pointer;
+      opacity: 0;
+      filter: alpha(opacity=0);
+    }
+    input[type="checkbox"] {
+      + .input-helper {
+        &:before,
+        &:after {
+          position: absolute;
+          top: 0;
+          left: 0;
+          .rtl & {
+            left: auto;
+            right: 0;
+          }
+        }
+        &:before {
+          content: "";
+          width: 18px;
+          height: 18px;
+          border-radius: 2px;
+          border: solid theme-color(primary);
+          border-width: 2px;
+          @include transition(all);
+          transition-duration: 0s;
+          -webkit-transition-duration: 250ms;
+          transition-duration: 250ms;
+        }
+
+        &:after {
+          @include transition(all);
+          transition-duration: 0s;
+          -webkit-transition-duration: 250ms;
+          transition-duration: 250ms;
+          font-family: 'Material Design Icons';
+          opacity: 0;
+          filter: alpha(opacity=0);
+          -webkit-transform: scale(0);
+          -ms-transform: scale(0);
+          -o-transform: scale(0);
+          transform: scale(0);
+          content: '\F12C';
+          font-size: .9375rem;
+          font-weight: bold;
+          color: $white;
+        }
+      }
+      &:checked {
+        +.input-helper {
+          &:before {
+            background: theme-color(primary);
+            border-width: 0;
+          }
+          &:after {
+            width: 18px;
+            opacity: 1;
+            line-height: 18px;
+            filter: alpha(opacity=100);
+            -webkit-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+          }
+        }
+      }
+
+      &:disabled {
+        + .input-helper {
+          &:before {
+            border-color: $border-color;
+          }
+        }
+
+        &:checked {
+          + .input-helper {
+            &:after {
+              background: $border-color;
+              color: $white;
+            }
+          }
+        }
+      }
+    }
+    input[type="radio"] {
+      +.input-helper {
+        &:before {
+          position: absolute;
+          content: "";
+          top: 0;
+          left: 0;
+          .rtl & {
+            left: auto;
+            right: 0;
+          }
+          border: solid theme-color(primary);
+          border-width: 2px;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          @include transition(all);
+          transition-duration: 0s;
+          -webkit-transition-duration: 250ms;
+          transition-duration: 250ms;
+        }
+
+        &:after {
+          content: "";
+          width: 8px;
+          height: 8px;
+          background: $white;
+          border-radius: 50%;
+          top: 6px;
+          left: 6px;
+          .rtl & {
+            left: auto;
+            right: 6px;
+          }
+          -webkit-transition: all;
+          -o-transition: all;
+          transition: all;
+          transition-duration: 0s;
+          -webkit-transition-duration: 250ms;
+          transition-duration: 250ms;
+          opacity: 0;
+          filter: alpha(opacity=0);
+          -webkit-transform: scale(0);
+          -ms-transform: scale(0);
+          -o-transform: scale(0);
+          transform: scale(0);
+          position: absolute;
+        }
+      }
+
+      &:checked {
+        +.input-helper {
+          &:before {
+            background: theme-color(primary);
+            border-width: 0;
+          }
+
+          &:after {
+            opacity: 1;
+            line-height: 1.5;
+            filter: alpha(opacity=100);
+            -webkit-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+          }
+        }
+      }
+
+      &:disabled {
+        + .input-helper {
+          &:before {
+            border-color: $border-color;
+          }
+        }
+
+        &:checked {
+          + .input-helper {
+            &:before {
+              background: $border-color;
+            }
+
+            &:after {
+              background: $white;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@each $color, $value in $theme-colors {
+  .form-check-#{$color} {
+    &.form-check {
+      label {
+        input[type="checkbox"],
+        input[type="radio"] {
+          +.input-helper {
+            &:before {
+              border-color: theme-color($color);
+            }
+          }
+          &:checked {
+            +.input-helper {
+              &:before {
+                background: $value;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (min-width: 576px) {
+  .form-inline .form-check {
+
+  }
+}

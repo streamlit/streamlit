@@ -1,0 +1,37 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.footer {
+  background: $footer-bg;
+  color: $footer-color;
+  border-top: none;
+  padding: 20px 1rem;
+  transition: all $action-transition-duration $action-transition-timing-function;
+  -moz-transition: all $action-transition-duration $action-transition-timing-function;
+  -webkit-transition: all $action-transition-duration $action-transition-timing-function;
+  -ms-transition: all $action-transition-duration $action-transition-timing-function;
+  font-size: calc(#{$default-font-size} - 0.05rem);
+  font-family: $type1;
+  font-weight: 400;
+  a {
+    color: theme-color(success);
+    font-size: inherit;
+  }
+  @media (max-width: 991px) {
+    margin-left: 0;
+    width: 100%;
+  }
+}

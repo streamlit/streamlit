@@ -1,0 +1,104 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Auth */
+
+.auth {
+	height: 100%;
+	.login-half-bg {
+		background: url("../../../images/auth/login-bg.jpg");
+		background-size: cover;
+	}
+	.register-half-bg {
+		background: url("../../../images/auth/register-bg.jpg");
+		background-size: cover;
+	}
+	&.lock-full-bg {
+		background: url("../../../images/auth/lockscreen-bg.jpg");
+		background-size: cover;
+	}
+	.lock-profile-img {
+		width: 90px;
+		height: 90px;
+		border-radius: 100%;
+	}
+	.auth-form-light {
+		background: $white;
+		select {
+			color: $input-placeholder-color;
+		}
+		.input-group {
+			.form-control {
+				&:focus,
+				&:active {
+					border-color: $border-color;
+				}
+			}
+		}
+	}
+	.auth-form-transparent {
+		background: transparent;
+		.form-control,
+		.input-group-text {
+			border-color: theme-color(secondary);
+			&:focus,
+			&:active {
+				border-color: theme-color(secondary);
+			}
+		}
+		select {
+			outline-color: theme-color(secondary);
+		}
+	}
+	&.auth-img-bg {
+		padding: 0;
+		.auth-form-transparent {
+			@media (min-width:768px) {
+				width: 55%;
+				margin: auto;
+			}
+		}
+	}
+	.brand-logo {
+		margin-bottom: 2rem;
+		img {
+			width: 150px;
+		}
+	}
+	form {
+		.form-group {
+			margin-bottom: 1.5rem;
+			label {
+				font-size: .8125rem;
+			}
+			.form-control {
+				background: transparent;
+				border-radius: 0;
+				font-size: .9375rem;
+			}
+		}
+		.auth-form-btn {
+			padding: 1rem 3rem;
+			line-height: 1.5;
+		}
+		.auth-link {
+			font-size: $default-font-size;
+			&:hover {
+				color: initial;
+			}
+		}
+	}
+}

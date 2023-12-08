@@ -477,6 +477,18 @@ export class AppRoot {
     }
   }
 
+  public get_by_namespace(ns: string): BlockNode {
+    const [main, sidebar, event] = this.root.children
+
+    if (ns === "event") {
+      return event as BlockNode
+    } else if (ns === "sidebar") {
+      return sidebar as BlockNode
+    }
+
+    return main as BlockNode
+  }
+
   public get main(): BlockNode {
     const [main, ,] = this.root.children
     return main as BlockNode

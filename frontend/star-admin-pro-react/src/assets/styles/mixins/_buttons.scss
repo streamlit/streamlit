@@ -1,0 +1,101 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@mixin social-button($color) {
+	background: $color;
+	color: color(white);
+
+	&:hover {
+		background: darken($color, 10%);
+	}
+
+	&.btn-link {
+		background: none;
+		color: $color;
+
+		&:hover {
+			color: darken($color, 10%);
+		}
+	}
+}
+
+@mixin btn-social-outline-variant($color) {
+	background: transparent;
+	border-color: $color;
+	color: $color;
+
+	&:hover {
+		background: rgba($color, 0.2);
+	}
+}
+
+@mixin button-inverse-variant($color, $color-hover: $white) {
+	color: $color;
+	background-color: rgba($color, 0.2);
+	background-image: none;
+	border-color: rgba($color, 0);
+
+	@include hover {
+		color: $color-hover;
+		background-color: $color;
+		border-color: $color;
+	}
+
+	&.disabled,
+	&:disabled {
+		color: $color;
+		background-color: transparent;
+	}
+
+	&.active,
+	&:active,
+	.show>&.dropdown-toggle {
+		color: $color-hover;
+		background-color: $color;
+		border-color: $color;
+	}
+}
+
+@mixin button-inverse-outline-variant($color, $color-hover: $white) {
+	color: $color;
+	background-image: none;
+	background: transparent;
+	border-color: rgba($color, 0.2);
+
+	@include hover {
+		color: $color;
+		background-color: rgba($color, 0.2);
+		border-color: rgba($color, 0.2);
+	}
+
+	&.focus,
+	&:focus {
+		box-shadow: 0 0 0 3px rgba($color, .5);
+	}
+
+	&.disabled,
+	&:disabled {
+		color: $color;
+		background-color: transparent;
+	}
+
+	&.active,
+	&:active,
+	.show>&.dropdown-toggle {
+		color: $color-hover;
+		border-color: $color;
+	}
+}

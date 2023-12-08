@@ -18,7 +18,10 @@ import axios from "axios"
 import { ForwardMsg } from "@streamlit/lib/src/proto"
 import { LOG } from "./log"
 import { ensureError } from "./ErrorHandling"
-import { type BaseUriParts, buildHttpUri } from "@streamlit/lib"
+import {
+  type BaseUriParts,
+  buildHttpUri,
+} from "@streamlit/lib/src/util/UriUtil"
 
 class CacheEntry {
   public readonly encodedMsg: Uint8Array

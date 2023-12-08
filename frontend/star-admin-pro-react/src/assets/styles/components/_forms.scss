@@ -1,0 +1,117 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Forms */
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.input-group-append,
+.input-group-prepend {
+  color: $input-placeholder-color;
+  width: auto;
+  border: none;
+  .input-group-text {
+    border-color: $border-color;
+    padding: 0.94rem 0.5rem 0.94rem 1rem;
+    color: $input-placeholder-color;
+  }
+  button {
+    padding-top: .3rem;
+    padding-bottom: .3rem;
+  }
+}
+
+.custom-control {
+  .custom-control-label {
+    line-height: 1.6;
+    margin-bottom: 0;
+  }
+}
+
+.form-control {
+  border: 1px solid $border-color;
+  font-family: $type1;
+  font-size: $input-font-size;
+  font-weight: 400;
+  padding: 8px 12px;
+}
+
+select {
+  &.form-control {
+    padding: .4375rem .75rem;
+    border: 0;
+    outline: 1px solid $border-color;
+    color: $input-placeholder-color;
+    &:focus {
+      outline: 1px solid $border-color;
+    }
+    @each $color,
+    $value in $theme-colors {
+      &.border-#{$color} {
+        outline: 1px solid $value;
+        &:focus {
+          outline: 1px solid $value;
+        }
+      }
+    }
+  }
+}
+
+.form-group {
+  label {
+    font-size: $default-font-size;
+    line-height: 1;
+    vertical-align: top;
+    margin-bottom: .5rem;
+  }
+  &.has-danger {
+    .form-control {
+      border-color: theme-color(danger);
+    }
+  }
+  .file-upload-default {
+    visibility: hidden;
+    position: absolute;
+  }
+  .file-upload-info {
+    background: transparent;
+  }
+}
+.form-check-input {
+  margin-left: 0;
+}
+
+.custom-file {
+  .visibility-hidden {
+  visibility: hidden;
+  }
+  .custom-file-label {
+    background: $input-bg;;
+    border: 1px solid $border-color;
+    height: calc(2.25rem + 2px);
+    font-weight: normal;
+    font-size: 0.875rem;
+    padding: 0.625rem 0.6875rem;
+    border-radius: 2px;
+    &:after {
+      background-color: theme-color(primary);
+      height: auto;
+      @extend .btn-primary;
+    }
+  }
+}

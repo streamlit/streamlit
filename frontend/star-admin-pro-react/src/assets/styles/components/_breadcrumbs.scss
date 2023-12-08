@@ -1,0 +1,99 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Breadcrumbs */
+
+.breadcrumb {
+  border: $border-width solid $border-color;
+
+  .breadcrumb-item {
+    font-size: $breadcrumb-font-size;
+  }
+
+  &.breadcrumb-custom {
+    padding: $breadcrumb-custom-padding-y $breadcrumb-custom-padding-x;
+    border-color: $breadcrumb-item-bg;
+    .breadcrumb-item {
+      font-size: $breadcrumb-font-size;
+      background: $breadcrumb-item-bg;
+      padding: $breadcrumb-custom-item-padding-y $breadcrumb-custom-item-padding-x;
+      color: $breadcrumb-custom-item-color;
+      display: inline-block;
+      vertical-align: top;
+      &:last-child {
+        background: transparent;
+      }
+      &:before{
+        content: "";
+      }
+      a{
+        position: relative;
+        color: inherit;
+        border: 1px solid $breadcrumb-item-bg;
+        display: inline-block;
+        vertical-align: top;
+        &:before,&:after{
+          position: absolute;
+          top: -9px;
+          width: 0;
+          height: 0;
+          content: "";
+          border-top: 21px solid transparent;
+          border-bottom: 21px solid transparent;
+        }
+        &:before{
+          right: -22px;
+          z-index: 3;
+          border-left-color: $breadcrumb-item-bg;
+          border-left-style: solid;
+          border-left-width: 12px;
+        }
+        &:after{
+          border-top: 21px solid transparent;
+          border-bottom: 22px solid transparent;
+          border-left: 12px solid $white;
+          top: -9px;
+          right: -23px;
+        }
+      }
+      span{
+        display: inline-block;
+        vertical-align: top;
+      }
+    }
+  }
+
+  &.bg-success,&.bg-dark,&.bg-danger,&.bg-warning,&.bg-primary,&.bg-info{
+    border: none;
+    .breadcrumb-item{
+      color: $white;
+      &:before{
+        color: inherit;
+      }
+      a,span{
+        color: inherit;
+      }
+    }
+  }
+}
+
+
+/* inverse breadcrumb */
+@each $color, $value in $theme-colors {
+  .bg-inverse-#{$color} {
+    @include breadcrumb-inverse-variant($value);
+  }
+}

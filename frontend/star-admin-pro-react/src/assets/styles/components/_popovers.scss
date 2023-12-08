@@ -1,0 +1,144 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Popovers */
+
+.popover-static-demo {
+	.popover {
+		width: 185px;
+		position: relative;
+		display: block;
+		float: left;
+		margin: 1rem .5rem;
+		&.bs-popover-bottom-demo,
+		&.bs-popover-top-demo {
+			.arrow {
+				left: 50%;
+			}
+		}
+		&.bs-popover-left-demo,
+		&.bs-popover-right-demo{
+			.arrow {
+				top: 50%;
+			}
+		}
+	}
+}
+
+.popover {
+	z-index: 1029;
+	&.bs-popover-top-demo {
+		.arrow {
+			&:before{
+				border-top-color: $popover-border-color;
+			}
+			&:after{
+				border-top-color: $popover-arrow-color;
+			}
+		}
+	}
+	&.bs-popover-right-demo{
+		.arrow {
+			&:before{
+				border-right-color: $popover-border-color;
+			}
+			&:after{
+				border-right-color: $popover-arrow-color;
+			}
+		}
+	}
+	&.bs-popover-bottom-demo{
+		.arrow {
+			&:before{
+				border-bottom-color: $popover-border-color;
+			}
+			&:after{
+				border-bottom-color: $popover-arrow-color;
+			}
+		}
+		.popover-header {
+			&:before {
+				border-bottom: 0;
+			}
+		}
+	}
+	&.bs-popover-left-demo{
+		.arrow {
+			&:before{
+				border-left-color: $popover-border-color;
+			}
+			&:after{
+				border-left-color: $popover-arrow-color;
+			}
+		}
+	}
+	.popover-header {
+		font-size: .9375rem;
+		border-bottom: 0;
+		background: $white;
+		color: inherit;
+		border-bottom: 1px solid $popover-border-color;
+	}
+	.popover-body {
+		color: $text-muted;
+	}
+	&.left {
+		.arrow {
+			&:before {
+				border-left-color: $popover-border-color;
+			}
+			&:after {
+				border-left-color: $popover-arrow-color;
+			}
+		}
+	}
+	&.right {
+		.arrow {
+			&:before {
+				border-right-color: $popover-border-color;
+			}
+			&:after {
+				border-right-color: $popover-arrow-color;
+			}
+		}
+	}
+	&.top {
+		.arrow {
+			&:before {
+				border-top-color: $popover-border-color;
+			}
+			&:after {
+				border-top-color: $popover-arrow-color;
+			}
+		}
+	}
+	&.bottom {
+		.arrow {
+			&:before {
+				border-bottom-color: $popover-border-color;
+			}
+			&:after {
+				border-bottom-color: $popover-arrow-color;
+			}
+		}
+	}
+}
+
+@each $color, $value in $theme-colors {
+	.popover-#{$color} {
+	  @include popover-variant($color);
+	}
+}

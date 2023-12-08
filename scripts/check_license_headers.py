@@ -47,6 +47,7 @@ IGNORE_PATTERN = re.compile(
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
+    r"|^frontend/star-admin-pro-react/public/robots.txt$"
     r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
     r"|^lib/(test|dev)-requirements\.txt$"
     r"|^lib/min-constraints-gen\.txt"

@@ -1,0 +1,108 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Portfolio */
+.portfolio-grid {
+	figure {
+		position: relative;
+		float: left;
+		overflow: hidden;
+		width: 100%;
+		background: theme-color(primary);
+		text-align: center;
+		cursor: pointer;
+
+		img {
+			position: relative;
+			display: block;
+			min-height: 100%;
+			max-width: 100%;
+			width: 100%;
+			opacity: 0.8;
+		}
+
+		figcaption {
+			padding: 2em;
+			color: $white;
+			text-transform: uppercase;
+			font-size: 1.25em;
+			-webkit-backface-visibility: hidden;
+			backface-visibility: hidden;
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+
+			&:after,
+			&:before {
+				pointer-events: none;
+			}
+		}
+
+		&.effect-text-in {
+			border-radius: 0.25rem;
+
+			h4,
+			img {
+				-webkit-transition: -webkit-transform 0.35s;
+				transition: transform 0.35s;
+			}
+
+			img {
+				-webkit-backface-visibility: hidden;
+				backface-visibility: hidden;
+			}
+
+			h4,
+			p {
+				position: absolute;
+				bottom: 10px;
+				left: 0;
+				padding: 10px;
+				margin-bottom: 0;
+				width: 100%;
+			}
+
+			p {
+				text-transform: none;
+				opacity: 0;
+				-webkit-transition: opacity 0.35s, -webkit-transform 0.35s;
+				transition: opacity 0.35s, transform 0.35s;
+				-webkit-transform: translate3d(0,50px,0);
+				transform: translate3d(0,50px,0);
+			}
+
+			&:hover {
+				img {
+					-webkit-transform: translate3d(0,-80px,0);
+					transform: translate3d(0,-80px,0);
+				}
+
+				h4 {
+					-webkit-transform: translate3d(0,-100px,0);
+					transform: translate3d(0,-100px,0);
+				}
+
+				p {
+					opacity: 1;
+					-webkit-transform: translate3d(0,0,0);
+					transform: translate3d(0,0,0);
+				}
+			}
+		}
+	}
+}

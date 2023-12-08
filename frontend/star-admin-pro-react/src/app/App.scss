@@ -1,0 +1,97 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* You can add global styles to this file, and also import other style files */
+
+/* === Plugin styles === */
+
+@import "~react-bootstrap-table-next/dist/react-bootstrap-table2.min.css";
+@import '~@fullcalendar/core/main.css';
+@import '~@fullcalendar/daygrid/main.css';
+
+
+@import "~bootstrap/scss/functions";
+@import "~bootstrap/scss/variables";
+
+@import "../assets/styles/variables";
+@import "~compass-mixins/lib/compass";
+@import "~compass-mixins/lib/animate";
+@import "~bootstrap/scss/bootstrap";
+@import "../assets/styles/fonts";
+@import "../assets/styles/functions";
+
+/* === Icon fonts === */
+@import "~@mdi/font/scss/materialdesignicons";
+@import "~flag-icon-css/sass/flag-icon";
+
+
+/* === Template mixins === */
+@import "../assets/styles/mixins/animation";
+@import "../assets/styles/mixins/badges";
+@import "../assets/styles/mixins/buttons";
+@import "../assets/styles/mixins/misc";
+@import "../assets/styles/mixins/color-functions";
+@import "../assets/styles/mixins/cards";
+@import "../assets/styles/mixins/blockqoute";
+@import "../assets/styles/mixins/popovers";
+@import "../assets/styles/mixins/tooltips";
+@import "../assets/styles/mixins/no-ui-slider";
+
+
+/* === Core Styles === */
+@import "../assets/styles/background";
+@import "../assets/styles/typography";
+@import "../assets/styles/reset";
+@import "../assets/styles/responsive";
+@import "../assets/styles/misc";
+@import "../assets/styles/utilities";
+@import "../assets/styles/demo";
+@import "../assets/styles/spinner";
+@import "../assets/styles/dashboard";
+
+/* === Components === */
+
+@import "../assets/styles/components/forms";
+@import "../assets/styles/components/checkbox-radio";
+@import "../assets/styles/components/icons";
+@import "../assets/styles/components/tables";
+@import "../assets/styles/components/buttons";
+@import "../assets/styles/components/breadcrumbs";
+@import "../assets/styles/components/cards";
+@import "../assets/styles/components/preview";
+@import "../assets/styles/components/user-profile";
+@import "../assets/styles/components/lists";
+@import "../assets/styles/components/bootstrap-progress";
+@import "../assets/styles/components/tabs";
+@import "../assets/styles/components/dropdowns";
+@import "../assets/styles/components/pagination";
+@import "../assets/styles/components/loaders/loaders";
+@import "../assets/styles/components/timeline";
+@import "../assets/styles/components/spinner";
+@import "../assets/styles/components/react-table";
+
+@import "../assets/styles/components/landing-screens/auth";
+
+/* === Plugin Overrides === */
+@import "../assets/styles/components/plugin-overrides/react-bootstrap-table";
+@import "../assets/styles/components/plugin-overrides/react-table";
+
+/* === Layout === */
+@import "../assets/styles/navbar";
+@import "../assets/styles/sidebar";
+@import "../assets/styles/footer";
+@import "../assets/styles/layout";
+@import "../assets/styles/settings-panel";

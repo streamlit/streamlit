@@ -1,0 +1,55 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Dropdowns */
+
+.dropdown {
+  .dropdown-toggle {
+    &:after {
+      border-top: 0;
+      border-right: 0;
+      border-left: 0;
+      border-bottom: 0;
+      font: normal normal normal 24px/1 "Material Design Icons";
+      content: "\f140";
+      width: auto;
+      height: auto;
+      vertical-align: baseline;
+      font-size: 14px;
+    }
+    &.toggle-arrow-hide {
+      &:before {
+        display: none;
+      }
+      &:after {
+        display: none;
+      }
+    }
+  }
+  .dropdown-menu {
+    margin-top: .75rem;
+    font-size: $default-font-size;
+    box-shadow: 0px 1px 15px 1px rgba(230, 234, 236, 0.35);
+    .dropdown-item {
+      font-size: 1rem;
+      padding: .25rem 1.5rem;
+      cursor: pointer;
+      &:active {
+        background: initial;
+      }
+    }
+  }
+}

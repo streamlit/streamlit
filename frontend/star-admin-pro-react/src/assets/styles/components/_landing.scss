@@ -1,0 +1,148 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.banner-wrapper {
+  background-color: $landing-bg;
+  .navbar {
+    background: none;
+    padding: 50px 0;
+    .navbar-brand {
+      width: 170px;
+    }
+    .navbar-nav {
+      .nav-link {
+        color: $white;
+        font-size: 20px;
+        padding-left: 18px;
+      }
+    }
+    .navbar-toggler {
+      border: 1px solid $white;
+      color: $white;
+    }
+  }
+  .banner-content {
+    padding: 45px 15px;
+    h1 {
+      font-size: 46px;
+    }
+    h3 {
+      font-size: 36px;
+    }
+  }
+}
+.details-wrapper {
+  padding: 140px 0 50px 0;
+  background: $landing-bg-color;
+  .card-icon-top {
+    position: relative;
+    box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    .card-icon {
+      top: -38px;
+      left: calc(50% - 30px);
+      height: 70px;
+      width: 70px;
+      position: absolute;
+    }
+    h4 {
+      font-size: 30px;
+    }
+    .card-text {
+      font-size: 18px;
+    }
+  }
+  .card-item-preview {
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05), 0 5px 15px rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+    position: relative;
+    .badge {
+      height: 80px;
+      width: 80px;
+      border-radius: 50%;
+      position: absolute;
+      right: -32px;
+      top: -38px;
+      padding-top: 25px;
+      font-size: 24px;
+    }
+  }
+  .feature-list-row {
+    .feature-list-item {
+      i {
+        font-size: 45px;
+        display: block;
+        padding: 40px 0;
+      }
+      .feature-description {
+        font-size: 17px;
+        padding-bottom: 20px;
+      }
+    }
+  }
+}
+footer {
+  padding: 85px 0 30px 0;
+  background-color: $primary;
+  img {
+    width: 170px;
+  }
+  .social-icons {
+    height: 60px;
+    width: 60px;
+    border-radius: 50%;
+    margin-right: 15px;
+    cursor: pointer;
+    span {
+      padding: 16px 0 0 17px;
+      display: block;
+      font-size: 26px;
+    }
+  }
+  i {
+    color: $white;
+    padding: 0 10px 10px 0;
+  }
+  h6 {
+    font-size: 18px;
+    color: $white;
+  }
+  .nav {
+    .nav-item {
+      .nav-link {
+        color: $white;
+        font-size: 18px;
+        &:not(:last-child) {
+          border-right: 1px solid $white;
+        }
+      }
+    }
+  }
+  p {
+    color: $white;
+    font-size: 17px;
+  }
+  .form-control {
+    border-radius: 25px 25px;
+  }
+  h4 {
+    padding-top: 35px;
+    color: $white;
+    a {
+      color: $danger;
+    }
+  }
+}

@@ -1,0 +1,64 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Bar loader */
+.bar-loader{
+  width: 50px;
+  height: 50px;
+  border-radius: 100%;
+  position: relative;
+  margin: 0 auto;
+}
+
+.bar-loader span{
+  display: inline-block;
+  width: 5px;
+  height: 30px;
+  background-color: rgba(theme-color(danger), .7);
+  margin: 0 2px;
+}
+
+.bar-loader span:nth-child(1){
+  animation: grow 1s ease-in-out infinite;
+}
+
+.bar-loader span:nth-child(2){
+  animation: grow 1s ease-in-out 0.15s infinite;
+}
+
+.bar-loader span:nth-child(3){
+  animation: grow 1s ease-in-out 0.30s infinite;
+}
+
+.bar-loader span:nth-child(4){
+  animation: grow 1s ease-in-out 0.45s infinite;
+}
+
+@keyframes grow{
+  0%, 100%{
+    -webkit-transform: scaleY(1);
+    -ms-transform: scaleY(1);
+    -o-transform: scaleY(1);
+    transform: scaleY(1);
+  }
+
+  50%{
+    -webkit-transform: scaleY(1.8);
+    -ms-transform: scaleY(1.8);
+    -o-transform: scaleY(1.8);
+    transform: scaleY(1.8);
+  }
+}

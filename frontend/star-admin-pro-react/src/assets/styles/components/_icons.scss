@@ -1,0 +1,41 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Icons */
+
+.icons-list {
+  border-left: 1px solid $border-color;
+  border-bottom: 1px solid $border-color;
+  >div {
+    background: $white;
+    border-top: 1px solid $border-color;
+    border-right: 1px solid $border-color;
+    @include display-flex;
+    @include align-items(center);
+    padding:15px 15px;
+    font-family: $type1;
+    font-weight: 400;
+    font-size: $default-font-size;
+
+    i {
+      display: inline-block;
+      font-size: 20px;
+      width: 40px;
+      text-align: left;
+      color: theme-color(primary);
+    }
+  }
+}

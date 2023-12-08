@@ -1,0 +1,179 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Lists */
+
+ul,
+ol,
+dl {
+  padding-left: 1rem;
+  font-size: $default-font-size;
+  li {
+    line-height: 1.8;
+  }
+}
+
+.list-ticked,
+.list-arrow,
+.list-star {
+  list-style: none;
+  padding: 0;
+  li {
+    padding-left: 1.5rem;
+    &:before {
+      font-family: "Material Design Icons";
+      margin-left: -1.5rem;
+      width: 1.5rem;
+      margin-right: .5rem;
+    }
+  }
+}
+
+.list-ticked {
+  li {
+    &:before {
+      content: '\F12D';
+      color: theme-color(danger);
+    }
+  }
+}
+
+.list-arrow {
+  li {
+    &:before {
+      content: '\F142';
+      color: theme-color(success);
+    }
+  }
+}
+
+.list-star {
+  li {
+    &:before {
+      content: '\F4CE';
+      color: theme-color(warning);
+    }
+  }
+}
+
+.bullet-line-list {
+  padding-left: 30px;
+  margin-bottom: 0;
+  position: relative;
+  list-style-type: none;
+
+  .rtl & {
+    padding-right: 0px;
+  }
+
+  li {
+    position: relative;
+    line-height: 1;
+    padding-bottom: 10px;
+
+    &:before {
+      content: "";
+      position: absolute;
+      border-radius: 100%;
+      width: 12px;
+      height: 12px;
+      left: -28px;
+      top: 6px;
+      border: 3px solid theme-color(primary);
+      margin-right: 15px;
+      z-index: 2;
+      background: $bullet-line-list-shape-bg;
+    }
+
+    &:after {
+      content: "";
+      border: 1px solid $border-color;
+      position: absolute;
+      bottom: 0;
+      left: -23px;
+      height: 100%;
+    }
+
+    &:first-child {
+      &:after {
+        content: "";
+        height: 80%;
+      }
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+
+      &:after {
+        content: "";
+        top: 0;
+        height: 30%;
+      }
+    }
+  }
+}
+.gradient-bullet-list {
+  padding-left: 0;
+  .rtl & {
+    padding-right: 0;
+  }
+  li {
+    position: relative;
+    list-style-type: none;
+    padding-left: 25px;
+    line-height: 1;
+    &:before,
+    &:after {
+      content:"";
+      position: absolute;
+    }
+    &:before {
+      top: 0;
+      left: 0;
+      width: 15px;
+      height: 15px;
+      border-radius: 100%;
+    }
+    &:after {
+      width: 11px;
+      height: 11px;
+      top: 2px;
+      left: 2px;
+      background: $info;
+      border-radius: 100%;
+      z-index: 1;
+    }
+  }
+  &:after {
+    content: "";
+    border: 1px solid $list-border-bg;
+    position: absolute;
+    top: 64px;
+    bottom: 113px;
+    left: 36px;
+    @media (max-width:768px) {
+      bottom: 100px;
+    }
+    @media (max-width:576px) {
+      bottom: 113px;
+    }
+  }
+  img {
+    height: 14px;
+    width: 14px;
+    border-radius: 4px;
+  }
+}

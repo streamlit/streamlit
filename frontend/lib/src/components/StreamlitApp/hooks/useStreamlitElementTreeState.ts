@@ -27,7 +27,7 @@ import { type StreamlitInstallation } from "../stores/StreamlitInstallationConte
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
 
-export function useStreamlitElementTree(
+export function useStreamlitElementTreeState(
   messageQueue: MessageQueue,
   streamlitInstallation: StreamlitInstallation | null,
   scriptRunInfo: ScriptRunInfo,

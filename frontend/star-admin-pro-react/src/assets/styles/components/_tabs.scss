@@ -1,0 +1,210 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Tabs */
+
+// Basic Styles
+.nav-pills,
+.nav-tabs {
+	.nav-item {
+		.nav-link {
+			font-family: $type1;
+			line-height: 1;
+			font-size: $default-font-size;
+			color: $body-color;
+			text-align: center;
+			display: flex;
+
+			i {
+				margin-right: 10px;
+			}
+		}
+	}
+}
+
+.tab-content {
+	font-family: $type1;
+	font-size: $default-font-size;
+	line-height: 1.71;
+}
+
+.tab-basic {
+	border-bottom: none;
+	margin-bottom: 20px;
+
+	.nav-item {
+		margin-right: 7%;
+
+		.nav-link {
+			color: $text-muted;
+			padding: 0 0 7px;
+			border-top: none;
+			border-right: none;
+			border-left: none;
+			border-bottom: 2px solid $border-color;
+
+			&.active {
+				border-top: none;
+				border-right: none;
+				border-left: none;
+				border-bottom: 2px solid theme-color(success);
+				color: theme-color(success);
+				background: $card-bg;
+			}
+		}
+	}
+}
+
+.tab-content-basic {}
+
+.tab-solid {
+	border: none;
+	margin-bottom: 30px;
+
+	.nav-item {
+		.nav-link {
+			border: none;
+			padding: 10px 16px;
+			border-radius: 4px;
+
+			&:nth(fist-child) {
+				padding-left: 0;
+			}
+
+			&.active {
+				border: none;
+				color: $white;
+			}
+		}
+	}
+}
+
+.tab-content-solid {
+	border: none;
+	padding-left: 0;
+	padding-right: 0;
+}
+
+@each $color,
+$value in $theme-colors {
+	.tab-solid-#{$color} {
+		@include tab-solid-variant($value);
+	}
+}
+
+.tab-minimal {
+	.nav-tabs {
+		border: none;
+
+		.nav-item {
+			.nav-link {
+				border: none;
+				font-size: 14px;
+
+				&.active {
+					font-weight: 600;
+					background: $card-bg;
+					color: $body-color;
+				}
+
+				&:first-child {
+					padding-left: 0;
+				}
+			}
+		}
+	}
+
+	.tab-content {}
+}
+
+.tab-simple-styled {
+	border-bottom: none;
+	margin-top: 30px;
+	margin-bottom: 30px;
+
+	.nav-item {
+		margin-right: 30px;
+
+		.nav-link {
+			border: none;
+			padding: 0;
+			color: $text-muted;
+
+			&.active {
+				background: $card-bg;
+				color: theme-color(info);
+			}
+		}
+	}
+}
+
+.tab-tile-style {
+	display: flex;
+	justify-content: space-around;
+	border-bottom: none;
+	margin-bottom: 30px;
+
+	.nav-item {
+		.nav-link {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: flex-start;
+			padding: 15px 25px;
+			border-radius: 0px;
+			border: none;
+
+			p {
+				margin-bottom: 0;
+			}
+		}
+
+		&:hover {
+			border: none;
+		}
+
+		&.active {
+			.nav-link {
+				background: rgba(#e6ecf5, 0.4);
+
+				&:before {
+					content: "";
+					position: absolute;
+					top: 0px;
+					width: 100%;
+					left: 0;
+					height: 2px;
+					background: theme-color(danger);
+					right: 0;
+				}
+			}
+		}
+	}
+}
+
+.vertical-tab {
+	display: flex;
+
+	.nav-tabs {
+		flex-direction: column;
+		margin-bottom: 0;
+	}
+
+	.tab-content {
+		margin-bottom: 0;
+	}
+}

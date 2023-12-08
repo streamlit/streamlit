@@ -1,0 +1,531 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Navbar */
+
+.navbar {
+  font-family: $type1;
+  left: $sidebar-width-lg;
+  transition: left $action-transition-duration $action-transition-timing-function,
+    width $action-transition-duration $action-transition-timing-function;
+  -webkit-transition: left $action-transition-duration $action-transition-timing-function,
+    width $action-transition-duration $action-transition-timing-function;
+  -moz-transition: left $action-transition-duration $action-transition-timing-function,
+    width $action-transition-duration $action-transition-timing-function;
+  -ms-transition: left $action-transition-duration $action-transition-timing-function,
+    width $action-transition-duration $action-transition-timing-function;
+
+  .navbar-menu-wrapper {
+    transition: width $action-transition-duration $action-transition-timing-function;
+    -webkit-transition: width $action-transition-duration $action-transition-timing-function;
+    -moz-transition: width $action-transition-duration $action-transition-timing-function;
+    -ms-transition: width $action-transition-duration $action-transition-timing-function;
+    color: $navbar-menu-color;
+    padding-left: 15px;
+    padding-right: 15px;
+    width: calc(100% - #{$sidebar-width-lg});
+    height: $navbar-height;
+    background: $navbar-bg;
+    @media (max-width: 991px) {
+      width: 100%;
+      padding-left: 11px;
+    }
+
+    .navbar-toggler {
+      border: 0;
+      color: $navbar-menu-color;
+      margin-right: 0;
+      &:not(.navbar-toggler-right) {
+        @media (max-width: 991px) {
+          display: none;
+        }
+      }
+    }
+    .search-form {
+      width: 35%;
+      margin-right: 30px;
+      @media (max-width: 1024px) {
+        width: 22%;
+      }
+      .form-control {
+        height: 32px;
+      }
+
+      .form-group {
+        margin-bottom: 0;
+      }
+    }
+    .navbar-text {
+      font-size: $default-font-size;
+    }
+
+    .navbar-nav {
+      @include flex-direction(row);
+      @include align-items(stretch);
+      .nav-item {
+        @include display-flex();
+        @include align-items(center);
+        padding-left: 0rem;
+        padding-right: 0rem;
+        line-height: 1;
+        margin-left: 1rem;
+        @media (max-width: 767px) {
+          padding-right: 0.5rem;
+          padding-left: 0.5rem;
+        }
+        .nav-link {
+          color: $navbar-menu-color;
+          font-size: $navbar-font-size;
+          i {
+            font-size: $navbar-icon-font-size;
+            color: $navbar-menu-color;
+          }
+          .nav-profile-img {
+            height: 34px;
+            width: 34px;
+            border-radius: 50%;
+          }
+          .profile-text {
+            margin-right: 15px;
+            .rtl & {
+              margin-right: 0;
+              margin-left: 15px;
+            }
+          }
+          .badge {
+            margin-left: .5rem;
+            .rtl & {
+              margin-left: 0;
+              margin-right: .5rem;
+            }
+          }
+        }
+        .dropdown {
+          .dropdown-toggle {
+            padding: 0;
+            font-weight: normal;
+            &:after {
+              content: "\F140";
+              display: inline-block;
+              font: normal normal normal 24px/1 "Material Design Icons";
+              font-size: inherit;
+              text-rendering: auto;
+              line-height: inherit;
+              -webkit-font-smoothing: antialiased;
+              border: 0;
+              vertical-align: inherit;
+            }
+            i {
+              font-size: 1.25rem;
+              line-height: 1.75;
+            }
+            &.bg-transparent {
+              background: transparent;
+              border: none;
+              &:focus {
+                box-shadow: none;
+              }
+            }
+          }
+          .badge {
+            margin-left: 2.5rem;
+            .rtl & {
+              margin-left: 0;
+              margin-right: .5rem;
+            }
+          }
+          .count-indicator {
+            position: relative;
+            border-radius: 100%;
+            text-align: center;
+            margin-right: 0;
+            i {
+              margin-right: 0;
+              vertical-align: middle;
+            }
+            .count {
+              position: absolute;
+              left: 50%;
+              width: 16px;
+              height: 16px;
+              border-radius: 100%;
+              top: -1px;
+              font-size: 11px;
+              color: $white;
+              background: theme-color(danger);
+              padding-top: 2px;
+            }
+            &:after {
+              display: none;
+            }
+            .count-varient1 {
+              background: theme-color(warning);
+            }
+            .count-varient2 {
+              background: theme-color(success);
+            }
+          }
+          i {
+            margin-right: 0.5rem;
+            vertical-align: middle;
+            .rtl & {
+              margin-left: 0.5rem;
+              margin-right: 0;
+            }
+          }
+          .navbar-dropdown {
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            position: absolute;
+            top: $navbar-height;
+            cursor: pointer;
+            left: auto;
+            right: auto;
+            min-width: 100%;
+            -webkit-box-shadow: 0px 0px 13px -3px rgba(0, 0, 0, 0.1);
+            -moz-box-shadow: 0px 0px 13px -3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 0px 13px -3px rgba(0, 0, 0, 0.1);
+            @include border-radius(4px);
+            @media (max-width: 991px) {
+              right: -85px;
+            }
+            @extend .dropdownAnimation;
+            border: 1px solid rgba(182, 182, 182, 0.1);
+            padding: 0;
+            @include border-radius(0);
+            overflow: hidden;
+            .rtl & {
+              left: auto;
+              right: -5rem;
+              min-width: 15rem;
+            }
+            .navbar-nav-right & {
+              right: 0;
+              left: auto;
+              .rtl & {
+                right: auto;
+                left: 0;
+              }
+            }
+            &.dropdown-left {
+              left: 0;
+              right: auto;
+            }
+            .dropdown-item {
+              @extend .d-flex;
+              @extend .align-items-center;
+              margin-bottom: 0;
+              padding: 7px 25px;
+              line-height: 1;
+              font-size: 14px;
+              &.text-small {
+                font-size: 12px;
+              }
+              i {
+                font-size: 24px;
+              }
+
+              .ellipsis {
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .preview-icon {
+                width: 40px;
+                height: 40px;
+              }
+              .small-text {
+                font-size: 0.75rem;
+              }
+              .badge {
+                margin-bottom: 0.5rem;
+              }
+            }
+
+            .dropdown-divider {
+              margin: 0;
+            }
+            &.navbar-dropdown-large {
+              width: 300px;
+              @media (max-width: 767px) {
+                width: 100%;
+              }
+              .dropdown-item {
+                white-space: normal;
+                &:nth-child(2n) {
+                  background: $navbar-item-light-bg;
+                }
+              }
+            }
+          }
+          @media (max-width: 767px) {
+            position: static;
+            .navbar-dropdown,
+            .navbar-dropdown-large {
+              width: 100%;
+              margin: auto;
+              left: 0px;
+              right: 0px;
+              width: 100%;
+              top: 69px;
+              @media (max-width: 767px) {
+                margin-top: 20px;
+              }
+            }
+          }
+          @media (max-width: 991px) {
+            .navbar-dropdown {
+              min-width: 320px;
+            }
+          }
+        }
+        &.nav-search {
+          .input-group {
+            width: 260px;
+            .input-group-append {
+              background: transparent;
+            }
+            .form-control {
+              background: $navbar-item-bg;
+              border: 0;
+              color: $white;
+              padding: 0.5rem 1rem;
+              border-top-left-radius: 50px;
+              border-bottom-left-radius: 50px;
+              height: auto;
+              .rtl & {
+                border-top-left-radius: 0px;
+                border-bottom-left-radius: 0px;
+                border-top-right-radius: 50px;
+                border-bottom-right-radius: 50px;
+              }
+            }
+            .input-group-text {
+              background: $navbar-item-bg;
+              border: 0;
+              color: $white;
+              padding: 0.5rem 1rem;
+              border-top-right-radius: 50px;
+              border-bottom-right-radius: 50px;
+              .rtl & {
+                border-top-right-radius: 0px;
+                border-bottom-right-radius: 0px;
+                border-top-left-radius: 50px;
+                border-bottom-left-radius: 50px;
+              }
+            }
+          }
+        }
+        &.nav-profile {
+          .nav-link {
+            .profile-name {
+              @media (max-width: 767px) {
+                display: none;
+              }
+            }
+          }
+        }
+        &.language-dropdown {
+          .dropdown-menu {
+            width: 170px;
+            left: -15px !important;
+
+
+            .dropdown-item {
+              padding-left: 22px;
+              padding-right: 12px;
+
+              .flag-icon-holder {
+                margin-right: 15px;
+              }
+            }
+          }
+
+          .flag-icon-holder {
+            height: 25px;
+            width: 25px;
+            border-radius: 100%;
+            overflow: hidden;
+
+            i {
+              font-size: 25px;
+              line-height: 1;
+            }
+          }
+        }
+        @media (max-width: 576px) {
+          border: none;
+        }
+      }
+      &.navbar-nav-right {
+        @media (min-width: 992px) {
+          margin-left: auto;
+          .nav-item {
+            .dropdown {
+              .dropdown-toggle {
+                &:after {
+                  content: "\F140";
+                  display: inline-block;
+                  font: normal normal normal 24px/1 "Material Design Icons";
+                  font-size: inherit;
+                  text-rendering: auto;
+                  line-height: inherit;
+                  -webkit-font-smoothing: antialiased;
+                  border: 0;
+                  vertical-align: inherit;
+                }
+                &.toggle-arrow-hide {
+                  &:after {
+                    display: none;
+                  }
+                }
+              }
+            }
+          }
+          .rtl & {
+            margin-left: 0;
+            margin-right: auto;
+          }
+        }
+      }
+      &.header-links {
+        height: $navbar-height;
+        padding-left: 2%;
+
+        .nav-item {
+          margin-left: 1rem;
+          padding: 0;
+
+          .nav-link {
+            height: $navbar-height;
+            font-size: $navbar-font-size;
+            padding: 16px 25px;
+            display: flex;
+            align-items: center;
+
+            i {
+              margin-right: 10px;
+
+              .rtl & {
+                margin-right: 0;
+                margin-left: 10px;
+              }
+            }
+          }
+
+          &.active {
+            background: rgba($white, 0.13);
+
+          }
+        }
+      }
+    }
+  }
+  //navbar color variations
+  &.navbar-dark {
+    .count-varient1 {
+      background: theme-color(warning);
+    }
+    .count-varient2 {
+      background: theme-color(success);
+    }
+  }
+
+  &.navbar-light {
+    .navbar-brand {
+      color: $black;
+    }
+    .navbar-menu-wrapper {
+      background: $white;
+      .navbar-nav {
+        .nav-item {
+          border-color: $light-color-icon-bg;
+          .nav-link {
+            color: $black;
+          }
+          &.nav-search {
+            .input-group {
+              .form-control,
+              .input-group-text {
+                background: $light-color-icon-bg;
+              }
+              .form-control {
+                @include input-placeholder {
+                  color: $black;
+                }
+              }
+              .input-group-text {
+                color: $black;
+              }
+            }
+          }
+        }
+      }
+      .navbar-toggler {
+        i:before {
+          background: $light-color-icon-bg;
+          color: $black;
+        }
+      }
+    }
+    @extend .navbar-dark;
+  }
+  @media (max-width: 991px) {
+    left: 0;
+    height: $navbar-height;
+    padding: 0;
+  }
+  @media (max-width: 768px) {
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-bottom: 0;
+    padding-top: 0;
+  }
+}
+@media (max-width:991px) {
+  .navbar {
+    flex-direction: row;
+    .navbar-menu-wrapper {
+      .navbar-brand {
+        min-width: 50px;
+        padding: 10px;
+        &.brand-logo {
+          display: none;
+        }
+        &.brand-logo-mini {
+          display: inline-block;
+        }
+      }
+    }
+  }
+
+  .navbar-collapse {
+    display: flex;
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width:480px) {
+  .navbar {
+    .navbar-brand-wrapper {
+      width: 55px;
+      .brand-logo-mini{
+        padding-top: 0px;
+      }
+    }
+  }
+}

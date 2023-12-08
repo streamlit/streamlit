@@ -1,0 +1,160 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Typography */
+
+body {
+  font-size: 1rem;
+  font-family: $type1;
+  font-weight: initial;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: $type1;
+  font-weight: normal;
+  font-style: normal;
+  font-stretch: normal;
+  line-height: normal;
+}
+
+p,
+a:not([href]):not([tabindex]) {
+  color: $body-color;
+  font-size: $default-font-size;
+}
+
+.h1,
+h1 {
+  font-size: 2.3125rem; //37px
+}
+
+.h2,
+h2 {
+  font-size: 2rem; //32px
+}
+
+.h3,
+h3 {
+  font-size: 1.6875rem; //27px
+}
+
+.h4,
+h4 {
+  font-size: 1.25rem; //20px
+}
+
+.h5,
+h5 {
+  font-size: 1.0625rem; //17px
+}
+
+.h6,
+h6 {
+  font-size: 1rem; //16px
+}
+
+p {
+  font-size: $default-font-size;
+}
+
+.display-1 {
+  font-size: 3.75rem;
+  @media (max-width: 991px) {
+    font-size: 3rem;
+  }
+}
+.display-2 {
+  font-size: 3.125rem;
+  @media (max-width: 991px) {
+    font-size: 2.5rem;
+  }
+}
+.display-3 {
+  font-size: 2.5rem;
+  @media (max-width: 991px) {
+    font-size: 2rem;
+  }
+}
+.display-4 {
+  font-size: 1.875rem;
+  @media (max-width: 991px) {
+    font-size: 1.5rem;
+  }
+}
+.display-5 {
+  font-size: 1.25rem;
+  @media (max-width: 991px) {
+    font-size: 1rem;
+  }
+}
+.blockquote {
+  padding: 1.25rem;
+  border: 1px solid $border-color;
+}
+
+address {
+  p {
+    margin-bottom: 0;
+  }
+}
+
+//blockqoute color variations
+@each $color, $value in $theme-colors {
+  .blockquote-#{$color} {
+    @include blockquote($value);
+  }
+}
+.error-page {
+  h1 {
+    font-size: 12rem;
+    @media (max-width: 991px) {
+      font-size: 8rem;
+    }
+  }
+}
+.icon-lg {
+  font-size: 2.5rem;
+}
+.icon-md {
+  font-size: 1.875rem;
+}
+.icon-sm {
+  font-size: 1rem;
+}
+
+.font-weight-normal {
+  font-weight: 400;
+}
+
+.font-weight-medium {
+  font-weight: 500;
+}
+
+.font-weight-semibold {
+  font-weight: 600;
+}

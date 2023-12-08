@@ -1,0 +1,130 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Demo Styles */
+// Add spacing to Boostrap components for demo purpose
+.template-demo {
+  > .btn {
+    @extend .mt-3;
+    @extend .mr-3;
+  }
+
+  .slider-wrap {
+    height: 100px;
+  }
+
+  > .btn-toolbar {
+    @extend .mt-3;
+    @extend .mr-3;
+  }
+
+  > .btn-group,
+  >  .btn-group-vertical {
+    @extend .mt-2;
+    @extend .mr-2;
+  }
+
+  .progress {
+    margin-top: 1.5rem;
+  }
+
+  .circle-progress {
+    @extend .mt-2;
+  }
+
+  > h2,
+   > h3,
+   > h4,
+   > h5,
+   > h6,
+  > h1 {
+    border-top: 1px solid $border-color;
+    padding: 0.5rem 0 0;
+  }
+
+  .noUi-target {
+    &.noUi-horizontal {
+      margin-top: 2rem;
+    }
+
+    &.noUi-vertical {
+      margin-right: 2rem;
+    }
+  }
+
+  > .dropdown {
+    display: inline-block;
+    @extend .mr-2;
+    margin-bottom: 0.5rem;
+  }
+
+  nav {
+    .breadcrumb {
+      margin-bottom: 1.375rem;
+    }
+
+    &:last-child {
+      .breadcrumb {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .editable-form {
+    > .form-group {
+      border-bottom: 1px solid $border-color;
+      padding-bottom: 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+  }
+
+  .circle-progress {
+    padding: 15px;
+  }
+
+  .circle-progress-block {
+    @extend .mb-3;
+    @extend .px-2;
+  }
+}
+
+.demo-modal {
+  position: static;
+  display: block;
+
+  .modal-dialog {
+    @extend .mt-0;
+
+    &.modal-lg {
+      max-width: 100%;
+    }
+  }
+}
+
+.loader-demo-box {
+  @extend .border;
+  @extend .border-secondary;
+  @extend .rounded;
+  width: 100%;
+  height: 200px;
+  @extend .d-flex;
+  @extend .align-items-center;
+}
+
+.dropdown-menu-static-demo {
+  height: 250px;
+  margin-bottom: 20px;
+}

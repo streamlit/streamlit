@@ -1,0 +1,114 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Pagination */
+
+.pagination {
+  .page-item {
+    .page-link {
+      border-color: $border-color;
+      color: color(black);
+      font-size: .875rem;
+      @include transition-duration(0.3s);
+      &:focus{
+        background: inherit;
+      }
+      i {
+        &:before {
+          font-size: inherit;
+          line-height: 1;
+          vertical-align: middle;
+        }
+      }
+    }
+    &.active,
+    &:hover,
+    &:focus,
+    &:active {
+      .page-link {
+        background: theme-color("primary");
+        border-color: theme-color("primary");
+        color: color(white);
+      }
+    }
+  }
+  &.flat {
+    .page-item {
+      .page-link {
+        border: none;
+        @include border-radius(2px);
+      }
+    }
+  }
+  &.separated {
+    .page-item {
+      margin-left: 2px;
+      margin-right: 2px;
+      &:first-child {
+        margin-left: 0;
+      }
+      &:last-child {
+        margin-right: 0;
+      }
+      .page-link {
+        @include border-radius(2px);
+      }
+    }
+  }
+  &.rounded {
+    .page-item {
+      .page-link {}
+      &:first-child {
+        .page-link {
+          @include border-radius(25px 0 0 25px);
+        }
+      }
+      &:last-child {
+        .page-link {
+          @include border-radius(0 25px 25px 0);
+        }
+      }
+    }
+  }
+  &.rounded-flat{
+    .page-item {
+      margin-right: 3px;
+      margin-left: 3px;
+      .page-link{
+        border: none;
+        @include border-radius(50px);
+
+      }
+    }
+  }
+  &.rounded-separated{
+    .page-item {
+      margin-left: 2px;
+      margin-right: 2px;
+      .page-link{
+        @include border-radius(18px);
+      }
+    }
+  }
+}
+
+
+/* pagination variations */
+@each $color, $value in $theme-colors {
+  .pagination-#{$color} {
+    @include pagination-variants($value);
+  }
+}

@@ -28,7 +28,8 @@ import {
   extractPageNameFromPathName,
   useAppUrlManager,
 } from "./hooks/useAppUrlManager"
-import type { BaseUriParts } from "@streamlit/lib"
+import type { AppRoot } from "../../AppNode"
+import type { BaseUriParts } from "../../util/UriUtil"
 import { useStreamlitScriptRunState } from "./hooks/useStreamlitScriptRunState"
 import { useStreamlitAppSettingsState } from "./hooks/useStreamlitAppSettingsState"
 import { useGitState } from "./hooks/useGitState"
@@ -48,7 +49,7 @@ import {
 } from "./stores/ScriptRunContext"
 import { type PageConfig, PageConfigContext } from "./stores/PageConfigContext"
 import { useStatelessPageConfig } from "./hooks/useStatelessPageConfig"
-import { useStreamlitElementTree } from "./hooks/useStreamlitElementTree"
+import { useStreamlitElementTreeState } from "./hooks/useStreamlitElementTreeState"
 import { useWidgetStateManagerState } from "./hooks/useWidgetStateManagerState"
 import {
   WidgetStateManagerContext,
@@ -59,6 +60,7 @@ import {
   StreamlitAppCommandsContext,
 } from "./stores/AppCommandsContext"
 import { type AppUrl, AppUrlContext } from "./stores/AppUrlContext"
+import { StreamlitElementTreeContext } from "./stores/StreamlitElementTreeContext"
 
 export interface StreamlitAppProps {
   children: ReactNode
@@ -115,7 +117,7 @@ export function StreamlitApp({
     onPageConfigChange
   )
   const appUrlManager = useAppUrlManager(messageQueue, workingEndpoint)
-  const elements = useStreamlitElementTree(
+  const elementTree = useStreamlitElementTreeState(
     messageQueue,
     streamlitInstallation,
     scriptRun,
@@ -126,7 +128,7 @@ export function StreamlitApp({
     messageQueue,
     streamlitInstallation,
     appUrlManager.currentPageScriptHash,
-    elements
+    elementTree
   )
   const gitInfo = useGitState(messageQueue)
 
@@ -288,6 +290,7 @@ export function StreamlitApp({
       StreamlitAppCommandsContext,
       commands,
     ] as ContextPair<StreamlitAppCommands>,
+    [StreamlitElementTreeContext, elementTree] as ContextPair<AppRoot>,
   ]
 
   return contexts.reduce(

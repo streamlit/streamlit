@@ -1,0 +1,163 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Color Functions Mixins
+
+// Solid tab variations
+@mixin tab-solid-variant($color) {
+  .nav-link {
+    &.active {
+      background: $color;
+    }
+  }
+}
+// Minimal tab variations
+@mixin tab-minimal-variant($color) {
+  .nav-tabs {
+    .nav-item {
+      .nav-link {
+        &.active {
+          color: $color;
+        }
+      }
+    }
+  }
+}
+// Sider color variations
+@mixin slider-color-variant($color) {
+  .noUi-base {
+    .noUi-connect {
+      background: $color;
+    }
+
+    .noUi-origin {
+      background: $color;
+
+      .noUi-handle {
+        &:after {
+          background: $color;
+        }
+
+        .noUi-tooltip {
+          background: $color;
+          color: $white;
+        }
+      }
+    }
+  }
+}
+// Breadcrumb color variations
+@mixin breadcrumb-inverse-variant($color) {
+  background: lighten($color, 25%);
+  border-color: $color;
+
+  .breadcrumb-item {
+    color: $color;
+
+    &:before {
+      color: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+  }
+
+  &.breadcrumb-custom {
+    background: transparent;
+
+    .breadcrumb-item {
+      background: lighten($color, 25%);
+
+      a {
+        color: $color;
+        border: none;
+
+        &:before {
+          border-left-color: lighten($color, 25%);
+        }
+      }
+
+      span {
+        color: $color;
+      }
+
+      &:last-child {
+        background: transparent;
+      }
+    }
+  }
+}
+// Pagination variations
+@mixin pagination-variants($color) {
+  .page-item {
+    &.active {
+      .page-link {
+        background: $color;
+        border-color: $color;
+      }
+    }
+
+    .page-link {
+      &:hover {
+        background: lighten($color,5%);
+        border-color: $color;
+        color: $white;
+      }
+    }
+  }
+}
+// Accordion Inverse variations
+@mixin accordion-inverse-variant($color) {
+  .card {
+    background: rgba($color, 0.16);
+    color: $color;
+    border: none;
+
+    .card-header {
+      color: $color;
+      border: none;
+
+      a,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      p,
+      span {
+        color: $color;
+      }
+
+      a {
+        border-color: $color;
+
+        &:before {
+          color: $color;
+        }
+
+        &[aria-expanded="true"] {
+          border-bottom: 1px solid rgba($color, 0.16);
+        }
+
+        &[aria-expanded="false"] {
+          border-bottom: 1px solid transparent;
+        }
+      }
+    }
+  }
+}

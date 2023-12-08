@@ -1,0 +1,318 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Settings Panel */
+
+.settings-panel{
+  display: block;
+  position: fixed;
+  top:0;
+  right: -$settings-panel-width;
+  bottom: 0;
+  width: $settings-panel-width;
+  height: 100vh;
+  min-height: 100%;
+  background: $white;
+  @include transition-duration($action-transition-duration);
+  @include transition-timing-function($action-transition-timing-function);
+  @include transition-property(right, box-shadow);
+  z-index: 9999;
+  .nav-tabs{
+    @include display-flex;
+    @include justify-content(center);
+    width: auto;
+    margin:0;
+    border-bottom: none;
+    .nav-item {
+      border: none;
+      text-align: center;
+      border: none;
+      background: transparent;
+      color: rgba($white, 0.5);
+      @include transition-duration(0.4s);
+      transition-property: color;
+      -webkit-transition-property: color;
+      @include justify-content(center);
+      padding: 1rem;
+      &.active{
+        background: transparent;
+        color: $white;
+      }
+    }
+  }
+  .tab-content{
+    border: none;
+    padding: 20px 0 0px 0;
+    .tab-pane{
+      &.scroll-wrapper{
+        position: relative;
+        max-height: 100vh;
+        height: 100%;
+        padding-bottom: 100px;
+      }
+    }
+  }
+  .settings-heading{
+    padding: 16px 0 13px 35px;
+    font-size: $default-font-size;
+		font-family: $type1;
+		font-weight: 700;
+    line-height: 1;
+    color: rgba(0, 0, 0, 0.9);
+    opacity: 0.9;
+    margin-bottom: 0;
+    border-top: 1px solid $border-color;
+    border-bottom: 1px solid $border-color;
+    .rtl &{
+      padding: 16px 35px 13px 0;
+    }
+  }
+  small.settings-heading{
+    .rtl &{
+      padding: 16px 0 13px 12px;
+    }
+  }
+  .sidebar-bg-options{
+    padding: 13px 35px;
+    @include display-flex;
+    @include align-items(center);
+    font-size: $default-font-size;
+    line-height: 1;
+    color: lighten($black, 35%);
+    background: $white;
+    @include transition-duration($action-transition-duration);
+    @include transition-property(background);
+    &.selected{
+      background: color(gray-lightest);
+    }
+    .rtl & {
+      .rounded-circle{
+        @extend .mr-0;
+        @extend .ml-3;
+      }
+    }
+  }
+  .color-tiles{
+    @include display-flex;
+    @include justify-content(space-between);
+    @include flex-wrap(wrap);
+    margin: 0px 35px 10px 35px;
+    padding-top: 15px;
+    .tiles{
+      @extend .img-ss;
+      @extend .rounded-circle;
+      margin: 10px 18px;
+      @include display-flex;
+      @include align-items(center);
+      @include justify-content(center);
+      &:before{
+        content: "";
+        width: 0px;
+        height: 0px;
+        opacity: 0;
+        background: rgba($white , 0.5);
+        @include border-radius(100%);
+        border: 0px solid rgba($white , 0.4);
+        @include transition-duration($action-transition-duration);
+        @include transition-timing-function($action-transition-timing-function);
+      }
+      &.selected{
+        &:before{
+          width: 10px;
+          height: 10px;
+          opacity: 1;
+          border-width: $border-width;
+        }
+      }
+      &.primary{
+        @extend .bg-primary;
+      }
+      &.success{
+        @extend .bg-success;
+      }
+      &.warning{
+        @extend .bg-warning;
+      }
+      &.danger{
+        @extend .bg-danger;
+      }
+      &.pink{
+        background: color(pink);
+      }
+      &.info{
+        @extend .bg-info;
+      }
+      &.dark{
+        @extend .bg-dark;
+      }
+      &.light{
+        border:1px solid lighten(color(gray),60%);
+        @extend .bg-light;
+      }
+    }
+  }
+  .chat-list{
+    padding-left: 0;
+    .list{
+      padding: 0.4rem 0.8rem;
+      @include display-flex;
+      @include justify-content(space-between);
+      border-bottom: $border-width solid $border-color;
+      &:last-child{
+        border-bottom: none;
+      }
+      .profile{
+        position: relative;
+        margin-right: 1rem;
+        img{
+          width:2.50rem;
+          height: 2.50rem;
+          @include border-radius(100%);
+        }
+        span{
+          height: 0.75rem;
+          width: 0.75rem;
+          position: absolute;
+          bottom: 0.34rem;
+          right: 0;
+          border: 0.13rem solid $white;
+          @include border-radius(100%);
+          &.online{
+            background: theme-color(success);
+          }
+          &.offline{
+            background: theme-color(warning);
+          }
+        }
+      }
+      .info{
+        margin-right: auto;
+        p{
+          display: block;
+          margin-bottom: 0;
+          @extend %ellipsor;
+          &:last-child{
+            opacity: 0.5;
+            font-size: 0.8rem;
+          }
+        }
+      }
+      &.active{
+        background: theme-color(light);
+      }
+    }
+  }
+  &.open{
+    right:0;
+    -webkit-box-shadow: 7px 0px 80px -9px rgba(0,0,0,0.15);
+    -moz-box-shadow: 7px 0px 80px -9px rgba(0,0,0,0.15);
+    box-shadow: 7px 0px 80px -9px rgba(0,0,0,0.15);
+  }
+  .settings-close{
+    position: absolute;
+    top:14px;
+    right: 10px;
+    color: $white;
+    background: transparent;
+    @include border-radius(4px);
+    padding: 0 3px;
+    cursor: pointer;
+    @include transition-duration(0.2s);
+    z-index: 999;
+    &:hover{
+      background: rgba($white,0.3);
+    }
+    .rtl & {
+      right: unset;
+      left: 10px;
+    }
+  }
+  .events{
+    p {
+      font-family: $type1;
+      font-weight: 400;
+    }
+    i {
+      margin-right: .625rem;
+      .rtl & {
+        margin-right: 0;
+        margin-left: .625rem;
+      }
+    }
+  }
+  .rtl & {
+    right: unset;
+    left: -$settings-panel-width;
+    @include transition-property(left);
+    .chat-list{
+      padding-right: 0;
+      .list{
+        .profile{
+          margin-right: 0;
+          margin-left: 1rem;
+        }
+        .info{
+          margin-right: 0;
+          margin-left: auto;
+          .badge {
+            margin-right: 10px;
+          }
+        }
+      }
+    }
+    &.open{
+      left: 0;
+      right: unset;
+    }
+  }
+}
+
+#theme-settings{
+  .settings-close{
+    top: 12px;
+    @extend .bg-primary;
+  }
+}
+
+#settings-trigger{
+  position: fixed;
+  bottom: 40px;
+  right: 30px;
+  height: 45px;
+  width: 45px;
+  background: theme-color(primary);
+  z-index: 99;
+  -webkit-box-shadow: 0px 0px 31px 6px rgba(0,0,0,0.17);
+  -moz-box-shadow: 0px 0px 31px 6px rgba(0,0,0,0.17);
+  box-shadow: 0px 0px 31px 6px rgba(0,0,0,0.17);
+  @include display-flex;
+  @include align-items(center);
+  @include justify-content(center);
+  @include border-radius(100%);
+  @extend .fadeInUp;
+  @include animation-duration(1s);
+  @include animation-delay(1s);
+  @include animation-fill-mode(both);
+  i{
+    color: $white;
+    font-size: 1rem;
+    line-height: 1rem;
+    @extend .infinite-spin;
+  }
+  @media (max-width: 991px){
+    display: none;
+  }
+}

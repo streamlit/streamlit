@@ -1,0 +1,365 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Sidebar */
+
+.sidebar {
+  min-height: calc(100vh - #{$navbar-height});
+  background: $sidebar-gradient;
+  font-family: $type1;
+  padding: 0;
+  width: $sidebar-width-lg;
+  z-index: 11;
+  transition: width $action-transition-duration $action-transition-timing-function, background $action-transition-duration $action-transition-timing-function;
+  -webkit-transition: width $action-transition-duration $action-transition-timing-function, background $action-transition-duration $action-transition-timing-function;
+  -moz-transition: width $action-transition-duration $action-transition-timing-function, background $action-transition-duration $action-transition-timing-function;
+  -ms-transition: width $action-transition-duration $action-transition-timing-function, background $action-transition-duration $action-transition-timing-function;
+  .sidebar-brand-wrapper {
+    width: auto;
+    height: $navbar-height;
+
+    .sidebar-brand {
+      // padding: 2.25rem 0 0.25rem 40px;
+      text-align: center;
+      display: inline-block;
+      margin: 0 auto;
+
+      .rtl & {
+        padding: 20px 10px 10px 0;
+      }
+
+      img {
+        width: calc(#{$sidebar-width-lg} - 80px);
+        max-width: 100%;
+        height: 48px;
+        margin: auto;
+        vertical-align: middle;
+      }
+    }
+
+    .brand-logo-mini {
+      display: none;
+      img {
+        width: calc(#{$sidebar-width-icon} - 50px);
+        max-width: 100%;
+        height: 35px;
+        margin: auto;
+      }
+    }
+  }
+  >.nav {
+    overflow: hidden;
+    flex-wrap: nowrap;
+    flex-direction: column;
+
+    .nav-item {
+      .collapse {
+        z-index: 999;
+      }
+
+      .sub-menu {
+        margin: 5px 0;
+        flex-wrap: nowrap;
+
+        .rtl & {
+          padding: $rtl-sidebar-submenu-padding;
+        }
+
+        .nav-item {
+          display: block;
+          max-width: 100%;
+          .nav-link {
+            padding: 10px 0px 10px 70px;
+            position: relative;
+            color: rgba($sidebar-light-menu-color, 0.8);
+            font-size: calc(#{$sidebar-menu-font-size} - 2px);
+            font-weight: 500;
+            transition-duration: 0.5s;
+            transition-timing-function: "ease-in-out";
+            transition-property: "background", "color", "box-shadow", "padding";
+            display: block;
+            max-width: 100%;
+            display: block;
+
+            &:before {
+              content: "";
+              position: absolute;
+              top: 0px;
+              left: 35px;
+              display: block;
+              height: 100%;
+              width: 2px;
+              background: $sidebar-light-submenu-line-color;
+
+              .rtl & {
+                right: -5px;
+                left: unset;
+              }
+            }
+
+            &:hover {
+              color: $sidebar-light-menu-color;
+
+              &:before {
+                background: #fff;
+              }
+            }
+
+            .rtl & {
+              padding: 10px 15px 10px 0px;
+            }
+          }
+
+          &:first-child {
+            .nav-link {
+              padding-top: 0;
+            }
+          }
+
+          &:last-child {
+            .nav-link {
+              padding-bottom: 0;
+            }
+          }
+        }
+      }
+
+      .nav-link {
+        align-items: center;
+        display: flex;
+        padding: $sidebar-menu-padding;
+        white-space: nowrap;
+        color: $sidebar-light-menu-color;
+
+        .rtl & {
+          padding: $sidebar-menu-padding-rtl;
+        }
+
+        i {
+          &.menu-arrow {
+            margin-left: auto;
+            margin-right: 0;
+            transition-duration: 0.2s;
+            transition-property: transform;
+            transition-timing-function: ease-in;
+
+            &:before {
+              content: "\F054";
+              font-family: "Material Design Icons";
+              font-size: 18px;
+              line-height: 1;
+              font-style: normal;
+              vertical-align: middle;
+              color: $sidebar-light-menu-arrow-color;
+            }
+          }
+        }
+
+        &[aria-expanded="true"] {
+
+          i {
+            &.menu-arrow {
+              transform: rotate(90deg);
+            }
+          }
+        }
+
+        .menu-icon {
+          display: none;
+          margin-right: 1.25rem;
+          width: $sidebar-icon-size;
+          line-height: 1;
+          font-size: 18px;
+          color: $sidebar-light-menu-icon-color;
+
+          .rtl & {
+            margin-right: 0;
+            margin-left: 1.25rem;
+          }
+        }
+
+        .menu-title {
+          color: inherit;
+          display: inline-block;
+          font-size: $sidebar-menu-font-size;
+          line-height: 1;
+          vertical-align: middle;
+          font-weight: 500;
+        }
+
+        .badge {
+          margin-left: auto;
+        }
+
+        &:hover {
+          color: $sidebar-navlink-menu-item-hover-color;
+        }
+      }
+
+      &.active {
+        >.nav-link {
+          color: $sidebar-light-menu-active-color;
+
+          .menu-title,
+          i {
+            color: inherit;
+          }
+        }
+      }
+
+      &.nav-profile {
+        max-width: 270px;
+        margin-right: auto;
+        margin-left: auto;
+        margin-top: 30px;
+        margin-bottom: 30px;
+
+        .nav-link {
+          display: flex;
+          border-radius: 3px;
+          border: $sidebar-nav-item-profile-border-color;
+          background-color: $sidebar-nav-item-profile-bg;
+          color: $sidebar-nav-item-profile-color;
+          padding: 15px 25px;
+
+          .profile-image {
+            margin-right: 15px;
+            position: relative;
+
+            .rtl & {
+              margin-right: 0;
+              margin-left: 15px;
+            }
+          }
+
+          .dot-indicator {
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+          }
+
+          .profile-name {
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 15px;
+            color: $sidebar-profile-name-color;
+          }
+
+          .designation {
+            margin-bottom: 0;
+            font-weight: 400;
+            color: $sidebar-profile-designation-color;
+          }
+        }
+      }
+
+      &.nav-category {
+        color: $sidebar-light-category-color;
+        border-bottom: 1px solid $sidebar-nav-category-border-color;
+        margin: 0 30px;
+        font-size: 15px;
+        font-weight: 500;
+        padding: 10px 0px 15px 0px;
+      }
+    }
+
+    >.nav-item {
+      >.nav-link {
+        height: $nav-link-height;
+      }
+    }
+
+    >.nav-item:not(.nav-profile) {
+      >.nav-link {
+        position: relative;
+
+        &:before {
+          content: "";
+          position: absolute;
+          left: 30px;
+          right: 50%;
+          width: 10px;
+          height: 10px;
+          border-radius: 100%;
+          border: 2px solid $sidebar-nav-item-dot-color;
+          display: block;
+
+          .rtl & {
+            left: auto;
+            right: 45px;
+          }
+        }
+      }
+    }
+
+    &:not(.sub-menu) {
+      >.nav-item {
+        >.nav-link {
+          background: transparent;
+          transition-duration: 0.3s;
+          transition-timing-function: "ease-in-out";
+          transition-property: "background", "color", "box-shadow", "padding";
+        }
+
+        &:hover {
+          &:not(.nav-profile):not(.hover-open) {
+            >.nav-link:not([aria-expanded="true"]) {
+              background: $sidebar-light-menu-hover-bg;
+              padding-left: 65px;
+
+              .rtl & {
+                padding-left: 30px;
+                padding-right: 80px;
+              }
+
+              &:before {
+                border-color: $sidebar-light-menu-hover-color;
+              }
+
+              .menu-title {
+                color: $sidebar-light-menu-hover-color;
+              }
+
+              .menu-arrow {
+                &:before {
+                  color: $sidebar-light-menu-arrow-color;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/* style for off-canvas menu*/
+
+@media screen and (max-width: 991px) {
+  .sidebar-offcanvas {
+    position: fixed;
+    max-height: calc(100vh - #{$navbar-height});
+    top: $navbar-height;
+    bottom: 0;
+    overflow: auto;
+    right: -$sidebar-width-lg;
+    transition: all 0.25s ease-out;
+
+    &.active {
+      right: 0;
+    }
+  }
+}

@@ -1,0 +1,60 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Jumping dots loader */
+.jumping-dots-loader {
+    width: 100px;
+    height: 100px;
+    border-radius: 100%;
+    position: relative;
+    margin: 0 auto;
+}
+.jumping-dots-loader span{
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 100%;
+    background-color: rgba(theme-color(danger), .8);
+    margin: 35px 5px;
+  }
+
+  .jumping-dots-loader span:nth-child(1){
+    animation: bounce 1s ease-in-out infinite;
+  }
+
+  .jumping-dots-loader span:nth-child(2){
+    animation: bounce 1s ease-in-out 0.33s infinite;
+  }
+
+  .jumping-dots-loader span:nth-child(3){
+    animation: bounce 1s ease-in-out 0.66s infinite;
+  }
+
+  @keyframes bounce{
+    0%, 75%, 100%{
+      -webkit-transform: translateY(0);
+      -ms-transform: translateY(0);
+      -o-transform: translateY(0);
+      transform: translateY(0);
+    }
+
+    25%{
+      -webkit-transform: translateY(-20px);
+      -ms-transform: translateY(-20px);
+      -o-transform: translateY(-20px);
+      transform: translateY(-20px);
+    }
+  }

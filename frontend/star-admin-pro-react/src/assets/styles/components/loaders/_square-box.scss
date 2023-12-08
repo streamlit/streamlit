@@ -1,0 +1,106 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Square box loader */
+
+@keyframes dyinglight {
+	15% {
+		transform: scale(1.6)
+	}
+	50% {
+		transform: rotate(-89deg)
+	}
+	100% {
+		transform: rotate(-90deg)
+	}
+}
+
+
+.square-box-loader {
+position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-block;
+}
+
+
+.square-box-loader-square {
+  display: block;
+  width: $square-size;
+  height: $square-size;
+  background: theme-color(primary);
+}
+
+
+.square-box-loader-container {
+position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  transform-origin: 50% 50% 0;
+  animation: dyinglight 1s ease infinite;
+  backface-visibility: hidden;
+}
+
+
+.square-box-loader-corner-top:before,
+.square-box-loader-corner-top:after,
+.square-box-loader-corner-bottom:before,
+.square-box-loader-corner-bottom:after {
+	position: absolute;
+  width: $square-corner-size;
+  height: $square-corner-size;
+  color: theme-color(primary);
+  content: '';
+}
+
+
+.square-box-loader-corner-top {
+	&:before {
+		border-left: 1px solid;
+		border-top: 1px solid;
+		top: -$square-corner-position;
+		left: -$square-corner-position;
+	}
+
+	&:after {
+		border-right: 1px solid;
+		border-top: 1px solid;
+		top: -$square-corner-position;
+		right: -$square-corner-position;
+	}
+
+}
+
+
+.square-box-loader-corner-bottom {
+	&:before {
+		border-left: 1px solid;
+		border-bottom: 1px solid;
+		bottom: -$square-corner-position;
+		left: -$square-corner-position;
+	}
+
+	&:after {
+		border-right: 1px solid;
+		border-bottom: 1px solid;
+		bottom: -$square-corner-position;
+		right: -$square-corner-position;
+	}
+
+}

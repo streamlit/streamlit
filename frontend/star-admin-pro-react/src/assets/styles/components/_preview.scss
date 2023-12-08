@@ -1,0 +1,153 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Preview */
+
+.preview-list {
+  .preview-item {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    .form-check {
+      margin-top: 8px;
+      margin-right: 1rem;
+    }
+
+    .preview-thumbnail {
+      color: color(white);
+      position: relative;
+
+      .preview-icon,
+      img {
+        border-radius: 100%;
+      }
+
+      .preview-icon {
+        padding: 6px;
+        text-align: center;
+
+        i {
+          font-size: 1.125rem;
+        }
+      }
+
+      .badge {
+        border: 2px solid $border-color;
+        border-radius: 100%;
+        bottom: 5px;
+        display: block;
+        height: 14px;
+        left: -5px;
+        padding: 0;
+        position: absolute;
+        width: 14px;
+
+        &.badge-online {
+          @extend .badge-success;
+        }
+
+        &.badge-offline {
+          @extend .badge-info;
+        }
+
+        &.badge-busy {
+          @extend .badge-warning;
+        }
+      }
+    }
+
+    .preview-item-content {
+      line-height: 1;
+      padding-left: 1.5rem;
+      color: $body-color;
+
+      .rtl & {
+        padding-left: 0;
+        padding-right: 1.5rem;
+        text-align: right;
+      }
+
+      &:first-child {
+        padding-left: 0;
+
+        .rtl & {
+          padding-right: 0;
+        }
+      }
+
+      p {
+        margin-bottom: 10px;
+
+        .content-category {
+          font-family: $type1;
+          padding-right: 15px;
+          border-right: 1px solid $border-color;
+          @extend .text-muted;
+        }
+      }
+    }
+
+    .preview-actions {
+      display: flex;
+      flex-direction: row;
+
+      i {
+        width: 29px;
+        color: color(gray-lightest);
+        height: 29px;
+        border: 2px solid color(gray-lightest);
+        border-radius: 100%;
+        padding: 3px 6px;
+        display: inline-block;
+
+        &:first-child {
+          margin-right: 10px;
+        }
+      }
+    }
+  }
+
+  &.comment-preview {
+    .preview-item {
+      padding: 0.87rem 0;
+
+      &:first-child {
+        padding-top: 0;
+      }
+
+      p {
+        line-height: 27px;
+      }
+    }
+  }
+
+  &.bordered {
+    .preview-item {
+      border-bottom: 1px solid $border-color;
+
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+  }
+}

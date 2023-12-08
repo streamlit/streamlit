@@ -1,0 +1,152 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Reset Styles */
+
+body {
+    padding: 0;
+    margin: 0;
+    overflow-x: hidden;
+}
+
+.form-control,
+.form-control:focus {
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none
+}
+
+.form-control {
+    box-shadow: none
+}
+
+.form-control:focus {
+    outline: 0;
+    box-shadow: none
+}
+
+a,
+div,
+h1,
+h2,
+h3,
+h4,
+h5,
+p,
+span {
+    text-shadow: none
+}
+
+[type=button]:focus,
+a:active,
+a:focus,
+a:visited,
+button::-moz-focus-inner,
+input[type=reset]::-moz-focus-inner,
+input[type=button]::-moz-focus-inner,
+input[type=submit]::-moz-focus-inner,
+input[type=file]>input[type=button]::-moz-focus-inner,
+select::-moz-focus-inner {
+    outline: 0
+}
+
+input,
+.form-control:focus,
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+    outline: none;
+    outline-width: 0;
+    outline-color: transparent;
+    box-shadow: none;
+    outline-style: none;
+}
+
+textarea {
+    resize: none;
+    overflow-x: hidden;
+}
+
+.btn,
+.btn-group.open .dropdown-toggle,
+.btn:active,
+.btn:focus,
+.btn:hover,
+.btn:visited,
+a,
+a:active,
+a:checked,
+a:focus,
+a:hover,
+a:visited,
+body,
+button,
+button:active,
+button:hover,
+button:visited,
+div,
+input,
+input:active,
+input:focus,
+input:hover,
+input:visited,
+select,
+select:active,
+select:focus,
+select:visited,
+textarea,
+textarea:active,
+textarea:focus,
+textarea:hover,
+textarea:visited {
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none
+}
+
+.btn.active.focus,
+.btn.active:focus,
+.btn.focus,
+.btn:active.focus,
+.btn:active:focus,
+.btn:focus,
+button,
+button:active,
+button:checked,
+button:focus,
+button:hover,
+button:visited {
+    outline: 0;
+    outline-offset: 0
+}
+
+.bootstrap-select .dropdown-toggle:focus {
+    outline: 0;
+    outline-offset: 0
+}
+
+.dropdown-menu>li>a:active,
+.dropdown-menu>li>a:focus,
+.dropdown-menu>li>a:hover,
+.dropdown-menu>li>a:visited {
+    outline: 0
+}
+
+a:focus,
+input:focus {
+    border-color: transparent;
+    outline: none
+}

@@ -1,0 +1,51 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Moving square loader */
+
+.moving-square-loader {
+    width: 100px;
+    height: 100px;
+    border-radius: 100%;
+    position: relative;
+    margin: 0 auto;
+}
+.moving-square-loader:before{
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: calc(50% - 10px);
+    left: 0px;
+    background-color: rgba(theme-color(danger), .7);
+    animation: rotatemove 1s infinite;
+  }
+
+  @keyframes rotatemove{
+    0%{
+      -webkit-transform: scale(1) translateX(0px);
+      -ms-transform: scale(1) translateX(0px);
+      -o-transform: scale(1) translateX(0px);
+      transform: scale(1) translateX(0px);
+    }
+
+    100%{
+      -webkit-transform: scale(2) translateX(45px);
+      -ms-transform: scale(2) translateX(45px);
+      -o-transform: scale(2) translateX(45px);
+      transform: scale(2) translateX(45px);
+    }
+  }

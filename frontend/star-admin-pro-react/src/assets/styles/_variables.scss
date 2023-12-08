@@ -1,0 +1,474 @@
+
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+////////// COLOR SYSTEM //////////
+
+$blue:              #5E50F9;
+$indigo:            #6610f2;
+$purple:            #6a008a;
+$pink:              #E91E63;
+$red:               #f96868;
+$orange:            #f2a654;
+$yellow:            #f6e84e;
+$green:             #46c35f;
+$teal:              #58d8a3;
+$cyan:              #57c7d4;
+$black:             #000;
+$white:             #ffffff;
+$white-smoke:       #f2f7f8;
+$violet:            #41478a;
+$darkslategray :    #2e383e;
+$dodger-blue :      #3498db;
+
+
+$colors: (
+  blue:             $blue,
+  indigo:           $indigo,
+  purple:           $purple,
+  pink:             $pink,
+  red:              $red,
+  orange:           $orange,
+  yellow:           $yellow,
+  green:            $green,
+  teal:             $teal,
+  cyan:             $cyan,
+  white:            $white,
+  gray:             #434a54,
+  gray-light:       #aab2bd,
+  gray-lighter:     #e8eff4,
+  gray-lightest:    #e6e9ed,
+  gray-dark:        #0f1531,
+  black:            #000000
+);
+
+
+$theme-colors: (
+  primary: #2196f3,
+  secondary: #dde4eb,
+  success:#19d895,
+  info: #8862e0,
+  warning: #ffaf00,
+  danger: #ff6258,
+  light: #fbfbfb,
+  dark: #252C46
+);
+
+$theme-gradient-colors: (
+  primary:         linear-gradient(to right, #da8cff, #9a55ff),
+  secondary:       linear-gradient(to right, #e7ebf0, #868e96),
+  success:         linear-gradient(to right, #84d9d2, #07cdae),
+  info:            linear-gradient(to right, #90caf9, #047edf 99%),
+  warning:         linear-gradient(to right, #f6e384, #ffd500),
+  danger:          linear-gradient(to right, #ffbf96, #fe7096),
+  light:           linear-gradient(to bottom, #f4f4f4, #e4e4e9),
+  dark:            linear-gradient(89deg, #5e7188, #3e4b5b)
+);
+
+
+////////// COLOR SYSTEM //////////
+
+////////// COLOR VARIABLES //////////
+$content-bg: #f3f3f3;
+$footer-bg: $content-bg;
+$footer-color: color(dark);
+$border-color: #dee2e6;
+$circle-border:$white;
+
+////////// COLOR VARIABLES //////////
+
+
+
+////////// SOCIAL COLORS //////////
+
+$social-colors: (
+  twitter: #2caae1,
+  facebook: #3b579d,
+  google: #dc4a38,
+  linkedin: #0177b5,
+  pinterest: #cc2127,
+  youtube: #e52d27,
+  github: #333333,
+  behance: #1769ff,
+  dribbble: #ea4c89,
+  reddit: #ff4500
+);
+
+////////// SOCIAL COLORS //////////
+
+////////// FONTS//
+
+$type1:     'Roboto', sans-serif;
+
+$default-font-size: .875rem; // 14px as base font size
+
+$text-muted: #6c7293;
+$body-color: #343a40;
+
+////////// FONT VARIABLES //////////
+
+////////// SIDEBAR ////////
+$sidebar-width-lg: 270px;
+$sidebar-width-mini: 185px;
+$sidebar-width-icon: 70px;
+
+$sidebar-light-bg: #fff;
+$sidebar-light-menu-color: #fff;
+$sidebar-light-submenu-color: $sidebar-light-menu-color;
+$sidebar-light-menu-active-bg: #0f25d5;
+$sidebar-light-menu-active-color:#fff;
+$sidebar-light-menu-hover-bg: $sidebar-light-menu-active-bg;
+$sidebar-light-menu-hover-color: $sidebar-light-menu-color;
+$sidebar-light-submenu-hover-bg: initial;
+$sidebar-light-submenu-hover-color: #000;
+$sidebar-light-icon-active-color: theme-color(success);
+$sidebar-light-menu-icon-color: $sidebar-light-menu-color;
+$sidebar-light-menu-arrow-color: #bfccda;
+$sidebar-light-menu-border-color: #c0bfcf;
+$sidebar-light-category-color: #999999;
+$sidebar-light-profile-name-color: #404852;
+$sidebar-light-profile-title-color: #8d9498;
+
+
+
+$sidebar-gradient-color-1:#5768f3;
+$sidebar-gradient-color-2:#1c45ef;
+$sidebar-gradient:linear-gradient(to top, $sidebar-gradient-color-1, $sidebar-gradient-color-2);
+$navbar-dropdown-toggle-arrow-color:grey;
+
+$sidebar-light-submenu-line-color: darken($sidebar-gradient-color-1, 18%);
+$rtl-sidebar-submenu-padding: 0 3.45rem 0 0;
+$sidebar-menu-padding-rtl: 15px 70px 15px 30px;
+$sidebar-navlink-menu-item-hover-color:darken($sidebar-light-menu-color, 5%);
+$sidebar-nav-item-profile-border-color:1px solid rgba(#fff, 0.11);
+$sidebar-nav-item-profile-bg:rgba(255, 255, 255, 0.1);
+$sidebar-nav-item-profile-color: #fff;
+$sidebar-profile-name-color: #fff !default;
+$sidebar-profile-designation-color:#fff !default;
+$sidebar-nav-category-border-color:rgba(255, 255, 255, 0.13);
+$sidebar-nav-item-dot-color:#fff;
+
+$navbar-menu-wrapper-color:#001737;
+$navbar-menu-wrapper-box-shadow:0 4px 16px 0 rgba(167, 175, 183, 0.33);
+
+$sidebar-dark-bg: #18151e;
+$sidebar-dark-menu-color: $white;
+$sidebar-dark-menu-active-bg: #282037;
+$sidebar-dark-menu-active-color: darken($white, 30%);
+$sidebar-dark-menu-hover-bg: lighten($sidebar-dark-bg, 10%);
+$sidebar-dark-menu-hover-color: color(white);
+$sidebar-dark-submenu-color: $sidebar-dark-menu-color;
+$sidebar-dark-submenu-hover-bg: initial;
+$sidebar-dark-submenu-hover-color: darken($sidebar-dark-submenu-color, 30%);
+$sidebar-dark-icon-bg: rgba(194,244,219,.12);
+$sidebar-dark-icon-color: #33c92d;
+$sidebar-dark-action-border: rgba(151,151,151,.27);
+$sidebar-dark-menu-icon-color: #bba8bff5;
+$sidebar-dark-menu-arrow-color: #9e9da0;
+
+$sidebar-dark-profile-name-color: #404852;
+$sidebar-dark-profile-title-color: #8d9498;
+
+$sidebar-menu-font-size: 15px;
+$sidebar-menu-padding-y: 12px;
+$sidebar-menu-padding-x: 2.25rem;
+
+$sidebar-menu-padding: 15px 30px 15px 55px;
+$sidebar-icon-size: 16px;
+
+$sidebar-submenu-font-size: .75rem;
+$sidebar-submenu-item-padding: .75rem 1rem .75rem 1rem;
+$sidebar-submenu-padding: 0 0 0 4rem;
+
+$sidebar-icon-font-size: 20px;
+$sidebar-arrow-font-size: .625rem;
+
+$sidebar-profile-bg: transparent;
+$sidebar-profile-padding: .75rem 1.625rem .75rem 1.188rem;
+
+$sidebar-mini-menu-padding: .8125rem 1rem .8125rem 1rem;
+
+$sidebar-icon-only-menu-padding: .5rem 1.625rem .5rem 1.188rem;
+$sidebar-icon-only-submenu-padding: 0 0 0 1.5rem;
+
+$icon-only-collapse-width: 190px;
+$icon-only-menu-bg-light: $sidebar-light-bg;
+$icon-only-menu-bg-dark: $sidebar-dark-bg;
+
+///////// SIDEBAR ////////
+
+///////// NAVBAR ////////
+
+$navbar-height: 63px;
+$navbar-bg: #fff;
+$navbar-menu-color: #001737;
+$navbar-font-size: 15px;
+$navbar-icon-font-size: 1.25rem;
+$nvabar-brand-bg: #000000;
+$nvabar-toggler-color: #8e94a9;
+$navbar-search-bg: #eef0fa;
+$nvabar-search-icon-color: #8e94a9;
+$nav-dropdown-color: #111111;
+$navbar-item-bg: #3f3f40;
+$navbar-item-light-bg: #e6e5f2;
+$light-color-icon-bg: #f2f2f2;
+$nav-link-height: 52px;
+
+///////// NAVBAR ////////
+
+
+
+///////// BUTTONS ////////
+
+$button-fixed-width: 120px;
+$btn-padding-y: 0.4rem;
+$btn-padding-x: 1rem;
+$btn-line-height: 1;
+$btn-padding-y-xs: .5rem;
+$btn-padding-x-xs: .75rem;
+$btn-padding-y-sm: 0.5rem;
+$btn-padding-x-sm: .95rem;
+$btn-padding-y-lg: 0.94rem;
+$btn-padding-x-lg: 1.94rem;
+$btn-font-size: .875rem;
+$btn-font-size-xs: .625rem;
+$btn-font-size-sm: .875rem;
+$btn-font-size-lg: .875rem;
+$btn-border-radius: .1875rem;
+$btn-border-radius-xs: .1875rem;
+$btn-border-radius-sm: .1875rem;
+$btn-border-radius-lg: .1875rem;
+$social-btn-padding: 13px;
+$social-btn-icon-size: 1rem;
+
+///////// BUTTONS ////////
+
+
+
+////////// TOOLTIP VARIABLES //////////
+
+//default styles
+$tooltip-font-size:     .75rem;
+$tooltip-padding-y:     .4rem;
+$tooltip-padding-x:     .75rem;
+$tooltip-border-radius: .375rem;
+
+////////// TOOLTIP VARIABLES //////////
+
+
+
+/////////  FORMS /////////
+
+$input-bg:                color(white);
+$input-border-radius:     2px;
+$input-placeholder-color: #b9b8b8;
+$input-font-size: 0.75rem;
+
+$input-padding-y:       .875rem;
+$input-padding-x:       1.375rem;
+$input-line-height:     1;
+
+$input-padding-y-xs:    .5rem;
+$input-padding-x-xs:    .75rem;
+
+$input-padding-y-sm:    .50rem;
+$input-padding-x-sm:    .81rem;
+
+$input-padding-y-lg:    .94rem;
+$input-padding-x-lg:    1.94rem;
+
+$input-height:          2.875rem;
+$input-height-sm:       2.575rem;
+$input-height-lg:       3.175rem;
+
+///////// FORMS /////////
+
+////////  DROPDOWNS ///////
+
+$dropdown-border-color: $border-color;
+$dropdown-divider-bg:   $border-color;
+$dropdown-link-color:   $body-color;
+$dropdown-header-color: $body-color;
+////////  DROPDOWNS ///////
+
+//////// TABLES ////////
+$table-accent-bg: rgba(0, 0, 0, 0.05);
+$table-hover-bg:  $content-bg;
+$table-cell-padding: .9375rem;
+$table-border-color: $border-color;
+
+$table-inverse-bg: #2a2b32;
+$table-inverse-color: color(white);
+
+//////// TABLES ////////
+
+
+
+////////// MEASUREMENT AND PROPERTY VARIABLES //////////
+$card-bg: #fff;
+$card-title-color: $body-color;
+$border-property: 1px solid $border-color;
+$border-property: 1px solid $border-color;
+$card-spacing-y: 25px;
+$card-padding-y: 1.88rem;
+$card-padding-x: 1.81rem;
+$card-border-radius: 3px;
+$card-border-color: #e6e6e6;
+$grid-gutter-width: 25px;
+$action-transition-duration: 0.25s;
+$action-transition-timing-function: ease;
+$card-description-color: #76838f;
+$card-bg-varient: #fff;
+$card-shadow-color: 0px 0px 8px 6px rgba(0, 0, 0, 0.02);
+$list-card-bg: $white;
+////////// OTHER VARIABLES //////////
+
+
+
+////////// BREAD CRUMBS VARIABLES //////////
+
+// default styles
+$breadcrumb-padding-y:              0.56rem;
+$breadcrumb-padding-x:              1.13rem;
+$breadcrumb-item-padding:           .5rem;
+$breadcrumb-margin-bottom:          1rem;
+$breadcrumb-font-size:              $default-font-size;
+$breadcrumb-bg:                     transparent;
+$breadcrumb-border-color:           $border-color;
+$breadcrumb-divider-color:          $gray-600;
+$breadcrumb-active-color:           $gray-700;
+$breadcrumb-divider:                "/";
+
+// custom styles
+$breadcrumb-custom-padding-y:       0;
+$breadcrumb-custom-padding-x:       0;
+$breadcrumb-custom-item-padding-y:  0.56rem;
+$breadcrumb-custom-item-padding-x:  10px;
+$breadcrumb-custom-item-color:      $black;
+$breadcrumb-item-bg:                #dbe3e6;
+
+////////// BREAD CRUMBS VARIABLES //////////
+
+
+
+////////// MODALS VARIABLES //////////
+
+$modal-inner-padding:               0.9375rem;
+$modal-dialog-margin:               10px;
+$modal-dialog-margin-y-sm-up:       30px;
+$modal-title-line-height:           $line-height-base;
+$modal-content-bg:                  $content-bg;
+$modal-content-box-shadow-xs:       0 3px 9px rgba($black,.5);
+$modal-content-box-shadow-sm-up:    0 5px 15px rgba($black,.5);
+
+$modal-backdrop-bg:                 $black;
+$modal-backdrop-opacity:            .5;
+
+$modal-header-border-color:         $border-color;
+$modal-content-border-color:        $border-color;
+$modal-footer-border-color:         $border-color;
+
+$modal-header-border-width:         $border-width;
+$modal-content-border-width:        $border-width;
+$modal-footer-border-width:         $border-width;
+
+$modal-header-padding-x:              26px;
+$modal-header-padding-y:              25px;
+
+$modal-body-padding-x:                26px;
+$modal-body-padding-y:                35px;
+
+$modal-footer-padding-x:              31px;
+$modal-footer-padding-y:              15px;
+
+$modal-lg:                          90%;
+$modal-md:                          500px;
+$modal-sm:                          300px;
+$modal-transition:                  transform .4s ease;
+
+////////// MODALS VARIABLES //////////
+
+/////////  TABS VARIABLES //////////
+$nav-tabs-border-color:             #ebedf2;
+$nav-tabs-link-bg:                  #f6f8fa;
+$nav-tabs-link-color:               #000000;
+$nav-tabs-link-hover-border-color:  $nav-tabs-border-color $nav-tabs-border-color $nav-tabs-border-color;
+$nav-tabs-link-active-color:        $body-color;
+$nav-tabs-link-active-bg:           $white;
+$nav-tabs-link-active-border-color: $nav-tabs-border-color $nav-tabs-border-color $nav-tabs-link-active-bg;
+$nav-pills-custom-bg:               #fcfcfd;
+$text-gray:gray;
+$circle-img-border: $white;
+////////   TABS VARIABLES /////////
+
+////////   CALENDAR  //////////////
+$fullcalendar-color: #a8b2b9;
+////////   CALENDAR  //////////////
+
+///////// SETTINGS PANEL ////////
+$settings-panel-width: 300px;
+///////// SETTINGS PANEL ////////
+
+////////// Vendor file asset path //////////
+$mdi-font-path:        "~@mdi/font/fonts";
+$fa-font-path : '~font-awesome/fonts/';
+$flag-icon-css-path : '~flag-icon-css/flags/';
+$simple-line-font-path : '~simple-line-icons/fonts/';
+
+
+///////// BOXED LAYOUT ///////
+$boxed-container-width: 1200px;
+$boxed-layout-bg: #c6c8ca;
+///////// BOXED LAYOUT ///////
+
+///////// TICKETS-TAB ///////
+$tab-head-bg: darken(#f2edf3, 2%);
+$accent-color: $white;
+///////// TICKETS-TAB ///////
+
+///////// LANDING PAGE ///////
+$landing-bg:#1a142dfa;
+$landing-bg-color: $white;
+///////// LANDING PAGE ///////
+
+///////// CHATS ///////
+$chat-container-height:100%;
+$chat-bottom-btn: $white;
+$form-focus-bg: $white;
+///////// CHATS ///////
+
+///////// KANBAN ///////
+$private-btn-bg:#eae2ec;
+///////// KANBAN ///////
+
+$bullet-line-list-shape-bg: color(white) !default;
+
+$card-mixed-danger :linear-gradient(to bottom, #d41459 , #911a6c);
+
+
+$survey-head-color: #a7afb7;
+$list-border-bg: #e8e8e8;
+
+$accordian-head-color: $black;
+$datepicker-arrow-bg: #eef1f2;
+
+
+$page-header-toolbar-btn-color: theme-color(primary);
+
+$card-accent-color: #030aac;
+$iconholder-primary-border-color:#4e55c5;
+$iconholder-primary-bg:#2944b5;
+$iconholder-primary-color: #fff;
