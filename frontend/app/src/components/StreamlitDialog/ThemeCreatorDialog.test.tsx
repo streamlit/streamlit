@@ -15,17 +15,18 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen, fireEvent, within } from "@testing-library/react"
 import {
-  UISelectbox,
-  shallow,
-  BaseColorPicker,
-  baseTheme,
   darkTheme,
   lightTheme,
   toThemeInput,
   fonts,
   CustomThemeConfig,
+  LibContextProps,
 } from "@streamlit/lib"
+import { customRenderLibContext } from "@streamlit/lib/src/test_util"
+
 import ThemeCreatorDialog, {
   Props as ThemeCreatorDialogProps,
   toMinimalToml,
@@ -42,6 +43,16 @@ const getProps = (
   ...props,
 })
 
+const getContext = (
+  extend?: Partial<LibContextProps>
+): Partial<LibContextProps> => ({
+  activeTheme: lightTheme,
+  setTheme: mockSetTheme,
+  availableThemes: [],
+  addThemes: mockAddThemes,
+  ...extend,
+})
+
 Object.assign(navigator, {
   clipboard: {
     writeText: jest.fn(),
@@ -49,23 +60,14 @@ Object.assign(navigator, {
 })
 
 describe("Renders ThemeCreatorDialog", () => {
-  beforeEach(() =>
-    jest.spyOn(React, "useContext").mockImplementation(() => ({
-      activeTheme: baseTheme,
-      setTheme: mockSetTheme,
-      availableThemes: [],
-      addThemes: mockAddThemes,
-    }))
-  )
-
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
   it("renders theme creator dialog", () => {
+    const availableThemes = [lightTheme, darkTheme]
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    expect(wrapper).toMatchSnapshot()
+    const context = getContext({ availableThemes })
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, context)
+
+    expect(screen.getByTestId("stThemeCreatorDialog")).toBeInTheDocument()
+    expect(screen.getByText("Edit active theme")).toBeInTheDocument()
   })
 })
 
@@ -159,54 +161,55 @@ font="monospace"
 })
 
 describe("Opened ThemeCreatorDialog", () => {
-  beforeEach(() => {
-    jest.spyOn(React, "useContext").mockImplementation(() => ({
-      activeTheme: baseTheme,
-      setTheme: mockSetTheme,
-      availableThemes: [],
-      addThemes: mockAddThemes,
-    }))
-  })
-
   afterEach(() => {
     jest.clearAllMocks()
   })
 
   it("should update theme on color change", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-      .find("ThemeOption")
-      .first()
-      .dive()
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
 
-    const colorpicker = wrapper.find(BaseColorPicker)
-    expect(colorpicker).toHaveLength(1)
+    const themeColorPickers = screen.getAllByTestId("stColorPicker")
+    expect(themeColorPickers).toHaveLength(4)
 
-    colorpicker.at(0).prop("onChange")("pink")
+    const primaryColorPicker = within(themeColorPickers[0]).getByTestId(
+      "stColorBlock"
+    )
+    fireEvent.click(primaryColorPicker)
+
+    const newColor = "#e91e63"
+    const colorInput = screen.getByRole("textbox")
+    fireEvent.change(colorInput, { target: { value: newColor } })
+    // Close out of the popover
+    fireEvent.click(primaryColorPicker)
+
     expect(mockAddThemes).toHaveBeenCalled()
     expect(mockAddThemes.mock.calls[0][0][0].emotion.colors.primary).toBe(
-      "pink"
+      newColor
     )
 
     expect(mockSetTheme).toHaveBeenCalled()
-    expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe("pink")
+    expect(mockSetTheme.mock.calls[0][0].emotion.colors.primary).toBe(newColor)
   })
 
   it("should update theme on font change", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-      .find("ThemeOption")
-      .last()
-      .dive()
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
 
-    const selectbox = wrapper.find(UISelectbox)
-    const { options } = selectbox.props()
+    fireEvent.click(screen.getByRole("combobox"))
+    const options = screen.getAllByRole("option")
 
     expect(options).toHaveLength(
       Object.keys(CustomThemeConfig.FontFamily).length
     )
 
-    selectbox.prop("onChange")(2)
+    fireEvent.click(options[2])
     expect(mockAddThemes).toHaveBeenCalled()
     expect(
       mockAddThemes.mock.calls[0][0][0].emotion.genericFonts.bodyFont
@@ -220,23 +223,30 @@ describe("Opened ThemeCreatorDialog", () => {
 
   it("should have font dropdown populated", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-      .find("ThemeOption")
-      .last()
-      .dive()
-    const selectbox = wrapper.find(UISelectbox)
-    const { options, value } = selectbox.props()
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
+
+    fireEvent.click(screen.getByRole("combobox"))
+    const options = screen.getAllByRole("option")
 
     expect(options).toHaveLength(
       Object.keys(CustomThemeConfig.FontFamily).length
     )
-    expect(value).toBe(0)
+    expect(options[0]).toHaveTextContent("Sans serif")
+    expect(options[0]).toHaveAttribute("aria-selected", "true")
   })
 
   it("should call backToSettings if back button has been clicked", () => {
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    wrapper.find("StyledBackButton").simulate("click")
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
+
+    const backButton = screen.getByTestId("stThemeCreatorBack")
+    fireEvent.click(backButton)
     expect(props.backToSettings).toHaveBeenCalled()
   })
 
@@ -250,11 +260,16 @@ describe("Opened ThemeCreatorDialog", () => {
     useStateSpy.mockImplementation(init => [init, updateCopied])
 
     const props = getProps()
-    const wrapper = shallow(<ThemeCreatorDialog {...props} />)
-    const copyBtn = wrapper.find("BaseButton")
+    customRenderLibContext(<ThemeCreatorDialog {...props} />, {
+      setTheme: mockSetTheme,
+      addThemes: mockAddThemes,
+    })
 
-    expect(copyBtn.prop("children")).toBe("Copy theme to clipboard")
-    copyBtn.simulate("click")
+    const copyBtn = screen.getByRole("button", {
+      name: "Copy theme to clipboard",
+    })
+    fireEvent.click(copyBtn)
+
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`[theme]
 base="light"
 `)
