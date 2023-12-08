@@ -46,14 +46,6 @@ export interface StreamlitInstallation {
 export const StreamlitInstallationContext =
   createContext<StreamlitInstallation | null>(null)
 
-export function useStreamlitInstallation(): StreamlitInstallation {
-  const context = useContext(StreamlitInstallationContext)
-
-  if (context === null) {
-    throw new Error(
-      "useStreamlitInstallation must be used within a StreamlitInstallationContextProvider"
-    )
-  }
-
-  return context
+export function useStreamlitInstallation(): StreamlitInstallation | null {
+  return useContext(StreamlitInstallationContext)
 }

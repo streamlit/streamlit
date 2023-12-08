@@ -62,7 +62,6 @@ export function StreamlitView({
   const { connectionState } = useStreamlitConnection()
   const { widgetManager, formsData } = useWidgetStateManager()
   const { scriptRunState, scriptRunId } = useStreamlitScriptRun()
-  const {} = useStreamlitInstallation()
   const elementTree = useStreamlitElementTree()
 
   const endpoints = useMemo(() => new DummyEndpoints(), [])

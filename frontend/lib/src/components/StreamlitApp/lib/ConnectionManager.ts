@@ -184,7 +184,7 @@ export class ConnectionManager {
     this.websocket = new WebSocket(uri, ["streamlit", ...sessionTokens])
     this.websocket.binaryType = "arraybuffer"
 
-    if (!this.wsConnectionTimeoutId) {
+    if (this.wsConnectionTimeoutId) {
       // This should never happen. We set the timeout ID to null in both FSM
       // nodes that lead to this one.
       throw new Error("WS timeout is already set")
