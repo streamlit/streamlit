@@ -547,14 +547,12 @@ class ScriptRunner:
                     result = partial_func()
 
                     if result is not None:
-                        _, rerun_app = result
-                        if rerun_app:
-                            self.request_rerun(
-                                RerunData(
-                                    query_string=rerun_data.query_string,
-                                    page_script_hash=rerun_data.page_script_hash,
-                                )
+                        self.request_rerun(
+                            RerunData(
+                                query_string=rerun_data.query_string,
+                                page_script_hash=rerun_data.page_script_hash,
                             )
+                        )
 
                     partial_run = True
                 else:
