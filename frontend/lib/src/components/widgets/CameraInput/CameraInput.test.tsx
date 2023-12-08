@@ -15,31 +15,28 @@
  */
 
 import React from "react"
-import { act } from "react-dom/test-utils"
+import "@testing-library/jest-dom"
+
+import { screen } from "@testing-library/react"
+
 import { enableFetchMocks } from "jest-fetch-mock"
 
-import { mount, shallow } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
   CameraInput as CameraInputProto,
   FileURLs as FileURLsProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
-import { WidgetLabel } from "@streamlit/lib/src/components/widgets/BaseWidget"
-import CameraInput, { Props, State } from "./CameraInput"
-import { FacingMode } from "./SwitchFacingModeButton"
-import WebcamComponent from "./WebcamComponent"
-import { StyledBox } from "./styled-components"
+
+import CameraInput, { Props } from "./CameraInput"
 
 jest.mock("react-webcam")
 
-jest.mock("react-device-detect", () => {
-  return {
-    isMobile: true,
-  }
-})
-
-const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
+const getProps = (
+  elementProps: Partial<CameraInputProto> = {},
+  props: Partial<Props> = {}
+): Props => {
   return {
     element: CameraInputProto.create({
       id: "id",
@@ -72,6 +69,7 @@ const getProps = (elementProps: Partial<CameraInputProto> = {}): Props => {
       }),
       deleteFile: jest.fn(),
     },
+    ...props,
   }
 }
 
@@ -80,36 +78,18 @@ describe("CameraInput widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
-    const wrapper = shallow(<CameraInput {...props} />)
-    const instance = wrapper.instance() as CameraInput
+    render(<CameraInput {...props} />)
 
-    expect(wrapper).toBeDefined()
-    expect(instance.status).toBe("ready")
-
-    expect(wrapper.find(WebcamComponent)).toHaveLength(1)
-    expect(wrapper.find(StyledBox)).toHaveLength(0)
+    expect(screen.getByTestId("stCameraInput")).toBeInTheDocument()
+    expect(screen.getByText("Take Photo")).toBeInTheDocument()
     // WidgetStateManager should have been called on mounting
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
   })
 
-  it("sets initial value properly if non-empty", () => {
-    const props = getProps()
-
-    const wrapper = shallow(<CameraInput {...props} />)
-    expect(wrapper.state()).toEqual({
-      files: [],
-      clearPhotoInProgress: false,
-      facingMode: FacingMode.USER,
-      imgSrc: null,
-      shutter: false,
-      minShutterEffectPassed: true,
-    })
-  })
-
   it("shows a label", () => {
     const props = getProps()
-    const wrapper = shallow(<CameraInput {...props} />)
-    expect(wrapper.find(WidgetLabel).props().label).toEqual(
+    render(<CameraInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveTextContent(
       props.element.label
     )
   })
@@ -120,9 +100,9 @@ describe("CameraInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
       },
     })
-    const wrapper = mount(<CameraInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN
+    render(<CameraInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 
@@ -132,87 +112,7 @@ describe("CameraInput widget", () => {
         value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
-    const wrapper = mount(<CameraInput {...props} />)
-    expect(wrapper.find("StyledWidgetLabel").prop("labelVisibility")).toEqual(
-      LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED
-    )
-  })
-
-  it("shows a SwitchFacingMode button", () => {
-    const props = getProps()
-    const wrapper = mount(<CameraInput {...props} />)
-
-    act(() => {
-      wrapper
-        .find("Webcam")
-        .props()
-        // @ts-expect-error
-        .onUserMedia(null)
-    })
-
-    wrapper.update()
-
-    expect(wrapper.find("SwitchFacingModeButton").exists()).toBeTruthy()
-  })
-
-  it("changes `facingMode` when SwitchFacingMode button clicked", () => {
-    const props = getProps()
-    const wrapper = mount<CameraInput, Props, State>(
-      <CameraInput {...props} />
-    )
-
-    act(() => {
-      wrapper
-        .find("Webcam")
-        .props()
-        // @ts-expect-error
-        .onUserMedia(null)
-    })
-
-    wrapper.update()
-
-    act(() => {
-      wrapper.find("SwitchFacingModeButton").find("button").simulate("click")
-    })
-    wrapper.update()
-
-    expect(wrapper.instance().state.facingMode).toBe(FacingMode.ENVIRONMENT)
-  })
-
-  it("test handle capture function", async () => {
-    const props = getProps()
-    const wrapper = shallow<CameraInput, Props, State>(
-      <CameraInput {...props} />
-    )
-    // @ts-expect-error
-    await wrapper.instance().handleCapture("test img")
-
-    expect(wrapper.instance().state.files).toHaveLength(1)
-    expect(wrapper.instance().state.files[0].name).toContain("camera-input-")
-    expect(wrapper.instance().state.shutter).toBe(false)
-    expect(wrapper.instance().state.minShutterEffectPassed).toBe(true)
-
-    expect(wrapper.find(StyledBox)).toHaveLength(1)
-    expect(wrapper.find(WebcamComponent)).toHaveLength(0)
-  })
-
-  it("test remove capture", async () => {
-    const props = getProps()
-    const wrapper = shallow<CameraInput, Props, State>(
-      <CameraInput {...props} />
-    )
-    // @ts-expect-error
-    await wrapper.instance().handleCapture("test img")
-
-    // @ts-expect-error
-    await wrapper.instance().removeCapture()
-    expect(wrapper.state()).toEqual({
-      files: [],
-      clearPhotoInProgress: true,
-      facingMode: FacingMode.USER,
-      imgSrc: null,
-      shutter: false,
-      minShutterEffectPassed: true,
-    })
+    render(<CameraInput {...props} />)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 })

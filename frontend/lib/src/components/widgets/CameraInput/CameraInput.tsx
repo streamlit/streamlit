@@ -51,7 +51,7 @@ import {
   StyledSpan,
   StyledImg,
 } from "./styled-components"
-import WebcamComponent from "./WebcamComponent"
+import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 
 export interface Props {
   element: CameraInputProto
@@ -59,6 +59,8 @@ export interface Props {
   uploadClient: FileUploadClient
   disabled: boolean
   width: number
+  // Allow for unit testing
+  testOverride?: WebcamPermission
 }
 
 type FileUploaderStatus =
@@ -400,6 +402,7 @@ class CameraInput extends React.PureComponent<Props, State> {
             setClearPhotoInProgress={this.setClearPhotoInProgress}
             facingMode={this.state.facingMode}
             setFacingMode={this.setFacingMode}
+            testOverride={this.props.testOverride}
           />
         )}
       </StyledCameraInput>
