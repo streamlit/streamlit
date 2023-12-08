@@ -269,11 +269,14 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
   return (
     <Modal animate={false} isOpen onClose={props.onClose}>
       <ModalHeader>
-        <StyledBackButton onClick={onClickedBack} />
+        <StyledBackButton
+          onClick={onClickedBack}
+          data-testid="stThemeCreatorBack"
+        />
         Edit active theme
       </ModalHeader>
       <ModalBody>
-        <StyledDialogBody>
+        <StyledDialogBody data-testid="stThemeCreatorDialog">
           <StyledFullRow>
             <StyledSmall>
               Changes made to the active theme will exist for the duration of a
