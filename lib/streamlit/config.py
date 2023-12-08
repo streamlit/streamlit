@@ -376,6 +376,16 @@ _create_option(
 )
 
 _create_option(
+    "global.storeCachedForwardMessagesInMemory",
+    description="""If True, store cached ForwardMsgs in backend memory.
+        This is an internal flag to validate a potential removal of the in-memory
+        forward message cache.""",
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
     "global.dataFrameSerialization",
     description="""
         DataFrame serialization.
