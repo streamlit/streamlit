@@ -1153,7 +1153,7 @@ describe("App.sendRerunBackMsg", () => {
     })
   })
 
-  it("removes the query params if a new page is selected", () => {
+  it("sets queryString to an empty string if the page hash is different", () => {
     wrapper.setState({
       currentPageScriptHash: "current_page_hash",
       queryParams: "foo=bar",
@@ -1171,7 +1171,6 @@ describe("App.sendRerunBackMsg", () => {
       rerunScript: {
         pageScriptHash: "some_other_page_hash",
         pageName: "",
-        // must be reset to an empty string
         queryString: "",
       },
     })
