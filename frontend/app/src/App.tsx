@@ -634,8 +634,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState, menuItems } =
-      pageConfig
+    const {
+      title,
+      favicon,
+      layout,
+      initialSidebarState,
+      menuItems,
+      showPageNavigation,
+    } = pageConfig
 
     if (title) {
       this.hostCommunicationMgr.sendMessageToHost({
@@ -672,6 +678,12 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.setState({ menuItems })
+
+    if (showPageNavigation === this.state.hideSidebarNav) {
+      this.setState(() => ({
+        hideSidebarNav: !showPageNavigation,
+      }))
+    }
   }
 
   handlePageInfoChanged = (pageInfo: PageInfo): void => {
