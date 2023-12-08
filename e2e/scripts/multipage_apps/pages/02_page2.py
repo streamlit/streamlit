@@ -14,4 +14,6 @@
 
 import streamlit as st
 
+st.set_page_config(show_page_navigation=True)
+
 st.header("Page 2")
