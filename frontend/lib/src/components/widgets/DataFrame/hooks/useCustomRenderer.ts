@@ -23,7 +23,12 @@ import {
   Theme as GlideTheme,
   drawTextCell,
 } from "@glideapps/glide-data-grid"
-import { useExtraCells } from "@glideapps/glide-data-grid-cells"
+import {
+  SparklineCell,
+  DropdownCell,
+  RangeCell,
+  DatePickerCell,
+} from "@glideapps/glide-data-grid-cells"
 
 import {
   BaseColumn,
@@ -145,11 +150,17 @@ function useCustomRenderer(
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:
-  const extraCellArgs = useExtraCells()
+  const customRenderers = [
+    SparklineCell,
+    DropdownCell,
+    RangeCell,
+    DatePickerCell,
+    ...CustomCells,
+  ] as DataEditorProps["customRenderers"]
 
   return {
     drawCell,
-    customRenderers: [...extraCellArgs.customRenderers, ...CustomCells],
+    customRenderers,
   }
 }
 
