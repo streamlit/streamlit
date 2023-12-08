@@ -171,3 +171,18 @@ class PageConfigTest(DeltaGeneratorTestCase):
             self.assertTrue(valid_url(url))
         else:
             self.assertFalse(valid_url(url))
+
+    def test_set_page_config_sidebar_nav_default(self):
+        st.set_page_config()
+        c = self.get_message_from_queue().page_config_changed
+        self.assertEqual(c.show_page_navigation, True)
+
+    def test_set_page_config_sidebar_nav_true(self):
+        st.set_page_config(show_page_navigation=True)
+        c = self.get_message_from_queue().page_config_changed
+        self.assertEqual(c.show_page_navigation, True)
+
+    def test_set_page_config_sidebar_nav_false(self):
+        st.set_page_config(show_page_navigation=False)
+        c = self.get_message_from_queue().page_config_changed
+        self.assertEqual(c.show_page_navigation, False)

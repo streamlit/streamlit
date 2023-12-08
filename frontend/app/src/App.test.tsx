@@ -634,6 +634,23 @@ describe("App.handleNewSession", () => {
     expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
+  it("sets hideSidebarNav based on config.toml or set_page_config", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const app = wrapper.instance() as App
+
+    // default in this.state is true
+    expect(app.state.hideSidebarNav).toBe(true)
+
+    // update the value based on new session message
+    // @ts-expect-error
+    wrapper.instance().handleNewSession(new NewSession(NEW_SESSION))
+    expect(app.state.hideSidebarNav).toBe(false)
+
+    // update the value based on set page config message
+    app.handlePageConfigChanged(new PageConfig({ showPageNavigation: false }))
+    expect(app.state.hideSidebarNav).toBe(true)
+  })
+
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
     let instance: App

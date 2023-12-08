@@ -341,6 +341,7 @@ class ConfigTest(unittest.TestCase):
                 "client.displayEnabled",
                 "client.showErrorDetails",
                 "client.toolbarMode",
+                "client.showPageNavigation",
                 "theme.base",
                 "theme.primaryColor",
                 "theme.backgroundColor",
