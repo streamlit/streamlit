@@ -16,12 +16,14 @@
 
 import React, { useState, useCallback, useEffect } from "react"
 import { Link, withRouter } from "react-router-dom"
-import { Collapse } from "react-bootstrap"
+import { useStreamlitAppUrl, useStreamlitAppCommands } from "@streamlit/lib"
 import { Dropdown } from "react-bootstrap"
 import { Trans } from "react-i18next"
 
 function Sidebar({ location }) {
   const [state, setState] = useState({})
+  const { appPages } = useStreamlitAppUrl()
+  const { changePage } = useStreamlitAppCommands()
 
   const toggleMenuState = useCallback(
     menuState => {
@@ -167,317 +169,31 @@ function Sidebar({ location }) {
             </Dropdown>
           </div>
         </li>
-
-        <li
-          className={
-            isPathActive("/dashboard") ? "nav-item active" : "nav-item"
-          }
-        >
-          <Link className="nav-link" to="/dashboard">
-            <i className="mdi mdi-television menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Dashboard</Trans>
-            </span>
-          </Link>
-        </li>
-        <li
-          className={
-            isPathActive("/basic-ui") ? "nav-item active" : "nav-item"
-          }
-        >
-          <div
-            className={
-              state.basicUiMenuOpen ? "nav-link menu-expanded" : "nav-link"
-            }
-            onClick={() => toggleMenuState("basicUiMenuOpen")}
-            data-toggle="collapse"
-          >
-            <i className="mdi mdi-crosshairs-gps menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Basic UI Elements</Trans>
-            </span>
-            <i className="menu-arrow"></i>
-          </div>
-          <Collapse in={state.basicUiMenuOpen}>
-            <ul className="nav flex-column sub-menu">
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/basic-ui/buttons")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/basic-ui/buttons"
-                >
-                  <Trans>Buttons</Trans>
-                </Link>
-              </li>
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/basic-ui/dropdowns")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/basic-ui/dropdowns"
-                >
-                  <Trans>Dropdowns</Trans>
-                </Link>
-              </li>
-            </ul>
-          </Collapse>
-        </li>
-        <li
-          className={
-            isPathActive("/form-elements") ? "nav-item active" : "nav-item"
-          }
-        >
-          <div
-            className={
-              state.formElementsMenuOpen
-                ? "nav-link menu-expanded"
-                : "nav-link"
-            }
-            onClick={() => toggleMenuState("formElementsMenuOpen")}
-            data-toggle="collapse"
-          >
-            <i className="mdi mdi-format-list-bulleted menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Form Elements</Trans>
-            </span>
-            <i className="menu-arrow"></i>
-          </div>
-          <Collapse in={state.formElementsMenuOpen}>
-            <ul className="nav flex-column sub-menu">
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/form-elements/basic-elements")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/form-elements/basic-elements"
-                >
-                  <Trans>Basic Elements</Trans>
-                </Link>
-              </li>
-            </ul>
-          </Collapse>
-        </li>
-        <li
-          className={isPathActive("/tables") ? "nav-item active" : "nav-item"}
-        >
-          <div
-            className={
-              state.tablesMenuOpen ? "nav-link menu-expanded" : "nav-link"
-            }
-            onClick={() => toggleMenuState("tablesMenuOpen")}
-            data-toggle="collapse"
-          >
-            <i className="mdi mdi-table-large menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Tables</Trans>
-            </span>
-            <i className="menu-arrow"></i>
-          </div>
-          <Collapse in={state.tablesMenuOpen}>
-            <ul className="nav flex-column sub-menu">
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/tables/basic-table")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/tables/basic-table"
-                >
-                  <Trans>Basic Table</Trans>
-                </Link>
-              </li>
-            </ul>
-          </Collapse>
-        </li>
-        <li
-          className={isPathActive("/icons") ? "nav-item active" : "nav-item"}
-        >
-          <div
-            className={
-              state.iconsMenuOpen ? "nav-link menu-expanded" : "nav-link"
-            }
-            onClick={() => toggleMenuState("iconsMenuOpen")}
-            data-toggle="collapse"
-          >
-            <i className="mdi mdi-account-box-outline menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Icons</Trans>
-            </span>
-            <i className="menu-arrow"></i>
-          </div>
-          <Collapse in={state.iconsMenuOpen}>
-            <ul className="nav flex-column sub-menu">
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/icons/mdi") ? "nav-link active" : "nav-link"
-                  }
-                  to="/icons/mdi"
-                >
-                  Material
-                </Link>
-              </li>
-            </ul>
-          </Collapse>
-        </li>
-        <li
-          className={isPathActive("/charts") ? "nav-item active" : "nav-item"}
-        >
-          <div
-            className={
-              state.chartsMenuOpen ? "nav-link menu-expanded" : "nav-link"
-            }
-            onClick={() => toggleMenuState("chartsMenuOpen")}
-            data-toggle="collapse"
-          >
-            <i className="mdi mdi-chart-line menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Charts</Trans>
-            </span>
-            <i className="menu-arrow"></i>
-          </div>
-          <Collapse in={state.chartsMenuOpen}>
-            <ul className="nav flex-column sub-menu">
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/charts/chart-js")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/charts/chart-js"
-                >
-                  Chart Js
-                </Link>
-              </li>
-            </ul>
-          </Collapse>
-        </li>
-        <li
-          className={
-            isPathActive("/user-pages") ? "nav-item active" : "nav-item"
-          }
-        >
-          <div
-            className={
-              state.userPagesMenuOpen ? "nav-link menu-expanded" : "nav-link"
-            }
-            onClick={() => toggleMenuState("userPagesMenuOpen")}
-            data-toggle="collapse"
-          >
-            <i className="mdi mdi-lock-outline menu-icon"></i>
-            <span className="menu-title">
-              <Trans>User Pages</Trans>
-            </span>
-            <i className="menu-arrow"></i>
-          </div>
-          <Collapse in={state.userPagesMenuOpen}>
-            <ul className="nav flex-column sub-menu">
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/user-pages/login-1")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/user-pages/login-1"
-                >
-                  <Trans>Login</Trans>
-                </Link>
-              </li>
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/user-pages/register-1")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/user-pages/register-1"
-                >
-                  <Trans>Register</Trans>
-                </Link>
-              </li>
-            </ul>
-          </Collapse>
-        </li>
-        <li
-          className={
-            isPathActive("/error-pages") ? "nav-item active" : "nav-item"
-          }
-        >
-          <div
-            className={
-              state.errorPagesMenuOpen ? "nav-link menu-expanded" : "nav-link"
-            }
-            onClick={() => toggleMenuState("errorPagesMenuOpen")}
-            data-toggle="collapse"
-          >
-            <i className="mdi mdi-information-outline menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Error Pages</Trans>
-            </span>
-            <i className="menu-arrow"></i>
-          </div>
-          <Collapse in={state.errorPagesMenuOpen}>
-            <ul className="nav flex-column sub-menu">
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/error-pages/error-404")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/error-pages/error-404"
-                >
-                  404
-                </Link>
-              </li>
-              <li className="nav-item">
-                {" "}
-                <Link
-                  className={
-                    isPathActive("/error-pages/error-500")
-                      ? "nav-link active"
-                      : "nav-link"
-                  }
-                  to="/error-pages/error-500"
-                >
-                  500
-                </Link>
-              </li>
-            </ul>
-          </Collapse>
-        </li>
-        <li className="nav-item">
-          <a
-            className="nav-link"
-            href="http://www.bootstrapdash.com/demo/star-admin-free/react/documentation/documentation.html"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <i className="mdi mdi-file-outline menu-icon"></i>
-            <span className="menu-title">
-              <Trans>Documentation</Trans>
-            </span>
-          </a>
-        </li>
+        {appPages.map((page, index) => {
+          return (
+            <li
+              key={page.pageScriptHash}
+              className={
+                isPathActive(`/${page.pageName}`)
+                  ? "nav-item active"
+                  : "nav-item"
+              }
+            >
+              <Link
+                className="nav-link"
+                to={`/${page.pageName}`}
+                onClick={() => {
+                  changePage(page.pageScriptHash)
+                }}
+              >
+                <i className="mdi mdi-television menu-icon"></i>
+                <span className="menu-title">
+                  <Trans>{page.pageName}</Trans>
+                </span>
+              </Link>
+            </li>
+          )
+        })}
       </ul>
     </nav>
   )

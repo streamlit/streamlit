@@ -26,7 +26,7 @@ import { withTranslation } from "react-i18next"
 import { StreamlitApp } from "@streamlit/lib"
 
 class App extends Component {
-  state = {}
+  state = { initialPageUrl: window.location.href }
   componentDidMount() {
     this.onRouteChanged()
   }
@@ -40,7 +40,7 @@ class App extends Component {
     )
     let footerComponent = !this.state.isFullPageLayout ? <Footer /> : ""
     return (
-      <StreamlitApp endpoint={window.location.href}>
+      <StreamlitApp endpoint={this.state.initialPageUrl}>
         <div className="container-scroller">
           {navbarComponent}
           <div className="container-fluid page-body-wrapper">

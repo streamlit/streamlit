@@ -43,29 +43,7 @@ class AppRoutes extends Component {
     return (
       <Suspense fallback={<Spinner />}>
         <Switch>
-          <Route exact path="/" component={Dashboard} />
-
-          <Route path="/basic-ui/buttons" component={Buttons} />
-          <Route path="/basic-ui/dropdowns" component={Dropdowns} />
-
-          <Route
-            path="/form-Elements/basic-elements"
-            component={BasicElements}
-          />
-
-          <Route path="/tables/basic-table" component={BasicTable} />
-
-          <Route path="/icons/mdi" component={Mdi} />
-
-          <Route path="/charts/chart-js" component={ChartJs} />
-
-          <Route path="/user-pages/login-1" component={Login} />
-          <Route path="/user-pages/register-1" component={Register1} />
-
-          <Route path="/error-pages/error-404" component={Error404} />
-          <Route path="/error-pages/error-500" component={Error500} />
-
-          <Redirect to="/dashboard" />
+          <Route component={Dashboard} />
         </Switch>
       </Suspense>
     )

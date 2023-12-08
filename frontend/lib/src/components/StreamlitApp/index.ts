@@ -15,3 +15,5 @@
  */
 
 export { StreamlitApp } from "./StreamlitApp"
+export { useStreamlitAppUrl } from "./stores/AppUrlContext"
+export { useStreamlitAppCommands } from "./stores/AppCommandsContext"
