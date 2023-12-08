@@ -64,7 +64,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
     def connect_session(self, existing_session_id=None, session_id_override=None):
         return self.session_mgr.connect_session(
             client=MagicMock(),
-            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
             user_info={},
             existing_session_id=existing_session_id,
             session_id_override=session_id_override,
