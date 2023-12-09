@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactWrapper } from "enzyme"
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import Maybe from "./Maybe"
 
 interface OuterProps {
   name: string
+  enable: boolean
 }
 
 interface InnerProps {
@@ -28,71 +28,61 @@ interface InnerProps {
 }
 const Inner = (props: InnerProps): any => <div>{props.name}</div>
 
+const Outer = (props: OuterProps): any => (
+  <Maybe enable={props.enable}>
+    <Inner name={props.name} />
+  </Maybe>
+)
+
 describe("The Maybe component", () => {
   describe("when enable is true", () => {
-    let component: ReactWrapper
-
-    beforeEach(() => {
-      const Outer = (props: OuterProps): any => (
-        <Maybe enable={true}>
-          <Inner name={props.name} />
-        </Maybe>
-      )
-      component = mount(<Outer name={"old again"} />)
-    })
-
     afterEach(() => {
-      component.unmount()
       jest.restoreAllMocks()
     })
 
     it("should invoke the render method when the props of an enclosing element update", () => {
+      const { rerender } = render(<Outer name={"old again"} enable={true} />)
+
       const spyShouldComponentUpdate = jest.spyOn(
         Maybe.prototype,
         "shouldComponentUpdate"
       )
       const spyRender = jest.spyOn(Maybe.prototype, "render")
-      component.setProps({ name: "new name" })
+
+      rerender(<Outer name={"new name"} enable={true} />)
+
       expect(spyShouldComponentUpdate).toHaveBeenCalled()
       expect(spyRender).toHaveBeenCalled()
     })
 
     it("should call render() when a Maybe is first disabled", () => {
+      const { rerender } = render(<Outer name={"old again"} enable={true} />)
+
       const spyShouldComponentUpdate = jest.spyOn(
         Maybe.prototype,
         "shouldComponentUpdate"
       )
       const spyRender = jest.spyOn(Maybe.prototype, "render")
-      component.setProps({ name: "new name", enable: false })
+
+      rerender(<Outer name={"new name"} enable={false} />)
+
       expect(spyShouldComponentUpdate).toHaveBeenCalled()
       expect(spyRender).toHaveBeenCalled()
     })
   })
 
   describe("when enable is false", () => {
-    let component: ReactWrapper
-
-    beforeEach(() => {
-      const Outer = (props: OuterProps): any => (
-        <Maybe enable={false}>
-          <Inner name={props.name} />
-        </Maybe>
-      )
-      component = mount(<Outer name={"old again"} />)
-    })
-
-    afterEach(() => {
-      component.unmount()
-      jest.restoreAllMocks()
-    })
-
     it("should not invoke the render method when the props of an enclosing element update", () => {
+      const { rerender } = render(<Outer name={"old again"} enable={false} />)
+
       const spyShouldComponentUpdate = jest.spyOn(
         Maybe.prototype,
         "shouldComponentUpdate"
       )
       const spyRender = jest.spyOn(Maybe.prototype, "render")
-      component.setProps({ name: "new name" })
+
+      rerender(<Outer name={"new name"} enable={false} />)
+
       expect(spyShouldComponentUpdate).toHaveBeenCalled()
       expect(spyRender).toHaveBeenCalledTimes(0)
     })
