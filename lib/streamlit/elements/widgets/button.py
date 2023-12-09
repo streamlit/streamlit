@@ -425,9 +425,9 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        label: str,
         page_path: str,
         *,
+        label: Optional[str] = None,
         icon: Optional[str] = None,
         active: Optional[Union[bool, str]] = "auto",
         indent: bool = False,
@@ -442,8 +442,8 @@ class ButtonMixin:
         """
 
         return self._page_link(
-            label=label,
             page_path=page_path,
+            label=label,
             icon=icon,
             active=active,
             indent=indent,
@@ -546,9 +546,9 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        label: str,
         page_path: str,
         *,  # keyword-only arguments:
+        label: Optional[str] = None,
         icon: Optional[str] = None,
         active: Optional[Union[bool, str]] = "auto",
         indent: bool = False,
@@ -569,12 +569,14 @@ class ButtonMixin:
         )
 
         page_link_proto = PageLinkProto()
-        page_link_proto.label = label
         page_link_proto.page_path = page_path
         page_link_proto.active = str(active).lower()
         page_link_proto.indent = indent
         page_link_proto.disabled = disabled
         page_link_proto.use_container_width = use_container_width
+
+        if label is not None:
+            page_link_proto.label = label
 
         if align is not None:
             align = align.lower()
@@ -591,9 +593,11 @@ class ButtonMixin:
         page_names = [page["page_name"].replace("_", " ") for page in page_data]
 
         for page in page_data:
-            page_name = page["page_name"].lower().replace("_", " ")
+            page_name = page["page_name"].replace("_", " ").replace("-", " ")
             path = page["script_path"]
-            if requested_page_path in path or requested_page_name == page_name:
+            if requested_page_path in path or requested_page_name == page_name.lower():
+                if label is None:
+                    page_link_proto.label = page_name
                 page_link_proto.page_script_hash = page["page_script_hash"]
                 page_link_proto.page_path = path
                 break
