@@ -50,6 +50,7 @@ export interface ScreenCastHOC {
 
 interface InjectedProps {
   screenCast: ScreenCastHOC
+  testOverride?: Steps
 }
 
 type WrappedProps<P extends InjectedProps> = Omit<P, "screenCast">
@@ -70,7 +71,7 @@ function withScreencast<P extends InjectedProps>(
     state = {
       fileName: "streamlit-screencast",
       recordAudio: false,
-      currentState: "OFF" as Steps,
+      currentState: this.props.testOverride || ("OFF" as Steps),
     }
 
     private toggleRecordAudio = (): void => {

@@ -16,13 +16,13 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 
 import { shallow, render } from "@streamlit/lib"
 
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import Countdown from "@streamlit/app/src/components/Countdown"
-import withScreencast, { ScreenCastHOC } from "./withScreencast"
+import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
 import {
   ScreencastDialog,
   UnsupportedBrowserDialog,
@@ -33,6 +33,7 @@ jest.mock("@streamlit/app/src/util/ScreenCastRecorder")
 
 interface TestProps {
   screenCast: ScreenCastHOC
+  testOverride?: Steps
 
   /**
    * A property that's not related to the withScreencast wrapper.
@@ -42,10 +43,12 @@ interface TestProps {
 }
 
 class TestComponent extends PureComponent<TestProps> {
+  currentState = this.props.screenCast.currentState
   public render = (): ReactElement => (
     <>
       <div>{this.props.unrelatedProp}</div>
       <div>{this.props.screenCast ? "Screencast" : "Undefined"}</div>
+      <div>{this.currentState}</div>
     </>
   )
 }
@@ -69,12 +72,45 @@ describe("withScreencast HOC", () => {
   })
 
   it("defines displayName", () => {
+    render(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
     expect(WrappedTestComponent.displayName).toBe(
       "withScreencast(TestComponent)"
     )
   })
 
   describe("Steps", () => {
+    it("shows a configuration dialog before start recording", () => {
+      render(
+        <WrappedTestComponent
+          unrelatedProp={"mockLabel"}
+          testOverride={"SETUP"}
+        />
+      )
+      expect(screen.getByTestId("stScreencastInstruction")).toBeInTheDocument()
+    })
+
+    it("shows a countdown after setup", () => {
+      render(
+        <WrappedTestComponent
+          unrelatedProp={"mockLabel"}
+          testOverride={"COUNTDOWN"}
+        />
+      )
+      expect(screen.getByTestId("stCountdown")).toBeInTheDocument()
+    })
+
+    it("shows an unsupported dialog when it's an unsupported browser", () => {
+      render(
+        <WrappedTestComponent
+          unrelatedProp={"mockLabel"}
+          testOverride={"UNSUPPORTED"}
+        />
+      )
+      expect(
+        screen.getByTestId("stUnsupportedBrowserDialog")
+      ).toBeInTheDocument()
+    })
+
     //   const wrapper = shallow(
     //     <WrappedTestComponent unrelatedProp={"mockLabel"} />
     //   )
