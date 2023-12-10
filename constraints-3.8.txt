@@ -34,7 +34,7 @@ gitdb==4.0.11
 GitPython==3.1.40
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.91.1
+hypothesis==6.92.0
 identify==2.5.33
 idna==3.6
 importlib-metadata==6.11.0
@@ -70,7 +70,7 @@ opencv-python==4.8.1.78
 packaging==23.2
 pandas==2.0.3
 parameterized==0.9.0
-pathspec==0.11.2
+pathspec==0.12.0
 Pillow==10.1.0
 pixelmatch==0.3.0
 pkginfo==1.9.6
@@ -146,7 +146,7 @@ types-toml==0.10.8.7
 types-typed-ast==1.5.8.7
 types-urllib3==1.26.25.14
 typing-inspect==0.9.0
-typing_extensions==4.8.0
+typing_extensions==4.9.0
 tzdata==2023.3
 tzlocal==5.2
 urllib3==1.26.18
