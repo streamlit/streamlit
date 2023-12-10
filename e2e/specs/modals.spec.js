@@ -83,6 +83,30 @@ describe("modals", () => {
     cy.get("div[role='dialog']").matchImageSnapshot(
       "screencast"
     );
+
+    // Additional testing for screencast functionality
+    cy.get('button').eq(2).click({ force: true });
+
+    cy.get('[data-testid="stCountdown"]').should("exist");
+
+    cy.wait(4000);
+
+    cy.get("#MainMenu").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(3).should("have.text", "Stop recordingesc")
+    cy.get(".main").type('{esc}')
+
+    cy.get(`[data-testid="stVideoRecordedDialog"]`).should("exist");
+  });
+
+  it("renders the light screencast dialog correctly", () => {
+    cy.get("#MainMenu").click();
+
+    cy.get('[data-testid="main-menu-list"] > ul').eq(3).click({ force: true });
+
+    cy.get("div[role='dialog']").matchImageSnapshot(
+      "screencast"
+    );
   });
 
   it("renders the dark screencast dialog correctly", () => {
