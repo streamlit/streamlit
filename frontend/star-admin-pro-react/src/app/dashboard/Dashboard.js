@@ -16,12 +16,12 @@
 
 import React, { Component } from "react"
 // import { Line, Doughnut, Bar, Radar } from 'react-chartjs-2';
-import { Line, Bar, Radar } from "react-chartjs-2"
+import { Bar, Line } from "react-chartjs-2"
 
-import { ProgressBar, Dropdown } from "react-bootstrap"
+import { StreamlitView } from "@streamlit/lib"
+import { Dropdown, ProgressBar } from "react-bootstrap"
 import GaugeChart from "react-gauge-chart"
 import { VectorMap } from "react-jvectormap"
-import { StreamlitView } from "@streamlit/lib"
 
 const mapData = {
   CN: 100000,
@@ -839,173 +839,7 @@ export class Dashboard extends Component {
     },
   }
 
-  componentDidMount() {
-    //your code
-    var ctx = document.getElementById("visitChart").getContext("2d")
-    var gradientBar1 = ctx.createLinearGradient(0, 0, 0, 181)
-    gradientBar1.addColorStop(1, "rgba(110,123,247,0.7)")
-    gradientBar1.addColorStop(0, "rgba(255,255,255,0)")
-
-    var ctx2 = document.getElementById("imoressionChart").getContext("2d")
-    var gradientBar2 = ctx2.createLinearGradient(0, 0, 0, 181)
-    gradientBar2.addColorStop(1, "rgba(110,123,247,0.7)")
-    gradientBar2.addColorStop(0, "rgba(255,255,255,0)")
-
-    var ctx3 = document.getElementById("conversionChart").getContext("2d")
-    var gradientBar3 = ctx3.createLinearGradient(0, 0, 0, 181)
-    gradientBar3.addColorStop(1, "rgba(110,123,247,0.7)")
-    gradientBar3.addColorStop(0, "rgba(255,255,255,0)")
-
-    var ctx4 = document.getElementById("downloadChart").getContext("2d")
-    var gradientBar4 = ctx4.createLinearGradient(0, 0, 0, 181)
-    gradientBar4.addColorStop(1, "rgba(110,123,247,0.7)")
-    gradientBar4.addColorStop(0, "rgba(255,255,255,0)")
-
-    var ctx7 = document
-      .getElementById("totaltransactionChart")
-      .getContext("2d")
-    var gradientBar7 = ctx7.createLinearGradient(0, 100, 200, 0)
-    gradientBar7.addColorStop(1, "#fa3252")
-    gradientBar7.addColorStop(0, "#fa5539")
-
-    const visitData = {
-      labels: [
-        "Day 1",
-        "Day 2",
-        "Day 3",
-        "Day 4",
-        "Day 5",
-        "Day 6",
-        "Day 7",
-        "Day 8",
-        "Day 9",
-        "Day 10",
-        "Day 11",
-        "Day 12",
-        "Day 13",
-      ],
-      datasets: [
-        {
-          label: "Profit",
-          data: [7, 6, 9, 7, 8, 6, 8, 5, 7, 8, 6, 7, 7],
-          borderColor: "#6d7cfc",
-          backgroundColor: gradientBar1,
-          borderWidth: 3,
-          fill: true,
-        },
-      ],
-    }
-    const impressionData = {
-      labels: [
-        "Day 1",
-        "Day 2",
-        "Day 3",
-        "Day 4",
-        "Day 5",
-        "Day 6",
-        "Day 7",
-        "Day 8",
-        "Day 9",
-        "Day 10",
-        "Day 11",
-        "Day 12",
-        "Day 13",
-      ],
-      datasets: [
-        {
-          label: "Profit",
-          data: [7, 6, 8, 5, 7, 8, 6, 7, 7, 6, 9, 7, 8],
-          borderColor: "#6d7cfc",
-          backgroundColor: gradientBar2,
-          borderWidth: 3,
-          fill: true,
-        },
-      ],
-    }
-    const conversionData = {
-      labels: [
-        "Day 1",
-        "Day 2",
-        "Day 3",
-        "Day 4",
-        "Day 5",
-        "Day 6",
-        "Day 7",
-        "Day 8",
-        "Day 9",
-        "Day 10",
-        "Day 11",
-        "Day 12",
-        "Day 13",
-      ],
-      datasets: [
-        {
-          label: "Profit",
-          data: [8, 6, 7, 8, 5, 7, 9, 7, 8, 7, 6, 7, 6],
-          borderColor: "#6d7cfc",
-          backgroundColor: gradientBar3,
-          borderWidth: 3,
-          fill: true,
-        },
-      ],
-    }
-    const downloadData = {
-      labels: [
-        "Day 1",
-        "Day 2",
-        "Day 3",
-        "Day 4",
-        "Day 5",
-        "Day 6",
-        "Day 7",
-        "Day 8",
-        "Day 9",
-        "Day 10",
-        "Day 11",
-        "Day 12",
-        "Day 13",
-      ],
-      datasets: [
-        {
-          label: "Profit",
-          data: [7, 6, 8, 5, 8, 6, 8, 7, 8, 6, 9, 7, 7],
-          borderColor: "#6d7cfc",
-          backgroundColor: gradientBar4,
-          borderWidth: 3,
-          fill: true,
-        },
-      ],
-    }
-
-    const totaltransactionData = {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-      datasets: [
-        {
-          label: "Sessions",
-          data: [320, 280, 300, 280, 300, 270, 350],
-          backgroundColor: gradientBar7,
-          borderColor: "#fa394e",
-          borderWidth: 0,
-          pointBackgroundColor: "#fa394e",
-          pointRadius: 7,
-          pointBorderWidth: 3,
-          pointBorderColor: "#fff",
-          pointHoverRadius: 7,
-          pointHoverBackgroundColor: "#fa394e",
-          pointHoverBorderColor: "#fa394e",
-          pointHoverBorderWidth: 2,
-          pointHitRadius: 7,
-        },
-      ],
-    }
-    this.setState({
-      visitChartData: visitData,
-      impressionChartData: impressionData,
-      conversionChartData: conversionData,
-      downloadChartData: downloadData,
-      totaltransactionChartData: totaltransactionData,
-    })
-  }
+  componentDidMount() {}
 
   toggleProBanner() {
     document.querySelector(".proBanner").classList.toggle("hide")
@@ -1143,96 +977,7 @@ export class Dashboard extends Component {
           <div className="col-md-12 grid-margin">
             <div className="card">
               <div className="card-body">
-                <div className="row">
-                  <div className="col-xl-3 col-lg-6 col-sm-6 grid-margin-xl-0 grid-margin">
-                    <div className="d-flex">
-                      <div className="wrapper">
-                        <h3 className="mb-0 font-weight-semibold">32,451</h3>
-                        <h5 className="mb-0 font-weight-medium text-primary">
-                          Visits
-                        </h5>
-                        <p className="mb-0 text-muted">+14.00(+0.50%)</p>
-                      </div>
-                      <div className="wrapper my-auto ml-auto ml-lg-4">
-                        <Line
-                          ref="chart"
-                          data={this.state.visitChartData}
-                          options={this.state.areaOptions}
-                          datasetKeyProvider={this.state.datasetKeyProvider}
-                          height={50}
-                          width={100}
-                          id="visitChart"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-xl-3 col-lg-6 col-sm-6 mt-md-0 mt-4 grid-margin-xl-0 grid-margin">
-                    <div className="d-flex">
-                      <div className="wrapper">
-                        <h3 className="mb-0 font-weight-semibold">15,236</h3>
-                        <h5 className="mb-0 font-weight-medium text-primary">
-                          Impressions
-                        </h5>
-                        <p className="mb-0 text-muted">+138.97(+0.54%)</p>
-                      </div>
-                      <div className="wrapper my-auto ml-auto ml-lg-4">
-                        <Line
-                          ref="chart"
-                          data={this.state.impressionChartData}
-                          options={this.state.areaOptions}
-                          datasetKeyProvider={this.state.datasetKeyProvider}
-                          height={50}
-                          width={100}
-                          id="imoressionChart"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-xl-3 col-lg-6 col-sm-6 mt-md-0 mt-4 grid-margin-xl-0 grid-margin">
-                    <div className="d-flex">
-                      <div className="wrapper">
-                        <h3 className="mb-0 font-weight-semibold">7,688</h3>
-                        <h5 className="mb-0 font-weight-medium text-primary">
-                          Conversion
-                        </h5>
-                        <p className="mb-0 text-muted">+57.62(+0.76%)</p>
-                      </div>
-                      <div className="wrapper my-auto ml-auto ml-lg-4">
-                        <Line
-                          ref="chart"
-                          data={this.state.conversionChartData}
-                          options={this.state.areaOptions}
-                          datasetKeyProvider={this.state.datasetKeyProvider}
-                          height={50}
-                          width={100}
-                          id="conversionChart"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-xl-3 col-lg-6 col-sm-6 mt-md-0 mt-4 grid-margin-xl-0 grid-margin">
-                    <div className="d-flex">
-                      <div className="wrapper">
-                        <h3 className="mb-0 font-weight-semibold">1,553</h3>
-                        <h5 className="mb-0 font-weight-medium text-primary">
-                          Downloads
-                        </h5>
-                        <p className="mb-0 text-muted">+138.97(+0.54%)</p>
-                      </div>
-                      <div className="wrapper my-auto ml-auto ml-lg-4">
-                        <Line
-                          ref="chart"
-                          data={this.state.downloadChartData}
-                          options={this.state.areaOptions}
-                          datasetKeyProvider={this.state.datasetKeyProvider}
-                          height={50}
-                          width={100}
-                          id="downloadChart"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <StreamlitView namespace="cards" />
               </div>
             </div>
           </div>
@@ -1251,11 +996,6 @@ export class Dashboard extends Component {
                 <div className="wrapper">
                   <StreamlitView namespace="sidebar" />
                 </div>
-                <Radar
-                  data={this.state.netProfitChartData}
-                  options={this.state.netProfitOptions}
-                  height={280}
-                />
               </div>
             </div>
           </div>

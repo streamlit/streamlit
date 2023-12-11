@@ -219,15 +219,18 @@ experimental_connection = _deprecate_func_name(
 class Namespaces:
     def __init__(self) -> None:
         object.__setattr__(self, "_attrs", {})
+        object.__setattr__(self, "_num", 10)
 
     def __getattribute__(self, __name: str) -> Any:
         _attrs = object.__getattribute__(self, "_attrs")
+        _num = object.__getattribute__(self, "_num")
         if __name in _attrs:
             return _attrs[__name]
 
-        _attrs[__name] = _DeltaGenerator(
-            root_container=_RootContainer.MAIN, parent=_main
-        )
+        # If I don't change the root_container, the namespace will be the same
+        # as the main namespace.
+        _attrs[__name] = _DeltaGenerator(root_container=_num, parent=_main)
+        object.__setattr__(self, "_num", _num + 1)
 
         return _attrs[__name]
 
