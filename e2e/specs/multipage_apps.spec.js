@@ -96,4 +96,13 @@ describe("multipage apps", () => {
     // Expand the nav again
     cy.get('[data-testid="stSidebarNavSeparator"] svg').click();
   });
+
+  it('removes query params when swapping pages', () => {
+    cy.loadApp("http://localhost:3000?foo=bar");
+
+    cy.getIndexed('[data-testid="stSidebarNav"] a', 1).click();
+    cy.get(".element-container .stMarkdown h2").should("contain", "Page 2");
+
+    cy.url().should('eq', 'http://localhost:3000/page2')
+  })
 });
