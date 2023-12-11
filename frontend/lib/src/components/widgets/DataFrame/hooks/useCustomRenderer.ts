@@ -18,10 +18,11 @@ import React from "react"
 
 import {
   DataEditorProps,
-  DrawCustomCellCallback,
+  DrawCellCallback,
   Rectangle,
   Theme as GlideTheme,
   drawTextCell,
+  BaseDrawArgs,
 } from "@glideapps/glide-data-grid"
 import {
   SparklineCell,
@@ -67,15 +68,17 @@ export function drawRequiredIndicator(
 /**
  * If a cell is marked as missing, we draw a placeholder symbol with a faded text color.
  */
-export const drawMissingPlaceholder: DrawCustomCellCallback = args => {
-  const { cell, theme } = args
+export const drawMissingPlaceholder = (args: BaseDrawArgs): void => {
+  const { cell, theme, ctx } = args
   drawTextCell(
     {
       ...args,
       theme: {
         ...theme,
         textDark: theme.textLight,
-        textMedium: theme.textLight,
+        headerFontFull: `${theme.headerFontStyle} ${theme.fontFamily}`,
+        baseFontFull: `${theme.baseFontStyle} ${theme.fontFamily}`,
+        markerFontFull: `${theme.markerFontStyle} ${theme.fontFamily}`,
       },
       // The following props are just added for technical reasons:
       // @ts-expect-error
@@ -85,7 +88,8 @@ export const drawMissingPlaceholder: DrawCustomCellCallback = args => {
     NULL_VALUE_TOKEN,
     cell.contentAlign
   )
-  return true
+  // Reset fill style to the original one
+  ctx.fillStyle = theme.textDark
 }
 
 /**
@@ -115,24 +119,24 @@ function useCustomRenderer(
   columns: BaseColumn[],
   hasSelectionRow: boolean
 ): CustomRendererReturn {
-  const drawCell: DrawCustomCellCallback = React.useCallback(
-    args => {
+  const drawCell: DrawCellCallback = React.useCallback(
+    (args, draw) => {
       const { cell, theme, ctx, rect } = args
       const colPos = hasSelectionRow ? args.col - 1 : args.col
       if (isMissingValueCell(cell) && colPos < columns.length) {
-        let contentRendered = false
         const column = columns[colPos]
 
         // We explicitly ignore some cell types here (e.g. checkbox, progress...) since
         // they are taking care of rendering their missing value state themselves (usually as empty cell).
         // All other cell types are rendered with a placeholder symbol and a faded text color via drawMissingPlaceholder.
         if (
-          !["checkbox", "line_chart", "bar_chart", "progress"].includes(
+          ["checkbox", "line_chart", "bar_chart", "progress"].includes(
             column.kind
           )
         ) {
-          drawMissingPlaceholder(args)
-          contentRendered = true
+          draw()
+        } else {
+          drawMissingPlaceholder(args as BaseDrawArgs)
         }
 
         if (column.isRequired && column.isEditable) {
@@ -140,11 +144,9 @@ function useCustomRenderer(
           // we draw a red indicator in the top right corner of the cell.
           drawRequiredIndicator(ctx, rect, theme)
         }
-
-        return contentRendered
+        return
       }
-
-      return false
+      draw()
     },
     [columns, hasSelectionRow]
   )
