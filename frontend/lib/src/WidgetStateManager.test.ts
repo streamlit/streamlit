@@ -411,6 +411,22 @@ describe("Widget State Manager", () => {
         widgets: [{ id: "firstSubmitButton", triggerValue: true }],
       })
     })
+
+    it("does not submit the form if the first submitButton is disabled", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "firstSubmitButton", disabled: true })
+      )
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "secondSubmitButton" })
+      )
+      // Submit the form
+      widgetMgr.submitForm(formId)
+
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
   })
 
   describe("Forms don't interfere with each other", () => {
