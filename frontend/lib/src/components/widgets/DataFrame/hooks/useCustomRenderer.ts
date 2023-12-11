@@ -107,7 +107,6 @@ type CustomRendererReturn = Pick<
  * a red indicator for required cells.
  *
  * @param columns - The columns of the table.
- * @param hasSelectionRow - Whether the table has the selection row activated (e.g. for dynamic editing).
  *
  * @returns An object containing the following properties:
  * - `drawCell`: A function that overwrites some rendering that can be
@@ -115,14 +114,11 @@ type CustomRendererReturn = Pick<
  * - `customRenderers`: A map of custom cell renderers used by custom cells
  *    that can be passed to the `DataEditor` component.
  */
-function useCustomRenderer(
-  columns: BaseColumn[],
-  hasSelectionRow: boolean
-): CustomRendererReturn {
+function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
   const drawCell: DrawCellCallback = React.useCallback(
     (args, draw) => {
       const { cell, theme, ctx, rect } = args
-      const colPos = hasSelectionRow ? args.col - 1 : args.col
+      const colPos = args.col
       if (isMissingValueCell(cell) && colPos < columns.length) {
         const column = columns[colPos]
 
@@ -148,7 +144,7 @@ function useCustomRenderer(
       }
       draw()
     },
-    [columns, hasSelectionRow]
+    [columns]
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:
