@@ -870,6 +870,17 @@ _create_option(
     ),
 )
 
+_create_option(
+    "server.frontendPath",
+    description=(
+        """
+        When set, Streamlit will serve the frontend from the specified directory, rather
+        than from the internal Streamlit package. This is useful for development purposes
+        or for using a custom frontend.
+        """
+    ),
+)
+
 # Config Section: UI #
 
 _create_section("ui", "Configuration of UI elements displayed in the browser.")

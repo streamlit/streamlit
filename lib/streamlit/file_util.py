@@ -19,7 +19,7 @@ import io
 import os
 from pathlib import Path
 
-from streamlit import env_util, util
+from streamlit import config, env_util, util
 from streamlit.string_util import is_binary_string
 
 # Configuration and credentials are stored inside the ~/.streamlit folder
@@ -118,6 +118,8 @@ def streamlit_write(path, binary=False):
 
 def get_static_dir():
     """Get the folder where static HTML/JS/CSS files live."""
+    if config.get_option("server.frontendPath"):
+        return os.path.abspath(config.get_option("server.frontendPath"))
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, "static"))
 
