@@ -20,7 +20,7 @@ describe("st.camera_input", () => {
     Cypress.config("defaultCommandTimeout", 30000);
 
     Cypress.Cookies.defaults({
-      preserve: ["_xsrf"],
+      preserve: ["_streamlit_xsrf"],
     });
     cy.loadApp("http://localhost:3000/");
   });

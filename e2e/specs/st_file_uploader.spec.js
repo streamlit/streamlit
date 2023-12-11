@@ -17,7 +17,7 @@
 describe("st.file_uploader", () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
-      preserve: ["_xsrf"],
+      preserve: ["_streamlit_xsrf"],
     });
     cy.server();
     cy.route("PUT", "**/upload_file/**").as("uploadFile");

@@ -553,7 +553,7 @@ export class App extends PureComponent<Props, State> {
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     } else {
-      setCookie("_xsrf", "")
+      setCookie("_streamlit_xsrf", "")
 
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
