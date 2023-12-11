@@ -18,8 +18,6 @@ import unittest
 from unittest.mock import MagicMock
 
 from streamlit import config
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import app_session
 from streamlit.runtime.forward_msg_cache import (
     ForwardMsgCache,
@@ -27,6 +25,7 @@ from streamlit.runtime.forward_msg_cache import (
     populate_hash_if_needed,
 )
 from streamlit.runtime.stats import CacheStat
+from streamlit.testing.v1.util import patch_config_options
 from tests.streamlit.message_mocks import create_dataframe_msg
 
 
@@ -169,6 +168,27 @@ class ForwardMsgCacheTest(unittest.TestCase):
         runcount2 += 2
         cache.remove_expired_entries_for_session(session2, runcount2)
         self.assertIsNone(cache.get_message(msg_hash))
+
+    @patch_config_options({"global.storeCachedForwardMessagesInMemory": False})
+    def test_store_in_memory_config_option(self):
+        """Test MessageCache's storeCachedForwardMessagesInMemory config option logic"""
+        cache = ForwardMsgCache()
+        session = _create_mock_session()
+        run_count = 0
+
+        msg = create_dataframe_msg([1, 2, 3, 4, 5])
+        msg_hash = populate_hash_if_needed(msg)
+
+        cache.add_message(msg, session, run_count)
+
+        run_count += 1
+        # Cache should still count message references for messages.
+        self.assertTrue(cache.has_message_reference(msg, session, run_count))
+
+        message_content = cache.get_message(msg_hash)
+
+        # Cache should not store message content for messages.
+        self.assertEqual(message_content, None)
 
     def test_cache_stats_provider(self):
         """Test ForwardMsgCache's CacheStatsProvider implementation."""
