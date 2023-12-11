@@ -1307,7 +1307,6 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash != currentPageScriptHash) {
-        // reset query string when changing pages to replicate real web apps
         queryString = ""
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
