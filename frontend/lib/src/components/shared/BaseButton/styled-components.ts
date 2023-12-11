@@ -54,7 +54,10 @@ export interface BaseButtonProps {
 
 type RequiredBaseButtonProps = Required<BaseButtonProps>
 
-function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
+function getSizeStyle(
+  size: BaseButtonSize,
+  theme: EmotionTheme
+): Omit<CSSObject, "accentColor"> {
   switch (size) {
     case BaseButtonSize.XSMALL:
       return {

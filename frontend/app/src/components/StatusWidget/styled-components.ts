@@ -68,7 +68,9 @@ export const StyledAppStatus = styled.div(({ theme }) => ({
   height: "1.6rem",
 }))
 
-const minimizedStyles = (theme: EmotionTheme): CSSObject => ({
+const minimizedStyles = (
+  theme: EmotionTheme
+): Omit<CSSObject, "accentColor"> => ({
   opacity: 0,
   padding: theme.spacing.none,
   margin: theme.spacing.none,

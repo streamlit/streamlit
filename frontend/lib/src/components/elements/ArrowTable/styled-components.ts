@@ -33,7 +33,9 @@ export const StyledTable = styled.table(({ theme }) => ({
   border: `1px solid ${theme.colors.fadedText05}`,
 }))
 
-const styleCellFunction = (theme: EmotionTheme): CSSObject => ({
+const styleCellFunction = (
+  theme: EmotionTheme
+): Omit<CSSObject, "accentColor"> => ({
   borderBottom: `1px solid ${theme.colors.fadedText05}`,
   borderRight: `1px solid ${theme.colors.fadedText05}`,
   verticalAlign: "middle",

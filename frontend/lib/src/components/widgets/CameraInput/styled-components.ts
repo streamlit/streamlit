@@ -37,7 +37,10 @@ enum Size {
   LARGE = "large",
 }
 
-function getSizeStyle(size: Size, theme: EmotionTheme): CSSObject {
+function getSizeStyle(
+  size: Size,
+  theme: EmotionTheme
+): Omit<CSSObject, "accentColor"> {
   switch (size) {
     case Size.XSMALL:
       return {

@@ -125,7 +125,9 @@ export const StyledFileError = styled.small(({ theme }) => ({
 
 export const StyledFileErrorIcon = styled.span({})
 
-const compactFileUploader = (theme: EmotionTheme): CSSObject => ({
+const compactFileUploader = (
+  theme: EmotionTheme
+): Omit<CSSObject, "accentColor"> => ({
   [StyledFileDropzoneSection as any]: {
     display: "flex",
     flexDirection: "column",
