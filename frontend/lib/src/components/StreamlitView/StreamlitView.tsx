@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useMemo } from "react"
+import { ReactElement, useMemo } from "react"
 
-import VerticalBlock from "../core/Block"
-import { useStreamlitScriptRun } from "../StreamlitApp/stores/ScriptRunContext"
-import { useWidgetStateManager } from "../StreamlitApp/stores/WidgetStateManagerContext"
+import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
 import { SessionInfo } from "@streamlit/lib/src/SessionInfo"
+import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { BaseUriParts, buildHttpUri } from "@streamlit/lib/src/util/UriUtil"
 import {
   ConnectionState,
   useStreamlitConnection,
 } from "../StreamlitApp/stores/ConnectionContext"
-import { FileUploadClient } from "@streamlit/lib/src/FileUploadClient"
+import { useStreamlitScriptRun } from "../StreamlitApp/stores/ScriptRunContext"
+import { useWidgetStateManager } from "../StreamlitApp/stores/WidgetStateManagerContext"
+import VerticalBlock from "../core/Block"
 import { ComponentRegistry } from "../widgets/CustomComponent"
-import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { BaseUriParts, buildHttpUri } from "@streamlit/lib/src/util/UriUtil"
 
 import { useStreamlitElementTree } from "../StreamlitApp/stores/StreamlitElementTreeContext"
 
@@ -79,7 +79,7 @@ export interface StreamlitViewProps {
 }
 
 export function StreamlitView({
-  namespace,
+  namespace = "",
 }: StreamlitViewProps): ReactElement {
   const { connectionState, workingEndpoint } = useStreamlitConnection()
   const { widgetManager, formsData } = useWidgetStateManager()

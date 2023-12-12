@@ -527,6 +527,9 @@ class DeltaGenerator(
             if element_height is not None:
                 msg.metadata.element_dimension_spec.height = element_height
 
+            import streamlit as st
+
+            msg.delta.namespaces.data[:] = st.ns._names
             _enqueue_message(msg)
             msg_was_enqueued = True
 

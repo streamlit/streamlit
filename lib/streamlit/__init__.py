@@ -216,13 +216,20 @@ experimental_connection = _deprecate_func_name(
 )
 
 
+STARTING_ID = 3
+
+
 class Namespaces:
     def __init__(self) -> None:
         object.__setattr__(self, "_attrs", {})
-        object.__setattr__(self, "_num", 10)
+        object.__setattr__(self, "_num", STARTING_ID)
 
     def __getattribute__(self, __name: str) -> Any:
         _attrs = object.__getattribute__(self, "_attrs")
+        if __name == "_attrs":
+            return _attrs
+        elif __name == "_names":
+            return list(_attrs.keys())
         _num = object.__getattribute__(self, "_num")
         if __name in _attrs:
             return _attrs[__name]

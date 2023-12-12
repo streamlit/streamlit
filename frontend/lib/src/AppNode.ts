@@ -16,8 +16,13 @@
 
 import { produce } from "immer"
 import {
-  Arrow as ArrowProto,
+  VegaLiteChartElement,
+  WrappedNamedDataset,
+} from "./components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { Quiver } from "./dataframes/Quiver"
+import {
   ArrowNamedDataSet,
+  Arrow as ArrowProto,
   ArrowVegaLiteChart as ArrowVegaLiteChartProto,
   Block as BlockProto,
   Delta,
@@ -26,15 +31,10 @@ import {
   IArrow,
   IArrowNamedDataSet,
 } from "./proto"
-import {
-  VegaLiteChartElement,
-  WrappedNamedDataset,
-} from "./components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
-import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 import {
-  getLoadingScreenType,
   LoadingScreenType,
+  getLoadingScreenType,
   makeElementWithErrorText,
   makeElementWithInfoText,
   makeSkeletonElement,
@@ -405,6 +405,7 @@ export class BlockNode implements AppNode {
  */
 export class AppRoot {
   private readonly root: BlockNode
+  private namespaces: Record<string, BlockNode> = {}
 
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
@@ -462,13 +463,17 @@ export class AppRoot {
     return new AppRoot(new BlockNode([main, sidebar, event]))
   }
 
-  public constructor(root: BlockNode) {
+  public constructor(
+    root: BlockNode,
+    namespaces: Record<string, BlockNode> = {}
+  ) {
     this.root = root
+    this.namespaces = namespaces
 
     // Verify that our root node has exactly 3 children: a 'main' block,
     // a 'sidebar' block, and an 'event' block.
     if (
-      this.root.children.length !== 3 ||
+      this.root.children.length < 3 ||
       this.main == null ||
       this.sidebar == null ||
       this.event == null
@@ -480,13 +485,26 @@ export class AppRoot {
   public get_by_namespace(ns: string): BlockNode {
     const [main, sidebar, event] = this.root.children
 
+    console.log(ns)
+
     if (ns === "event") {
       return event as BlockNode
     } else if (ns === "sidebar") {
       return sidebar as BlockNode
+    } else if (ns === "") {
+      return main as BlockNode
     }
 
-    return main as BlockNode
+    if (this.namespaces[ns] === undefined) {
+      //throw new Error(`Invalid namespace: ${ns}`)
+      const newBlock = new BlockNode()
+      // this.root.children.push(newBlock)
+      return newBlock
+    }
+
+    return this.namespaces[ns]
+
+    //return this.root.children[this.namespaces.indexOf(ns) + 3] as BlockNode
   }
 
   public get main(): BlockNode {
@@ -516,6 +534,16 @@ export class AppRoot {
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
+        const namespaces = delta.namespaces?.data as string[]
+
+        for (const ns of namespaces) {
+          if (!this.namespaces[ns]) {
+            const newBlock = new BlockNode()
+            this.namespaces[ns] = newBlock
+            this.root.children.push(newBlock)
+          }
+        }
+
         return this.addElement(deltaPath, scriptRunId, element, metadata)
       }
 
@@ -586,7 +614,10 @@ export class AppRoot {
     metadata: ForwardMsgMetadata
   ): AppRoot {
     const elementNode = new ElementNode(element, metadata, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
+    return new AppRoot(
+      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.namespaces
+    )
   }
 
   private addBlock(
@@ -603,7 +634,10 @@ export class AppRoot {
       existingNode instanceof BlockNode ? existingNode.children : []
 
     const blockNode = new BlockNode(children, block, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
+    return new AppRoot(
+      this.root.setIn(deltaPath, blockNode, scriptRunId),
+      this.namespaces
+    )
   }
 
   private arrowAddRows(
@@ -617,7 +651,10 @@ export class AppRoot {
     }
 
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
+    return new AppRoot(
+      this.root.setIn(deltaPath, elementNode, scriptRunId),
+      this.namespaces
+    )
   }
 }
 
