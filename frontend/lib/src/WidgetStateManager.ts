@@ -217,7 +217,6 @@ export class WidgetStateManager {
 
     const submitButtons = this.formsData.submitButtons.get(formId)
     const disableForm = submitButtons?.at(0)?.disabled
-    console.log(disableForm)
     if (disableForm) {
       return
     }
