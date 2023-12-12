@@ -308,14 +308,18 @@ export class BlockNode implements AppNode {
 
   public readonly scriptRunId: string
 
+  public readonly name?: string
+
   public constructor(
     children?: AppNode[],
     deltaBlock?: BlockProto,
-    scriptRunId?: string
+    scriptRunId?: string,
+    name?: string
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
+    this.name = name
   }
 
   /** True if this Block has no children. */
@@ -365,7 +369,7 @@ export class BlockNode implements AppNode {
       )
     }
 
-    return new BlockNode(newChildren, this.deltaBlock, scriptRunId)
+    return new BlockNode(newChildren, this.deltaBlock, scriptRunId, this.name)
   }
 
   public clearStaleNodes(currentScriptRunId: string): BlockNode | undefined {
@@ -405,7 +409,10 @@ export class BlockNode implements AppNode {
  */
 export class AppRoot {
   private readonly root: BlockNode
+
   private namespaces: Record<string, BlockNode> = {}
+
+  private namespaceIdx: string[] = []
 
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
@@ -445,30 +452,37 @@ export class AppRoot {
     const main = new BlockNode(
       mainNodes,
       new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
+      NO_SCRIPT_RUN_ID,
+      "main"
     )
 
     const sidebar = new BlockNode(
       [],
       new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
+      NO_SCRIPT_RUN_ID,
+      "sidebar"
     )
 
     const event = new BlockNode(
       [],
       new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
+      NO_SCRIPT_RUN_ID,
+      "event"
     )
 
     return new AppRoot(new BlockNode([main, sidebar, event]))
   }
 
-  public constructor(
-    root: BlockNode,
-    namespaces: Record<string, BlockNode> = {}
-  ) {
+  public constructor(root: BlockNode) {
     this.root = root
-    this.namespaces = namespaces
+    this.namespaces = {}
+    for (const child of root.children as BlockNode[]) {
+      if (child.name) {
+        this.namespaces[child.name] = child
+      } else {
+        console.error("Root Child is undefined!")
+      }
+    }
 
     // Verify that our root node has exactly 3 children: a 'main' block,
     // a 'sidebar' block, and an 'event' block.
@@ -482,44 +496,36 @@ export class AppRoot {
     }
   }
 
-  public get_by_namespace(ns: string): BlockNode {
-    const [main, sidebar, event] = this.root.children
-
-    console.log(ns)
-
-    if (ns === "event") {
-      return event as BlockNode
-    } else if (ns === "sidebar") {
-      return sidebar as BlockNode
-    } else if (ns === "") {
-      return main as BlockNode
+  public getByNamespace(ns: string): BlockNode {
+    if (ns === "") {
+      return this.namespaces.main
     }
 
-    if (this.namespaces[ns] === undefined) {
-      //throw new Error(`Invalid namespace: ${ns}`)
-      const newBlock = new BlockNode()
-      // this.root.children.push(newBlock)
+    if (!this.namespaces[ns]) {
+      // This is a fake block for the time being
+      console.debug("Failed to retrieve Namespace: " + ns)
+      const newBlock = new BlockNode(
+        [],
+        new BlockProto({ allowEmpty: true }),
+        NO_SCRIPT_RUN_ID
+      )
       return newBlock
     }
 
+    console.debug("Retrieving Namespace: " + ns)
     return this.namespaces[ns]
-
-    //return this.root.children[this.namespaces.indexOf(ns) + 3] as BlockNode
   }
 
   public get main(): BlockNode {
-    const [main, ,] = this.root.children
-    return main as BlockNode
+    return this.namespaces.main
   }
 
   public get sidebar(): BlockNode {
-    const [, sidebar] = this.root.children
-    return sidebar as BlockNode
+    return this.namespaces.sidebar
   }
 
   public get event(): BlockNode {
-    const [, , event] = this.root.children
-    return event as BlockNode
+    return this.namespaces.event
   }
 
   public applyDelta(
@@ -535,12 +541,16 @@ export class AppRoot {
       case "newElement": {
         const element = delta.newElement as Element
         const namespaces = delta.namespaces?.data as string[]
-
         for (const ns of namespaces) {
           if (!this.namespaces[ns]) {
-            const newBlock = new BlockNode()
-            this.namespaces[ns] = newBlock
+            const newBlock = new BlockNode(
+              [],
+              new BlockProto({ allowEmpty: true }),
+              scriptRunId,
+              ns
+            )
             this.root.children.push(newBlock)
+            this.namespaces[ns] = newBlock
           }
         }
 
@@ -582,16 +592,21 @@ export class AppRoot {
   }
 
   public clearStaleNodes(currentScriptRunId: string): AppRoot {
-    const main =
-      this.main.clearStaleNodes(currentScriptRunId) || new BlockNode()
-    const sidebar =
-      this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
-    const event =
-      this.event.clearStaleNodes(currentScriptRunId) || new BlockNode()
+    const newChildren = (this.root.children as BlockNode[]).map(child => {
+      const newChild =
+        child.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      for (const key of Object.keys(this.namespaces)) {
+        if (this.namespaces[key] === child) {
+          this.namespaces[key] = newChild
+        }
+      }
+
+      return newChild
+    })
 
     return new AppRoot(
       new BlockNode(
-        [main, sidebar, event],
+        newChildren,
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       )
@@ -614,10 +629,7 @@ export class AppRoot {
     metadata: ForwardMsgMetadata
   ): AppRoot {
     const elementNode = new ElementNode(element, metadata, scriptRunId)
-    return new AppRoot(
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
-      this.namespaces
-    )
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private addBlock(
@@ -634,10 +646,7 @@ export class AppRoot {
       existingNode instanceof BlockNode ? existingNode.children : []
 
     const blockNode = new BlockNode(children, block, scriptRunId)
-    return new AppRoot(
-      this.root.setIn(deltaPath, blockNode, scriptRunId),
-      this.namespaces
-    )
+    return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
   }
 
   private arrowAddRows(
@@ -651,10 +660,7 @@ export class AppRoot {
     }
 
     const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
-    return new AppRoot(
-      this.root.setIn(deltaPath, elementNode, scriptRunId),
-      this.namespaces
-    )
+    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 }
 

@@ -33,7 +33,7 @@ export function useStreamlitElementTreeState(
   scriptRunInfo: ScriptRunInfo,
   currentPageScriptHash: string
 ): AppRoot {
-  const [root, setRoot] = useState<AppRoot>(AppRoot.empty(true))
+  const [root, setRoot] = useState<AppRoot>(() => AppRoot.empty(true))
   const pendingElementsBuffer = useRef<AppRoot>(root)
   const pendingElementsTimerRunning = useRef<boolean>(false)
   const { scriptRunId, scriptRunState } = scriptRunInfo

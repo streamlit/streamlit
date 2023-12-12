@@ -113,7 +113,7 @@ export function StreamlitView({
     [endpoints]
   )
   // TODO More advance logic
-  const node = elementTree.get_by_namespace(namespace)
+  const node = elementTree.getByNamespace(namespace)
 
   return (
     <VerticalBlock
