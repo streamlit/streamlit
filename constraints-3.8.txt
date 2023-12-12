@@ -23,7 +23,7 @@ cryptography==41.0.7
 cx-Oracle==7.3.0
 cycler==0.12.1
 dataclasses-json==0.6.3
-distlib==0.3.7
+distlib==0.3.8
 docutils==0.20.1
 exceptiongroup==1.2.0
 execnet==2.0.2
@@ -49,9 +49,9 @@ jsonschema==4.20.0
 jsonschema-specifications==2023.11.2
 keyring==24.3.0
 kiwisolver==1.4.5
-langchain==0.0.349
-langchain-community==0.0.1
-langchain-core==0.0.13
+langchain==0.0.350
+langchain-community==0.0.2
+langchain-core==0.1.0
 langsmith==0.0.69
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
