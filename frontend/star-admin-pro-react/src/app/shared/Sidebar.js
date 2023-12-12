@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-import React, { useState, useCallback, useEffect } from "react"
-import { Link, withRouter } from "react-router-dom"
-import { useStreamlitAppUrl, useStreamlitAppCommands } from "@streamlit/lib"
+import { useStreamlitAppCommands, useStreamlitAppUrl } from "@streamlit/lib"
+import React, { useCallback, useEffect, useState } from "react"
 import { Dropdown } from "react-bootstrap"
 import { Trans } from "react-i18next"
+import { Link, withRouter } from "react-router-dom"
+import mini_logo from "../../assets/images/logo-mini.svg"
+import logo from "../../assets/images/logo.svg"
 
 function Sidebar({ location }) {
   const [state, setState] = useState({})
@@ -97,10 +99,10 @@ function Sidebar({ location }) {
     <nav className="sidebar sidebar-offcanvas" id="sidebar">
       <div className="text-center sidebar-brand-wrapper d-flex align-items-center">
         <a className="sidebar-brand brand-logo" href="index.html">
-          <img src={require("../../assets/images/logo.svg")} alt="logo" />
+          <img src={logo} alt="logo" />
         </a>
         <a className="sidebar-brand brand-logo-mini pt-3" href="index.html">
-          <img src={require("../../assets/images/logo-mini.svg")} alt="logo" />
+          <img src={mini_logo} alt="logo" />
         </a>
       </div>
       <ul className="nav">
