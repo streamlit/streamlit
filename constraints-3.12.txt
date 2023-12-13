@@ -17,7 +17,7 @@ contourpy==1.2.0
 coverage==7.3.2
 cryptography==41.0.7
 cycler==0.12.1
-distlib==0.3.7
+distlib==0.3.8
 docutils==0.20.1
 execnet==2.0.2
 filelock==3.13.1
