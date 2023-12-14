@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { merge, mergeWith, isArray } from "lodash"
+import merge from "lodash/merge"
+import mergeWith from "lodash/mergeWith"
 
 import {
   getGray30,
@@ -143,7 +144,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
 
   // Fill in theme defaults where the user didn't specify config options.
   return mergeWith({}, streamlitTheme, config, (_, b) =>
-    isArray(b) ? b : undefined
+    Array.isArray(b) ? b : undefined
   )
 }
 

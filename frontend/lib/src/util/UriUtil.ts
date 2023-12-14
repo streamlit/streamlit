@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { take } from "lodash"
+import take from "lodash/take"
 
 import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "@streamlit/lib/src/baseconsts"
 

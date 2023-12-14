@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { pick } from "lodash"
+import pick from "lodash/pick"
 import {
   SessionInfo,
   DeployedAppMetadata,
