@@ -48,7 +48,7 @@ multidict==6.0.4
 mypy==1.6.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
-mysqlclient==2.2.0
+mysqlclient==2.2.1
 nh3==0.2.15
 nodeenv==1.8.0
 numpy==1.26.2

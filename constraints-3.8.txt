@@ -50,7 +50,7 @@ jsonschema-specifications==2023.11.2
 keyring==24.3.0
 kiwisolver==1.4.5
 langchain==0.0.350
-langchain-community==0.0.2
+langchain-community==0.0.3
 langchain-core==0.1.0
 langsmith==0.0.69
 markdown-it-py==3.0.0
@@ -63,7 +63,7 @@ multidict==6.0.4
 mypy==1.6.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
-mysqlclient==2.2.0
+mysqlclient==2.2.1
 nh3==0.2.15
 nodeenv==1.8.0
 numpy==1.24.4
