@@ -49,6 +49,7 @@ import streamlit as st
 from streamlit import config, errors
 from streamlit import logger as _logger
 from streamlit import string_util
+from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     import graphviz
@@ -654,6 +655,23 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         return it  # type: ignore[return-value]
     else:
         return list(it)
+
+
+def check_python_comparable(seq: Sequence) -> None:
+    """Check if the sequence elements support "python comparison".
+    That means that the equality operator (==) returns a boolean value.
+    Which is not True for e.g. numpy arrays and pandas series.
+    In case of empty sequences, the check not raise an exception."""
+    try:
+        bool(seq[0] == seq[0])
+    except LookupError:
+        pass
+    except ValueError:
+        raise StreamlitAPIException(
+            f"Options must be python comparable. Got **{type(seq[0]).__name__}**. \n\n"
+            "Please refactor your code, to use a comparable type, e.g. "
+            "using index numbers instead."
+        )
 
 
 def is_pandas_version_less_than(v: str) -> bool:

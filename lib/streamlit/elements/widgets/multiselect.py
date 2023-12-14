@@ -50,6 +50,7 @@ from streamlit.type_util import (
     LabelVisibility,
     OptionSequence,
     T,
+    check_python_comparable,
     ensure_indexable,
     is_iterable,
     is_type,
@@ -294,6 +295,7 @@ class MultiSelectMixin:
         check_session_state_rules(default_value=default, key=key)
 
         opt = ensure_indexable(options)
+        check_python_comparable(opt)
         maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
