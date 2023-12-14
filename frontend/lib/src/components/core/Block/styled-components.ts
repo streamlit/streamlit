@@ -77,6 +77,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: 1000,
     },
 
+    ":has(> .stPageLink)": {
+      marginTop: "-0.5rem",
+    },
+
     // We do not want the chat input to be faded out.
     // TODO: Reconsider this when we implement fixed-sized chat containers
     ...(isStale && elementType !== "chatInput" && elementType !== "skeleton"

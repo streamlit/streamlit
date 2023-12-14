@@ -58,7 +58,7 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
       borderRadius: theme.spacing.twoXS,
 
       paddingLeft: indent || center ? theme.spacing.threeXL : theme.spacing.sm,
-      paddingRight: theme.spacing.threeXL,
+      paddingRight: theme.spacing.sm,
       marginTop: theme.spacing.threeXS,
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
