@@ -680,6 +680,7 @@ export class App extends PureComponent<Props, State> {
     this.setState({ menuItems })
 
     if (showPageNavigation === this.state.hideSidebarNav) {
+      console.log("CHANGED >>>>>>> hideSidebarNav: ", !showPageNavigation)
       this.setState(() => ({
         hideSidebarNav: !showPageNavigation,
       }))
@@ -888,6 +889,8 @@ export class App extends PureComponent<Props, State> {
         window.history.pushState({}, "", pageUrl)
       }
     }
+
+    console.log(">>>>>>> App Session hideSidebarNav: ", config.hideSidebarNav)
 
     this.processThemeInput(themeInput)
     this.setState(
