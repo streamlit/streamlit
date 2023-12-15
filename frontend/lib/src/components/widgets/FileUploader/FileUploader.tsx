@@ -16,6 +16,7 @@
 
 import axios from "axios"
 import isEqual from "lodash/isEqual"
+import zip from "lodash/zip"
 import React from "react"
 import { FileRejection } from "react-dropzone"
 
@@ -247,7 +248,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           }
         }
 
-        _.zip(fileURLsArray, acceptedFiles).forEach(
+        zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
             this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
           }
