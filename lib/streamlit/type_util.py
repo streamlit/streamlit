@@ -660,11 +660,11 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
 def check_python_comparable(seq: Sequence) -> None:
     """Check if the sequence elements support "python comparison".
     That means that the equality operator (==) returns a boolean value.
-    Which is not True for e.g. numpy arrays and pandas series.
-    In case of empty sequences, the check not raise an exception."""
+    Which is not True for e.g. numpy arrays and pandas series."""
     try:
         bool(seq[0] == seq[0])
     except LookupError:
+        # In case of empty sequences, the check not raise an exception.
         pass
     except ValueError:
         raise StreamlitAPIException(
