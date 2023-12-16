@@ -657,7 +657,7 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         return list(it)
 
 
-def check_python_comparable(seq: Sequence) -> None:
+def check_python_comparable(seq: Sequence[Any]) -> None:
     """Check if the sequence elements support "python comparison".
     That means that the equality operator (==) returns a boolean value.
     Which is not True for e.g. numpy arrays and pandas series."""
