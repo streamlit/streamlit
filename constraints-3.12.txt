@@ -22,12 +22,12 @@ docutils==0.20.1
 execnet==2.0.2
 filelock==3.13.1
 fonttools==4.46.0
-frozenlist==1.4.0
+frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.40
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.92.0
+hypothesis==6.92.1
 identify==2.5.33
 idna==3.6
 importlib-metadata==6.11.0
