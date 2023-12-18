@@ -80,7 +80,7 @@ pre-commit==3.6.0
 protobuf==3.20.3
 psycopg2-binary==2.9.9
 py4j==0.10.9.7
-pyarrow==14.0.1
+pyarrow==14.0.2
 pycparser==2.21
 pydantic==1.10.13
 pydeck==0.8.1b0
