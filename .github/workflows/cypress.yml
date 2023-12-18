@@ -115,13 +115,13 @@ jobs:
             exit 1;
           fi
       - name: Store Videos
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cypress_videos
           path: frontend/cypress/videos
       - name: Store Snapshots
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cypress_snapshots
