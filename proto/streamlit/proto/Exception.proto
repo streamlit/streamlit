@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "ExceptionProto";
+
 // A python exception.
 //
 // NOTE: This proto type is used by some external services so needs to remain

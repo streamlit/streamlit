@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "LabelVisibilityMessageProto";
+
 message LabelVisibilityMessage {
   // We use separate LabelVisibilityMessage instead of just defining Enum and
   // use it in other widgets proto files due to protobuf js error, when just

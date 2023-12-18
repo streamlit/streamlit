@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "PageInfoProto";
+
 // Message used to update page metadata.
 message PageInfo {
   // The page's query string, if the user decided to set it.

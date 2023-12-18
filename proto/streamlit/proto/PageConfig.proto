@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "PageConfigProto";
+
 // Properties of the page that the app creator may configure.
 message PageConfig {
   string title = 1;

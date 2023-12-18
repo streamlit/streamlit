@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "SpinnerProto";
+
 message Spinner {
   // A message to display while executing that block.
   string text = 1;

@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "NamedDataSetProto";
+
 import "streamlit/proto/DataFrame.proto";
 
 // DEPRECATED: This proto message is deprecated and unsused.

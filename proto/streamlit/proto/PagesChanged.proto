@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "PagesChangedProto";
+
 import "streamlit/proto/AppPage.proto";
 
 // Message used to tell the client that the app's pages have changed.

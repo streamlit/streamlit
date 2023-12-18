@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "DeckGlJsonChartProto";
+
 message DeckGlJsonChart {
   // The json of the pydeck object (https://deckgl.readthedocs.io/en/latest/deck.html)
   string json = 1;

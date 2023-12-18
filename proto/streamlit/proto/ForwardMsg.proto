@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "ForwardMsgProto";
+
 import "streamlit/proto/Common.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/GitInfo.proto";

@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "RootContainerProto";
+
 // Constants for our three "RootContainers" - the top-level containers
 // that `st.foo` and `st.sidebar.foo` write to. Each value corresponds
 // to the first index in any `delta_path` that uses these containers.
