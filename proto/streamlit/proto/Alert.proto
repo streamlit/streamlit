@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "AlertProto";
+
 // NOTE: This proto type is used by some external services so needs to remain
 // relatively stable. While it isn't entirely set in stone, changing it
 // may require a good amount of effort so should be avoided if possible.

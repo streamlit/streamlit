@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "CommonProto";
+
 // Message types that are common to multiple protobufs.
 
 message StringArray {
