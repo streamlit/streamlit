@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import NoReturn
 
 import streamlit as st
@@ -92,53 +93,52 @@ def experimental_rerun() -> NoReturn:
 
 
 @gather_metrics("switch_page")
-def switch_page(page_path: str) -> NoReturn:
+def switch_page(page: str) -> NoReturn:
     """Switch the current programmatically page in a multi-page app.
 
-    When `st.switch_page()` is called with a page_path, the current page script is halted
+    When `st.switch_page()` is called with a page, the current page script is halted
     and the requested page script will be queued to run from the top.
 
     Parameters
     ----------
-    page_path: str
-        The label of the page to switch to, or the page's file path relative to the main script.
+    page: str
+        The file path, relative to the main script, of the page to switch to.
     """
 
-    if page_path.startswith("."):
-        requested_page_path = page_path.replace("./", "/")
-    else:
-        requested_page_path = page_path
-
-    # option to pass in the label as the page_path
-    requested_page_name = (
-        requested_page_path.lower().replace("_", " ").replace("-", " ")
-    )
-
     ctx = get_script_run_ctx()
+    main_script_path = ctx.main_script_path
+    main_script_directory = os.path.dirname(main_script_path)
 
+    query_string = ""
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
 
-    # TODO: Figure out best way to retrieve app's page data
-    # - streamlit.source_util.get_pages requires the main script path (used by streamlit extras)
-    # - is using the global _cached_pages hacky/problematic ?
+    if page.startswith("./"):
+        page = page[2:]
+    elif page.startswith("/"):
+        page = page[1:]
 
-    mpa_pages = source_util._cached_pages
-    page_data = mpa_pages.values()  # type: ignore[union-attr]
-    page_names = [page["page_name"].replace("_", " ") for page in page_data]
+    if page.startswith(main_script_directory + "/"):
+        requested_page = page
+    else:
+        requested_page = os.path.join(main_script_directory, page)
 
-    for page in page_data:
-        page_name = page["page_name"].lower().replace("_", " ")
-        path = page["script_path"]
-        if requested_page_path in path or requested_page_name == page_name:
+    all_app_pages = source_util.get_pages(main_script_path).values()  # type: ignore[union-attr]
+
+    for page_data in all_app_pages:
+        full_path = page_data["script_path"]
+        path_pieces = full_path.split("/")
+        main_directory_index = path_pieces.index(main_script_directory)
+        path_relative_to_main = "/".join(path_pieces[main_directory_index:])
+
+        if requested_page in path_relative_to_main:
             raise RerunException(
                 RerunData(
                     query_string=query_string,
-                    page_script_hash=page["page_script_hash"],
+                    page_script_hash=page_data["page_script_hash"],
                 )
             )
 
-    # TODO: Update warning message once page_path input options confirmed.
     raise StreamlitAPIException(
-        f"Could not find page_path: {page_path}.  Must be the file path relative to the main script, or one of the following page names: {', '.join(page_names)}."
+        f"Could not find page: '{page}'.  Must be the file path relative to the main script, from the directory: {main_script_directory}."
     )

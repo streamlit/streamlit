@@ -28,7 +28,6 @@ import {
   StyledNavLinkText,
   StyledNavLinkContainer,
 } from "./styled-components"
-import { el } from "date-fns/locale"
 
 export interface Props {
   disabled: boolean
@@ -87,7 +86,7 @@ function PageLink(props: Props): ReactElement {
             indent={element.indent}
             center={center}
             fluidWidth={element.useContainerWidth ? width : false}
-            href={element.pagePath}
+            href={element.page}
             onClick={e => {
               e.preventDefault()
               if (!disabled) {

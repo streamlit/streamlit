@@ -21,7 +21,7 @@ syntax = "proto3";
 
 message PageLink {
   string label = 2;
-  string page_path = 3;
+  string page = 3;
   string icon = 4;
   string active = 5;
   bool indent = 6;

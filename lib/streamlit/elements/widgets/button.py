@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import io
+import os
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
@@ -425,7 +426,7 @@ class ButtonMixin:
     @gather_metrics("page_link")
     def page_link(
         self,
-        page_path: str,
+        page: str,
         *,
         label: Optional[str] = None,
         icon: Optional[str] = None,
@@ -442,7 +443,7 @@ class ButtonMixin:
         """
 
         return self._page_link(
-            page_path=page_path,
+            page=page,
             label=label,
             icon=icon,
             active=active,
@@ -546,7 +547,7 @@ class ButtonMixin:
 
     def _page_link(
         self,
-        page_path: str,
+        page: str,
         *,  # keyword-only arguments:
         label: Optional[str] = None,
         icon: Optional[str] = None,
@@ -558,18 +559,21 @@ class ButtonMixin:
         use_container_width: bool = False,
     ) -> "DeltaGenerator":
 
-        if page_path.startswith("./"):
-            requested_page_path = page_path.replace("./", "/")
-        else:
-            requested_page_path = page_path
+        ctx = get_script_run_ctx()
+        main_script_path = ctx.main_script_path
+        main_script_directory = os.path.dirname(main_script_path)
 
-        # option to pass in the label as the page_path
-        requested_page_name = (
-            requested_page_path.lower().replace("_", " ").replace("-", " ")
-        )
+        if page.startswith("./"):
+            page = page[2:]
+        if page.startswith("/"):
+            page = page[1:]
+
+        if page.startswith(main_script_directory + "/"):
+            requested_page = page
+        else:
+            requested_page = os.path.join(main_script_directory, page)
 
         page_link_proto = PageLinkProto()
-        page_link_proto.page_path = page_path
         page_link_proto.active = str(active).lower()
         page_link_proto.indent = indent
         page_link_proto.disabled = disabled
@@ -587,32 +591,34 @@ class ButtonMixin:
                 )
             page_link_proto.align = align
 
-        # Handle retrieving the page_script_hash & page_path
-        mpa_pages = source_util._cached_pages
-        page_data = mpa_pages.values()  # type: ignore[union-attr]
-        page_names = [page["page_name"].replace("_", " ") for page in page_data]
-
-        for page in page_data:
-            page_name = page["page_name"].replace("_", " ").replace("-", " ")
-            path = page["script_path"]
-            if requested_page_path in path or requested_page_name == page_name.lower():
-                if label is None:
-                    page_link_proto.label = page_name
-                page_link_proto.page_script_hash = page["page_script_hash"]
-                page_link_proto.page_path = path
-                break
-
-        # TODO: Update warning message once page_path input options confirmed.
-        if page_link_proto.page_script_hash == "":
-            raise StreamlitAPIException(
-                f"Could not find page_path: {page_path}. Must be the file path relative to the main script, or one of the following page names: {', '.join(page_names)}."
-            )
-
         if icon is not None:
             page_link_proto.icon = icon
 
         if help is not None:
             page_link_proto.help = dedent(help)
+
+        # Handle retrieving the page_script_hash & page
+        all_app_pages = source_util.get_pages(main_script_path).values()  # type: ignore[union-attr]
+
+        for page_data in all_app_pages:
+            page_name = page_data["page_name"].replace("_", " ").replace("-", " ")
+
+            full_path = page_data["script_path"]
+            path_pieces = full_path.split("/")
+            main_directory_index = path_pieces.index(main_script_directory)
+            path_relative_to_main = "/".join(path_pieces[main_directory_index:])
+
+            if requested_page in path_relative_to_main:
+                if label is None:
+                    page_link_proto.label = page_name
+                page_link_proto.page_script_hash = page_data["page_script_hash"]
+                page_link_proto.page = full_path
+                break
+
+        if page_link_proto.page_script_hash == "":
+            raise StreamlitAPIException(
+                f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {main_script_directory}."
+            )
 
         return self.dg._enqueue("page_link", page_link_proto)
 

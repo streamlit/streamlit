@@ -25,6 +25,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Command
+from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -62,6 +63,7 @@ class ScriptRunContext:
     query_string: str
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
+    main_script_path: str
     page_script_hash: str
     user_info: UserInfo
 
