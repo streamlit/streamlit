@@ -1964,28 +1964,28 @@
     minimatch "^3.1.2"
     strip-json-comments "^3.1.1"
 
-"@glideapps/glide-data-grid-cells@5.99.9-beta3":
-  version "5.99.9-beta3"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-5.99.9-beta3.tgz#3b5f84ff8568e49f9e30d83a999cf618ea74ae76"
-  integrity sha512-SoA/SAGJmB4QewhqeFK/1VmeeFUbn+BI+KoAmoIqyabR511IgpvcNW+7pZRmTfbcPTLhRTvQ+k8xNAdQv5CVMA==
+"@glideapps/glide-data-grid-cells@5.99.9-beta8":
+  version "5.99.9-beta8"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-5.99.9-beta8.tgz#6535827a422d6adf565577d3ee24cfbbf4699d49"
+  integrity sha512-cToZFDBnvTwEtQl70AQ0iyh2GujXClUGuk+94XmW6eS75XNJtSaRr3q5FQS94B3WnsKomcpHjTpvZosaMNxSyQ==
   dependencies:
-    "@glideapps/glide-data-grid" "5.99.9-beta3"
+    "@glideapps/glide-data-grid" "5.99.9-beta8"
     "@linaria/react" "^4.5.3"
     "@toast-ui/editor" "3.1.10"
     "@toast-ui/react-editor" "3.1.10"
     react-select "^5.2.2"
 
-"@glideapps/glide-data-grid-source@5.99.9-beta3":
-  version "5.99.9-beta3"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.99.9-beta3.tgz#12329ff35e6d12cf44a047bc2c93d4c9f09eb557"
-  integrity sha512-y6mgnoLdbuxYXKRfeq38xiavuXtvCVZpYn0zOCLl01AJKfiFcAUi3WIqFnlaxnveCuCUV3tS14QfhNeK4sQkAw==
+"@glideapps/glide-data-grid-source@5.99.9-beta8":
+  version "5.99.9-beta8"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.99.9-beta8.tgz#09a725cbe30d355efa6b5d65616e063b8471721c"
+  integrity sha512-1TyHFSkka9QnQWcuOeTb6SYEhBqoXYAP2MvCSFxwyEeUYZnyLHkCTlEqqFhbu9gBmuKHa3vpk1KiqNp64ixVFw==
   dependencies:
-    "@glideapps/glide-data-grid" "5.99.9-beta3"
+    "@glideapps/glide-data-grid" "5.99.9-beta8"
 
-"@glideapps/glide-data-grid@5.99.9-beta3":
-  version "5.99.9-beta3"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.99.9-beta3.tgz#831fdcf97d30bf611f70804dd3dbf5b4ddcebdc4"
-  integrity sha512-hcPuDdswSFH/e4uVG4qlB45yu50IzGyVCc14HatVLie60lslgjrUutgNNuwZgcxm1G2PbXxHvP5rqzt1greTzQ==
+"@glideapps/glide-data-grid@5.99.9-beta8":
+  version "5.99.9-beta8"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.99.9-beta8.tgz#0c11944bfbb9bee834eb3e82ae81bdeaf234c875"
+  integrity sha512-m0dUfRyz3tIIq48D4TbaqT+02/cUYGuYjzOwpOz+UeyoHKJqBrdpiSg1voJd+MCtS2kBUPFt3arZVc4+FXz7gQ==
   dependencies:
     "@linaria/react" "^4.5.3"
     canvas-hypertxt "^1.0.3"
