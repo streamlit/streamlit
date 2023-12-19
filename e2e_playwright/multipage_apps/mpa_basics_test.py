@@ -14,7 +14,11 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 
 
 def test_loads_main_script_on_initial_page_load(app: Page):
@@ -32,6 +36,7 @@ def test_renders_sidebar_nav_correctly(
 def test_can_switch_between_pages_by_clicking_on_sidebar_links(app: Page):
     """Test that we can switch between pages by clicking on sidebar links."""
     app.get_by_test_id("stSidebarNav").locator("a").nth(1).click()
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
 
 
@@ -48,25 +53,32 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     slider = app.locator('.stSlider [role="slider"]')
     slider.click()
     slider.press("ArrowRight")
+    wait_for_app_run(app)
 
     app.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    wait_for_app_run(app)
+
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 3")
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
 
     slider.click()
     slider.press("ArrowRight")
+    wait_for_app_run(app)
+
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 1")
 
 
 def test_can_switch_to_the_first_page_with_a_duplicate_name(app: Page):
     """Test that we can switch to the first page with a duplicate name."""
     app.get_by_test_id("stSidebarNav").locator("a").nth(3).click()
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 4")
 
 
 def test_can_switch_to_the_second_page_with_a_duplicate_name(app: Page):
     """Test that we can switch to the second page with a duplicate name."""
     app.get_by_test_id("stSidebarNav").locator("a").nth(4).click()
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 5")
 
 
