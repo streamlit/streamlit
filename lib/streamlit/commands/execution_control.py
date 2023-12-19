@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import NoReturn
 
 import streamlit as st
+from streamlit import source_util
 from streamlit.deprecation_util import make_deprecated_name_warning
+from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
+from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
 
 _LOGGER = get_logger(__name__)
 
@@ -87,3 +90,48 @@ def experimental_rerun() -> NoReturn:
     # be seen.
     _LOGGER.warning(msg)
     rerun()
+
+
+@gather_metrics("switch_page")
+def switch_page(page: str) -> NoReturn:
+    """Switch the current programmatically page in a multi-page app.
+    When `st.switch_page()` is called with a page, the current page script is halted
+    and the requested page script will be queued to run from the top.
+    Parameters
+    ----------
+    page: str
+        The file path, relative to the main script, of the page to switch to.
+    """
+
+    ctx = get_script_run_ctx()
+
+    query_string = ""
+    if ctx and ctx.script_requests:
+        query_string = ctx.query_string
+
+    ctx_main_script = ctx.main_script_path
+    main_script_path = os.path.join(os.getcwd(), ctx_main_script)
+    main_script_directory = os.path.dirname(main_script_path)
+
+    if page.startswith("./"):
+        page = page[2:]
+    elif page.startswith("/"):
+        page = page[1:]
+
+    requested_page = os.path.join(main_script_directory, page)
+    all_app_pages = source_util.get_pages(ctx_main_script).values()  # type: ignore[union-attr]
+
+    for page_data in all_app_pages:
+        full_path = page_data["script_path"]
+
+        if requested_page == full_path:
+            raise RerunException(
+                RerunData(
+                    query_string=query_string,
+                    page_script_hash=page_data["page_script_hash"],
+                )
+            )
+
+    raise StreamlitAPIException(
+        f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.dirname(ctx_main_script)}."
+    )

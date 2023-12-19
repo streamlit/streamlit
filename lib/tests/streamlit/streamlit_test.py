@@ -137,7 +137,7 @@ class StreamlitTest(unittest.TestCase):
                 "set_page_config",
                 "stop",
                 "rerun",
-                "cache",
+                "switch_page" "cache",
                 "secrets",
                 "session_state",
                 "cache_data",
