@@ -134,5 +134,5 @@ def switch_page(page: str) -> NoReturn:
             )
 
     raise StreamlitAPIException(
-        f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.dirname(ctx_main_script)}."
+        f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
     )
