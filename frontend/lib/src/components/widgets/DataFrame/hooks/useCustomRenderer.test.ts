@@ -60,7 +60,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
 describe("useCustomRenderer hook", () => {
   it("returns correct initial state", () => {
     const { result } = renderHook(() => {
-      return useCustomRenderer(MOCK_COLUMNS, false)
+      return useCustomRenderer(MOCK_COLUMNS)
     })
 
     // Initial state assertions
