@@ -128,3 +128,23 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
+
+def test_switch_page(app: Page):
+    """Test that we can switch between pages by triggering st.switch_page."""
+
+    # Click the button to trigger st.switch_page using relative path
+    app.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+
+    # Check that we are on the correct page
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    # st.switch_page using relative path & leading /
+    app.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Page 6")
+
+    # st.switch_page using relative path & leading ./
+    app.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")

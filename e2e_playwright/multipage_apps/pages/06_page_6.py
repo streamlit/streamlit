@@ -15,3 +15,8 @@
 import streamlit as st
 
 st.header("Page 6")
+
+
+home = st.button("`./streamlit_app.py`")
+if home:
+    st.switch_page("./streamlit_app.py")
