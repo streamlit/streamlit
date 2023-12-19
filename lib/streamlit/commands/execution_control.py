@@ -106,10 +106,11 @@ def switch_page(page: str) -> NoReturn:
     ctx = get_script_run_ctx()
 
     query_string = ""
-    if ctx and ctx.script_requests:
+    ctx_main_script = ""
+    if ctx:
         query_string = ctx.query_string
+        ctx_main_script = ctx.main_script_path
 
-    ctx_main_script = ctx.main_script_path
     main_script_path = os.path.join(os.getcwd(), ctx_main_script)
     main_script_directory = os.path.dirname(main_script_path)
 
@@ -119,7 +120,7 @@ def switch_page(page: str) -> NoReturn:
         page = page[1:]
 
     requested_page = os.path.join(main_script_directory, page)
-    all_app_pages = source_util.get_pages(ctx_main_script).values()  # type: ignore[union-attr]
+    all_app_pages = source_util.get_pages(ctx_main_script).values()
 
     for page_data in all_app_pages:
         full_path = page_data["script_path"]
