@@ -520,7 +520,7 @@ _create_option(
 )
 
 _create_option(
-    "client.showPageNavigation",
+    "client.showSidebarNavigation",
     description="""Controls whether the default sidebar page navigation in a multi-page app is displayed.""",
     default_val=True,
     type_=bool,
@@ -910,7 +910,7 @@ _create_option(
     default_val=False,
     type_=bool,
     deprecated=True,
-    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showPageNavigation. It will be removed in a future version.",
+    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
     expiration_date="2024-01-20",
     visibility="hidden",
 )

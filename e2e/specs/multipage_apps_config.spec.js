@@ -15,7 +15,7 @@
  */
 
 describe("multipage apps - showSidebarNav", () => {
-    it("does not render the SidebarNav when client.showPageNavigation=false", () => {
+    it("does not render the SidebarNav when client.showSidebarNavigation=false", () => {
       cy.loadApp("http://localhost:3000/");
       cy.get(".appview-container section").should("have.length", 1);
     });
