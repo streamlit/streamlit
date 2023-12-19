@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "ImageProto";
+
 // An image which can be displayed on the screen.
 message Image {
   string url = 3;

@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "PlotlyChartProto";
+
 message PlotlyChart {
   oneof chart {
     // If the user chose to send the plot to Plotly's server, then this is the

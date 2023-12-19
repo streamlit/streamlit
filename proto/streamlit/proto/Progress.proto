@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "ProgressProto";
+
 message Progress {
   uint32 value = 1;
   string text = 2;

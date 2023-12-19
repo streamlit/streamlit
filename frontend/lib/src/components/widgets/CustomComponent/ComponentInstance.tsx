@@ -464,6 +464,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           src={src}
           width={this.props.width}
           height={this.frameHeight}
+          style={{ colorScheme: "light dark" }}
           scrolling="no"
           sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
           title={componentName}
