@@ -32,6 +32,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -54,6 +55,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -80,6 +82,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -105,6 +108,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
