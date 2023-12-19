@@ -94,7 +94,7 @@ class PollingPathWatcher:
         modification_time = util.path_modification_time(
             self._path, self._allow_nonexistent
         )
-        if modification_time <= self._modification_time:
+        if modification_time != 0.0 and modification_time <= self._modification_time:
             self._schedule()
             return
 

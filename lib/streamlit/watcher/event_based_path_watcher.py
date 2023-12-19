@@ -345,7 +345,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         modification_time = util.path_modification_time(
             changed_path, changed_path_info.allow_nonexistent
         )
-        if modification_time == changed_path_info.modification_time:
+
+        if (
+            modification_time != 0.0
+            and modification_time == changed_path_info.modification_time
+        ):
             LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
             return
 
