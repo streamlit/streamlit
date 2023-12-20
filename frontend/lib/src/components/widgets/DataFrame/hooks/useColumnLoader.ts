@@ -15,7 +15,7 @@
  */
 import React from "react"
 
-import { merge } from "lodash"
+import merge from "lodash/merge"
 
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"

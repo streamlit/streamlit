@@ -15,7 +15,6 @@
  */
 
 import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { isString } from "lodash"
 
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
@@ -58,7 +57,9 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
               cellData.map((x: any) =>
                 // Replace commas with spaces since commas are used to
                 // separate the list items.
-                isString(x) && x.includes(",") ? x.replace(/,/g, " ") : x
+                typeof x === "string" && x.includes(",")
+                  ? x.replace(/,/g, " ")
+                  : x
               )
             ),
       } as BubbleCell

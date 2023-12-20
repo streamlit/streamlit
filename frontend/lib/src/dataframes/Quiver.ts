@@ -30,7 +30,10 @@ import {
   util,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip, zip, trimEnd } from "lodash"
+import range from "lodash/range"
+import unzip from "lodash/unzip"
+import zip from "lodash/zip"
+import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
 import numbro from "numbro"
 

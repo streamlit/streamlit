@@ -15,7 +15,8 @@
  */
 
 import axios from "axios"
-import _ from "lodash"
+import isEqual from "lodash/isEqual"
+import zip from "lodash/zip"
 import React from "react"
 import { FileRejection } from "react-dropzone"
 
@@ -154,7 +155,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
+    if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
         fromUi: true,
       })
@@ -247,7 +248,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           }
         }
 
-        _.zip(fileURLsArray, acceptedFiles).forEach(
+        zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
             this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
           }

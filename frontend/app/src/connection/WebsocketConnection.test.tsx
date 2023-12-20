@@ -16,7 +16,7 @@
 
 import axios from "axios"
 import { WS } from "jest-websocket-mock"
-import { zip } from "lodash"
+import zip from "lodash/zip"
 import React, { Fragment } from "react"
 
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"

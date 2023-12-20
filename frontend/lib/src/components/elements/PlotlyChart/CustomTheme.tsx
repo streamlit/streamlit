@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { merge } from "lodash"
+import merge from "lodash/merge"
 
 import {
   getDecreasingRed,
