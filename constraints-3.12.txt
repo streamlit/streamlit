@@ -14,7 +14,7 @@ charset-normalizer==3.3.2
 chart-studio==1.1.0
 click==8.1.7
 contourpy==1.2.0
-coverage==7.3.3
+coverage==7.3.4
 cryptography==41.0.7
 cycler==0.12.1
 distlib==0.3.8

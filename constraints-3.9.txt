@@ -15,7 +15,7 @@ charset-normalizer==3.3.2
 chart-studio==1.1.0
 click==8.1.7
 contourpy==1.2.0
-coverage==7.3.3
+coverage==7.3.4
 cryptography==41.0.7
 cx-Oracle==7.3.0
 cycler==0.12.1
@@ -46,9 +46,9 @@ jsonschema==4.20.0
 jsonschema-specifications==2023.11.2
 keyring==24.3.0
 kiwisolver==1.4.5
-langchain==0.0.351
-langchain-community==0.0.4
-langchain-core==0.1.1
+langchain==0.0.352
+langchain-community==0.0.5
+langchain-core==0.1.2
 langsmith==0.0.72
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
