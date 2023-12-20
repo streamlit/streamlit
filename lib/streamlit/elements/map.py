@@ -124,8 +124,9 @@ class MapMixin:
         Parameters
         ----------
         data : pandas.DataFrame, pandas.Styler, pyarrow.Table, pyspark.sql.DataFrame,\
-             snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table,\
-             Iterable, dict, or None
+            snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table,\
+            Iterable, dict, or None
+
             The data to be plotted.
 
         latitude : str or None
