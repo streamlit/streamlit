@@ -38,6 +38,10 @@ const CSV_ESCAPE_CHAR = '"'
 const CSV_ROW_DELIMITER = "\n"
 // Used to indicate Unicode encoding of a text file (for excel compatibility)
 const CSV_UTF8_BOM = "\ufeff"
+// Regex to check if a value contains special characters that need to be escaped
+const CSV_SPECIAL_CHARS_REGEX = new RegExp(
+  `[${[CSV_DELIMITER, CSV_QUOTE_CHAR, CSV_ROW_DELIMITER].join("")}]`
+)
 
 export function toCsvRow(rowValues: any[]): string {
   return (
@@ -58,8 +62,7 @@ function escapeValue(value: any): string {
   const strValue = toSafeString(value)
 
   // Special chars need to be escaped:
-  const specialChars = [CSV_DELIMITER, CSV_QUOTE_CHAR, CSV_ROW_DELIMITER]
-  if (new RegExp(`[${specialChars.join("")}]`).test(strValue)) {
+  if (CSV_SPECIAL_CHARS_REGEX.test(strValue)) {
     // Add quotes around the value:
     return `${CSV_QUOTE_CHAR}${strValue.replace(
       // Escape all quote chars if inside a quoted string:

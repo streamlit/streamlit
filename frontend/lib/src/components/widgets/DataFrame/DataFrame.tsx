@@ -385,15 +385,8 @@ function DataFrame({
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
-    if (resizableContainerRef.current) {
-      // TODO(lukasmasuch): This is only a hacky and temporary solution until
-      // glide-data-grid provides a better way to determine this:
-      // https://github.com/glideapps/glide-data-grid/issues/784
-
-      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-      const scrollAreaBounds = resizableContainerRef.current
-        ?.querySelector(".dvn-stack")
-        ?.getBoundingClientRect()
+    if (resizableContainerRef.current && dataEditorRef.current) {
+      const scrollAreaBounds = dataEditorRef.current?.getBounds()
       if (scrollAreaBounds) {
         setHasVerticalScroll(
           scrollAreaBounds.height > resizableContainerRef.current.clientHeight
@@ -636,8 +629,9 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            // Prevent the cell border from being cut off at the bottom and right:
-            scrollbarWidthOverride: 1,
+            // We use overflow scrollbars, so we need to deactivate the native
+            // scrollbar override:
+            scrollbarWidthOverride: 0,
             ...(hasCustomizedScrollbars && {
               // Add negative padding to the right and bottom to allow the scrollbars in
               // webkit to overlay the table:
