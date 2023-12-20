@@ -217,9 +217,14 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const observer = useMemo(
     () =>
       new ResizeObserver(([entry]) => {
-        // We need to determine the available width here to be able to set
-        // an explicit width for the `StyledVerticalBlock`.
-        setWidth(entry.target.getBoundingClientRect().width)
+        // Since the setWidth will perform changes to the DOM,
+        // we need wrap it in a requestAnimationFrame to avoid this error:
+        // ResizeObserver loop completed with undelivered notifications.
+        window.requestAnimationFrame(() => {
+          // We need to determine the available width here to be able to set
+          // an explicit width for the `StyledVerticalBlock`.
+          setWidth(entry.target.getBoundingClientRect().width)
+        })
       }),
     [setWidth]
   )
