@@ -48,6 +48,7 @@ import {
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
   Metric as MetricProto,
+  PageLink as PageLinkProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Text as TextProto,
@@ -83,6 +84,7 @@ import Maybe from "@streamlit/lib/src/components/core/Maybe"
 import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import {
   BaseBlockProps,
@@ -138,6 +140,10 @@ const ImageList = React.lazy(
 
 const LinkButton = React.lazy(
   () => import("@streamlit/lib/src/components/elements/LinkButton")
+)
+
+const PageLink = React.lazy(
+  () => import("@streamlit/lib/src/components/elements/PageLink")
 )
 
 const PlotlyChart = React.lazy(
@@ -359,6 +365,18 @@ const RawElementNodeRenderer = (
           element={node.element.heading as HeadingProto}
         />
       )
+
+    case "pageLink": {
+      const pageLinkProto = node.element.pageLink as PageLinkProto
+      widgetProps.disabled = widgetProps.disabled || pageLinkProto.disabled
+      return (
+        <PageLink
+          element={pageLinkProto}
+          width={width}
+          disabled={widgetProps.disabled}
+        />
+      )
+    }
 
     case "plotlyChart":
       return (
@@ -708,6 +726,7 @@ const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
   const { isFullScreen } = React.useContext(LibContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -739,6 +758,7 @@ const ElementNodeRenderer = (
         className={"element-container"}
         data-testid={"element-container"}
         elementType={elementType}
+        isInSidebar={isInSidebar}
       >
         <ErrorBoundary width={width}>
           <Suspense fallback={<Skeleton />}>
