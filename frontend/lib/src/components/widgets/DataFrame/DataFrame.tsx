@@ -407,6 +407,11 @@ function DataFrame({
     }
   }, [resizableSize, numRows, glideColumns])
 
+  React.useEffect(() => {
+    // Clear cell selections if it the fullscreen mode changes
+    clearCellSelection()
+  }, [isFullScreen])
+
   return (
     <StyledResizableContainer
       data-testid="stDataFrame"
