@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -123,9 +123,10 @@ class MapMixin:
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray,\
-            pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame,\
-            snowflake.snowpark.table.Table, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, pyspark.sql.DataFrame,\
+            snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table,\
+            Iterable, dict, or None
+
             The data to be plotted.
 
         latitude : str or None

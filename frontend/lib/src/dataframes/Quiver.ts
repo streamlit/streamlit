@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,10 @@ import {
   util,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip, zip, trimEnd } from "lodash"
+import range from "lodash/range"
+import unzip from "lodash/unzip"
+import zip from "lodash/zip"
+import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
 import numbro from "numbro"
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ This file is automatically run by pytest before tests are executed.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shlex
@@ -122,6 +123,15 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
     return test_module.__file__.replace("_test.py", ".py")
 
 
+def hash_to_range(
+    text: str,
+    min: int = 10000,
+    max: int = 65535,
+) -> int:
+    sha256_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return min + (int(sha256_hash, 16) % (max - min + 1))
+
+
 def is_port_available(port: int, host: str) -> bool:
     """Check if a port is available on the given host."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -217,8 +227,14 @@ def wait_for_app_loaded(page: Page):
 
 
 @pytest.fixture(scope="module")
-def app_port() -> int:
+def app_port(worker_id: str) -> int:
     """Fixture that returns an available port on localhost."""
+    if worker_id and worker_id != "master":
+        # This is run with xdist, we try to get a port by hashing the worker ID
+        port = hash_to_range(worker_id)
+        if is_port_available(port, "localhost"):
+            return port
+    # Find a random available port:
     return find_available_port()
 
 

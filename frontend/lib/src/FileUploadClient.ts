@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 import { CancelToken } from "axios"
-import _ from "lodash"
+import isEqual from "lodash/isEqual"
 import { v4 as uuidv4 } from "uuid"
 
 import { IFileURLs, IFileURLsResponse } from "@streamlit/lib/src/proto"
@@ -207,7 +207,7 @@ export class FileUploadClient {
     }
 
     const newWidgetIds = this.getFormIdSet()
-    if (!_.isEqual(newWidgetIds, prevWidgetIds)) {
+    if (!isEqual(newWidgetIds, prevWidgetIds)) {
       this.pendingFormUploadsChanged(newWidgetIds)
     }
   }
