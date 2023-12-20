@@ -31,7 +31,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     kind: GridCellKind.Image,
     data: [],
     displayData: [],
-    allowAdd: false,
+    readonly: true,
     allowOverlay: true,
     contentAlign: props.contentAlignment || "center",
     style: props.isIndex ? "faded" : "normal",
