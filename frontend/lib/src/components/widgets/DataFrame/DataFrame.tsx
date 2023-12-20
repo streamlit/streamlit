@@ -555,7 +555,7 @@ function DataFrame({
           rowHeight={ROW_HEIGHT}
           headerHeight={ROW_HEIGHT}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
-          onColumnResize={onColumnResize}
+          onColumnResize={isTouchDevice ? undefined : onColumnResize}
           // Freeze all index columns:
           freezeColumns={freezeColumns}
           smoothScrollX={true}
