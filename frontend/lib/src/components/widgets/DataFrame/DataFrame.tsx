@@ -561,20 +561,13 @@ function DataFrame({
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:
-          verticalBorder={(col: number) =>
-            // Show no border for last column in certain situations
-            // This is required to prevent the cell selection border to not be cut off
-            !(
-              col >= columns.length &&
-              (element.useContainerWidth || resizableSize.width === "100%")
-            )
-          }
+          verticalBorder={true}
           // Activate copy to clipboard functionality:
           getCellsForSelection={true}
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={isTouchDevice ? "none" : "rect"}
+          rangeSelect={isTouchDevice ? "cell" : "rect"}
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable tooltips on hover of a cell or column header:
