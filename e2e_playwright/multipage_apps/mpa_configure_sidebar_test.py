@@ -25,6 +25,8 @@ def configure_hide_sidebar_nav():
     # We need to do this in a package scope fixture to ensure that its applied
     # before the app server is started.
     os.environ["STREAMLIT_UI_HIDE_SIDEBAR_NAV"] = "True"
+    yield
+    del os.environ["STREAMLIT_UI_HIDE_SIDEBAR_NAV"]
 
 
 def test_hides_sidebar_nav(app: Page, configure_hide_sidebar_nav):

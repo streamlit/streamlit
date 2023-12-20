@@ -53,10 +53,10 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     slider = app.locator('.stSlider [role="slider"]')
     slider.click()
     slider.press("ArrowRight")
-    wait_for_app_run(app)
+    wait_for_app_run(app, wait_delay=500)
 
     app.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
-    wait_for_app_run(app)
+    wait_for_app_run(app, wait_delay=1000)
 
     expect(app.get_by_test_id("stHeading")).to_contain_text("Page 3")
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
