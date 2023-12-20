@@ -346,6 +346,8 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             changed_path, changed_path_info.allow_nonexistent
         )
 
+        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+        # modification_time is always 0.0 because of file system limitations.
         if (
             modification_time != 0.0
             and modification_time == changed_path_info.modification_time
