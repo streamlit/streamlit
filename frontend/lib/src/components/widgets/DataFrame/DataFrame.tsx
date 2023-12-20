@@ -386,7 +386,16 @@ function DataFrame({
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
     if (resizableContainerRef.current && dataEditorRef.current) {
-      const scrollAreaBounds = dataEditorRef.current?.getBounds()
+      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+      const scrollAreaBounds = resizableContainerRef.current
+        ?.querySelector(".dvn-stack")
+        ?.getBoundingClientRect()
+
+      // We might also be able to use the following as an alternative,
+      // but it seems to cause "Maximum update depth exceeded" when scrollbars
+      // are activated or deactivated.
+      // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+
       if (scrollAreaBounds) {
         setHasVerticalScroll(
           scrollAreaBounds.height > resizableContainerRef.current.clientHeight
@@ -534,7 +543,7 @@ function DataFrame({
             setResizableSize({
               width: resizableRef.current.size.width,
               height:
-                // Add an additional pixel if it is stretched to full width
+                // Add additional pixels if it is stretched to full width
                 // to allow the full cell border to be visible
                 maxHeight - resizableRef.current.size.height ===
                 BORDER_THRESHOLD
