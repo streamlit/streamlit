@@ -52,11 +52,12 @@ export interface StyledElementContainerProps {
   isStale: boolean
   width: number
   elementType: string
+  isInSidebar: boolean
 }
 
 const GLOBAL_ELEMENTS = ["balloons", "snow", "chatInput"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
-  ({ theme, isStale, width, elementType }) => ({
+  ({ theme, isStale, width, elementType, isInSidebar }) => ({
     width,
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
@@ -76,6 +77,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       marginBottom: "-1rem",
       zIndex: 1000,
     },
+
+    // TODO: Confirm with design (pinch margin only in sidebar?)
+    ":has(> .stPageLink)": {
+      marginTop: "-0.5rem",
+    },
+
+    // ":has(> .stPageLink)": {
+    //   marginTop: isInSidebar ? "-0.5rem" : "inherit",
+    // },
 
     // We do not want the chat input to be faded out.
     // TODO: Reconsider this when we implement fixed-sized chat containers

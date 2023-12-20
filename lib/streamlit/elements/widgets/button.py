@@ -13,19 +13,21 @@
 # limitations under the License.
 
 import io
+import os
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
 
 from typing_extensions import Final, Literal
 
-from streamlit import runtime
+from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
+from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
@@ -421,6 +423,30 @@ class ButtonMixin:
             use_container_width=use_container_width,
         )
 
+    @gather_metrics("page_link")
+    def page_link(
+        self,
+        page: str,
+        *,
+        label: Optional[str] = None,
+        icon: Optional[str] = None,
+        help: Optional[str] = None,
+        disabled: bool = False,
+        use_container_width: Optional[bool] = None,
+    ) -> "DeltaGenerator":
+        """Display a link to another page in a multi-page app.
+        When clicked, the page will be switched to the specified page.
+        """
+
+        return self._page_link(
+            page=page,
+            label=label,
+            icon=icon,
+            help=help,
+            disabled=disabled,
+            use_container_width=use_container_width,
+        )
+
     def _download_button(
         self,
         label: str,
@@ -511,6 +537,66 @@ class ButtonMixin:
             link_button_proto.help = dedent(help)
 
         return self.dg._enqueue("link_button", link_button_proto)
+
+    def _page_link(
+        self,
+        page: str,
+        *,  # keyword-only arguments:
+        label: Optional[str] = None,
+        icon: Optional[str] = None,
+        help: Optional[str] = None,
+        disabled: bool = False,
+        use_container_width: Optional[bool] = None,
+    ) -> "DeltaGenerator":
+        page_link_proto = PageLinkProto()
+        page_link_proto.disabled = disabled
+
+        if label is not None:
+            page_link_proto.label = label
+
+        if icon is not None:
+            page_link_proto.icon = icon
+
+        if help is not None:
+            page_link_proto.help = dedent(help)
+
+        if use_container_width is not None:
+            page_link_proto.use_container_width = str(use_container_width)
+
+        ctx = get_script_run_ctx()
+        ctx_main_script = ""
+        if ctx:
+            ctx.query_string
+            ctx_main_script = ctx.main_script_path
+
+        main_script_path = os.path.join(os.getcwd(), ctx_main_script)
+        main_script_directory = os.path.dirname(main_script_path)
+
+        if page.startswith("./"):
+            page = page[2:]
+        elif page.startswith("/"):
+            page = page[1:]
+
+        requested_page = os.path.join(main_script_directory, page)
+        all_app_pages = source_util.get_pages(ctx_main_script).values()
+
+        # Handle retrieving the page_script_hash & page
+        for page_data in all_app_pages:
+            full_path = page_data["script_path"]
+            page_name = page_data["page_name"].replace("_", " ").replace("-", " ")
+            if requested_page == full_path:
+                if label is None:
+                    page_link_proto.label = page_name
+                page_link_proto.page_script_hash = page_data["page_script_hash"]
+                page_link_proto.page = full_path
+                break
+
+        if page_link_proto.page_script_hash == "":
+            raise StreamlitAPIException(
+                f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
+            )
+
+        return self.dg._enqueue("page_link", page_link_proto)
 
     def _button(
         self,

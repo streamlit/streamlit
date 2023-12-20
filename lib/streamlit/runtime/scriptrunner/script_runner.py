@@ -271,6 +271,7 @@ class ScriptRunner:
             query_string="",
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
+            main_script_path=self._main_script_path,
             page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
