@@ -98,7 +98,7 @@ class PlotlyMixin:
 
         Parameters
         ----------
-        figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
+        figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,\
             dict/list of plotly.graph_objs.Figure/Data
 
             See https://plot.ly/python/ for examples of graph descriptions.
