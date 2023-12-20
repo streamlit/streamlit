@@ -23,7 +23,8 @@ import {
   GridColumn,
   BaseGridCell,
 } from "@glideapps/glide-data-grid"
-import { toString, merge, isArray } from "lodash"
+import toString from "lodash/toString"
+import merge from "lodash/merge"
 import numbro from "numbro"
 import { sprintf } from "sprintf-js"
 import moment, { Moment } from "moment"
@@ -303,7 +304,7 @@ export function toSafeArray(data: any): any[] {
         typeof value === "bigint" ? Number(value) : value
       )
     )
-    if (!isArray(parsedData)) {
+    if (!Array.isArray(parsedData)) {
       return [toSafeString(parsedData)]
     }
 
@@ -387,7 +388,7 @@ export function toSafeNumber(value: any): number | null {
     return null
   }
 
-  if (isArray(value)) {
+  if (Array.isArray(value)) {
     return NaN
   }
 

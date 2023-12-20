@@ -20,7 +20,7 @@ import { ChevronDown } from "baseui/icon"
 import { Select as UISelect, OnChangeParams, Option } from "baseui/select"
 import { withTheme } from "@emotion/react"
 import { hasMatch, score } from "fzy.js"
-import _ from "lodash"
+import sortBy from "lodash/sortBy"
 
 import VirtualDropdown from "@streamlit/lib/src/components/shared/Dropdown/VirtualDropdown"
 import {
@@ -80,11 +80,12 @@ export function fuzzyFilterSelectOptions(
     return options
   }
 
-  return _(options)
-    .filter((opt: SelectOption) => hasMatch(pattern, opt.label))
-    .sortBy((opt: SelectOption) => score(pattern, opt.label))
-    .reverse()
-    .value()
+  const filteredOptions = options.filter((opt: SelectOption) =>
+    hasMatch(pattern, opt.label)
+  )
+  return sortBy(filteredOptions, (opt: SelectOption) =>
+    score(pattern, opt.label)
+  ).reverse()
 }
 
 export class Selectbox extends React.PureComponent<Props, State> {

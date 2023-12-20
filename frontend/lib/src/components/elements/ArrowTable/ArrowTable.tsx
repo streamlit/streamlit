@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { range } from "lodash"
+import range from "lodash/range"
 import React, { ReactElement } from "react"
 
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"

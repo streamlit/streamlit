@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { pick } from "lodash"
+import pick from "lodash/pick"
 import { StyleProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"

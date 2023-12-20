@@ -30,7 +30,8 @@ import {
   Components,
   ReactMarkdownProps,
 } from "react-markdown/lib/ast-to-react"
-import { once, omit } from "lodash"
+import once from "lodash/once"
+import omit from "lodash/omit"
 import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"

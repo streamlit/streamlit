@@ -15,7 +15,7 @@
  */
 
 import { CancelToken } from "axios"
-import _ from "lodash"
+import isEqual from "lodash/isEqual"
 import { v4 as uuidv4 } from "uuid"
 
 import { IFileURLs, IFileURLsResponse } from "@streamlit/lib/src/proto"
@@ -207,7 +207,7 @@ export class FileUploadClient {
     }
 
     const newWidgetIds = this.getFormIdSet()
-    if (!_.isEqual(newWidgetIds, prevWidgetIds)) {
+    if (!isEqual(newWidgetIds, prevWidgetIds)) {
       this.pendingFormUploadsChanged(newWidgetIds)
     }
   }
