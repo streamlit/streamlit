@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,8 @@ import {
   Components,
   ReactMarkdownProps,
 } from "react-markdown/lib/ast-to-react"
-import { once, omit } from "lodash"
+import once from "lodash/once"
+import omit from "lodash/omit"
 import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"

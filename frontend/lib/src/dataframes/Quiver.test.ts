@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 import { Field, Utf8, vectorFromArray } from "apache-arrow"
-import { cloneDeep } from "lodash"
+import cloneDeep from "lodash/cloneDeep"
 
 import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {

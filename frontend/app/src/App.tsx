@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,8 @@ import {
   LibConfig,
   AppConfig,
 } from "@streamlit/lib"
-import { concat, noop, without } from "lodash"
+import noop from "lodash/noop"
+import without from "lodash/without"
 
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 
@@ -1545,7 +1546,7 @@ export class App extends PureComponent<Props, State> {
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.concat(func),
       }
     })
   }
