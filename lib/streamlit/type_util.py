@@ -669,8 +669,8 @@ def check_python_comparable(seq: Sequence[Any]) -> None:
     except ValueError:
         raise StreamlitAPIException(
             f"Options must be python comparable. Got **{type(seq[0]).__name__}**. \n\n"
-            "Please refactor your code, to use a comparable type, e.g. "
-            "using index numbers instead."
+            "Please refactor your code, to use a comparable type, "
+            "e.g. using index numbers instead."
         )
 
 
