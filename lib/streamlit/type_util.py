@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1079,10 +1079,15 @@ def infer_vegalite_type(
         "complex",
     ]:
         return "quantitative"
+
     elif typ == "categorical" and data.cat.ordered:
-        # TODO(lukasmasuch): Is this correct, I cannot find any reference that
-        # altair supports a tuple here. It seems to be supported via sort instead?
-        return ("ordinal", data.cat.categories.tolist())  # type: ignore[return-value]
+        # STREAMLIT MOD: The original code returns a tuple here:
+        # return ("ordinal", data.cat.categories.tolist())
+        # But returning the tuple here isn't compatible with our
+        # built-in chart implementation. And it also doesn't seem to be necessary.
+        # Altair already extracts the correct sort order somewhere else.
+        # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
+        return "ordinal"
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [

@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "OpenmetricsDataModelProto";
+
 // The OpenMetrics protobuf schema which defines the protobuf wire format. 
 // Ensure to interpret "required" as semantically required for a valid message.
 // All string fields MUST be UTF-8 encoded strings.

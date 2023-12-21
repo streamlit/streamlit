@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,12 +50,27 @@ class LocalSourcesWatcher:
         )
 
         self._watched_modules: Dict[str, WatchedModule] = {}
+        self._watched_pages: Set[str] = set()
+
+        self.update_watched_pages()
+
+    def update_watched_pages(self) -> None:
+        old_watched_pages = self._watched_pages
+        new_pages_paths: Set[str] = set()
 
         for page_info in get_pages(self._main_script_path).values():
-            self._register_watcher(
-                page_info["script_path"],
-                module_name=None,  # Only root scripts have their modules set to None
-            )
+            new_pages_paths.add(page_info["script_path"])
+            if page_info["script_path"] not in old_watched_pages:
+                self._register_watcher(
+                    page_info["script_path"],
+                    module_name=None,
+                )
+
+        for old_page_path in old_watched_pages:
+            if old_page_path not in new_pages_paths:
+                self._deregister_watcher(old_page_path)
+
+        self._watched_pages = new_pages_paths
 
     def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)
@@ -88,6 +103,7 @@ class LocalSourcesWatcher:
         for wm in self._watched_modules.values():
             wm.watcher.close()
         self._watched_modules = {}
+        self._watched_pages = set()
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):

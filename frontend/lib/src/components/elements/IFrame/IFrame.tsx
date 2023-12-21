@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ export default function IFrame({
     scrolling = "no"
     style = { overflow: "hidden" }
   }
+
+  style.colorScheme = "light dark"
 
   // Either 'src' or 'srcDoc' will be set in our element. If 'src'
   // is set, we're loading a remote URL in the iframe.

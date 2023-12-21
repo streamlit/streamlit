@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 from playwright.sync_api import Page, expect
 
 
-def test_bokeh_chart(themed_app: Page):
+def test_bokeh_chart(app: Page):
     """Test that st.bokeh_chart renders correctly."""
-    bokeh_chart_elements = themed_app.locator("[data-testid=stBokehChart]")
+    bokeh_chart_elements = app.get_by_test_id("stBokehChart")
     expect(bokeh_chart_elements).to_have_count(4)
 
     expect(bokeh_chart_elements.nth(0).locator("canvas").nth(0)).to_be_visible()

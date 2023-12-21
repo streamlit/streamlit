@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ import {
   DateTimeColumn,
   TimeColumn,
   DateColumn,
+  LinkCell,
   removeLineBreaks,
 } from "./columns"
 
@@ -445,6 +446,17 @@ export function getCellFromArrow(
             displayDate: displayData,
           },
         } as DatePickerType
+      } else if (
+        cellTemplate.kind === GridCellKind.Custom &&
+        (cellTemplate as LinkCell).data?.kind === "link-cell"
+      ) {
+        cellTemplate = {
+          ...cellTemplate,
+          data: {
+            ...(cellTemplate as LinkCell).data,
+            displayText: displayData,
+          },
+        } as LinkCell
       }
     }
 

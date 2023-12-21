@@ -32,7 +32,7 @@ jobs:
       # We need to install Python 3.9 here because it's the latest version
       # supported by the miniconda installer as of 2022/10/11.
       - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.9"
       - name: Setup virtual env

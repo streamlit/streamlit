@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,13 @@ function renderIFrame({
   height: propHeight,
 }: PlotlyIFrameProps): ReactElement {
   const height = propHeight || DEFAULT_HEIGHT
-  return <iframe title="Plotly" src={url} style={{ width, height }} />
+  return (
+    <iframe
+      title="Plotly"
+      src={url}
+      style={{ width, height, colorScheme: "light dark" }}
+    />
+  )
 }
 
 /** Render a Plotly chart from a FigureProto */

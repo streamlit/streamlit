@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -70,6 +70,7 @@ class LinkColumnConfig(TypedDict):
     type: Literal["link"]
     max_chars: NotRequired[int | None]
     validate: NotRequired[str | None]
+    display_text: NotRequired[str | None]
 
 
 class BarChartColumnConfig(TypedDict):
@@ -474,6 +475,7 @@ def LinkColumn(
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
+    display_text: str | None = None,
 ) -> ColumnConfig:
     """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -514,6 +516,23 @@ def LinkColumn(
         A regular expression (JS flavor, e.g. ``"^https://.+$"``) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
+    display_text: str or None
+        The text that is displayed in the cell. Can be one of:
+
+        * None (default) to display the URL itself.
+
+        * A string that is displayed in every cell, e.g. “Open link”.
+
+        * A regular expression (JS flavor, detected by usage of parentheses)
+          to extract a part of the URL via a capture group, e.g. "https://(.*?)\.streamlit\.app”
+          to extract the display text “foo” from the URL “https://foo.streamlit.app”.
+
+        For more complex cases, you may use [Pandas Styler's format function on the underlying
+        dataframe](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html).
+        Note that this makes the app slow, doesn't work with editable columns, and might
+        be removed in the future.
+
+
     Examples
     --------
 
@@ -528,6 +547,12 @@ def LinkColumn(
     >>>             "https://issues.streamlit.app",
     >>>             "https://30days.streamlit.app",
     >>>         ],
+    >>>         "creator": [
+    >>>             "https://github.com/streamlit",
+    >>>             "https://github.com/arnaudmiribel",
+    >>>             "https://github.com/streamlit",
+    >>>             "https://github.com/streamlit",
+    >>>         ],
     >>>     }
     >>> )
     >>>
@@ -539,7 +564,11 @@ def LinkColumn(
     >>>             help="The top trending Streamlit apps",
     >>>             validate="^https://[a-z]+\.streamlit\.app$",
     >>>             max_chars=100,
-    >>>         )
+    >>>             display_text="https://(.*?)\.streamlit\.app"
+    >>>         ),
+    >>>         "creator": st.column_config.LinkColumn(
+    >>>             "App Creator", display_text="Open profile"
+    >>>         ),
     >>>     },
     >>>     hide_index=True,
     >>> )
@@ -557,7 +586,10 @@ def LinkColumn(
         required=required,
         default=default,
         type_config=LinkColumnConfig(
-            type="link", max_chars=max_chars, validate=validate
+            type="link",
+            max_chars=max_chars,
+            validate=validate,
+            display_text=display_text,
         ),
     )
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import {
   GridColumn,
   BaseGridCell,
 } from "@glideapps/glide-data-grid"
-import { toString, merge, isArray } from "lodash"
+import toString from "lodash/toString"
+import merge from "lodash/merge"
 import numbro from "numbro"
 import { sprintf } from "sprintf-js"
 import moment, { Moment } from "moment"
@@ -303,7 +304,7 @@ export function toSafeArray(data: any): any[] {
         typeof value === "bigint" ? Number(value) : value
       )
     )
-    if (!isArray(parsedData)) {
+    if (!Array.isArray(parsedData)) {
       return [toSafeString(parsedData)]
     }
 
@@ -387,7 +388,7 @@ export function toSafeNumber(value: any): number | null {
     return null
   }
 
-  if (isArray(value)) {
+  if (Array.isArray(value)) {
     return NaN
   }
 
@@ -632,4 +633,41 @@ export function removeLineBreaks(text: string): string {
     return text.replace(LINE_BREAK_REGEX, " ")
   }
   return text
+}
+
+/**
+ * Determines the correct value to display in a link cell based on the `href` and `regexPattern` parameters.
+ *
+ * @param href - The raw url value.
+ * @param displayTextRegex - The regex pattern which will be applied to the `href`. If no match is found, then we return the `href`.
+ * @returns - The string value to be displayed in the cell.
+ *
+ * * @example
+ * const regex = new RegExp("https:\/\/(.*?)\.streamlit\.app")
+ * const regex2 = new RegExp("https:\/\/roadmap\.(.*?)\.app")
+ * getLinkDisplayValueFromRegex(regex, "https://roadmap.streamlit.app"); // returns "roadmap"
+ * getLinkDisplayValueFromRegex(regex, "https://roadmap.streamlit.app"); // returns "streamlit"
+ */
+export function getLinkDisplayValueFromRegex(
+  displayTextRegex: RegExp,
+  href?: string | null
+): string {
+  if (isNullOrUndefined(href)) {
+    return ""
+  }
+
+  try {
+    // apply the regex pattern to display the value
+    const patternMatch = href.match(displayTextRegex)
+    if (patternMatch && patternMatch[1] !== undefined) {
+      // return the first matching group
+      return patternMatch[1]
+    }
+
+    // if the regex doesn't find a match with the url, just use the url as display value
+    return href
+  } catch (error) {
+    // if there was any error return the href
+    return href
+  }
 }
