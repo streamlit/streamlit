@@ -31,7 +31,7 @@ describe("st.experimental_get_query_string", () => {
     );
     cy.getIndexed(".element-container [data-testid='stMarkdownContainer']", 0).contains(
       "Please replace st.experimental_get_query_params with st.query_params. " +
-      "st.experimental_get_query_params will be removed after 2024-04-13. " +
+      "st.experimental_get_query_params will be removed after 2024-04-11. " +
       "Refer to our docs page for more information."
     );
 
