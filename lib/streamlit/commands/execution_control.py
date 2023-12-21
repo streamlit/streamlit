@@ -105,19 +105,15 @@ def switch_page(page: str) -> NoReturn:
 
     ctx = get_script_run_ctx()
 
-    query_string = ""
     ctx_main_script = ""
     if ctx:
-        query_string = ctx.query_string
         ctx_main_script = ctx.main_script_path
 
     main_script_path = os.path.join(os.getcwd(), ctx_main_script)
     main_script_directory = os.path.dirname(main_script_path)
 
-    if page.startswith("./"):
-        page = page[2:]
-    elif page.startswith("/"):
-        page = page[1:]
+    # Convenience for ./dir/page.py and /dir/page.py to refer to main directory
+    page = page.strip(".").strip("/")
 
     requested_page = os.path.join(main_script_directory, page)
     all_app_pages = source_util.get_pages(ctx_main_script).values()
@@ -126,9 +122,9 @@ def switch_page(page: str) -> NoReturn:
         full_path = page_data["script_path"]
 
         if requested_page == full_path:
-            raise RerunException(
+            ctx.script_requests.request_rerun(
                 RerunData(
-                    query_string=query_string,
+                    query_string="",
                     page_script_hash=page_data["page_script_hash"],
                 )
             )

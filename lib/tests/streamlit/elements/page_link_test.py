@@ -12,10 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-
-st.header("Page 6")
-
-home = st.button("`./streamlit_app.py`")
-if home:
-    st.switch_page("./streamlit_app.py")
+"""page_link unit tests."""
