@@ -93,7 +93,7 @@ def experimental_rerun() -> NoReturn:
 
 
 @gather_metrics("switch_page")
-def switch_page(page: str) -> NoReturn:
+def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
     """Switch the current programmatically page in a multi-page app.
     When `st.switch_page()` is called with a page, the current page script is halted
     and the requested page script will be queued to run from the top.
@@ -112,25 +112,29 @@ def switch_page(page: str) -> NoReturn:
     main_script_path = os.path.join(os.getcwd(), ctx_main_script)
     main_script_directory = os.path.dirname(main_script_path)
 
-    # Ensure leading / doesn't refer to root directory
-    page = os.path.join(main_script_directory, page.strip("/"))
+    # Convenience for handling ./ notation and ensure leading / doesn't refer to root directory
+    page = os.path.normpath(page.strip("/"))
 
-    # Convenience for ./ to refer to the main script directory
-    requested_page = os.path.normpath(page)
-
+    # Build full path
+    requested_page = os.path.join(main_script_directory, page)
     all_app_pages = source_util.get_pages(ctx_main_script).values()
 
+    page_found = False
     for page_data in all_app_pages:
         full_path = page_data["script_path"]
 
-        if requested_page == full_path:
+        if requested_page == full_path and ctx and ctx.script_requests:
+            page_found = True
             ctx.script_requests.request_rerun(
                 RerunData(
                     query_string="",
                     page_script_hash=page_data["page_script_hash"],
                 )
             )
+            # Force a yield point so the runner can do the rerun
+            st.empty()
 
-    raise StreamlitAPIException(
-        f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
-    )
+    if not page_found:
+        raise StreamlitAPIException(
+            f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
+        )
