@@ -79,6 +79,7 @@ export const EMBED_QUERY_PARAM_VALUES = [
  */
 export const TELEMETRY_QUERY_PARAM_KEY = "readUserTelemetryChoice"
 export const TELEMETRY_PARAM_VALUE = "InsertTelemetry"
+export const TELEMETRY_DATE_VALUE = "TelemetryDate"
 
 export enum LoadingScreenType {
   NONE,
@@ -114,8 +115,39 @@ export function hasTelemetryParam(): boolean {
   return telemetryParam === TELEMETRY_QUERY_PARAM_KEY
 }
 
+/**
+ * Sets the telemetry preference to localStorage
+ */
 export function updateTelemetryPreference(preference: string): void {
   localStorage.setItem(TELEMETRY_PARAM_VALUE, preference)
+}
+
+/**
+ * Clears cookies and localStorage
+ */
+export function clearCookies(): void {
+  document.cookie = ""
+  localStorage.clear()
+}
+
+/**
+ * Sets the telemetry date to localStorage
+ */
+export function updateTelemetryDate(date: string): void {
+  localStorage.setItem(TELEMETRY_DATE_VALUE, date)
+}
+
+/**
+ * Checks if the telemetry consent date is older than 6 months
+ */
+export function isConsentStale(timestamp: string): boolean {
+  const timestampNumber = parseInt(timestamp)
+  const consent_date = new Date(timestampNumber * 1000) as any
+  const today = new Date() as any
+
+  const six_months_in_ms =
+    1000 /*ms*/ * 60 /*s*/ * 60 /*min*/ * 24 /*h*/ * 30 /*days*/ * 6 /*months*/
+  return today - consent_date > six_months_in_ms
 }
 
 /**

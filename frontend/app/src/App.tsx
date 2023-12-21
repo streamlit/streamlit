@@ -110,7 +110,10 @@ import {
   AppConfig,
   hasTelemetryParam,
   updateTelemetryPreference,
+  updateTelemetryDate,
+  isConsentStale,
   localStorageAvailable,
+  clearCookies,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -163,9 +166,10 @@ interface State {
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
+  telemetryPreference: string
+  telemetryDate: string
   // host communication info
   isOwner: boolean
-  telemetryPreference: string
   hostMenuItems: IMenuItem[]
   hostToolbarItems: IToolbarItem[]
   hostHideSidebarNav: boolean
@@ -280,6 +284,7 @@ export class App extends PureComponent<Props, State> {
       // Information sent from the host
       isOwner: false,
       telemetryPreference: "",
+      telemetryDate: "",
       hostMenuItems: [],
       hostToolbarItems: [],
       hostHideSidebarNav: false,
@@ -309,6 +314,7 @@ export class App extends PureComponent<Props, State> {
       pageChanged: this.onPageChange,
       telemetryPreferenceChanged: preference =>
         this.setTelemetryPreference(preference),
+      telemetryDateChanged: date => this.setTelemetryDate(date),
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       hostMenuItemsChanged: hostMenuItems => {
         this.setState({ hostMenuItems })
@@ -890,6 +896,7 @@ export class App extends PureComponent<Props, State> {
     // So we need to store it back in localStorage
     if (this.state.telemetryPreference !== "") {
       this.setTelemetryPreference(this.state.telemetryPreference)
+      this.setTelemetryDate(this.state.telemetryDate)
     }
 
     this.setState(
@@ -967,20 +974,31 @@ export class App extends PureComponent<Props, State> {
     const isLocalStorageAvailable = localStorageAvailable()
     if (!isLocalStorageAvailable) return
 
-    // If it does, check localStorage for a cookie preference
     if (telemetryParamExists === true) {
+      // If it does, check localStorage for a cookie preference
       const telemetryFromLocalStorage = this.getTelemetryPreference()
 
-      // Store the telemetry preference in state, so we can store it back in localStorage after first time initialization.
-      this.setState({ telemetryPreference: telemetryFromLocalStorage || "" })
+      // Check if the consent date is > 6 months old.
+      const consentDate = this.getTelemetryDate()
+      const consentIsStale = isConsentStale(consentDate)
+
+      // 1. If it's stale, don't load Segment, clear cookies and localStorage, and refresh the page for changes to take effect.
+      // 2. If it's not, store the preference in state so we can then update it to localStorage again after first-time initialization.
+      if (consentIsStale === true) {
+        clearCookies()
+        window.location.reload()
+        return
+      } else {
+        this.setState({ telemetryPreference: telemetryFromLocalStorage || "" })
+        this.setState({ telemetryDate: consentDate || "" })
+      }
 
       switch (telemetryFromLocalStorage) {
-        // If the preference is set to false, clear cookies and localStorage
+        // If the preference is set to false, clear cookies and localStorage, but store the telemetry preference in state, so we can put it back in localStorage after first time initialization.
         case "false":
-          document.cookie = ""
-          localStorage.clear()
+          clearCookies()
           break
-        // If the preference is set to true, load Segment and dont clear cookies or localStorage
+        // If the preference is set to true, initialize segment and don't clear cookies
         case "true":
           this.metricsMgr.initialize({
             gatherUsageStats: config.gatherUsageStats,
@@ -988,12 +1006,12 @@ export class App extends PureComponent<Props, State> {
           break
         // Undefined state, do the same as with cookies = false
         default:
-          document.cookie = ""
-          localStorage.clear()
+          clearCookies()
           break
       }
     } else {
       // If there's no param on the URL, it's safe to assume this app is not hosted in CC, so we can load Segment
+      // TODO: Confirm this with stakeholders
       this.metricsMgr.initialize({
         gatherUsageStats: config.gatherUsageStats,
       })
@@ -1036,19 +1054,24 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Sets the Telemetry Preference locally and sends it to the host.
+   * Sets the Telemetry Preference in localStorage.
    */
   setTelemetryPreference = (preference: string): void => {
     this.setState({ telemetryPreference: preference })
     updateTelemetryPreference(preference)
-    this.hostCommunicationMgr.sendMessageToHost({
-      type: "SET_TELEMETRY_PREFERENCE",
-      preference,
-    })
+  }
+
+  setTelemetryDate = (date: string): void => {
+    this.setState({ telemetryDate: date })
+    updateTelemetryDate(date)
   }
 
   getTelemetryPreference = (): string | undefined => {
     return localStorage.getItem("InsertTelemetry") || undefined
+  }
+
+  getTelemetryDate = (): string => {
+    return localStorage.getItem("TelemetryDate") || ""
   }
 
   createThemeHash = (themeInput?: CustomThemeConfig): string => {

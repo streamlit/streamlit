@@ -113,6 +113,10 @@ export type IHostToGuestMessage = {
       type: "SET_TELEMETRY_PREFERENCE"
       preference: string
     }
+  | {
+      type: "SET_TELEMETRY_DATE"
+      preference: string
+    }
 )
 
 export type IGuestToHostMessage =
@@ -125,6 +129,10 @@ export type IGuestToHostMessage =
     }
   | {
       type: "SET_TELEMETRY_PREFERENCE"
+      preference: string
+    }
+  | {
+      type: "SET_TELEMETRY_DATE"
       preference: string
     }
   | {

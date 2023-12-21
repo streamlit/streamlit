@@ -191,6 +191,15 @@ Usage:
       type: "SET_TELEMETRY_PREFERENCE",
       preference,
     })
+
+    updateTelemetryDate(Date.now())
+  }
+
+  function updateTelemetryDate(date) {
+    sendMessage({
+      type: "SET_TELEMETRY_DATE",
+      date,
+    })
   }
 </script>
 

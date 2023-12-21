@@ -113,6 +113,9 @@ export {
   getCookie,
   hasTelemetryParam,
   updateTelemetryPreference,
+  updateTelemetryDate,
+  isConsentStale,
+  clearCookies,
 } from "./util/utils"
 export { useIsOverflowing } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"

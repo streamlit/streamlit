@@ -46,6 +46,7 @@ export interface HostCommunicationProps {
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
   readonly telemetryPreferenceChanged: (preference: string) => void
+  readonly telemetryDateChanged: (date: string) => void
   readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
   readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
   readonly hostHideSidebarNavChanged: (hideSidebarNav: boolean) => void
@@ -240,6 +241,10 @@ export default class HostCommunicationManager {
 
     if (message.type === "SET_TELEMETRY_PREFERENCE") {
       this.props.telemetryPreferenceChanged(message.preference)
+    }
+
+    if (message.type === "SET_TELEMETRY_DATE") {
+      this.props.telemetryDateChanged(message.date)
     }
   }
 }
