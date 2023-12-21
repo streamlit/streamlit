@@ -216,7 +216,9 @@ export class WidgetStateManager {
     const form = this.getOrCreateFormState(formId)
 
     const submitButtons = this.formsData.submitButtons.get(formId)
-    const disableForm = submitButtons?.at(0)?.disabled
+    const disableForm = submitButtons?.some(
+      submitButton => submitButton.disabled
+    )
     if (disableForm) {
       return
     }
