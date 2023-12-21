@@ -37,15 +37,28 @@ from typing import Any, Dict, Generator, List, Literal, Protocol
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import (
-    Browser,
-    BrowserContext,
-    BrowserType,
-    ElementHandle,
-    Locator,
-    Page,
-)
+from playwright.sync_api import ElementHandle, Locator, Page
 from pytest import FixtureRequest
+
+
+def reorder_early_fixtures(metafunc: pytest.Metafunc):
+    """Put fixtures with `pytest.mark.early` first during execution
+
+    This allows patch of configurations before the application is initialized
+
+    Copied from: https://github.com/pytest-dev/pytest/issues/1216#issuecomment-456109892
+    """
+    for fixturedef in metafunc._arg2fixturedefs.values():
+        fixturedef = fixturedef[0]
+        for mark in getattr(fixturedef.func, "pytestmark", []):
+            if mark.name == "early":
+                order = metafunc.fixturenames
+                order.insert(0, order.pop(order.index(fixturedef.argname)))
+                break
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc):
+    reorder_early_fixtures(metafunc)
 
 
 class AsyncSubprocess:

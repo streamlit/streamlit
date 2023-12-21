@@ -41,13 +41,15 @@ IGNORE_PATTERN = re.compile(
     r"|\.(json|prettierrc|nvmrc)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
+    # Exclude pytest config files, because they don't have any degree of creativity.
+    r"|pytest\.ini$"
     # Exclude empty files, because they don't have any degree of creativity.
     r"|py\.typed$"
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
-    r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
+    r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini)$"
     r"|^lib/(test|dev)-requirements\.txt$"
     r"|^lib/min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
