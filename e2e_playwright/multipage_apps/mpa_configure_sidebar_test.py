@@ -29,6 +29,6 @@ def configure_show_sidebar_nav():
     del os.environ["STREAMLIT_CLIENT_SHOW_SIDEBAR_NAVIGATION"]
 
 
-def test_hides_sidebar_nav(app: Page, configure_hide_sidebar_nav):
+def test_hides_sidebar_nav(app: Page, configure_show_sidebar_nav):
     """Test that client.showSidebarNavigation=False hides the sidebar."""
     expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
