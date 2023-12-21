@@ -212,24 +212,19 @@ experimental_user = _UserInfoProxy()
 experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
 
-# TODO(willhuang1997): Make sure this docs link gets updated for get and set query params.
-_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = (
-    "Refer to our [docs page](%SOME_DOC_LINK%) for more information."
-)
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
 
 experimental_get_query_params = _deprecate_func_name(
     _get_query_params,
     "experimental_get_query_params",
-    # TODO(willhuang1997): Make sure this date is correct for get and set query params. A placeholder is here for now.
-    "2024-04-13",
+    "2024-04-11",
     _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
 experimental_set_query_params = _deprecate_func_name(
     _set_query_params,
     "experimental_set_query_params",
-    # TODO(willhuang1997): Make sure this date is correct for get and set query params. A placeholder is here for now.
-    "2024-04-13",
+    "2024-04-11",
     _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
     name_override="query_params",
 )
