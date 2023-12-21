@@ -128,3 +128,15 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
+
+
+def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
+    """Test that query params are removed when swapping pages"""
+
+    page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
+    wait_for_app_loaded(page)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    wait_for_app_run(page)
+
+    assert page.url == f"http://localhost:{app_port}/page3"
