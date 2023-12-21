@@ -275,9 +275,10 @@ class TypeUtilTest(unittest.TestCase):
             type_util.check_python_comparable(sequence)
         self.assertEqual(
             (
-                f"Options must be python comparable. Got **{type_str}**. \n\n"
-                "Please refactor your code, to use a comparable type, e.g. using index "
-                "numbers instead."
+                "Options must be python comparable, that means to return a boolean for "
+                f"equality operator. Got **{type_str}** instead. \n\n"
+                "Please consider refactoring your code to use an elements of "
+                "comparable type as options, e.g. using indices instead."
             ),
             str(exception_message.value),
         )
