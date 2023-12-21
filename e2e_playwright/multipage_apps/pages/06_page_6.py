@@ -16,6 +16,6 @@ import streamlit as st
 
 st.header("Page 6")
 
-home = st.button("`./streamlit_app.py`")
+home = st.button("`./mpa_basics.py`")
 if home:
-    st.switch_page("./streamlit_app.py")
+    st.switch_page("./mpa_basics.py")
