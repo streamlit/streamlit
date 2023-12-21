@@ -45,6 +45,7 @@ export interface HostCommunicationProps {
   readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
+  readonly telemetryPreferenceChanged: (preference: string) => void
   readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
   readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
   readonly hostHideSidebarNavChanged: (hideSidebarNav: boolean) => void
@@ -235,6 +236,10 @@ export default class HostCommunicationManager {
 
     if (message.type === "SET_CUSTOM_THEME_CONFIG") {
       this.props.themeChanged(message.themeInfo)
+    }
+
+    if (message.type === "SET_TELEMETRY_PREFERENCE") {
+      this.props.telemetryPreferenceChanged(message.preference)
     }
   }
 }

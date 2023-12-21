@@ -108,6 +108,9 @@ import {
   IHostConfigResponse,
   LibConfig,
   AppConfig,
+  hasTelemetryParam,
+  updateTelemetryPreference,
+  localStorageAvailable,
 } from "@streamlit/lib"
 import { concat, noop, without } from "lodash"
 
@@ -162,6 +165,7 @@ interface State {
   latestRunTime: number
   // host communication info
   isOwner: boolean
+  telemetryPreference: string
   hostMenuItems: IMenuItem[]
   hostToolbarItems: IToolbarItem[]
   hostHideSidebarNav: boolean
@@ -275,6 +279,7 @@ export class App extends PureComponent<Props, State> {
       latestRunTime: performance.now(),
       // Information sent from the host
       isOwner: false,
+      telemetryPreference: "",
       hostMenuItems: [],
       hostToolbarItems: [],
       hostHideSidebarNav: false,
@@ -302,6 +307,8 @@ export class App extends PureComponent<Props, State> {
       sendAppHeartbeat: this.sendAppHeartbeat,
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
+      telemetryPreferenceChanged: preference =>
+        this.setTelemetryPreference(preference),
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       hostMenuItemsChanged: hostMenuItems => {
         this.setState({ hostMenuItems })
@@ -878,6 +885,13 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.processThemeInput(themeInput)
+
+    // If we have a telemetryPreference value stored in state here, it means we had a value coming from localStorage after the one time initialization, which we probably wiped as part of the cookie cleanup.
+    // So we need to store it back in localStorage
+    if (this.state.telemetryPreference !== "") {
+      this.setTelemetryPreference(this.state.telemetryPreference)
+    }
+
     this.setState(
       {
         allowRunOnSave: config.allowRunOnSave,
@@ -948,9 +962,42 @@ export class App extends PureComponent<Props, State> {
       SessionInfo.propsFromNewSessionMessage(newSessionProto)
     )
 
-    this.metricsMgr.initialize({
-      gatherUsageStats: config.gatherUsageStats,
-    })
+    // Before initilization, check if the app is passed with the telemetry param enabled
+    const telemetryParamExists = hasTelemetryParam()
+    const isLocalStorageAvailable = localStorageAvailable()
+    if (!isLocalStorageAvailable) return
+
+    // If it does, check localStorage for a cookie preference
+    if (telemetryParamExists === true) {
+      const telemetryFromLocalStorage = this.getTelemetryPreference()
+
+      // Store the telemetry preference in state, so we can store it back in localStorage after first time initialization.
+      this.setState({ telemetryPreference: telemetryFromLocalStorage || "" })
+
+      switch (telemetryFromLocalStorage) {
+        // If the preference is set to false, clear cookies and localStorage
+        case "false":
+          document.cookie = ""
+          localStorage.clear()
+          break
+        // If the preference is set to true, load Segment and dont clear cookies or localStorage
+        case "true":
+          this.metricsMgr.initialize({
+            gatherUsageStats: config.gatherUsageStats,
+          })
+          break
+        // Undefined state, do the same as with cookies = false
+        default:
+          document.cookie = ""
+          localStorage.clear()
+          break
+      }
+    } else {
+      // If there's no param on the URL, it's safe to assume this app is not hosted in CC, so we can load Segment
+      this.metricsMgr.initialize({
+        gatherUsageStats: config.gatherUsageStats,
+      })
+    }
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
   }
@@ -986,6 +1033,22 @@ export class App extends PureComponent<Props, State> {
       type: "SET_THEME_CONFIG",
       themeInfo: toExportedTheme(themeConfig.emotion),
     })
+  }
+
+  /**
+   * Sets the Telemetry Preference locally and sends it to the host.
+   */
+  setTelemetryPreference = (preference: string): void => {
+    this.setState({ telemetryPreference: preference })
+    updateTelemetryPreference(preference)
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_TELEMETRY_PREFERENCE",
+      preference,
+    })
+  }
+
+  getTelemetryPreference = (): string | undefined => {
+    return localStorage.getItem("InsertTelemetry") || undefined
   }
 
   createThemeHash = (themeInput?: CustomThemeConfig): string => {

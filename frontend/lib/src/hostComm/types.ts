@@ -109,6 +109,10 @@ export type IHostToGuestMessage = {
       type: "SET_CUSTOM_THEME_CONFIG"
       themeInfo: ICustomThemeConfig
     }
+  | {
+      type: "SET_TELEMETRY_PREFERENCE"
+      preference: string
+    }
 )
 
 export type IGuestToHostMessage =
@@ -118,6 +122,10 @@ export type IGuestToHostMessage =
   | {
       type: "MENU_ITEM_CALLBACK"
       key: string
+    }
+  | {
+      type: "SET_TELEMETRY_PREFERENCE"
+      preference: string
     }
   | {
       type: "TOOLBAR_ITEM_CALLBACK"

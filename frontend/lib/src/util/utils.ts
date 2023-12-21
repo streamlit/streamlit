@@ -74,6 +74,12 @@ export const EMBED_QUERY_PARAM_VALUES = [
   EMBED_TRUE,
 ]
 
+/*
+ * Telemetry query param value
+ */
+export const TELEMETRY_QUERY_PARAM_KEY = "readUserTelemetryChoice"
+export const TELEMETRY_PARAM_VALUE = "InsertTelemetry"
+
 export enum LoadingScreenType {
   NONE,
   V1,
@@ -98,6 +104,18 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
     }
   })
   return embedUrlParams
+}
+
+/**
+ * Returns true if the URL parameters contain ?readUserTelemetryPreference
+ */
+export function hasTelemetryParam(): boolean {
+  const telemetryParam = window.location.search.substring(1)
+  return telemetryParam === TELEMETRY_QUERY_PARAM_KEY
+}
+
+export function updateTelemetryPreference(preference: string): void {
+  localStorage.setItem(TELEMETRY_PARAM_VALUE, preference)
 }
 
 /**

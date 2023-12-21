@@ -111,6 +111,8 @@ export {
   extractPageNameFromPathName,
   makeElementWithInfoText,
   getCookie,
+  hasTelemetryParam,
+  updateTelemetryPreference,
 } from "./util/utils"
 export { useIsOverflowing } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"
