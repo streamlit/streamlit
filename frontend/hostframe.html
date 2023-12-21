@@ -185,6 +185,13 @@ Usage:
       },
     })
   }
+
+  function updateTelemetryPreference(preference) {
+    sendMessage({
+      type: "SET_TELEMETRY_PREFERENCE",
+      preference,
+    })
+  }
 </script>
 
 <style>
@@ -228,6 +235,8 @@ body {
   <button onclick="setHostToolbarItem()">Add Toolbar Item</button>
   <button onclick="setHideSidebarNav()">Hide Sidebar Nav</button>
   <button onclick="setSidebarDownshift()">Sidebar Chevron Downshift</button>
+  <button onclick="updateTelemetryPreference('false')">Deny cookies</button>
+  <button onclick="updateTelemetryPreference('true')">Accept cookies</button>
 </div>
 
 <iframe id="guest" src="http://localhost:3000" />
