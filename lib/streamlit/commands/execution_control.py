@@ -21,7 +21,7 @@ from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
+from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 
 _LOGGER = get_logger(__name__)
 
@@ -112,10 +112,12 @@ def switch_page(page: str) -> NoReturn:
     main_script_path = os.path.join(os.getcwd(), ctx_main_script)
     main_script_directory = os.path.dirname(main_script_path)
 
-    # Convenience for ./dir/page.py and /dir/page.py to refer to main directory
-    page = page.strip(".").strip("/")
+    # Ensure leading / doesn't refer to root directory
+    page = os.path.join(main_script_directory, page.strip("/"))
 
-    requested_page = os.path.join(main_script_directory, page)
+    # Convenience for ./ to refer to the main script directory
+    requested_page = os.path.normpath(page)
+
     all_app_pages = source_util.get_pages(ctx_main_script).values()
 
     for page_data in all_app_pages:

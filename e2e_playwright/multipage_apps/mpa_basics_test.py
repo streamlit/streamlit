@@ -129,6 +129,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
+
 def test_switch_page(app: Page):
     """Test that we can switch between pages by triggering st.switch_page."""
 
