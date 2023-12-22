@@ -1975,6 +1975,17 @@
     "@toast-ui/react-editor" "3.1.10"
     react-select "^5.2.2"
 
+"@glideapps/glide-data-grid-cells@5.99.9-beta9":
+  version "5.99.9-beta9"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-5.99.9-beta9.tgz#7e35845fddfca3468fa59cad3434d6f44c319f1d"
+  integrity sha512-CnLBNFnBk8qStZfbxRIP9LRgxuw5iIImITfY4q0btDgH8Co/lYc4fn7rBBl6ejWX13mcf4Mn4vFBg/cq5x7Xiw==
+  dependencies:
+    "@glideapps/glide-data-grid" "5.99.9-beta9"
+    "@linaria/react" "^4.5.3"
+    "@toast-ui/editor" "3.1.10"
+    "@toast-ui/react-editor" "3.1.10"
+    react-select "^5.2.2"
+
 "@glideapps/glide-data-grid-source@5.99.9-beta8":
   version "5.99.9-beta8"
   resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.99.9-beta8.tgz#09a725cbe30d355efa6b5d65616e063b8471721c"
@@ -1982,10 +1993,26 @@
   dependencies:
     "@glideapps/glide-data-grid" "5.99.9-beta8"
 
+"@glideapps/glide-data-grid-source@5.99.9-beta9":
+  version "5.99.9-beta9"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-5.99.9-beta9.tgz#de3d56091926466e567ee5a738f99a7b77a60b6c"
+  integrity sha512-mobLwK2Ea1SzhBD0I7xeN9eSTo9HGyTmyDqFl2Je0nZrFoCt1btrChws42wsamsoKeqRFZS5LiobNJb0HyVKGQ==
+  dependencies:
+    "@glideapps/glide-data-grid" "5.99.9-beta9"
+
 "@glideapps/glide-data-grid@5.99.9-beta8":
   version "5.99.9-beta8"
   resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.99.9-beta8.tgz#0c11944bfbb9bee834eb3e82ae81bdeaf234c875"
   integrity sha512-m0dUfRyz3tIIq48D4TbaqT+02/cUYGuYjzOwpOz+UeyoHKJqBrdpiSg1voJd+MCtS2kBUPFt3arZVc4+FXz7gQ==
+  dependencies:
+    "@linaria/react" "^4.5.3"
+    canvas-hypertxt "^1.0.3"
+    react-number-format "^5.0.0"
+
+"@glideapps/glide-data-grid@5.99.9-beta9":
+  version "5.99.9-beta9"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-5.99.9-beta9.tgz#6343ff6406e769fe32dc9eb2cc1a8c9d59626d1c"
+  integrity sha512-NMQ2JtaxLEm7wAmyFasiAgchqZ2ZD1NI7S9RUpnqQMjMlfHxKBNgWXNTKhEmBdk0LzREDAQftC94f/OEZubhwQ==
   dependencies:
     "@linaria/react" "^4.5.3"
     canvas-hypertxt "^1.0.3"

@@ -31,5 +31,10 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "dependencies": {
+    "@glideapps/glide-data-grid": "5.99.9-beta9",
+    "@glideapps/glide-data-grid-cells": "5.99.9-beta9",
+    "@glideapps/glide-data-grid-source": "5.99.9-beta9"
+  }
 }
