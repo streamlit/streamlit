@@ -85,6 +85,7 @@ from streamlit.commands.execution_control import (
     stop as stop,
     rerun as rerun,
     experimental_rerun as _experimental_rerun,
+    switch_page as switch_page,
 )
 
 # We add the metrics tracking for caching here,
