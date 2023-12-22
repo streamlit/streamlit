@@ -566,17 +566,15 @@ class ButtonMixin:
         ctx = get_script_run_ctx()
         ctx_main_script = ""
         if ctx:
-            ctx.query_string
             ctx_main_script = ctx.main_script_path
 
         main_script_path = os.path.join(os.getcwd(), ctx_main_script)
         main_script_directory = os.path.dirname(main_script_path)
 
-        if page.startswith("./"):
-            page = page[2:]
-        elif page.startswith("/"):
-            page = page[1:]
+        # Convenience for handling ./ notation and ensure leading / doesn't refer to root directory
+        page = os.path.normpath(page.strip("/"))
 
+        # Build full path
         requested_page = os.path.join(main_script_directory, page)
         all_app_pages = source_util.get_pages(ctx_main_script).values()
 

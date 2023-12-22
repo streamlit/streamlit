@@ -87,7 +87,7 @@ describe("PageLink", () => {
     expect(pageNavLink).toHaveStyle("width: 250px")
   })
 
-  it("follows useContainerWidth property if set to true", () => {
+  it("follows useContainerWidth property if set to false", () => {
     const props = getProps({ useContainerWidth: "False" })
     render(<PageLink {...props} />)
     const pageNavLink = screen.getByTestId("stPageNavLink")
