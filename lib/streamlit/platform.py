@@ -14,18 +14,27 @@
 
 """Platform module."""
 
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner import get_script_run_ctx
+try:
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+except ImportError as e:
+    print(f"Error in importing the module {e}")
 
 
 def post_parent_message(message: str) -> None:
     """
     Sends a string message to the parent window (when host configuration allows).
+    The mesage is sent using ForwardMsg protocol buffers(proto)
     """
     ctx = get_script_run_ctx()
     if ctx is None:
+        print("Script run context unavaiable")
         return
 
     fwd_msg = ForwardMsg()
     fwd_msg.parent_message.message = message
-    ctx.enqueue(fwd_msg)
+    try:
+        ctx.enqueue(fwd_msg)
+    except Exception as e:
+        print(f"Error sending message {e}")
