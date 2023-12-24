@@ -16,7 +16,7 @@ click==8.1.7
 contourpy==1.2.0
 coverage==7.3.4
 cryptography==41.0.7
-cx-Oracle==7.3.0
+cx_Oracle==7.3.0
 cycler==0.12.1
 dataclasses-json==0.6.3
 distlib==0.3.8
