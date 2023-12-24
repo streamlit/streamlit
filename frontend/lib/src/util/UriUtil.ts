@@ -48,9 +48,14 @@ export function getWindowBaseUriParts(): BaseUriParts {
     port = isHttps() ? 443 : 80
   }
 
-  const basePath = window.location.pathname
-    .replace(FINAL_SLASH_RE, "")
-    .replace(INITIAL_SLASH_RE, "")
+  // "about:blank" is sometimes as href when Streamlit is running
+  // within an iframe with inline code, e.g. in the case of stlite.
+  const basePath =
+    window.location.href === "about:blank"
+      ? ""
+      : window.location.pathname
+          .replace(FINAL_SLASH_RE, "")
+          .replace(INITIAL_SLASH_RE, "")
 
   return { host, port, basePath }
 }

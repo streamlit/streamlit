@@ -874,7 +874,14 @@ export class App extends PureComponent<Props, State> {
         const pagePath = viewingMainPage ? "" : newPageName
         const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
 
-        window.history.pushState({}, "", pageUrl)
+        // Remove the trailing slash unless it results in an empty string to avoid undesirable path overrides
+        // such as "/test.html" -> "/test.html/". These are problematic for uses with stlite.
+        const trimmedPageUrl =
+          pageUrl.endsWith("/") && pageUrl !== "/"
+            ? pageUrl.slice(0, -1)
+            : pageUrl
+
+        window.history.pushState({}, "", trimmedPageUrl)
       }
     }
 
