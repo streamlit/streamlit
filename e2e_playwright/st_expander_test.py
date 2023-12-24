@@ -47,6 +47,22 @@ def test_expander_displays_correctly(
     )
 
 
+def test_expander_long_displays_correctly(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that long expanders are displayed correctly."""
+    assert_snapshot(
+        # expander_long
+        themed_app.locator(".main [data-testid='stExpander']").nth(4),
+        name="stExpander-long-expanded",
+    )
+    assert_snapshot(
+        # collapsed_long
+        themed_app.locator(".main [data-testid='stExpander']").nth(5),
+        name="stExpander-long-collapsed",
+    )
+
+
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
     main_expanders = app.locator(".main [data-testid='stExpander']")
