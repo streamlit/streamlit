@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,6 +87,7 @@ from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
@@ -282,9 +283,7 @@ class DeltaGenerator(
 
     def __enter__(self) -> None:
         # with block started
-        ctx = get_script_run_ctx()
-        if ctx:
-            ctx.dg_stack.append(self)
+        dg_stack.set(dg_stack.get() + (self,))
 
     def __exit__(
         self,
@@ -293,9 +292,8 @@ class DeltaGenerator(
         traceback: Any,
     ) -> Literal[False]:
         # with block ended
-        ctx = get_script_run_ctx()
-        if ctx is not None:
-            ctx.dg_stack.pop()
+
+        dg_stack.set(dg_stack.get()[:-1])
 
         # Re-raise any exceptions
         return False
@@ -310,9 +308,9 @@ class DeltaGenerator(
         if self == self._main_dg:
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
-            ctx = get_script_run_ctx()
-            if ctx and len(ctx.dg_stack) > 0:
-                return ctx.dg_stack[-1]
+            current_stack = dg_stack.get()
+            if len(current_stack) > 0:
+                return current_stack[-1]
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
         # current `with` dg.

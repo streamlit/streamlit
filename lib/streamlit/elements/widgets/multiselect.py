@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum_sequence,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
@@ -347,6 +348,7 @@ class MultiSelectMixin:
             raise StreamlitAPIException(
                 _get_over_max_options_message(default_count, max_selections)
             )
+        widget_state = maybe_coerce_enum_sequence(widget_state, options, opt)
 
         if widget_state.value_changed:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)

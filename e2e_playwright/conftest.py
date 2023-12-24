@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ This file is automatically run by pytest before tests are executed.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shlex
@@ -31,13 +32,33 @@ from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Generator, List, Literal, Protocol
+from typing import Any, Dict, Generator, List, Literal, Protocol
 
 import pytest
 import requests
 from PIL import Image
 from playwright.sync_api import ElementHandle, Locator, Page
 from pytest import FixtureRequest
+
+
+def reorder_early_fixtures(metafunc: pytest.Metafunc):
+    """Put fixtures with `pytest.mark.early` first during execution
+
+    This allows patch of configurations before the application is initialized
+
+    Copied from: https://github.com/pytest-dev/pytest/issues/1216#issuecomment-456109892
+    """
+    for fixturedef in metafunc._arg2fixturedefs.values():
+        fixturedef = fixturedef[0]
+        for mark in getattr(fixturedef.func, "pytestmark", []):
+            if mark.name == "early":
+                order = metafunc.fixturenames
+                order.insert(0, order.pop(order.index(fixturedef.argname)))
+                break
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc):
+    reorder_early_fixtures(metafunc)
 
 
 class AsyncSubprocess:
@@ -100,6 +121,15 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
     """Resolve the test module to the corresponding test script filename."""
     assert test_module.__file__ is not None
     return test_module.__file__.replace("_test.py", ".py")
+
+
+def hash_to_range(
+    text: str,
+    min: int = 10000,
+    max: int = 65535,
+) -> int:
+    sha256_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return min + (int(sha256_hash, 16) % (max - min + 1))
 
 
 def is_port_available(port: int, host: str) -> bool:
@@ -197,8 +227,14 @@ def wait_for_app_loaded(page: Page):
 
 
 @pytest.fixture(scope="module")
-def app_port() -> int:
+def app_port(worker_id: str) -> int:
     """Fixture that returns an available port on localhost."""
+    if worker_id and worker_id != "master":
+        # This is run with xdist, we try to get a port by hashing the worker ID
+        port = hash_to_range(worker_id)
+        if is_port_available(port, "localhost"):
+            return port
+    # Find a random available port:
     return find_available_port()
 
 
@@ -239,6 +275,41 @@ def app(page: Page, app_port: int) -> Page:
     page.goto(f"http://localhost:{app_port}/")
     wait_for_app_loaded(page)
     return page
+
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args: Dict, browser_name: str):
+    """Fixture that adds the fake device and ui args to the browser type launch args."""
+    # The browser context fixture in pytest-playwright is defined in session scope, and
+    # depends on the browser_type_launch_args fixture. This means that we can't
+    # redefine the browser_type_launch_args fixture more narrow scope
+    # e.g. function or module scope.
+    # https://github.com/microsoft/playwright-pytest/blob/ef99541352b307411dbc15c627e50f95de30cc71/pytest_playwright/pytest_playwright.py#L128
+
+    # We need to extend browser launch args to support fake video stream for
+    # st.camera_input test.
+    # https://github.com/microsoft/playwright/issues/4532#issuecomment-1491761713
+
+    if browser_name == "chromium":
+        browser_type_launch_args = {
+            **browser_type_launch_args,
+            "args": [
+                "--use-fake-device-for-media-stream",
+                "--use-fake-ui-for-media-stream",
+            ],
+        }
+
+    elif browser_name == "firefox":
+        browser_type_launch_args = {
+            **browser_type_launch_args,
+            "firefox_user_prefs": {
+                "media.navigator.streams.fake": True,
+                "media.navigator.permission.disabled": True,
+                "permissions.default.microphone": 1,
+                "permissions.default.camera": 1,
+            },
+        }
+    return browser_type_launch_args
 
 
 @pytest.fixture(scope="function", params=["light_theme", "dark_theme"])

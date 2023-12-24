@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ import {
   DateTimeColumn,
   TimeColumn,
   DateColumn,
+  LinkCell,
   removeLineBreaks,
 } from "./columns"
 
@@ -231,6 +232,7 @@ export function getIndexFromArrow(
  *
  * @param data - The Arrow data.
  * @param columnPosition - The numeric position of the data column.
+ *        Starts with 0 at the first non-index column.
  *
  * @return the column props for the data column.
  */
@@ -380,7 +382,12 @@ export function getCellFromArrow(
     ) {
       // Time values needs to be adjusted to seconds based on the unit
       parsedDate = moment
-        .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
+        .unix(
+          Quiver.convertToSeconds(
+            arrowCell.content,
+            arrowCell.field?.type?.unit ?? 0
+          )
+        )
         .utc()
         .toDate()
     } else {
@@ -439,6 +446,17 @@ export function getCellFromArrow(
             displayDate: displayData,
           },
         } as DatePickerType
+      } else if (
+        cellTemplate.kind === GridCellKind.Custom &&
+        (cellTemplate as LinkCell).data?.kind === "link-cell"
+      ) {
+        cellTemplate = {
+          ...cellTemplate,
+          data: {
+            ...(cellTemplate as LinkCell).data,
+            displayText: displayData,
+          },
+        } as LinkCell
       }
     }
 

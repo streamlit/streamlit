@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,10 +54,10 @@ class ScriptCacheTest(unittest.TestCase):
         """`clear` removes cached entries."""
         cache = ScriptCache()
         cache.get_bytecode(_get_script_path("good_script.py"))
-        self.assertEquals(1, len(cache._cache))
+        self.assertEqual(1, len(cache._cache))
 
         cache.clear()
-        self.assertEquals(0, len(cache._cache))
+        self.assertEqual(0, len(cache._cache))
 
     def test_file_not_found_error(self):
         """An exception is thrown when a script file doesn't exist."""

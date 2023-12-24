@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "BlockProto";
+
 message Block {
   oneof type {
     Vertical vertical = 1;
@@ -31,6 +34,9 @@ message Block {
   bool allow_empty = 8;
 
   message Vertical {
+    bool border = 1;
+    // Height of the container, activates scrolling
+    uint32 height = 2;
   }
 
   message Horizontal {
@@ -51,6 +57,7 @@ message Block {
   message Form {
     string form_id = 1;
     bool clear_on_submit = 2;
+    bool border = 3;
   }
 
   message TabContainer {

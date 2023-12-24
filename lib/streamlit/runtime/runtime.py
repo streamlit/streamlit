@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,8 +83,8 @@ class RuntimeConfig:
     # The filesystem path of the Streamlit script to run.
     script_path: str
 
-    # The (optional) command line that Streamlit was started with
-    # (e.g. "streamlit run app.py")
+    # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
+    # longer use this anywhere.
     command_line: Optional[str]
 
     # The storage backend for Streamlit's MediaFileManager.
@@ -103,6 +103,9 @@ class RuntimeConfig:
 
     # The SessionStorage instance for the SessionManager to use.
     session_storage: SessionStorage = field(default_factory=MemorySessionStorage)
+
+    # True if the command used to start Streamlit was `streamlit hello`.
+    is_hello: bool = False
 
 
 class RuntimeState(Enum):
@@ -183,7 +186,7 @@ class Runtime:
         self._loop_coroutine_task: Optional[asyncio.Task[None]] = None
 
         self._main_script_path = config.script_path
-        self._command_line = config.command_line or ""
+        self._is_hello = config.is_hello
 
         self._state = RuntimeState.INITIAL
 
@@ -321,6 +324,7 @@ class Runtime:
         client: SessionClient,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
+        session_id_override: Optional[str] = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 
@@ -336,6 +340,17 @@ class Runtime:
             {
                 "email": "example@example.com"
             }
+        existing_session_id
+            The ID of an existing session to reconnect to. If one is not provided, a new
+            session is created. Note that whether the Runtime's SessionManager supports
+            reconnecting to an existing session depends on the SessionManager that this
+            runtime is configured with.
+        session_id_override
+            The ID to assign to a new session being created with this method. Setting
+            this can be useful when the service that a Streamlit Runtime is running in
+            wants to tie the lifecycle of a Streamlit session to some other session-like
+            object that it manages. Only one of existing_session_id and
+            session_id_override should be set.
 
         Returns
         -------
@@ -346,14 +361,19 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        assert not (
+            existing_session_id and session_id_override
+        ), "Only one of existing_session_id and session_id_override should be set!"
+
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
         session_id = self._session_mgr.connect_session(
             client=client,
-            script_data=ScriptData(self._main_script_path, self._command_line or ""),
+            script_data=ScriptData(self._main_script_path, self._is_hello),
             user_info=user_info,
             existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
         )
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._get_async_objs().has_connection.set()
@@ -365,6 +385,7 @@ class Runtime:
         client: SessionClient,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
+        session_id_override: Optional[str] = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 
@@ -375,7 +396,10 @@ class Runtime:
         """
         LOGGER.warning("create_session is deprecated! Use connect_session instead.")
         return self.connect_session(
-            client=client, user_info=user_info, existing_session_id=existing_session_id
+            client=client,
+            user_info=user_info,
+            existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
         )
 
     def close_session(self, session_id: str) -> None:
@@ -519,7 +543,7 @@ class Runtime:
         # SessionManager intentionally. This isn't a "real" session and is only being
         # used to test that the script runs without error.
         session = AppSession(
-            script_data=ScriptData(self._main_script_path, self._command_line),
+            script_data=ScriptData(self._main_script_path, self._is_hello),
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,

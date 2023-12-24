@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.27.2",
+  "version": "1.29.0",
   "private": true,
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -43,8 +43,8 @@
     "@loaders.gl/core": "^3.2.13",
     "@loaders.gl/csv": "^3.2.13",
     "@loaders.gl/gltf": "^3.2.13",
-    "apache-arrow": "^13.0.0",
-    "axios": "^0.27.2",
+    "apache-arrow": "^14.0.0",
+    "axios": "^1.6.0",
     "baseui": "12.2.0",
     "camelcase": "^7.0.1",
     "classnames": "^2.3.2",

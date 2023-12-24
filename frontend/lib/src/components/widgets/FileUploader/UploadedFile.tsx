@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ export const UploadedFileStatus = ({
 
 const UploadedFile = ({ fileInfo, onDelete }: Props): React.ReactElement => {
   return (
-    <StyledUploadedFile className="uploadedFile">
+    <StyledUploadedFile className="uploadedFile" data-testid="stUploadedFile">
       <StyledFileIcon>
         <Icon content={InsertDriveFile} size="twoXL" />
       </StyledFileIcon>

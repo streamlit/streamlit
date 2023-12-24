@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import contextlib
 import copy
 import re
 import types
-from enum import Enum, auto
+from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -32,6 +32,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -45,7 +46,7 @@ from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
 
 import streamlit as st
-from streamlit import errors
+from streamlit import config, errors
 from streamlit import logger as _logger
 from streamlit import string_util
 
@@ -139,6 +140,8 @@ OptionSequence: TypeAlias = Union[
 Key: TypeAlias = Union[str, int]
 
 LabelVisibility = Literal["visible", "hidden", "collapsed"]
+
+VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
 
 
 class SupportsStr(Protocol):
@@ -672,6 +675,24 @@ def is_pandas_version_less_than(v: str) -> bool:
     return version.parse(pd.__version__) < version.parse(v)
 
 
+def is_pyarrow_version_less_than(v: str) -> bool:
+    """Return True if the current Pyarrow version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+    """
+    from packaging import version
+
+    return version.parse(pa.__version__) < version.parse(v)
+
+
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to bytes using Apache Arrow.
 
@@ -691,9 +712,6 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     if column.dtype.kind in [
-        # timedelta is supported by pyarrow but not in the Arrow JS:
-        # https://github.com/streamlit/streamlit/issues/4489
-        "m",  # timedelta64[ns]
         "c",  # complex64, complex128, complex256
     ]:
         return True
@@ -707,8 +725,6 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
         if inferred_type in [
             "mixed-integer",
             "complex",
-            "timedelta",
-            "timedelta64",
         ]:
             return True
         elif inferred_type == "mixed":
@@ -808,6 +824,9 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
 
 def bytes_to_data_frame(source: bytes) -> DataFrame:
     """Convert bytes to pandas.DataFrame.
+
+    Using this function in production needs to make sure that
+    the pyarrow version >= 14.0.1.
 
     Parameters
     ----------
@@ -1009,6 +1028,11 @@ def to_key(key: Optional[Key]) -> Optional[str]:
         return str(key)
 
 
+def maybe_tuple_to_list(item: Any) -> Any:
+    """Convert a tuple to a list. Leave as is if it's not a tuple."""
+    return list(item) if isinstance(item, tuple) else item
+
+
 def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[str]):
     if not label:
         _LOGGER.warning(
@@ -1032,7 +1056,9 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does
 # return that in some situations.
-def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
+def infer_vegalite_type(
+    data: Series[Any],
+) -> VegaLiteType:
     """
     From an array-like input, infer the correct vega typecode
     ('ordinal', 'nominal', 'quantitative', or 'temporal')
@@ -1053,8 +1079,15 @@ def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
         "complex",
     ]:
         return "quantitative"
+
     elif typ == "categorical" and data.cat.ordered:
-        return ("ordinal", data.cat.categories.tolist())
+        # STREAMLIT MOD: The original code returns a tuple here:
+        # return ("ordinal", data.cat.categories.tolist())
+        # But returning the tuple here isn't compatible with our
+        # built-in chart implementation. And it also doesn't seem to be necessary.
+        # Altair already extracts the correct sort order somewhere else.
+        # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
+        return "ordinal"
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [
@@ -1075,3 +1108,63 @@ def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
         #     stacklevel=1,
         # )
         return "nominal"
+
+
+E1 = TypeVar("E1", bound=Enum)
+E2 = TypeVar("E2", bound=Enum)
+
+ALLOWED_ENUM_COERCION_CONFIG_SETTINGS = ("off", "nameOnly", "nameAndValue")
+
+
+def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
+    """Attempt to coerce an Enum value to another EnumMeta.
+
+    An Enum value of EnumMeta E1 is considered coercable to EnumType E2
+    if the EnumMeta __qualname__ match and the names of their members
+    match as well. (This is configurable in streamlist configs)
+    """
+    if not isinstance(from_enum_value, Enum):
+        raise ValueError(
+            f"Expected an Enum in the first argument. Got {type(from_enum_value)}"
+        )
+    if not isinstance(to_enum_class, EnumMeta):
+        raise ValueError(
+            f"Expected an EnumMeta/Type in the second argument. Got {type(to_enum_class)}"
+        )
+    if isinstance(from_enum_value, to_enum_class):
+        return from_enum_value  # Enum is already a member, no coersion necessary
+
+    coercion_type = config.get_option("runner.enumCoercion")
+    if coercion_type not in ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:
+        raise errors.StreamlitAPIException(
+            "Invalid value for config option runner.enumCoercion. "
+            f"Expected one of {ALLOWED_ENUM_COERCION_CONFIG_SETTINGS}, "
+            f"but got '{coercion_type}'."
+        )
+    if coercion_type == "off":
+        return from_enum_value  # do not attempt to coerce
+
+    # We now know this is an Enum AND the user has configured coercion enabled.
+    # Check if we do NOT meet the required conditions and log a failure message
+    # if that is the case.
+    from_enum_class = from_enum_value.__class__
+    if (
+        from_enum_class.__qualname__ != to_enum_class.__qualname__
+        or (
+            coercion_type == "nameOnly"
+            and set(to_enum_class._member_names_) != set(from_enum_class._member_names_)
+        )
+        or (
+            coercion_type == "nameAndValue"
+            and set(to_enum_class._value2member_map_)
+            != set(from_enum_class._value2member_map_)
+        )
+    ):
+        _LOGGER.debug("Failed to coerce %s to class %s", from_enum_value, to_enum_class)
+        return from_enum_value  # do not attempt to coerce
+
+    # At this point we think the Enum is coercable, and we know
+    # E1 and E2 have the same member names. We convert from E1 to E2 using _name_
+    # (since user Enum subclasses can override the .name property in 3.11)
+    _LOGGER.debug("Coerced %s to class %s", from_enum_value, to_enum_class)
+    return to_enum_class[from_enum_value._name_]

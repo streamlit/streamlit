@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ import { VEGA_LITE } from "./vegaLite"
 import { TEN_BY_TEN } from "./tenByTen"
 import { TALL, VERY_TALL } from "./tall"
 import { SMALL, WIDE } from "./wide"
+import { TIMEDELTA } from "./types/timedelta"
 
 export {
   // Types
@@ -59,6 +60,7 @@ export {
   RANGE,
   UINT64,
   UNICODE,
+  TIMEDELTA,
   // Special cases
   EMPTY,
   MULTI,

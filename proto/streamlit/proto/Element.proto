@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 
 syntax = "proto3";
+
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "ElementProto";
 
 import "streamlit/proto/Alert.proto";
 import "streamlit/proto/Arrow.proto";
@@ -53,6 +56,7 @@ import "streamlit/proto/Snow.proto";
 import "streamlit/proto/Spinner.proto";
 import "streamlit/proto/Radio.proto";
 import "streamlit/proto/Selectbox.proto";
+import "streamlit/proto/Skeleton.proto";
 import "streamlit/proto/Slider.proto";
 import "streamlit/proto/Text.proto";
 import "streamlit/proto/TextArea.proto";
@@ -106,6 +110,7 @@ message Element {
     Progress progress = 5;
     Radio radio = 23;
     Selectbox selectbox = 25;
+    Skeleton skeleton = 52;  // Internal-only.
     Slider slider = 21;
     Snow snow = 46;
     Spinner spinner = 44;
@@ -119,7 +124,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 52
+    // Next ID: 53
   }
 
   reserved 9;

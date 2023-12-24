@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,8 +142,9 @@ export const createEmotionTheme = (
     backgroundColor: bgColor,
     primaryColor: primary,
     textColor: bodyText,
-    widgetBackgroundColor: widgetBackgroundColor,
-    widgetBorderColor: widgetBorderColor,
+    skeletonBackgroundColor,
+    widgetBackgroundColor,
+    widgetBorderColor,
   } = parsedColors
 
   const newGenericColors = { ...genericColors }
@@ -155,6 +156,8 @@ export const createEmotionTheme = (
   if (widgetBackgroundColor)
     newGenericColors.widgetBackgroundColor = widgetBackgroundColor
   if (widgetBorderColor) newGenericColors.widgetBorderColor = widgetBorderColor
+  if (skeletonBackgroundColor)
+    newGenericColors.skeletonBackgroundColor = skeletonBackgroundColor
 
   const conditionalOverrides: any = {}
 

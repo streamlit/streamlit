@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -588,13 +588,14 @@ class ScriptRunnerTest(AsyncTestCase):
                 scriptrunner, ["True", "matey!", "2", "True", "loop_forever"]
             )
 
-            # Rerun with previous values. Everything should be the same.
+            # Rerun with previous values. The button should be reset;
+            # everything else should be the same.
             scriptrunner.clear_forward_msgs()
             scriptrunner.request_rerun(RerunData())
 
             require_widgets_deltas([scriptrunner])
             self._assert_text_deltas(
-                scriptrunner, ["True", "matey!", "2", "True", "loop_forever"]
+                scriptrunner, ["True", "matey!", "2", "False", "loop_forever"]
             )
 
         finally:

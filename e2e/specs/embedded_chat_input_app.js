@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ describe("embedded app with chat input", () => {
     cy.get(".main .block-container").should(
       "have.css",
       "padding-top",
-      "16px" // == 1rem
+      "33.6px" // == 2.1rem
     );
   });
 

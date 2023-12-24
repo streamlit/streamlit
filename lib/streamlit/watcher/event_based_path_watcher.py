@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -345,7 +345,13 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         modification_time = util.path_modification_time(
             changed_path, changed_path_info.allow_nonexistent
         )
-        if modification_time == changed_path_info.modification_time:
+
+        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+        # modification_time is always 0.0 because of file system limitations.
+        if (
+            modification_time != 0.0
+            and modification_time == changed_path_info.modification_time
+        ):
             LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
             return
 

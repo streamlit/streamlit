@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -373,13 +373,13 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
 def test_number_input_interaction():
     """Test interactions with an empty number input widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
 
-    st.number_input("the label", value=None)
-    """
-    ).run()
+    def script():
+        import streamlit as st
+
+        st.number_input("the label", value=None)
+
+    at = AppTest.from_function(script).run()
     number_input = at.number_input[0]
     assert number_input.value is None
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,16 @@ export const StyledFormSubmitContent = styled.div(() => ({
   display: "flex",
 }))
 
-export const StyledForm = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.colors.fadedText10}`,
-  borderRadius: theme.radii.lg,
-  padding: "calc(1em - 1px)", // 1px to account for border.
+export interface StyledFormProps {
+  border: boolean
+}
+
+export const StyledForm = styled.div<StyledFormProps>(({ theme, border }) => ({
+  ...(border && {
+    border: `1px solid ${theme.colors.fadedText10}`,
+    borderRadius: theme.radii.lg,
+    padding: "calc(1em - 1px)", // 1px to account for border.
+  }),
 }))
 
 export const StyledErrorContainer = styled.div(({ theme }) => ({

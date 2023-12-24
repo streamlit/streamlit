@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,8 @@ export const usePrevious = (value: any): any => {
 }
 
 export const useIsOverflowing = (
-  ref: MutableRefObject<HTMLElement | null>
+  ref: MutableRefObject<HTMLElement | null>,
+  expanded?: boolean
 ): boolean => {
   const { current } = ref
   const [isOverflowing, setIsOverflowing] = useState(false)
@@ -38,7 +39,7 @@ export const useIsOverflowing = (
 
       setIsOverflowing(scrollHeight > clientHeight)
     }
-  }, [setIsOverflowing, current, current?.clientHeight])
+  }, [setIsOverflowing, expanded, current, current?.clientHeight])
 
   return isOverflowing
 }

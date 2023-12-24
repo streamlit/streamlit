@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -534,6 +534,7 @@ class SessionState:
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
         """
+        self._reset_triggers()
         self._remove_stale_widgets(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:

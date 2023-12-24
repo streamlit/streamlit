@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,13 +72,15 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         set arbitrary HTTP headers, and this header is the only one where we have the
         ability to set it to arbitrary values, so we use it to pass tokens (in this
         case, the previous session ID to allow us to reconnect to it) from client to
-        server as the *second* value in the list.
+        server as the *third* value in the list.
 
-        The reason why the auth token is set as the second value is that, when
-        Sec-WebSocket-Protocol is set, many clients expect the server to respond with a
-        selected subprotocol to use. We don't want that reply to be the token, so we
-        by convention have the client always set the first protocol to "streamlit" and
-        select that.
+        The reason why the auth token is set as the third value is that:
+          * when Sec-WebSocket-Protocol is set, many clients expect the server to
+            respond with a selected subprotocol to use. We don't want that reply to be
+            the session token, so we by convention have the client always set the first
+            protocol to "streamlit" and select that.
+          * the second protocol in the list is reserved in some deployment environments
+            for an auth token that we currently don't use
         """
         if subprotocols:
             return subprotocols[0]
@@ -111,10 +113,10 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 for p in self.request.headers["Sec-Websocket-Protocol"].split(",")
             ]
 
-            if len(ws_protocols) > 1:
-                # See the NOTE in the docstring of the select_subprotocol method above
+            if len(ws_protocols) >= 3:
+                # See the NOTE in the docstring of the `select_subprotocol` method above
                 # for a detailed explanation of why this is done.
-                existing_session_id = ws_protocols[1]
+                existing_session_id = ws_protocols[2]
         except KeyError:
             # Just let existing_session_id=None if we run into any error while trying to
             # extract it from the Sec-Websocket-Protocol header.

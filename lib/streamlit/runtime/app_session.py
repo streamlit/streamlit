@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -80,6 +80,7 @@ class AppSession:
         message_enqueued_callback: Optional[Callable[[], None]],
         local_sources_watcher: LocalSourcesWatcher,
         user_info: Dict[str, Optional[str]],
+        session_id_override: Optional[str] = None,
     ) -> None:
         """Initialize the AppSession.
 
@@ -113,9 +114,13 @@ class AppSession:
             Information about the current user is optionally provided when a
             websocket connection is initialized via the "X-Streamlit-User" header.
 
+        session_id_override
+            The ID to assign to this session. Setting this can be useful when the
+            service that a Streamlit Runtime is running in wants to tie the lifecycle of
+            a Streamlit session to some other session-like object that it manages.
         """
         # Each AppSession has a unique string ID.
-        self.id = str(uuid.uuid4())
+        self.id = session_id_override or str(uuid.uuid4())
 
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
@@ -284,6 +289,8 @@ class AppSession:
                 self._handle_git_information_request()
             elif msg_type == "clear_cache":
                 self._handle_clear_cache_request()
+            elif msg_type == "app_heartbeat":
+                self._handle_app_heartbeat_request()
             elif msg_type == "set_run_on_save":
                 self._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_script":
@@ -440,6 +447,9 @@ class AppSession:
         msg = ForwardMsg()
         _populate_app_pages(msg.pages_changed, self._script_data.main_script_path)
         self._enqueue_forward_msg(msg)
+
+        if self._local_sources_watcher is not None:
+            self._local_sources_watcher.update_watched_pages()
 
     def _clear_queue(self) -> None:
         self._browser_queue.clear()
@@ -646,7 +656,7 @@ class AppSession:
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
-        imsg.command_line = self._script_data.command_line
+        imsg.is_hello = self._script_data.is_hello
         imsg.session_id = self.id
 
         return msg
@@ -732,6 +742,17 @@ class AppSession:
         caching.cache_resource.clear()
         self._session_state.clear()
 
+    def _handle_app_heartbeat_request(self) -> None:
+        """Handle an incoming app heartbeat.
+
+        The heartbeat indicates the frontend is active and keeps the
+        websocket from going idle and disconnecting.
+
+        The actual handler here is a noop
+
+        """
+        pass
+
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
 
@@ -791,7 +812,6 @@ def _get_toolbar_mode() -> "Config.ToolbarMode.ValueType":
 def _populate_config_msg(msg: Config) -> None:
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
-    msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
     msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")

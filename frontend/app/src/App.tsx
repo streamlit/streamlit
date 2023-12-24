@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,8 @@ import {
   LibConfig,
   AppConfig,
 } from "@streamlit/lib"
-import { concat, noop, without } from "lodash"
+import noop from "lodash/noop"
+import without from "lodash/without"
 
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 
@@ -174,6 +175,8 @@ interface State {
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
+
+const INITIAL_SCRIPT_RUN_ID = "<null>"
 
 // eslint-disable-next-line
 declare global {
@@ -241,10 +244,10 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(true),
       isFullScreen: false,
       scriptName: "",
-      scriptRunId: "<null>",
+      scriptRunId: INITIAL_SCRIPT_RUN_ID,
       appHash: null,
       scriptRunState: ScriptRunState.NOT_RUNNING,
       userSettings: {
@@ -297,6 +300,7 @@ export class App extends PureComponent<Props, State> {
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
+      sendAppHeartbeat: this.sendAppHeartbeat,
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
@@ -392,6 +396,7 @@ export class App extends PureComponent<Props, State> {
           useExternalAuthToken,
           disableFullscreenMode,
           enableCustomParentMessages,
+          mapboxToken,
         } = response
 
         const appConfig: AppConfig = {
@@ -399,7 +404,7 @@ export class App extends PureComponent<Props, State> {
           useExternalAuthToken,
           enableCustomParentMessages,
         }
-        const libConfig: LibConfig = { disableFullscreenMode }
+        const libConfig: LibConfig = { mapboxToken, disableFullscreenMode }
 
         // Set the allowed origins configuration for the host communication:
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
@@ -549,7 +554,7 @@ export class App extends PureComponent<Props, State> {
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     } else {
-      setCookie("_xsrf", "")
+      setCookie("_streamlit_xsrf", "")
 
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
@@ -1107,7 +1112,7 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(),
+        elements: AppRoot.empty(false),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
@@ -1414,6 +1419,19 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Sends an app heartbeat message through the websocket
+   */
+  sendAppHeartbeat = (): void => {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ appHeartbeat: true })
+      backMsg.type = "appHeartbeat"
+      this.sendBackMsg(backMsg)
+    } else {
+      logError("Cannot send app heartbeat: disconnected from server")
+    }
+  }
+
+  /**
    * Sends a message back to the server.
    */
   private sendBackMsg = (msg: BackMsg): void => {
@@ -1528,7 +1546,7 @@ export class App extends PureComponent<Props, State> {
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.concat(func),
       }
     })
   }
@@ -1682,7 +1700,15 @@ export class App extends PureComponent<Props, State> {
             attach={window}
             focused={true}
           >
-            <StyledApp className={outerDivClass}>
+            <StyledApp
+              className={outerDivClass}
+              data-testid="stApp"
+              data-teststate={
+                scriptRunId == INITIAL_SCRIPT_RUN_ID
+                  ? "initial"
+                  : scriptRunState
+              }
+            >
               {/* The tabindex below is required for testing. */}
               <Header>
                 {!hideTopBar && (

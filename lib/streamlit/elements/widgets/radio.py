@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
+    maybe_coerce_enum,
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
@@ -318,6 +319,7 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
         )
+        widget_state = maybe_coerce_enum(widget_state, options, opt)
 
         if widget_state.value_changed:
             if widget_state.value is not None:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -395,7 +395,10 @@ export class NumberInput extends React.PureComponent<Props, State> {
             </StyledWidgetLabelHelp>
           )}
         </WidgetLabel>
-        <StyledInputContainer className={isFocused ? "focused" : ""}>
+        <StyledInputContainer
+          className={isFocused ? "focused" : ""}
+          data-testid="stNumberInputContainer"
+        >
           <UIInput
             type="number"
             inputRef={this.inputRef}
@@ -434,6 +437,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
               },
               Input: {
                 props: {
+                  "data-testid": "stNumberInput-Input",
                   step: this.getStep(),
                   min: this.getMin(),
                   max: this.getMax(),
@@ -472,6 +476,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
             <StyledInputControls>
               <StyledInputControl
                 className="step-down"
+                data-testid="stNumberInput-StepDown"
                 onClick={this.modifyValueUsingStep("decrement")}
                 disabled={disableDecrement}
                 tabIndex={-1}
@@ -484,6 +489,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
               </StyledInputControl>
               <StyledInputControl
                 className="step-up"
+                data-testid="stNumberInput-StepUp"
                 onClick={this.modifyValueUsingStep("increment")}
                 disabled={disableIncrement}
                 tabIndex={-1}

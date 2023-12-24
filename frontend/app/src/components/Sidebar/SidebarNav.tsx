@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ const SidebarNav = ({
   const { pageLinkBaseUrl } = React.useContext(AppContext)
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef)
+  const isOverflowing = useIsOverflowing(navItemsRef, expanded)
 
   const onMouseOver = useCallback(() => {
     if (isOverflowing) {

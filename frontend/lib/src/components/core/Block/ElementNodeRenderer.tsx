@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,9 +70,12 @@ import ExceptionElement from "@streamlit/lib/src/components/elements/ExceptionEl
 import Json from "@streamlit/lib/src/components/elements/Json"
 import Markdown from "@streamlit/lib/src/components/elements/Markdown"
 import Metric from "@streamlit/lib/src/components/elements/Metric"
+import {
+  Skeleton,
+  AppSkeleton,
+} from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
@@ -238,23 +241,7 @@ const RawElementNodeRenderer = (
 
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
   // since leaf elements are always direct children of a VerticalBlock, which always calculates
-  let width = props.width ?? 0
-
-  // Modify width using the value from the spec as passed with the message when applicable
-  if (node.metadata.elementDimensionSpec) {
-    if (
-      node.metadata.elementDimensionSpec.width &&
-      node.metadata.elementDimensionSpec.width > 0
-    ) {
-      width = Math.min(node.metadata.elementDimensionSpec.width, width)
-    }
-    if (
-      node.metadata.elementDimensionSpec.height &&
-      node.metadata.elementDimensionSpec.height > 0
-    ) {
-      height = node.metadata.elementDimensionSpec.height
-    }
-  }
+  const width = props.width ?? 0
 
   switch (node.element.type) {
     case "alert": {
@@ -308,7 +295,6 @@ const RawElementNodeRenderer = (
     case "deckGlJsonChart":
       return (
         <DeckGlJsonChart
-          sessionInfo={props.sessionInfo}
           width={width}
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
         />
@@ -623,6 +609,10 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "skeleton": {
+      return <AppSkeleton />
+    }
+
     case "slider": {
       const sliderProto = node.element.slider as SliderProto
       widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
@@ -751,11 +741,7 @@ const ElementNodeRenderer = (
         elementType={elementType}
       >
         <ErrorBoundary width={width}>
-          <Suspense
-            fallback={
-              <AlertElement body="Loading..." kind={Kind.INFO} width={width} />
-            }
-          >
+          <Suspense fallback={<Skeleton />}>
             <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>

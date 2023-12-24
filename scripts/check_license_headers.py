@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,13 +41,15 @@ IGNORE_PATTERN = re.compile(
     r"|\.(json|prettierrc|nvmrc)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
+    # Exclude pytest config files, because they don't have any degree of creativity.
+    r"|pytest\.ini$"
     # Exclude empty files, because they don't have any degree of creativity.
     r"|py\.typed$"
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
-    r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
+    r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini)$"
     r"|^lib/(test|dev)-requirements\.txt$"
     r"|^lib/min-constraints-gen\.txt"
     r"|\.isort\.cfg$"
@@ -56,7 +58,8 @@ IGNORE_PATTERN = re.compile(
     r"|/(fixtures|__snapshots__|test_data|data)/"
     # Exclude vendored files.
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
-    r"|proto/streamlit/proto/openmetrics_data_model\.proto",
+    r"|proto/streamlit/proto/openmetrics_data_model\.proto"
+    r"|^e2e_flaky/scripts/.*\.py",
     re.IGNORECASE,
 )
 

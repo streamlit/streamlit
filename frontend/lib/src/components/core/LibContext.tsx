@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,11 @@ import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
  * should still work with a new frontend versions.
  */
 export type LibConfig = {
+  /**
+   * the mapbox token that can be configured by a platform
+   */
+  mapboxToken?: string
+
   /**
    * Whether to disable the full screen mode all elements / widgets.
    */

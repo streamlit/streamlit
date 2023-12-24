@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ class ScriptData:
     """Contains parameters related to running a script."""
 
     main_script_path: str
-    command_line: str
+    is_hello: bool = False
     script_folder: str = field(init=False)
     name: str = field(init=False)
 

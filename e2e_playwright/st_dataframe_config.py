@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -194,6 +194,18 @@ st.dataframe(
                 None,
             ],
             "col_1": ["/a", "/b", "", None],
+            "col_2": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
+                None,
+            ],
+            "col_3": [
+                "https://roadmap.streamlit.app",
+                "https://extras.streamlit.app",
+                "",
+                None,
+            ],
         }
     ),
     column_config={
@@ -208,6 +220,14 @@ st.dataframe(
             validate="^[0-9]+$",  # Should be ignored
         ),
         "col_1": st.column_config.LinkColumn(),
+        "col_2": st.column_config.LinkColumn(
+            "Display text via Regex",
+            display_text="https://(.*?)\.streamlit\.app",
+        ),
+        "col_3": st.column_config.LinkColumn(
+            "Static display text",
+            display_text="Open link",
+        ),
     },
 )
 

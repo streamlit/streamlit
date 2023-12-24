@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ const NUM_DISCONNECTS = 20;
 describe("websocket reconnects", () => {
   beforeEach(() => {
     Cypress.Cookies.defaults({
-      preserve: ["_xsrf"],
+      preserve: ["_streamlit_xsrf"],
     });
     cy.server();
     cy.route("PUT", "**/upload_file/**").as("uploadFile");

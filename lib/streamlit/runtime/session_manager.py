@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -237,6 +237,7 @@ class SessionManager(Protocol):
         script_data: ScriptData,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
+        session_id_override: Optional[str] = None,
     ) -> str:
         """Create a new session or connect to an existing one.
 
@@ -256,10 +257,16 @@ class SessionManager(Protocol):
             }
         existing_session_id
             The ID of an existing session to reconnect to. If one is not provided, a new
-            session is created. Note that whether a SessionManager supports reconnection
+            session is created. Note that whether a SessionManager supports reconnecting
             to an existing session is left up to the concrete SessionManager
             implementation. Those that do not support reconnection should simply ignore
             this argument.
+        session_id_override
+            The ID to assign to a new session being created with this method. Setting
+            this can be useful when the service that a Streamlit Runtime is running in
+            wants to tie the lifecycle of a Streamlit session to some other session-like
+            object that it manages. Only one of existing_session_id and
+            session_id_override should be set.
 
         Returns
         -------

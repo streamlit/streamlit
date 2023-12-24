@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -282,6 +282,9 @@ _create_option(
         """,
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="global.disableWatchdogWarning has been deprecated has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
 )
 
 
@@ -373,6 +376,16 @@ _create_option(
 )
 
 _create_option(
+    "global.storeCachedForwardMessagesInMemory",
+    description="""If True, store cached ForwardMsgs in backend memory.
+        This is an internal flag to validate a potential removal of the in-memory
+        forward message cache.""",
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
     "global.dataFrameSerialization",
     description="""
         DataFrame serialization.
@@ -450,6 +463,9 @@ _create_option(
     default_val=True,
     type_=bool,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="client.caching has been deprecated and is not required anymore for our new caching commands.",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -459,6 +475,9 @@ _create_option(
     default_val=True,
     type_=bool,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="client.displayEnabled has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -523,6 +542,9 @@ _create_option(
         """,
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="runner.installTracer has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -532,6 +554,9 @@ _create_option(
         prevent Python crashing.
         """,
     default_val=True,
+    deprecated=True,
+    deprecation_text="runner.fixMatplotlib has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
     type_=bool,
 )
 
@@ -545,6 +570,7 @@ _create_option(
         """,
     default_val=True,
     type_=bool,
+    visibility="hidden",
 )
 
 _create_option(
@@ -570,6 +596,23 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
+)
+
+_create_option(
+    "runner.enumCoercion",
+    description="""
+        Adjust how certain 'options' widgets like radio, selectbox, and
+        multiselect coerce Enum members when the Enum class gets
+        re-defined during a script re-run.
+
+        Allowed values:
+        * "off": Disables Enum coercion.
+        * "nameOnly": Enum classes can be coerced if their member names match.
+        * "nameAndValue": Enum classes can be coerced if their member names AND
+          member values match.
+    """,
+    default_val="nameOnly",
+    type_=str,
 )
 
 # Config Section: Server #
@@ -679,7 +722,7 @@ _create_option(
     "server.scriptHealthCheckEnabled",
     visibility="hidden",
     description="""
-    Flag for enabling the script health check endpoint. It used for checking if
+    Flag for enabling the script health check endpoint. It's used for checking if
     a script loads successfully. On success, the endpoint will return a 200
     HTTP status code. On failure, the endpoint will return a 503 HTTP status code.
 
@@ -917,6 +960,8 @@ _create_option(
     default_val=True,
     scriptable=True,
     type_=bool,
+    deprecated=True,
+    deprecation_text="deprecation.showfileUploaderEncoding has been deprecated and will be removed in a future version.",
     expiration_date="2021-01-06",
 )
 

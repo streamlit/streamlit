@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -124,6 +124,11 @@ class DataEditorUtilTest(unittest.TestCase):
                 "2021-01-01T10:20:30.123456Z",
                 ColumnDataKind.DATE,
                 datetime.date(2021, 1, 1),
+            ),
+            (
+                100000,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(100000),
             ),
         ]
     )

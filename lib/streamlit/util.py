@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -104,13 +104,6 @@ def _open_browser_with_command(command, url):
     cmd_line = [command, url]
     with open(os.devnull, "w") as devnull:
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
-
-
-def _maybe_tuple_to_list(item: Any) -> Any:
-    """Convert a tuple to a list. Leave as is if it's not a tuple."""
-    if isinstance(item, tuple):
-        return list(item)
-    return item
 
 
 def repr_(self: Any) -> str:

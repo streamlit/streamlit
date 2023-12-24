@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, cast
 
 from typing_extensions import Final
 
+from streamlit import config
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.util import HASHLIB_KWARGS
@@ -173,3 +174,7 @@ def marshall(
     tooltip = _get_pydeck_tooltip(pydeck_obj)
     if tooltip:
         pydeck_proto.tooltip = json.dumps(tooltip)
+
+    mapbox_token = config.get_option("mapbox.token")
+    if mapbox_token:
+        pydeck_proto.mapbox_token = mapbox_token

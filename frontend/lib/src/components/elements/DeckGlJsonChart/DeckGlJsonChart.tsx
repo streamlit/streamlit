@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import { GLTFLoader } from "@loaders.gl/gltf"
 import { registerLoaders } from "@loaders.gl/core"
 
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
-import withMapboxToken from "@streamlit/lib/src/hocs/withMapboxToken"
+import withMapboxToken from "./withMapboxToken"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/lib/src/proto"
 import {
@@ -264,7 +264,9 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
                 ? deck.mapStyle
                 : deck.mapStyle[0])
             }
-            mapboxApiAccessToken={this.props.mapboxToken}
+            mapboxApiAccessToken={
+              this.props.element.mapboxToken || this.props.mapboxToken
+            }
           />
           <StyledNavigationControlContainer>
             <NavigationControl className="zoomButton" showCompass={false} />

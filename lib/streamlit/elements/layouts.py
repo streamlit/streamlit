@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,9 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 class LayoutsMixin:
     @gather_metrics("container")
-    def container(self) -> "DeltaGenerator":
+    def container(
+        self, *, height: int | None = None, border: bool | None = None
+    ) -> "DeltaGenerator":
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -39,6 +41,26 @@ class LayoutsMixin:
         To add elements to the returned container, you can use "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
+
+        Parameters
+        ----------
+        height : int or None
+            Desired height of the container expressed in pixels. If None (default)
+            the container grows to fit its content. If a fixed height, scrolling is
+            enabled for large content, and a grey border is shown around the container
+            to visually separate its scroll surface from the rest of the app.
+
+            .. note::
+                Use containers with scroll sparingly. If you do, try to keep
+                the height small (below 500 pixels). Otherwise, the scroll
+                surface of the container might cover the majority of the screen
+                on mobile devices, which makes it hard to scroll the rest of the app.
+
+        border : bool or None
+            Whether to show a border around the container. If None (default), a
+            border is shown automatically if the container is set to a fixed height,
+            so you can visually distinguish the scroll surfaces.
+
 
         Examples
         --------
@@ -62,7 +84,7 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> container = st.container()
+        >>> container = st.container(border=True)
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
         >>>
@@ -73,7 +95,20 @@ class LayoutsMixin:
             https://doc-container2.streamlit.app/
             height: 480px
         """
-        return self.dg._block()
+        block_proto = BlockProto()
+        block_proto.allow_empty = False
+        block_proto.vertical.border = border or False
+        if height:
+            # Activate scrolling container behavior:
+            block_proto.allow_empty = True
+            block_proto.vertical.height = height
+            if border is None:
+                # If border is None, we activated the
+                # border as default setting for scrolling
+                # containers.
+                block_proto.vertical.border = True
+
+        return self.dg._block(block_proto)
 
     # TODO: Enforce that columns are not nested or in Sidebar
     @gather_metrics("columns")

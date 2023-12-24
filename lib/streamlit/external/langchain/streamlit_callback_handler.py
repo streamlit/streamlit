@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,8 +35,14 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
 
-from langchain.callbacks.base import BaseCallbackHandler
-from langchain.schema import AgentAction, AgentFinish, LLMResult
+from langchain.callbacks.base import (  # type: ignore[import-not-found, unused-ignore]
+    BaseCallbackHandler,
+)
+from langchain.schema import (  # type: ignore[import-not-found, unused-ignore]
+    AgentAction,
+    AgentFinish,
+    LLMResult,
+)
 
 from streamlit.runtime.metrics_util import gather_metrics
 

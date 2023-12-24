@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import {
   Config,
   PageConfig,
 } from "@streamlit/lib"
+import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
 import {
@@ -310,7 +311,9 @@ function getPreferredMenuOrder(
     coreMenuItems.settings,
     coreMenuItems.DIVIDER,
     coreMenuItems.print,
-    coreMenuItems.recordScreencast,
+    ...(ScreenCastRecorder.isSupportedBrowser()
+      ? [coreMenuItems.recordScreencast]
+      : []),
     coreMenuItems.DIVIDER,
     coreMenuItems.report,
     coreMenuItems.community,

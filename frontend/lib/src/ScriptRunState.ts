@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,10 @@
  */
 
 export enum ScriptRunState {
+  // TODO: Add INITIAL state here and clean up data-teststate in App.tsx.
+  // But before we do this, we need to make sure Snowflake hosts that use this
+  // state will not break. And that's a bigger project...
+  //INITIAL = "initial",
   NOT_RUNNING = "notRunning",
   RUNNING = "running",
   RERUN_REQUESTED = "rerunRequested", // script *not* running, but user requested it be re-run

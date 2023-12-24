@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,11 @@ import {
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 import {
-  makeElementWithInfoText,
+  getLoadingScreenType,
+  LoadingScreenType,
   makeElementWithErrorText,
+  makeElementWithInfoText,
+  makeSkeletonElement,
   notUndefined,
 } from "./util/utils"
 
@@ -404,19 +407,38 @@ export class AppRoot {
   private readonly root: BlockNode
 
   /**
-   * Create an empty AppRoot with an optional placeholder element.
+   * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(placeholderText?: string): AppRoot {
-    let mainNodes: AppNode[]
-    if (placeholderText != null) {
-      const waitNode = new ElementNode(
-        makeElementWithInfoText(placeholderText),
-        ForwardMsgMetadata.create({}),
-        NO_SCRIPT_RUN_ID
+  public static empty(isInitialRender = true): AppRoot {
+    const mainNodes: AppNode[] = []
+
+    let waitElement: Element | undefined
+
+    switch (getLoadingScreenType()) {
+      case LoadingScreenType.NONE:
+        break
+
+      case LoadingScreenType.V1:
+        // Only show the v1 loading state when it's the initial render.
+        // This is how v1 used to work, and we don't want any backward
+        // incompatibility.
+        if (isInitialRender) {
+          waitElement = makeElementWithInfoText("Please wait...")
+        }
+        break
+
+      default:
+        waitElement = makeSkeletonElement()
+    }
+
+    if (waitElement) {
+      mainNodes.push(
+        new ElementNode(
+          waitElement,
+          ForwardMsgMetadata.create({}),
+          NO_SCRIPT_RUN_ID
+        )
       )
-      mainNodes = [waitNode]
-    } else {
-      mainNodes = []
     }
 
     const main = new BlockNode(

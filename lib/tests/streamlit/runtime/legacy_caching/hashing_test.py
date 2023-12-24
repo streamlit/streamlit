@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import hashlib
 import os
 import re
 import socket
+import sys
 import tempfile
 import time
 import types
@@ -553,6 +554,12 @@ class HashTest(unittest.TestCase):
             ("postgresql", "password"),
             ("mysql", "passwd"),
             ("oracle", "password"),
+            ("mssql", "password"),
+        ]
+        if sys.version_info < (3, 12)
+        else [
+            ("postgresql", "password"),
+            ("mysql", "passwd"),
             ("mssql", "password"),
         ]
     )

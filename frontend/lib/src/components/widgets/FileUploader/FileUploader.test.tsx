@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -213,8 +213,8 @@ describe("FileUploader widget enzyme tests", () => {
     expect(getFiles(wrapper)[0].status.type).toBe("uploading")
     expect(instance.status).toBe("updating")
 
-    // WidgetStateManager should not have been called yet
-    expect(props.widgetMgr.setFileUploaderStateValue).not.toHaveBeenCalled()
+    // WidgetStateManager should have been called on mounting
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
 
     // Wait a tick to simulate the file upload completing.
     await process.nextTick
@@ -402,7 +402,7 @@ describe("FileUploader widget enzyme tests", () => {
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with our two file IDs
-    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(2)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
       props.element,
@@ -426,9 +426,9 @@ describe("FileUploader widget enzyme tests", () => {
     expect(instance.status).toBe("ready")
 
     // WidgetStateManager should have been called with the file ID
-    // of the remaining file. This should be the second time WidgetStateManager
+    // of the remaining file. This should be the third time WidgetStateManager
     // has been updated.
-    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(2)
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
     const newWidgetValue = [initialFiles[1]]
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
       props.element,
@@ -464,14 +464,13 @@ describe("FileUploader widget enzyme tests", () => {
     expect(getFiles(wrapper).length).toBe(0)
     expect(instance.status).toBe("ready")
 
-    // WidgetStateManager will still have been called once, with a single
-    // value - the id that was last returned from the server.
+    // WidgetStateManager will still have been called once, during component mounting
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
       buildFileUploaderStateProto([]),
       {
-        fromUi: true,
+        fromUi: false,
       }
     )
   })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import inspect
 import io
 import os
 import pickle
+import struct
 import sys
 import tempfile
 import threading
@@ -224,6 +225,11 @@ def _int_to_bytes(i: int) -> bytes:
     return i.to_bytes(num_bytes, "little", signed=True)
 
 
+def _float_to_bytes(f: float) -> bytes:
+    # Floats are 64bit in Python, so we need to use the "d" format.
+    return struct.pack("<d", f)
+
+
 def _key(obj: Optional[Any]) -> Any:
     """Return key for memoization."""
 
@@ -361,7 +367,7 @@ class _CacheFuncHasher:
             return obj.encode()
 
         elif isinstance(obj, float):
-            return self.to_bytes(hash(obj))
+            return _float_to_bytes(obj)
 
         elif isinstance(obj, int):
             return _int_to_bytes(obj)

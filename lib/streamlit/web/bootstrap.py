@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import click
 
@@ -393,7 +393,7 @@ def _install_pages_watcher(main_script_path_str: str) -> None:
 
 def run(
     main_script_path: str,
-    command_line: Optional[str],
+    is_hello: bool,
     args: List[str],
     flag_options: Dict[str, Any],
 ) -> None:
@@ -411,7 +411,7 @@ def run(
     _install_pages_watcher(main_script_path)
 
     # Create the server. It won't start running yet.
-    server = Server(main_script_path, command_line)
+    server = Server(main_script_path, is_hello)
 
     async def run_server() -> None:
         # Start the server

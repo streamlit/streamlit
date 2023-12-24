@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,7 +112,6 @@ describe("MainMenu", () => {
       "Rerun",
       "Settings",
       "Print",
-      "Record a screencast",
       "View app source",
       "Report bug with app",
       "About",
@@ -136,7 +135,6 @@ describe("MainMenu", () => {
       "Rerun",
       "Settings",
       "Print",
-      "Record a screencast",
       "About",
       "Developer options",
       "Clear cache",
@@ -161,15 +159,9 @@ describe("MainMenu", () => {
     const coreMenu = screen.getAllByTestId("main-menu-list")[0]
 
     const coreMenuOptions = within(coreMenu).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(5)
+    expect(coreMenuOptions).toHaveLength(4)
 
-    const expectedLabels = [
-      "Rerun",
-      "Settings",
-      "Print",
-      "Record a screencast",
-      "About",
-    ]
+    const expectedLabels = ["Rerun", "Settings", "Print", "About"]
     coreMenuOptions.forEach((option, index) => {
       expect(option).toHaveTextContent(expectedLabels[index])
     })
@@ -218,15 +210,9 @@ describe("MainMenu", () => {
     expect(subMenus).toHaveLength(1)
 
     const coreMenuOptions = within(subMenus[0]).getAllByRole("option")
-    expect(coreMenuOptions).toHaveLength(5)
+    expect(coreMenuOptions).toHaveLength(4)
 
-    const expectedLabels = [
-      "Rerun",
-      "Settings",
-      "Print",
-      "Record a screencast",
-      "About",
-    ]
+    const expectedLabels = ["Rerun", "Settings", "Print", "About"]
     coreMenuOptions.forEach((option, index) => {
       expect(option).toHaveTextContent(expectedLabels[index])
     })

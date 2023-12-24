@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -182,12 +182,13 @@ class SomeObj(object):
 
 def test_text_input_interaction():
     """Test interactions with an empty text_area widget."""
-    at = AppTest.from_string(
-        """
-    import streamlit as st
-    st.text_area("the label", value=None)
-    """
-    ).run()
+
+    def script():
+        import streamlit as st
+
+        st.text_area("the label", value=None)
+
+    at = AppTest.from_function(script).run()
     text_area = at.text_area[0]
     assert text_area.value is None
 

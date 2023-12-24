@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,7 +179,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     params.url = url
 
     if (this.csrfEnabled) {
-      const xsrfCookie = getCookie("_xsrf")
+      const xsrfCookie = getCookie("_streamlit_xsrf")
       if (xsrfCookie != null) {
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
