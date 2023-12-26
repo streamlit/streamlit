@@ -304,6 +304,11 @@ export class App extends PureComponent<Props, State> {
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
+      jwtPairChanged: ({ jwtToken, jwtHeaderName }) => {
+        if (this.endpoints.setJWTPair !== undefined) {
+          this.endpoints.setJWTPair({ jwtToken, jwtHeaderName })
+        }
+      },
       hostMenuItemsChanged: hostMenuItems => {
         this.setState({ hostMenuItems })
       },

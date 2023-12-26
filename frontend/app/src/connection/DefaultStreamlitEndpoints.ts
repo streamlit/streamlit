@@ -19,6 +19,7 @@ import {
   BaseUriParts,
   buildHttpUri,
   StreamlitEndpoints,
+  JWTPair,
   getCookie,
   IAppPage,
 } from "@streamlit/lib"
@@ -41,6 +42,8 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
   private cachedServerUri?: BaseUriParts
 
+  private jwtPair?: JWTPair
+
   public constructor(props: Props) {
     this.getServerUri = props.getServerUri
     this.csrfEnabled = props.csrfEnabled
@@ -51,6 +54,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       this.requireServerUri(),
       `${COMPONENT_ENDPOINT_BASE}/${componentName}/${path}`
     )
+  }
+
+  public setJWTPair(jwtPair: JWTPair): void {
+    this.jwtPair = jwtPair
   }
 
   /**
@@ -112,12 +119,17 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const form = new FormData()
     form.append("sessionId", sessionId)
     form.append(file.name, file)
+    const headers: Record<string, string> = {}
+    if (this.jwtPair !== undefined) {
+      headers[this.jwtPair.jwtHeaderName] = this.jwtPair.jwtToken
+    }
 
     return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {
       cancelToken,
       method: "PUT",
       data: form,
       responseType: "text",
+      headers,
       onUploadProgress,
     }).then(() => undefined) // If the request succeeds, we don't care about the response body
   }

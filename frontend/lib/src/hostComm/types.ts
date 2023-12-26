@@ -59,6 +59,8 @@ export type IHostToGuestMessage = {
   | {
       type: "SET_AUTH_TOKEN"
       authToken: string
+      jwtToken?: string
+      jwtHeaderName?: string
     }
   | {
       type: "SET_IS_OWNER"
