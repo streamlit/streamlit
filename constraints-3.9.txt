@@ -43,7 +43,7 @@ Jinja2==3.1.2
 jsonpatch==1.33
 jsonpointer==2.4
 jsonschema==4.20.0
-jsonschema-specifications==2023.11.2
+jsonschema-specifications==2023.12.1
 keyring==24.3.0
 kiwisolver==1.4.5
 langchain==0.0.352
