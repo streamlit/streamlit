@@ -53,12 +53,12 @@ def test_expander_long_displays_correctly(
     """Test that long expanders are displayed correctly."""
     assert_snapshot(
         # expander_long
-        themed_app.locator(".main [data-testid='stExpander']").nth(4),
+        themed_app.locator(".main [data-testid='stExpander']").nth(3),
         name="stExpander-long-expanded",
     )
     assert_snapshot(
         # collapsed_long
-        themed_app.locator(".main [data-testid='stExpander']").nth(5),
+        themed_app.locator(".main [data-testid='stExpander']").nth(4),
         name="stExpander-long-collapsed",
     )
 
