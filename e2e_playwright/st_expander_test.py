@@ -23,7 +23,7 @@ def test_displays_expander_and_regular_containers_properly(app: Page):
     """Test that expanders and regular containers are displayed properly."""
 
     main_expanders = app.locator(".main [data-testid='stExpander']")
-    expect(main_expanders).to_have_count(3)
+    expect(main_expanders).to_have_count(5)
 
     for expander in main_expanders.all():
         expect(expander.locator(EXPANDER_HEADER_IDENTIFIER)).to_be_visible()
@@ -66,7 +66,7 @@ def test_expander_long_displays_correctly(
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
     main_expanders = app.locator(".main [data-testid='stExpander']")
-    expect(main_expanders).to_have_count(3)
+    expect(main_expanders).to_have_count(5)
 
     expanders = main_expanders.all()
     # Starts expanded
@@ -96,7 +96,7 @@ def test_empty_expander_not_rendered(app: Page):
 def test_expander_session_state_set(app: Page):
     """Test that session state updates are propagated to expander content"""
     main_expanders = app.locator(".main [data-testid='stExpander']")
-    expect(main_expanders).to_have_count(3)
+    expect(main_expanders).to_have_count(5)
 
     # Show the Number Input
     num_input = main_expanders.nth(2).locator(".stNumberInput input")
