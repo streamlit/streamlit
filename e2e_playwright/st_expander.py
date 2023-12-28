@@ -49,7 +49,7 @@ expander_long = st.expander(
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
     "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
     "dolor, eleifend sit amet purus id, dictum aliquam quam.",
-    expanded=True
+    expanded=True,
 )
 expander_long.write(
     "I can collapse. "
