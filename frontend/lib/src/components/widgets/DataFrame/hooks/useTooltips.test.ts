@@ -25,7 +25,6 @@ import useTooltips, {
   DEBOUNCE_TIME_MS,
   REQUIRED_CELL_TOOLTIP,
 } from "./useTooltips"
-import { GridMouseEventArgs } from "@glideapps/glide-data-grid"
 
 const TOOLTIP_CONTENT = "This is a **number** column."
 const MOCK_COLUMNS: BaseColumn[] = [
@@ -101,7 +100,7 @@ describe("useTooltips hook", () => {
         kind: "header",
         location: [0, -1],
         bounds: { x: 0, y: 0, width: 100, height: 30 },
-      } as object as GridMouseEventArgs)
+      } as object as any)
 
       jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
     })
@@ -124,7 +123,7 @@ describe("useTooltips hook", () => {
         kind: "cell",
         location: [0, 1],
         bounds: { x: 0, y: 30, width: 100, height: 30 },
-      } as object as GridMouseEventArgs)
+      } as object as any)
 
       jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
     })
@@ -147,7 +146,7 @@ describe("useTooltips hook", () => {
         kind: "cell",
         location: [0, 1],
         bounds: { x: 0, y: 30, width: 100, height: 30 },
-      } as object as GridMouseEventArgs)
+      } as object as any)
 
       jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
     })
@@ -170,7 +169,7 @@ describe("useTooltips hook", () => {
         kind: "header",
         location: [0, 0],
         bounds: { x: 0, y: 0, width: 100, height: 30 },
-      } as object as GridMouseEventArgs)
+      } as object as any)
 
       jest.advanceTimersByTime(DEBOUNCE_TIME_MS)
     })
