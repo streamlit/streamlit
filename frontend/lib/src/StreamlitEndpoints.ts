@@ -17,9 +17,9 @@
 import { CancelToken } from "axios"
 import { IAppPage } from "./proto"
 
-export type JWTPair = {
-  jwtToken: string
+export type JWTHeader = {
   jwtHeaderName: string
+  jwtHeaderValue: string
 }
 
 /** Exposes non-websocket endpoints used by the frontend. */
@@ -100,10 +100,9 @@ export interface StreamlitEndpoints {
    */
   fetchCachedForwardMsg(hash: string): Promise<Uint8Array>
 
-  // TODO[Karen] write better docstring
   /**
-   * Set JWT Pair.
-   * @param jwtPair the object that contains jwtToken and jwtHeaderName
+   * Set JWT Header.
+   * @param jwtHeader the object that contains jwtHeaderName and jwtHeaderValue
    */
-  setJWTPair?(jwtPair: JWTPair): void
+  setJWTHeader?(jwtHeader: JWTHeader): void
 }

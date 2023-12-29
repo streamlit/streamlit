@@ -45,9 +45,9 @@ export interface HostCommunicationProps {
   readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
-  readonly jwtPairChanged: (jwtPayload: {
-    jwtToken: string
+  readonly jwtHeaderChanged: (jwtPayload: {
     jwtHeaderName: string
+    jwtHeaderValue: string
   }) => void
   readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
   readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
@@ -197,7 +197,7 @@ export default class HostCommunicationManager {
       // above.
       this.deferredAuthToken.resolve(message.authToken)
       if (message.jwtHeaderName !== undefined) {
-        this.props.jwtPairChanged(message)
+        this.props.jwtHeaderChanged(message)
       }
     }
 

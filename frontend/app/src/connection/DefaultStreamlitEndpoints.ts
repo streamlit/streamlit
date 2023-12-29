@@ -19,7 +19,7 @@ import {
   BaseUriParts,
   buildHttpUri,
   StreamlitEndpoints,
-  JWTPair,
+  JWTHeader,
   getCookie,
   IAppPage,
 } from "@streamlit/lib"
@@ -42,7 +42,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
   private cachedServerUri?: BaseUriParts
 
-  private jwtPair?: JWTPair
+  private jwtHeader?: JWTHeader
 
   public constructor(props: Props) {
     this.getServerUri = props.getServerUri
@@ -56,8 +56,8 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     )
   }
 
-  public setJWTPair(jwtPair: JWTPair): void {
-    this.jwtPair = jwtPair
+  public setJWTHeader(jwtHeader: JWTHeader): void {
+    this.jwtHeader = jwtHeader
   }
 
   /**
@@ -120,8 +120,8 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     form.append("sessionId", sessionId)
     form.append(file.name, file)
     const headers: Record<string, string> = {}
-    if (this.jwtPair !== undefined) {
-      headers[this.jwtPair.jwtHeaderName] = this.jwtPair.jwtToken
+    if (this.jwtHeader !== undefined) {
+      headers[this.jwtHeader.jwtHeaderName] = this.jwtHeader.jwtHeaderValue
     }
 
     return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {
