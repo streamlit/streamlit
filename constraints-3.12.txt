@@ -121,7 +121,7 @@ types-setuptools==69.0.0.0
 types-toml==0.10.8.7
 types-typed-ast==1.5.8.7
 typing_extensions==4.9.0
-tzdata==2023.3
+tzdata==2023.4
 tzlocal==5.2
 urllib3==2.1.0
 validators==0.22.0
