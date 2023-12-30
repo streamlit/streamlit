@@ -530,10 +530,18 @@ def marshall_column_config(
         The column config to marshall.
     """
 
-    # Ignore all None values and prefix columns specified by numerical index:
-    proto.columns = json.dumps(
-        {
-            (f"{_NUMERICAL_POSITION_PREFIX}{str(k)}" if isinstance(k, int) else k): v
-            for (k, v) in remove_none_values(column_config_mapping).items()
-        }
-    )
+    try:
+        # Ignore all None values and prefix columns specified by numerical index:
+        proto.columns = json.dumps(
+            {
+                (
+                    f"{_NUMERICAL_POSITION_PREFIX}{str(k)}" if isinstance(k, int) else k
+                ): v
+                for (k, v) in remove_none_values(column_config_mapping).items()
+            },
+            allow_nan=False,
+        )
+    except ValueError as ex:
+        raise StreamlitAPIException(
+            f"The provided column config cannot be serialized into JSON: {ex}"
+        ) from ex
