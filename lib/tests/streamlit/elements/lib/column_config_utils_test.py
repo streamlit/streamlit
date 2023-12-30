@@ -28,6 +28,7 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnConfigMapping,
     ColumnConfigMappingInput,
     ColumnDataKind,
+    _convert_column_config_to_json,
     _determine_data_kind,
     _determine_data_kind_via_arrow,
     _determine_data_kind_via_inferred_type,
@@ -565,3 +566,17 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         self.assertNotIn("b", columns_config)
         self.assertTrue(columns_config["c"]["disabled"])
         self.assertTrue(columns_config["d"]["disabled"])
+
+    def test_nan_as_value_raises_exception(self):
+        """Test that the usage of `nan` as value in column config raises an exception."""
+
+        with self.assertRaises(StreamlitAPIException):
+            _convert_column_config_to_json(
+                {
+                    "label": "Col1",
+                    "type_config": {
+                        "type": "selectbox",
+                        "options": ["a", "b", "c", np.nan],
+                    },
+                },
+            )
