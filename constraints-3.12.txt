@@ -48,7 +48,7 @@ mysqlclient==2.2.1
 nh3==0.2.15
 nodeenv==1.8.0
 numpy==1.26.2
-opencv-python==4.8.1.78
+opencv-python==4.9.0.80
 packaging==23.2
 pandas==2.1.4
 parameterized==0.9.0
@@ -74,7 +74,7 @@ Pygments==2.17.2
 pyodbc==5.0.1
 pyparsing==3.1.1
 pyspark==3.5.0
-pytest==7.4.3
+pytest==7.4.4
 pytest-base-url==2.0.0
 pytest-cov==4.1.0
 pytest-github-actions-annotate-failures==0.2.0
@@ -95,7 +95,7 @@ rfc3986==2.0.0
 rich==13.7.0
 rpds-py==0.16.2
 scipy==1.11.4
-seaborn==0.13.0
+seaborn==0.13.1
 SecretStorage==3.3.3
 semver==2.13.0
 setuptools==69.0.3
