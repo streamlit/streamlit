@@ -138,6 +138,14 @@ class ScriptRunContext:
                 + "to only use `st.query_params`"
             )
 
+    def mark_experimental_query_params_used(self):
+        self._experimental_query_params_used = True
+        self.ensure_single_query_api_used()
+
+    def mark_production_query_params_used(self):
+        self._production_query_params_used = True
+        self.ensure_single_query_api_used()
+
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
 

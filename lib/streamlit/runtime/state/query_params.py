@@ -28,6 +28,7 @@ class QueryParams(MutableMapping[str, str]):
     _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
 
     def __iter__(self) -> Iterator[str]:
+        self._ensure_single_query_api_used()
         return iter(self._query_params.keys())
 
     def __getitem__(self, key: str) -> str:
@@ -35,6 +36,7 @@ class QueryParams(MutableMapping[str, str]):
         Returns the last item in a list or an empty string if empty.
         If the key is not present, raise KeyError.
         """
+        self._ensure_single_query_api_used()
         try:
             value = self._query_params[key]
             if isinstance(value, list):
@@ -65,7 +67,6 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
-        self._ensure_single_query_api_used()
         try:
             del self._query_params[key]
             self._send_query_param_msg()
@@ -101,7 +102,6 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
-        self._ensure_single_query_api_used()
         self._query_params.clear()
         self._send_query_param_msg()
 
@@ -128,8 +128,7 @@ class QueryParams(MutableMapping[str, str]):
         ctx = get_script_run_ctx()
         if ctx is None:
             return
-        ctx._production_query_params_used = True
-        ctx.ensure_single_query_api_used()
+        ctx.mark_production_query_params_used()
 
 
 def missing_key_error_message(key: str) -> str:
