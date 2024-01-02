@@ -262,6 +262,14 @@ function useColumnLoader(
             ...updatedColumn,
             icon: "editable",
           }
+
+          // Make sure that required columns are not hidden:
+          if (updatedColumn.isRequired) {
+            updatedColumn = {
+              ...updatedColumn,
+              isHidden: false,
+            }
+          }
         }
 
         return ColumnType(updatedColumn)
