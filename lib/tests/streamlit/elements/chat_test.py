@@ -189,7 +189,7 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it correctly adds chat input to main dg."""
         st.chat_input("Placeholder", position="inline")
 
-        self.assertEquals(
+        self.assertEqual(
             self.get_message_from_queue().metadata.delta_path[0],
             RootContainerProto.MAIN,
         )
@@ -199,7 +199,7 @@ class ChatTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exception_message:
             st.form("Form Key").chat_input("Placeholder")
 
-        self.assertEquals(
+        self.assertEqual(
             str(exception_message.value),
             "`st.chat_input()` can't be used in an `st.form()`.",
         )
@@ -217,7 +217,7 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects inline position when called in any of the special containers."""
         container_call().chat_input("Placeholder")
 
-        self.assertNotEquals(
+        self.assertNotEqual(
             self.get_message_from_queue().metadata.delta_path[0],
             RootContainerProto.BOTTOM,
         )
@@ -233,7 +233,7 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects bottom position when called in st.container() or the main dg."""
         container_call().chat_input("Placeholder")
 
-        self.assertEquals(
+        self.assertEqual(
             self.get_message_from_queue().metadata.delta_path[0],
             RootContainerProto.BOTTOM,
         )
