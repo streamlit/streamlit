@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import Iterable
-from typing import Dict, Iterator, List, MutableMapping, Union
+from typing import Dict, Iterable, Iterator, List, MutableMapping, Union
 
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.query_params import missing_key_error_message

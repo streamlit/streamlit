@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, MutableMapping, Union
+from typing import Dict, Iterable, Iterator, List, MutableMapping, Union
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
