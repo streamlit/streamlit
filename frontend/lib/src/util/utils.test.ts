@@ -112,7 +112,6 @@ describe("embedParamValues", () => {
     "show_toolbar",
     "show_padding",
     "disable_scrolling",
-    "show_footer",
     "light_theme",
     "dark_theme",
     "hide_loading_screen",

@@ -130,7 +130,6 @@ class StreamlitTest(unittest.TestCase):
                 "write",
                 "color_picker",
                 "sidebar",
-                "event",
                 # Other modules the user should have access to:
                 "echo",
                 "spinner",
