@@ -159,11 +159,11 @@ def test_switch_page_removes_query_params(page: Page, app_port: int):
     wait_for_app_loaded(page)
 
     # Trigger st.switch_page
-    page.get_by_test_id("baseButton-secondary").click()
-    wait_for_app_run(page)
+    page.get_by_test_id("stButton").locator("button").first.click()
+    wait_for_app_loaded(page)
 
     # Check that query params don't persist
-    assert page.url == f"http://localhost:{app_port}/page2"
+    expect(page.url).to_have_text(f"http://localhost:{app_port}/page2")
 
 
 def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
