@@ -78,6 +78,7 @@ class ScriptRunContext:
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: Optional[ScriptRequests] = None
 
+    # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
     _production_query_params_used = False
 
