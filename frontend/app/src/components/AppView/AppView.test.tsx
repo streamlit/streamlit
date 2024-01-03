@@ -59,7 +59,6 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     embedded: false,
     showPadding: false,
     disableScrolling: false,
-    showFooter: false,
     showToolbar: false,
     showColoredLine: false,
     pageLinkBaseUrl: "",
@@ -135,9 +134,10 @@ describe("AppView element", () => {
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
     })
     render(<AppView {...props} />)
 
@@ -170,13 +170,14 @@ describe("AppView element", () => {
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const appPages = [
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
       appPages,
     })
     render(<AppView {...props} />)
@@ -213,9 +214,10 @@ describe("AppView element", () => {
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
     })
     render(<AppView {...props} />)
 
@@ -259,7 +261,7 @@ describe("AppView element", () => {
     })
   })
 
-  it("does not render a Scroll To Bottom container when no chat input is present", () => {
+  it("does not render a Scroll To Bottom container when no bottom container is present", () => {
     const props = getProps()
     render(<AppView {...props} />)
 
@@ -267,7 +269,7 @@ describe("AppView element", () => {
     expect(stbContainer).not.toBeInTheDocument()
   })
 
-  it("renders a Scroll To Bottom container when a chat input is present", () => {
+  it("renders a Scroll To Bottom container if there is an element in the bottom container.", () => {
     const chatInputElement = new ElementNode(
       new Element({
         chatInput: {
@@ -275,22 +277,22 @@ describe("AppView element", () => {
           placeholder: "Enter Text Here",
           disabled: false,
           default: "",
-          position: ChatInputProto.Position.BOTTOM,
         },
       }),
       ForwardMsgMetadata.create({}),
       "no script run id"
     )
 
+    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-
-    const main = new BlockNode(
+    const bottom = new BlockNode(
       [chatInputElement],
       new BlockProto({ allowEmpty: true })
     )
+
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
     })
 
     render(<AppView {...props} />)
