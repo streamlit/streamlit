@@ -140,6 +140,7 @@ class StreamlitTest(unittest.TestCase):
                 "cache",
                 "secrets",
                 "session_state",
+                "query_params",
                 "cache_data",
                 "cache_resource",
                 # Experimental APIs:

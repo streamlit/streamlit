@@ -66,9 +66,12 @@ from streamlit.runtime.connection_factory import (
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
-from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
+from streamlit.runtime.state import (
+    SessionStateProxy as _SessionStateProxy,
+    QueryParamsProxy as _QueryParamsProxy,
+)
 from streamlit.user_info import UserInfoProxy as _UserInfoProxy
-from streamlit.commands.query_params import (
+from streamlit.commands.experimental_query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
 )
@@ -192,6 +195,8 @@ set_option = _gather_metrics("set_option", _config.set_user_option)
 # Session State
 session_state = _SessionStateProxy()
 
+query_params = _QueryParamsProxy()
+
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
@@ -206,8 +211,23 @@ connection = _connection
 experimental_user = _UserInfoProxy()
 experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
-experimental_get_query_params = _get_query_params
-experimental_set_query_params = _set_query_params
+
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
+
+experimental_get_query_params = _deprecate_func_name(
+    _get_query_params,
+    "experimental_get_query_params",
+    "2024-04-11",
+    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
+    name_override="query_params",
+)
+experimental_set_query_params = _deprecate_func_name(
+    _set_query_params,
+    "experimental_set_query_params",
+    "2024-04-11",
+    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
+    name_override="query_params",
+)
 experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(
