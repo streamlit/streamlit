@@ -41,6 +41,12 @@ import {
   StyledAppViewContainer,
   StyledAppViewMain,
   StyledIFrameResizerAnchor,
+  StyledEventBlockContainer,
+  StyledInnerBottomContainer,
+  StyledStickyBottomContainer,
+  StyledAppViewBlockSpacer,
+  StyledSidebarBlockContainer,
+  StyledBottomBlockContainer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
@@ -100,16 +106,6 @@ function AppView(props: AppViewProps): ReactElement {
     endpoints,
   } = props
 
-  // TODO: This works for scroll to bottom, but we will need
-  // to revisit this when we support multiple position options
-  const containsChatInput =
-    Array.from(elements.main.getElements()).find(element => {
-      return element.type === "chatInput"
-    }) !== undefined
-  const Component = containsChatInput
-    ? ScrollToBottomContainer
-    : StyledAppViewMain
-
   React.useEffect(() => {
     const listener = (): void => {
       sendMessageToHost({
@@ -127,7 +123,6 @@ function AppView(props: AppViewProps): ReactElement {
     embedded,
     showPadding,
     disableScrolling,
-    showFooter,
     showToolbar,
     showColoredLine,
     toastAdjustment,
@@ -138,32 +133,26 @@ function AppView(props: AppViewProps): ReactElement {
   const showSidebar =
     hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
   const hasEventElements = !elements.event.isEmpty
+  const hasBottomElements = !elements.bottom.isEmpty
 
-  const renderBlock = (node: BlockNode, events = false): ReactElement => (
-    <StyledAppViewBlockContainer
-      className="block-container"
-      data-testid="block-container"
-      isWideMode={wideMode}
-      showPadding={showPadding}
-      addPaddingForHeader={showToolbar || showColoredLine}
-      addPaddingForChatInput={containsChatInput}
-      events={events}
-      isEmbedded={embedded}
-      hasSidebar={showSidebar}
-    >
-      <VerticalBlock
-        node={node}
-        endpoints={endpoints}
-        sessionInfo={sessionInfo}
-        scriptRunId={scriptRunId}
-        scriptRunState={scriptRunState}
-        widgetMgr={widgetMgr}
-        widgetsDisabled={widgetsDisabled}
-        uploadClient={uploadClient}
-        componentRegistry={componentRegistry}
-        formsData={formsData}
-      />
-    </StyledAppViewBlockContainer>
+  // Activate scroll to bottom whenever there are bottom elements:
+  const Component = hasBottomElements
+    ? ScrollToBottomContainer
+    : StyledAppViewMain
+
+  const renderBlock = (node: BlockNode): ReactElement => (
+    <VerticalBlock
+      node={node}
+      endpoints={endpoints}
+      sessionInfo={sessionInfo}
+      scriptRunId={scriptRunId}
+      scriptRunState={scriptRunState}
+      widgetMgr={widgetMgr}
+      widgetsDisabled={widgetsDisabled}
+      uploadClient={uploadClient}
+      componentRegistry={componentRegistry}
+      formsData={formsData}
+    />
   )
 
   // The tabindex is required to support scrolling by arrow keys.
@@ -183,7 +172,12 @@ function AppView(props: AppViewProps): ReactElement {
           currentPageScriptHash={currentPageScriptHash}
           hideSidebarNav={hideSidebarNav}
         >
-          {renderBlock(elements.sidebar)}
+          <StyledSidebarBlockContainer
+            className="block-container"
+            data-testid="block-container"
+          >
+            {renderBlock(elements.sidebar)}
+          </StyledSidebarBlockContainer>
         </ThemedSidebar>
       )}
       <Component
@@ -192,17 +186,44 @@ function AppView(props: AppViewProps): ReactElement {
         disableScrolling={disableScrolling}
         className="main"
       >
-        {renderBlock(elements.main)}
+        <StyledAppViewBlockContainer
+          className="block-container"
+          data-testid="block-container"
+          isWideMode={wideMode}
+          showPadding={showPadding}
+          addPaddingForHeader={showToolbar || showColoredLine}
+          hasBottom={hasBottomElements}
+          isEmbedded={embedded}
+          hasSidebar={showSidebar}
+        >
+          {renderBlock(elements.main)}
+        </StyledAppViewBlockContainer>
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height. But we don't add an anchor if there is
-        a bottom pinned chat_input in the app, since those two aspects don't work
+        a bottom container in the app, since those two aspects don't work
         well together. */}
-        {!containsChatInput && (
+        {!hasBottomElements && (
           <StyledIFrameResizerAnchor
-            hasFooter={!embedded || showFooter}
             data-testid="IframeResizerAnchor"
             data-iframe-height
           />
+        )}
+        {hasBottomElements && (
+          <>
+            <StyledAppViewBlockSpacer data-testid="AppViewBlockSpacer" />
+            <StyledStickyBottomContainer>
+              <StyledInnerBottomContainer>
+                <StyledBottomBlockContainer
+                  className="block-container"
+                  data-testid="block-container"
+                  isWideMode={wideMode}
+                  showPadding={showPadding}
+                >
+                  {renderBlock(elements.bottom)}
+                </StyledBottomBlockContainer>
+              </StyledInnerBottomContainer>
+            </StyledStickyBottomContainer>
+          </>
         )}
       </Component>
       {hasEventElements && (
@@ -210,7 +231,12 @@ function AppView(props: AppViewProps): ReactElement {
           toastAdjustment={toastAdjustment}
           scriptRunId={elements.event.scriptRunId}
         >
-          {renderBlock(elements.event, true)}
+          <StyledEventBlockContainer
+            className="block-container"
+            data-testid="block-container"
+          >
+            {renderBlock(elements.event)}
+          </StyledEventBlockContainer>
         </EventContainer>
       )}
     </StyledAppViewContainer>
