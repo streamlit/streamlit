@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from streamlit.runtime.state.common import WidgetArgs, WidgetCallback, WidgetKwargs
+from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
@@ -33,6 +34,7 @@ __all__ = [
     "WidgetArgs",
     "WidgetCallback",
     "WidgetKwargs",
+    "QueryParamsProxy",
     "SafeSessionState",
     "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
     "SessionState",

@@ -225,6 +225,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
+            (st.query_params.__setattr__, "query_params.set_attr"),
+            (st.query_params.__getattr__, "query_params.get_attr"),
+            (st.query_params.__setitem__, "query_params.set_item"),
+            (st.query_params.__getitem__, "query_params.get_item"),
         ]
     )
     def test_internal_api_commands(
