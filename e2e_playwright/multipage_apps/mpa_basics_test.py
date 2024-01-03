@@ -149,3 +149,15 @@ def test_switch_page(app: Page):
     app.get_by_test_id("baseButton-secondary").click()
     wait_for_app_run(app)
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
+
+
+def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
+    """Test that query params are removed when swapping pages"""
+
+    page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
+    wait_for_app_loaded(page)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    wait_for_app_run(page)
+
+    assert page.url == f"http://localhost:{app_port}/page3"
