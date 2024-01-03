@@ -19,10 +19,10 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.utils import SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT
-from streamlit.elements.widgets.chat import DISALLOWED_CONTAINERS_ERROR_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -160,7 +160,6 @@ class ChatTest(DeltaGeneratorTestCase):
         self.assertEqual(c.set_value, False)
         self.assertEqual(c.max_chars, 0)
         self.assertEqual(c.disabled, False)
-        self.assertEqual(c.position, ChatInputProto.Position.BOTTOM)
 
     def test_chat_input_disabled(self):
         """Test that it sets disabled correctly."""
@@ -173,7 +172,6 @@ class ChatTest(DeltaGeneratorTestCase):
         self.assertEqual(c.set_value, False)
         self.assertEqual(c.max_chars, 0)
         self.assertEqual(c.disabled, True)
-        self.assertEqual(c.position, ChatInputProto.Position.BOTTOM)
 
     def test_chat_input_max_chars(self):
         """Test that it sets max chars correctly."""
@@ -186,25 +184,24 @@ class ChatTest(DeltaGeneratorTestCase):
         self.assertEqual(c.set_value, False)
         self.assertEqual(c.max_chars, 100)
         self.assertEqual(c.disabled, False)
-        self.assertEqual(c.position, ChatInputProto.Position.BOTTOM)
 
-    @parameterized.expand(
-        [
-            lambda: st.columns(2)[0],
-            lambda: st.tabs(["Tab1", "Tab2"])[0],
-            lambda: st.expander("Expand Me"),
-            lambda: st.form("Form Key"),
-            lambda: st.sidebar,
-        ]
-    )
-    def test_chat_not_allowed_in_containers(self, container_call):
-        """Test that it disallows being called in containers."""
+    def test_chat_input_inline_position(self):
+        """Test that it correctly adds chat input to main dg."""
+        st.chat_input("Placeholder", position="inline")
+
+        self.assertEquals(
+            self.get_message_from_queue().metadata.delta_path[0],
+            RootContainerProto.MAIN,
+        )
+
+    def test_chat_not_allowed_in_form(self):
+        """Test that it disallows being called in a form."""
         with pytest.raises(StreamlitAPIException) as exception_message:
-            container_call().chat_input("Placeholder")
+            st.form("Form Key").chat_input("Placeholder")
 
-        self.assertEqual(
-            DISALLOWED_CONTAINERS_ERROR_TEXT,
+        self.assertEquals(
             str(exception_message.value),
+            "`st.chat_input()` can't be used in an `st.form()`.",
         )
 
     @parameterized.expand(
@@ -212,19 +209,33 @@ class ChatTest(DeltaGeneratorTestCase):
             lambda: st.columns(2)[0],
             lambda: st.tabs(["Tab1", "Tab2"])[0],
             lambda: st.expander("Expand Me"),
-            lambda: st.form("Form Key"),
+            lambda: st.chat_message("user"),
             lambda: st.sidebar,
         ]
     )
-    def test_chat_not_allowed_in_with_containers(self, container_call):
-        """Test that it disallows being called in containers (using with syntax)."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
-            with container_call():
-                st.chat_input("Placeholder")
+    def test_chat_selects_inline_postion(self, container_call):
+        """Test that it selects inline position when called in any of the special containers."""
+        container_call().chat_input("Placeholder")
 
-        self.assertEqual(
-            DISALLOWED_CONTAINERS_ERROR_TEXT,
-            str(exception_message.value),
+        self.assertNotEquals(
+            self.get_message_from_queue().metadata.delta_path[0],
+            RootContainerProto.BOTTOM,
+        )
+
+    @parameterized.expand(
+        [
+            lambda: st.container(),
+            lambda: st,
+            lambda: st._main,
+        ]
+    )
+    def test_chat_selects_bottom_position(self, container_call):
+        """Test that it selects bottom position when called in st.container() or the main dg."""
+        container_call().chat_input("Placeholder")
+
+        self.assertEquals(
+            self.get_message_from_queue().metadata.delta_path[0],
+            RootContainerProto.BOTTOM,
         )
 
     def test_session_state_rules(self):

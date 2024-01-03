@@ -288,6 +288,7 @@ class ChatMixin:
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
+            position=position,
             page=ctx.page_script_hash if ctx else None,
         )
 
@@ -308,7 +309,7 @@ class ChatMixin:
             # other container types as parents, we use inline position.
             parent_block_types = set(self.dg._active_dg._parent_block_types)
             if self.dg._active_dg._root_container == RootContainer.MAIN and (
-                not parent_block_types or parent_block_types == set("vertical")
+                not parent_block_types or parent_block_types == {"vertical"}
             ):
                 position = "bottom"
             else:
@@ -342,10 +343,12 @@ class ChatMixin:
             chat_input_proto.set_value = True
 
         if position == "bottom":
-            # We need to enqueue the chat input in the bottom container.
-            import streamlit
+            # We import it here to avoid circular imports.
+            from streamlit import _bottom
 
-            streamlit._bottom._enqueue("chat_input", chat_input_proto)
+            # We need to enqueue the chat input into the bottom container
+            # instead of the currently active dg.
+            _bottom._enqueue("chat_input", chat_input_proto)
         else:
             self.dg._enqueue("chat_input", chat_input_proto)
 
