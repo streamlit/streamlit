@@ -29,7 +29,6 @@ import {
   FileUploadClient,
   createFormsData,
   WidgetStateManager,
-  ChatInput as ChatInputProto,
   ForwardMsgMetadata,
   PageConfig,
   Element,
