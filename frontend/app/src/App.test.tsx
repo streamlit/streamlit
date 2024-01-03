@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ const NEW_SESSION_JSON: INewSession = {
       scriptIsRunning: false,
     },
     sessionId: "sessionId",
-    commandLine: "commandLine",
+    isHello: false,
   },
   appPages: [
     { pageScriptHash: "page_script_hash", pageName: "streamlit_app" },
@@ -844,7 +844,7 @@ describe("App.handleNewSession", () => {
           },
           initialize: {
             ...NEW_SESSION_JSON.initialize,
-            commandLine: "streamlit hello",
+            isHello: true,
           },
         })
       )
@@ -884,7 +884,7 @@ describe("App.onHistoryChange", () => {
         scriptIsRunning: false,
       },
       sessionId: "sessionId",
-      commandLine: "commandLine",
+      isHello: false,
     },
     appPages: [
       { pageScriptHash: "top_hash", pageName: "streamlit_app" },

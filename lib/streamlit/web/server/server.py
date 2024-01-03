@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -70,6 +70,7 @@ TORNADO_SETTINGS = {
     # If we don't get a ping response within 30s, the connection
     # is timed out.
     "websocket_ping_timeout": 30,
+    "xsrf_cookie_name": "_streamlit_xsrf",
 }
 
 # When server.port is not available it will look for the next available port
@@ -217,7 +218,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
 
 
 class Server:
-    def __init__(self, main_script_path: str, command_line: Optional[str]):
+    def __init__(self, main_script_path: str, is_hello: bool):
         """Create the server. It won't be started yet."""
         _set_tornado_log_levels()
 
@@ -232,10 +233,11 @@ class Server:
         self._runtime = Runtime(
             RuntimeConfig(
                 script_path=main_script_path,
-                command_line=command_line,
+                command_line=None,
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
+                is_hello=is_hello,
             ),
         )
 

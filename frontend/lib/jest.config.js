@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ module.exports = {
     "!src/**/*.min.js",
   ],
   // needed for vegalite tests as vega uses canvas
-  setupFiles: ["jest-canvas-mock"],
+  setupFiles: ["jest-canvas-mock", "<rootDir>/src/setupTestEnv.js"],
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.js"],
   testMatch: ["<rootDir>/src/**/*.{test,}.{js,jsx,ts,tsx}"],
   // for things such as global window and more. https://github.com/jsdom/jsdom

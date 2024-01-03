@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -262,11 +262,11 @@ def _main_run(
     if flag_options is None:
         flag_options = {}
 
-    command_line = _get_command_line_as_string()
+    is_hello = _get_command_line_as_string() == "streamlit hello"
 
     check_credentials()
 
-    bootstrap.run(file, command_line, args, flag_options)
+    bootstrap.run(file, is_hello, args, flag_options)
 
 
 # SUBCOMMAND: cache

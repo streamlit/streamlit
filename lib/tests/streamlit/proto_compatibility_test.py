@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ FD = FieldDescriptor
                 ("session_status", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("command_line", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("session_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
             },
         ),
         (

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ def _create_test_session(
         return_value=event_loop,
     ):
         return AppSession(
-            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,

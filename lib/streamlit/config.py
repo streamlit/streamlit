@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -373,6 +373,16 @@ _create_option(
     visibility="hidden",
     default_val=2,
     type_=int,
+)
+
+_create_option(
+    "global.storeCachedForwardMessagesInMemory",
+    description="""If True, store cached ForwardMsgs in backend memory.
+        This is an internal flag to validate a potential removal of the in-memory
+        forward message cache.""",
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
 )
 
 _create_option(

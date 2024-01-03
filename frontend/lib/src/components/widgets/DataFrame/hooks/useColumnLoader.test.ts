@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -357,6 +357,28 @@ describe("useColumnLoader hook", () => {
     for (const column of result.current.columns) {
       expect(column.icon).toBe("editable")
     }
+  })
+
+  it("disallows hidden for editable columns that are required", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      editingMode: ArrowProto.EditingMode.DYNAMIC,
+      columns: JSON.stringify({
+        c1: {
+          required: true,
+          hidden: true,
+        },
+      }),
+    })
+
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false)
+    })
+
+    expect(result.current.columns[1].isRequired).toBe(true)
+    expect(result.current.columns[1].isHidden).toBe(false)
   })
 
   it("doesn't configure any icon for non-editable columns", () => {
