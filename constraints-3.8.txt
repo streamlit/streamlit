@@ -52,7 +52,7 @@ kiwisolver==1.4.5
 langchain==0.0.353
 langchain-community==0.0.7
 langchain-core==0.1.4
-langsmith==0.0.75
+langsmith==0.0.77
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
 marshmallow==3.20.1
@@ -126,7 +126,7 @@ sniffio==1.3.0
 snowflake-connector-python==3.6.0
 snowflake-snowpark-python==1.11.1
 sortedcontainers==2.4.0
-SQLAlchemy==1.4.50
+SQLAlchemy==1.4.51
 sqlalchemy2-stubs==0.0.2a38
 tenacity==8.2.3
 testfixtures==7.2.2
