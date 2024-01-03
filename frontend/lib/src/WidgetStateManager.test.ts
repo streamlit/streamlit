@@ -371,7 +371,6 @@ describe("Widget State Manager", () => {
       // We have a single pending form.
       expect(formsData.formsWithPendingChanges).toEqual(new Set([formId]))
 
-      // Submit the form
       widgetMgr.submitForm(formId)
 
       // Our backMsg should be populated with our two widget values,
@@ -404,12 +403,41 @@ describe("Widget State Manager", () => {
         formId,
         new ButtonProto({ id: "secondSubmitButton" })
       )
-      // Submit the form
       widgetMgr.submitForm(formId)
 
       expect(sendBackMsg).toHaveBeenCalledWith({
         widgets: [{ id: "firstSubmitButton", triggerValue: true }],
       })
+    })
+
+    it("does not submit the form if the first submitButton is disabled", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "firstSubmitButton", disabled: true })
+      )
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "secondSubmitButton" })
+      )
+      widgetMgr.submitForm(formId)
+
+      expect(sendBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("does not submit the form if the second submitButton is disabled", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "firstSubmitButton" })
+      )
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "secondSubmitButton", disabled: true })
+      )
+      widgetMgr.submitForm(formId)
+
+      expect(sendBackMsg).not.toHaveBeenCalled()
     })
   })
 
