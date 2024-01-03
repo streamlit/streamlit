@@ -151,6 +151,21 @@ def test_switch_page(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
 
 
+def test_switch_page_removes_query_params(page: Page, app_port: int):
+    """Test that query params are removed when navigating via st.switch_page"""
+
+    # Start at main page with query params
+    page.goto(f"http://localhost:{app_port}/?foo=bar")
+    wait_for_app_loaded(page)
+
+    # Trigger st.switch_page
+    page.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(page)
+
+    # Check that query params don't persist
+    assert page.url == f"http://localhost:{app_port}/page2"
+
+
 def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
     """Test that query params are removed when swapping pages"""
 
