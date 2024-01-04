@@ -220,8 +220,19 @@ def wait_for_app_loaded(page: Page, embedded: bool = False):
 
     # Wait for the main menu to appear:
     if not embedded:
-        page.wait_for_selector("#MainMenu", timeout=20000, state="attached")
+        page.wait_for_selector(
+            "[data-testid='stMainMenu']", timeout=20000, state="attached"
+        )
 
+    wait_for_app_run(page)
+
+
+def rerun_app(page: Page):
+    """Triggers an app rerun and waits for the run to be finished."""
+    # Click somewhere to clear the focus from elements:
+    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    # Press "r" to rerun the app:
+    page.keyboard.press("r")
     wait_for_app_run(page)
 
 

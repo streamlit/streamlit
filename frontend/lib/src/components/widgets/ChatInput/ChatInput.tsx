@@ -235,6 +235,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
             onClick={handleSubmit}
             disabled={!dirty || disabled}
             extended={isInputExtended}
+            data-testid="stChatInputSubmitButton"
           >
             <Icon content={Send} size="xl" color="inherit" />
           </StyledSendIconButton>

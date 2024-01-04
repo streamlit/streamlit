@@ -20,8 +20,8 @@ st.write("Chat input 1 (inline) - value:", v1)
 
 col1, _ = st.columns(2)
 
-v2 = col1.chat_input("Chat input 2 (in column)")
-st.write("Chat input 2 (inline, column) - value:", v2)
+v2 = col1.chat_input("Chat input 2 (in column, disabled)", disabled=True)
+st.write("Chat input 2 (in column, disabled) - value:", v2)
 
 if runtime.exists():
 
