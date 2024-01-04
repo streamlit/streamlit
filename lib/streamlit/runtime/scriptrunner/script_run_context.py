@@ -63,6 +63,7 @@ class ScriptRunContext:
     query_string: str
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
+    main_script_path: str
     page_script_hash: str
     user_info: UserInfo
 
