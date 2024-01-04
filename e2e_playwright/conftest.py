@@ -221,7 +221,7 @@ def wait_for_app_loaded(page: Page, embedded: bool = False):
     # Wait for the main menu to appear:
     if not embedded:
         page.wait_for_selector("#MainMenu", timeout=20000, state="attached")
-    
+
     wait_for_app_run(page)
 
 
