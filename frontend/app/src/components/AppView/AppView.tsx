@@ -29,6 +29,7 @@ import {
   SessionInfo,
   IGuestToHostMessage,
   StreamlitEndpoints,
+  LibContext,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -128,12 +129,44 @@ function AppView(props: AppViewProps): ReactElement {
     toastAdjustment,
   } = React.useContext(AppContext)
 
+  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
+    React.useContext(LibContext)
+
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
-  const showSidebar =
-    hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
   const hasEventElements = !elements.event.isEmpty
   const hasBottomElements = !elements.bottom.isEmpty
+
+  const [showSidebarOverride, setShowSidebarOverride] = React.useState(false)
+  const showSidebar =
+    hasSidebarElements ||
+    (!hideSidebarNav && appPages.length > 1) ||
+    showSidebarOverride
+
+  React.useEffect(() => {
+    // Handle sidebar flicker/unmount with MPA & hideSidebarNav
+    if (showSidebar && hideSidebarNav && !showSidebarOverride) {
+      setShowSidebarOverride(true)
+    }
+  }, [showSidebar, hideSidebarNav, showSidebarOverride])
+
+  const scriptFinishedHandler = React.useCallback(() => {
+    // Check at end of script run if no sidebar elements
+    if (!hasSidebarElements && showSidebarOverride) {
+      setShowSidebarOverride(false)
+    }
+  }, [hasSidebarElements, showSidebarOverride])
+
+  React.useEffect(() => {
+    addScriptFinishedHandler(scriptFinishedHandler)
+    return () => {
+      removeScriptFinishedHandler(scriptFinishedHandler)
+    }
+  }, [
+    scriptFinishedHandler,
+    addScriptFinishedHandler,
+    removeScriptFinishedHandler,
+  ])
 
   // Activate scroll to bottom whenever there are bottom elements:
   const Component = hasBottomElements
