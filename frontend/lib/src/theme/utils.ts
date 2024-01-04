@@ -50,11 +50,26 @@ import { createBaseUiTheme } from "./createThemeUtil"
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
 
+let isPrinting = false
+let currentTheme: ThemeConfig = lightTheme // default
+
+window.addEventListener("beforeprint", () => {
+  isPrinting = true
+})
+
+window.addEventListener("afterprint", () => {
+  isPrinting = false
+})
+
 export const getSystemTheme = (): ThemeConfig => {
-  return window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
+  if (isPrinting) {
+    return currentTheme
+  }
+
+  currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
     ? darkTheme
     : lightTheme
+  return currentTheme
 }
 
 export const createAutoTheme = (): ThemeConfig => ({
