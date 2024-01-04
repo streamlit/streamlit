@@ -220,6 +220,14 @@ function Tabs(props: TabProps): ReactElement {
                           paddingRight: "0.6rem",
                         }
                       : {}),
+                    ...(!isStale && isStaleTab
+                      ? {
+                          // Apply stale effect if only this specific
+                          // tab is stale but not the entire tab container.
+                          opacity: 0.33,
+                          transition: "opacity 1s ease-in 0.5s",
+                        }
+                      : {}),
                   }),
                 },
               }}
