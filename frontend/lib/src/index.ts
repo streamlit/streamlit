@@ -100,7 +100,6 @@ export {
   isColoredLineDisplayed,
   isDarkTheme,
   isEmbed,
-  isFooterDisplayed,
   isInChildFrame,
   isLightTheme,
   isPaddingDisplayed,
