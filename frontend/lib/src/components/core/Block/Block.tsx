@@ -229,15 +229,6 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     [setWidth]
   )
 
-  useEffect(() => {
-    if (wrapperElement.current) {
-      observer.observe(wrapperElement.current)
-    }
-    return () => {
-      observer.disconnect()
-    }
-  }, [wrapperElement, observer])
-
   const border = props.node.deltaBlock.vertical?.border ?? false
   const height = props.node.deltaBlock.vertical?.height || undefined
 
@@ -248,6 +239,18 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
       )
     }) !== undefined
+
+  useEffect(() => {
+    if (wrapperElement.current) {
+      observer.observe(wrapperElement.current)
+    }
+    return () => {
+      observer.disconnect()
+    }
+    // We need to update the observer whenever the scrolling is activated or deactivated
+    // Otherwise, it still tries to measure the width of the old wrapper element.
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [observer, activateScrollToBottom])
 
   // Decide which wrapper to use based on whether we need to activate scrolling to bottom
   // This is done for performance reasons, to prevent the usage of useScrollToBottom

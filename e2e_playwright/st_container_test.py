@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_permits_multiple_out_of_order_elements(app: Page):
@@ -69,3 +69,20 @@ def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFuncti
     expect(scroll_container_chat).to_have_css("overflow", "auto")
     expect(scroll_container_chat).to_have_css("height", "200px")
     assert_snapshot(scroll_container_chat, name="st_container-scroll_container_chat")
+
+
+def test_correctly_handles_first_chat_message(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that st.container(height=<pixels>) correctly handles the scroll
+    behaviour change when adding the first chat message ."""
+
+    # Click button to add a chat message to the empty container:
+    app.get_by_test_id("stButton").nth(2).locator("button").click()
+
+    wait_for_app_run(app)
+
+    assert_snapshot(
+        app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5),
+        name="st_container-added_chat_message",
+    )
