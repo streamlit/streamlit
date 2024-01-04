@@ -634,6 +634,19 @@ describe("App.handleNewSession", () => {
     expect(instance.clearAppState).not.toHaveBeenCalled()
   })
 
+  it("sets hideSidebarNav based on new session message", () => {
+    const wrapper = shallow(<App {...getProps()} />)
+    const app = wrapper.instance() as App
+
+    // default in this.state is true
+    expect(app.state.hideSidebarNav).toBe(true)
+
+    // update the value based on new session message
+    // @ts-expect-error
+    wrapper.instance().handleNewSession(new NewSession(NEW_SESSION))
+    expect(app.state.hideSidebarNav).toBe(false)
+  })
+
   describe("page change URL handling", () => {
     let wrapper: ShallowWrapper
     let instance: App
@@ -1150,6 +1163,34 @@ describe("App.sendRerunBackMsg", () => {
         pageName: "baz",
         queryString: "",
       },
+    })
+  })
+
+  it("sets queryString to an empty string if the page hash is different", () => {
+    wrapper.setState({
+      currentPageScriptHash: "current_page_hash",
+      queryParams: "foo=bar",
+    })
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
+
+    instance.sendRerunBackMsg(undefined, "some_other_page_hash")
+
+    // @ts-expect-error
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "some_other_page_hash",
+        pageName: "",
+        queryString: "",
+      },
+    })
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_QUERY_PARAM",
+      queryParams: "",
     })
   })
 })

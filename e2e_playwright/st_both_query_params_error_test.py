@@ -12,23 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-import pytest
 from playwright.sync_api import Page, expect
 
 
-@pytest.fixture(scope="module")
-@pytest.mark.early
-def configure_show_sidebar_nav():
-    """Configure client.showSidebarNavigation=False."""
-    # We need to do this in a package scope fixture to ensure that its applied
-    # before the app server is started.
-    os.environ["STREAMLIT_CLIENT_SHOW_SIDEBAR_NAVIGATION"] = "False"
-    yield
-    del os.environ["STREAMLIT_CLIENT_SHOW_SIDEBAR_NAVIGATION"]
-
-
-def test_hides_sidebar_nav(app: Page, configure_show_sidebar_nav):
-    """Test that client.showSidebarNavigation=False hides the sidebar."""
-    expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
+def test_query_params_exception_msg(app: Page):
+    assert app.get_by_test_id("stException") is not None
+    expect(
+        app.get_by_text(
+            "Using st.query_params together with either st.experimental_get_query_params or st.experimental_set_query_params is not supported. Please convert your app to only use st.query_params"
+        )
+    ).to_be_visible()

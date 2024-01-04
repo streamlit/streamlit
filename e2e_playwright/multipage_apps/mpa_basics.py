@@ -16,3 +16,7 @@ import streamlit as st
 
 st.header("Main Page")
 st.slider("x")
+
+page_2 = st.button("`pages/02_page2.py`")
+if page_2:
+    st.switch_page("pages/02_page2.py")
