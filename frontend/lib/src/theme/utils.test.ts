@@ -359,6 +359,14 @@ describe("createTheme", () => {
 })
 
 describe("getSystemTheme", () => {
+  // Backup original matchMedia
+  const originalMatchMedia = window.matchMedia
+
+  afterEach(() => {
+    // Reset matchMedia after each test
+    window.matchMedia = originalMatchMedia
+  })
+
   it("returns lightTheme when matchMedia does *not* match dark", () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -383,6 +391,38 @@ describe("getSystemTheme", () => {
     })
 
     expect(getSystemTheme().name).toBe("Dark")
+  })
+
+  it("maintains the theme during printing process", () => {
+    // Simulate dark theme preference
+    window.matchMedia = jest.fn().mockImplementation(query => ({
+      matches: true,
+      media: query,
+      ...matchMediaFillers,
+    }))
+
+    // Check theme before printing
+    expect(getSystemTheme().name).toBe("Dark")
+
+    // Simulate opening print dialog
+    window.dispatchEvent(new Event("beforeprint"))
+    expect(getSystemTheme().name).toBe("Dark")
+
+    // Simulate closing print dialog
+    window.dispatchEvent(new Event("afterprint"))
+
+    // Check theme after printing, expecting it to still be Dark
+    expect(getSystemTheme().name).toBe("Dark")
+
+    // Change to light theme preference
+    window.matchMedia = jest.fn().mockImplementation(query => ({
+      matches: false, // Simulate light theme preference
+      media: query,
+      ...matchMediaFillers,
+    }))
+
+    // Check theme after changing preference post-printing
+    expect(getSystemTheme().name).toBe("Light")
   })
 })
 
