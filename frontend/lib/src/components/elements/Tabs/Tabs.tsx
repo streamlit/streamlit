@@ -144,13 +144,12 @@ function Tabs(props: TabProps): ReactElement {
             scriptRunState,
             scriptRunId
           )
-          const disabled = widgetsDisabled || isStaleTab
 
           // Ensure stale tab's elements are also marked stale/disabled
           const childProps = {
             ...props,
             isStale: isStale || isStaleTab,
-            widgetsDisabled: disabled,
+            widgetsDisabled,
             node: appNode as BlockNode,
           }
           let nodeLabel = index.toString()
@@ -159,8 +158,7 @@ function Tabs(props: TabProps): ReactElement {
           }
           allTabLabels[index] = nodeLabel
 
-          const isSelected =
-            activeTabKey.toString() === index.toString() && !isStaleTab
+          const isSelected = activeTabKey.toString() === index.toString()
           const isLast = index === node.children.length - 1
 
           return (
@@ -173,7 +171,7 @@ function Tabs(props: TabProps): ReactElement {
                 />
               }
               key={index}
-              disabled={disabled}
+              disabled={widgetsDisabled}
               overrides={{
                 TabPanel: {
                   style: () => ({
@@ -193,25 +191,25 @@ function Tabs(props: TabProps): ReactElement {
                     paddingBottom: theme.spacing.none,
                     fontSize: theme.fontSizes.sm,
                     background: "transparent",
-                    color: disabled
+                    color: widgetsDisabled
                       ? theme.colors.fadedText40
                       : theme.colors.bodyText,
                     ":focus": {
                       outline: "none",
-                      color: disabled
+                      color: widgetsDisabled
                         ? theme.colors.fadedText40
                         : theme.colors.primary,
                       background: "none",
                     },
                     ":hover": {
-                      color: disabled
+                      color: widgetsDisabled
                         ? theme.colors.fadedText40
                         : theme.colors.primary,
                       background: "none",
                     },
                     ...(isSelected
                       ? {
-                          color: disabled
+                          color: widgetsDisabled
                             ? theme.colors.fadedText40
                             : theme.colors.primary,
                         }
