@@ -22,11 +22,11 @@ export interface StyledChatInputContainerProps {
 
 export const StyledChatInputContainer =
   styled.div<StyledChatInputContainerProps>(({ theme, width }) => {
-    const lightTheme = hasLightBackgroundColor(theme)
     return {
       borderRadius: theme.radii.lg,
       display: "flex",
-      backgroundColor: lightTheme ? theme.colors.gray20 : theme.colors.gray90,
+      backgroundColor:
+        theme.colors.widgetBackgroundColor ?? theme.colors.secondaryBg,
       width: `${width}px`,
     }
   })

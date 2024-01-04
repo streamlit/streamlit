@@ -133,9 +133,9 @@ export interface StyledVerticalBlockProps {
 export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
   ({ width, theme }) => ({
     width,
-    position: "relative", // Required for the automatic width computation.
 
-    display: "flex",
+    position: "relative", // Required for the automatic width computation.
+    display: width === 0 ? "none" : "flex",
     flex: 1,
     flexDirection: "column",
     gap: theme.spacing.lg,

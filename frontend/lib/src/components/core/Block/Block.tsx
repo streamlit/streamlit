@@ -223,7 +223,9 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         window.requestAnimationFrame(() => {
           // We need to determine the available width here to be able to set
           // an explicit width for the `StyledVerticalBlock`.
-          setWidth(entry.target.getBoundingClientRect().width)
+          if (entry.target.getBoundingClientRect().width !== 0) {
+            setWidth(entry.target.getBoundingClientRect().width)
+          }
         })
       }),
     [setWidth]
@@ -236,7 +238,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     return () => {
       observer.disconnect()
     }
-  }, [wrapperElement, observer])
+  }, [wrapperElement.current, observer])
 
   const border = props.node.deltaBlock.vertical?.border ?? false
   const height = props.node.deltaBlock.vertical?.height || undefined
