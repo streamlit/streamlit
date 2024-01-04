@@ -102,6 +102,7 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                     query_string="",
                     session_state=SafeSessionState(SessionState(), lambda: None),
                     uploaded_file_mgr=None,
+                    main_script_path="",
                     page_script_hash="",
                     user_info={"email": "something@else.com"},
                 ),

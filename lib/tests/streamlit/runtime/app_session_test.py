@@ -607,6 +607,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )

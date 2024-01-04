@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import NoReturn
 
 import streamlit as st
+from streamlit import source_util
 from streamlit.deprecation_util import make_deprecated_name_warning
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
@@ -87,3 +90,47 @@ def experimental_rerun() -> NoReturn:
     # be seen.
     _LOGGER.warning(msg)
     rerun()
+
+
+@gather_metrics("switch_page")
+def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
+    """Switch the current programmatically page in a multi-page app.
+    When `st.switch_page()` is called with a page, the current page script is halted
+    and the requested page script will be queued to run from the top.
+    Parameters
+    ----------
+    page: str
+        The file path, relative to the main script, of the page to switch to.
+    """
+
+    ctx = get_script_run_ctx()
+
+    if not ctx or not ctx.script_requests:
+        # This should never be the case
+        raise NoSessionContext()
+
+    main_script_path = os.path.join(os.getcwd(), ctx.main_script_path)
+    main_script_directory = os.path.dirname(main_script_path)
+
+    # Convenience for handling ./ notation and ensure leading / doesn't refer to root directory
+    page = os.path.normpath(page.strip("/"))
+
+    # Build full path
+    requested_page = os.path.join(main_script_directory, page)
+    all_app_pages = source_util.get_pages(ctx.main_script_path).values()
+
+    matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
+
+    if len(matched_pages) == 0:
+        raise StreamlitAPIException(
+            f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
+        )
+
+    ctx.script_requests.request_rerun(
+        RerunData(
+            query_string="",
+            page_script_hash=matched_pages[0]["page_script_hash"],
+        )
+    )
+    # Force a yield point so the runner can do the rerun
+    st.empty()

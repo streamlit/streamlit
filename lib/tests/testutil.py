@@ -51,6 +51,7 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
         query_string="mock_query_string",
         session_state=SafeSessionState(SessionState(), lambda: None),
         uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+        main_script_path="",
         page_script_hash="mock_page_script_hash",
         user_info={"email": "mock@test.com"},
     )
