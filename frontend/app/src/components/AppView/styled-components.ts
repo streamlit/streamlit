@@ -117,7 +117,8 @@ export const StyledAppViewBlockContainer =
       ) {
         topEmbedPadding = "3rem"
       }
-      const bottomEmbedPadding = showPadding && !hasBottom ? "10rem" : "1rem"
+      const bottomEmbedPadding =
+        showPadding && !hasBottom ? "10rem" : theme.spacing.lg
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
         width: theme.sizes.full,
@@ -172,7 +173,7 @@ export const StyledBottomBlockContainer =
           paddingRight: wideSidePadding,
         },
         paddingTop: theme.spacing.lg,
-        paddingBottom: showPadding ? "55px" : "1rem",
+        paddingBottom: showPadding ? "55px" : theme.spacing.threeXL,
         minWidth: isWideMode ? "auto" : undefined,
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
 

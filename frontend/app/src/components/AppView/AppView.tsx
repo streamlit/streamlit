@@ -207,8 +207,13 @@ function AppView(props: AppViewProps): ReactElement {
         )}
         {hasBottomElements && (
           <>
+            {/* We add spacing here to make sure that the sticky bottom is
+           always pinned the bottom. Using sticky layout here instead of
+           absolut / fixed is a trick to automatically account for the bottom
+           height in the scroll area. Thereby, the bottom container will never
+           cover something if you scroll to the end.*/}
             <StyledAppViewBlockSpacer />
-            <StyledStickyBottomContainer>
+            <StyledStickyBottomContainer data-testid="stBottom">
               <StyledInnerBottomContainer>
                 <StyledBottomBlockContainer
                   data-testid="stBottomBlockContainer"
