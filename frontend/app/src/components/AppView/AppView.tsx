@@ -127,7 +127,6 @@ function AppView(props: AppViewProps): ReactElement {
     embedded,
     showPadding,
     disableScrolling,
-    showFooter,
     showToolbar,
     showColoredLine,
     toastAdjustment,
@@ -199,7 +198,6 @@ function AppView(props: AppViewProps): ReactElement {
         well together. */}
         {!containsChatInput && (
           <StyledIFrameResizerAnchor
-            hasFooter={!embedded || showFooter}
             data-testid="IframeResizerAnchor"
             data-iframe-height
           />
