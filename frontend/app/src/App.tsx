@@ -305,7 +305,10 @@ export class App extends PureComponent<Props, State> {
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
-        if (this.endpoints.setJWTHeader !== undefined) {
+        if (
+          this.endpoints.setJWTHeader !== undefined &&
+          this.state.appConfig.useExternalAuthToken
+        ) {
           this.endpoints.setJWTHeader({ jwtHeaderName, jwtHeaderValue })
         }
       },
