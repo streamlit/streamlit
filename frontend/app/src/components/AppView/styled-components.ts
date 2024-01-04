@@ -141,7 +141,7 @@ export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   },
 }))
 
-export const StyledIFrameResizerAnchor = styled.div(({ theme }) => ({
+export const StyledIFrameResizerAnchor = styled.div(() => ({
   position: "relative",
   bottom: "0",
 }))
