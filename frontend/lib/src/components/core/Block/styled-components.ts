@@ -136,8 +136,7 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
   ({ width, theme }) => ({
     width,
     position: "relative", // Required for the automatic width computation.
-
-    display: "flex",
+    display: width === 0 ? "none" : "flex",
     flex: 1,
     flexDirection: "column",
     gap: theme.spacing.lg,
