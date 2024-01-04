@@ -66,9 +66,11 @@ export const getSystemTheme = (): ThemeConfig => {
     return currentTheme
   }
 
-  currentTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? darkTheme
-    : lightTheme
+  currentTheme =
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? darkTheme
+      : lightTheme
   return currentTheme
 }
 
