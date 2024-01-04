@@ -78,7 +78,7 @@ def test_correctly_handles_first_chat_message(
     behaviour change when adding the first chat message ."""
 
     # Click button to add a chat message to the empty container:
-    app.get_by_test_id("stButton").nth(1).locator("button").click()
+    app.get_by_test_id("stButton").nth(2).locator("button").click()
 
     wait_for_app_run(app)
 
