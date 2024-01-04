@@ -20,15 +20,15 @@ from playwright.sync_api import Page, expect
 
 @pytest.fixture(scope="module")
 @pytest.mark.early
-def configure_hide_sidebar_nav():
-    """Configure ui.hideSidebarNav=True."""
+def configure_show_sidebar_nav():
+    """Configure client.showSidebarNavigation=False."""
     # We need to do this in a package scope fixture to ensure that its applied
     # before the app server is started.
-    os.environ["STREAMLIT_UI_HIDE_SIDEBAR_NAV"] = "True"
+    os.environ["STREAMLIT_CLIENT_SHOW_SIDEBAR_NAVIGATION"] = "False"
     yield
-    del os.environ["STREAMLIT_UI_HIDE_SIDEBAR_NAV"]
+    del os.environ["STREAMLIT_CLIENT_SHOW_SIDEBAR_NAVIGATION"]
 
 
-def test_hides_sidebar_nav(app: Page, configure_hide_sidebar_nav):
-    """Test that ui.hideSidebarNav=True hides the sidebar."""
+def test_hides_sidebar_nav(app: Page, configure_show_sidebar_nav):
+    """Test that client.showSidebarNavigation=False hides the sidebar."""
     expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
