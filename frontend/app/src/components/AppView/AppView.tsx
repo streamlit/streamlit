@@ -172,10 +172,7 @@ function AppView(props: AppViewProps): ReactElement {
           currentPageScriptHash={currentPageScriptHash}
           hideSidebarNav={hideSidebarNav}
         >
-          <StyledSidebarBlockContainer
-            className="block-container"
-            data-testid="block-container"
-          >
+          <StyledSidebarBlockContainer>
             {renderBlock(elements.sidebar)}
           </StyledSidebarBlockContainer>
         </ThemedSidebar>
@@ -188,7 +185,7 @@ function AppView(props: AppViewProps): ReactElement {
       >
         <StyledAppViewBlockContainer
           className="block-container"
-          data-testid="block-container"
+          data-testid="stAppViewBlockContainer"
           isWideMode={wideMode}
           showPadding={showPadding}
           addPaddingForHeader={showToolbar || showColoredLine}
@@ -210,12 +207,11 @@ function AppView(props: AppViewProps): ReactElement {
         )}
         {hasBottomElements && (
           <>
-            <StyledAppViewBlockSpacer data-testid="AppViewBlockSpacer" />
+            <StyledAppViewBlockSpacer />
             <StyledStickyBottomContainer>
               <StyledInnerBottomContainer>
                 <StyledBottomBlockContainer
-                  className="block-container"
-                  data-testid="block-container"
+                  data-testid="stBottomBlockContainer"
                   isWideMode={wideMode}
                   showPadding={showPadding}
                 >
@@ -231,10 +227,7 @@ function AppView(props: AppViewProps): ReactElement {
           toastAdjustment={toastAdjustment}
           scriptRunId={elements.event.scriptRunId}
         >
-          <StyledEventBlockContainer
-            className="block-container"
-            data-testid="block-container"
-          >
+          <StyledEventBlockContainer>
             {renderBlock(elements.event)}
           </StyledEventBlockContainer>
         </EventContainer>

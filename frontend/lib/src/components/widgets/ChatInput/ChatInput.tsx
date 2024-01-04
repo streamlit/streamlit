@@ -161,7 +161,11 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
       : false
 
   return (
-    <StyledChatInputContainer className="stChatInput" width={width}>
+    <StyledChatInputContainer
+      className="stChatInput"
+      data-testid="stChatInput"
+      width={width}
+    >
       <StyledChatInput>
         <UITextArea
           inputRef={chatInputRef}
@@ -192,7 +196,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
             },
             Input: {
               props: {
-                "data-testid": "stChatInput",
+                "data-testid": "stChatInputTextArea",
               },
               style: {
                 lineHeight: "1.4",
