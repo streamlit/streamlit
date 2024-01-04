@@ -59,7 +59,6 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     embedded: false,
     showPadding: false,
     disableScrolling: false,
-    showFooter: false,
     showToolbar: false,
     showColoredLine: false,
     pageLinkBaseUrl: "",

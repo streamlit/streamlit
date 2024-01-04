@@ -51,12 +51,6 @@ export interface Props {
   disableScrolling: boolean
 
   /**
-   * True if the footer should be displayed.
-   * @see isFooterDisplayed
-   */
-  showFooter: boolean
-
-  /**
    * True if the toolbar should be displayed.
    * @see isToolbarDisplayed
    */
@@ -108,7 +102,6 @@ export const AppContext = React.createContext<Props>({
   embedded: false,
   showPadding: false,
   disableScrolling: false,
-  showFooter: false,
   showToolbar: false,
   showColoredLine: false,
   pageLinkBaseUrl: "",
