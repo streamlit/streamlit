@@ -223,7 +223,10 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         window.requestAnimationFrame(() => {
           // We need to determine the available width here to be able to set
           // an explicit width for the `StyledVerticalBlock`.
-          setWidth(entry.target.getBoundingClientRect().width)
+
+          // The width should never be set to 0 since it can cause
+          // flickering effects.
+          setWidth(entry.target.getBoundingClientRect().width || -1)
         })
       }),
     [setWidth]
