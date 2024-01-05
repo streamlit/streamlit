@@ -22,19 +22,15 @@ import streamlit as st
 
 
 np.random.seed(0)
-df = pd.DataFrame(np.random.randn(100, 6), columns=["a", "b", "c", "d", "e", "f"])
+df = pd.DataFrame(np.random.randn(100, 5), columns=["a", "b", "c", "d", "e"])
 
 placeholder = st.empty()
 col11, col12, col13 = st.columns(3)
 
 with st.popover(
-    "Popover this is a test and another test and another one and more",
-    help="Help text",
-    use_container_width=True,
+    "Click here to open the popover container",
 ):
-    st.write(
-        "Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello Hello "
-    )
+    st.write("Hello World 👋")
     st.number_input("Number input")
     foo = st.text_input("Text input")
     col1, col2, col3 = st.columns(3)
@@ -42,7 +38,9 @@ with st.popover(
     st.selectbox("Selectbox", ["a", "b", "c"])
     col2.text_input("Column 2")
     col3.text_input("Column 3")
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, use_container_width=False)
     st.dataframe(df)
+    result = st.data_editor(df)
 
 placeholder.write(foo)
+st.write(result)
