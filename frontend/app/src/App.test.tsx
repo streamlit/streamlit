@@ -335,9 +335,11 @@ describe("App", () => {
 
   describe("streamlit server version changes", () => {
     let prevWindowLocation: Location
+
     beforeEach(() => {
       prevWindowLocation = window.location
     })
+
     afterEach(() => {
       window.location = prevWindowLocation
     })
@@ -423,6 +425,7 @@ describe("App", () => {
         expect(screen.getByText("Here is some text")).toBeInTheDocument()
       })
     }
+
     afterEach(() => {
       window.localStorage.clear()
     })
@@ -603,11 +606,6 @@ describe("App", () => {
         customTheme: null,
       })
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        customTheme: null,
-      })
-
       expect(props.theme.addThemes).not.toHaveBeenCalled()
       expect(props.theme.setTheme).not.toHaveBeenCalled()
     })
@@ -762,7 +760,7 @@ describe("App", () => {
       })
     })
 
-    it("calls clearAppState if currentPageScriptHash changes", async () => {
+    it("clears app elements if currentPageScriptHash changes", async () => {
       await makeAppWithElements()
 
       sendForwardMessage("newSession", {
@@ -773,7 +771,7 @@ describe("App", () => {
       expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
     })
 
-    it("doesn't call clearAppState if currentPageScriptHash doesn't change", async () => {
+    it("doesn't clear app elements if currentPageScriptHash doesn't change", async () => {
       await makeAppWithElements()
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
@@ -821,7 +819,7 @@ describe("App", () => {
         )
       })
 
-      it("retains the query string", () => {
+      it("does not retain the query string without embed params", () => {
         renderApp(getProps())
         window.history.pushState({}, "", "/?foo=bar")
 
@@ -832,6 +830,48 @@ describe("App", () => {
           "",
           "/?foo=bar"
         )
+      })
+
+      it("retains embed query params even if the page hash is different", () => {
+        const embedParams =
+          "embed=true&embed_options=disable_scrolling&embed_options=show_colored_line"
+        window.history.pushState({}, "", `/?${embedParams}`)
+
+        renderApp(getProps())
+
+        const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+          HostCommunicationManager
+        )
+
+        const appPages = [
+          { pageScriptHash: "toppage_hash", pageName: "streamlit_app" },
+          { pageScriptHash: "subpage_hash", pageName: "page2" },
+        ]
+
+        // Because the page URL is already "/" pointing to the main page, no new history is pushed.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          appPages,
+          pageScriptHash: "toppage_hash",
+        })
+
+        const navLinks = screen.queryAllByTestId("stSidebarNavLink")
+        expect(navLinks).toHaveLength(2)
+
+        fireEvent.click(navLinks[1])
+
+        const connectionManager = getMockConnectionManager()
+
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[0][0].rerunScript
+            .queryString
+        ).toBe(embedParams)
+
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+          type: "SET_QUERY_PARAM",
+          queryParams: embedParams,
+        })
       })
 
       it("works with baseUrlPaths", () => {
@@ -1523,9 +1563,6 @@ describe("App", () => {
 
       const connectionManager = getMockConnectionManager()
 
-      // It's called twice
-      // Once for the initial script run
-      // Once for the file upload
       expect(connectionManager.sendMessage).not.toBeCalled()
     })
   })
