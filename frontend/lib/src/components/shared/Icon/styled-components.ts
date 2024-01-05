@@ -78,6 +78,7 @@ export const StyledIcon = styled("span", {
     height: theme.iconSizes[size],
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
+    flexShrink: 0,
   }
 })
 
