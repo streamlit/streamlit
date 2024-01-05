@@ -17,6 +17,7 @@ import dataclasses
 import inspect
 import json as json
 import types
+from io import StringIO
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -30,9 +31,11 @@ from typing import (
 )
 
 import numpy as np
+from PIL import Image, ImageFile
 from typing_extensions import Final
 
 from streamlit import type_util
+from streamlit.elements.widgets.file_uploader import UploadedFile
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
@@ -332,6 +335,12 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
+            elif isinstance(arg, (ImageFile.ImageFile, Image.Image)):
+                flush_buffer()
+                self.dg.image(arg)
+            elif isinstance(arg, StringIO):
+                flush_buffer()
+                self.dg.markdown(arg.getvalue())
             elif inspect.isgenerator(arg) or inspect.isgeneratorfunction(arg):
                 flush_buffer()
                 self.experimental_stream(arg, unsafe_allow_html=unsafe_allow_html)
