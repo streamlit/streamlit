@@ -39,7 +39,7 @@ def test_shows_left_and_right_graph(app: Page):
         "Left"
     )
     expect(app.locator(".stGraphVizChart > svg > g > title").nth(4)).to_have_text(
-        "Left"
+        "Right"
     )
 
 
