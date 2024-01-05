@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import dataclasses
 import inspect
@@ -100,10 +102,13 @@ class WriteMixin:
         # Iterate through the generator and write each chunk to the app
         # with a type writer effect.
         for chunk in stream:
-            if type_util.is_openai_completion_chunk(chunk):
-                # Try to convert openai chat completion chunks to strings:
+            if type_util.is_type(
+                chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
+            ):
+                # Try to convert openai chat completion chunk to a string:
                 with contextlib.suppress(Exception):
                     chunk = chunk.choices[0].delta.content or ""
+
             if isinstance(chunk, str):
                 first_text = False
                 if not stream_container:
@@ -341,7 +346,11 @@ class WriteMixin:
             elif isinstance(arg, StringIO):
                 flush_buffer()
                 self.dg.markdown(arg.getvalue())
-            elif inspect.isgenerator(arg) or inspect.isgeneratorfunction(arg):
+            elif (
+                inspect.isgenerator(arg)
+                or inspect.isgeneratorfunction(arg)
+                or type_util.is_type(arg, "openai.Stream")
+            ):
                 flush_buffer()
                 self.experimental_stream(arg, unsafe_allow_html=unsafe_allow_html)
             elif isinstance(arg, HELP_TYPES):
