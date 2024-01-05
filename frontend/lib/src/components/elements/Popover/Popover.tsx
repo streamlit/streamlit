@@ -58,6 +58,7 @@ const Popover: React.FC<PopoverProps> = ({
         Body: {
           style: () => ({
             marginRight: theme.spacing.lg,
+            marginBottom: theme.spacing.lg,
             maxHeight: "70vh",
             overflow: "auto",
             maxWidth: "80vw",
