@@ -53,6 +53,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
             script_requests=ScriptRequests(),

@@ -128,3 +128,51 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
+
+
+def test_switch_page(app: Page):
+    """Test that we can switch between pages by triggering st.switch_page."""
+
+    # Click the button to trigger st.switch_page using relative path
+    app.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+
+    # Check that we are on the correct page
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Page 2")
+
+    # st.switch_page using relative path & leading /
+    app.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Page 6")
+
+    # st.switch_page using relative path & leading ./
+    app.get_by_test_id("baseButton-secondary").click()
+    wait_for_app_run(app)
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Main Page")
+
+
+def test_switch_page_removes_query_params(page: Page, app_port: int):
+    """Test that query params are removed when navigating via st.switch_page"""
+
+    # Start at main page with query params
+    page.goto(f"http://localhost:{app_port}/?foo=bar")
+    wait_for_app_loaded(page)
+
+    # Trigger st.switch_page
+    page.get_by_test_id("stButton").locator("button").first.click()
+    wait_for_app_loaded(page)
+
+    # Check that query params don't persist
+    assert page.url == f"http://localhost:{app_port}/page2"
+
+
+def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
+    """Test that query params are removed when swapping pages"""
+
+    page.goto(f"http://localhost:{app_port}/page_7?foo=bar")
+    wait_for_app_loaded(page)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    wait_for_app_run(page)
+
+    assert page.url == f"http://localhost:{app_port}/page3"

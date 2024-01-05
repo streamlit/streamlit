@@ -141,14 +141,7 @@ export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   },
 }))
 
-export interface StyledIFrameResizerAnchorProps {
-  hasFooter: boolean
-}
-
-// The anchor appears above the footer, so we need to offset it by the footer
-// if the app is not embedded.
-export const StyledIFrameResizerAnchor =
-  styled.div<StyledIFrameResizerAnchorProps>(({ theme, hasFooter }) => ({
-    position: "relative",
-    bottom: hasFooter ? `-${theme.sizes.footerHeight}` : "0",
-  }))
+export const StyledIFrameResizerAnchor = styled.div(() => ({
+  position: "relative",
+  bottom: "0",
+}))

@@ -208,14 +208,14 @@ def marshall(
     proto.use_container_width = use_container_width
 
     if sharing == "streamlit":
-        import plotly.utils
+        import plotly.io
 
         config = dict(kwargs.get("config", {}))
         # Copy over some kwargs to config dict. Plotly does the same in plot().
         config.setdefault("showLink", kwargs.get("show_link", False))
         config.setdefault("linkText", kwargs.get("link_text", False))
 
-        proto.figure.spec = json.dumps(figure, cls=plotly.utils.PlotlyJSONEncoder)
+        proto.figure.spec = plotly.io.to_json(figure, validate=False)
         proto.figure.config = json.dumps(config)
 
     else:

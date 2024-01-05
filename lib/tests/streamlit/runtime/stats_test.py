@@ -50,3 +50,36 @@ class StatsManagerTest(unittest.TestCase):
         ]
 
         self.assertEqual(provider1.stats + provider2.stats, manager.get_stats())
+
+    def test_get_stats_aggregated(self):
+        """StatsManager.get_stats should return all providers' stats aggregated."""
+        manager = StatsManager()
+        provider1 = MockStatsProvider()
+        provider2 = MockStatsProvider()
+        manager.register_provider(provider1)
+        manager.register_provider(provider2)
+
+        # No stats
+        self.assertEqual([], manager.get_stats())
+
+        # Some stats
+        provider1.stats = [
+            CacheStat("provider1", "foo", 1),
+            CacheStat("provider1", "foo", 8),
+            CacheStat("provider1", "bar", 2),
+        ]
+
+        provider2.stats = [
+            CacheStat("provider2", "baz", 4),
+            CacheStat("provider2", "qux", 5),
+            CacheStat("provider2", "qux", 6),
+        ]
+
+        expected_result = [
+            CacheStat("provider1", "foo", 9),
+            CacheStat("provider1", "bar", 2),
+            CacheStat("provider2", "baz", 4),
+            CacheStat("provider2", "qux", 11),
+        ]
+
+        self.assertEqual(expected_result, manager.get_stats())

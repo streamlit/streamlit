@@ -359,6 +359,28 @@ describe("useColumnLoader hook", () => {
     }
   })
 
+  it("disallows hidden for editable columns that are required", () => {
+    const element = ArrowProto.create({
+      data: UNICODE,
+      editingMode: ArrowProto.EditingMode.DYNAMIC,
+      columns: JSON.stringify({
+        c1: {
+          required: true,
+          hidden: true,
+        },
+      }),
+    })
+
+    const data = new Quiver(element)
+
+    const { result } = renderHook(() => {
+      return useColumnLoader(element, data, false)
+    })
+
+    expect(result.current.columns[1].isRequired).toBe(true)
+    expect(result.current.columns[1].isHidden).toBe(false)
+  })
+
   it("doesn't configure any icon for non-editable columns", () => {
     const element = ArrowProto.create({
       data: UNICODE,

@@ -27,14 +27,20 @@ describe("st.experimental_get_query_string", () => {
   it("shows query string correctly", () => {
     cy.get(".element-container [data-testid='stMarkdownContainer']").should(
       "have.length",
-      1
+      2
     );
-    cy.contains(
+    cy.getIndexed(".element-container [data-testid='stMarkdownContainer']", 0).contains(
+      "Please replace st.experimental_get_query_params with st.query_params. " +
+      "st.experimental_get_query_params will be removed after 2024-04-11. " +
+      "Refer to our docs page for more information."
+    );
+
+    cy.getIndexed(".element-container [data-testid='stMarkdownContainer']", 1).contains(
       "Current query string is: {" +
-        "'show_map': ['True'], " +
-        "'number_of_countries': ['2'], " +
-        "'selected': ['asia', 'america']" +
-        "}"
+      "'show_map': ['True'], " +
+      "'number_of_countries': ['2'], " +
+      "'selected': ['asia', 'america']" +
+      "}"
     );
   });
 });

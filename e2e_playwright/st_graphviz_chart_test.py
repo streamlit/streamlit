@@ -29,26 +29,26 @@ def click_fullscreen(app: Page):
 
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
-
-    wait_for_app_run(app)
-    title_count = len(app.locator(".stGraphVizChart > svg > g > title").all())
-    assert title_count == 6
+    expect(app.locator(".stGraphVizChart > svg > g > title")).to_have_count(6)
 
 
 def test_shows_left_and_right_graph(app: Page):
     """Test if it shows left and right graph."""
 
-    left_text = app.locator(".stGraphVizChart > svg > g > title").nth(3).text_content()
-    right_text = app.locator(".stGraphVizChart > svg > g > title").nth(4).text_content()
-    assert "Left" in left_text and "Right" in right_text
+    expect(app.locator(".stGraphVizChart > svg > g > title").nth(3)).to_have_text(
+        "Left"
+    )
+    expect(app.locator(".stGraphVizChart > svg > g > title").nth(4)).to_have_text(
+        "Right"
+    )
 
 
 def test_first_graph_dimensions(app: Page):
     """Test the dimensions of the first graph."""
 
     first_graph_svg = get_first_graph_svg(app)
-    assert first_graph_svg.get_attribute("width") == "79pt"
-    assert first_graph_svg.get_attribute("height") == "116pt"
+    expect(first_graph_svg).to_have_attribute("width", "79pt")
+    expect(first_graph_svg).to_have_attribute("height", "116pt")
 
 
 def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction):
@@ -84,8 +84,8 @@ def test_first_graph_after_exit_fullscreen(
     click_fullscreen(app)
 
     first_graph_svg = get_first_graph_svg(app)
-    assert first_graph_svg.get_attribute("width") == "79pt"
-    assert first_graph_svg.get_attribute("height") == "116pt"
+    expect(first_graph_svg).to_have_attribute("width", "79pt")
+    expect(first_graph_svg).to_have_attribute("height", "116pt")
     assert_snapshot(first_graph_svg, name="graphviz_after_exit_fullscreen")
 
 
