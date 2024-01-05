@@ -20,6 +20,7 @@ import {
   DataEditorRef,
   GridSelection,
   CompactSelection,
+  GridMouseEventArgs,
   GridCell,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
@@ -623,7 +624,7 @@ function DataFrame({
             }
           }}
           theme={theme}
-          onMouseMove={(args: any) => {
+          onMouseMove={(args: GridMouseEventArgs) => {
             // Determine if the dataframe is focused or not
             if (args.kind === "out-of-bounds" && isFocused) {
               setIsFocused(false)
