@@ -45,7 +45,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
             # we don't want to serve directories, and serve only files
             raise tornado.web.HTTPError(404)
 
-        if os.path.commonprefix([full_path, root]) != root:
+        if os.path.commonpath([full_path, root]) != root:
             # Don't allow misbehaving clients to break out of the static files directory
             _LOGGER.warning(
                 "Serving files outside of the static directory is not supported"
