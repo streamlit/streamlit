@@ -12,11 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import dataclasses
 import inspect
 import json as json
 import types
-from typing import TYPE_CHECKING, Any, List, Tuple, Type, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generator,
+    Iterable,
+    List,
+    Tuple,
+    Type,
+    cast,
+)
 
 import numpy as np
 from typing_extensions import Final
@@ -44,8 +55,78 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
 
 _LOGGER = get_logger(__name__)
 
+_TEXT_CURSOR = "▕"
+
+
+class StreamingOutput(list):
+    pass
+
 
 class WriteMixin:
+    def experimental_stream(
+        self, arg: Callable | Generator | Iterable, unsafe_allow_html: bool = False
+    ) -> List[Any] | str:
+        """Stream a generator or iterable to the app.
+
+        This is done by iterating through the generator and writing all
+        string chunks to the app with a type writer effect.
+        """
+
+        # This causes greyed out effect since this element is missing on rerun:
+        stream_container: DeltaGenerator | None = None
+        streamed_response: str = ""
+        written_content: List[Any] = StreamingOutput()
+
+        def flush_stream_response():
+            """Write the full response to the app."""
+            nonlocal streamed_response
+            nonlocal stream_container
+
+            if streamed_response and stream_container:
+                # Replace the stream_container element the full response
+                stream_container.write(
+                    streamed_response, unsafe_allow_html=unsafe_allow_html
+                )
+                written_content.append(streamed_response)
+                stream_container = None
+                streamed_response = ""
+
+        # Make sure we have a generator and not just a generator function.
+        stream = arg() if inspect.isgeneratorfunction(arg) else arg
+
+        # Iterate through the generator and write each chunk to the app
+        # with a type writer effect.
+        for chunk in stream:
+            if type_util.is_openai_completion_chunk(chunk):
+                # Try to convert openai chat completion chunks to strings:
+                with contextlib.suppress(Exception):
+                    chunk = chunk.choices[0].delta.content or ""
+            if isinstance(chunk, str):
+                first_text = False
+                if not stream_container:
+                    stream_container = self.dg.empty()
+                    first_text = True
+                streamed_response += chunk
+                # Only add the streaming symbol on the second text chunk
+                stream_container.write(
+                    streamed_response + ("" if first_text else _TEXT_CURSOR),
+                    unsafe_allow_html=unsafe_allow_html,
+                )
+            elif callable(chunk):
+                flush_stream_response()
+                chunk()
+            else:
+                flush_stream_response()
+                self.write(chunk, unsafe_allow_html=unsafe_allow_html)
+                written_content.append(chunk)
+        flush_stream_response()
+
+        # If the output only contains a single string, return it as a string
+        if len(written_content) == 1 and isinstance(written_content[0], str):
+            return written_content[0]
+        # Otherwise return it as a list
+        return written_content
+
     @gather_metrics("write")
     def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
         """Write arguments to the app.
@@ -182,8 +263,12 @@ class WriteMixin:
 
         def flush_buffer():
             if string_buffer:
-                self.dg.markdown(
-                    " ".join(string_buffer),
+                text_content = " ".join(string_buffer)
+                # The usage of empty here prevents
+                # some grey out effects:
+                text_container = self.dg.empty()
+                text_container.markdown(
+                    text_content,
                     unsafe_allow_html=unsafe_allow_html,
                 )
                 string_buffer[:] = []
@@ -192,6 +277,14 @@ class WriteMixin:
             # Order matters!
             if isinstance(arg, str):
                 string_buffer.append(arg)
+            elif isinstance(arg, StreamingOutput):
+                flush_buffer()
+                for item in arg:
+                    if callable(item):
+                        flush_buffer()
+                        item()
+                    else:
+                        self.write(item, unsafe_allow_html=unsafe_allow_html)
             elif type_util.is_snowpark_or_pyspark_data_object(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
@@ -204,12 +297,6 @@ class WriteMixin:
             elif isinstance(arg, Exception):
                 flush_buffer()
                 self.dg.exception(arg)
-            elif isinstance(arg, HELP_TYPES):
-                flush_buffer()
-                self.dg.help(arg)
-            elif dataclasses.is_dataclass(arg):
-                flush_buffer()
-                self.dg.help(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
                 self.dg.altair_chart(arg)
@@ -245,6 +332,15 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
+            elif inspect.isgenerator(arg) or inspect.isgeneratorfunction(arg):
+                flush_buffer()
+                self.experimental_stream(arg, unsafe_allow_html=unsafe_allow_html)
+            elif isinstance(arg, HELP_TYPES):
+                flush_buffer()
+                self.dg.help(arg)
+            elif dataclasses.is_dataclass(arg):
+                flush_buffer()
+                self.dg.help(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
                 # We cast arg to type here to appease mypy, due to bug in mypy:

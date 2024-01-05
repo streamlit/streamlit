@@ -465,6 +465,11 @@ def is_pydeck(obj: object) -> TypeGuard[Deck]:
     return is_type(obj, "pydeck.bindings.deck.Deck")
 
 
+def is_openai_completion_chunk(obj: object) -> bool:
+    """True if input looks like a OpenAI chat completion chunk."""
+    return is_type(obj, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk")
+
+
 def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     try:
         # The ignore statement here is intentional, as this is a

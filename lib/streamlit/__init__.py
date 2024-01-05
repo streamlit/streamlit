@@ -234,3 +234,4 @@ experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(
     connection, "experimental_connection", "2024-04-01", name_override="connection"
 )
+experimental_stream = _main.experimental_stream
