@@ -28,6 +28,7 @@ from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
 from streamlit import errors, type_util
+from streamlit.errors import StreamlitAPIException
 from tests.streamlit.data_mocks import (
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
@@ -246,6 +247,41 @@ class TypeUtilTest(unittest.TestCase):
         self.assertNotEqual(id(original_styler), id(out))
         self.assertNotEqual(id(original_df), id(out))
         pd.testing.assert_frame_equal(original_df, out)
+
+    @parameterized.expand(
+        [
+            ([1, 2, 3],),
+            (["foo", "bar", "baz"],),
+            (np.array([1, 2, 3, 4]),),
+            (pd.Series([1, 2, 3]),),
+        ]
+    )
+    def test_check_python_comparable(self, sequence):
+        """Test that `check_python_comparable` not raises exception
+        when elements of sequence returns bool when compared."""
+
+        # Just check that it should not raise any exception
+        type_util.check_python_comparable(sequence)
+
+    @parameterized.expand(
+        [
+            (np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]), "ndarray"),
+            ([pd.Series([1, 2, 3]), pd.Series([4, 5, 6])], "Series"),
+        ]
+    )
+    def test_check_python_comparable_exception(self, sequence, type_str):
+        """Test that `check_python_comparable` raises an exception if ndarray."""
+        with pytest.raises(StreamlitAPIException) as exception_message:
+            type_util.check_python_comparable(sequence)
+        self.assertEqual(
+            (
+                "Invalid option type provided. Options must be comparable, returning a "
+                f"boolean when used with *==*. \n\nGot **{type_str}**, which cannot be "
+                "compared. Refactor your code to use elements of comparable types as "
+                "options, e.g. use indices instead."
+            ),
+            str(exception_message.value),
+        )
 
     def test_convert_anything_to_df_calls_to_pandas_when_available(self):
         class DataFrameIsh:
