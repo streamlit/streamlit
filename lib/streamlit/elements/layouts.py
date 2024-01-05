@@ -110,7 +110,6 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto)
 
-    # TODO: Enforce that columns are not nested or in Sidebar
     @gather_metrics("columns")
     def columns(
         self, spec: SpecType, *, gap: Optional[str] = "small"
@@ -442,6 +441,87 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.expandable.CopyFrom(expandable_proto)
+
+        return self.dg._block(block_proto=block_proto)
+
+    @gather_metrics("popover")
+    def popover(
+        self,
+        label: str,
+        *,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
+        r"""Insert a popover container.
+
+        Inserts a multi-element container as a popover. It consists of a button-like
+        element and a container that opens when the button is clicked.
+
+        To add elements to the returned container, you can use "with" notation (preferred) or
+        just call methods directly on the returned object. See examples below.
+
+        .. warning::
+            You may not put expanders or popovers inside another popover.
+
+        Parameters
+        ----------
+        label : str
+            The label of the button that opens the popover container.
+            The label can optionally contain Markdown and supports the
+            following elements: Bold, Italics, Strikethroughs, Inline Code,
+            Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+                For a list of all supported codes,
+                see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+                must be on their own lines). Supported LaTeX functions are listed
+                at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+                where ``color`` needs to be replaced with any of the following
+                supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+        use_container_width : bool
+            An optional boolean, which makes the popover button stretch its width
+            to match the parent container.
+
+        Examples
+        --------
+        You can use `with` notation to insert any element into a popover
+
+        >>> import streamlit as st
+        >>>
+
+        .. output ::
+            https://doc-popover.streamlit.app/
+            height: 500px
+
+        Or you can just call methods directly in the returned objects:
+
+        >>> import streamlit as st
+        >>>
+
+        .. output ::
+            https://doc-popover.streamlit.app/
+            height: 500px
+
+        """
+        if label is None:
+            raise StreamlitAPIException("A label is required for a popover")
+
+        popover_proto = BlockProto.Popover()
+        popover_proto.label = label
+        popover_proto.use_container_width = use_container_width
+
+        block_proto = BlockProto()
+        block_proto.allow_empty = True
+        block_proto.popover.CopyFrom(popover_proto)
 
         return self.dg._block(block_proto=block_proto)
 

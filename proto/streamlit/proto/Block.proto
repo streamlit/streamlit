@@ -29,6 +29,7 @@ message Block {
     TabContainer tab_container = 6;
     Tab tab = 7;
     ChatMessage chat_message = 9;
+    Popover popover = 10;
   }
 
   bool allow_empty = 8;
@@ -66,6 +67,12 @@ message Block {
   message Tab {
     string label = 1;
   }
+
+  message Popover {
+    string label = 1;
+    bool use_container_width = 2;
+  }
+
 
   message ChatMessage {
     enum AvatarType {

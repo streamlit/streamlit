@@ -183,6 +183,7 @@ warning = _main.warning
 write = _main.write
 color_picker = _main.color_picker
 status = _main.status
+popover = _main.popover
 
 # Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
 toast = event.toast

@@ -28,6 +28,7 @@ import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
+import Popover from "@streamlit/lib/src/components/elements/Popover"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
 import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
@@ -86,6 +87,18 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       >
         {child}
       </Expander>
+    )
+  }
+
+  if (node.deltaBlock.popover) {
+    return (
+      <Popover
+        empty={node.isEmpty}
+        width={props.width}
+        element={node.deltaBlock.popover as BlockProto.Popover}
+      >
+        {child}
+      </Popover>
     )
   }
 
