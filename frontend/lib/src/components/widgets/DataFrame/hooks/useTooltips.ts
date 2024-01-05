@@ -16,7 +16,11 @@
 
 import React from "react"
 
-import { GridCell, DataEditorProps } from "@glideapps/glide-data-grid"
+import {
+  GridCell,
+  DataEditorProps,
+  GridMouseEventArgs,
+} from "@glideapps/glide-data-grid"
 
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
@@ -59,7 +63,7 @@ function useTooltips(
   const timeoutRef = React.useRef<any>(null)
 
   const onItemHovered = React.useCallback(
-    (args: any) => {
+    (args: GridMouseEventArgs) => {
       // Always reset the tooltips on any change here
       clearTimeout(timeoutRef.current)
       timeoutRef.current = 0
