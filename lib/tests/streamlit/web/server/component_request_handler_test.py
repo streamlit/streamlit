@@ -21,7 +21,7 @@ from streamlit.components.v1.components import ComponentRegistry, declare_compon
 from streamlit.web.server import ComponentRequestHandler
 
 URL = "http://not.a.real.url:3001"
-PATH = "not/a/real/path"
+PATH = "/not/a/real/path"
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
@@ -74,6 +74,21 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         response = self._request_component(
             "tests.streamlit.web.server.component_request_handler_test.test//etc/hosts"
+        )
+
+        self.assertEqual(403, response.code)
+        self.assertEqual(b"forbidden", response.body)
+
+    def test_outside_component_dir_with_same_prefix_request(self):
+        """Tests to ensure a path based on the same prefix but a different
+        directory test folder is forbidden."""
+
+        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+            # We don't need the return value in this case.
+            declare_component("test", path=PATH)
+
+        response = self._request_component(
+            f"tests.streamlit.web.server.component_request_handler_test.test//{PATH}_really"
         )
 
         self.assertEqual(403, response.code)
