@@ -49,7 +49,7 @@ export interface ChartColumnParams {
 function BaseChartColumn(
   kind: string,
   props: BaseColumnProps,
-  chart_type: "line" | "bar"
+  chart_type: "line" | "bar" | "area"
 ): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
@@ -72,6 +72,7 @@ function BaseChartColumn(
       displayValues: [],
       graphKind: chart_type,
       yAxis: [parameters.y_min, parameters.y_max],
+      hideAxis: chart_type === "line",
     },
   } as SparklineCellType
 
@@ -193,7 +194,7 @@ function BaseChartColumn(
  * This column type is currently read-only.
  */
 export function LineChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("line_chart", props, "line")
+  return BaseChartColumn("line_chart", props, "area")
 }
 
 LineChartColumn.isEditableType = false
