@@ -24,7 +24,7 @@ gitdb==4.0.11
 GitPython==3.1.40
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.92.2
+hypothesis==6.92.3
 identify==2.5.33
 idna==3.6
 importlib-metadata==6.11.0
