@@ -48,9 +48,17 @@ export function getWindowBaseUriParts(): BaseUriParts {
     port = isHttps() ? 443 : 80
   }
 
-  const basePath = window.location.pathname
-    .replace(FINAL_SLASH_RE, "")
-    .replace(INITIAL_SLASH_RE, "")
+  let basePath
+
+  // stlite: If we're running in an iframe, the href might be "about:blank".
+  // In that case, we want to use the current path as the base path.
+  if (window.location.href === "about:blank") {
+    basePath = ""
+  } else {
+    basePath = window.location.pathname
+      .replace(FINAL_SLASH_RE, "")
+      .replace(INITIAL_SLASH_RE, "")
+  }
 
   return { host, port, basePath }
 }

@@ -25,6 +25,9 @@ import { logWarning } from "./util/log"
 import Resolver from "./util/Resolver"
 import { isValidFormId } from "./util/utils"
 
+import { FormDataEncoder, FormDataLike } from "form-data-encoder"
+import type { StliteKernel } from "@stlite/kernel"
+
 /** Common widget protobuf fields that are used by the FileUploadClient. */
 interface WidgetInfo {
   id: string
@@ -85,6 +88,13 @@ export class FileUploadClient {
     this.requestFileURLs = props.requestFileURLs
   }
 
+  // Stlite: Add kernel
+  private kernel: StliteKernel | undefined
+
+  public setKernel(kernel: StliteKernel) {
+    this.kernel = kernel
+  }
+
   /**
    * Upload a file to the given URL. It will be associated with this browser's
    * sessionID.
@@ -101,19 +111,48 @@ export class FileUploadClient {
     widget: WidgetInfo,
     fileUploadUrl: string,
     file: File,
-    onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
+    _onUploadProgress?: (progressEvent: any) => void,
+    _cancelToken?: CancelToken
   ): Promise<void> {
     this.offsetPendingRequestCount(widget.formId, 1)
-    return this.endpoints
-      .uploadFileUploaderFile(
-        fileUploadUrl,
-        file,
-        this.sessionInfo.current.sessionId,
-        onUploadProgress,
-        cancelToken
-      )
-      .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
+
+    // stlite: Use form upload
+    const form = new FormData()
+    form.append("sessionId", this.sessionInfo.current.sessionId)
+    form.append(file.name, file)
+
+    const encoder = new FormDataEncoder(form as unknown as FormDataLike)
+    const bodyBlob = new Blob(encoder as unknown as BufferSource[], {
+      type: encoder.contentType,
+    })
+
+    return bodyBlob.arrayBuffer().then(body => {
+      if (this.kernel == null) {
+        throw new Error("Kernel not ready")
+      }
+
+      return this.kernel
+        .sendHttpRequest({
+          method: "POST",
+          path: fileUploadUrl,
+          body,
+          headers: { ...encoder.headers },
+        })
+        .then(_response => {
+          return
+        })
+        .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
+    })
+
+    //   return this.endpoints
+    //     .uploadFileUploaderFile(
+    //       fileUploadUrl,
+    //       file,
+    //       this.sessionInfo.current.sessionId,
+    //       onUploadProgress,
+    //       cancelToken
+    //     )
+    //     .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
   }
 
   /**

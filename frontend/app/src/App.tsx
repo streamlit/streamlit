@@ -20,7 +20,7 @@ import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
-import { ConnectionManager, StliteKernelContext, FileUploadClient } from "@stlite/kernel"
+import { StliteKernelContext } from "@stlite/kernel"
 
 // Other local imports.
 import { AppContext } from "@streamlit/app/src/components/AppContext"
@@ -35,6 +35,7 @@ import {
   DialogType,
   StreamlitDialog,
 } from "@streamlit/app/src/components/StreamlitDialog"
+import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 import {
@@ -58,6 +59,7 @@ import {
   BaseUriParts,
   RERUN_PROMPT_MODAL_DIALOG,
   SessionInfo,
+  FileUploadClient,
   logError,
   logMessage,
   AppRoot,
@@ -829,6 +831,7 @@ export class App extends PureComponent<Props, State> {
         const pagePath = viewingMainPage ? "" : newPageName
         const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
 
+        // Stlite Modification:
         // Remove the trailing slash unless it results in an empty string to avoid undesirable path overrides such as "/test.html" -> "/test.html/" which is a special case only for stlite, not Streamlit.
         // See https://github.com/whitphx/stlite/issues/178
         const trimmedPageUrl =

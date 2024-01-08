@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ast
 import asyncio
 import gc
 import sys
@@ -230,9 +229,15 @@ class ScriptRunner:
         This must be called only once.
 
         """
+        # Stlite: threading is not supported on Pyodide. Use script task instead
         if self._script_task is not None:
             raise Exception("ScriptRunner was already started")
 
+        # self._script_thread = threading.Thread(
+        #     target=self._run_script_thread,
+        #     name="ScriptRunner.scriptThread",
+        # )
+        # self._script_thread.start()
         self._script_task = asyncio.create_task(self._run_script_thread())
 
     def _get_script_run_ctx(self) -> ScriptRunContext:
@@ -539,6 +544,8 @@ class ScriptRunner:
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
+
+                # Stlite: asyncio does not support exec() so we use eval() instead
                 if code.co_flags & CO_COROUTINE:
                     # The source code includes top-level awaits, so the compiled code object is a coroutine.
                     await eval(code, module.__dict__)

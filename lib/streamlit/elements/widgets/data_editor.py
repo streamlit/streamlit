@@ -796,7 +796,7 @@ class DataEditorMixin:
 
         # stlite: Don't use Arrow
         # arrow_bytes = type_util.pyarrow_table_to_bytes(arrow_table)
-        df_bytes = type_util.data_frame_to_bytes(data_df)
+        arrow_bytes = type_util.data_frame_to_bytes(data_df)
 
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
@@ -806,8 +806,7 @@ class DataEditorMixin:
         id = compute_widget_id(
             "data_editor",
             user_key=key,
-            # data=arrow_bytes,
-            data=df_bytes,
+            data=arrow_bytes,
             width=width,
             height=height,
             use_container_width=use_container_width,
@@ -858,9 +857,7 @@ class DataEditorMixin:
             data.set_uuid(styler_uuid)
             marshall_styler(proto, data, styler_uuid)
 
-        # stlite: Don't use Arrow. `type_util.data_frame_to_bytes` is polyfilled to use Parquet instead for stlite.
-        # proto.data = arrow_bytes
-        proto.data = df_bytes
+        proto.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
 
