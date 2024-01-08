@@ -228,8 +228,13 @@ export class Streamlit {
 }
 
 const _injectTheme = (theme: Theme) => {
-  const style = document.createElement("style");
-  document.head.appendChild(style);
+  const injectedStyleElementId = "__streamlit_injected_styles";
+  let style = document.getElementById(injectedStyleElementId);
+  if (!style) {
+    style = document.createElement("style");
+    style.id = injectedStyleElementId;
+    document.head.appendChild(style);
+  }
   style.innerHTML = `
     :root {
       --primary-color: ${theme.primaryColor};
