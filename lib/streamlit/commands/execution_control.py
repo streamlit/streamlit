@@ -80,7 +80,7 @@ def rerun() -> NoReturn:  # type: ignore[misc]
 def experimental_rerun() -> NoReturn:
     """Rerun the script immediately.
 
-    When `st.experimental_rerun()` is called, the script is halted - no
+    When ``st.experimental_rerun()`` is called, the script is halted - no
     more statements will be run, and the script will be queued to re-run
     from the top.
     """
@@ -94,13 +94,38 @@ def experimental_rerun() -> NoReturn:
 
 @gather_metrics("switch_page")
 def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
-    """Switch the current programmatically page in a multi-page app.
-    When `st.switch_page()` is called with a page, the current page script is halted
+    """Programmatically switch the current page in a multi-page app.
+
+    When ``st.switch_page()`` is called, the current page script is halted
     and the requested page script will be queued to run from the top.
+
     Parameters
     ----------
     page: str
-        The file path, relative to the main script, of the page to switch to.
+        The file path (relative to the main script) of the page to switch to.
+
+    Example
+    -------
+    Consider the following example given this file structure:
+    >>> your-repository/
+    >>> ├── pages/
+    >>> │   ├── page_1.py.py
+    >>> │   └── page_2.py.py
+    >>> └── your_app.py
+
+    >>> import streamlit as st
+    >>>
+    >>> if st.button("Home"):
+    >>>     st.switch_page("your_app.py")
+    >>> if st.button("Page 1"):
+    >>>     st.switch_page("pages/page_1.py")
+    >>> if st.button("Page 2"):
+    >>>     st.switch_page("pages/page_2.py")
+
+    .. output ::
+        https://doc-switch-page.streamlit.app/
+        height: 350px
+
     """
 
     ctx = get_script_run_ctx()
