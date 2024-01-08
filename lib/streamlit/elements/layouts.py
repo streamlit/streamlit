@@ -110,6 +110,19 @@ class LayoutsMixin:
             https://doc-container3.streamlit.app/
             height: 350px
 
+        Using ``height`` to create a scrolling container for long content:
+
+        >>> import streamlit as st
+        >>>
+        >>> long_text = "Lorem ipsum. " * 1000
+        >>>
+        >>> with st.container(height=300):
+        >>>     st.markdown(long_text)
+
+        .. output ::
+            https://doc-container4.streamlit.app/
+            height: 400px
+
         """
         block_proto = BlockProto()
         block_proto.allow_empty = False
