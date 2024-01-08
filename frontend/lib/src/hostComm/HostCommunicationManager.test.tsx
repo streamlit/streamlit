@@ -413,6 +413,24 @@ describe("HostCommunicationManager messaging", () => {
       hostCommunicationMgr.props.themeChanged
     ).toHaveBeenCalledWith(mockCustomThemeConfig)
   })
+
+  it("can process a received SET_AUTH_TOKEN message with JWT pair", () => {
+    const message = new MessageEvent("message", {
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "SET_AUTH_TOKEN",
+        jwtHeaderName: "X-JWT-HEADER-NAME",
+        jwtHeaderValue: "X-JWT-HEADER-VALUE",
+      },
+      origin: "https://devel.streamlit.test",
+    })
+    dispatchEvent("message", message)
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.jwtHeaderChanged
+    ).toHaveBeenCalledWith(message.data)
+  })
 })
 
 describe("Test different origins", () => {
