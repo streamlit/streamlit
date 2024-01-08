@@ -2,10 +2,6 @@
   "name": "streamlit",
   "version": "1.27.0",
   "private": true,
-  "workspaces": [
-    "app",
-    "lib"
-  ],
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
     "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
