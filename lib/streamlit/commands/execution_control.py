@@ -56,7 +56,7 @@ def stop() -> NoReturn:  # type: ignore[misc]
 def rerun() -> NoReturn:  # type: ignore[misc]
     """Rerun the script immediately.
 
-    When `st.rerun()` is called, the script is halted - no more statements will
+    When ``st.rerun()`` is called, the script is halted - no more statements will
     be run, and the script will be queued to re-run from the top.
     """
 

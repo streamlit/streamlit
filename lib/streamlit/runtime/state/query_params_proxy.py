@@ -74,7 +74,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
         When a key is repeated as a query parameter within the URL, this method
         allows all values to be obtained. In contrast, dict-like methods only
-        retireve tha last value when a key is repeated in the URL.
+        retrieve the last value when a key is repeated in the URL.
 
         Parameters
         ----------
