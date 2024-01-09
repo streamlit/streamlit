@@ -17,10 +17,6 @@
 import React from "react"
 
 import { DataEditorProps } from "@glideapps/glide-data-grid"
-// We don't have Typescript defs for these imports, which makes ESLint unhappy
-/* eslint-disable import/no-extraneous-dependencies */
-import { showSaveFilePicker } from "native-file-system-adapter"
-/* eslint-enable */
 
 import {
   BaseColumn,
@@ -94,6 +90,8 @@ function useDataExporter(
   numRows: number
 ): DataExporterReturn {
   const exportToCsv = React.useCallback(async () => {
+    const showSaveFilePicker = await import("native-file-system-adapter")
+
     const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
     const suggestedName = `${timestamp}_export.csv`
 
