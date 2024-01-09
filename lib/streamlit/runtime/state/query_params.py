@@ -30,7 +30,15 @@ class QueryParams(MutableMapping[str, str]):
 
     def __iter__(self) -> Iterator[str]:
         self._ensure_single_query_api_used()
-        return iter(self._query_params.keys())
+
+        # Avoid circular imports
+        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
+
+        return iter(
+            key
+            for key in self._query_params.keys()
+            if key not in EMBED_QUERY_PARAMS_KEYS
+        )
 
     def __getitem__(self, key: str) -> str:
         """Retrieves a value for a given key in query parameters.
@@ -39,15 +47,23 @@ class QueryParams(MutableMapping[str, str]):
         """
         self._ensure_single_query_api_used()
         try:
-            value = self._query_params[key]
-            if isinstance(value, list):
-                if len(value) == 0:
-                    return ""
-                else:
-                    # Return the last value to mimic Tornado's behavior
-                    # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
-                    return value[-1]
-            return value
+            # Avoid circular imports
+            from streamlit.commands.experimental_query_params import (
+                EMBED_QUERY_PARAMS_KEYS,
+            )
+
+            if key not in EMBED_QUERY_PARAMS_KEYS:
+                value = self._query_params[key]
+                if isinstance(value, list):
+                    if len(value) == 0:
+                        return ""
+                    else:
+                        # Return the last value to mimic Tornado's behavior
+                        # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
+                        return value[-1]
+                return value
+            else:
+                raise KeyError(missing_key_error_message(key))
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
@@ -59,40 +75,49 @@ class QueryParams(MutableMapping[str, str]):
         # Avoid circular imports
         from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
 
+        if key in EMBED_QUERY_PARAMS_KEYS:
+            raise StreamlitAPIException(
+                "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
+            )
         # Type checking users should handle the string serialization themselves
         # We will accept any type for the list and serialize to str just in case
         if isinstance(value, Iterable) and not isinstance(value, str):
-            for item in value:
-                if item in EMBED_QUERY_PARAMS_KEYS:
-                    raise StreamlitAPIException(
-                        "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
-                    )
             self._query_params[key] = [str(item) for item in value]
         else:
-            if key in EMBED_QUERY_PARAMS_KEYS:
-                raise StreamlitAPIException(
-                    "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
-                )
             self._query_params[key] = str(value)
         self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
         try:
-            del self._query_params[key]
+            # Avoid circular imports
+            from streamlit.commands.experimental_query_params import (
+                EMBED_QUERY_PARAMS_KEYS,
+            )
+
+            if key not in EMBED_QUERY_PARAMS_KEYS:
+                del self._query_params[key]
             self._send_query_param_msg()
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
+        # Avoid circular imports
+        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
+
         self._ensure_single_query_api_used()
-        if key not in self._query_params:
+        if key not in self._query_params or key in EMBED_QUERY_PARAMS_KEYS:
             return []
         value = self._query_params[key]
         return value if isinstance(value, list) else [value]
 
     def __len__(self) -> int:
         self._ensure_single_query_api_used()
-        return len(self._query_params)
+        # Avoid circular imports
+        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
+
+        return len(
+            {key for key in self._query_params if key not in EMBED_QUERY_PARAMS_KEYS}
+        )
 
     def _send_query_param_msg(self) -> None:
         # Avoid circular imports
