@@ -303,8 +303,6 @@ class CacheResourceAPI:
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(days=1)``.
 
-            Note that ``ttl`` will be ignored if ``persist="disk"`` or ``persist=True``.
-
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. When a new entry is added to a full cache,
