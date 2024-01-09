@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, Iterator, List, MutableMapping, Union
 from urllib import parse
 
+from streamlit.constants import EMBED_QUERY_PARAMS_KEYS
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
@@ -31,9 +32,6 @@ class QueryParams(MutableMapping[str, str]):
     def __iter__(self) -> Iterator[str]:
         self._ensure_single_query_api_used()
 
-        # Avoid circular imports
-        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
-
         return iter(
             key
             for key in self._query_params.keys()
@@ -47,11 +45,6 @@ class QueryParams(MutableMapping[str, str]):
         """
         self._ensure_single_query_api_used()
         try:
-            # Avoid circular imports
-            from streamlit.commands.experimental_query_params import (
-                EMBED_QUERY_PARAMS_KEYS,
-            )
-
             if key in EMBED_QUERY_PARAMS_KEYS:
                 raise KeyError(missing_key_error_message(key))
             value = self._query_params[key]
@@ -71,8 +64,6 @@ class QueryParams(MutableMapping[str, str]):
             raise StreamlitAPIException(
                 f"You cannot set a query params key `{key}` to a dictionary."
             )
-        # Avoid circular imports
-        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
 
         if key in EMBED_QUERY_PARAMS_KEYS:
             raise StreamlitAPIException(
@@ -88,11 +79,6 @@ class QueryParams(MutableMapping[str, str]):
 
     def __delitem__(self, key: str) -> None:
         try:
-            # Avoid circular imports
-            from streamlit.commands.experimental_query_params import (
-                EMBED_QUERY_PARAMS_KEYS,
-            )
-
             if key in EMBED_QUERY_PARAMS_KEYS:
                 raise KeyError(missing_key_error_message(key))
             del self._query_params[key]
@@ -101,9 +87,6 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(missing_key_error_message(key))
 
     def get_all(self, key: str) -> List[str]:
-        # Avoid circular imports
-        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
-
         self._ensure_single_query_api_used()
         if key not in self._query_params or key in EMBED_QUERY_PARAMS_KEYS:
             return []
@@ -112,9 +95,6 @@ class QueryParams(MutableMapping[str, str]):
 
     def __len__(self) -> int:
         self._ensure_single_query_api_used()
-        # Avoid circular imports
-        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
-
         return len(
             {key for key in self._query_params if key not in EMBED_QUERY_PARAMS_KEYS}
         )
@@ -136,9 +116,6 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
-        # Avoid circular imports
-        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
-
         new_query_params = {}
         for key, value in self._query_params.items():
             if key in EMBED_QUERY_PARAMS_KEYS:
@@ -148,9 +125,6 @@ class QueryParams(MutableMapping[str, str]):
         self._send_query_param_msg()
 
     def to_dict(self) -> Dict[str, str]:
-        # Avoid circular imports
-        from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
-
         self._ensure_single_query_api_used()
         # return the last query param if multiple values are set
         return {

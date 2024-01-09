@@ -16,14 +16,15 @@ import urllib.parse as parse
 from typing import Any, Dict, List, Union
 
 from streamlit import util
+from streamlit.constants import (
+    EMBED_OPTIONS_QUERY_PARAM,
+    EMBED_QUERY_PARAM,
+    EMBED_QUERY_PARAMS_KEYS,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-EMBED_QUERY_PARAM = "embed"
-EMBED_OPTIONS_QUERY_PARAM = "embed_options"
-EMBED_QUERY_PARAMS_KEYS = [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
 
 
 @gather_metrics("experimental_get_query_params")
