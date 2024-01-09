@@ -81,7 +81,7 @@ def group_stats(stats: List[CacheStat]) -> List[CacheStat]:
                 byte_length=sum(map(lambda item: item.byte_length, stats)),
             )
         )
-    return stats
+    return result
 
 
 @runtime_checkable
