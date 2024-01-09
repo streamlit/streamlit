@@ -145,9 +145,10 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
             del self.query_params["embed"]
         assert "embed" in self.query_params._query_params
 
-    def test__delitem__does_nothing_for_embed_options_key(self):
+    def test__delitem__throws_KeyErrorException_for_embed_options_key(self):
         self.query_params._query_params = self.query_params_dict_with_embed_key
-        del self.query_params["embed_options"]
+        with pytest.raises(KeyError):
+            del self.query_params["embed_options"]
         assert "embed_options" in self.query_params._query_params
 
     def test_get_all_returns_empty_list_for_nonexistent_key(self):
