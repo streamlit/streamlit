@@ -52,18 +52,17 @@ class QueryParams(MutableMapping[str, str]):
                 EMBED_QUERY_PARAMS_KEYS,
             )
 
-            if key not in EMBED_QUERY_PARAMS_KEYS:
-                value = self._query_params[key]
-                if isinstance(value, list):
-                    if len(value) == 0:
-                        return ""
-                    else:
-                        # Return the last value to mimic Tornado's behavior
-                        # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
-                        return value[-1]
-                return value
-            else:
+            if key in EMBED_QUERY_PARAMS_KEYS:
                 raise KeyError(missing_key_error_message(key))
+            value = self._query_params[key]
+            if isinstance(value, list):
+                if len(value) == 0:
+                    return ""
+                else:
+                    # Return the last value to mimic Tornado's behavior
+                    # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
+                    return value[-1]
+            return value
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
@@ -94,8 +93,9 @@ class QueryParams(MutableMapping[str, str]):
                 EMBED_QUERY_PARAMS_KEYS,
             )
 
-            if key not in EMBED_QUERY_PARAMS_KEYS:
-                del self._query_params[key]
+            if key in EMBED_QUERY_PARAMS_KEYS:
+                raise KeyError(missing_key_error_message(key))
+            del self._query_params[key]
             self._send_query_param_msg()
         except KeyError:
             raise KeyError(missing_key_error_message(key))
