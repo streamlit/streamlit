@@ -127,14 +127,62 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         message = self.get_message_from_queue(0)
         assert "" == message.page_info_changed.query_string
 
+    def test_clear_doesnt_remove_embed_query_params(self):
+        self.query_params._query_params = {
+            "foo": "bar",
+            "embed": "true",
+            "embed_options": ["show_colored_line", "disable_scrolling"],
+        }
+        result_dict = {
+            "embed": "true",
+            "embed_options": ["show_colored_line", "disable_scrolling"],
+        }
+        self.query_params.clear()
+        assert self.query_params._query_params == result_dict
+
     def test_to_dict(self):
         self.query_params["baz"] = ""
         result_dict = {"foo": "bar", "two": "y", "baz": ""}
         assert self.query_params.to_dict() == result_dict
 
+    def test_to_dict_doesnt_include_embed_params(self):
+        self.query_params._query_params = {
+            "foo": "bar",
+            "embed": "true",
+            "embed_options": ["show_colored_line", "disable_scrolling"],
+        }
+        result_dict = {"foo": "bar"}
+        assert self.query_params.to_dict() == result_dict
+
     def test_set_with_no_forward_msg_sends_no_msg_and_sets_query_params(self):
         self.query_params.set_with_no_forward_msg("test", "test")
         assert self.query_params["test"] == "test"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_set_with_no_forward_msg_accepts_embed(self):
+        self.query_params.set_with_no_forward_msg("embed", "true")
+        assert self.query_params._query_params["embed"] == "true"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_set_with_no_forward_msg_accepts_embed_options(self):
+        self.query_params.set_with_no_forward_msg("embed_options", "disable_scrolling")
+        assert self.query_params._query_params["embed_options"] == "disable_scrolling"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_set_with_no_forward_msg_accepts_multiple_embed_options(self):
+        self.query_params.set_with_no_forward_msg(
+            "embed_options", ["disable_scrolling", "show_colored_line"]
+        )
+        assert self.query_params._query_params["embed_options"] == [
+            "disable_scrolling",
+            "show_colored_line",
+        ]
         with pytest.raises(IndexError):
             # no forward message should be sent
             self.get_message_from_queue(0)
