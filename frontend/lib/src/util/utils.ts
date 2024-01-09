@@ -99,6 +99,28 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
 }
 
 /**
+ * Returns "embed" and "embed_options" query param options in the url. Returns empty string if not embedded.
+ * Example:
+ *  returns "embed=true&embed_options=show_loading_screen_v2" if the url is
+ *  http://localhost:3000/test?embed=true&embed_options=show_loading_screen_v2
+ */
+export function parseEmbedUrlString(): string {
+  if (!isEmbed()) {
+    return ""
+  }
+
+  const embedValues = new URLSearchParams(window.location.search).getAll(
+    EMBED_OPTIONS_QUERY_PARAM_KEY
+  )
+  const map: Record<string, string> = {}
+  map[EMBED_QUERY_PARAM_KEY] = "true"
+  embedValues.forEach((embedValue: string) => {
+    map[EMBED_OPTIONS_QUERY_PARAM_KEY] = embedValue
+  })
+  return new URLSearchParams(map).toString()
+}
+
+/**
  * Returns true if the URL parameters contain ?embed=true (case insensitive).
  */
 export function isEmbed(): boolean {

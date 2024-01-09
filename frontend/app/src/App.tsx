@@ -124,6 +124,7 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
+import { parseEmbedUrlString } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -865,10 +866,13 @@ export class App extends PureComponent<Props, State> {
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
+        const queryString = parseEmbedUrlString()
+        const qs = queryString ? `?${queryString}` : ""
+
         const basePathPrefix = basePath ? `/${basePath}` : ""
 
         const pagePath = viewingMainPage ? "" : newPageName
-        const pageUrl = `${basePathPrefix}/${pagePath}`
+        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
 
         window.history.pushState({}, "", pageUrl)
       }
@@ -1307,8 +1311,8 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash != currentPageScriptHash) {
-        // clear query parameters within a page change
-        queryString = ""
+        // clear non-embed query parameters within a page change
+        queryString = parseEmbedUrlString()
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
           queryParams: queryString,
