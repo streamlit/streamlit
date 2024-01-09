@@ -28,7 +28,7 @@ from streamlit.runtime.media_file_storage import (
     MediaFileStorage,
     MediaFileStorageError,
 )
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.util import HASHLIB_KWARGS
 
 LOGGER = get_logger(__name__)
@@ -181,4 +181,4 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
                     byte_length=len(file.content),
                 )
             )
-        return stats
+        return group_stats(stats)

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import itertools
 from abc import abstractmethod
 from typing import List, NamedTuple
 
@@ -60,6 +60,28 @@ class CacheStat(NamedTuple):
 
         metric_point = metric.metric_points.add()
         metric_point.gauge_value.int_value = self.byte_length
+
+
+def group_stats(stats: List[CacheStat]) -> List[CacheStat]:
+    """Group a list of CacheStats by category_name and cache_name."""
+
+    def key_function(individual_stat):
+        return individual_stat.category_name, individual_stat.cache_name
+
+    result: List[CacheStat] = []
+
+    sorted_stats = sorted(stats, key=key_function)
+    grouped_stats = itertools.groupby(sorted_stats, key=key_function)
+
+    for (category_name, cache_name), stats in grouped_stats:
+        result.append(
+            CacheStat(
+                category_name=category_name,
+                cache_name=cache_name,
+                byte_length=sum(map(lambda item: item.byte_length, stats)),
+            )
+        )
+    return stats
 
 
 @runtime_checkable
