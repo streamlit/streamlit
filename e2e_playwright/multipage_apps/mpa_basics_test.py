@@ -182,7 +182,7 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
     """Test that query params are removed when swapping pages"""
 
     page.goto(
-        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=disable_scrolling&embed_options=show_colored_line"
+        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
     )
     wait_for_app_loaded(page)
 
@@ -191,5 +191,5 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
 
     assert (
         page.url
-        == f"http://localhost:{app_port}/page3?embed=true&embed_options=disable_scrolling&embed_options=show_colored_line"
+        == f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
     )
