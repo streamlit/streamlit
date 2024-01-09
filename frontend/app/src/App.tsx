@@ -20,7 +20,7 @@ import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
-import { StliteKernelContext, ConnectionManager } from "@stlite/kernel"
+import { ConnectionManager, StliteKernelContext } from "@stlite/kernel"
 
 // Other local imports.
 import { AppContext } from "@streamlit/app/src/components/AppContext"
