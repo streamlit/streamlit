@@ -1193,6 +1193,52 @@ describe("App.sendRerunBackMsg", () => {
       queryParams: "",
     })
   })
+
+  it("retains embed query params even if the page hash is different", () => {
+    const originalWindowLocation = window.location
+    const embedParams =
+      "embed=true&embed_options=disable_scrolling&embed_options=show_colored_line"
+
+    // Change window.location.href in order for query params to exist
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: new URL(`${window.location.href}?${embedParams}`),
+    })
+
+    wrapper.setState({
+      currentPageScriptHash: "current_page_hash",
+      queryParams: `foo=bar&${embedParams}`,
+    })
+    const sendMessageFunc = jest.spyOn(
+      // @ts-expect-error
+      instance.hostCommunicationMgr,
+      "sendMessageToHost"
+    )
+
+    instance.sendRerunBackMsg(undefined, "some_other_page_hash")
+
+    // @ts-expect-error
+    expect(instance.sendBackMsg).toHaveBeenCalledWith({
+      rerunScript: {
+        pageScriptHash: "some_other_page_hash",
+        pageName: "",
+        queryString: embedParams,
+      },
+    })
+
+    expect(sendMessageFunc).toHaveBeenCalledWith({
+      type: "SET_QUERY_PARAM",
+      queryParams: embedParams,
+    })
+
+    // Reset window.location
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      enumerable: true,
+      value: originalWindowLocation,
+    })
+  })
 })
 
 //   * handlePageNotFound has branching error messages depending on pageName
