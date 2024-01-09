@@ -20,7 +20,7 @@ import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
 import classNames from "classnames"
 
-import { StliteKernelContext } from "@stlite/kernel"
+import { StliteKernelContext, ConnectionManager } from "@stlite/kernel"
 
 // Other local imports.
 import { AppContext } from "@streamlit/app/src/components/AppContext"
@@ -35,7 +35,8 @@ import {
   DialogType,
   StreamlitDialog,
 } from "@streamlit/app/src/components/StreamlitDialog"
-import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
+// Stlite Modification: we use a replacement implementation:
+// import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 import {
@@ -819,7 +820,8 @@ export class App extends PureComponent<Props, State> {
       const prevPageName =
         prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
       // It is important to compare `newPageName` with the previous one encoded in the URL
-      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+      // to hanimport { ConnectionManager } from '../../src/app/connection/ConnectionManager';
+dle new session runs triggered by URL changes through the `onHistoryChange()` callback,
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
