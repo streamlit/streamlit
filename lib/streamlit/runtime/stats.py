@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
 from abc import abstractmethod
 from typing import List, NamedTuple
 
@@ -82,26 +81,9 @@ class StatsManager:
         self._cache_stats_providers.append(provider)
 
     def get_stats(self) -> List[CacheStat]:
-        """Return a list containing all stats from each registered provider.
-        Stats are grouped by category_name and cache_type."""
+        """Return a list containing all stats from each registered provider."""
         all_stats: List[CacheStat] = []
         for provider in self._cache_stats_providers:
-            provider_stats = provider.get_stats()
-            grouped_stats = itertools.groupby(
-                provider_stats,
-                lambda individual_stat: (
-                    individual_stat.category_name,
-                    individual_stat.cache_name,
-                ),
-            )
-
-            for (category_name, cache_name), stats in grouped_stats:
-                all_stats.append(
-                    CacheStat(
-                        category_name=category_name,
-                        cache_name=cache_name,
-                        byte_length=sum(map(lambda item: item.byte_length, stats)),
-                    )
-                )
+            all_stats.extend(provider.get_stats())
 
         return all_stats
