@@ -96,7 +96,6 @@ class QueryParams(MutableMapping[str, str]):
 
     def _send_query_param_msg(self) -> None:
         # Avoid circular imports
-        from streamlit.commands.experimental_query_params import _ensure_no_embed_params
         from streamlit.runtime.scriptrunner import get_script_run_ctx
 
         ctx = get_script_run_ctx()
@@ -112,6 +111,7 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
+        # Avoid circular imports
         from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
 
         new_query_params = {}
@@ -127,7 +127,7 @@ class QueryParams(MutableMapping[str, str]):
         from streamlit.commands.experimental_query_params import EMBED_QUERY_PARAMS_KEYS
 
         self._ensure_single_query_api_used()
-        # return the last query param if multiple keys are set
+        # return the last query param if multiple values are set
         return {
             key: self[key]
             for key in self._query_params
