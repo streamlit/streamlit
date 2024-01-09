@@ -820,8 +820,7 @@ export class App extends PureComponent<Props, State> {
       const prevPageName =
         prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
       // It is important to compare `newPageName` with the previous one encoded in the URL
-      // to hanimport { ConnectionManager } from '../../src/app/connection/ConnectionManager';
-dle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
