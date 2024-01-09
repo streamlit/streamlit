@@ -112,12 +112,12 @@ export function parseEmbedUrlString(): string {
   const embedValues = new URLSearchParams(window.location.search).getAll(
     EMBED_OPTIONS_QUERY_PARAM_KEY
   )
-  const map: Record<string, string> = {}
-  map[EMBED_QUERY_PARAM_KEY] = "true"
+  const embedUrlMap: string[][] = []
+  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, "true"])
   embedValues.forEach((embedValue: string) => {
-    map[EMBED_OPTIONS_QUERY_PARAM_KEY] = embedValue
+    embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
   })
-  return new URLSearchParams(map).toString()
+  return new URLSearchParams(embedUrlMap).toString()
 }
 
 /**
