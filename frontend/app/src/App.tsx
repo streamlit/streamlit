@@ -1121,12 +1121,15 @@ export class App extends PureComponent<Props, State> {
     scriptRunId: string,
     scriptName: string
   ): void {
+    // Handle the case of hideSidebarNav being set to true - retain sidebar elements
+    const retainSidebar = this.state.hideSidebarNav
+    const sidebarElements = this.state.elements.sidebar
     this.setState(
       {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(false),
+        elements: AppRoot.empty(false, retainSidebar, sidebarElements),
       },
       () => {
         this.pendingElementsBuffer = this.state.elements

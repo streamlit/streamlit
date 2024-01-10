@@ -409,7 +409,11 @@ export class AppRoot {
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(isInitialRender = true): AppRoot {
+  public static empty(
+    isInitialRender = true,
+    retainSidebar = false,
+    sidebarElements?: BlockNode
+  ): AppRoot {
     const mainNodes: AppNode[] = []
 
     let waitElement: Element | undefined
@@ -447,11 +451,14 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    const sidebar = new BlockNode(
-      [],
-      new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
-    )
+    const sidebar =
+      retainSidebar && sidebarElements
+        ? sidebarElements
+        : new BlockNode(
+            [],
+            new BlockProto({ allowEmpty: true }),
+            NO_SCRIPT_RUN_ID
+          )
 
     const event = new BlockNode(
       [],
