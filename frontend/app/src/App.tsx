@@ -124,7 +124,7 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { parseEmbedUrlString } from "@streamlit/lib/src/util/utils"
+import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -867,7 +867,7 @@ export class App extends PureComponent<Props, State> {
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
         // If embed params need to be changed, make sure to change to other parts of the code that reference parseEmbedUrlString
-        const queryString = parseEmbedUrlString()
+        const queryString = preserveEmbedQueryParams()
         const qs = queryString ? `?${queryString}` : ""
 
         const basePathPrefix = basePath ? `/${basePath}` : ""
@@ -1313,7 +1313,7 @@ export class App extends PureComponent<Props, State> {
       // value in the BackMsg we send to the server.
       if (pageScriptHash != currentPageScriptHash) {
         // clear non-embed query parameters within a page change
-        queryString = parseEmbedUrlString()
+        queryString = preserveEmbedQueryParams()
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
           queryParams: queryString,
