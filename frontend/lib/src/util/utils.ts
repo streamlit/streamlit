@@ -53,7 +53,6 @@ export const EMBED_SHOW_COLORED_LINE = "show_colored_line"
 export const EMBED_SHOW_TOOLBAR = "show_toolbar"
 export const EMBED_SHOW_PADDING = "show_padding"
 export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
-export const EMBED_SHOW_FOOTER = "show_footer"
 export const EMBED_LIGHT_THEME = "light_theme"
 export const EMBED_DARK_THEME = "dark_theme"
 export const EMBED_TRUE = "true"
@@ -65,7 +64,6 @@ export const EMBED_QUERY_PARAM_VALUES = [
   EMBED_SHOW_TOOLBAR,
   EMBED_SHOW_PADDING,
   EMBED_DISABLE_SCROLLING,
-  EMBED_SHOW_FOOTER,
   EMBED_LIGHT_THEME,
   EMBED_DARK_THEME,
   EMBED_HIDE_LOADING_SCREEN,
@@ -98,6 +96,31 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
     }
   })
   return embedUrlParams
+}
+
+/**
+ * Returns "embed" and "embed_options" query param options in the url. Returns empty string if not embedded.
+ * Example:
+ *  returns "embed=true&embed_options=show_loading_screen_v2" if the url is
+ *  http://localhost:3000/test?embed=true&embed_options=show_loading_screen_v2
+ */
+export function preserveEmbedQueryParams(): string {
+  if (!isEmbed()) {
+    return ""
+  }
+
+  const embedOptionsValues = new URLSearchParams(
+    window.location.search
+  ).getAll(EMBED_OPTIONS_QUERY_PARAM_KEY)
+
+  // instantiate multiple key values with an array of string pairs
+  // https://stackoverflow.com/questions/72571132/urlsearchparams-with-multiple-values
+  const embedUrlMap: string[][] = []
+  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, EMBED_TRUE])
+  embedOptionsValues.forEach((embedValue: string) => {
+    embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
+  })
+  return new URLSearchParams(embedUrlMap).toString()
 }
 
 /**
@@ -135,16 +158,6 @@ export function isToolbarDisplayed(): boolean {
 export function isScrollingHidden(): boolean {
   return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
     EMBED_DISABLE_SCROLLING
-  )
-}
-
-/**
- * Returns true if the URL parameters contain ?embed=true&embed_options=show_footer (case insensitive).
- */
-export function isFooterDisplayed(): boolean {
-  return (
-    isEmbed() &&
-    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_SHOW_FOOTER)
   )
 }
 

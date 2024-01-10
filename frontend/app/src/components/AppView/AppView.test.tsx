@@ -59,7 +59,6 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     embedded: false,
     showPadding: false,
     disableScrolling: false,
-    showFooter: false,
     showToolbar: false,
     showColoredLine: false,
     pageLinkBaseUrl: "",
@@ -154,6 +153,17 @@ describe("AppView element", () => {
 
     const sidebarDOMElement = screen.queryByTestId("stSidebar")
     expect(sidebarDOMElement).toBeInTheDocument()
+  })
+
+  it("does not render a sidebar when there are no elements, multiple pages, and hideSidebarNav is true", () => {
+    const appPages = [
+      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+    ]
+    render(<AppView {...getProps({ appPages, hideSidebarNav: true })} />)
+
+    const sidebar = screen.queryByTestId("stSidebar")
+    expect(sidebar).not.toBeInTheDocument()
   })
 
   it("renders a sidebar when there are elements and multiple pages", () => {

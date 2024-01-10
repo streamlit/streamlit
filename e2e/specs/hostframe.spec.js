@@ -17,7 +17,7 @@
 describe("Host communication", () => {
     before(() => {
         cy.visit("hostframe.html");
-        cy.get("#toolbar button").should("have.length", 9);
+        cy.get("#toolbar button").should("have.length", 10);
         cy.get("iframe")
             .iframe(() => {
                 cy.waitForScriptFinish()

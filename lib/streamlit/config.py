@@ -283,7 +283,7 @@ _create_option(
     default_val=False,
     type_=bool,
     deprecated=True,
-    deprecation_text="global.disableWatchdogWarning has been deprecated has been deprecated and will be removed in a future version.",
+    deprecation_text="global.disableWatchdogWarning has been deprecated and will be removed in a future version.",
     expiration_date="2024-01-20",
 )
 
@@ -516,6 +516,14 @@ _create_option(
 """,
     default_val="auto",
     type_=str,
+    scriptable=True,
+)
+
+_create_option(
+    "client.showSidebarNavigation",
+    description="""Controls whether the default sidebar page navigation in a multi-page app is displayed.""",
+    default_val=True,
+    type_=bool,
     scriptable=True,
 )
 
@@ -901,6 +909,9 @@ _create_option(
     description="Flag to hide the sidebar page navigation component.",
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
+    expiration_date="2024-01-20",
     visibility="hidden",
 )
 

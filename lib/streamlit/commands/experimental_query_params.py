@@ -13,17 +13,18 @@
 # limitations under the License.
 
 import urllib.parse as parse
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from streamlit import util
+from streamlit.constants import (
+    EMBED_OPTIONS_QUERY_PARAM,
+    EMBED_QUERY_PARAM,
+    EMBED_QUERY_PARAMS_KEYS,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-
-EMBED_QUERY_PARAM = "embed"
-EMBED_OPTIONS_QUERY_PARAM = "embed_options"
-EMBED_QUERY_PARAMS_KEYS = [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
 
 
 @gather_metrics("experimental_get_query_params")
@@ -56,8 +57,9 @@ def get_query_params() -> Dict[str, List[str]]:
     ctx = get_script_run_ctx()
     if ctx is None:
         return {}
+    ctx.mark_experimental_query_params_used()
     # Return new query params dict, but without embed, embed_options query params
-    return util.exclude_key_query_params(
+    return util.exclude_keys_in_dict(
         parse.parse_qs(ctx.query_string, keep_blank_values=True),
         keys_to_exclude=EMBED_QUERY_PARAMS_KEYS,
     )
@@ -93,6 +95,7 @@ def set_query_params(**query_params: Any) -> None:
     ctx = get_script_run_ctx()
     if ctx is None:
         return
+    ctx.mark_experimental_query_params_used()
 
     msg = ForwardMsg()
     msg.page_info_changed.query_string = _ensure_no_embed_params(
@@ -103,12 +106,12 @@ def set_query_params(**query_params: Any) -> None:
 
 
 def _ensure_no_embed_params(
-    query_params: Dict[str, List[str]], query_string: str
+    query_params: Dict[str, Union[List[str], str]], query_string: str
 ) -> str:
     """Ensures there are no embed params set (raises StreamlitAPIException) if there is a try,
     also makes sure old param values in query_string are preserved. Returns query_string : str."""
     # Get query params dict without embed, embed_options params
-    query_params_without_embed = util.exclude_key_query_params(
+    query_params_without_embed = util.exclude_keys_in_dict(
         query_params, keys_to_exclude=EMBED_QUERY_PARAMS_KEYS
     )
     if query_params != query_params_without_embed:
