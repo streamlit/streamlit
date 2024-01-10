@@ -21,7 +21,7 @@ def test_alert_displays_an_error_message(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements.first).to_have_text("This is an error")
+    expect(alert_elements.nth(0)).to_have_text("This is an error")
 
     assert_snapshot(alert_elements.nth(0), name="st_alert_error")
 
@@ -32,7 +32,7 @@ def test_alert_displays_a_warning_message(
     alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements.nth(1)).to_have_text("This is a warning")
 
-    assert_snapshot(alert_elements.nth(0), name="st_button_warning")
+    assert_snapshot(alert_elements.nth(1), name="st_button_warning")
 
 
 def test_alert_displays_an_info_message(
