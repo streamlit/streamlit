@@ -866,6 +866,7 @@ export class App extends PureComponent<Props, State> {
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
+        // If embed params need to be changed, make sure to change to other parts of the code that reference parseEmbedUrlString
         const queryString = parseEmbedUrlString()
         const qs = queryString ? `?${queryString}` : ""
 

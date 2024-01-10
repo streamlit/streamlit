@@ -104,7 +104,7 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
  *  returns "embed=true&embed_options=show_loading_screen_v2" if the url is
  *  http://localhost:3000/test?embed=true&embed_options=show_loading_screen_v2
  */
-export function parseEmbedUrlString(): string {
+export function preserveEmbedQueryParams(): string {
   if (!isEmbed()) {
     return ""
   }
