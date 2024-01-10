@@ -1195,16 +1195,17 @@ describe("App.sendRerunBackMsg", () => {
   })
 
   it("retains embed query params even if the page hash is different", () => {
-    const originalWindowLocation = window.location
     const embedParams =
       "embed=true&embed_options=disable_scrolling&embed_options=show_colored_line"
 
-    // Change window.location.href in order for query params to exist
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: new URL(`${window.location.href}?${embedParams}`),
-    })
+    const prevWindowLocation = window.location
+    // @ts-expect-error
+    delete window.location
+    // @ts-expect-error
+    window.location = {
+      assign: jest.fn(),
+      search: `foo=bar&${embedParams}`,
+    }
 
     wrapper.setState({
       currentPageScriptHash: "current_page_hash",
@@ -1232,12 +1233,7 @@ describe("App.sendRerunBackMsg", () => {
       queryParams: embedParams,
     })
 
-    // Reset window.location
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      enumerable: true,
-      value: originalWindowLocation,
-    })
+    window.location = prevWindowLocation
   })
 })
 
