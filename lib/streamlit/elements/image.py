@@ -259,15 +259,19 @@ def _4d_to_list_3d(array: "npt.NDArray[Any]") -> List["npt.NDArray[Any]"]:
 def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
     if len(array.shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
-    if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
+    # False positive warning from mypy,
+    # see: https://github.com/python/mypy/issues/16763
+    if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):  # type: ignore[unreachable]
         raise StreamlitAPIException(
             "Channel can only be 1, 3, or 4 got %d. Shape is %s"
             % (array.shape[-1], str(array.shape))
         )
 
     # If there's only one channel, convert is to x, y
-    if len(array.shape) == 3 and array.shape[-1] == 1:
-        array = array[:, :, 0]
+    # False positive warning from mypy about unreachable right and operand,
+    # see: https://github.com/python/mypy/issues/16763
+    if len(array.shape) == 3 and array.shape[-1] == 1:  # type: ignore[unreachable]
+        array = array[:, :, 0]  # type: ignore[unreachable]
 
     return array
 
@@ -406,7 +410,9 @@ def image_to_url(
 
         if channels == "BGR":
             if len(image.shape) == 3:
-                image = image[:, :, [2, 1, 0]]
+                # False positive warning from mypy,
+                # see: https://github.com/python/mypy/issues/16763
+                image = image[:, :, [2, 1, 0]]  # type: ignore[unreachable]
             else:
                 raise StreamlitAPIException(
                     'When using `channels="BGR"`, the input image should '
@@ -494,8 +500,10 @@ def marshall_images(
     images: Sequence[AtomicImage]
     if isinstance(image, list):
         images = image
+    # False positive warning from mypy,
+    # see: https://github.com/python/mypy/issues/16763
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
-        images = _4d_to_list_3d(image)
+        images = _4d_to_list_3d(image)  # type: ignore[unreachable]
     else:
         images = [image]
 
@@ -505,8 +513,11 @@ def marshall_images(
         if isinstance(caption, str):
             captions = [caption]
         # You can pass in a 1-D Numpy array as captions.
+
+        # False positive warning from mypy,
+        # see: https://github.com/python/mypy/issues/16763
         elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
-            captions = caption.tolist()
+            captions = caption.tolist()  # type: ignore[unreachable]
         # If there are no captions then make the captions list the same size
         # as the images list.
         elif caption is None:

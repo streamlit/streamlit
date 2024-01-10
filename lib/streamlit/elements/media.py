@@ -324,7 +324,9 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     data: "npt.NDArray[Any]" = np.array(data, dtype=float)
 
     if len(data.shape) == 1:
-        nchan = 1
+        # False positive warning from mypy,
+        # see: https://github.com/python/mypy/issues/16763
+        nchan = 1  # type: ignore[unreachable]
     elif len(data.shape) == 2:
         # In wave files,channels are interleaved. E.g.,
         # "L1R1L2R2..." for stereo. See

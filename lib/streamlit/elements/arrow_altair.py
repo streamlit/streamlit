@@ -1310,7 +1310,7 @@ def _get_y_encoding(
 
 def _get_color_encoding(
     df: pd.DataFrame,
-    color_value: Color | None,
+    color_value: str | Color | List[Color] | None,
     color_column: str | None,
     y_column_list: List[str],
     color_from_user: str | Color | List[Color] | None,
