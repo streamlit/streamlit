@@ -99,6 +99,31 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
 }
 
 /**
+ * Returns "embed" and "embed_options" query param options in the url. Returns empty string if not embedded.
+ * Example:
+ *  returns "embed=true&embed_options=show_loading_screen_v2" if the url is
+ *  http://localhost:3000/test?embed=true&embed_options=show_loading_screen_v2
+ */
+export function preserveEmbedQueryParams(): string {
+  if (!isEmbed()) {
+    return ""
+  }
+
+  const embedOptionsValues = new URLSearchParams(
+    window.location.search
+  ).getAll(EMBED_OPTIONS_QUERY_PARAM_KEY)
+
+  // instantiate multiple key values with an array of string pairs
+  // https://stackoverflow.com/questions/72571132/urlsearchparams-with-multiple-values
+  const embedUrlMap: string[][] = []
+  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, EMBED_TRUE])
+  embedOptionsValues.forEach((embedValue: string) => {
+    embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
+  })
+  return new URLSearchParams(embedUrlMap).toString()
+}
+
+/**
  * Returns true if the URL parameters contain ?embed=true (case insensitive).
  */
 export function isEmbed(): boolean {
