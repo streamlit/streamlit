@@ -47,12 +47,12 @@ jsonschema-specifications==2023.12.1
 keyring==24.3.0
 kiwisolver==1.4.5
 langchain==0.1.0
-langchain-community==0.0.10
-langchain-core==0.1.8
-langsmith==0.0.78
+langchain-community==0.0.11
+langchain-core==0.1.9
+langsmith==0.0.79
 markdown-it-py==3.0.0
 MarkupSafe==2.1.3
-marshmallow==3.20.1
+marshmallow==3.20.2
 matplotlib==3.8.2
 mdurl==0.1.2
 more-itertools==10.2.0
