@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from streamlit import type_util
 from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state import SessionStateProxy
+from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -188,6 +188,13 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with st.session_state."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write(SessionStateProxy())
+
+            p.assert_called_once()
+
+    def test_query_params(self):
+        """Test st.write with st.query_params."""
+        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
+            st.write(QueryParamsProxy())
 
             p.assert_called_once()
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,4 +14,11 @@
 
 import streamlit as st
 
-st.header("Page 6")
+st.header("Page 7")
+
+with st.sidebar:
+    st.write("Sidebar")
+    color = st.color_picker("Pick a color")
+    st.write("You picked:", color)
+    st.divider()
+    st.text_area("Some random text:", height=500)

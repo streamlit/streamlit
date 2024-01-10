@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +43,10 @@ with st.container(height=200):
     for i in range(10):
         st.markdown(f"Message {i}")
 
-st.container(height=100)
+empty_container = st.container(height=100)
+
+if st.button("Add message"):
+    empty_container.chat_message("user").write("Hello world")
 
 with st.container(height=200):
     for i in range(10):

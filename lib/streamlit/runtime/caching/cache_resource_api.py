@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -302,8 +302,6 @@ class CacheResourceAPI:
             * A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(days=1)``.
-
-            Note that ``ttl`` will be ignored if ``persist="disk"`` or ``persist=True``.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None

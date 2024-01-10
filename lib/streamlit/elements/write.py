@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.state import SessionStateProxy
+from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from streamlit.string_util import is_mem_address_str, probably_contains_html_tags
 from streamlit.user_info import UserInfoProxy
 
@@ -234,7 +234,9 @@ class WriteMixin:
                 flush_buffer()
                 dot = vis_utils.model_to_dot(arg)
                 self.dg.graphviz_chart(dot.to_string())
-            elif isinstance(arg, (dict, list, SessionStateProxy, UserInfoProxy)):
+            elif isinstance(
+                arg, (dict, list, SessionStateProxy, UserInfoProxy, QueryParamsProxy)
+            ):
                 flush_buffer()
                 self.dg.json(arg)
             elif type_util.is_namedtuple(arg):

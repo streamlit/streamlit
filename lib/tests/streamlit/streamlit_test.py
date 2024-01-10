@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -138,9 +138,11 @@ class StreamlitTest(unittest.TestCase):
                 "set_page_config",
                 "stop",
                 "rerun",
+                "switch_page",
                 "cache",
                 "secrets",
                 "session_state",
+                "query_params",
                 "cache_data",
                 "cache_resource",
                 # Experimental APIs:

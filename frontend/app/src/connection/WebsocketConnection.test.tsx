@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import axios from "axios"
 import { WS } from "jest-websocket-mock"
-import { zip } from "lodash"
+import zip from "lodash/zip"
 import React, { Fragment } from "react"
 
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import unittest
+
+from parameterized import parameterized
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -32,6 +34,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -54,6 +57,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -80,6 +84,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -105,6 +110,7 @@ class ScriptRunContextTest(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -121,3 +127,64 @@ class ScriptRunContextTest(unittest.TestCase):
             ctx.enqueue(msg)
         except StreamlitAPIException:
             self.fail("set_page_config should have succeeded after reset!")
+
+    @parameterized.expand(
+        [
+            (True, True, True),  # Both APIs used
+            (True, False, False),  # Only experimental API used
+            (False, True, False),  # Only final API used
+            (False, False, False),  # Neither API used
+        ]
+    )
+    def test_both_query_params_used(
+        self, experimental_used, production_used, should_raise
+    ):
+        fake_enqueue = lambda msg: None
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=fake_enqueue,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
+            page_script_hash="",
+            user_info={"email": "test@test.com"},
+        )
+        ctx._experimental_query_params_used = experimental_used
+        ctx._production_query_params_used = production_used
+
+        if should_raise:
+            with self.assertRaises(StreamlitAPIException):
+                ctx.ensure_single_query_api_used()
+        else:
+            ctx.ensure_single_query_api_used()
+
+    def test_mark_experimental_query_params_used_sets_true(self):
+        fake_enqueue = lambda msg: None
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=fake_enqueue,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
+            page_script_hash="",
+            user_info={"email": "test@test.com"},
+        )
+        ctx.mark_experimental_query_params_used()
+        assert ctx._experimental_query_params_used == True
+
+    def test_mark_production_query_params_used_sets_true(self):
+        fake_enqueue = lambda msg: None
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=fake_enqueue,
+            query_string="",
+            session_state=SafeSessionState(SessionState(), lambda: None),
+            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+            main_script_path="",
+            page_script_hash="",
+            user_info={"email": "test@test.com"},
+        )
+        ctx.mark_production_query_params_used()
+        assert ctx._production_query_params_used == True

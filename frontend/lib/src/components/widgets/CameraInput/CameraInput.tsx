@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
-import _ from "lodash"
+import isEqual from "lodash/isEqual"
 import React from "react"
 
 import {
@@ -268,7 +268,7 @@ class CameraInput extends React.PureComponent<Props, State> {
 
     // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
+    if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
         fromUi: true,
       })

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,6 @@ import {
   isColoredLineDisplayed,
   isDarkTheme,
   isEmbed,
-  isFooterDisplayed,
   isInChildFrame,
   isLightTheme,
   isPaddingDisplayed,
@@ -109,7 +108,8 @@ import {
   LibConfig,
   AppConfig,
 } from "@streamlit/lib"
-import { concat, noop, without } from "lodash"
+import noop from "lodash/noop"
+import without from "lodash/without"
 
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 
@@ -878,13 +878,10 @@ export class App extends PureComponent<Props, State> {
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
-        const queryString = this.getQueryString()
-
-        const qs = queryString ? `?${queryString}` : ""
         const basePathPrefix = basePath ? `/${basePath}` : ""
 
         const pagePath = viewingMainPage ? "" : newPageName
-        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+        const pageUrl = `${basePathPrefix}/${pagePath}`
 
         window.history.pushState({}, "", pageUrl)
       }
@@ -1321,12 +1318,20 @@ export class App extends PureComponent<Props, State> {
 
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
-    const queryString = this.getQueryString()
+    let queryString = this.getQueryString()
     let pageName = ""
 
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
+      if (pageScriptHash != currentPageScriptHash) {
+        // clear query parameters within a page change
+        queryString = ""
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_QUERY_PARAM",
+          queryParams: queryString,
+        })
+      }
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
       // click the "Rerun" button in the main menu. In this case, we
@@ -1563,7 +1568,7 @@ export class App extends PureComponent<Props, State> {
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.concat(func),
       }
     })
   }
@@ -1687,7 +1692,6 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbed(),
           showPadding: !isEmbed() || isPaddingDisplayed(),
           disableScrolling: isScrollingHidden(),
-          showFooter: !isEmbed() || isFooterDisplayed(),
           showToolbar: !isEmbed() || isToolbarDisplayed(),
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
           // host communication manager elements

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ class PlotlyMixin:
 
         Parameters
         ----------
-        figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,
+        figure_or_data : plotly.graph_objs.Figure, plotly.graph_objs.Data,\
             dict/list of plotly.graph_objs.Figure/Data
 
             See https://plot.ly/python/ for examples of graph descriptions.
@@ -208,14 +208,14 @@ def marshall(
     proto.use_container_width = use_container_width
 
     if sharing == "streamlit":
-        import plotly.utils
+        import plotly.io
 
         config = dict(kwargs.get("config", {}))
         # Copy over some kwargs to config dict. Plotly does the same in plot().
         config.setdefault("showLink", kwargs.get("show_link", False))
         config.setdefault("linkText", kwargs.get("link_text", False))
 
-        proto.figure.spec = json.dumps(figure, cls=plotly.utils.PlotlyJSONEncoder)
+        proto.figure.spec = plotly.io.to_json(figure, validate=False)
         proto.figure.config = json.dumps(config)
 
     else:

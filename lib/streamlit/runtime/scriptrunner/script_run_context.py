@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ import contextvars
 import threading
 from dataclasses import dataclass, field
 from typing import Callable, Counter, Dict, List, Optional, Set, Tuple
+from urllib import parse
 
 from typing_extensions import Final, TypeAlias
 
@@ -79,6 +80,10 @@ class ScriptRunContext:
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: Optional[ScriptRequests] = None
 
+    # TODO(willhuang1997): Remove this variable when experimental query params are removed
+    _experimental_query_params_used = False
+    _production_query_params_used = False
+
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
@@ -92,6 +97,17 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
+
+        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
+        with self.session_state.query_params() as qp:
+            qp.clear_with_no_forward_msg()
+            for key, val in parsed_query_params.items():
+                if len(val) == 0:
+                    qp.set_with_no_forward_msg(key, val="")
+                elif len(val) == 1:
+                    qp.set_with_no_forward_msg(key, val=val[-1])
+                else:
+                    qp.set_with_no_forward_msg(key, val)
 
     def on_script_start(self) -> None:
         self._has_script_started = True
@@ -116,6 +132,22 @@ class ScriptRunContext:
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)
+
+    def ensure_single_query_api_used(self):
+        if self._experimental_query_params_used and self._production_query_params_used:
+            raise StreamlitAPIException(
+                "Using `st.query_params` together with either `st.experimental_get_query_params` "
+                + "or `st.experimental_set_query_params` is not supported. Please convert your app "
+                + "to only use `st.query_params`"
+            )
+
+    def mark_experimental_query_params_used(self):
+        self._experimental_query_params_used = True
+        self.ensure_single_query_api_used()
+
+    def mark_production_query_params_used(self):
+        self._production_query_params_used = True
+        self.ensure_single_query_api_used()
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"

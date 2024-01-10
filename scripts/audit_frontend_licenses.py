@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -87,17 +87,17 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
     ),
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
-        "mapbox-gl",
-        "1.13.3",
+        "@plotly/mapbox-gl",
+        "1.13.4",
         "SEE LICENSE IN LICENSE.txt",
-        "git://github.com/mapbox/mapbox-gl-js.git",
+        "git://github.com/plotly/mapbox-gl-js.git",
         "Unknown",
         "Unknown",
     ),
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
         "mapbox-gl",
-        "1.10.1",
+        "1.13.3",
         "SEE LICENSE IN LICENSE.txt",
         "git://github.com/mapbox/mapbox-gl-js.git",
         "Unknown",

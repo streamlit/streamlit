@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,5 +14,7 @@
 
 import streamlit as st
 
-st.header("Main Page")
-st.slider("x")
+st.query_params.y = 1.23
+
+# Should throw an error after both apis are used
+params = st.experimental_get_query_params()

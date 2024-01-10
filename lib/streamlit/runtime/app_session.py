@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -814,8 +814,9 @@ def _populate_config_msg(msg: Config) -> None:
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
+    # ui.hideSidebarNav is deprecated, will be removed in the future
     msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
-    if config.get_option("client.showPageNavigation") == False:
+    if config.get_option("client.showSidebarNavigation") == False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
 

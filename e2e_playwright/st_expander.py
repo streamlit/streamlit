@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,3 +43,27 @@ st.text(st.session_state.number)
 
 if st.button("Print State Value"):
     st.text(st.session_state.number)
+
+expander_long = st.expander(
+    "Expand me! "
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
+    "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
+    "dolor, eleifend sit amet purus id, dictum aliquam quam.",
+    expanded=True,
+)
+expander_long.write(
+    "I can collapse. "
+    "Integer et justo orci. In euismod posuere nulla ac maximus. Mauris tristique hendrerit "
+    "placerat. Integer eu imperdiet ipsum. Praesent maximus pharetra est, ut ultrices ante "
+    "molestie id. Nulla sollicitudin arcu orci, eget lobortis lacus ultricies eu. Ut suscipit est "
+    "eget tellus laoreet faucibus. Nullam nec blandit felis. Nulla ullamcorper, justo eget "
+    "consequat ultricies, nisi dolor lacinia mauris, eu lacinia ante nisi sit amet tortor."
+)
+
+collapsed_long = st.expander(
+    "Expand me! "
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum arcu nisl, tincidunt id "
+    "orci id, condimentum cursus nunc. Nullam sed sodales ipsum, vel tincidunt dui. Etiam diam "
+    "dolor, eleifend sit amet purus id, dictum aliquam quam."
+)
+collapsed_long.write("I am already collapsed")

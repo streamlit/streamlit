@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+from playwright.sync_api import Page, expect
 
-st.header("Page 5")
+
+def test_query_params_exception_msg(app: Page):
+    expect(app.get_by_test_id("stException")).to_be_visible()
+    expect(
+        app.get_by_text(
+            "Using st.query_params together with either st.experimental_get_query_params or st.experimental_set_query_params is not supported. Please convert your app to only use st.query_params"
+        )
+    ).to_be_visible()

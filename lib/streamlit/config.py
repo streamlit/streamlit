@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -283,7 +283,7 @@ _create_option(
     default_val=False,
     type_=bool,
     deprecated=True,
-    deprecation_text="global.disableWatchdogWarning has been deprecated has been deprecated and will be removed in a future version.",
+    deprecation_text="global.disableWatchdogWarning has been deprecated and will be removed in a future version.",
     expiration_date="2024-01-20",
 )
 
@@ -520,10 +520,11 @@ _create_option(
 )
 
 _create_option(
-    "client.showPageNavigation",
-    description="""Controls whether the sidebar page navigation is displayed.""",
+    "client.showSidebarNavigation",
+    description="""Controls whether the default sidebar page navigation in a multi-page app is displayed.""",
     default_val=True,
     type_=bool,
+    scriptable=True,
 )
 
 # Config Section: Runner #
@@ -908,6 +909,9 @@ _create_option(
     description="Flag to hide the sidebar page navigation component.",
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
+    expiration_date="2024-01-20",
     visibility="hidden",
 )
 

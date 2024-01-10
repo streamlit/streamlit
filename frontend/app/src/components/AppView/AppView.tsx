@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,12 +119,12 @@ function AppView(props: AppViewProps): ReactElement {
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
   const hasEventElements = !elements.event.isEmpty
-  const [sidebarOverride, setSidebarOverride] = React.useState(false)
+  const [showSidebarOverride, setShowSidebarOverride] = React.useState(false)
 
   const showSidebar =
     hasSidebarElements ||
     (!hideSidebarNav && appPages.length > 1) ||
-    sidebarOverride
+    showSidebarOverride
 
   // TODO: This works for scroll to bottom, but we will need
   // to revisit this when we support multiple position options
@@ -148,16 +148,18 @@ function AppView(props: AppViewProps): ReactElement {
   }, [sendMessageToHost])
 
   React.useEffect(() => {
-    if (showSidebar && hideSidebarNav && !sidebarOverride) {
-      setSidebarOverride(true)
+    // Handle sidebar flicker/unmount with MPA & hideSidebarNav
+    if (showSidebar && hideSidebarNav && !showSidebarOverride) {
+      setShowSidebarOverride(true)
     }
-  }, [showSidebar, hideSidebarNav, sidebarOverride])
+  }, [showSidebar, hideSidebarNav, showSidebarOverride])
 
   const scriptFinishedHandler = React.useCallback(() => {
-    if (!hasSidebarElements && sidebarOverride) {
-      setSidebarOverride(false)
+    // Check at end of script run if no sidebar elements
+    if (!hasSidebarElements && showSidebarOverride) {
+      setShowSidebarOverride(false)
     }
-  }, [hasSidebarElements, sidebarOverride])
+  }, [hasSidebarElements, showSidebarOverride])
 
   React.useEffect(() => {
     addScriptFinishedHandler(scriptFinishedHandler)
@@ -230,7 +232,6 @@ function AppView(props: AppViewProps): ReactElement {
         well together. */}
         {!containsChatInput && (
           <StyledIFrameResizerAnchor
-            hasFooter={!embedded || showFooter}
             data-testid="IframeResizerAnchor"
             data-iframe-height
           />

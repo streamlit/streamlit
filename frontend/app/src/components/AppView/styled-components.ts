@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,14 +141,7 @@ export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
   },
 }))
 
-export interface StyledIFrameResizerAnchorProps {
-  hasFooter: boolean
-}
-
-// The anchor appears above the footer, so we need to offset it by the footer
-// if the app is not embedded.
-export const StyledIFrameResizerAnchor =
-  styled.div<StyledIFrameResizerAnchorProps>(({ theme, hasFooter }) => ({
-    position: "relative",
-    bottom: hasFooter ? `-${theme.sizes.footerHeight}` : "0",
-  }))
+export const StyledIFrameResizerAnchor = styled.div(() => ({
+  position: "relative",
+  bottom: "0",
+}))

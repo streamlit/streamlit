@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 from abc import abstractmethod
 from typing import List, NamedTuple
 
@@ -81,8 +82,26 @@ class StatsManager:
         self._cache_stats_providers.append(provider)
 
     def get_stats(self) -> List[CacheStat]:
-        """Return a list containing all stats from each registered provider."""
+        """Return a list containing all stats from each registered provider.
+        Stats are grouped by category_name and cache_type."""
         all_stats: List[CacheStat] = []
         for provider in self._cache_stats_providers:
-            all_stats.extend(provider.get_stats())
+            provider_stats = provider.get_stats()
+            grouped_stats = itertools.groupby(
+                provider_stats,
+                lambda individual_stat: (
+                    individual_stat.category_name,
+                    individual_stat.cache_name,
+                ),
+            )
+
+            for (category_name, cache_name), stats in grouped_stats:
+                all_stats.append(
+                    CacheStat(
+                        category_name=category_name,
+                        cache_name=cache_name,
+                        byte_length=sum(map(lambda item: item.byte_length, stats)),
+                    )
+                )
+
         return all_stats

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -217,21 +217,20 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const observer = useMemo(
     () =>
       new ResizeObserver(([entry]) => {
-        // We need to determine the available width here to be able to set
-        // an explicit width for the `StyledVerticalBlock`.
-        setWidth(entry.target.getBoundingClientRect().width)
+        // Since the setWidth will perform changes to the DOM,
+        // we need wrap it in a requestAnimationFrame to avoid this error:
+        // ResizeObserver loop completed with undelivered notifications.
+        window.requestAnimationFrame(() => {
+          // We need to determine the available width here to be able to set
+          // an explicit width for the `StyledVerticalBlock`.
+
+          // The width should never be set to 0 since it can cause
+          // flickering effects.
+          setWidth(entry.target.getBoundingClientRect().width || -1)
+        })
       }),
     [setWidth]
   )
-
-  useEffect(() => {
-    if (wrapperElement.current) {
-      observer.observe(wrapperElement.current)
-    }
-    return () => {
-      observer.disconnect()
-    }
-  }, [wrapperElement, observer])
 
   const border = props.node.deltaBlock.vertical?.border ?? false
   const height = props.node.deltaBlock.vertical?.height || undefined
@@ -243,6 +242,18 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
       )
     }) !== undefined
+
+  useEffect(() => {
+    if (wrapperElement.current) {
+      observer.observe(wrapperElement.current)
+    }
+    return () => {
+      observer.disconnect()
+    }
+    // We need to update the observer whenever the scrolling is activated or deactivated
+    // Otherwise, it still tries to measure the width of the old wrapper element.
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [observer, activateScrollToBottom])
 
   // Decide which wrapper to use based on whether we need to activate scrolling to bottom
   // This is done for performance reasons, to prevent the usage of useScrollToBottom

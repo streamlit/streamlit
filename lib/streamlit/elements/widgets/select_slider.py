@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ from streamlit.type_util import (
     LabelVisibility,
     OptionSequence,
     T,
+    check_python_comparable,
     ensure_indexable,
     maybe_raise_label_warnings,
     to_key,
@@ -264,6 +265,7 @@ class SelectSliderMixin:
         check_session_state_rules(default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
         opt = ensure_indexable(options)
+        check_python_comparable(opt)
 
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")

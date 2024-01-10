@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,4 +14,8 @@
 
 import streamlit as st
 
-st.header("Page 4")
+st.header("Page 2")
+
+page_6 = st.button("`/pages/06_page_6.py`")
+if page_6:
+    st.switch_page("/pages/06_page_6.py")

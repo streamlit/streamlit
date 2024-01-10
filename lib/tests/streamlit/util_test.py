@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -145,15 +145,13 @@ class UtilTest(unittest.TestCase):
             ),
         ]
     )
-    def test_drop_key_query_params(
+    def test_exclude_keys_in_dict(
         self,
-        query_params: Dict[str, List[str]],
+        d: Dict[str, List[str]],
         keys_to_drop: List[str],
         result: Dict[str, List[str]],
     ):
-        self.assertDictEqual(
-            util.exclude_key_query_params(query_params, keys_to_drop), result
-        )
+        self.assertDictEqual(util.exclude_keys_in_dict(d, keys_to_drop), result)
 
     @parameterized.expand(
         [
