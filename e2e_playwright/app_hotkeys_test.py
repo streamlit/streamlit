@@ -17,15 +17,20 @@ from playwright.sync_api import Page, expect
 
 def test_shows_clear_cache_dialog_when_c_is_pressed(app: Page):
     app.keyboard.type("c")
-    expect(app.get_by_test_id("stClearCacheDialog")).to_be_visible()
+    expect(app.get_by_role("dialog")).to_be_visible()
+    expect(app.get_by_role("dialog")).to_have_text(
+        """
+Clear cachesAre you sure you want to clear the app's function caches?This will remove all cached entries from functions using @st.cache, @st.cache_data, and @st.cache_resource.CancelClear caches
+    """
+    )
 
 
 modifier_keys = ["Control", "Meta"]
 
 
-async def test_does_not_show_clear_cache_when_modifier_c_is_pressed(app: Page):
+def test_does_not_show_clear_cache_when_modifier_c_is_pressed(app: Page):
     for key in modifier_keys:
-        await app.keyboard.press(f"{key}+c")
+        app.keyboard.press(f"{key}+c")
     expect(app.get_by_test_id("stClearCacheDialog")).not_to_be_visible()
 
 
@@ -39,8 +44,8 @@ def test_reruns_when_r_is_pressed(app: Page):
     expect(app.get_by_test_id("stStatusWidget")).to_be_visible()
 
 
-async def test_does_not_clear_cache_dialog_when_c_is_pressed_inside_text_input(
+def test_does_not_clear_cache_dialog_when_r_is_pressed_inside_text_input(
     app: Page,
 ):
-    await app.get_by_test_id("stTextInput").press("r")
+    app.get_by_test_id("stTextInput").press("r")
     expect(app.get_by_test_id("stStatusWidget")).not_to_be_visible()
