@@ -89,7 +89,6 @@ function AppView(props: AppViewProps): ReactElement {
     embedded,
     showPadding,
     disableScrolling,
-    showFooter,
     showToolbar,
     showColoredLine,
     toastAdjustment,
