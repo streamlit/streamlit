@@ -304,6 +304,14 @@ export class App extends PureComponent<Props, State> {
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
+      jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
+        if (
+          this.endpoints.setJWTHeader !== undefined &&
+          this.state.appConfig.useExternalAuthToken
+        ) {
+          this.endpoints.setJWTHeader({ jwtHeaderName, jwtHeaderValue })
+        }
+      },
       hostMenuItemsChanged: hostMenuItems => {
         this.setState({ hostMenuItems })
       },

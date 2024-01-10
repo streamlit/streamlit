@@ -39,17 +39,20 @@ Usage:
 -->
 
 <script>
-  window.addEventListener('message', (event) => {
+  window.addEventListener("message", event => {
     console.log("Received message event:", event)
   })
 
   function sendMessage(data) {
-    const guestwindow = document.getElementById('guest').contentWindow;
+    const guestwindow = document.getElementById("guest").contentWindow
 
-    guestwindow.postMessage({
-      stCommVersion: 1,
-      ...data,
-    }, '*')
+    guestwindow.postMessage(
+      {
+        stCommVersion: 1,
+        ...data,
+      },
+      "*"
+    )
   }
 
   function setHostMenuItem() {
@@ -57,12 +60,12 @@ Usage:
       type: "SET_MENU_ITEMS",
       items: [
         {
-          type: 'text',
-          label: 'Adopt a Corgi',
-          key: 'share',
+          type: "text",
+          label: "Adopt a Corgi",
+          key: "share",
         },
         {
-          type: 'separator',
+          type: "separator",
         },
       ],
     })
@@ -99,6 +102,18 @@ Usage:
     sendMessage({
       type: "SET_SIDEBAR_CHEVRON_DOWNSHIFT",
       sidebarChevronDownshift: 50,
+    })
+  }
+
+  function setAuthToken() {
+    // We handle auth token and jwt header name/value in child iframe,
+    // only when `useExternalAuthToken` is set to True in
+    // "_stcore/host-config" endpoint. Otherwise, we ignore this message.
+    sendMessage({
+      type: "SET_AUTH_TOKEN",
+      authToken: "AUTH_TOKEN",
+      jwtHeaderName: "X-JWT-HEADER-NAME",
+      jwtHeaderValue: "X-JWT-HEADER-VALUE",
     })
   }
 
@@ -188,33 +203,42 @@ Usage:
 </script>
 
 <style>
-html {
-  margin: 0;
-  padding: 0;
-}
+  html {
+    margin: 0;
+    padding: 0;
+  }
 
-body {
-  display: flex;
-  flex-direction: column;
-  position: absolute;
-  margin: 0;
-  padding: 0;
-  inset: 0;
-  background-image: linear-gradient(45deg, #fff4c9 25%, #ffffff 25%, #ffffff 50%, #fff4c9 50%, #fff4c9 75%, #ffffff 75%, #ffffff 100%);
-  background-size: 56.57px 56.57px;
-}
+  body {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    inset: 0;
+    background-image: linear-gradient(
+      45deg,
+      #fff4c9 25%,
+      #ffffff 25%,
+      #ffffff 50%,
+      #fff4c9 50%,
+      #fff4c9 75%,
+      #ffffff 75%,
+      #ffffff 100%
+    );
+    background-size: 56.57px 56.57px;
+  }
 
-#toolbar {
-  padding: 0.5rem 1rem;
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-}
+  #toolbar {
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+  }
 
-#guest {
-  flex: 1;
-  border: none;
-}
+  #guest {
+    flex: 1;
+    border: none;
+  }
 </style>
 
 <div id="toolbar">
@@ -228,6 +252,7 @@ body {
   <button onclick="setHostToolbarItem()">Add Toolbar Item</button>
   <button onclick="setHideSidebarNav()">Hide Sidebar Nav</button>
   <button onclick="setSidebarDownshift()">Sidebar Chevron Downshift</button>
+  <button onclick="setAuthToken()">Set Auth Token</button>
 </div>
 
 <iframe id="guest" src="http://localhost:3000" />
