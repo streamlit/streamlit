@@ -206,6 +206,7 @@ describe("DefaultStreamlitEndpoints", () => {
         method: "PUT",
         responseType: "text",
         data: expectedData,
+        headers: {},
         cancelToken: mockCancelToken,
         onUploadProgress: mockOnUploadProgress,
       })
@@ -238,6 +239,7 @@ describe("DefaultStreamlitEndpoints", () => {
         method: "PUT",
         responseType: "text",
         data: expectedData,
+        headers: {},
         cancelToken: mockCancelToken,
         onUploadProgress: mockOnUploadProgress,
       })
