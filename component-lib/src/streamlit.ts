@@ -69,6 +69,8 @@ export class Streamlit {
 
   public static readonly RENDER_EVENT = "streamlit:render";
 
+  public static readonly INJECTED_STYLE_ELEMENT_ID = "__streamlit_injected_styles";
+
   /** Dispatches events received from Streamlit. */
   public static readonly events = new EventTarget();
 
@@ -228,8 +230,12 @@ export class Streamlit {
 }
 
 const _injectTheme = (theme: Theme) => {
-  const style = document.createElement("style");
-  document.head.appendChild(style);
+  let style = document.getElementById(Streamlit.INJECTED_STYLE_ELEMENT_ID);
+  if (!style) {
+    style = document.createElement("style");
+    style.id = Streamlit.INJECTED_STYLE_ELEMENT_ID;
+    document.head.appendChild(style);
+  }
   style.innerHTML = `
     :root {
       --primary-color: ${theme.primaryColor};
