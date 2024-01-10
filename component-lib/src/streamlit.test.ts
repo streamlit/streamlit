@@ -249,7 +249,7 @@ describe("Streamlit", () => {
         "--text-color"
       )
     ).toEqual(theme.textColor);
-    
+
     expect(
       document.getElementById(Streamlit.INJECTED_STYLE_ELEMENT_ID)
     ).toBeInstanceOf(HTMLStyleElement)

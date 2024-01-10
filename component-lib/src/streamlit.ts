@@ -68,7 +68,7 @@ export class Streamlit {
   public static readonly API_VERSION = 1;
 
   public static readonly RENDER_EVENT = "streamlit:render";
-  
+
   public static readonly INJECTED_STYLE_ELEMENT_ID = "__streamlit_injected_styles";
 
   /** Dispatches events received from Streamlit. */
