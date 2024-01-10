@@ -109,15 +109,15 @@ export function preserveEmbedQueryParams(): string {
     return ""
   }
 
-  const embedValues = new URLSearchParams(window.location.search).getAll(
-    EMBED_OPTIONS_QUERY_PARAM_KEY
-  )
+  const embedOptionsValues = new URLSearchParams(
+    window.location.search
+  ).getAll(EMBED_OPTIONS_QUERY_PARAM_KEY)
 
   // instantiate multiple key values with an array of string pairs
   // https://stackoverflow.com/questions/72571132/urlsearchparams-with-multiple-values
   const embedUrlMap: string[][] = []
-  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, "true"])
-  embedValues.forEach((embedValue: string) => {
+  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, EMBED_TRUE])
+  embedOptionsValues.forEach((embedValue: string) => {
     embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
   })
   return new URLSearchParams(embedUrlMap).toString()
