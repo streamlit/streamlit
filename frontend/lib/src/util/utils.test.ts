@@ -23,6 +23,7 @@ import {
   getLoadingScreenType,
   isEmbed,
   setCookie,
+  preserveEmbedQueryParams,
 } from "./utils"
 
 describe("getCookie", () => {
@@ -330,5 +331,48 @@ describe("getLoadingScreenType", () => {
     }))
 
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
+  })
+
+  describe("preserveEmbedQueryParams", () => {
+    let prevWindowLocation: Location
+    afterEach(() => {
+      window.location = prevWindowLocation
+    })
+
+    it("should return an empty string if not in embed mode", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search: "foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe("")
+    })
+
+    it("should preserve embed query string even with no embed options and remove foo=bar", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search: "embed=true&foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe("embed=true")
+    })
+
+    it("should preserve embed query string with embed options and remove foo=bar", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search:
+          "embed=true&embed_options=option1&embed_options=option2&foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe(
+        "embed=true&embed_options=option1&embed_options=option2"
+      )
+    })
   })
 })

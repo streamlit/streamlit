@@ -157,7 +157,7 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
 
     ctx.script_requests.request_rerun(
         RerunData(
-            query_string="",
+            query_string=ctx.query_string,
             page_script_hash=matched_pages[0]["page_script_hash"],
         )
     )
