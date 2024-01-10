@@ -43,7 +43,7 @@ from streamlit.runtime.state.common import (
     is_widget_id,
 )
 from streamlit.runtime.state.query_params import QueryParams
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
 from streamlit.vendor.pympler.asizeof import asizeof
 
@@ -677,4 +677,4 @@ class SessionStateStatProvider(CacheStatsProvider):
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
             stats.extend(session_state.get_stats())
-        return stats
+        return group_stats(stats)

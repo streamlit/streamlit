@@ -103,12 +103,7 @@ class UploadedFileManagerTest(unittest.TestCase):
             CacheStat(
                 category_name="UploadedFileManager",
                 cache_name="",
-                byte_length=len(FILE_1.data),
-            ),
-            CacheStat(
-                category_name="UploadedFileManager",
-                cache_name="",
-                byte_length=len(FILE_2.data),
+                byte_length=len(FILE_1.data) + len(FILE_2.data),
             ),
         ]
         self.assertEqual(expected, self.mgr.get_stats())

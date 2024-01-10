@@ -47,7 +47,7 @@ from streamlit.runtime.caching.cached_message_replay import (
 from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.vendor.pympler.asizeof import asizeof
 
 _LOGGER = get_logger(__name__)
@@ -131,7 +131,7 @@ class ResourceCaches(CacheStatsProvider):
         stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
-        return stats
+        return group_stats(stats)
 
 
 # Singleton ResourceCaches instance

@@ -60,7 +60,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 
 _LOGGER = get_logger(__name__)
 
@@ -236,7 +236,7 @@ class DataCaches(CacheStatsProvider):
         stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
-        return stats
+        return group_stats(stats)
 
     def validate_cache_params(
         self,

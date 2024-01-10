@@ -19,7 +19,7 @@ from weakref import WeakKeyDictionary
 from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -292,4 +292,4 @@ class ForwardMsgCache(CacheStatsProvider):
                     byte_length=entry.msg.ByteSize() if entry.msg is not None else 0,
                 )
             )
-        return stats
+        return group_stats(stats)
