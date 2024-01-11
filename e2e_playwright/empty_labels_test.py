@@ -14,8 +14,10 @@
 
 from playwright.sync_api import Page
 
-from e2e_playwright.conftest import assert_snapshot
+from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_empty_labels_still_work_with_widgets(app: Page):
+def test_empty_labels_still_work_with_widgets(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     assert_snapshot(app.get_by_test_id("stHorizontalBlock"), name="empty_labels")
