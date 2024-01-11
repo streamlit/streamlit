@@ -93,7 +93,36 @@ class LayoutsMixin:
 
         .. output ::
             https://doc-container2.streamlit.app/
-            height: 480px
+            height: 300px
+
+        Using ``height`` to make a grid:
+
+        >>> import streamlit as st
+        >>>
+        >>> row1 = st.columns(3)
+        >>> row2 = st.columns(3)
+        >>>
+        >>> for col in row1 + row2:
+        >>>     tile = col.container(height=120, border=True)
+        >>>     tile.title(":balloon:")
+
+        .. output ::
+            https://doc-container3.streamlit.app/
+            height: 350px
+
+        Using ``height`` to create a scrolling container for long content:
+
+        >>> import streamlit as st
+        >>>
+        >>> long_text = "Lorem ipsum. " * 1000
+        >>>
+        >>> with st.container(height=300):
+        >>>     st.markdown(long_text)
+
+        .. output ::
+            https://doc-container4.streamlit.app/
+            height: 400px
+
         """
         block_proto = BlockProto()
         block_proto.allow_empty = False

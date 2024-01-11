@@ -176,3 +176,20 @@ def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
     wait_for_app_run(page)
 
     assert page.url == f"http://localhost:{app_port}/page3"
+
+
+def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port: int):
+    """Test that query params are removed when swapping pages"""
+
+    page.goto(
+        f"http://localhost:{app_port}/page_7?foo=bar&embed=True&embed_options=show_toolbar&embed_options=show_colored_line"
+    )
+    wait_for_app_loaded(page)
+
+    page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    wait_for_app_run(page)
+
+    assert (
+        page.url
+        == f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
+    )
