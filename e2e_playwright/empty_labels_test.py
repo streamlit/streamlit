@@ -18,4 +18,4 @@ from e2e_playwright.conftest import assert_snapshot
 
 
 def test_empty_labels_still_work_with_widgets(app: Page):
-    assert_snapshot(app.get_by_role("dialog"), name="empty_labels")
+    assert_snapshot(app.get_by_test_id("stHorizontalBlock"), name="empty_labels")
