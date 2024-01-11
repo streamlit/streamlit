@@ -14,4 +14,17 @@
 
 import streamlit as st
 
-st.warning("This warning message is awesome!")
+st.button("click to rerun")
+
+side_effects = []
+
+
+@st.cache_data(experimental_allow_widgets=True)
+def foo():
+    side_effects.append("function ran")
+    r = st.radio("radio", ["foo", "bar", "baz", "qux"], index=1)
+    return r
+
+
+foo()
+st.text(side_effects)

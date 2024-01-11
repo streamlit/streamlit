@@ -201,6 +201,7 @@ function ScrollToBottomVerticalBlockWrapper(
       border={border}
       height={height}
       data-testid="stVerticalBlockBorderWrapper"
+      data-test-scroll-behavior="scroll-to-bottom"
       ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
     >
       {children}
@@ -276,6 +277,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       border={border}
       height={height}
       data-testid="stVerticalBlockBorderWrapper"
+      data-test-scroll-behavior="normal"
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
         <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
