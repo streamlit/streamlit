@@ -105,6 +105,7 @@ class StreamlitTest(unittest.TestCase):
                 "multiselect",
                 "number_input",
                 "plotly_chart",
+                "popover",
                 "progress",
                 "pyplot",
                 "radio",
