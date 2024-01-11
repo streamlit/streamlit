@@ -34,4 +34,5 @@ def test_deploy_button_displays_correctly(
         deploy_dialog.get_by_test_id("stDeployDialogCustomDeploymentIcon")
     ).to_be_visible()
 
-    assert_snapshot(deploy_dialog, name="deploy_dialog")
+    # Make a snapshot of the dialog window
+    assert_snapshot(deploy_dialog.get_by_role("dialog"), name="deploy_dialog")
