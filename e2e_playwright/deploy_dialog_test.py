@@ -22,4 +22,12 @@ def test_deploy_button_displays_correctly(
 ):
     deploy_button = themed_app.get_by_test_id("stDeployButton")
     deploy_button.click()
-    assert_snapshot(themed_app.get_by_role("dialog"), name="deploy_button")
+
+    # Make sure that deploy dialog is properly displayed
+    # Before taking screenshot
+    deploy_dialog = themed_app.get_by_role("stDeployDialog")
+    expect(deploy_dialog).to_be_visible()
+    expect(deploy_dialog.locator("img")).to_have_count(2)
+    expect(deploy_dialog.locator("img").nth(0)).to_be_visible()
+
+    assert_snapshot(deploy_dialog, name="deploy_dialog")
