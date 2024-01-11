@@ -50,6 +50,8 @@ from streamlit import config as _config
 from streamlit.deprecation_util import deprecate_func_name as _deprecate_func_name
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
 
+from streamlit.decorator_dialog import dialog as decorator_dialog, dialog_init_hook
+
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
@@ -215,3 +217,6 @@ experimental_connection = _deprecate_func_name(
 )
 
 partial = _partial
+
+decorator_dialog = decorator_dialog
+# dialog_init_hook()

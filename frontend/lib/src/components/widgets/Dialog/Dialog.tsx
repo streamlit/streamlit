@@ -15,15 +15,17 @@
  */
 
 import React, { ReactElement, ReactNode, useEffect, useState } from "react"
-import Modal, { ModalHeader, ModalBody } from "src/components/shared/Modal"
-import { ScriptRunState } from "src/lib/ScriptRunState"
-import { WidgetStateManager } from "src/lib/WidgetStateManager"
+import Modal, {
+  ModalHeader,
+  ModalBody,
+} from "@streamlit/lib/src/components/shared/Modal"
+import { ScriptRunState, WidgetStateManager } from "@streamlit/lib"
 import {
   shouldDialogBeOpened,
   clearShouldDialogBeOpened,
   shouldDialogBeClosed,
   closeDialog,
-} from "src/lib/utils"
+} from "@streamlit/lib/src/util/utils"
 
 export interface State {
   isOpen: boolean

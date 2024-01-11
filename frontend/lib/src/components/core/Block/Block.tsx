@@ -22,7 +22,7 @@ import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
-import { Dialog } from "src/components/widgets/Dialog"
+import { Dialog } from "@streamlit/lib/src/components/widgets/Dialog"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
@@ -97,9 +97,9 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     const submitButtons = props.formsData.submitButtons.get(formId)
     const hasSubmitButton =
       submitButtons !== undefined && submitButtons.length > 0
-    const submitButtonCount = props.formsData.submitButtonCount.get(formId)
-    const hasSubmitButton =
-      submitButtonCount !== undefined && submitButtonCount > 0
+    // const submitButtonCount = props.formsData.submitButtonCount.get(formId)
+    // const hasSubmitButton =
+    //   submitButtonCount !== undefined && submitButtonCount > 0
     if (isDialog) {
       return (
         <Dialog
