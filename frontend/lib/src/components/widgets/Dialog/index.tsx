@@ -15,3 +15,4 @@
  */
 
 export { Dialog } from "./Dialog"
+export { DialogNonForm } from "./DialogNonForm"

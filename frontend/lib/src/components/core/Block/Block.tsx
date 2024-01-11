@@ -22,7 +22,10 @@ import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
-import { Dialog } from "@streamlit/lib/src/components/widgets/Dialog"
+import {
+  Dialog,
+  DialogNonForm,
+} from "@streamlit/lib/src/components/widgets/Dialog"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
@@ -128,6 +131,19 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       >
         {child}
       </Form>
+    )
+  }
+
+  if (node.deltaBlock.dialogNonForm) {
+    return (
+      <DialogNonForm
+        title={node.deltaBlock.dialogNonForm.title || "Placeholder Title"}
+        scriptRunState={props.scriptRunState}
+        dismissible={node.deltaBlock.dialogNonForm.dismissible || false}
+        isOpen={node.deltaBlock.dialogNonForm.isOpen || false}
+      >
+        {child}
+      </DialogNonForm>
     )
   }
 

@@ -62,14 +62,14 @@ def dialog_init_hook():
         unsafe_allow_html=True,
     )
 
-    global _dlg_wrapper
-    _dlg_wrapper = st.empty()
+    # global _dlg_wrapper
+    # _dlg_wrapper = st.empty()
 
     if s.dialog_function is not None:
         _open_dialog()
 
 
-def _open_dialog():
+def _open_dialog(title: str = ""):
     s = st.session_state
     is_first_run = False
 
@@ -78,7 +78,11 @@ def _open_dialog():
 
     s.dialog_function_last_run = s.current_run
 
-    with _dlg_wrapper.expander("PRETEND THIS IS A DIALOG", expanded=True):
+    # with _dlg_wrapper.expander("PRETEND THIS IS A DIALOG", expanded=True):
+    # dialog = st.dialog("Decorator Dialog", close_on_submit=True)
+    # dialog.open()
+    dialog = st.dialog_non_form(title, dismissible=True, is_open=True)
+    with dialog:
         out = s.dialog_function(
             *s.dialog_function_args,
             **s.dialog_function_kwargs,
@@ -93,19 +97,23 @@ def _open_dialog():
         s.dialog_return = out
 
         if s.dialog_return_run < s.current_run:
-            _dlg_wrapper.empty()
+            # _dlg_wrapper.empty()
+            dialog.update(False)
 
 
-def dialog(fn):
-    def decorated_fn(*args, **kwargs):
-        s = st.session_state
+def dialog(title: str = "Decorator Function"):
+    def inner_decorator(fn):
+        def decorated_fn(*args, **kwargs):
+            s = st.session_state
 
-        s.dialog_function = fn
-        s.dialog_function_args = args
-        s.dialog_function_kwargs = kwargs
-        s.dialog_return = None
+            s.dialog_function = fn
+            s.dialog_function_args = args
+            s.dialog_function_kwargs = kwargs
+            s.dialog_return = None
 
-        if s.dialog_function_last_run != s.current_run:
-            _open_dialog()
+            if s.dialog_function_last_run != s.current_run:
+                _open_dialog(title)
 
-    return decorated_fn
+        return decorated_fn
+
+    return inner_decorator
