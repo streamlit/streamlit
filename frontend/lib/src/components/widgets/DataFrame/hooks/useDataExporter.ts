@@ -92,12 +92,12 @@ function useDataExporter(
   const exportToCsv = React.useCallback(async () => {
     // Lazy import to prevent weird breakage in some niche cases
     // (e.g. usage in replay.io browser)
-    const showSaveFilePicker = await import("native-file-system-adapter")
+    const nativeFileSystemAdapter = await import("native-file-system-adapter")
 
     const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
     const suggestedName = `${timestamp}_export.csv`
 
-    const fileHandle = await showSaveFilePicker({
+    const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
       suggestedName,
       types: [{ accept: { "text/csv": [".csv"] } }],
       excludeAcceptAllOption: false,
