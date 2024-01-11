@@ -34,5 +34,8 @@ def test_deploy_button_displays_correctly(
         deploy_dialog.get_by_test_id("stDeployDialogCustomDeploymentIcon")
     ).to_be_visible()
 
+    # Wait for a short time to make sure that the images have been loaded
+    themed_app.wait_for_timeout(250)
+
     # Make a snapshot of the dialog window
     assert_snapshot(deploy_dialog.get_by_role("dialog"), name="deploy_dialog")
