@@ -15,7 +15,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded
+from e2e_playwright.conftest import wait_for_app_run
 
 
 def test_runs_cached_function_with_new_widget_values(app: Page):
@@ -23,18 +23,17 @@ def test_runs_cached_function_with_new_widget_values(app: Page):
     expect(app.get_by_test_id("stText")).to_have_text("['function ran']")
     app.get_by_text("click to rerun").click()
 
-    wait_for_app_loaded(
-        app,
-    )
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stRadio")).to_have_count(1)
     expect(app.get_by_test_id("stText")).to_have_text("[]")
 
-    for _, element in enumerate(app.get_by_test_id("stRadio").nth(0).all()):
-        element.locator('label[data-baseweb="radio"]').last.click()
+    app.get_by_test_id("stRadio").nth(0).locator(
+        'label[data-baseweb="radio"]'
+    ).last.click()
     expect(app.get_by_test_id("stRadio")).to_have_count(1)
     expect(app.get_by_test_id("stText")).to_have_text("['function ran']")
     app.get_by_text("click to rerun").click()
 
-    wait_for_app_loaded(app)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stRadio")).to_have_count(1)
     expect(app.get_by_test_id("stText")).to_have_text("[]")
