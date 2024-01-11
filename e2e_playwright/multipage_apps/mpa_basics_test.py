@@ -173,7 +173,7 @@ def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
     wait_for_app_loaded(page)
 
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
-    wait_for_app_run(page)
+    wait_for_app_loaded(page)
 
     assert page.url == f"http://localhost:{app_port}/page3"
 
@@ -187,7 +187,7 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
     wait_for_app_loaded(page)
 
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
-    wait_for_app_run(page)
+    wait_for_app_loaded(page)
 
     assert (
         page.url
