@@ -61,7 +61,7 @@ def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFuncti
     assert_snapshot(scroll_container, name="st_container-scroll_container")
 
     scroll_container_empty = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5)
-    expect(scroll_container_chat).to_have_css("overflow", "auto")
+    expect(scroll_container_empty).to_have_css("overflow", "auto")
     expect(scroll_container_empty).to_have_css("height", "100px")
     expect(scroll_container_empty).to_have_attribute(
         "data-test-scroll-behavior", "normal"
