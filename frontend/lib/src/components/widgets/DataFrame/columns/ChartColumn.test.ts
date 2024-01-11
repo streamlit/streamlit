@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind, LoadingCell } from "@glideapps/glide-data-grid"
+import { GridCellKind } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { BaseColumnProps, isErrorCell } from "./utils"
