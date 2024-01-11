@@ -25,7 +25,7 @@ def test_deploy_button_displays_correctly(
 
     # Make sure that deploy dialog is properly displayed
     # Before taking screenshot
-    deploy_dialog = themed_app.get_by_test_id("stDeployDialog")
+    deploy_dialog = themed_app.get_by_test_id("stModal")
     expect(deploy_dialog).to_be_visible()
     expect(deploy_dialog.locator("img")).to_have_count(2)
     expect(deploy_dialog.locator("img").nth(0)).to_be_visible()

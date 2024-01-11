@@ -140,7 +140,7 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
   }, [props, onClose, gitInfo])
 
   return (
-    <Modal onClose={onClose} data-testid={"stDeployDialog"}>
+    <Modal onClose={onClose}>
       <StyledCardContainer>
         <Card>
           <StyledBody>
