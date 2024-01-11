@@ -34,6 +34,7 @@ import {
   PLACEMENT,
 } from "baseui/popover"
 
+import { StyledPopoverButtonIcon } from "./styled-components"
 export interface PopoverProps {
   element: BlockProto.Popover
   empty: boolean
@@ -111,7 +112,7 @@ const Popover: React.FC<PopoverProps> = ({
             largerLabel
             disableLinks
           />
-          <div style={{ marginLeft: theme.spacing.twoXSPx }}>
+          <StyledPopoverButtonIcon>
             <StyledIcon
               as={ExpandMore}
               color={"inherit"}
@@ -120,7 +121,7 @@ const Popover: React.FC<PopoverProps> = ({
               margin=""
               padding=""
             />
-          </div>
+          </StyledPopoverButtonIcon>
         </BaseButton>
       </div>
     </UIPopover>
