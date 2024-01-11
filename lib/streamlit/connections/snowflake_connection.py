@@ -52,11 +52,14 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     def _connect(self, **kwargs) -> "InternalSnowflakeConnection":
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
-        from snowflake.snowpark.context import get_active_session  # type:ignore[import]
 
         # If we're running in SiS, just call get_active_session() and retrieve the
         # lower-level connection from it.
         if running_in_sis():
+            from snowflake.snowpark.context import (  # type:ignore[import]  # isort: skip
+                get_active_session,
+            )
+
             session = get_active_session()
 
             if hasattr(session, "connection"):
