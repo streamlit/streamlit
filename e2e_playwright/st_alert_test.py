@@ -32,7 +32,7 @@ def test_alert_displays_a_warning_message(
     alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements.nth(1)).to_have_text("This is a warning")
 
-    assert_snapshot(alert_elements.nth(1), name="st_button_warning")
+    assert_snapshot(alert_elements.nth(1), name="st_alert_warning")
 
 
 def test_alert_displays_an_info_message(
@@ -41,7 +41,7 @@ def test_alert_displays_an_info_message(
     alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements.nth(2)).to_have_text("This is an info message")
 
-    assert_snapshot(alert_elements.nth(2), name="st_button_info")
+    assert_snapshot(alert_elements.nth(2), name="st_alert_info")
 
 
 def test_alert_displays_a_success_message(
@@ -50,4 +50,4 @@ def test_alert_displays_a_success_message(
     alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements.nth(3)).to_have_text("This is a success message")
 
-    assert_snapshot(alert_elements.nth(3), name="st_button_success")
+    assert_snapshot(alert_elements.nth(3), name="st_alert_success")
