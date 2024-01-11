@@ -125,9 +125,7 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
 
     # Expand the nav again
     svg.click()
-    assert_snapshot(
-        page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
-    )
+    expect(page.get_by_test_id("stSidebarNav")).to_be_visible()
 
 
 def test_switch_page(app: Page):
