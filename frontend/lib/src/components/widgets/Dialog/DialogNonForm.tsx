@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useEffect, useState } from "react"
+import React, {
+  ReactElement,
+  ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import Modal, {
   ModalHeader,
   ModalBody,
 } from "@streamlit/lib/src/components/shared/Modal"
-import { ScriptRunState } from "@streamlit/lib"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 export interface Props {
-  scriptRunState: ScriptRunState
   children?: ReactNode
   title?: string
   dismissible?: boolean
@@ -33,6 +37,10 @@ export interface Props {
 export function DialogNonForm(props: Props): ReactElement {
   const { children, title, dismissible, isOpen: initialIsOpen } = props
   const [isOpen, setIsOpen] = useState<boolean>(initialIsOpen || false)
+  //   const [isReset, setIsReset] = useState<boolean>(false)
+  const isReset = useRef<boolean>(false)
+
+  console.log(props, isOpen)
 
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
@@ -55,12 +63,18 @@ export function DialogNonForm(props: Props): ReactElement {
     // expander's `expanded` state in this edge case.
   }, [initialIsOpen])
 
+  //   useEffect(() => {
+  //     setIsOpen(true)
+  //     // setIsReset(false)
+  //   }, [isReset])
+
   return (
     <Modal
       isOpen={isOpen}
       closeable={dismissible}
       onClose={() => {
         setIsOpen(false)
+        // isReset.current = true
         // TODO: do we have to inform the python-side about the closure?
       }}
     >

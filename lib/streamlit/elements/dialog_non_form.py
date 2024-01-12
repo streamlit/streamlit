@@ -85,10 +85,14 @@ class DialogNonForm(DeltaGenerator):
         self._current_is_open = is_open
         _enqueue_message(msg)
 
+    def __call__(self, is_open: bool = True) -> DialogNonForm:
+        self._current_is_open = is_open
+        return self
+
     def __enter__(self) -> DialogNonForm:  # type: ignore[override]
         print("Enter NonFormDialog!")
         time.sleep(0.05)
-        self.update(True)
+        self.update(self._current_is_open)
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?

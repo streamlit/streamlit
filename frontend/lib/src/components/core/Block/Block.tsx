@@ -138,7 +138,6 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     return (
       <DialogNonForm
         title={node.deltaBlock.dialogNonForm.title || "Placeholder Title"}
-        scriptRunState={props.scriptRunState}
         dismissible={node.deltaBlock.dialogNonForm.dismissible || false}
         isOpen={node.deltaBlock.dialogNonForm.isOpen || false}
       >

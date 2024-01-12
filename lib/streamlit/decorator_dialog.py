@@ -21,7 +21,7 @@ import streamlit as st
 _dlg_wrapper = None
 
 
-def dialog_init_hook():
+def dialog_init_hook(title: str):
     s = st.session_state
 
     if "dialog_function" not in s:
@@ -62,11 +62,11 @@ def dialog_init_hook():
         unsafe_allow_html=True,
     )
 
-    # global _dlg_wrapper
-    # _dlg_wrapper = st.empty()
+    global _dlg_wrapper
+    _dlg_wrapper = st.empty()
 
     if s.dialog_function is not None:
-        _open_dialog()
+        _open_dialog(title)
 
 
 def _open_dialog(title: str = ""):
@@ -81,13 +81,13 @@ def _open_dialog(title: str = ""):
     # with _dlg_wrapper.expander("PRETEND THIS IS A DIALOG", expanded=True):
     # dialog = st.dialog("Decorator Dialog", close_on_submit=True)
     # dialog.open()
-    dialog = st.dialog_non_form(title, dismissible=True, is_open=True)
+    dialog = st.dialog_non_form(title, dismissible=False, is_open=True)
     with dialog:
         out = s.dialog_function(
             *s.dialog_function_args,
             **s.dialog_function_kwargs,
         )
-
+    print(out)
     if out is not None:
         if is_first_run:
             return
@@ -97,13 +97,15 @@ def _open_dialog(title: str = ""):
         s.dialog_return = out
 
         if s.dialog_return_run < s.current_run:
-            # _dlg_wrapper.empty()
+            _dlg_wrapper.empty()
             dialog.update(False)
 
 
 def dialog(title: str = "Decorator Function"):
     def inner_decorator(fn):
         def decorated_fn(*args, **kwargs):
+            dialog_init_hook(title)
+
             s = st.session_state
 
             s.dialog_function = fn
@@ -111,6 +113,7 @@ def dialog(title: str = "Decorator Function"):
             s.dialog_function_kwargs = kwargs
             s.dialog_return = None
 
+            print(s.dialog_function_last_run, s.current_run)
             if s.dialog_function_last_run != s.current_run:
                 _open_dialog(title)
 
