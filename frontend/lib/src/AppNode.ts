@@ -183,6 +183,8 @@ export class ElementNode implements AppNode {
       datasets: modifiedDatasets,
       useContainerWidth: proto.useContainerWidth,
       vegaLiteTheme: proto.theme,
+      id: proto.id,
+      formId: null,
     }
 
     this.lazyVegaLiteChartElement = toReturn

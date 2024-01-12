@@ -68,6 +68,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "time_input": "string_value",
         "component_instance": "json_value",
         "data_editor": "string_value",
+        "arrow_vega_lite_chart": "json_value",
     }
 )
 
@@ -185,6 +186,8 @@ def register_widget_from_metadata(
 
     widget_id = metadata.id
     user_key = user_key_from_widget_id(widget_id)
+    print(f"{user_key=}")
+    print(f"{widget_id=}")
 
     # Ensure another widget with the same user key hasn't already been registered.
     if user_key is not None:
