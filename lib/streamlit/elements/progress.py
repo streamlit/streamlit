@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from typing import TYPE_CHECKING, Optional, Union, cast
 
 from typing_extensions import TypeAlias
@@ -29,6 +30,27 @@ if TYPE_CHECKING:
 FloatOrInt: TypeAlias = Union[int, float]
 
 
+def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> bool:
+    """
+    Checks given value is 'between' the bounds of [low, high],
+    considering close values around bounds are acceptable input
+
+    Parameters
+    ----------
+    value : float
+    low : float
+    high : float
+    """
+    if (
+        (low <= value <= high)
+        or math.isclose(value, low, rel_tol=1e-9, abs_tol=1e-9)
+        or math.isclose(value, high, rel_tol=1e-9, abs_tol=1e-9)
+    ):
+        return True
+    else:
+        return False
+
+
 def _get_value(value):
     if isinstance(value, int):
         if 0 <= value <= 100:
@@ -39,7 +61,7 @@ def _get_value(value):
             )
 
     elif isinstance(value, float):
-        if 0.0 <= value <= 1.0:
+        if _check_float_between(value, low=0.0, high=1.0):
             return int(value * 100)
         else:
             raise StreamlitAPIException(
