@@ -93,7 +93,7 @@ requests-toolbelt==1.0.0
 retrying==1.3.4
 rfc3986==2.0.0
 rich==13.7.0
-rpds-py==0.16.2
+rpds-py==0.17.1
 scipy==1.11.4
 seaborn==0.13.1
 SecretStorage==3.3.3
