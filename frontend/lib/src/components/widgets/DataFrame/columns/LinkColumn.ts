@@ -17,6 +17,7 @@
 import { GridCell, GridCellKind, UriCell } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import {
   BaseColumn,
@@ -39,7 +40,7 @@ export interface LinkColumnParams {
  * The link column is a special column that interprets the cell content as
  * an hyperlink / url and allows the user to click on it.
  */
-function LinkColumn(props: BaseColumnProps): BaseColumn {
+function LinkColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
   const parameters = (props.columnTypeOptions as LinkColumnParams) || {}
 
   let validateRegex: RegExp | string | undefined = undefined
@@ -112,6 +113,10 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "link",
     sortMode: "default",
+    themeOverride: {
+      ...(props.themeOverride ?? {}),
+      textDark: theme.colors.linkText,
+    },
     validateInput,
     getCell(data?: any, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
@@ -119,6 +124,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
           ...cellTemplate,
           data: null as any,
           isMissingValue: true,
+          onClickUri: () => {},
         } as UriCell
       }
 
