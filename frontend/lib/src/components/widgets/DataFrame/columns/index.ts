@@ -24,13 +24,16 @@ import LinkColumn from "./LinkColumn"
 import ImageColumn from "./ImageColumn"
 import ProgressColumn from "./ProgressColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
+import MultiSelectColumn from "./MultiSelectColumn"
 import { LineChartColumn, BarChartColumn } from "./ChartColumn"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
 export type { LinkCell } from "./cells/LinkCell"
+export type { MultiSelectCell } from "./cells/MultiSelectCell"
 
 import { ColumnCreator } from "./utils"
 import { linkCellRenderer } from "./cells/LinkCell"
+import multiSelectCellRenderer from "./cells/MultiSelectCell"
 
 export * from "./utils"
 
@@ -55,10 +58,11 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     bar_chart: BarChartColumn,
     image: ImageColumn,
     progress: ProgressColumn,
+    multiselect: MultiSelectColumn,
   })
 )
 
-export const CustomCells = [linkCellRenderer]
+export const CustomCells = [linkCellRenderer, multiSelectCellRenderer]
 
 export {
   ObjectColumn,
@@ -68,6 +72,7 @@ export {
   ListColumn,
   NumberColumn,
   LinkColumn,
+  MultiSelectColumn,
   DateTimeColumn,
   DateColumn,
   TimeColumn,

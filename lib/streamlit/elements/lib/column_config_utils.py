@@ -98,6 +98,10 @@ _EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = 
         ColumnDataKind.EMPTY,
     ],
     "link": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
+    "multiselect": [
+        ColumnDataKind.LIST,
+        ColumnDataKind.EMPTY,
+    ],
 }
 
 

@@ -40,6 +40,7 @@ ColumnType: TypeAlias = Literal[
     "bar_chart",
     "image",
     "progress",
+    "multiselect",
 ]
 
 
@@ -91,6 +92,11 @@ class ImageColumnConfig(TypedDict):
 
 class ListColumnConfig(TypedDict):
     type: Literal["list"]
+
+
+class MultiSelectColumnConfig(TypedDict):
+    type: Literal["multiselect"]
+    options: NotRequired[List[str] | None]
 
 
 class DatetimeColumnConfig(TypedDict):
@@ -181,6 +187,7 @@ class ColumnConfig(TypedDict, total=False):
         LineChartColumnConfig,
         BarChartColumnConfig,
         ImageColumnConfig,
+        MultiSelectColumnConfig,
         None,
     ]
 
@@ -1069,6 +1076,66 @@ def ListColumn(
     """
     return ColumnConfig(
         label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
+    )
+
+
+@gather_metrics("column_config.MultiSelectColumn")
+def MultiSelectColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: datetime.datetime | None = None,
+    options: Iterable[str] | None = None,
+):
+    """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: datetime.datetime or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+
+    .. output::
+        https://doc-multiselect-column.streamlit.app/
+        height: 300px
+    """
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        type_config=MultiSelectColumnConfig(
+            type="multiselect",
+            options=list(options) if options is not None else None,
+        ),
     )
 
 
