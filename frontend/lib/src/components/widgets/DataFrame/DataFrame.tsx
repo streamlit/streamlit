@@ -123,7 +123,7 @@ function DataFrame({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const theme = useCustomTheme()
+  const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
@@ -524,7 +524,7 @@ function DataFrame({
         defaultSize={resizableSize}
         style={{
           border: `1px solid ${theme.borderColor}`,
-          borderRadius: `${theme.tableBorderRadius}`,
+          borderRadius: `${tableBorderRadius}`,
         }}
         minHeight={minHeight}
         maxHeight={maxHeight}
@@ -657,7 +657,7 @@ function DataFrame({
           // Custom image editor to render single images:
           imageEditorOverride={ImageCellEditor}
           // Add our custom SVG header icons:
-          headerIcons={theme.headerIcons}
+          headerIcons={headerIcons}
           // Add support for user input validation:
           validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:

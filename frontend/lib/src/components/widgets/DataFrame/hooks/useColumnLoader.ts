@@ -16,7 +16,9 @@
 import React from "react"
 
 import merge from "lodash/merge"
+import { useTheme } from "@emotion/react"
 
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
@@ -219,6 +221,8 @@ function useColumnLoader(
   data: Quiver,
   disabled: boolean
 ): ColumnLoaderReturn {
+  const theme: EmotionTheme = useTheme()
+
   const columnConfigMapping = React.useMemo(() => {
     return getColumnConfig(element.columns)
   }, [element.columns])
@@ -272,7 +276,7 @@ function useColumnLoader(
           }
         }
 
-        return ColumnType(updatedColumn)
+        return ColumnType(updatedColumn, theme)
       })
       .filter(column => {
         // Filter out all columns that are hidden
@@ -315,6 +319,7 @@ function useColumnLoader(
     disabled,
     element.editingMode,
     element.columnOrder,
+    theme,
   ])
 
   return {

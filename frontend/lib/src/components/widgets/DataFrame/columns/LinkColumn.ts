@@ -23,7 +23,6 @@ import {
   BaseColumnProps,
   toSafeString,
   getErrorCell,
-  ColumnCreator,
   getLinkDisplayValueFromRegex,
 } from "./utils"
 
@@ -174,4 +173,4 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
 LinkColumn.isEditableType = true
 
-export default LinkColumn as ColumnCreator
+export default LinkColumn
