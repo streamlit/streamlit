@@ -123,7 +123,7 @@ function DataFrame({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const theme = useCustomTheme()
+  const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
@@ -242,7 +242,8 @@ function DataFrame({
         }
       }
     },
-    // TODO: fix incorrect hook usage. Could misbehave with add_rows so leaving here for now
+    // We only want to run this effect once during the initial component load
+    // so we disable the eslint rule.
     /* eslint-disable react-hooks/exhaustive-deps */
     []
   )
@@ -323,9 +324,12 @@ function DataFrame({
 
   const { drawCell, customRenderers } = useCustomRenderer(columns)
 
-  const { columns: glideColumns, onColumnResize } = useColumnSizer(
-    columns.map(column => toGlideColumn(column))
+  const transformedColumns = React.useMemo(
+    () => columns.map(column => toGlideColumn(column)),
+    [columns]
   )
+  const { columns: glideColumns, onColumnResize } =
+    useColumnSizer(transformedColumns)
 
   const {
     minHeight,
@@ -385,26 +389,32 @@ function DataFrame({
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
-    if (resizableContainerRef.current && dataEditorRef.current) {
-      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-      const scrollAreaBounds = resizableContainerRef.current
-        ?.querySelector(".dvn-stack")
-        ?.getBoundingClientRect()
+    // The setTimeout is a workaround to get the scroll area bounding box
+    // after the grid has been rendered. Otherwise, the scroll area div
+    // (dvn-stack) might not have been created yet.
+    setTimeout(() => {
+      if (resizableContainerRef.current && dataEditorRef.current) {
+        // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+        const scrollAreaBounds = resizableContainerRef.current
+          ?.querySelector(".dvn-stack")
+          ?.getBoundingClientRect()
 
-      // We might also be able to use the following as an alternative,
-      // but it seems to cause "Maximum update depth exceeded" when scrollbars
-      // are activated or deactivated.
-      // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+        // We might also be able to use the following as an alternative,
+        // but it seems to cause "Maximum update depth exceeded" when scrollbars
+        // are activated or deactivated.
+        // const scrollAreaBounds = dataEditorRef.current?.getBounds()
 
-      if (scrollAreaBounds) {
-        setHasVerticalScroll(
-          scrollAreaBounds.height > resizableContainerRef.current.clientHeight
-        )
-        setHasHorizontalScroll(
-          scrollAreaBounds.width > resizableContainerRef.current.clientWidth
-        )
+        if (scrollAreaBounds) {
+          setHasVerticalScroll(
+            scrollAreaBounds.height >
+              resizableContainerRef.current.clientHeight
+          )
+          setHasHorizontalScroll(
+            scrollAreaBounds.width > resizableContainerRef.current.clientWidth
+          )
+        }
       }
-    }
+    }, 1)
   }, [resizableSize, numRows, glideColumns])
 
   React.useEffect(() => {
@@ -524,7 +534,7 @@ function DataFrame({
         defaultSize={resizableSize}
         style={{
           border: `1px solid ${theme.borderColor}`,
-          borderRadius: `${theme.tableBorderRadius}`,
+          borderRadius: `${tableBorderRadius}`,
         }}
         minHeight={minHeight}
         maxHeight={maxHeight}
@@ -657,7 +667,7 @@ function DataFrame({
           // Custom image editor to render single images:
           imageEditorOverride={ImageCellEditor}
           // Add our custom SVG header icons:
-          headerIcons={theme.headerIcons}
+          headerIcons={headerIcons}
           // Add support for user input validation:
           validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:
