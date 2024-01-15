@@ -486,6 +486,8 @@ const renderer: CustomRenderer<MultiSelectCell> = {
       )
       ctx.fill()
 
+      // If a color is set for this option, we use it to determine the text color.
+      // Otherwise, use the configured textBubble color.
       ctx.fillStyle = matchedOption?.color
         ? color.luminance() > 0.5
           ? "#000000"
