@@ -23,7 +23,7 @@ import {
   BaseColumn,
   BaseColumnProps,
   toSafeString,
-  ColumnCreator,
+  mergeColumnParameters,
   arrayToCopyValue,
   getErrorCell,
   toSafeArray,
@@ -31,14 +31,21 @@ import {
 import { MultiSelectCell } from "./cells/MultiSelectCell"
 
 export interface MultiSelectColumnParams {
-  readonly options?: string[]
+  readonly options: string[]
 }
 
 function MultiSelectColumn(
   props: BaseColumnProps,
   theme: EmotionTheme
 ): BaseColumn {
-  const parameters = (props.columnTypeOptions as MultiSelectColumnParams) || {}
+  const parameters = mergeColumnParameters(
+    // Default parameters:
+    {
+      options: [],
+    },
+    // User parameters:
+    props.columnTypeOptions
+  ) as MultiSelectColumnParams
 
   const cellTemplate = {
     kind: GridCellKind.Custom,
@@ -49,7 +56,11 @@ function MultiSelectColumn(
     data: {
       kind: "multi-select-cell",
       values: [],
-      options: parameters.options || [],
+      options: [
+        ...parameters.options
+          .filter(opt => opt !== null && opt !== "") // ignore empty option if it exists
+          .map(opt => toSafeString(opt).trim()), // convert everything to string
+      ],
       allowCreation: false,
       allowDuplicates: false,
     },

@@ -1087,7 +1087,7 @@ def MultiSelectColumn(
     help: str | None = None,
     disabled: bool | None = None,
     required: bool | None = None,
-    default: datetime.datetime | None = None,
+    default: Iterable[str] | None = None,
     options: Iterable[str] | None = None,
 ):
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
@@ -1113,8 +1113,12 @@ def MultiSelectColumn(
         Whether edited cells in the column need to have a value. If True, an edited cell
         can only be submitted if it has a value other than None. Defaults to False.
 
-    default: datetime.datetime or None
+    default: Iterable of str or None
         Specifies the default value in this column when a new row is added by the user.
+
+    options: Iterable of str or None
+        The options that can be selected during editing.
+
 
     Examples
     --------
@@ -1132,6 +1136,7 @@ def MultiSelectColumn(
         help=help,
         disabled=disabled,
         required=required,
+        default=default,
         type_config=MultiSelectColumnConfig(
             type="multiselect",
             options=list(options) if options is not None else None,
