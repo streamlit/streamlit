@@ -23,6 +23,7 @@ import {
   toSafeString,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { logWarning } from "@streamlit/lib/src/util/log"
 
 // Delimiter between cells
 const CSV_DELIMITER = ","
@@ -90,39 +91,45 @@ function useDataExporter(
   numRows: number
 ): DataExporterReturn {
   const exportToCsv = React.useCallback(async () => {
-    // Lazy import to prevent weird breakage in some niche cases
-    // (e.g. usage in replay.io browser)
-    const nativeFileSystemAdapter = await import("native-file-system-adapter")
+    try {
+      // Lazy import to prevent weird breakage in some niche cases
+      // (e.g. usage in replay.io browser)
+      const nativeFileSystemAdapter = await import(
+        "native-file-system-adapter"
+      )
 
-    const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
-    const suggestedName = `${timestamp}_export.csv`
+      const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
+      const suggestedName = `${timestamp}_export.csv`
 
-    const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
-      suggestedName,
-      types: [{ accept: { "text/csv": [".csv"] } }],
-      excludeAcceptAllOption: false,
-    })
-
-    const textEncoder = new TextEncoder()
-    const writer = await fileHandle.createWritable()
-
-    // Write UTF-8 BOM for excel compatibility:
-    await writer.write(textEncoder.encode(CSV_UTF8_BOM))
-
-    // Write headers:
-    const headers: string[] = columns.map(column => column.name)
-    await writer.write(textEncoder.encode(toCsvRow(headers)))
-
-    for (let row = 0; row < numRows; row++) {
-      const rowData: any[] = []
-      columns.forEach((column: BaseColumn, col: number, _map) => {
-        rowData.push(column.getCellValue(getCellContent([col, row])))
+      const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
+        suggestedName,
+        types: [{ accept: { "text/csv": [".csv"] } }],
+        excludeAcceptAllOption: false,
       })
-      // Write row to CSV:
-      await writer.write(textEncoder.encode(toCsvRow(rowData)))
-    }
 
-    await writer.close()
+      const textEncoder = new TextEncoder()
+      const writer = await fileHandle.createWritable()
+
+      // Write UTF-8 BOM for excel compatibility:
+      await writer.write(textEncoder.encode(CSV_UTF8_BOM))
+
+      // Write headers:
+      const headers: string[] = columns.map(column => column.name)
+      await writer.write(textEncoder.encode(toCsvRow(headers)))
+
+      for (let row = 0; row < numRows; row++) {
+        const rowData: any[] = []
+        columns.forEach((column: BaseColumn, col: number, _map) => {
+          rowData.push(column.getCellValue(getCellContent([col, row])))
+        })
+        // Write row to CSV:
+        await writer.write(textEncoder.encode(toCsvRow(rowData)))
+      }
+
+      await writer.close()
+    } catch (error) {
+      logWarning("Failed to export data as CSV", error)
+    }
   }, [columns, numRows, getCellContent])
 
   return {

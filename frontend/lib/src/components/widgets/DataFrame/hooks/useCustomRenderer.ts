@@ -148,13 +148,20 @@ function useCustomRenderer(columns: BaseColumn[]): CustomRendererReturn {
   )
 
   // Load extra cell renderers from the glide-data-grid-cells package:
-  const customRenderers = [
-    SparklineCell,
-    DropdownCell,
-    RangeCell,
-    DatePickerCell,
-    ...CustomCells,
-  ] as DataEditorProps["customRenderers"]
+  const customRenderers = React.useMemo(
+    () =>
+      [
+        SparklineCell,
+        DropdownCell,
+        RangeCell,
+        DatePickerCell,
+        ...CustomCells,
+      ] as DataEditorProps["customRenderers"],
+    // This doesn't change during the lifetime of the component,
+    // so we can just run it once at creation time.
+    /* eslint-disable react-hooks/exhaustive-deps */
+    []
+  )
 
   return {
     drawCell,
