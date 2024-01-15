@@ -22,7 +22,7 @@ import {
   BaseColumn,
   BaseColumnProps,
   toSafeArray,
-  toSafeString,
+  arrayToCopyValue,
   isMissingValueCell,
 } from "./utils"
 
@@ -50,17 +50,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
         ...cellTemplate,
         data: cellData,
         isMissingValue: isNullOrUndefined(data),
-        copyData: isNullOrUndefined(data)
-          ? ""
-          : toSafeString(
-              cellData.map((x: any) =>
-                // Replace commas with spaces since commas are used to
-                // separate the list items.
-                typeof x === "string" && x.includes(",")
-                  ? x.replace(/,/g, " ")
-                  : x
-              )
-            ),
+        copyData: arrayToCopyValue(cellData),
       } as BubbleCell
     },
     getCellValue(cell: BubbleCell): string[] | null {

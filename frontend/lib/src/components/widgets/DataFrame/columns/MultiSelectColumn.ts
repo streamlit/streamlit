@@ -17,13 +17,15 @@
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import {
   BaseColumn,
   BaseColumnProps,
   toSafeString,
-  isMissingValueCell,
   ColumnCreator,
+  arrayToCopyValue,
+  getErrorCell,
   toSafeArray,
 } from "./utils"
 import { MultiSelectCell } from "./cells/MultiSelectCell"
@@ -32,7 +34,10 @@ export interface MultiSelectColumnParams {
   readonly options?: string[]
 }
 
-function MultiSelectColumn(props: BaseColumnProps): BaseColumn {
+function MultiSelectColumn(
+  props: BaseColumnProps,
+  theme: EmotionTheme
+): BaseColumn {
   const parameters = (props.columnTypeOptions as MultiSelectColumnParams) || {}
 
   const cellTemplate = {
@@ -45,11 +50,14 @@ function MultiSelectColumn(props: BaseColumnProps): BaseColumn {
       kind: "multi-select-cell",
       values: [],
       options: parameters.options || [],
+      allowCreation: false,
+      allowDuplicates: false,
     },
     copyData: "",
     themeOverride: {
       roundingRadius: 4,
-      // bgBubble:
+      bgBubble: theme.colors.primary,
+      bgBubbleSelected: theme.colors.primary,
     },
   } as MultiSelectCell
 
@@ -58,7 +66,34 @@ function MultiSelectColumn(props: BaseColumnProps): BaseColumn {
     kind: "link",
     sortMode: "default",
     getCell(data?: any, validate?: boolean): GridCell {
-      const cellData = isNullOrUndefined(data) ? [] : toSafeArray(data)
+      if (isNullOrUndefined(data)) {
+        return {
+          ...cellTemplate,
+          data: {
+            ...cellTemplate.data,
+            values: null,
+          },
+          isMissingValue: isNullOrUndefined(data),
+          copyData: "",
+        } as MultiSelectCell
+      }
+
+      let cellData = toSafeArray(data)
+
+      cellData = cellData.map((x: any) => toSafeString(x).trim())
+
+      if (validate && cellData.length > 0) {
+        // Filter out values that are not in the options list:
+        cellData = cellData.filter((x: string) =>
+          cellTemplate.data.options?.includes(x)
+        )
+        if (cellData.length === 0) {
+          return getErrorCell(
+            toSafeString(data),
+            "The values could not be matched with the configured options."
+          )
+        }
+      }
 
       return {
         ...cellTemplate,
@@ -67,21 +102,11 @@ function MultiSelectColumn(props: BaseColumnProps): BaseColumn {
           values: cellData,
         },
         isMissingValue: isNullOrUndefined(data),
-        copyData: isNullOrUndefined(data)
-          ? ""
-          : toSafeString(
-              cellData.map((x: any) =>
-                // Replace commas with spaces since commas are used to
-                // separate the list items.
-                typeof x === "string" && x.includes(",")
-                  ? x.replace(/,/g, " ")
-                  : x
-              )
-            ),
+        copyData: arrayToCopyValue(cellData),
       } as MultiSelectCell
     },
     getCellValue(cell: MultiSelectCell): string[] | null {
-      if (isNullOrUndefined(cell.data?.values) || isMissingValueCell(cell)) {
+      if (isNullOrUndefined(cell.data?.values)) {
         return null
       }
 
@@ -92,4 +117,4 @@ function MultiSelectColumn(props: BaseColumnProps): BaseColumn {
 
 MultiSelectColumn.isEditableType = true
 
-export default MultiSelectColumn as ColumnCreator
+export default MultiSelectColumn

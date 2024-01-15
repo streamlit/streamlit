@@ -400,7 +400,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
             pd.Index,
             pd.DatetimeIndex,
             # Categorical index doesn't work since arrow
-            # does serialize the options:
+            # does not serialize the options:
             # pd.CategoricalIndex,
             # Interval type isn't editable currently:
             # pd.IntervalIndex,
