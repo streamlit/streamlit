@@ -473,7 +473,10 @@ const renderer: CustomRenderer<MultiSelectCell> = {
       )
 
       x += width + TAG_MARGIN
-      if (x > drawArea.x + drawArea.width && row >= rows) {
+      if (
+        x > drawArea.x + drawArea.width + theme.cellHorizontalPadding &&
+        row >= rows
+      ) {
         break
       }
     }
