@@ -170,14 +170,14 @@ class DataEditorSerde:
 
 
 def _parse_value(
-    value: str | int | float | bool | None,
+    value: str | int | float | bool | List[str] | None,
     column_data_kind: ColumnDataKind,
 ) -> Any:
     """Convert a value to the correct type.
 
     Parameters
     ----------
-    value : str | int | float | bool | None
+    value : str | int | float | bool | List[str] | None
         The value to convert.
 
     column_data_kind : ColumnDataKind

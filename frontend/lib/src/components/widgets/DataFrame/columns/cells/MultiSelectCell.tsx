@@ -264,14 +264,19 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
       }
     },
     multiValueLabel: (styles, { data, isDisabled }) => {
-      const color = chroma(data.color ?? theme.bgBubble)
       return {
         ...styles,
         paddingRight: isDisabled ? BUBBLE_PADDING : undefined,
         paddingLeft: BUBBLE_PADDING,
         paddingTop: 0,
         paddingBottom: 0,
-        color: color.luminance() > 0.5 ? "black" : "white",
+        color: data.color
+          ? // If a color is set for this option,
+            // we use it to determine the text color.
+            chroma(data.color).luminance() > 0.5
+            ? "black"
+            : "white"
+          : theme.textBubble,
         fontSize: theme.editorFontSize,
         fontFamily: theme.fontFamily,
         justifyContent: "center",
@@ -289,7 +294,13 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
       const color = chroma(data.color ?? theme.bgBubble)
       return {
         ...styles,
-        color: color.luminance() > 0.5 ? "black" : "white",
+        color: data.color
+          ? // If a color is set for this option,
+            // we use it to determine the text color.
+            color.luminance() > 0.5
+            ? "black"
+            : "white"
+          : theme.textBubble,
         backgroundColor: isFocused
           ? color.luminance() > 0.5
             ? color.darken(0.5).css()
@@ -475,7 +486,11 @@ const renderer: CustomRenderer<MultiSelectCell> = {
       )
       ctx.fill()
 
-      ctx.fillStyle = color.luminance() > 0.5 ? "#000000" : "#ffffff"
+      ctx.fillStyle = matchedOption?.color
+        ? color.luminance() > 0.5
+          ? "#000000"
+          : "#ffffff"
+        : theme.textBubble
       ctx.fillText(
         displayText,
         x + BUBBLE_PADDING,

@@ -78,7 +78,7 @@ function useCustomTheme(): CustomThemeReturn {
       // Special cells:
       bgBubble: theme.colors.secondaryBg,
       bgBubbleSelected: lighten(theme.colors.secondaryBg, 0.1),
-      textBubble: theme.colors.fadedText60,
+      textBubble: theme.colors.bodyText,
       linkColor: theme.colors.linkText,
       drilldownBorder: theme.colors.darkenedBgMix25,
       // Unused settings:

@@ -112,6 +112,7 @@ function MultiSelectColumn(
       roundingRadius: 4,
       bgBubble: theme.colors.primary,
       bgBubbleSelected: theme.colors.primary,
+      textBubble: theme.colors.white,
     },
     getCell(data?: any, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
