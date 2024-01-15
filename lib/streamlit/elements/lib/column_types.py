@@ -94,9 +94,15 @@ class ListColumnConfig(TypedDict):
     type: Literal["list"]
 
 
+class MultiSelectOption(TypedDict):
+    value: str
+    label: NotRequired[str | None]
+    color: NotRequired[str | None]
+
+
 class MultiSelectColumnConfig(TypedDict):
     type: Literal["multiselect"]
-    options: NotRequired[List[str] | None]
+    options: NotRequired[List[str] | List[MultiSelectOption] | None]
 
 
 class DatetimeColumnConfig(TypedDict):
@@ -1108,9 +1114,17 @@ def MultiSelectColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     default: Iterable[str] | None = None,
-    options: Iterable[str] | None = None,
+    options: Iterable[str] | Iterable[MultiSelectOption] | None = None,
 ):
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
+
+    This is the default column type for list-like values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``.
+
+    This only support string-list values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+    When used with ``st.data_editor``, editing will be enabled with a multiselect widget.
 
     Parameters
     ----------

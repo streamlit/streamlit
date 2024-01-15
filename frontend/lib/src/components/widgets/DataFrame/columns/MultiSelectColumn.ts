@@ -29,9 +29,44 @@ import {
   toSafeArray,
 } from "./utils"
 import { MultiSelectCell } from "./cells/MultiSelectCell"
+import { unique } from "vega-lite"
+
+type SelectOption = { value: string; label?: string; color?: string }
+
+/**
+ * Unifies the options into the format required by the multi-select cell.
+ *
+ * @param options The options to prepare.
+ * @returns The prepared options in the format required by the multi-select cell.
+ */
+export const prepareOptions = (
+  options: readonly (string | SelectOption)[]
+): { value: string; label?: string; color?: string }[] => {
+  if (isNullOrUndefined(options)) {
+    return []
+  }
+
+  return options
+    .filter(opt => opt !== null && opt !== "")
+    .map(option => {
+      if (typeof option === "string") {
+        return {
+          value: toSafeString(option).trim(),
+          label: undefined,
+          color: undefined,
+        }
+      }
+
+      return {
+        value: toSafeString(option.value).trim(),
+        label: option.label ?? undefined,
+        color: option.color ?? undefined,
+      }
+    })
+}
 
 export interface MultiSelectColumnParams {
-  readonly options: string[]
+  readonly options: (string | SelectOption)[]
 }
 
 function MultiSelectColumn(
@@ -47,6 +82,12 @@ function MultiSelectColumn(
     props.columnTypeOptions
   ) as MultiSelectColumnParams
 
+  const preparedOptions = prepareOptions(parameters.options)
+  const uniqueOptions = unique(
+    preparedOptions.map(opt => opt.value),
+    x => x
+  )
+
   const cellTemplate = {
     kind: GridCellKind.Custom,
     readonly: !props.isEditable,
@@ -56,11 +97,7 @@ function MultiSelectColumn(
     data: {
       kind: "multi-select-cell",
       values: [],
-      options: [
-        ...parameters.options
-          .filter(opt => opt !== null && opt !== "") // ignore empty option if it exists
-          .map(opt => toSafeString(opt).trim()), // convert everything to string
-      ],
+      options: preparedOptions,
       allowCreation: false,
       allowDuplicates: false,
     },
@@ -95,9 +132,7 @@ function MultiSelectColumn(
 
       if (validate && cellData.length > 0) {
         // Filter out values that are not in the options list:
-        cellData = cellData.filter((x: string) =>
-          cellTemplate.data.options?.includes(x)
-        )
+        cellData = cellData.filter((x: string) => uniqueOptions.includes(x))
         if (cellData.length === 0) {
           return getErrorCell(
             toSafeString(data),
