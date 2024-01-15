@@ -65,17 +65,17 @@ function MultiSelectColumn(
       allowDuplicates: false,
     },
     copyData: "",
+  } as MultiSelectCell
+
+  return {
+    ...props,
+    kind: "multiselect",
+    sortMode: "default",
     themeOverride: {
       roundingRadius: 4,
       bgBubble: theme.colors.primary,
       bgBubbleSelected: theme.colors.primary,
     },
-  } as MultiSelectCell
-
-  return {
-    ...props,
-    kind: "link",
-    sortMode: "default",
     getCell(data?: any, validate?: boolean): GridCell {
       if (isNullOrUndefined(data)) {
         return {
@@ -84,7 +84,7 @@ function MultiSelectColumn(
             ...cellTemplate.data,
             values: null,
           },
-          isMissingValue: isNullOrUndefined(data),
+          isMissingValue: true,
           copyData: "",
         } as MultiSelectCell
       }
@@ -112,7 +112,6 @@ function MultiSelectColumn(
           ...cellTemplate.data,
           values: cellData,
         },
-        isMissingValue: isNullOrUndefined(data),
         copyData: arrayToCopyValue(cellData),
       } as MultiSelectCell
     },

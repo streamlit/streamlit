@@ -1020,12 +1020,15 @@ def ListColumn(
     *,
     width: ColumnWidth | None = None,
     help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
 ):
     """Configure a list column in ``st.dataframe`` or ``st.data_editor``.
 
-    This is the default column type for list-like values. List columns are not editable
-    at the moment. This command needs to be used in the ``column_config`` parameter of
-    ``st.dataframe`` or ``st.data_editor``.
+    This is the default column type for list-like values. This command needs to
+    be used in the ``column_config`` parameter of ``st.dataframe`` or
+    ``st.data_editor``.
 
     Parameters
     ----------
@@ -1040,6 +1043,17 @@ def ListColumn(
 
     help: str or None
         An optional tooltip that gets displayed when hovering over the column label.
+
+    disabled: bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required: bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default: Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
+
 
     Examples
     --------
@@ -1075,7 +1089,13 @@ def ListColumn(
         height: 300px
     """
     return ColumnConfig(
-        label=label, width=width, help=help, type_config=ListColumnConfig(type="list")
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=default,
+        type_config=ListColumnConfig(type="list"),
     )
 
 

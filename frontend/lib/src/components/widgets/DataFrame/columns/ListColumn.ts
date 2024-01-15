@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCell, BubbleCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
@@ -23,46 +23,70 @@ import {
   BaseColumnProps,
   toSafeArray,
   arrayToCopyValue,
-  isMissingValueCell,
 } from "./utils"
+import { MultiSelectCell } from "./cells/MultiSelectCell"
 
 /**
  * A column type that supports optimized rendering values of array/list types.
  */
 function ListColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate = {
-    kind: GridCellKind.Bubble,
-    data: [],
+    kind: GridCellKind.Custom,
+    readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
-  } as BubbleCell
+    data: {
+      kind: "multi-select-cell",
+      values: [],
+      options: undefined,
+      allowCreation: true,
+      allowDuplicates: true,
+    },
+    copyData: "",
+  } as MultiSelectCell
 
   return {
     ...props,
     kind: "list",
     sortMode: "default",
-    isEditable: false, // List column is always readonly
+    themeOverride: {
+      roundingRadius: 4,
+    },
     getCell(data?: any): GridCell {
-      const cellData = isNullOrUndefined(data) ? [] : toSafeArray(data)
+      if (isNullOrUndefined(data)) {
+        return {
+          ...cellTemplate,
+          data: {
+            ...cellTemplate.data,
+            values: null,
+          },
+          isMissingValue: true,
+          copyData: "",
+        } as MultiSelectCell
+      }
+
+      const cellData = toSafeArray(data)
 
       return {
         ...cellTemplate,
-        data: cellData,
-        isMissingValue: isNullOrUndefined(data),
+        data: {
+          ...cellTemplate.data,
+          values: cellData,
+        },
         copyData: arrayToCopyValue(cellData),
-      } as BubbleCell
+      } as MultiSelectCell
     },
-    getCellValue(cell: BubbleCell): string[] | null {
-      if (isNullOrUndefined(cell.data) || isMissingValueCell(cell)) {
+    getCellValue(cell: MultiSelectCell): string[] | null {
+      if (isNullOrUndefined(cell.data?.values)) {
         return null
       }
 
-      return cell.data
+      return cell.data.values
     },
   }
 }
 
-ListColumn.isEditableType = false
+ListColumn.isEditableType = true
 
 export default ListColumn

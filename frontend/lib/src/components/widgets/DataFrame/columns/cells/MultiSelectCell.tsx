@@ -353,7 +353,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         inputValue={inputValue}
         onInputChange={setInputValue}
         options={options}
-        placeholder={cell.readonly ? "" : undefined}
+        placeholder={cell.readonly ? "" : allowCreation ? "Add..." : undefined}
         noOptionsMessage={input => {
           return allowCreation && allowDuplicates && input.inputValue
             ? `Create "${input.inputValue}"`
