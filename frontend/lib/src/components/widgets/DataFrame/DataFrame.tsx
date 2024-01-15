@@ -323,9 +323,12 @@ function DataFrame({
 
   const { drawCell, customRenderers } = useCustomRenderer(columns)
 
-  const { columns: glideColumns, onColumnResize } = useColumnSizer(
-    columns.map(column => toGlideColumn(column))
+  const transformedColumns = React.useMemo(
+    () => columns.map(column => toGlideColumn(column)),
+    [columns]
   )
+  const { columns: glideColumns, onColumnResize } =
+    useColumnSizer(transformedColumns)
 
   const {
     minHeight,
