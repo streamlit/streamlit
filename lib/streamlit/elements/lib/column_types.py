@@ -1145,6 +1145,32 @@ def MultiSelectColumn(
 
     >>> import pandas as pd
     >>> import streamlit as st
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "category": [
+    >>>         ["exploration", "visualization"],
+    >>>         ["llm", "visualization"],
+    >>>         [],
+    >>>         ["exploration"],
+    >>>     ],
+    >>> }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>> data_df,
+    >>> column_config={
+    >>>     "category": st.column_config.MultiSelectColumn(
+    >>>         "App Categories",
+    >>>         help="The categories of the app",
+    >>>         options=[
+    >>>             "exploration",
+    >>>             "visualization",
+    >>>             "llm",
+    >>>         ],
+    >>>     )
+    >>> },
+    >>> hide_index=True,
+    >>> )
 
     .. output::
         https://doc-multiselect-column.streamlit.app/
