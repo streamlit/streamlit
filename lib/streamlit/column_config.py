@@ -27,9 +27,9 @@ __all__ = [
     "LinkColumn",
     "LineChartColumn",
     "ListColumn",
+    "MultiselectColumn",
     "DateColumn",
     "TimeColumn",
-    "MultiSelectColumn",
 ]
 
 
@@ -43,7 +43,7 @@ from streamlit.elements.lib.column_types import (
     LineChartColumn,
     LinkColumn,
     ListColumn,
-    MultiSelectColumn,
+    MultiselectColumn,
     NumberColumn,
     ProgressColumn,
     SelectboxColumn,

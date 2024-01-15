@@ -94,15 +94,15 @@ class ListColumnConfig(TypedDict):
     type: Literal["list"]
 
 
-class MultiSelectOption(TypedDict):
+class MultiselectOption(TypedDict):
     value: str
     label: NotRequired[str | None]
     color: NotRequired[str | None]
 
 
-class MultiSelectColumnConfig(TypedDict):
+class MultiselectColumnConfig(TypedDict):
     type: Literal["multiselect"]
-    options: NotRequired[List[str] | List[MultiSelectOption] | None]
+    options: NotRequired[List[str] | List[MultiselectOption] | None]
 
 
 class DatetimeColumnConfig(TypedDict):
@@ -193,7 +193,7 @@ class ColumnConfig(TypedDict, total=False):
         LineChartColumnConfig,
         BarChartColumnConfig,
         ImageColumnConfig,
-        MultiSelectColumnConfig,
+        MultiselectColumnConfig,
         None,
     ]
 
@@ -1105,8 +1105,8 @@ def ListColumn(
     )
 
 
-@gather_metrics("column_config.MultiSelectColumn")
-def MultiSelectColumn(
+@gather_metrics("column_config.MultiselectColumn")
+def MultiselectColumn(
     label: str | None = None,
     *,
     width: ColumnWidth | None = None,
@@ -1114,7 +1114,7 @@ def MultiSelectColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     default: Iterable[str] | None = None,
-    options: Iterable[str] | Iterable[MultiSelectOption] | None = None,
+    options: Iterable[str] | Iterable[MultiselectOption] | None = None,
 ):
     """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1173,7 +1173,7 @@ def MultiSelectColumn(
     >>> st.data_editor(
     >>> data_df,
     >>> column_config={
-    >>>     "category": st.column_config.MultiSelectColumn(
+    >>>     "category": st.column_config.MultiselectColumn(
     >>>         "App Categories",
     >>>         help="The categories of the app",
     >>>         options=[
@@ -1197,7 +1197,7 @@ def MultiSelectColumn(
         disabled=disabled,
         required=required,
         default=default,
-        type_config=MultiSelectColumnConfig(
+        type_config=MultiselectColumnConfig(
             type="multiselect",
             options=list(options) if options is not None else None,
         ),
