@@ -71,7 +71,6 @@ function useCustomTheme(): CustomThemeReturn {
       textDark: theme.colors.bodyText,
       textMedium: transparentize(theme.colors.bodyText, 0.2),
       textLight: theme.colors.fadedText40,
-      textBubble: theme.colors.fadedText60,
       bgCell: theme.colors.bgColor,
       bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color
       cellHorizontalPadding: 8,
@@ -79,6 +78,7 @@ function useCustomTheme(): CustomThemeReturn {
       // Special cells:
       bgBubble: theme.colors.secondaryBg,
       bgBubbleSelected: lighten(theme.colors.secondaryBg, 0.1),
+      textBubble: theme.colors.fadedText60,
       linkColor: theme.colors.linkText,
       drilldownBorder: theme.colors.darkenedBgMix25,
       // Unused settings:

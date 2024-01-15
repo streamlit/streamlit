@@ -53,13 +53,11 @@ interface MultiSelectCellProps {
   readonly allowCreation?: boolean
   /* If true, users can select the same value multiple times. */
   readonly allowDuplicates?: boolean
-  /* The default color of the tags. */
-  readonly color?: string
 }
 
-const TAG_HEIGHT = 20
-const TAG_PADDING = 6
-const TAG_MARGIN = 4
+const BUBBLE_HEIGHT = 20
+const BUBBLE_PADDING = 6
+const BUBBLE_MARGIN = 4
 /* This prefix is used when allowDuplicates is enabled to make sure that
 all underlying values are unique. */
 const VALUE_PREFIX = "__value"
@@ -163,7 +161,6 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
   const {
     options: optionsIn,
     values: valuesIn,
-    color: colorIn,
     allowCreation,
     allowDuplicates,
   } = cell.data
@@ -219,7 +216,12 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         },
       }
     },
-    input: styles => {
+    input: (styles, { isDisabled }) => {
+      if (isDisabled) {
+        return {
+          display: "none",
+        }
+      }
       return {
         ...styles,
         fontSize: theme.editorFontSize,
@@ -254,22 +256,28 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
       }
     },
     multiValue: (styles, { data }) => {
-      const color = chroma(data.color ?? colorIn ?? theme.bgBubble)
+      const color = chroma(data.color ?? theme.bgBubble)
       return {
         ...styles,
         backgroundColor: color.css(),
-        borderRadius: `${theme.roundingRadius ?? TAG_HEIGHT / 2}px`,
+        borderRadius: `${theme.roundingRadius ?? BUBBLE_HEIGHT / 2}px`,
       }
     },
     multiValueLabel: (styles, { data, isDisabled }) => {
-      const color = chroma(data.color ?? colorIn ?? theme.bgBubble)
+      const color = chroma(data.color ?? theme.bgBubble)
       return {
         ...styles,
-        paddingRight: isDisabled ? TAG_PADDING : undefined,
-        paddingLeft: TAG_PADDING,
+        paddingRight: isDisabled ? BUBBLE_PADDING : undefined,
+        paddingLeft: BUBBLE_PADDING,
+        paddingTop: 0,
+        paddingBottom: 0,
         color: color.luminance() > 0.5 ? "black" : "white",
         fontSize: theme.editorFontSize,
         fontFamily: theme.fontFamily,
+        justifyContent: "center",
+        alignItems: "center",
+        display: "flex",
+        height: BUBBLE_HEIGHT,
       }
     },
     multiValueRemove: (styles, { data, isDisabled, isFocused }) => {
@@ -278,7 +286,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
           display: "none",
         }
       }
-      const color = chroma(data.color ?? colorIn ?? theme.bgBubble)
+      const color = chroma(data.color ?? theme.bgBubble)
       return {
         ...styles,
         color: color.luminance() > 0.5 ? "black" : "white",
@@ -288,7 +296,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
             : color.brighten(0.5).css()
           : undefined,
         borderRadius: isFocused
-          ? `${theme.roundingRadius ?? TAG_HEIGHT / 2}px`
+          ? `${theme.roundingRadius ?? BUBBLE_HEIGHT / 2}px`
           : undefined,
         ":hover": {
           cursor: "pointer",
@@ -359,11 +367,11 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
             ? `Create "${input.inputValue}"`
             : undefined
         }}
-        menuIsOpen={menuOpen}
+        menuIsOpen={cell.readonly ? false : menuOpen}
         onMenuOpen={() => setMenuOpen(true)}
         onMenuClose={() => setMenuOpen(false)}
         value={resolveValues(value, options, allowDuplicates)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={cell.readonly ? undefined : handleKeyDown}
         menuPlacement={"auto"}
         menuPortalTarget={document.getElementById("portal")}
         autoFocus={true}
@@ -404,7 +412,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     (c.data as any).kind === "multi-select-cell",
   draw: (args, cell) => {
     const { ctx, theme, rect, highlighted } = args
-    const { values, options: optionsIn, color: colorIn } = cell.data
+    const { values, options: optionsIn } = cell.data
 
     if (values === undefined || values === null) {
       return true
@@ -420,7 +428,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     }
     const rows = Math.max(
       1,
-      Math.floor(drawArea.height / (TAG_HEIGHT + TAG_PADDING))
+      Math.floor(drawArea.height / (BUBBLE_HEIGHT + BUBBLE_PADDING))
     )
 
     let { x } = drawArea
@@ -428,20 +436,22 @@ const renderer: CustomRenderer<MultiSelectCell> = {
 
     let y =
       rows === 1
-        ? drawArea.y + (drawArea.height - TAG_HEIGHT) / 2
+        ? drawArea.y + (drawArea.height - BUBBLE_HEIGHT) / 2
         : drawArea.y +
-          (drawArea.height - rows * TAG_HEIGHT - (rows - 1) * TAG_PADDING) / 2
+          (drawArea.height -
+            rows * BUBBLE_HEIGHT -
+            (rows - 1) * BUBBLE_PADDING) /
+            2
     for (const value of values) {
       const matchedOption = options.find(t => t.value === value)
       const color = chroma(
         matchedOption?.color ??
-          colorIn ??
           (highlighted ? theme.bgBubbleSelected : theme.bgBubble)
       )
       const displayText = matchedOption?.label ?? value
       const metrics = measureTextCached(displayText, ctx)
-      const width = metrics.width + TAG_PADDING * 2
-      const textY = TAG_HEIGHT / 2
+      const width = metrics.width + BUBBLE_PADDING * 2
+      const textY = BUBBLE_HEIGHT / 2
 
       if (
         x !== drawArea.x &&
@@ -449,7 +459,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
         row < rows
       ) {
         row++
-        y += TAG_HEIGHT + TAG_PADDING
+        y += BUBBLE_HEIGHT + BUBBLE_PADDING
         x = drawArea.x
       }
 
@@ -460,19 +470,19 @@ const renderer: CustomRenderer<MultiSelectCell> = {
         x,
         y,
         width,
-        TAG_HEIGHT,
-        theme.roundingRadius ?? TAG_HEIGHT / 2
+        BUBBLE_HEIGHT,
+        theme.roundingRadius ?? BUBBLE_HEIGHT / 2
       )
       ctx.fill()
 
       ctx.fillStyle = color.luminance() > 0.5 ? "#000000" : "#ffffff"
       ctx.fillText(
         displayText,
-        x + TAG_PADDING,
+        x + BUBBLE_PADDING,
         y + textY + getMiddleCenterBias(ctx, theme)
       )
 
-      x += width + TAG_MARGIN
+      x += width + BUBBLE_MARGIN
       if (
         x > drawArea.x + drawArea.width + theme.cellHorizontalPadding &&
         row >= rows
@@ -500,7 +510,10 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     return (
       labels.reduce(
         (acc, data) =>
-          ctx.measureText(data).width + acc + TAG_PADDING * 2 + TAG_MARGIN,
+          ctx.measureText(data).width +
+          acc +
+          BUBBLE_PADDING * 2 +
+          BUBBLE_MARGIN,
         0
       ) +
       2 * t.cellHorizontalPadding -
