@@ -605,7 +605,7 @@ class DataEditorMixin:
                 - Styles from ``pandas.Styler`` will only be applied to non-editable columns.
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
-                  complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
+                  complex, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
                   fractions.Fraction, pandas.Interval, and pandas.Period.
                 - To prevent overflow in JavaScript, columns containing datetime.timedelta
                   and pandas.Timedelta values will default to uneditable but this can be
