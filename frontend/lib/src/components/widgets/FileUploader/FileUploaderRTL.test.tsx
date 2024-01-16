@@ -29,6 +29,7 @@ import {
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import FileUploader, { Props } from "./FileUploader"
+import { act } from "react-dom/test-utils"
 
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {
@@ -214,5 +215,78 @@ describe("FileUploader widget RTL tests", () => {
     expect(currentFiles[0].textContent).toContain("filename2.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(secondFile)
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+  })
+
+  it("uploads multiple files, even if some have errors", async () => {
+    const props = getProps({ multipleFiles: true, type: [".txt"] })
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId(
+      "stFileUploadDropzone"
+    ) as HTMLElement
+
+    const myFiles = [
+      new File(["Text in a file!"], "filename1.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Text in a file?"], "filename2.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Another PDF file"], "anotherpdffile.pdf", {
+        type: "application/pdf",
+        lastModified: 0,
+      }),
+    ]
+    act(() => {
+      fireEvent.drop(fileDropZone, {
+        dataTransfer: {
+          types: ["Files"],
+          files: myFiles,
+          items: myFiles.map(file => ({
+            kind: "file",
+            type: file.type,
+            getAsFile: () => file,
+          })),
+        },
+      })
+    })
+
+    await waitFor(() =>
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    )
+
+    const fileNames = await waitFor(() =>
+      screen.getAllByTestId("stUploadedFile")
+    )
+
+    expect(fileNames.length).toBe(3)
+
+    const errorFileNames = await waitFor(() =>
+      screen.getAllByTestId("stUploadedFileErrorMessage")
+    )
+
+    expect(errorFileNames.length).toBe(1)
+
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
+        },
+        {
+          fileId: "filename2.txt",
+          uploadUrl: "filename2.txt",
+          deleteUrl: "filename2.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
   })
 })
