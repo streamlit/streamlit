@@ -116,7 +116,7 @@ export class FileUploadClient {
   ): Promise<void> {
     this.offsetPendingRequestCount(widget.formId, 1)
 
-    // stlite: Use form upload
+    // stlite Modification: Use form upload
     const form = new FormData()
     form.append("sessionId", this.sessionInfo.current.sessionId)
     form.append(file.name, file)
@@ -133,7 +133,7 @@ export class FileUploadClient {
 
       return this.kernel
         .sendHttpRequest({
-          method: "POST",
+          method: "PUT",
           path: fileUploadUrl,
           body,
           headers: { ...encoder.headers },
@@ -143,16 +143,6 @@ export class FileUploadClient {
         })
         .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
     })
-
-    //   return this.endpoints
-    //     .uploadFileUploaderFile(
-    //       fileUploadUrl,
-    //       file,
-    //       this.sessionInfo.current.sessionId,
-    //       onUploadProgress,
-    //       cancelToken
-    //     )
-    //     .finally(() => this.offsetPendingRequestCount(widget.formId, -1))
   }
 
   /**
