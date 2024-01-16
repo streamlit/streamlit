@@ -62,7 +62,7 @@ def test_embedded_app_with_bottom_chat_input(
     # Bottom padding should be 16px (1rem):
     expect(app_view_block).to_have_css("padding-bottom", "16px")
     bottom_block = page.get_by_test_id("stBottomBlockContainer")
-    # Bottom padding should be 16px (1rem):
+    # Bottom padding should be 32px (2rem):
     expect(bottom_block).to_have_css("padding-bottom", "32px")
     # Top padding should be 16px (1rem):
     expect(bottom_block).to_have_css("padding-top", "16px")
@@ -85,7 +85,7 @@ def test_app_with_bottom_chat_input(app: Page, assert_snapshot: ImageCompareFunc
     expect(app_view_block).to_have_css("padding-bottom", "16px")
 
     bottom_block = app.get_by_test_id("stBottomBlockContainer")
-    # Bottom padding should be 16px (1rem):
+    # Bottom padding should be 55px:
     expect(bottom_block).to_have_css("padding-bottom", "55px")
     # Top padding should be 16px (1rem):
     expect(bottom_block).to_have_css("padding-top", "16px")
