@@ -16,9 +16,7 @@
 
 import "@testing-library/jest-dom"
 import { fireEvent, screen, waitFor } from "@testing-library/react"
-import { act } from "@testing-library/react-hooks"
 import React from "react"
-import { FileError } from "react-dropzone"
 import { render } from "@streamlit/lib/src/test_util"
 import userEvent from "@testing-library/user-event"
 
@@ -26,18 +24,11 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
   IFileURLs,
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import FileUploader, { Props } from "./FileUploader"
-import {
-  ErrorStatus,
-  UploadFileInfo,
-  UploadedStatus,
-  UploadingStatus,
-} from "./UploadFileInfo"
 
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {
@@ -60,21 +51,6 @@ const buildFileUploaderStateProto = (
         })
     ),
   })
-
-const INVALID_TYPE_ERROR: FileError = {
-  message: "error message",
-  code: "file-invalid-type",
-}
-
-const TOO_MANY_FILES: FileError = {
-  message: "error message",
-  code: "too-many-files",
-}
-
-const FILE_TOO_LARGE: FileError = {
-  message: "error message",
-  code: "file-too-large",
-}
 
 const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
   return {
@@ -145,7 +121,6 @@ describe("FileUploader widget RTL tests", () => {
     )
   })
   it("uploads a single file even if too many files are selected", async () => {
-    const user = userEvent.setup()
     const props = getProps({ multipleFiles: false })
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
@@ -169,13 +144,11 @@ describe("FileUploader widget RTL tests", () => {
       }),
     ]
 
-    act(() => {
-      fireEvent.drop(fileDropZone, {
-        dataTransfer: {
-          types: ["Files", "Files", "Files"],
-          files: myFiles,
-        },
-      })
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files", "Files", "Files"],
+        files: myFiles,
+      },
     })
 
     await waitFor(() =>
