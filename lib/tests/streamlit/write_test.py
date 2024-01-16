@@ -458,17 +458,19 @@ class StreamlitStreamTest(unittest.TestCase):
             yield pd.DataFrame([[1, 2], [3, 4]])
             yield "Text under dataframe"
 
-        stream_return = st.experimental_stream(test_stream)
-        self.assertEqual(
-            str(stream_return),
-            str(
-                [
-                    "This is a dataframe:",
-                    pd.DataFrame([[1, 2], [3, 4]]),
-                    "Text under dataframe",
-                ]
-            ),
-        )
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
+            stream_return = st.experimental_stream(test_stream)
+            p_dataframe.assert_called_once()
+            self.assertEqual(
+                str(stream_return),
+                str(
+                    [
+                        "This is a dataframe:",
+                        pd.DataFrame([[1, 2], [3, 4]]),
+                        "Text under dataframe",
+                    ]
+                ),
+            )
 
     def test_with_list_output(self):
         """Test st.stream with a list."""
@@ -480,17 +482,19 @@ class StreamlitStreamTest(unittest.TestCase):
             "Text under dataframe",
         ]
 
-        stream_return = st.experimental_stream(data)
-        self.assertEqual(
-            str(stream_return),
-            str(
-                [
-                    "This is a dataframe:",
-                    pd.DataFrame([[1, 2], [3, 4]]),
-                    "Text under dataframe",
-                ]
-            ),
-        )
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
+            stream_return = st.experimental_stream(data)
+            p_dataframe.assert_called_once()
+            self.assertEqual(
+                str(stream_return),
+                str(
+                    [
+                        "This is a dataframe:",
+                        pd.DataFrame([[1, 2], [3, 4]]),
+                        "Text under dataframe",
+                    ]
+                ),
+            )
 
 
 def make_is_type_mock(true_type_matchers):
