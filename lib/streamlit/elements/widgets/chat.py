@@ -299,7 +299,7 @@ class ChatMixin:
         if runtime.exists():
             if is_in_form(self.dg):
                 raise StreamlitAPIException(
-                    "`st.chat_input()` can't be used in an `st.form()`."
+                    "`st.chat_input()` can't be used in a `st.form()`."
                 )
 
         if position is None:
