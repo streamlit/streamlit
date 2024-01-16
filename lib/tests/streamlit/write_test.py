@@ -18,7 +18,7 @@ import dataclasses
 import time
 import unittest
 from collections import namedtuple
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
@@ -184,6 +184,19 @@ class StreamlitWriteTest(unittest.TestCase):
         # Should support it as a generator function call
         with patch("streamlit.delta_generator.DeltaGenerator.experimental_stream") as p:
             st.write(gen_function())
+
+            p.assert_called_once()
+
+    @patch("streamlit.type_util.is_type")
+    def test_openai_stream(self, is_type):
+        """Test st.write with openai.Stream."""
+        is_type.side_effect = make_is_type_mock("openai.Stream")
+
+        class FakeOpenaiStream(object):
+            pass
+
+        with patch("streamlit.delta_generator.DeltaGenerator.experimental_stream") as p:
+            st.write(FakeOpenaiStream())
 
             p.assert_called_once()
 
@@ -397,6 +410,31 @@ class StreamlitWriteTest(unittest.TestCase):
                 top_level.return_value = False
 
                 placeholder.write("But", "multiple", "args", "should", "fail")
+
+
+class StreamlitStreamTest(unittest.TestCase):
+    """Test st.stream."""
+
+    @patch("streamlit.type_util.is_type")
+    def test_openai_chunk(self, is_type):
+        """Test st.stream with openai Chunks."""
+
+        is_type.side_effect = make_is_type_mock(
+            "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
+        )
+
+        # Create a mock for ChatCompletionChunk
+        mock_chunk = MagicMock()
+        mock_chunk.choices = [MagicMock()]
+
+        def openai_stream():
+            mock_chunk.choices[0].delta.content = "Hello "
+            yield mock_chunk
+            mock_chunk.choices[0].delta.content = "World"
+            yield mock_chunk
+
+        stream_return = st.experimental_stream(openai_stream)
+        self.assertEqual(stream_return, "Hello World")
 
 
 def make_is_type_mock(true_type_matchers):
