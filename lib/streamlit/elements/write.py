@@ -75,6 +75,32 @@ class WriteMixin:
 
         This is done by iterating through the generator and writing all
         string chunks to the app with a type writer effect.
+
+        Parameters
+        ----------
+        arg : Callable, Generator, or Iterable
+            The generator or iterable to stream.
+
+        unsafe_allow_html : bool
+            This is a keyword-only argument that defaults to False.
+
+            By default, any HTML tags found in strings will be escaped and
+            therefore treated as pure text. This behavior may be turned off by
+            setting this argument to True.
+
+            That said, *we strongly advise against it*. It is hard to write secure
+            HTML, so by using this argument you may be compromising your users'
+            security. For more information, see:
+
+            https://github.com/streamlit/streamlit/issues/152
+
+        Example
+        -------
+        >>> import streamlit as st
+
+        ..  output::
+            https://doc-stream-text.streamlit.app/
+            height: 150px
         """
 
         # This causes greyed out effect since this element is missing on rerun:
@@ -154,24 +180,26 @@ class WriteMixin:
 
             Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string, with
+            - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(data_frame) : Displays the DataFrame as a table.
-            - write(error)      : Prints an exception specially.
-            - write(func)       : Displays information about a function.
-            - write(module)     : Displays information about the module.
-            - write(class)      : Displays information about a class.
-            - write(dict)       : Displays dict in an interactive widget.
-            - write(mpl_fig)    : Displays a Matplotlib figure.
-            - write(altair)     : Displays an Altair chart.
-            - write(keras)      : Displays a Keras model.
-            - write(graphviz)   : Displays a Graphviz graph.
-            - write(plotly_fig) : Displays a Plotly figure.
-            - write(bokeh_fig)  : Displays a Bokeh figure.
-            - write(sympy_expr) : Prints SymPy expression using LaTeX.
-            - write(htmlable)   : Prints _repr_html_() for the object if available.
-            - write(obj)        : Prints str(obj) if otherwise unknown.
+            - write(data_frame)     : Displays the DataFrame as a table.
+            - write(error)          : Prints an exception specially.
+            - write(generator)      : Streams the output of the generator.
+            - write(func)           : Displays information about a function.
+            - write(module)         : Displays information about the module.
+            - write(class)          : Displays information about a class.
+            - write(dict)           : Displays dict in an interactive widget.
+            - write(mpl_fig)        : Displays a Matplotlib figure.
+            - write(openai.Stream)  : Stream the output of the OpenAI stream.
+            - write(altair)         : Displays an Altair chart.
+            - write(keras)          : Displays a Keras model.
+            - write(graphviz)       : Displays a Graphviz graph.
+            - write(plotly_fig)     : Displays a Plotly figure.
+            - write(bokeh_fig)      : Displays a Bokeh figure.
+            - write(sympy_expr)     : Prints SymPy expression using LaTeX.
+            - write(htmlable)       : Prints _repr_html_() for the object if available.
+            - write(obj)            : Prints str(obj) if otherwise unknown.
 
         unsafe_allow_html : bool
             This is a keyword-only argument that defaults to False.
