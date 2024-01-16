@@ -181,8 +181,8 @@ class ScriptRunner:
         self._execing = False
 
         # This is initialized in start()
+        # Stlite: threading is not supported on Pyodide, use asyncio instead
         self._script_task: Optional[asyncio.Task] = None
-        # self._script_thread: Optional[threading.Thread] = None  # XXX: Stlite: threading is not supported on Pyodide
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -229,15 +229,10 @@ class ScriptRunner:
         This must be called only once.
 
         """
-        # Stlite: threading is not supported on Pyodide. Use script task instead
+        # Stlite: threading is not supported on Pyodide. Use asyncio instead
         if self._script_task is not None:
             raise Exception("ScriptRunner was already started")
 
-        # self._script_thread = threading.Thread(
-        #     target=self._run_script_thread,
-        #     name="ScriptRunner.scriptThread",
-        # )
-        # self._script_thread.start()
         self._script_task = asyncio.create_task(self._run_script_thread())
 
     def _get_script_run_ctx(self) -> ScriptRunContext:
