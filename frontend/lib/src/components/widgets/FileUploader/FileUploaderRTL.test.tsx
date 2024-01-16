@@ -15,7 +15,8 @@
  */
 
 import "@testing-library/jest-dom"
-import { screen } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { act } from "@testing-library/react-hooks"
 import React from "react"
 import { FileError } from "react-dropzone"
 import { render } from "@streamlit/lib/src/test_util"
@@ -54,7 +55,7 @@ const buildFileUploaderStateProto = (
         new UploadedFileInfoProto({
           fileId: fileUrls.fileId,
           fileUrls,
-          name: "filename.txt",
+          name: fileUrls.fileId,
           size: 15,
         })
     ),
@@ -111,7 +112,7 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
 }
 
 describe("FileUploader widget RTL tests", () => {
-  it("uploads rtl a single file upload", async () => {
+  it("uploads a single file upload", async () => {
     const user = userEvent.setup()
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
@@ -136,6 +137,70 @@ describe("FileUploader widget RTL tests", () => {
           fileId: "filename.txt",
           uploadUrl: "filename.txt",
           deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
+  })
+  it("uploads a single file even if too many files are selected", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ multipleFiles: false })
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId(
+      "stFileUploadDropzone"
+    ) as HTMLElement
+
+    const myFiles = [
+      new File(["Text in a file!"], "filename1.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Text in an another file!"], "filename2.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+      new File(["Another text in an another file!"], "filename3.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+    ]
+
+    act(() => {
+      fireEvent.drop(fileDropZone, {
+        dataTransfer: {
+          types: ["Files", "Files", "Files"],
+          files: myFiles,
+        },
+      })
+    })
+
+    await waitFor(() =>
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
+    )
+
+    const fileElements = screen.getAllByTestId("stUploadedFile")
+    // We should have 3 files. One will be uploading, the other two will
+    // be in the error state.
+    expect(fileElements.length).toBe(3)
+    expect(fileElements[0].textContent).toContain("filename1.txt")
+
+    const errors = screen.getAllByTestId("stUploadedFileErrorMessage")
+
+    expect(errors.length).toBe(2)
+    expect(errors[0].textContent).toContain("Only one file is allowed.")
+    expect(errors[1].textContent).toContain("Only one file is allowed.")
+
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
         },
       ]),
       {
