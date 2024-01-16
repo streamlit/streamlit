@@ -35,8 +35,7 @@ import {
   DialogType,
   StreamlitDialog,
 } from "@streamlit/app/src/components/StreamlitDialog"
-// Stlite Modification: we use a replacement implementation:
-// import { ConnectionManager } from "@streamlit/app/src/connection/ConnectionManager"
+// Stlite: we use a replacement implementation:
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
 import {
