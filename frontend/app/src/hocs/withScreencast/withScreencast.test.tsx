@@ -16,7 +16,7 @@
 
 import React, { PureComponent, ReactElement } from "react"
 import "@testing-library/jest-dom"
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib"
 import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
 
@@ -99,62 +99,5 @@ describe("withScreencast HOC", () => {
         screen.getByTestId("stUnsupportedBrowserDialog")
       ).toBeInTheDocument()
     })
-
-    //   const wrapper = shallow(
-    //     <WrappedTestComponent unrelatedProp={"mockLabel"} />
-    //   )
-    //   ScreenCastRecorder.isSupportedBrowser = () => true
-    //   wrapper
-    //     .find(TestComponent)
-    //     .props()
-    //     .screenCast.startRecording("screencast-filename")
-
-    // it("shows an unsupported dialog when it doesn't have a mediaDevices support", () => {
-    //   const wrapper = shallow(
-    //     <WrappedTestComponent unrelatedProp={"mockLabel"} />
-    //   )
-
-    //   Object.defineProperty(window.navigator, "mediaDevices", {
-    //     value: undefined,
-    //     configurable: true,
-    //   })
-
-    //   wrapper
-    //     .find(TestComponent)
-    //     .props()
-    //     .screenCast.startRecording("screencast-filename")
-    //
-    //   expect(wrapper.find(UnsupportedBrowserDialog).length).toBe(1)
-    // })
-
-    it("shows an unsupported dialog when it doesn't have a mediaDevices support", () => {
-      render(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
-
-      Object.defineProperty(window.navigator, "mediaDevices", {
-        value: undefined,
-        configurable: true,
-      })
-
-      // TODO:
-      // Need to find a way to trigger startRecording function passing a string - "screencast-filename"
-      fireEvent.click(screen.getByText("Start recording!"))
-
-      expect(
-        screen.getByTestId("stUnsupportedBrowserDialog")
-      ).toBeInTheDocument()
-    })
-
-    // Need to find a way to trigger .stop with Blob & stopRecording function passing a string
-
-    // it("shows recorded dialog after recording", async () => {
-    //   const wrappedComponentProps = wrapper.find(TestComponent).props()
-    //   // @ts-expect-error
-    //   wrapper.instance().recorder.stop = jest
-    //     .fn()
-    //     .mockReturnValue(new Blob([]))
-    //   await wrappedComponentProps.screenCast.stopRecording()
-    //   expect(wrapper.state("currentState")).toBe("PREVIEW_FILE")
-    //   expect(wrapper.find(VideoRecordedDialog).length).toBe(1)
-    // })
   })
 })
