@@ -67,6 +67,7 @@ class StreamingOutput(list):
 
 
 class WriteMixin:
+    @gather_metrics("experimental_stream")
     def experimental_stream(
         self, arg: Callable | Generator | Iterable, unsafe_allow_html: bool = False
     ) -> List[Any] | str:
