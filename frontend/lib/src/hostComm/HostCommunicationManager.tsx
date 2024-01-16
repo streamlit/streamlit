@@ -45,6 +45,10 @@ export interface HostCommunicationProps {
   readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
+  readonly jwtHeaderChanged: (jwtPayload: {
+    jwtHeaderName: string
+    jwtHeaderValue: string
+  }) => void
   readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
   readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
   readonly hostHideSidebarNavChanged: (hideSidebarNav: boolean) => void
@@ -192,6 +196,9 @@ export default class HostCommunicationManager {
       // is a no-op, and we already resolved the promise to undefined
       // above.
       this.deferredAuthToken.resolve(message.authToken)
+      if (message.jwtHeaderName !== undefined) {
+        this.props.jwtHeaderChanged(message)
+      }
     }
 
     if (message.type === "SET_IS_OWNER") {

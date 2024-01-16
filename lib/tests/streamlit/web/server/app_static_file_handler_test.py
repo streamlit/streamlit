@@ -69,7 +69,7 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 (
                     r"/app/static/(.*)",
                     AppStaticFileHandler,
-                    {"path": "%s/" % self._tmpdir.name},
+                    {"path": "%s" % self._tmpdir.name},
                 )
             ]
         )
@@ -137,6 +137,10 @@ class AppStaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
             self.fetch("/app/static/"),
             # Access to file outside static directory
             self.fetch("/app/static/../test_file_outside_directory.py"),
+            # Access to file outside static directory with same prefix
+            self.fetch(
+                f"/app/static/{self._tmpdir.name}_foo/test_file_outside_directory.py"
+            ),
             # Access to symlink outside static directory
             self.fetch(f"/app/static/{self._symlink_outside_directory}"),
             # Access to non-existent file

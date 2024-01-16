@@ -36,7 +36,6 @@ class ConnectionUtilTest(unittest.TestCase):
         assert extracted == {"k1": "v1", "k2": "v2"}
         assert d == {"k3": "v3", "k4": "v4"}
 
-    @pytest.mark.require_snowflake
     def test_not_running_in_sis(self):
         assert not running_in_sis()
 
@@ -47,6 +46,14 @@ class ConnectionUtilTest(unittest.TestCase):
     )
     def test_running_in_sis(self):
         assert running_in_sis()
+
+    @pytest.mark.require_snowflake
+    @patch(
+        "snowflake.snowpark._internal.utils.is_in_stored_procedure",
+        MagicMock(side_effect=ModuleNotFoundError("oh no")),
+    )
+    def test_running_in_sis_module_not_found_error(self):
+        assert not running_in_sis()
 
     def test_load_from_snowsql_config_file_no_file(self):
         assert load_from_snowsql_config_file("my_snowpark_connection") == {}
