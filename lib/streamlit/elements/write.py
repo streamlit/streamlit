@@ -37,7 +37,6 @@ from PIL import Image, ImageFile
 from typing_extensions import Final
 
 from streamlit import type_util
-from streamlit.elements.widgets.file_uploader import UploadedFile
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
