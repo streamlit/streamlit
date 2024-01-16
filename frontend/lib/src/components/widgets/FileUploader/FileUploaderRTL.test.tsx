@@ -208,4 +208,38 @@ describe("FileUploader widget RTL tests", () => {
       }
     )
   })
+  it("replaces file on single file uploader", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stDropzoneInput"
+    ) as HTMLInputElement
+
+    const firstFile = createFile()
+
+    await user.upload(fileDropZoneInput, firstFile)
+
+    const fileName = screen.getByTestId("stUploadedFile")
+    expect(fileName.textContent).toContain("filename.txt")
+    expect(fileDropZoneInput.files?.[0]).toEqual(firstFile)
+
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
+
+    const secondFile = new File(["Another text in a file"], "filename2.txt", {
+      type: "text/plain",
+      lastModified: 0,
+    })
+
+    // Upload a replacement file
+    await user.upload(fileDropZoneInput, secondFile)
+
+    const currentFiles = screen.getAllByTestId("stUploadedFile")
+    expect(currentFiles.length).toBe(1)
+    expect(currentFiles[0].textContent).toContain("filename2.txt")
+    expect(fileDropZoneInput.files?.[0]).toEqual(secondFile)
+    expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+  })
 })
