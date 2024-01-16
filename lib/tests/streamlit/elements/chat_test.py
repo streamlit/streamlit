@@ -201,7 +201,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         self.assertEqual(
             str(exception_message.value),
-            "`st.chat_input()` can't be used in an `st.form()`.",
+            "`st.chat_input()` can't be used in a `st.form()`.",
         )
 
     @parameterized.expand(
