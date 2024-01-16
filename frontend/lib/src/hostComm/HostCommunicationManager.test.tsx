@@ -198,6 +198,25 @@ describe("HostCommunicationManager messaging", () => {
     expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith()
   })
 
+  it("can process a received SET_APP_DISABLED message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_APP_DISABLED",
+          disabled: true,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.setAppDisabled).toHaveBeenCalledWith(
+      true
+    )
+  })
+
   it("should respond to SET_IS_OWNER message", () => {
     dispatchEvent(
       "message",
