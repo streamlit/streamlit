@@ -50,7 +50,7 @@ export function getWindowBaseUriParts(): BaseUriParts {
 
   let basePath
 
-  // stlite: If we're running in an iframe, the href might be "about:blank".
+  // Stlite: If we're running in an iframe, the href might be "about:blank".
   // In that case, we want to use the current path as the base path.
   if (window.location.href === "about:blank") {
     basePath = ""
