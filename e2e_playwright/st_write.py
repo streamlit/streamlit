@@ -17,6 +17,8 @@ import pandas as pd
 import streamlit as st
 from tests.streamlit import pyspark_mocks
 
+st.subheader("st.write(markdown)")
+
 st.write("Hello", "World")
 
 st.write("This **markdown** is awesome! :sunglasses:")
@@ -25,14 +27,21 @@ st.write("This <b>HTML tag</b> is escaped!")
 
 st.write("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
 
+st.subheader("st.write(dataframe-like)")
 st.write(pyspark_mocks.DataFrame())
 
 st.write(pd.DataFrame([1, 2, 3]))
+
+st.subheader("st.write(json-like)")
 
 st.write(["foo", "bar"])
 
 st.write({"foo": "bar"})
 
+st.subheader("st.write(help)")
+
 st.write(st.data_editor)
+
+st.subheader("st.write(exception)")
 
 st.write(Exception("This is an exception!"))
