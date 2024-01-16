@@ -18,19 +18,35 @@ from playwright.sync_api import Page, expect
 def test_displays_markdown(app: Page):
     """Test that markdown is displayed correctly."""
 
-    # Ensure that there are 4 element containers on the page before doing assertions
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(3)
+    expect(markdown_elements).to_have_count(4)
 
-    # Assert that the output is rendered correctly
-    expect(markdown_elements.nth(0)).to_contain_text("This markdown is awesome! 😎")
-    expect(markdown_elements.nth(1)).to_contain_text("This <b>HTML tag</b> is escaped!")
-    expect(markdown_elements.nth(2)).to_contain_text("This HTML tag is not escaped!")
+    expect(markdown_elements.nth(0)).to_contain_text("Hello World")
+    expect(markdown_elements.nth(1)).to_contain_text("This markdown is awesome! 😎")
+    expect(markdown_elements.nth(2)).to_contain_text("This <b>HTML tag</b> is escaped!")
+    expect(markdown_elements.nth(3)).to_contain_text("This HTML tag is not escaped!")
 
 
 def test_display_dataframe(app: Page):
-    """Test that st.write displays pyspark.sql.DataFrame as st.dataframe."""
+    """Test that st.write displays pyspark.sql.DataFrame and pd.Dataframe via st.dataframe."""
 
-    # Assert that there is exactly one st.dataframe component on the page
-    dataframe_element = app.locator(".stDataFrame")
-    expect(dataframe_element).to_have_count(1)
+    dataframe_element = app.get_by_test_id("stDataFrame")
+    expect(dataframe_element).to_have_count(2)
+
+
+def test_display_json(app: Page):
+    """Test that st.write displays dicts and arrays as json data."""
+    json_elements = app.get_by_test_id("stJson")
+    expect(json_elements).to_have_count(2)
+
+
+def test_display_help(app: Page):
+    """Test that st.write displays objects via st.help."""
+    help_elements = app.get_by_test_id("stDocstring")
+    expect(help_elements).to_have_count(1)
+
+
+def test_display_exception(app: Page):
+    """Test that st.write displays exceptions via st.exception."""
+    exception_elements = app.get_by_test_id("stException")
+    expect(exception_elements).to_have_count(1)

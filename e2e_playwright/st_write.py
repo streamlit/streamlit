@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pandas as pd
+
 import streamlit as st
 from tests.streamlit import pyspark_mocks
+
+st.write("Hello", "World")
 
 st.write("This **markdown** is awesome! :sunglasses:")
 
@@ -22,3 +26,13 @@ st.write("This <b>HTML tag</b> is escaped!")
 st.write("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
 
 st.write(pyspark_mocks.DataFrame())
+
+st.write(pd.DataFrame([1, 2, 3]))
+
+st.write(["foo", "bar"])
+
+st.write({"foo": "bar"})
+
+st.write(st.data_editor)
+
+st.write(Exception("This is an exception!"))
