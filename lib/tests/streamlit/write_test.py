@@ -168,6 +168,25 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
+    def test_generator(self):
+        """Test st.write with generator function."""
+
+        def gen_function():
+            yield "hello"
+            yield "world"
+
+        # Should support it as a generator function
+        with patch("streamlit.delta_generator.DeltaGenerator.experimental_stream") as p:
+            st.write(gen_function)
+
+            p.assert_called_once()
+
+        # Should support it as a generator function call
+        with patch("streamlit.delta_generator.DeltaGenerator.experimental_stream") as p:
+            st.write(gen_function())
+
+            p.assert_called_once()
+
     def test_list(self):
         """Test st.write with list."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
