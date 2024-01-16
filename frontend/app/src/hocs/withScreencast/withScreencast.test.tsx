@@ -17,17 +17,8 @@
 import React, { PureComponent, ReactElement } from "react"
 import "@testing-library/jest-dom"
 import { fireEvent, screen, waitFor } from "@testing-library/react"
-
-import { shallow, render } from "@streamlit/lib"
-
-import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
-import Countdown from "@streamlit/app/src/components/Countdown"
+import { render } from "@streamlit/lib"
 import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
-import {
-  ScreencastDialog,
-  UnsupportedBrowserDialog,
-  VideoRecordedDialog,
-} from "./components"
 
 jest.mock("@streamlit/app/src/util/ScreenCastRecorder")
 
@@ -43,12 +34,10 @@ interface TestProps {
 }
 
 class TestComponent extends PureComponent<TestProps> {
-  currentState = this.props.screenCast.currentState
   public render = (): ReactElement => (
     <>
       <div>{this.props.unrelatedProp}</div>
       <div>{this.props.screenCast ? "Screencast" : "Undefined"}</div>
-      <div>{this.currentState}</div>
     </>
   )
 }
@@ -119,56 +108,53 @@ describe("withScreencast HOC", () => {
     //     .find(TestComponent)
     //     .props()
     //     .screenCast.startRecording("screencast-filename")
-    // it("shows a configuration dialog before start recording", () => {
-    //   expect(wrapper.find(ScreencastDialog).length).toBe(1)
-    // })
-    //   it("shows a countdown after setup", async () => {
-    //     await wrapper.find(ScreencastDialog).props().startRecording()
-    //     const countdownWrapper = wrapper.find(Countdown)
-    //     expect(countdownWrapper.length).toBe(1)
-    //   })
-    //   it("is in recording state after countdown", async () => {
-    //     const countdownWrapper = wrapper.find(Countdown)
-    //     // @ts-expect-error
-    //     wrapper.instance().recorder.start = jest.fn().mockReturnValue(true)
-    //     await countdownWrapper.props().endCallback()
-    //     const wrappedComponentProps = wrapper.find(TestComponent).props()
-    //     expect(wrappedComponentProps.screenCast.currentState).toBe("RECORDING")
-    //   })
-    //   it("shows recorded dialog after recording", async () => {
-    //     const wrappedComponentProps = wrapper.find(TestComponent).props()
-    //     // @ts-expect-error
-    //     wrapper.instance().recorder.stop = jest
-    //       .fn()
-    //       .mockReturnValue(new Blob([]))
-    //     await wrappedComponentProps.screenCast.stopRecording()
-    //     expect(wrapper.state("currentState")).toBe("PREVIEW_FILE")
-    //     expect(wrapper.find(VideoRecordedDialog).length).toBe(1)
-    //   })
-    // })
-    // it("shows an unsupported dialog when it's an unsupported browser", () => {
-    //   const wrapper = shallow(
-    //     <WrappedTestComponent unrelatedProp={"mockLabel"} />
-    //   )
-    //   ScreenCastRecorder.isSupportedBrowser = () => false
-    //   wrapper
-    //     .find(TestComponent)
-    //     .props()
-    //     .screenCast.startRecording("screencast-filename")
-    //   expect(wrapper.find(UnsupportedBrowserDialog).length).toBe(1)
-    // })
+
     // it("shows an unsupported dialog when it doesn't have a mediaDevices support", () => {
     //   const wrapper = shallow(
     //     <WrappedTestComponent unrelatedProp={"mockLabel"} />
     //   )
+
     //   Object.defineProperty(window.navigator, "mediaDevices", {
     //     value: undefined,
     //     configurable: true,
     //   })
+
     //   wrapper
     //     .find(TestComponent)
     //     .props()
     //     .screenCast.startRecording("screencast-filename")
+    //
     //   expect(wrapper.find(UnsupportedBrowserDialog).length).toBe(1)
+    // })
+
+    it("shows an unsupported dialog when it doesn't have a mediaDevices support", () => {
+      render(<WrappedTestComponent unrelatedProp={"mockLabel"} />)
+
+      Object.defineProperty(window.navigator, "mediaDevices", {
+        value: undefined,
+        configurable: true,
+      })
+
+      // TODO:
+      // Need to find a way to trigger startRecording function passing a string - "screencast-filename"
+      fireEvent.click(screen.getByText("Start recording!"))
+
+      expect(
+        screen.getByTestId("stUnsupportedBrowserDialog")
+      ).toBeInTheDocument()
+    })
+
+    // Need to find a way to trigger .stop with Blob & stopRecording function passing a string
+
+    // it("shows recorded dialog after recording", async () => {
+    //   const wrappedComponentProps = wrapper.find(TestComponent).props()
+    //   // @ts-expect-error
+    //   wrapper.instance().recorder.stop = jest
+    //     .fn()
+    //     .mockReturnValue(new Blob([]))
+    //   await wrappedComponentProps.screenCast.stopRecording()
+    //   expect(wrapper.state("currentState")).toBe("PREVIEW_FILE")
+    //   expect(wrapper.find(VideoRecordedDialog).length).toBe(1)
+    // })
   })
 })
