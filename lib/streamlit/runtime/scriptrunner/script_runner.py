@@ -310,7 +310,7 @@ class ScriptRunner:
 
     def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread"""
-        # return self._script_thread == threading.current_thread()
+        # Stlite: threading is not supported on Pyodide. Use asyncio instead
         return self._script_task == asyncio.current_task()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:

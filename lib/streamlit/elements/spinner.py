@@ -72,8 +72,7 @@ def spinner(text: str = "In progress...") -> Iterator[None]:
                             spinner_proto.text = clean_text(text)
                             message._enqueue("spinner", spinner_proto)
 
-        # stlite: Since threading does not work on Pyodide, we use asyncio instead.
-        # add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
+        # Stlite: Since threading does not work on Pyodide, we use asyncio instead.
         asyncio.get_event_loop().call_later(DELAY_SECS, set_message)
 
         # Yield control back to the context.

@@ -81,14 +81,12 @@ class PollingPathWatcher:
         return repr_(self)
 
     def _schedule(self) -> None:
-        # XXX: Stlite: Fix this method to use asyncio instead of threading, which does not work on Pyodide.
+        # Stlite: Fix this method to use asyncio instead of threading, which does not work on Pyodide.
 
-        # def task():
         async def task():
             await asyncio.sleep(_POLLING_PERIOD_SECS)
             self._check_if_path_changed()
 
-        # PollingPathWatcher._executor.submit(task)
         asyncio.create_task(task())
 
     def _check_if_path_changed(self) -> None:
