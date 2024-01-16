@@ -20,10 +20,33 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class QueryParamsMethodTests(DeltaGeneratorTestCase):
+    query_params_dict_with_embed_key = {
+        "foo": "bar",
+        "two": ["x", "y"],
+        "embed": "true",
+        "embed_options": "disable_scrolling",
+    }
+
     def setUp(self):
         super().setUp()
         self.query_params = QueryParams()
         self.query_params._query_params = {"foo": "bar", "two": ["x", "y"]}
+
+    def test__iter__doesnt_include_embed_keys(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        for key in self.query_params.__iter__():
+            if key == "embed" or key == "embed_options":
+                raise KeyError("Cannot iterate through embed or embed_options key")
+
+    def test__getitem__raises_KeyError_for_nonexistent_key_for_embed(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        with pytest.raises(KeyError):
+            self.query_params["embed"]
+
+    def test__getitem__raises_KeyError_for_nonexistent_key_for_embed_options(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        with pytest.raises(KeyError):
+            self.query_params["embed_options"]
 
     def test__getitem__raises_KeyError_for_nonexistent_key(self):
         with pytest.raises(KeyError):
@@ -97,6 +120,14 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             self.query_params["embed_options"] = "show_toolbar"
 
+    def test__setitem__raises_error_with_embed_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params["embed"] = "true"
+
+    def test__setitem__raises_error_with_embed_options_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params["embed_options"] = "disable_scrolling"
+
     def test__delitem__removes_existing_key(self):
         del self.query_params["foo"]
         assert "foo" not in self.query_params
@@ -107,6 +138,18 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test__delitem__raises_error_for_nonexistent_key(self):
         with pytest.raises(KeyError):
             del self.query_params["nonexistent"]
+
+    def test__delitem__throws_KeyErrorException_for_embed_key(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        with pytest.raises(KeyError):
+            del self.query_params["embed"]
+        assert "embed" in self.query_params._query_params
+
+    def test__delitem__throws_KeyErrorException_for_embed_options_key(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        with pytest.raises(KeyError):
+            del self.query_params["embed_options"]
+        assert "embed_options" in self.query_params._query_params
 
     def test_get_all_returns_empty_list_for_nonexistent_key(self):
         assert self.query_params.get_all("nonexistent") == []
@@ -121,20 +164,80 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         self.query_params["test"] = ["", "a", 1, 1.23]
         assert self.query_params.get_all("test") == ["", "a", "1", "1.23"]
 
+    def test_get_all_returns_empty_array_for_embed_key(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        assert self.query_params.get_all("embed") == []
+
+    def test_get_all_returns_empty_array_for_embed_options_key(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        assert self.query_params.get_all("embed_options") == []
+
+    def test__len__doesnt_include_embed_and_embed_options_key(self):
+        self.query_params._query_params = self.query_params_dict_with_embed_key
+        assert len(self.query_params) == 2
+
     def test_clear_removes_all_query_params(self):
         self.query_params.clear()
         assert len(self.query_params) == 0
         message = self.get_message_from_queue(0)
         assert "" == message.page_info_changed.query_string
 
+    def test_clear_doesnt_remove_embed_query_params(self):
+        self.query_params._query_params = {
+            "foo": "bar",
+            "embed": "true",
+            "embed_options": ["show_colored_line", "disable_scrolling"],
+        }
+        result_dict = {
+            "embed": "true",
+            "embed_options": ["show_colored_line", "disable_scrolling"],
+        }
+        self.query_params.clear()
+        assert self.query_params._query_params == result_dict
+
     def test_to_dict(self):
         self.query_params["baz"] = ""
         result_dict = {"foo": "bar", "two": "y", "baz": ""}
         assert self.query_params.to_dict() == result_dict
 
+    def test_to_dict_doesnt_include_embed_params(self):
+        self.query_params._query_params = {
+            "foo": "bar",
+            "embed": "true",
+            "embed_options": ["show_colored_line", "disable_scrolling"],
+        }
+        result_dict = {"foo": "bar"}
+        assert self.query_params.to_dict() == result_dict
+
     def test_set_with_no_forward_msg_sends_no_msg_and_sets_query_params(self):
         self.query_params.set_with_no_forward_msg("test", "test")
         assert self.query_params["test"] == "test"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_set_with_no_forward_msg_accepts_embed(self):
+        self.query_params.set_with_no_forward_msg("embed", "true")
+        assert self.query_params._query_params["embed"] == "true"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_set_with_no_forward_msg_accepts_embed_options(self):
+        self.query_params.set_with_no_forward_msg("embed_options", "disable_scrolling")
+        assert self.query_params._query_params["embed_options"] == "disable_scrolling"
+        with pytest.raises(IndexError):
+            # no forward message should be sent
+            self.get_message_from_queue(0)
+
+    def test_set_with_no_forward_msg_accepts_multiple_embed_options(self):
+        self.query_params.set_with_no_forward_msg(
+            "embed_options", ["disable_scrolling", "show_colored_line"]
+        )
+        assert self.query_params._query_params["embed_options"] == [
+            "disable_scrolling",
+            "show_colored_line",
+        ]
         with pytest.raises(IndexError):
             # no forward message should be sent
             self.get_message_from_queue(0)

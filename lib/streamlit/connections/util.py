@@ -81,8 +81,11 @@ def load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 def running_in_sis() -> bool:
     """Return whether this app is running in SiS."""
-    from snowflake.snowpark._internal.utils import (  # type: ignore[import]  # isort: skip
-        is_in_stored_procedure,
-    )
+    try:
+        from snowflake.snowpark._internal.utils import (  # type: ignore[import]  # isort: skip
+            is_in_stored_procedure,
+        )
 
-    return cast(bool, is_in_stored_procedure())
+        return cast(bool, is_in_stored_procedure())
+    except ModuleNotFoundError:
+        return False

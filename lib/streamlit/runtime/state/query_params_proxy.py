@@ -20,7 +20,8 @@ from streamlit.runtime.state.session_state_proxy import get_session_state
 
 
 class QueryParamsProxy(MutableMapping[str, str]):
-    """A stateless singleton that proxies `st.query_params` interactions
+    """
+    A stateless singleton that proxies ``st.query_params`` interactions
     to the current script thread's QueryParams instance.
     """
 
@@ -68,15 +69,51 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
     @gather_metrics("query_params.get_all")
     def get_all(self, key: str) -> List[str]:
+        """
+        Get a list of all query parameter values associated to a given key.
+
+        When a key is repeated as a query parameter within the URL, this method
+        allows all values to be obtained. In contrast, dict-like methods only
+        retrieve the last value when a key is repeated in the URL.
+
+        Parameters
+        ----------
+        key: str
+            The label of the query parameter in the URL.
+
+        Returns
+        -------
+        List[str]
+            A list of values associated to the given key. May return zero, one,
+            or multiple values.
+        """
         with get_session_state().query_params() as qp:
             return qp.get_all(key)
 
     @gather_metrics("query_params.clear")
     def clear(self) -> None:
+        """
+        Clear all query parameters from the URL of the app.
+
+        Returns
+        -------
+        None
+        """
         with get_session_state().query_params() as qp:
             qp.clear()
 
     @gather_metrics("query_params.to_dict")
     def to_dict(self) -> Dict[str, str]:
+        """
+        Get all query parameters as a dictionary.
+
+        When a key is repeated as a query parameter within the URL, this method
+        will return only the last value of each unique key.
+
+        Returns
+        -------
+        Dict[str,str]
+            A dictionary of the current query paramters in the app's URL.
+        """
         with get_session_state().query_params() as qp:
             return qp.to_dict()

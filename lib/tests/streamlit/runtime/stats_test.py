@@ -15,7 +15,12 @@
 import unittest
 from typing import List
 
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, StatsManager
+from streamlit.runtime.stats import (
+    CacheStat,
+    CacheStatsProvider,
+    StatsManager,
+    group_stats,
+)
 
 
 class MockStatsProvider(CacheStatsProvider):
@@ -51,35 +56,54 @@ class StatsManagerTest(unittest.TestCase):
 
         self.assertEqual(provider1.stats + provider2.stats, manager.get_stats())
 
-    def test_get_stats_aggregated(self):
-        """StatsManager.get_stats should return all providers' stats aggregated."""
-        manager = StatsManager()
-        provider1 = MockStatsProvider()
-        provider2 = MockStatsProvider()
-        manager.register_provider(provider1)
-        manager.register_provider(provider2)
+    def test_group_stats(self):
+        """Should return stats grouped by category_name and cache_name.
+        byte_length should be summed."""
 
-        # No stats
-        self.assertEqual([], manager.get_stats())
-
-        # Some stats
-        provider1.stats = [
+        # Similar stats sequential
+        stats1 = [
             CacheStat("provider1", "foo", 1),
-            CacheStat("provider1", "foo", 8),
             CacheStat("provider1", "bar", 2),
+            CacheStat("provider1", "bar", 5),
         ]
 
-        provider2.stats = [
-            CacheStat("provider2", "baz", 4),
-            CacheStat("provider2", "qux", 5),
-            CacheStat("provider2", "qux", 6),
+        # Similar stats not sequential
+        stats2 = [
+            CacheStat("provider2", "baz", 3),
+            CacheStat("provider2", "qux", 4),
+            CacheStat("provider2", "baz", 28),
         ]
 
-        expected_result = [
-            CacheStat("provider1", "foo", 9),
-            CacheStat("provider1", "bar", 2),
-            CacheStat("provider2", "baz", 4),
-            CacheStat("provider2", "qux", 11),
+        # All the same stats
+        stats3 = [
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
         ]
 
-        self.assertEqual(expected_result, manager.get_stats())
+        self.assertEqual(
+            set(group_stats(stats1)),
+            {
+                CacheStat("provider1", "foo", 1),
+                CacheStat("provider1", "bar", 7),
+            },
+        )
+
+        self.assertEqual(
+            set(group_stats(stats2)),
+            {
+                CacheStat("provider2", "baz", 31),
+                CacheStat("provider2", "qux", 4),
+            },
+        )
+
+        self.assertEqual(
+            set(group_stats(stats3)),
+            {
+                CacheStat("provider3", "boo", 7),
+            },
+        )

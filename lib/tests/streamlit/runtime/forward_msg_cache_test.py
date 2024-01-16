@@ -211,12 +211,7 @@ class ForwardMsgCacheTest(unittest.TestCase):
             CacheStat(
                 category_name="ForwardMessageCache",
                 cache_name="",
-                byte_length=msg1.ByteSize(),
-            ),
-            CacheStat(
-                category_name="ForwardMessageCache",
-                cache_name="",
-                byte_length=msg2.ByteSize(),
+                byte_length=msg1.ByteSize() + msg2.ByteSize(),
             ),
         ]
         self.assertEqual(set(expected), set(cache.get_stats()))
