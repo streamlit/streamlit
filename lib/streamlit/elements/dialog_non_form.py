@@ -17,7 +17,7 @@ import time
 from types import TracebackType
 from typing import List, Optional, Type, cast
 
-from typing_extensions import Literal
+from typing_extensions import Literal, Optional
 
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
 from streamlit.proto import Block_pb2
@@ -31,7 +31,7 @@ class DialogNonForm(DeltaGenerator):
         title: str,
         *,
         dismissible: bool = True,
-        is_open: bool = False,
+        is_open: Optional[bool] = None,
         key: str,
     ) -> DialogNonForm:
         # Import this here to avoid circular imports.
@@ -45,8 +45,11 @@ class DialogNonForm(DeltaGenerator):
         block_proto = Block_pb2.Block()
         block_proto.dialog_non_form.title = title
         block_proto.dialog_non_form.dismissible = dismissible
-        block_proto.dialog_non_form.is_open = is_open
+        if is_open is not None:
+            block_proto.dialog_non_form.is_open = is_open
         # block_dg = parent._active_dg._block(block_proto)
+
+        # return parent.dg._block(block_proto)
 
         delta_path: List[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
@@ -72,7 +75,7 @@ class DialogNonForm(DeltaGenerator):
         # block_dg._form_data = FormData(form_id)
         return dialog_non_form_container
 
-    def update(self, is_open: bool):
+    def update(self, is_open: Optional[bool]):
         assert self.current_proto is not None
         assert self._delta_path is not None
 
@@ -80,7 +83,9 @@ class DialogNonForm(DeltaGenerator):
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
 
-        msg.delta.add_block.dialog_non_form.is_open = is_open
+        if is_open is not None:
+            msg.delta.add_block.dialog_non_form.is_open = is_open
+
         self._current_proto = msg.delta.add_block
         self._current_is_open = is_open
         _enqueue_message(msg)

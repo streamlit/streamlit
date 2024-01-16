@@ -109,7 +109,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
           formId={formId}
           clearOnSubmit={clearOnSubmit}
           hasSubmitButton={hasSubmitButton}
-          scriptRunState={props.scriptRunState}
+          // scriptRunState={props.scriptRunState}
           widgetMgr={props.widgetMgr}
           title={title}
           closeOnSubmit={closeOnSubmit}
@@ -139,7 +139,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       <DialogNonForm
         title={node.deltaBlock.dialogNonForm.title || "Placeholder Title"}
         dismissible={node.deltaBlock.dialogNonForm.dismissible || false}
-        isOpen={node.deltaBlock.dialogNonForm.isOpen || false}
+        isOpen={node.deltaBlock.dialogNonForm.isOpen}
       >
         {child}
       </DialogNonForm>

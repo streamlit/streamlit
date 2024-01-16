@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
+import React, { ReactElement, ReactNode, useEffect, useState } from "react"
 import Modal, {
   ModalHeader,
   ModalBody,
@@ -31,14 +25,13 @@ export interface Props {
   children?: ReactNode
   title?: string
   dismissible?: boolean
-  isOpen?: boolean
+  isOpen: boolean | null | undefined
 }
 
 export function DialogNonForm(props: Props): ReactElement {
   const { children, title, dismissible, isOpen: initialIsOpen } = props
+
   const [isOpen, setIsOpen] = useState<boolean>(initialIsOpen || false)
-  //   const [isReset, setIsReset] = useState<boolean>(false)
-  const isReset = useRef<boolean>(false)
 
   console.log(props, isOpen)
 
@@ -46,27 +39,8 @@ export function DialogNonForm(props: Props): ReactElement {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialIsOpen)) {
       setIsOpen(initialIsOpen)
-
-      // We manage the open attribute via the detailsRef and not with React state
-      //   if (detailsRef.current) {
-      //     detailsRef.current.open = initialExpanded
-      //   }
     }
-
-    // Having `label` in the dependency array here is necessary because
-    // sometimes two distinct expanders look so similar that even the react
-    // diffing algorithm decides that they're the same element with updated
-    // props (this happens when something in the app removes one expander and
-    // replaces it with another in the same position).
-    //
-    // By adding `label` as a dependency, we ensure that we reset the
-    // expander's `expanded` state in this edge case.
   }, [initialIsOpen])
-
-  //   useEffect(() => {
-  //     setIsOpen(true)
-  //     // setIsReset(false)
-  //   }, [isReset])
 
   return (
     <Modal
@@ -74,7 +48,6 @@ export function DialogNonForm(props: Props): ReactElement {
       closeable={dismissible}
       onClose={() => {
         setIsOpen(false)
-        // isReset.current = true
         // TODO: do we have to inform the python-side about the closure?
       }}
     >

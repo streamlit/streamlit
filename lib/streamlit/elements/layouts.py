@@ -539,7 +539,7 @@ class LayoutsMixin:
         title: str,
         *,
         dismissible: bool = True,
-        is_open: bool = False,
+        is_open: Optional[bool] = None,
         key: Optional[str] = None,
     ) -> "DialogNonForm":
         from streamlit.elements.dialog_non_form import DialogNonForm
