@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import altair as alt
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 import streamlit as st
 from tests.streamlit import pyspark_mocks
+
+np.random.seed(0)
 
 st.subheader("st.write(markdown)")
 
@@ -28,6 +33,7 @@ st.write("This <b>HTML tag</b> is escaped!")
 st.write("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
 
 st.subheader("st.write(dataframe-like)")
+
 st.write(pyspark_mocks.DataFrame())
 
 st.write(pd.DataFrame([1, 2, 3]))
@@ -45,3 +51,16 @@ st.write(st.data_editor)
 st.subheader("st.write(exception)")
 
 st.write(Exception("This is an exception!"))
+
+st.subheader("st.write(matplotlib)")
+
+fig, ax = plt.subplots()
+ax.hist(np.random.normal(1, 1, size=100), bins=20)
+
+st.write(fig)
+
+st.subheader("st.write(altair)")
+
+df = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
+chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
+st.write(chart)
