@@ -416,7 +416,7 @@ class StreamlitStreamTest(unittest.TestCase):
     """Test st.stream."""
 
     @patch("streamlit.type_util.is_type")
-    def test_openai_chunk(self, is_type):
+    def test_with_openai_chunk(self, is_type):
         """Test st.stream with openai Chunks."""
 
         is_type.side_effect = make_is_type_mock(
@@ -435,6 +435,62 @@ class StreamlitStreamTest(unittest.TestCase):
 
         stream_return = st.experimental_stream(openai_stream)
         self.assertEqual(stream_return, "Hello World")
+
+    def test_with_generator_text(self):
+        """Test st.stream with generator text content."""
+
+        def test_stream():
+            yield "Hello "
+            yield "World"
+
+        stream_return = st.experimental_stream(test_stream)
+        self.assertEqual(stream_return, "Hello World")
+
+        stream_return = st.experimental_stream(test_stream())
+        self.assertEqual(stream_return, "Hello World")
+
+    def test_with_generator_misc(self):
+        """Test st.stream with generator with different content."""
+
+        def test_stream():
+            yield "This is "
+            yield "a dataframe:"
+            yield pd.DataFrame([[1, 2], [3, 4]])
+            yield "Text under dataframe"
+
+        stream_return = st.experimental_stream(test_stream)
+        self.assertEqual(
+            str(stream_return),
+            str(
+                [
+                    "This is a dataframe:",
+                    pd.DataFrame([[1, 2], [3, 4]]),
+                    "Text under dataframe",
+                ]
+            ),
+        )
+
+    def test_with_list_output(self):
+        """Test st.stream with a list."""
+
+        data = [
+            "This is ",
+            "a dataframe:",
+            pd.DataFrame([[1, 2], [3, 4]]),
+            "Text under dataframe",
+        ]
+
+        stream_return = st.experimental_stream(data)
+        self.assertEqual(
+            str(stream_return),
+            str(
+                [
+                    "This is a dataframe:",
+                    pd.DataFrame([[1, 2], [3, 4]]),
+                    "Text under dataframe",
+                ]
+            ),
+        )
 
 
 def make_is_type_mock(true_type_matchers):
