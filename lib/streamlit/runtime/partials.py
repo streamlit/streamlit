@@ -72,8 +72,6 @@ def partial(
         # To make mypy type narrow Optional[F] -> F
         non_optional_func = func
 
-    print(non_optional_func.__qualname__)
-
     @wraps(non_optional_func)
     def wrap(*args, **kwargs):
         import streamlit as st
@@ -104,7 +102,6 @@ def partial(
                 "utf-8"
             )
         )
-        print(non_optional_func.__qualname__)
         partial_id = h.hexdigest()
 
         def wrapped_partial():
@@ -118,8 +115,6 @@ def partial(
             ctx.dg_stack = pickle.loads(dg_stack)
 
             # Set dg stack to outside state
-            print(type(ctx.dg_stack))
-            print(ctx.dg_stack)
             ctx.current_partial_id = partial_id
 
             result = non_optional_func(*args, **kwargs)
@@ -131,7 +126,6 @@ def partial(
         save_partial(partial_id, wrapped_partial)
 
         if run_every:
-            print("Register rerun")
             msg = ForwardMsg()
             msg.auto_rerun.interval = run_every
             msg.auto_rerun.partial_id = partial_id
