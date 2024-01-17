@@ -71,11 +71,14 @@ export default class HostCommunicationManager {
 
   private deferredAuthToken: Resolver<string | undefined>
 
+  public useExternalAuthToken: boolean
+
   constructor(props: HostCommunicationProps) {
     this.props = props
 
     this.allowedOrigins = []
     this.deferredAuthToken = new Resolver()
+    this.useExternalAuthToken = false
   }
 
   /**
@@ -129,6 +132,7 @@ export default class HostCommunicationManager {
     if (!useExternalAuthToken) {
       this.deferredAuthToken.resolve(undefined)
     }
+    this.useExternalAuthToken = useExternalAuthToken
     if (!allowedOrigins.length) {
       return
     }

@@ -558,10 +558,14 @@ describe("HostCommunicationManager external auth token handling", () => {
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
 
+    expect(hostCommunicationMgr.useExternalAuthToken).toBe(false)
+
     hostCommunicationMgr.setAllowedOriginsResp({
       allowedOrigins: ["http://devel.streamlit.test"],
       useExternalAuthToken: true,
     })
+
+    expect(hostCommunicationMgr.useExternalAuthToken).toBe(true)
 
     // Asynchronously send a SET_AUTH_TOKEN message to the
     // HostCommunicationManager, which won't proceed past the `await`

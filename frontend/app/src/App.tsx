@@ -295,7 +295,7 @@ export class App extends PureComponent<Props, State> {
       jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
         if (
           this.endpoints.setJWTHeader !== undefined &&
-          this.state.appConfig.useExternalAuthToken
+          this.hostCommunicationMgr.useExternalAuthToken
         ) {
           this.endpoints.setJWTHeader({ jwtHeaderName, jwtHeaderValue })
         }
