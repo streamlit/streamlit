@@ -392,4 +392,51 @@ describe("FileUploader widget RTL tests", () => {
       }
     )
   })
+
+  it("can delete file with ErrorStatus", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ multipleFiles: false, type: [".txt"] })
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId(
+      "stFileUploadDropzone"
+    ) as HTMLElement
+
+    const myFiles = [
+      new File(["Another PDF file"], "anotherpdffile.pdf", {
+        type: "application/pdf",
+        lastModified: 0,
+      }),
+    ]
+
+    // Drop a file with an error (wrong extension)
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: myFiles,
+        items: myFiles.map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
+      },
+    })
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId("stUploadedFile").length).toBe(1)
+    )
+
+    const errorFileNames = screen.getAllByTestId("stUploadedFileErrorMessage")
+    expect(errorFileNames.length).toBe(1)
+
+    // Delete the file
+    const firstDeleteBtn = screen.getAllByTestId("fileDeleteBtn")[0]
+
+    await user.click(within(firstDeleteBtn).getByRole("button"))
+
+    // File should be gone
+    const fileNamesAfterDelete = screen.queryAllByTestId("stUploadedFile")
+    expect(fileNamesAfterDelete.length).toBe(0)
+  })
 })
