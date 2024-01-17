@@ -61,3 +61,11 @@ class DeltaGeneratorProgressTest(DeltaGeneratorTestCase):
         text = object()
         with self.assertRaises(StreamlitAPIException):
             st.progress(42, text=text)
+
+    def test_progress_with_close_float(self):
+        """Test Progress with float values close to 0.0 and 1.0"""
+        values = [-0.0000000000021, 1.0000000000000013]
+        for value in values:
+            st.progress(value)
+            element = self.get_delta_from_queue().new_element
+            self.assertEqual(int(value * 100), element.progress.value)
