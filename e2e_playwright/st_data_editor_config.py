@@ -33,21 +33,58 @@ df = pd.DataFrame(
 
 st.header("Multi select column:")
 
+data_df = pd.DataFrame(
+    {
+        "category": [
+            ["exploration", "visualization"],
+            ["llm", "visualization"],
+            [],
+            ["exploration"],
+        ],
+    }
+)
+
+st.data_editor(
+    data_df,
+    column_config={
+        "category": st.column_config.MultiselectColumn(
+            "App Categories",
+            help="The categories of the app",
+            options=[
+                {"value": "exploration", "label": "Foo", "color": "blue"},
+                "visualization",
+                "llm",
+            ],
+        )
+    },
+    hide_index=True,
+)
+
+st.header("Multi select column:")
+
 result = st.data_editor(
     pd.DataFrame(
         {
             "col_0": [[1, 2], [2, 3, 4], [], None],
-            "col_1": [["a", "b"], ["c", "d", "e"], [], None],
+            "col_1": [["a", "B"], ["c", "d", "e"], [], None],
+            "col_2": [None, None, None, None],
+            "col_3": ["a,b", "c,d,e", "", None],
         }
     ),
     column_config={
-        "col_0": st.column_config.MultiSelectColumn(
+        "col_0": st.column_config.MultiselectColumn(
             "Multi select column",
             width="medium",
             help="This is a list column",
         ),
-        "col_1": st.column_config.MultiSelectColumn(options=["a", "b", "c", "d", "e"]),
+        "col_1": st.column_config.MultiselectColumn(
+            options=["a", "B", "c", "d", "e"], default=["a", "B"], disabled=True
+        ),
+        "col_2": st.column_config.ListColumn(),
+        "col_3": st.column_config.ListColumn(),
     },
+    key="multi_select",
+    num_rows="dynamic",
 )
 st.dataframe(result)
 

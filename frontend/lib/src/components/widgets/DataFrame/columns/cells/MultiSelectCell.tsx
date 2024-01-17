@@ -28,7 +28,7 @@ import {
 } from "@glideapps/glide-data-grid"
 
 import styled from "@emotion/styled"
-import chroma from "chroma-js"
+import { getLuminance } from "color2k"
 import Select, {
   type MenuProps,
   components,
@@ -256,24 +256,23 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
       }
     },
     multiValue: (styles, { data }) => {
-      const color = chroma(data.color ?? theme.bgBubble)
       return {
         ...styles,
-        backgroundColor: color.css(),
+        backgroundColor: data.color ?? theme.bgBubble,
         borderRadius: `${theme.roundingRadius ?? BUBBLE_HEIGHT / 2}px`,
       }
     },
     multiValueLabel: (styles, { data, isDisabled }) => {
       return {
         ...styles,
-        paddingRight: isDisabled ? BUBBLE_PADDING : undefined,
+        paddingRight: isDisabled ? BUBBLE_PADDING : 0,
         paddingLeft: BUBBLE_PADDING,
         paddingTop: 0,
         paddingBottom: 0,
         color: data.color
           ? // If a color is set for this option,
             // we use it to determine the text color.
-            chroma(data.color).luminance() > 0.5
+            getLuminance(data.color) > 0.5
             ? "black"
             : "white"
           : theme.textBubble,
@@ -291,21 +290,16 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
           display: "none",
         }
       }
-      const color = chroma(data.color ?? theme.bgBubble)
       return {
         ...styles,
         color: data.color
           ? // If a color is set for this option,
             // we use it to determine the text color.
-            color.luminance() > 0.5
+            getLuminance(data.color) > 0.5
             ? "black"
             : "white"
           : theme.textBubble,
-        backgroundColor: isFocused
-          ? color.luminance() > 0.5
-            ? color.darken(0.5).css()
-            : color.brighten(0.5).css()
-          : undefined,
+        backgroundColor: undefined,
         borderRadius: isFocused
           ? `${theme.roundingRadius ?? BUBBLE_HEIGHT / 2}px`
           : undefined,
@@ -455,10 +449,9 @@ const renderer: CustomRenderer<MultiSelectCell> = {
             2
     for (const value of values) {
       const matchedOption = options.find(t => t.value === value)
-      const color = chroma(
+      const color =
         matchedOption?.color ??
-          (highlighted ? theme.bgBubbleSelected : theme.bgBubble)
-      )
+        (highlighted ? theme.bgBubbleSelected : theme.bgBubble)
       const displayText = matchedOption?.label ?? value
       const metrics = measureTextCached(displayText, ctx)
       const width = metrics.width + BUBBLE_PADDING * 2
@@ -474,7 +467,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
         x = drawArea.x
       }
 
-      ctx.fillStyle = color.hex()
+      ctx.fillStyle = color
       ctx.beginPath()
       roundedRect(
         ctx,
@@ -486,10 +479,10 @@ const renderer: CustomRenderer<MultiSelectCell> = {
       )
       ctx.fill()
 
-      // If a color is set for this option, we use it to determine the text color.
+      // If a color is set for this option, we use either black or white as the text color depending on the background.
       // Otherwise, use the configured textBubble color.
       ctx.fillStyle = matchedOption?.color
-        ? color.luminance() > 0.5
+        ? getLuminance(color) > 0.5
           ? "#000000"
           : "#ffffff"
         : theme.textBubble
