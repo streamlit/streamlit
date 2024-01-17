@@ -30,8 +30,8 @@ import {
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import FileUploader, { Props } from "./FileUploader"
 
-const createFile = (): File => {
-  return new File(["Text in a file!"], "filename.txt", {
+const createFile = (filename = "filename.txt"): File => {
+  return new File(["Text in a file!"], filename, {
     type: "text/plain",
     lastModified: 0,
   })
@@ -274,6 +274,75 @@ describe("FileUploader widget RTL tests", () => {
           fileId: "filename2.txt",
           uploadUrl: "filename2.txt",
           deleteUrl: "filename2.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
+  })
+
+  it("can delete completed upload", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ multipleFiles: true })
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stDropzoneInput"
+    ) as HTMLInputElement
+
+    // Upload two files
+    await user.upload(fileDropZoneInput, createFile("filename1.txt"))
+    await user.upload(fileDropZoneInput, createFile("filename2.txt"))
+
+    const fileNames = screen.getAllByTestId("stUploadedFile")
+    expect(fileNames.length).toBe(2)
+    expect(fileNames[0].textContent).toContain("filename2.txt")
+    expect(fileNames[1].textContent).toContain("filename1.txt")
+
+    // WidgetStateManager should have been called with our two file IDs and first time with empty state
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
+
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
+        },
+        {
+          fileId: "filename2.txt",
+          uploadUrl: "filename2.txt",
+          deleteUrl: "filename2.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
+
+    const firstDeleteBtn = screen.getAllByTestId("fileDeleteBtn")[0]
+
+    await user.click(firstDeleteBtn.getElementsByTagName("button")[0])
+
+    // We should only have a single file - the second file from the original upload list (filename1.txt).
+    const fileNamesAfterDelete = screen.getAllByTestId("stUploadedFile")
+    expect(fileNamesAfterDelete.length).toBe(1)
+    expect(fileNamesAfterDelete[0].textContent).toContain("filename1.txt")
+
+    // WidgetStateManager should have been called with the file ID
+    // of the remaining file. This should be the fourth time WidgetStateManager
+    // has been updated.
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(4)
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
         },
       ]),
       {
