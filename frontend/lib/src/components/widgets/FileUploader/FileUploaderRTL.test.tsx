@@ -29,7 +29,6 @@ import {
 } from "@streamlit/lib/src/proto"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import FileUploader, { Props } from "./FileUploader"
-import { act } from "react-dom/test-utils"
 
 const createFile = (): File => {
   return new File(["Text in a file!"], "filename.txt", {
@@ -240,34 +239,27 @@ describe("FileUploader widget RTL tests", () => {
         lastModified: 0,
       }),
     ]
-    act(() => {
-      fireEvent.drop(fileDropZone, {
-        dataTransfer: {
-          types: ["Files"],
-          files: myFiles,
-          items: myFiles.map(file => ({
-            kind: "file",
-            type: file.type,
-            getAsFile: () => file,
-          })),
-        },
-      })
+
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: myFiles,
+        items: myFiles.map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
+      },
     })
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
     )
 
-    const fileNames = await waitFor(() =>
-      screen.getAllByTestId("stUploadedFile")
-    )
-
+    const fileNames = screen.getAllByTestId("stUploadedFile")
     expect(fileNames.length).toBe(3)
 
-    const errorFileNames = await waitFor(() =>
-      screen.getAllByTestId("stUploadedFileErrorMessage")
-    )
-
+    const errorFileNames = screen.getAllByTestId("stUploadedFileErrorMessage")
     expect(errorFileNames.length).toBe(1)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
