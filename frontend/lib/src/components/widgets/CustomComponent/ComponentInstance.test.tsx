@@ -218,6 +218,7 @@ describe("ComponentInstance", () => {
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
       const postMessage = jest.spyOn(iframe.contentWindow, "postMessage")
+      // SET COMPONENT_READY
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -281,6 +282,7 @@ describe("ComponentInstance", () => {
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // @ts-expect-error
       const postMessage = jest.spyOn(iframe.contentWindow, "postMessage")
+      // SET COMPONENT_READY
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -293,6 +295,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
+      // SET COMPONENT_READY
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -328,6 +331,7 @@ describe("ComponentInstance", () => {
         />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+      // SET COMPONENT_READY
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -437,6 +441,7 @@ describe("ComponentInstance", () => {
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+      // SET COMPONENT_READY
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -449,6 +454,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
+      // SET COMPONENT_VALUE
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -491,6 +497,7 @@ describe("ComponentInstance", () => {
       )
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+      // SET COMPONENT_READY
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -505,6 +512,7 @@ describe("ComponentInstance", () => {
       )
 
       const bytesValue = new Uint8Array([0, 1, 2])
+      // SET COMPONENT_VALUE
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -554,7 +562,7 @@ describe("ComponentInstance", () => {
         />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-
+      // SET COMPONENT_VALUE
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -598,6 +606,7 @@ describe("ComponentInstance", () => {
           />
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+        // SET COMPONENT_READY
         fireEvent(
           window,
           new MessageEvent("message", {
@@ -610,7 +619,7 @@ describe("ComponentInstance", () => {
             source: iframe.contentWindow,
           })
         )
-
+        // SET IFRAME_HEIGHT
         fireEvent(
           window,
           new MessageEvent("message", {
@@ -671,7 +680,7 @@ describe("ComponentInstance", () => {
           />
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-
+        // SET IFRAME_HEIGHT
         fireEvent(
           window,
           new MessageEvent("message", {
