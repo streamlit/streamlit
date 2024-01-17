@@ -38,9 +38,10 @@ data_df = pd.DataFrame(
         "category": [
             ["exploration", "visualization"],
             ["llm", "visualization"],
-            [],
-            ["exploration"],
+            ["finance"],
+            ["geography"],
         ],
+        "tags": [["statistics"], ["ai", "bots"], ["stocks", "crypto"], None],
     }
 )
 
@@ -51,11 +52,21 @@ st.data_editor(
             "App Categories",
             help="The categories of the app",
             options=[
-                {"value": "exploration", "label": "Foo", "color": "blue"},
-                "visualization",
-                "llm",
+                {"value": "exploration", "label": "Exploration", "color": "#ffc38a"},
+                {"value": "llm", "label": "LLM", "color": "#ebfdea"},
+                {"value": "geography", "label": "Geography", "color": "#19747E"},
+                {
+                    "value": "visualization",
+                    "label": "Visualization",
+                    "color": "#FFE8D6",
+                },
+                {"value": "finance", "label": "Finance", "color": "#90E0EF"},
             ],
-        )
+        ),
+        "tags": st.column_config.ListColumn(
+            "Tags",
+            help="Tags related to this app app",
+        ),
     },
     hide_index=True,
 )
