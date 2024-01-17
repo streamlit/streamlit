@@ -16,15 +16,9 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import {
-  screen,
-  within,
-  waitFor,
-  fireEvent,
-  RenderResult,
-  Screen,
-} from "@testing-library/react"
+import { screen, within, waitFor } from "@testing-library/react"
 import { render, IMenuItem, mockSessionInfo, Config } from "@streamlit/lib"
+import { getMenuStructure, openMenu } from "./mainMenuTestHelpers"
 
 import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
 
@@ -47,31 +41,6 @@ const getProps = (extend?: Partial<Props>): Props => ({
   toolbarMode: Config.ToolbarMode.AUTO,
   ...extend,
 })
-
-async function openMenu(screen: Screen): Promise<void> {
-  fireEvent.click(screen.getByRole("button"))
-  // Each SubMenu is a listbox, so need to use findAllByRole (findByRole throws error if multiple matches)
-  const menu = await screen.findAllByRole("listbox")
-  expect(menu).toBeDefined()
-}
-
-function getMenuStructure(
-  renderResult: RenderResult
-): ({ type: "separator" } | { type: "option"; label: string })[][] {
-  return Array.from(
-    renderResult.baseElement.querySelectorAll('[role="listbox"]')
-  ).map(listBoxElement => {
-    return Array.from(
-      listBoxElement.querySelectorAll(
-        '[role=option] span:first-of-type, [data-testid="main-menu-divider"]'
-      )
-    ).map(d =>
-      d.getAttribute("data-testid") == "main-menu-divider"
-        ? { type: "separator" }
-        : { type: "option", label: d.textContent as string }
-    )
-  })
-}
 
 describe("MainMenu", () => {
   it("renders without crashing", () => {

@@ -56,6 +56,7 @@ class Countdown extends PureComponent<Props, State> {
 
     return (
       <StyledCountdown
+        data-testid="stCountdown"
         onAnimationEnd={this.onAnimationEnd}
         key={`frame${countdown}`}
       >
