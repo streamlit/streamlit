@@ -47,7 +47,6 @@ class ClassWithReprHtml:
 
 st.write(ClassWithReprHtml())
 
-
 st.write(100)
 
 st.write(None)
@@ -55,6 +54,18 @@ st.write(None)
 st.write(datetime(2021, 1, 1))
 
 st.write(np.float64(1.0))
+
+
+def stream_text():
+    yield "This is "
+    yield "streamed text"
+
+
+st.subheader("st.write(generator)")
+
+st.write(stream_text)
+
+st.write(stream_text())
 
 
 st.subheader("st.write(dataframe-like)")
@@ -141,36 +152,3 @@ st.write(
         ),
     )
 )
-
-
-_LOREM_IPSUM = """
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
-laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in
-voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat
-non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-"""
-
-
-def stream_example():
-    for word in _LOREM_IPSUM.split():
-        yield word + " "
-        time.sleep(0.1)
-
-    # Also supports any other object supported by `st.write`
-    yield pd.DataFrame(
-        np.random.randn(5, 10),
-        columns=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
-    )
-
-    for word in _LOREM_IPSUM.split():
-        yield word + " "
-        time.sleep(0.05)
-
-
-if st.button("Stream data"):
-    st.session_state["written_content"] = st._main._stream(stream_example)
-else:
-    if "written_content" in st.session_state:
-        st.write(st.session_state["written_content"])
-        time.sleep(5)
