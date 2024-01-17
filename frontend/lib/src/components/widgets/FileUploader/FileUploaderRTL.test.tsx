@@ -396,7 +396,6 @@ describe("FileUploader widget RTL tests", () => {
   it("can delete file with ErrorStatus", async () => {
     const user = userEvent.setup()
     const props = getProps({ multipleFiles: false, type: [".txt"] })
-    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
     const fileDropZone = screen.getByTestId(
@@ -438,5 +437,22 @@ describe("FileUploader widget RTL tests", () => {
     // File should be gone
     const fileNamesAfterDelete = screen.queryAllByTestId("stUploadedFile")
     expect(fileNamesAfterDelete.length).toBe(0)
+  })
+
+  it("shows an ErrorStatus when maxUploadSizeMb = 0", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ maxUploadSizeMb: 0 })
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stDropzoneInput"
+    ) as HTMLInputElement
+
+    await user.upload(fileDropZoneInput, createFile())
+
+    const errorFileNames = screen.getByTestId("stUploadedFileErrorMessage")
+    expect(errorFileNames.textContent).toContain(
+      "File must be 0.0B or smaller."
+    )
   })
 })
