@@ -350,4 +350,46 @@ describe("FileUploader widget RTL tests", () => {
       }
     )
   })
+
+  it("can delete in-progress upload", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+
+    // Mock the uploadFile method to return a promise that never resolves to test updating state
+    props.uploadClient.uploadFile = jest.fn().mockImplementation(() => {
+      return new Promise(() => {})
+    })
+
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stDropzoneInput"
+    ) as HTMLInputElement
+
+    const myFile = createFile()
+
+    await user.upload(fileDropZoneInput, myFile)
+
+    const progressBar = screen.getByRole("progressbar")
+    expect(progressBar).toBeInTheDocument()
+
+    // and then immediately delete it before upload "completes"
+    const deleteBtn = screen.getByTestId("fileDeleteBtn")
+
+    await user.click(within(deleteBtn).getByRole("button"))
+
+    const fileNames = screen.queryAllByTestId("stUploadedFile")
+    expect(fileNames.length).toBe(0)
+
+    // WidgetStateManager will still have been called once, during component mounting
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([]),
+      {
+        fromUi: false,
+      }
+    )
+  })
 })
