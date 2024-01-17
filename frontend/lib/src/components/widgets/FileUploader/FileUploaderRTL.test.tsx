@@ -15,7 +15,7 @@
  */
 
 import "@testing-library/jest-dom"
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import React from "react"
 import { render } from "@streamlit/lib/src/test_util"
 import userEvent from "@testing-library/user-event"
@@ -325,7 +325,7 @@ describe("FileUploader widget RTL tests", () => {
 
     const firstDeleteBtn = screen.getAllByTestId("fileDeleteBtn")[0]
 
-    await user.click(firstDeleteBtn.getElementsByTagName("button")[0])
+    await user.click(within(firstDeleteBtn).getByRole("button"))
 
     // We should only have a single file - the second file from the original upload list (filename1.txt).
     const fileNamesAfterDelete = screen.getAllByTestId("stUploadedFile")
