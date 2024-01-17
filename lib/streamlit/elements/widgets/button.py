@@ -563,6 +563,17 @@ class ButtonMixin:
         if use_container_width is not None:
             page_link_proto.use_container_width = str(use_container_width)
 
+        # Handle external links:
+        if page.startswith("http://") or page.startswith("https://"):
+            if label is None:
+                raise StreamlitAPIException(
+                    f"The label param is required for external links used with st.page_link - please provide a label."
+                )
+            else:
+                page_link_proto.page = page
+                page_link_proto.external = True
+                return self.dg._enqueue("page_link", page_link_proto)
+
         ctx = get_script_run_ctx()
         ctx_main_script = ""
         if ctx:

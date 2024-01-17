@@ -27,4 +27,5 @@ message PageLink {
   string help = 6;
   string use_container_width = 7;
   bool disabled = 8;
+  bool external = 9;
 }

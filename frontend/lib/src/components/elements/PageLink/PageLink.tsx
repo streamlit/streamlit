@@ -60,6 +60,21 @@ function PageLink(props: Props): ReactElement {
   )
   const isActive = currentPageScriptHash === element.pageScriptHash
 
+  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>): void => {
+    if (element.external) {
+      // External Page Link
+      if (disabled) {
+        event.preventDefault()
+      }
+    } else {
+      // MPA Page Link
+      event.preventDefault()
+      if (!disabled) {
+        onPageChange(element.pageScriptHash as string)
+      }
+    }
+  }
+
   return (
     <div
       className="row-widget stPageLink"
@@ -74,12 +89,9 @@ function PageLink(props: Props): ReactElement {
             isActive={isActive}
             fluidWidth={useContainerWidth ? width : false}
             href={element.page}
-            onClick={e => {
-              e.preventDefault()
-              if (!disabled) {
-                onPageChange(element.pageScriptHash as string)
-              }
-            }}
+            target={element.external ? "_blank" : ""}
+            rel="noreferrer"
+            onClick={handleClick}
           >
             {element.icon && <EmojiIcon size="lg">{element.icon}</EmojiIcon>}
             <StyledNavLinkText disabled={disabled} isActive={true}>
