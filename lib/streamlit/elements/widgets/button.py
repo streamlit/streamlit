@@ -37,6 +37,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
+from streamlit.string_util import clean_text, validate_emoji
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -555,7 +556,7 @@ class ButtonMixin:
             page_link_proto.label = label
 
         if icon is not None:
-            page_link_proto.icon = icon
+            page_link_proto.icon = validate_emoji(icon)
 
         if help is not None:
             page_link_proto.help = dedent(help)
@@ -565,7 +566,7 @@ class ButtonMixin:
 
         # Handle external links:
         if page.startswith("http://") or page.startswith("https://"):
-            if label is None:
+            if label is None or label == "":
                 raise StreamlitAPIException(
                     f"The label param is required for external links used with st.page_link - please provide a label."
                 )

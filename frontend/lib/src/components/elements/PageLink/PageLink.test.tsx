@@ -42,6 +42,10 @@ const getProps = (
 const mockOnPageChange = jest.fn()
 
 describe("PageLink", () => {
+  beforeEach(() => {
+    mockOnPageChange.mockClear()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<PageLink {...props} />)
@@ -126,5 +130,29 @@ describe("PageLink", () => {
     const pageNavLink = screen.getByTestId("stPageNavLink")
     fireEvent.click(pageNavLink)
     expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash")
+  })
+
+  it("does not trigger onPageChange when disabled", () => {
+    const props = getProps({}, { disabled: true })
+
+    customRenderLibContext(<PageLink {...props} />, {
+      onPageChange: mockOnPageChange,
+    })
+
+    const pageNavLink = screen.getByTestId("stPageNavLink")
+    fireEvent.click(pageNavLink)
+    expect(mockOnPageChange).not.toHaveBeenCalled()
+  })
+
+  it("does not trigger onPageChange for external links", () => {
+    const props = getProps({ page: "http://example.com", external: true })
+
+    customRenderLibContext(<PageLink {...props} />, {
+      onPageChange: mockOnPageChange,
+    })
+
+    const pageNavLink = screen.getByTestId("stPageNavLink")
+    fireEvent.click(pageNavLink)
+    expect(mockOnPageChange).not.toHaveBeenCalled()
   })
 })

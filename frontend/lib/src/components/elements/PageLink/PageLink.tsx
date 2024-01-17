@@ -60,15 +60,15 @@ function PageLink(props: Props): ReactElement {
   )
   const isActive = currentPageScriptHash === element.pageScriptHash
 
-  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>): void => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     if (element.external) {
       // External Page Link
       if (disabled) {
-        event.preventDefault()
+        e.preventDefault()
       }
     } else {
       // MPA Page Link
-      event.preventDefault()
+      e.preventDefault()
       if (!disabled) {
         onPageChange(element.pageScriptHash as string)
       }
