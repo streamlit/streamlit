@@ -455,4 +455,59 @@ describe("FileUploader widget RTL tests", () => {
       "File must be 0.0B or smaller."
     )
   })
+
+  it("resets its value when form is cleared", async () => {
+    const user = userEvent.setup()
+
+    // Create a widget in a clearOnSubmit form
+    const props = getProps({ formId: "form" })
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    props.widgetMgr.setFormClearOnSubmit("form", true)
+
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    const { rerender } = render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stDropzoneInput"
+    ) as HTMLInputElement
+
+    const myFile = createFile()
+    // Upload a single file
+    await user.upload(fileDropZoneInput, myFile)
+
+    const fileName = screen.getByTestId("stUploadedFile")
+    expect(fileName.textContent).toContain("filename.txt")
+
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
+
+    // "Submit" the form
+    props.widgetMgr.submitForm("form")
+    rerender(<FileUploader {...props} />)
+
+    // Our widget should be reset, and the widgetMgr should be updated
+    const fileNames = screen.queryAllByTestId("stUploadedFile")
+    expect(fileNames.length).toBe(0)
+
+    // WidgetStateManager will still have been called once, during component mounting
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
+      props.element,
+      buildFileUploaderStateProto([]),
+      {
+        fromUi: true,
+      }
+    )
+  })
 })
