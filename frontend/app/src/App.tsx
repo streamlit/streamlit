@@ -1121,15 +1121,19 @@ export class App extends PureComponent<Props, State> {
     scriptRunId: string,
     scriptName: string
   ): void {
+    const { hideSidebarNav, elements } = this.state
+    // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
+    const sidebarElements = hideSidebarNav && elements.sidebar
+
     this.setState(
       {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(false),
+        elements: AppRoot.empty(false, sidebarElements),
       },
       () => {
-        this.pendingElementsBuffer = this.state.elements
+        this.pendingElementsBuffer = elements
         this.widgetMgr.removeInactive(new Set([]))
       }
     )
