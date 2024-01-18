@@ -75,7 +75,7 @@ class WriteMixin:
         """Stream a generator or iterable to the app.
 
         This is done by iterating through the generator and writing all
-        chunks to the app. String chunks will be written using a ype writer effect.
+        chunks to the app. String chunks will be written using a type writer effect.
 
         Parameters
         ----------
@@ -178,7 +178,6 @@ class WriteMixin:
 
         """
 
-        # This causes greyed out effect since this element is missing on rerun:
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
         written_content: List[Any] = StreamingOutput()
