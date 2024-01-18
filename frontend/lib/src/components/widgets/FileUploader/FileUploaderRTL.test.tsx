@@ -163,13 +163,13 @@ describe("FileUploader widget RTL tests", () => {
       "stDropzoneInput"
     ) as HTMLInputElement
 
-    const myFile = createFile()
+    const fileToUpload = createFile()
 
-    await user.upload(fileDropZoneInput, myFile)
+    await user.upload(fileDropZoneInput, fileToUpload)
 
     const fileName = screen.getByTestId("stUploadedFile")
     expect(fileName.textContent).toContain("filename.txt")
-    expect(fileDropZoneInput.files?.[0]).toEqual(myFile)
+    expect(fileDropZoneInput.files?.[0]).toEqual(fileToUpload)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
       props.element,
@@ -194,7 +194,7 @@ describe("FileUploader widget RTL tests", () => {
       "stFileUploadDropzone"
     ) as HTMLElement
 
-    const myFiles = [
+    const filesToUpload = [
       new File(["Text in a file!"], "filename1.txt", {
         type: "text/plain",
         lastModified: 0,
@@ -212,7 +212,7 @@ describe("FileUploader widget RTL tests", () => {
     fireEvent.drop(fileDropZone, {
       dataTransfer: {
         types: ["Files", "Files", "Files"],
-        files: myFiles,
+        files: filesToUpload,
       },
     })
 
@@ -290,7 +290,7 @@ describe("FileUploader widget RTL tests", () => {
       "stFileUploadDropzone"
     ) as HTMLElement
 
-    const myFiles = [
+    const filesToUpload = [
       new File(["Text in a file!"], "filename1.txt", {
         type: "text/plain",
         lastModified: 0,
@@ -308,8 +308,8 @@ describe("FileUploader widget RTL tests", () => {
     fireEvent.drop(fileDropZone, {
       dataTransfer: {
         types: ["Files"],
-        files: myFiles,
-        items: myFiles.map(file => ({
+        files: filesToUpload,
+        items: filesToUpload.map(file => ({
           kind: "file",
           type: file.type,
           getAsFile: () => file,
@@ -432,9 +432,7 @@ describe("FileUploader widget RTL tests", () => {
       "stDropzoneInput"
     ) as HTMLInputElement
 
-    const myFile = createFile()
-
-    await user.upload(fileDropZoneInput, myFile)
+    await user.upload(fileDropZoneInput, createFile())
 
     const progressBar = screen.getByRole("progressbar")
     expect(progressBar).toBeInTheDocument()
@@ -467,7 +465,7 @@ describe("FileUploader widget RTL tests", () => {
       "stFileUploadDropzone"
     ) as HTMLElement
 
-    const myFiles = [
+    const filesToUpload = [
       new File(["Another PDF file"], "anotherpdffile.pdf", {
         type: "application/pdf",
         lastModified: 0,
@@ -478,8 +476,8 @@ describe("FileUploader widget RTL tests", () => {
     fireEvent.drop(fileDropZone, {
       dataTransfer: {
         types: ["Files"],
-        files: myFiles,
-        items: myFiles.map(file => ({
+        files: filesToUpload,
+        items: filesToUpload.map(file => ({
           kind: "file",
           type: file.type,
           getAsFile: () => file,
@@ -514,14 +512,12 @@ describe("FileUploader widget RTL tests", () => {
       "stDropzoneInput"
     ) as HTMLInputElement
 
-    const myFile = createFile()
-
     // Upload a file that will be rejected by the server
     props.uploadClient.uploadFile = jest
       .fn()
       .mockRejectedValue(new Error("random upload error!"))
 
-    await user.upload(fileDropZoneInput, myFile)
+    await user.upload(fileDropZoneInput, createFile())
 
     // Our file should have an error status
     const errorFileNames = screen.getByTestId("stUploadedFileErrorMessage")
@@ -536,7 +532,7 @@ describe("FileUploader widget RTL tests", () => {
       "stFileUploadDropzone"
     ) as HTMLElement
 
-    const myFiles = [
+    const filesToUpload = [
       new File(["TXT file"], "txtfile.txt", {
         type: "text/plain",
         lastModified: 0,
@@ -547,8 +543,8 @@ describe("FileUploader widget RTL tests", () => {
     fireEvent.drop(fileDropZone, {
       dataTransfer: {
         types: ["Files"],
-        files: myFiles,
-        items: myFiles.map(file => ({
+        files: filesToUpload,
+        items: filesToUpload.map(file => ({
           kind: "file",
           type: file.type,
           getAsFile: () => file,
@@ -599,9 +595,8 @@ describe("FileUploader widget RTL tests", () => {
       "stDropzoneInput"
     ) as HTMLInputElement
 
-    const myFile = createFile()
     // Upload a single file
-    await user.upload(fileDropZoneInput, myFile)
+    await user.upload(fileDropZoneInput, createFile())
 
     const fileName = screen.getByTestId("stUploadedFile")
     expect(fileName.textContent).toContain("filename.txt")
