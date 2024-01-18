@@ -361,7 +361,12 @@ class Slider extends React.PureComponent<Props, State> {
     this.thumbValueAlignment()
 
     return (
-      <div ref={this.sliderRef} className="stSlider" style={style}>
+      <div
+        ref={this.sliderRef}
+        className="stSlider"
+        data-testid="stSlider"
+        style={style}
+      >
         <WidgetLabel
           label={element.label}
           disabled={disabled}
