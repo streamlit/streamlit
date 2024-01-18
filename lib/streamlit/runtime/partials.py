@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ from typing import (
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.runtime.state.session_state_proxy import get_session_state
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -87,13 +88,13 @@ def partial(
         # at this point so that we can rewrite a specific part of the app in a partial
         # rerun. We'll eventually want to make changes to the DeltaGenerator class
         # itself to support this in a less hacky way.
-        if not len(ctx.dg_stack):
+        if not len(dg_stack.get()):
             with st.container():
-                dg_stack = pickle.dumps(ctx.dg_stack)
-                active_dg = ctx.dg_stack[-1]
+                _dg_stack = pickle.dumps(dg_stack.get())
+                active_dg = dg_stack.get()[-1]
         else:
-            dg_stack = pickle.dumps(ctx.dg_stack)
-            active_dg = ctx.dg_stack[-1]
+            _dg_stack = pickle.dumps(dg_stack.get())
+            active_dg = dg_stack.get()[-1]
 
         # TODO(lukasmasuch): Research more on what to include in the hash:
         h = hashlib.new("md5")
@@ -106,13 +107,14 @@ def partial(
 
         def wrapped_partial():
             from streamlit.runtime.scriptrunner import get_script_run_ctx
+            from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 
             ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
             # HACK: See the corresponding comment above for an explanation of what's
             # going on here.
-            ctx.dg_stack = pickle.loads(dg_stack)
+            dg_stack.set(pickle.loads(_dg_stack)[:])
 
             # Set dg stack to outside state
             ctx.current_partial_id = partial_id

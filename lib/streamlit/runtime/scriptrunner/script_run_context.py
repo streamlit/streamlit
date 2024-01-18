@@ -85,6 +85,7 @@ class ScriptRunContext:
     _production_query_params_used = False
 
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
+        global dg_stack
         self.cursors = {}
         self.widget_ids_this_run = set()
         self.widget_user_keys_this_run = set()
@@ -98,7 +99,7 @@ class ScriptRunContext:
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
         self.current_partial_id = None
-        self.dg_stack = []
+        dg_stack.set(tuple())
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
