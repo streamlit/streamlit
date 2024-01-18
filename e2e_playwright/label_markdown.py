@@ -174,5 +174,3 @@ with st.container():
     with st.expander(link_label):
         st.write("Expanded!")
     st.tabs([link_label])
-
-st.selectbox("", [])  # No label
