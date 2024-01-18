@@ -444,9 +444,6 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
-            elif isinstance(arg, (ImageFile.ImageFile, Image.Image)):
-                flush_buffer()
-                self.dg.image(arg)
             elif isinstance(arg, StringIO):
                 flush_buffer()
                 self.dg.markdown(arg.getvalue())
