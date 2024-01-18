@@ -57,7 +57,7 @@ export type IHostToGuestMessage = {
       pageScriptHash: string
     }
   | {
-      type: "SET_APP_DISABLED"
+      type: "SET_INPUTS_DISABLED"
       disabled: boolean
     }
   | {

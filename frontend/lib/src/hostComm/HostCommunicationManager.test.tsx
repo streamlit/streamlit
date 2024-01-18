@@ -52,7 +52,7 @@ describe("HostCommunicationManager messaging", () => {
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
       sendAppHeartbeat: jest.fn(),
-      setAppDisabled: jest.fn(),
+      setInputsDisabled: jest.fn(),
       isOwnerChanged: jest.fn(),
       jwtHeaderChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
@@ -198,13 +198,13 @@ describe("HostCommunicationManager messaging", () => {
     expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith()
   })
 
-  it("can process a received SET_APP_DISABLED message", () => {
+  it("can process a received SET_INPUTS_DISABLED message", () => {
     dispatchEvent(
       "message",
       new MessageEvent("message", {
         data: {
           stCommVersion: HOST_COMM_VERSION,
-          type: "SET_APP_DISABLED",
+          type: "SET_INPUTS_DISABLED",
           disabled: true,
         },
         origin: "https://devel.streamlit.test",
@@ -212,7 +212,7 @@ describe("HostCommunicationManager messaging", () => {
     )
 
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.setAppDisabled).toHaveBeenCalledWith(
+    expect(hostCommunicationMgr.props.setInputsDisabled).toHaveBeenCalledWith(
       true
     )
   })
@@ -467,7 +467,7 @@ describe("Test different origins", () => {
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
       sendAppHeartbeat: jest.fn(),
-      setAppDisabled: jest.fn(),
+      setInputsDisabled: jest.fn(),
       jwtHeaderChanged: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
@@ -563,7 +563,7 @@ describe("HostCommunicationManager external auth token handling", () => {
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
       sendAppHeartbeat: jest.fn(),
-      setAppDisabled: jest.fn(),
+      setInputsDisabled: jest.fn(),
       jwtHeaderChanged: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),

@@ -42,7 +42,7 @@ export interface HostCommunicationProps {
   readonly rerunScript: () => void
   readonly clearCache: () => void
   readonly sendAppHeartbeat: () => void
-  readonly setAppDisabled: (appDisabled: boolean) => void
+  readonly setInputsDisabled: (inputsDisabled: boolean) => void
   readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
@@ -190,8 +190,8 @@ export default class HostCommunicationManager {
       this.props.sendAppHeartbeat()
     }
 
-    if (message.type === "SET_APP_DISABLED") {
-      this.props.setAppDisabled(message.disabled)
+    if (message.type === "SET_INPUTS_DISABLED") {
+      this.props.setInputsDisabled(message.disabled)
     }
 
     if (message.type === "SET_AUTH_TOKEN") {

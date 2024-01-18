@@ -172,7 +172,7 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  appDisabled: boolean
+  inputsDisabled: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -286,7 +286,7 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
-      appDisabled: false,
+      inputsDisabled: false,
     }
 
     this.connectionManager = null
@@ -303,8 +303,8 @@ export class App extends PureComponent<Props, State> {
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
       sendAppHeartbeat: this.sendAppHeartbeat,
-      setAppDisabled: appDisabled => {
-        this.setState({ appDisabled })
+      setInputsDisabled: inputsDisabled => {
+        this.setState({ inputsDisabled })
       },
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
@@ -1658,7 +1658,7 @@ export class App extends PureComponent<Props, State> {
       hostToolbarItems,
       libConfig,
       appConfig,
-      appDisabled,
+      inputsDisabled,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1682,7 +1682,7 @@ export class App extends PureComponent<Props, State> {
       : null
 
     const widgetsDisabled =
-      appDisabled || connectionState !== ConnectionState.CONNECTED
+      inputsDisabled || connectionState !== ConnectionState.CONNECTED
 
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
