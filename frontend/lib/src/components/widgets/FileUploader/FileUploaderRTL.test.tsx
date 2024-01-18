@@ -24,6 +24,7 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
+  LabelVisibilityMessage as LabelVisibilityMessageProto,
   UploadedFileInfo as UploadedFileInfoProto,
   IFileURLs,
 } from "@streamlit/lib/src/proto"
@@ -88,6 +89,70 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
 }
 
 describe("FileUploader widget RTL tests", () => {
+  it("renders without crashing", () => {
+    const props = getProps()
+    render(<FileUploader {...props} />)
+    const fileUploaderElement = screen.getByTestId("stFileUploader")
+    expect(fileUploaderElement).toBeInTheDocument()
+  })
+
+  it("sets initial value properly non-empty", () => {
+    const props = getProps()
+    const { element, widgetMgr } = props
+
+    widgetMgr.setFileUploaderStateValue(
+      element,
+      buildFileUploaderStateProto([
+        new FileURLsProto({
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        }),
+      ]),
+      { fromUi: false }
+    )
+
+    render(<FileUploader {...props} />)
+    const fileNameNode = screen.getByText("filename.txt")
+    expect(fileNameNode).toBeInTheDocument()
+  })
+
+  it("shows a label", () => {
+    const props = getProps({ label: "Test label" })
+    render(<FileUploader {...props} />)
+
+    const labelNode = screen.getByText("Test label")
+    expect(labelNode).toBeInTheDocument()
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+    const props = getProps({
+      label: "Test label",
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+      },
+    })
+    render(<FileUploader {...props} />)
+
+    const labelNode = screen.getByText("Test label")
+    expect(labelNode).toBeInTheDocument()
+    expect(labelNode).not.toBeVisible()
+  })
+
+  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+    const props = getProps({
+      label: "Test label",
+      labelVisibility: {
+        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+      },
+    })
+    render(<FileUploader {...props} />)
+
+    const labelNode = screen.getByText("Test label")
+    expect(labelNode).toBeInTheDocument()
+    expect(labelNode).not.toBeVisible()
+  })
+
   it("uploads a single file upload", async () => {
     const user = userEvent.setup()
     const props = getProps()
@@ -437,6 +502,68 @@ describe("FileUploader widget RTL tests", () => {
     // File should be gone
     const fileNamesAfterDelete = screen.queryAllByTestId("stUploadedFile")
     expect(fileNamesAfterDelete.length).toBe(0)
+  })
+
+  it("handles upload error", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stDropzoneInput"
+    ) as HTMLInputElement
+
+    const myFile = createFile()
+
+    // Upload a file that will be rejected by the server
+    props.uploadClient.uploadFile = jest
+      .fn()
+      .mockRejectedValue(new Error("random upload error!"))
+
+    await user.upload(fileDropZoneInput, myFile)
+
+    // Our file should have an error status
+    const errorFileNames = screen.getByTestId("stUploadedFileErrorMessage")
+    expect(errorFileNames.textContent).toContain("random upload error!")
+  })
+
+  it("shows an ErrorStatus when File extension is not allowed", async () => {
+    const props = getProps({ multipleFiles: false, type: [".png"] })
+    render(<FileUploader {...props} />)
+
+    const fileDropZone = screen.getByTestId(
+      "stFileUploadDropzone"
+    ) as HTMLElement
+
+    const myFiles = [
+      new File(["TXT file"], "txtfile.txt", {
+        type: "text/plain",
+        lastModified: 0,
+      }),
+    ]
+
+    // Drop a file with an error (wrong extension)
+    fireEvent.drop(fileDropZone, {
+      dataTransfer: {
+        types: ["Files"],
+        files: myFiles,
+        items: myFiles.map(file => ({
+          kind: "file",
+          type: file.type,
+          getAsFile: () => file,
+        })),
+      },
+    })
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId("stUploadedFile").length).toBe(1)
+    )
+
+    const errorFileNames = screen.getByTestId("stUploadedFileErrorMessage")
+    expect(errorFileNames.textContent).toContain(
+      "text/plain files are not allowed."
+    )
   })
 
   it("shows an ErrorStatus when maxUploadSizeMb = 0", async () => {
