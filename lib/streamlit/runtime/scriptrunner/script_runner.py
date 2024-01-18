@@ -534,7 +534,10 @@ class ScriptRunner:
             with modified_sys_path(self._main_script_path), self._set_execing_flag():
                 # Run callbacks for widgets whose values have changed.
                 if rerun_data.widget_states is not None:
-                    self._session_state.on_script_will_rerun(rerun_data.widget_states)
+                    self._session_state.on_script_will_rerun(
+                        rerun_data.widget_states,
+                        reset_triggers=rerun_data.reset_triggers,
+                    )
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
@@ -551,6 +554,7 @@ class ScriptRunner:
                             RerunData(
                                 query_string=rerun_data.query_string,
                                 page_script_hash=rerun_data.page_script_hash,
+                                reset_triggers=False,
                             )
                         )
 
@@ -567,7 +571,7 @@ class ScriptRunner:
             # we want to count as a script completion so triggers reset.
             # It is also possible for this to happen if fast reruns is off,
             # but this is very rare.
-            premature_stop = False
+            premature_stop = partial_run
 
         except StopException:
             # This is thrown when the script executes `st.stop()`.

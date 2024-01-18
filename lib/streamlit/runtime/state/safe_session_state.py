@@ -51,14 +51,16 @@ class SafeSessionState:
         with self._lock:
             return self._state.register_widget(metadata, user_key)
 
-    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+    def on_script_will_rerun(
+        self, latest_widget_states: WidgetStatesProto, reset_triggers: bool
+    ) -> None:
         self._yield_callback()
         with self._lock:
             # TODO: rewrite this to copy the callbacks list into a local
             #  variable so that we don't need to hold our lock for the
             #  duration. (This will also allow us to downgrade our RLock
             #  to a Lock.)
-            self._state.on_script_will_rerun(latest_widget_states)
+            self._state.on_script_will_rerun(latest_widget_states, reset_triggers)
 
     def on_script_finished(self, widget_ids_this_run: Set[str]) -> None:
         with self._lock:
