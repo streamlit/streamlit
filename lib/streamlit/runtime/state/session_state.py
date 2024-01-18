@@ -491,14 +491,17 @@ class SessionState:
         for state in widget_states.widgets:
             self._new_widget_state.set_widget_from_proto(state)
 
-    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+    def on_script_will_rerun(
+        self, latest_widget_states: WidgetStatesProto, reset_triggers: bool
+    ) -> None:
         """Called by ScriptRunner before its script re-runs.
 
         Update widget data and call callbacks on widgets whose value changed
         between the previous and current script runs.
         """
-        # Clear any triggers that weren't reset because the script was disconnected
-        self._reset_triggers()
+        if reset_triggers:
+            # Clear any triggers that weren't reset because the script was disconnected
+            self._reset_triggers()
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
         self._call_callbacks()

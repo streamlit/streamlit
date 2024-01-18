@@ -45,6 +45,7 @@ class RerunData:
     page_script_hash: str = ""
     page_name: str = ""
     partial_id: Optional[str] = None
+    reset_triggers: bool = True
 
     def __repr__(self) -> str:
         return util.repr_(self)
