@@ -29,6 +29,7 @@ message Block {
     TabContainer tab_container = 6;
     Tab tab = 7;
     ChatMessage chat_message = 9;
+    DialogNonForm dialog_non_form = 10;
   }
 
   bool allow_empty = 8;
@@ -46,6 +47,12 @@ message Block {
   message Column {
     double weight = 1;
     string gap = 2;
+  }
+
+  message DialogNonForm {
+    string title = 1;
+    bool dismissible = 2;
+    optional bool is_open = 3;
   }
 
   message Expandable {

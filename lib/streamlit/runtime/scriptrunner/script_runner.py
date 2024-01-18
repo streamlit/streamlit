@@ -555,7 +555,7 @@ class ScriptRunner:
                             RerunData(
                                 query_string=rerun_data.query_string,
                                 page_script_hash=rerun_data.page_script_hash,
-                                reset_triggers=False,
+                                # reset_triggers=False,
                             )
                         )
 

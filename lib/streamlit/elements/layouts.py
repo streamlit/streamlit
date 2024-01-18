@@ -22,6 +22,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.dialog_non_form import DialogNonForm
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType = Union[int, Sequence[Union[int, float]]]
@@ -594,6 +595,21 @@ class LayoutsMixin:
 
         return StatusContainer._create(
             self.dg, label=label, expanded=expanded, state=state
+        )
+
+    @gather_metrics("dialog_non_form")
+    def dialog_non_form(
+        self,
+        title: str,
+        *,
+        dismissible: bool = True,
+        is_open: Optional[bool] = None,
+        key: Optional[str] = None,
+    ) -> "DialogNonForm":
+        from streamlit.elements.dialog_non_form import DialogNonForm
+
+        return DialogNonForm._create(
+            self.dg, title, dismissible=dismissible, is_open=is_open, key=key
         )
 
     @property

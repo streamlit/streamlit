@@ -25,6 +25,7 @@ import { useTheme } from "@emotion/react"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
+import { DialogNonForm } from "@streamlit/lib/src/components/widgets/Dialog"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
@@ -79,6 +80,18 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   const childProps = { ...props, ...{ node } }
   const child: ReactElement = <LayoutBlock {...childProps} />
+
+  if (node.deltaBlock.dialogNonForm) {
+    return (
+      <DialogNonForm
+        title={node.deltaBlock.dialogNonForm.title || "Placeholder Title"}
+        dismissible={node.deltaBlock.dialogNonForm.dismissible || false}
+        isOpen={node.deltaBlock.dialogNonForm.isOpen}
+      >
+        {child}
+      </DialogNonForm>
+    )
+  }
 
   if (node.deltaBlock.expandable) {
     return (

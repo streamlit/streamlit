@@ -93,6 +93,10 @@ from streamlit.commands.execution_control import (
 
 from streamlit.runtime.partials import partial as _partial
 
+from streamlit.decorator_dialog import decorator_dialog
+
+decorator_dialog = decorator_dialog
+
 # We add the metrics tracking for caching here,
 # since the actual cache function calls itself recursively
 cache = _gather_metrics("cache", _cache)
@@ -137,6 +141,7 @@ container = _main.container
 dataframe = _main.dataframe
 data_editor = _main.data_editor
 date_input = _main.date_input
+dialog_non_form = _main.dialog_non_form
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander
