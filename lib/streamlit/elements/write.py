@@ -70,7 +70,7 @@ class WriteMixin:
     @gather_metrics("experimental_stream")
     def experimental_stream(
         self,
-        arg: Callable[...] | Generator[Any] | Iterable[Any],
+        arg: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any],
         unsafe_allow_html: bool = False,
     ) -> List[Any] | str:
         """Stream a generator or iterable to the app.
@@ -203,7 +203,7 @@ class WriteMixin:
 
         # Iterate through the generator and write each chunk to the app
         # with a type writer effect.
-        for chunk in stream:
+        for chunk in stream:  # type: ignore
             if type_util.is_type(
                 chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
             ):
