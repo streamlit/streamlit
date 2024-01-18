@@ -33,7 +33,6 @@ from typing import (
 )
 
 import numpy as np
-from PIL import Image, ImageFile
 from typing_extensions import Final
 
 from streamlit import type_util
