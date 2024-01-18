@@ -612,6 +612,21 @@ class LayoutsMixin:
             self.dg, title, dismissible=dismissible, is_open=is_open, key=key
         )
 
+    @gather_metrics("dialog_form")
+    def dialog_form(
+        self,
+        title: str,
+        *,
+        close_on_submit: bool = True,
+        dismissible: bool = True,
+        key: Optional[str] = None,
+    ) -> "DialogMixinV2":
+        from streamlit.elements.dialog_form import DialogMixinV2
+
+        return DialogMixinV2._create(
+            self.dg, title=title, dismissible=True, is_open=False, key=key
+        )
+
     @property
     def dg(self) -> "DeltaGenerator":
         """Get our DeltaGenerator."""

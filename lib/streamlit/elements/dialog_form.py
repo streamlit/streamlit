@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 import time
 from types import TracebackType
 from typing import List, Literal, Optional, Type, cast
 
-from streamlit.delta_generator import DeltaGenerator, _enqueue_message
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.dialog_non_form import DialogNonForm
+from streamlit.elements.form import FormData, FormMixin
 from streamlit.proto import Block_pb2
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
-class DialogNonForm(DeltaGenerator):
+class DialogMixinV2(DialogNonForm):
     @staticmethod
     def _create(
         parent: DeltaGenerator,
@@ -32,7 +31,7 @@ class DialogNonForm(DeltaGenerator):
         dismissible: bool = True,
         is_open: Optional[bool] = None,
         key: str,
-    ) -> DialogNonForm:
+    ) -> "DialogMixinV2":
         # Import this here to avoid circular imports.
         from streamlit.elements.utils import check_session_state_rules
 
@@ -55,7 +54,7 @@ class DialogNonForm(DeltaGenerator):
         )
 
         dialog_non_form_container = cast(
-            DialogNonForm, parent._block(block_proto=block_proto, dg_type=DialogNonForm)
+            DialogMixinV2, parent._block(block_proto=block_proto, dg_type=DialogMixinV2)
         )
 
         # Apply initial configuration
@@ -72,36 +71,21 @@ class DialogNonForm(DeltaGenerator):
         # Attach the form's button info to the newly-created block's
         # DeltaGenerator.
         # block_dg._form_data = FormData(form_id)
+        dialog_non_form_container._form_dg = dialog_non_form_container.form(
+            title, border=False
+        )
         return dialog_non_form_container
 
-    def update(self, is_open: Optional[bool]):
-        assert self.current_proto is not None
-        assert self._delta_path is not None
-
-        msg = ForwardMsg()
-        msg.metadata.delta_path[:] = self._delta_path
-        msg.delta.add_block.CopyFrom(self._current_proto)
-
-        if is_open is not None:
-            msg.delta.add_block.dialog_non_form.is_open = is_open
-
-        self._current_proto = msg.delta.add_block
-        self._current_is_open = is_open
-        _enqueue_message(msg)
-
-    def __call__(self, is_open: bool = True) -> DialogNonForm:
-        self._current_is_open = is_open
-        return self
-
-    def __enter__(self) -> DialogNonForm:  # type: ignore[override]
-        print("Enter NonFormDialog!")
-        time.sleep(0.05)
-        self.update(self._current_is_open)
+    # def dialogv2(self, title: str, close_on_submit: bool = False, border: bool = True) -> FormMixin:
+    #     return st.dialog_non_form(title=title).form(title, border=border)
+    def __enter__(self) -> DeltaGenerator:  # type: ignore[override]
+        # print("Enter NonFormDialog!")
+        # time.sleep(0.05)
+        # self.update(self._current_is_open)
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
-        super().__enter__()
-        return self
+        return self._form_dg.__enter__()
 
     def __exit__(
         self,
@@ -109,10 +93,5 @@ class DialogNonForm(DeltaGenerator):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> Literal[False]:
+        # self._form.__exit__(exc_type, exc_val, exc_tb)
         return super().__exit__(exc_type, exc_val, exc_tb)
-
-    def open(self) -> None:
-        self.update(is_open=True)
-
-    def close(self) -> None:
-        self.update(is_open=False)

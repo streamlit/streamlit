@@ -141,6 +141,7 @@ container = _main.container
 dataframe = _main.dataframe
 data_editor = _main.data_editor
 date_input = _main.date_input
+dialog = _main.dialog_form
 dialog_non_form = _main.dialog_non_form
 divider = _main.divider
 download_button = _main.download_button
