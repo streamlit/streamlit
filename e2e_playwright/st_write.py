@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 from collections import namedtuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -53,6 +54,11 @@ st.write(None)
 st.write(datetime(2021, 1, 1))
 
 st.write(np.float64(1.0))
+
+string_io = io.StringIO()
+string_io.write("This is a string IO object!")
+
+st.write(string_io)
 
 
 def stream_text():
