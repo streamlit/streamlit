@@ -62,23 +62,25 @@ _LOGGER = get_logger(__name__)
 _TEXT_CURSOR = "▕"
 
 
-class StreamingOutput(list):
+class StreamingOutput(List[Any]):
     pass
 
 
 class WriteMixin:
     @gather_metrics("experimental_stream")
     def experimental_stream(
-        self, arg: Callable | Generator | Iterable, unsafe_allow_html: bool = False
+        self,
+        arg: Callable[...] | Generator[Any] | Iterable[Any],
+        unsafe_allow_html: bool = False,
     ) -> List[Any] | str:
         """Stream a generator or iterable to the app.
 
         This is done by iterating through the generator and writing all
-        string chunks to the app with a type writer effect.
+        chunks to the app. String chunks will be written using a ype writer effect.
 
         Parameters
         ----------
-        arg : Callable, Generator, or Iterable
+        arg : Callable, Generator, Iterable or OpenAI Stream
             The generator or iterable to stream.
 
         unsafe_allow_html : bool
@@ -94,13 +96,87 @@ class WriteMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
+        Returns
+        -------
+        str or list.
+            The full response as a string if the streamed output only contains a text or
+            a list of all the streamed objects otherwise. The return value is fully compatible
+            as input for ``st.write``.
+
+
         Example
         -------
+
+        You can pass a generator function as input:
+
+        >>> import time
+        >>> import numpy as np
+        >>> import pandas as pd
         >>> import streamlit as st
+        >>>
+        >>> _LOREM_IPSUM = \"\"\"
+        >>> Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+        >>> labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
+        >>> laboris nisi ut aliquip ex ea commodo consequat.
+        >>> \"\"\"
+        >>>
+        >>>
+        >>> def stream_data():
+        >>>     for word in _LOREM_IPSUM.split():
+        >>>         yield word + " "
+        >>>         time.sleep(0.02)
+        >>>
+        >>>     yield pd.DataFrame(
+        >>>         np.random.randn(5, 10),
+        >>>         columns=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
+        >>>     )
+        >>>
+        >>>     for word in _LOREM_IPSUM.split():
+        >>>         yield word + " "
+        >>>         time.sleep(0.02)
+        >>>
+        >>>
+        >>> if st.button("Stream data"):
+        >>>     st.experimental_stream(stream_data)
 
         ..  output::
-            https://doc-stream-text.streamlit.app/
-            height: 150px
+            https://doc-stream-data.streamlit.app/
+            height: 300px
+
+        Or an OpenAI stream:
+
+        >>> from openai import OpenAI
+        >>> import streamlit as st
+        >>>
+        >>> client = OpenAI(api_key=st.secrets["openai_api_key"])
+        >>>
+        >>> if "messages" not in st.session_state:
+        >>>     st.session_state.messages = []
+        >>>
+        >>> for message in st.session_state.messages:
+        >>>     st.chat_message(message["role"]).write(message["content"])
+        >>>
+        >>> if prompt := st.chat_input("What is up?"):
+        >>>     st.chat_message("user").write(prompt)
+        >>>     st.session_state.messages.append({"role": "user", "content": prompt})
+        >>>
+        >>>     with st.chat_message("assistant"):
+        >>>         response = st.experimental_stream(
+        >>>             client.chat.completions.create(
+        >>>                 model="gpt-3.5-turbo",
+        >>>                 messages=[
+        >>>                     {"role": m["role"], "content": m["content"]}
+        >>>                     for m in st.session_state.messages
+        >>>                 ],
+        >>>                 stream=True,
+        >>>             )
+        >>>         )
+        >>>        st.session_state.messages.append({"role": "assistant", "content": response})
+
+        ..  output::
+            https://doc-stream-openai.streamlit.app/
+            height: 400px
+
         """
 
         # This causes greyed out effect since this element is missing on rerun:
