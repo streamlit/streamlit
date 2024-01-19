@@ -68,9 +68,7 @@ class StreamingOutput(List[Any]):
 class WriteMixin:
     @gather_metrics("experimental_stream")
     def experimental_stream(
-        self,
-        arg: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any],
-        unsafe_allow_html: bool = False,
+        self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
     ) -> List[Any] | str:
         """Stream a generator or iterable to the app.
 
@@ -189,15 +187,21 @@ class WriteMixin:
 
             if streamed_response and stream_container:
                 # Replace the stream_container element the full response
-                stream_container.write(
-                    streamed_response, unsafe_allow_html=unsafe_allow_html
-                )
+                stream_container.write(streamed_response)
                 written_content.append(streamed_response)
                 stream_container = None
                 streamed_response = ""
 
         # Make sure we have a generator and not just a generator function.
-        stream = arg() if inspect.isgeneratorfunction(arg) else arg
+        stream = stream() if inspect.isgeneratorfunction(stream) else stream
+
+        try:
+            iter(stream)
+        except TypeError as exc:
+            raise StreamlitAPIException(
+                f"The provided input (type: {type(stream)}) cannot be iterated. "
+                "Please make sure that it is a generator, generator function or iterable."
+            ) from exc
 
         # Iterate through the generator and write each chunk to the app
         # with a type writer effect.
@@ -218,15 +222,15 @@ class WriteMixin:
                 # Only add the streaming symbol on the second text chunk
                 stream_container.write(
                     streamed_response + ("" if first_text else _TEXT_CURSOR),
-                    unsafe_allow_html=unsafe_allow_html,
                 )
             elif callable(chunk):
                 flush_stream_response()
                 chunk()
             else:
                 flush_stream_response()
-                self.write(chunk, unsafe_allow_html=unsafe_allow_html)
+                self.write(chunk)
                 written_content.append(chunk)
+
         flush_stream_response()
 
         # If the output only contains a single string, return it as a string
