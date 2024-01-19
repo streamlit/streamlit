@@ -33,9 +33,8 @@ def test_renders_settings_dialog_properly(
     assert_snapshot(app.get_by_role("dialog"), name="settings_dialog")
 
 
-# This test doesn't work depending on the linux machine that we get from github actions
-# as the linux machines may or may not have a supported browser
-# as a result, going to comment this test out for now as it will become a flakey test
+# This test doesn't work depending on webkit (safari) browser
+# as a result, going to comment this test out
 # def test_renders_screencast_dialog_properly(
 #     app: Page, assert_snapshot: ImageCompareFunction
 # ):
@@ -45,9 +44,8 @@ def test_renders_settings_dialog_properly(
 #     assert_snapshot(app.get_by_role("dialog"), name="record_screencast_dialog")
 
 
-# This test doesn't work depending on the linux machine that we get from github actions
-# as the linux machines may or may not have a supported browser
-# as a result, going to comment this test out for now as it will become a flakey test
+# This test doesn't work depending on webkit (safari) browser
+# as a result, going to comment this test out
 # def test_renders_screencast_recorded_dialog_properly(
 #     app: Page, assert_snapshot: ImageCompareFunction
 # ):
