@@ -1842,6 +1842,69 @@ describe("App", () => {
       })
     })
 
+    it("disables widgets when SET_INPUTS_DISABLED is sent by host", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "textInput",
+            textInput: {
+              label: "test input",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("test input")).toBeInTheDocument()
+      })
+
+      // widgets are initially disabled since the app is not CONNECTED
+      expect(screen.getByLabelText("test input")).toHaveAttribute("disabled")
+
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+
+      // widgets are enabled once CONNECTED
+      expect(screen.getByLabelText("test input")).not.toHaveAttribute(
+        "disabled"
+      )
+
+      // have the host disable widgets
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+      fireWindowPostMessage({
+        type: "SET_INPUTS_DISABLED",
+        disabled: true,
+      })
+
+      expect(screen.getByLabelText("test input")).toHaveAttribute("disabled")
+
+      // have the host reenable widgets
+      fireWindowPostMessage({
+        type: "SET_INPUTS_DISABLED",
+        disabled: false,
+      })
+
+      expect(screen.getByLabelText("test input")).not.toHaveAttribute(
+        "disabled"
+      )
+    })
+
     it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when scriptRunState changing", () => {
       // We test the scenarios of the following runstate changes
       //   1. Script is now running

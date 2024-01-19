@@ -57,6 +57,10 @@ export type IHostToGuestMessage = {
       pageScriptHash: string
     }
   | {
+      type: "SET_INPUTS_DISABLED"
+      disabled: boolean
+    }
+  | {
       type: "SET_AUTH_TOKEN"
       authToken: string
       jwtHeaderName?: string
