@@ -374,10 +374,13 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         src = this.props.registry.getComponentURL(componentName, "index.html")
       }
 
+      // Create a URL object from window.location
+      const currentUrl = new URL(window.location.href)
+
       // Add streamlitUrl query parameter to src.
       src = queryString.stringifyUrl({
         url: src,
-        query: { streamlitUrl: window.location.href },
+        query: { streamlitUrl: currentUrl.origin + currentUrl.pathname },
       })
 
       // Parse arguments. Our JSON arguments are just stored in a JSON string.

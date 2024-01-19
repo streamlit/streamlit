@@ -63,5 +63,7 @@ def test_declare_component_correctly_sets_attr(app: Page):
     )
     expect(declare_component).to_have_attribute(
         "src",
-        re.compile(r"http://not.a.real.url\?streamlitUrl=http%3A%2F%2Flocalhost.*"),
+        re.compile(
+            r"http://not.a.real.url\?streamlitUrl=http%3A%2F%2Flocalhost%3A\d*%2F$"
+        ),
     )
