@@ -31,7 +31,7 @@ def test_button_labels_handle_markdown(
     expect(buttons).to_have_count(4)
     for index, case in enumerate(cases):
         assert_snapshot(
-            buttons.nth(index).get_by_test_id("stWidgetLabel"),
+            buttons.nth(index),
             name=f"st_button-{case[0]}_{case[1]}",
         )
 
