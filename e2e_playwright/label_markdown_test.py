@@ -263,7 +263,7 @@ def test_metric_labels_handle_markdown(
     assert metrics.count() == 4
     for index, case in enumerate(cases):
         assert_snapshot(
-            metrics.nth(index).get_by_test_id("stWidgetLabel"),
+            metrics.nth(index).get_by_test_id("stMetricLabel"),
             name=f"st_metric-{case[0]}_{case[1]}",
         )
 
@@ -282,7 +282,7 @@ def test_expander_labels_handle_markdown(
     assert expanders.count() == 4
     for index, case in enumerate(cases):
         assert_snapshot(
-            expanders.nth(index).get_by_test_id("stWidgetLabel"),
+            expanders.nth(index),
             name=f"st_expander-{case[0]}_{case[1]}",
         )
 
@@ -299,6 +299,6 @@ def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunc
     assert tabs.count() == 4
     for index, case in enumerate(cases):
         assert_snapshot(
-            tabs.nth(index).get_by_test_id("stWidgetLabel"),
+            tabs.nth(index),
             name=f"st_tab-{case[0]}_{case[1]}",
         )
