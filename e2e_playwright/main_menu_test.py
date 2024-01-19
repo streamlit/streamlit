@@ -68,7 +68,7 @@ def test_renders_screencast_dialog_properly(
 #     ).to_be_visible
 
 
-def test_renders_screencast_dialog_properly(
+def test_renders_about_dialog_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     app.get_by_test_id("stMainMenu").click()
@@ -77,7 +77,7 @@ def test_renders_screencast_dialog_properly(
     assert_snapshot(app.get_by_role("dialog"), name="about_dialog")
 
 
-def test_renders_screencast_dialog_properly(
+def test_renders_clear_cache_dialog_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     app.get_by_test_id("stMainMenu").click()
