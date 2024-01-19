@@ -78,14 +78,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: 1000,
     },
 
-    // TODO: Confirm with design (pinch margin only in sidebar?)
     ":has(> .stPageLink)": {
-      marginTop: "-0.5rem",
+      marginTop: "-0.375rem",
+      marginBottom: "-0.375rem",
     },
-
-    // ":has(> .stPageLink)": {
-    //   marginTop: isInSidebar ? "-0.5rem" : "inherit",
-    // },
 
     // We do not want the chat input to be faded out.
     // TODO: Reconsider this when we implement fixed-sized chat containers
