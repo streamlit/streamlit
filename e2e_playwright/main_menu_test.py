@@ -52,6 +52,9 @@ def test_renders_screencast_recorded_dialog_properly(
 
     # Wait 5 seconds because there is a 3! 2! 1! on the screen until recording occurs and there may be buffer
     app.wait_for_timeout(5000)
+
+    # Remove the browser support dialog message
+    app.keyboard.press("escape")
     app.get_by_test_id("stMainMenu").click()
 
     app.get_by_text("Stop recording").click()
