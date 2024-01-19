@@ -15,3 +15,8 @@
 import streamlit as st
 
 st.header("Page 4")
+
+with st.sidebar:
+    st.page_link("mpa_configure_sidebar.py", label="Home", icon="🏠")
+    st.page_link("pages/02_page2.py", label="Page 2", icon="📄")
+    st.page_link("pages/03_page3.py", label="Page 3", icon="🗃")
