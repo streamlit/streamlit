@@ -60,7 +60,9 @@ def test_renders_screencast_recorded_dialog_properly(
     app.get_by_text("Stop recording").click()
 
     # don't use screenshot as the recording may differ so just check for specific text
-    expect(app.get_by_text("Preview your video below:")).to_be_visible
+    expect(
+        app.get_by_role("dialog").get_by_text("Preview your video below:")
+    ).to_be_visible
 
 
 def test_renders_screencast_dialog_properly(
