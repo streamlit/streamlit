@@ -93,9 +93,9 @@ from streamlit.commands.execution_control import (
 
 from streamlit.runtime.partials import partial as _partial
 
-from streamlit.decorator_dialog import decorator_dialog
+from streamlit.dialog_decorator import dialog_decorator
 
-decorator_dialog = decorator_dialog
+dialog_decorator = dialog_decorator
 
 # We add the metrics tracking for caching here,
 # since the actual cache function calls itself recursively
@@ -141,8 +141,8 @@ container = _main.container
 dataframe = _main.dataframe
 data_editor = _main.data_editor
 date_input = _main.date_input
-dialog = _main.dialog_form
-dialog_non_form = _main.dialog_non_form
+dialog_form = _main.dialog_form
+dialog_container = _main.dialog_non_form
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander

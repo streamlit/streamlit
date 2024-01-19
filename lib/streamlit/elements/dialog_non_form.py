@@ -75,6 +75,7 @@ class DialogNonForm(DeltaGenerator):
         return dialog_non_form_container
 
     def update(self, is_open: Optional[bool]):
+        time.sleep(0.05)
         assert self.current_proto is not None
         assert self._delta_path is not None
 
@@ -89,9 +90,9 @@ class DialogNonForm(DeltaGenerator):
         self._current_is_open = is_open
         _enqueue_message(msg)
 
-    def __call__(self, is_open: bool = True) -> DialogNonForm:
-        self._current_is_open = is_open
-        return self
+    # def __call__(self, is_open: bool = True) -> DialogNonForm:
+    #     self._current_is_open = is_open
+    #     return self
 
     def __enter__(self) -> DialogNonForm:  # type: ignore[override]
         print("Enter NonFormDialog!")

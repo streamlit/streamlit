@@ -17,12 +17,21 @@ from collections.abc import Callable
 import streamlit as st
 
 
-def decorator_dialog(title: str = "Dialog"):
+def dialog_decorator(title: str = "Dialog"):
     def inner_decorator(fn: Callable):
-        @st.partial
         def decorated_fn(*args, **kwargs):
-            with st.dialog_non_form(title=title, is_open=True):
-                return fn(*args, **kwargs)
+            dialog = st.dialog_container(title=title)
+            dialog.open()
+
+            @st.partial
+            def dialog_content():
+                ret = fn(*args, **kwargs)
+                if ret is not None:
+                    dialog.close()
+                return ret
+
+            with dialog:
+                dialog_content()
 
         return decorated_fn
 
