@@ -37,7 +37,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.string_util import clean_text, validate_emoji
+from streamlit.string_util import validate_emoji
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:

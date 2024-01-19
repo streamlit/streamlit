@@ -368,12 +368,12 @@ const RawElementNodeRenderer = (
 
     case "pageLink": {
       const pageLinkProto = node.element.pageLink as PageLinkProto
-      widgetProps.disabled = widgetProps.disabled || pageLinkProto.disabled
+      const isDisabled = widgetProps.disabled || pageLinkProto.disabled
       return (
         <PageLink
           element={pageLinkProto}
           width={width}
-          disabled={widgetProps.disabled}
+          disabled={isDisabled}
         />
       )
     }

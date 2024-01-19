@@ -35,13 +35,13 @@ export interface Props {
   width: number
 }
 
-function checkContainerWidthDefault(
+function shouldUseContainerWidth(
   useContainerWidth: string,
-  isInSidebar: boolean
+  isSidebar: boolean
 ): boolean {
-  if (useContainerWidth === "" && isInSidebar) {
+  if (useContainerWidth === "" && isSidebar) {
     return true
-  } else if (useContainerWidth === "" && !isInSidebar) {
+  } else if (useContainerWidth === "" && !isSidebar) {
     return false
   }
   return useContainerWidth === "True" ? true : false
@@ -49,16 +49,16 @@ function checkContainerWidthDefault(
 
 function PageLink(props: Props): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
-  const isInSidebar = React.useContext(IsSidebarContext)
+  const isSidebar = React.useContext(IsSidebarContext)
 
   const { disabled, element, width } = props
   const style = { width }
 
-  const useContainerWidth = checkContainerWidthDefault(
+  const useContainerWidth = shouldUseContainerWidth(
     element.useContainerWidth,
-    isInSidebar
+    isSidebar
   )
-  const isActive = currentPageScriptHash === element.pageScriptHash
+  const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     if (element.external) {
@@ -84,9 +84,9 @@ function PageLink(props: Props): ReactElement {
       <BaseButtonTooltip help={element.help} placement={Placement.TOP_RIGHT}>
         <StyledNavLinkContainer>
           <StyledNavLink
-            data-testid="stPageNavLink"
+            data-testid="stPageLink-NavLink"
             disabled={disabled}
-            isActive={isActive}
+            isCurrentPage={isCurrentPage}
             fluidWidth={useContainerWidth ? width : false}
             href={element.page}
             target={element.external ? "_blank" : ""}
@@ -94,7 +94,7 @@ function PageLink(props: Props): ReactElement {
             onClick={handleClick}
           >
             {element.icon && <EmojiIcon size="lg">{element.icon}</EmojiIcon>}
-            <StyledNavLinkText disabled={disabled} isActive={true}>
+            <StyledNavLinkText disabled={disabled}>
               {element.label}
             </StyledNavLinkText>
           </StyledNavLink>

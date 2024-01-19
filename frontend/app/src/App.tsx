@@ -1123,7 +1123,7 @@ export class App extends PureComponent<Props, State> {
   ): void {
     const { hideSidebarNav, elements } = this.state
     // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
-    const sidebarElements = hideSidebarNav && elements.sidebar
+    const sidebarElements = (hideSidebarNav && elements.sidebar) || undefined
 
     this.setState(
       {

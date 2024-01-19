@@ -87,14 +87,14 @@ describe("PageLink", () => {
   it("follows useContainerWidth property if set to true", () => {
     const props = getProps({ useContainerWidth: "True" })
     render(<PageLink {...props} />)
-    const pageNavLink = screen.getByTestId("stPageNavLink")
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     expect(pageNavLink).toHaveStyle("width: 250px")
   })
 
   it("follows useContainerWidth property if set to false", () => {
     const props = getProps({ useContainerWidth: "False" })
     render(<PageLink {...props} />)
-    const pageNavLink = screen.getByTestId("stPageNavLink")
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     expect(pageNavLink).toHaveStyle("width: fit-content")
   })
 
@@ -105,7 +105,7 @@ describe("PageLink", () => {
         <PageLink {...props} />
       </IsSidebarContext.Provider>
     )
-    const pageNavLink = screen.getByTestId("stPageNavLink")
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     expect(pageNavLink).toHaveStyle("width: 250px")
   })
 
@@ -116,7 +116,7 @@ describe("PageLink", () => {
         <PageLink {...props} />
       </IsSidebarContext.Provider>
     )
-    const pageNavLink = screen.getByTestId("stPageNavLink")
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     expect(pageNavLink).toHaveStyle("width: fit-content")
   })
 
@@ -127,7 +127,7 @@ describe("PageLink", () => {
       onPageChange: mockOnPageChange,
     })
 
-    const pageNavLink = screen.getByTestId("stPageNavLink")
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     fireEvent.click(pageNavLink)
     expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash")
   })
@@ -139,7 +139,7 @@ describe("PageLink", () => {
       onPageChange: mockOnPageChange,
     })
 
-    const pageNavLink = screen.getByTestId("stPageNavLink")
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     fireEvent.click(pageNavLink)
     expect(mockOnPageChange).not.toHaveBeenCalled()
   })
@@ -151,7 +151,7 @@ describe("PageLink", () => {
       onPageChange: mockOnPageChange,
     })
 
-    const pageNavLink = screen.getByTestId("stPageNavLink")
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     fireEvent.click(pageNavLink)
     expect(mockOnPageChange).not.toHaveBeenCalled()
   })

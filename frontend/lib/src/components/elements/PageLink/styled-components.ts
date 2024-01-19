@@ -23,16 +23,16 @@ export const StyledNavLinkContainer = styled.div(({}) => ({
 
 export interface StyledNavLinkProps {
   disabled: boolean
-  isActive: boolean
+  isCurrentPage: boolean
   // If true or number, the button should take up container's full width
   fluidWidth?: boolean | number
 }
 
 export const StyledNavLink = styled.a<StyledNavLinkProps>(
-  ({ disabled, isActive, fluidWidth, theme }) => {
+  ({ disabled, isCurrentPage, fluidWidth, theme }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
-      fontWeight: isActive ? 600 : 400,
+      fontWeight: isCurrentPage ? 600 : 400,
     }
 
     return {
@@ -51,10 +51,12 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
-      backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
+      backgroundColor: isCurrentPage
+        ? theme.colors.darkenedBgMix15
+        : "transparent",
 
       "&:hover": {
-        backgroundColor: isActive
+        backgroundColor: isCurrentPage
           ? theme.colors.darkenedBgMix25
           : theme.colors.darkenedBgMix15,
       },
@@ -91,9 +93,13 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
   }
 )
 
-export const StyledNavLinkText = styled.span<StyledNavLinkProps>(
-  ({ disabled, isActive, theme }) => ({
-    color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
+export interface StyledNavLinkTextProps {
+  disabled: boolean
+}
+
+export const StyledNavLinkText = styled.span<StyledNavLinkTextProps>(
+  ({ disabled, theme }) => ({
+    color: theme.colors.bodyText,
     overflow: "hidden",
     whiteSpace: "nowrap",
     textOverflow: "ellipsis",

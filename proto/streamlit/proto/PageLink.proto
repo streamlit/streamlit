@@ -20,12 +20,12 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "PageLinkProto";
 
 message PageLink {
-  string page = 2;
-  string label = 3;
-  string icon = 4;
-  string page_script_hash = 5;
-  string help = 6;
-  string use_container_width = 7;
-  bool disabled = 8;
-  bool external = 9;
+  string page = 1;
+  string label = 2;
+  string icon = 3;
+  string page_script_hash = 4;
+  string help = 5;
+  string use_container_width = 6;
+  bool disabled = 7;
+  bool external = 8;
 }

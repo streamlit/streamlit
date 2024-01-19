@@ -411,7 +411,7 @@ export class AppRoot {
    */
   public static empty(
     isInitialRender = true,
-    sidebarElements?: false | BlockNode
+    sidebarElements?: BlockNode | undefined
   ): AppRoot {
     const mainNodes: AppNode[] = []
 
