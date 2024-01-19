@@ -102,7 +102,7 @@ def test_slider_labels_handle_markdown(
     ]
 
     sliders = app.get_by_test_id("stSlider")
-    expect(sliders).to_have_count(4)
+    expect(sliders).to_have_count(8)
     for index, case in enumerate(cases):
         even = index % 2 == 0
         if even:
