@@ -34,7 +34,6 @@ class PageLinkTest(DeltaGeneratorTestCase):
         self.assertTrue(c.external)
         self.assertFalse(c.disabled)
         self.assertEqual(c.icon, "")
-        self.assertEqual(c.use_container_width, "")
         self.assertEqual(c.help, "")
 
     def test_external_https_page(self):
@@ -84,19 +83,6 @@ class PageLinkTest(DeltaGeneratorTestCase):
         self.assertTrue(c.external)
         self.assertEqual(c.help, "Some help text")
 
-    def test_use_container_width_is_empty_by_default(self):
-        """Test use_container_width is empty by default."""
-        st.page_link(
-            page="https://streamlit.io",
-            label="the label",
-        )
-
-        c = self.get_delta_from_queue().new_element.page_link
-        self.assertEqual(c.label, "the label")
-        self.assertEqual(c.page, "https://streamlit.io")
-        self.assertTrue(c.external)
-        self.assertEqual(c.use_container_width, "")
-
     def test_use_container_width_can_be_set_to_true(self):
         """Test use_container_width can be set to true."""
         st.page_link(
@@ -107,7 +93,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.page, "https://streamlit.io")
         self.assertTrue(c.external)
-        self.assertEqual(c.use_container_width, "True")
+        self.assertEqual(c.use_container_width, True)
 
     def test_use_container_width_can_be_set_to_false(self):
         """Test use_container_width can be set to false."""
@@ -119,4 +105,4 @@ class PageLinkTest(DeltaGeneratorTestCase):
         self.assertEqual(c.label, "the label")
         self.assertEqual(c.page, "https://streamlit.io")
         self.assertTrue(c.external)
-        self.assertEqual(c.use_container_width, "False")
+        self.assertEqual(c.use_container_width, False)

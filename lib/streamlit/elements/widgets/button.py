@@ -437,8 +437,35 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
     ) -> "DeltaGenerator":
-        """Display a link to another page in a multi-page app.
-        When clicked, the page will be switched to the specified page.
+        """Display a link to another page in a multi-page app, or an external page.
+        When clicked, the page will be switched to the specified page or open the external page in a new tab.
+
+        Parameters
+        ----------
+        page : str
+            The file path (relative to the main script) of the page to switch to. Alternatively, this can also be
+            the url to an external page (must start with http:// or https://).
+        label: str
+            The label for the page link button. Required for external pages.
+        icon: str
+            Emoji icon to be displayed in the label.
+        help : str
+            An optional tooltip that gets displayed when the button is
+            hovered over.
+        disabled : bool
+            An optional boolean, which disables the link button if set to
+            True. The default is False.
+        use_container_width: bool
+            An optional boolean, which makes the button stretch its width to match the
+            parent container.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> st.page_link("./streamlit_app.py", label="Home Page", icon="🏠")
+        >>> st.page_link("http://google.com", label="Google", icon="🌎")
+
         """
 
         return self._page_link(
