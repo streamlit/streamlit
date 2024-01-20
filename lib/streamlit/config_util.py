@@ -66,7 +66,7 @@ def show_config(
     def append_setting(text):
         out.append(click.style(text, fg="green"))
 
-    for section, section_description in section_descriptions.items():
+    for section, _ in section_descriptions.items():
         # We inject a fake config section used for unit tests that we exclude here as
         # its options are often missing required properties, which confuses the code
         # below.
