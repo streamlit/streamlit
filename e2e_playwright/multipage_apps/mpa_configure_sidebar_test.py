@@ -37,34 +37,45 @@ def test_hides_sidebar_nav(app: Page, configure_show_sidebar_nav):
 
 
 def test_page_links_in_main(
-    app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
+    themed_app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
 ):
     """Test that page link appears as expected in main."""
-    expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
-    page_links = app.get_by_test_id("stPageLink-NavLink")
-    expect(page_links).to_have_count(4)
+    expect(themed_app.get_by_test_id("stSidebar")).not_to_be_attached()
+    page_links = themed_app.get_by_test_id("stPageLink-NavLink")
+    expect(page_links).to_have_count(5)
 
-    assert_snapshot(page_links.nth(0), name=f"page-link")
+    # Selected page
+    assert_snapshot(page_links.nth(0), name=f"current-page-link")
     page_links.nth(0).hover()
-    assert_snapshot(page_links.nth(0), name=f"page-link-hover")
-    assert_snapshot(page_links.nth(1), name=f"page-link-disabled")
+    assert_snapshot(page_links.nth(0), name=f"current-page-link-hover")
+    # Non-selected page
+    assert_snapshot(page_links.nth(1), name=f"page-link")
+    page_links.nth(1).hover()
+    assert_snapshot(page_links.nth(1), name=f"page-link-hover")
+    # Disabled page
+    assert_snapshot(page_links.nth(2), name=f"page-link-disabled")
 
 
 def test_page_links_in_sidebar(
-    app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
+    themed_app: Page, configure_show_sidebar_nav, assert_snapshot: ImageCompareFunction
 ):
     """Test that page link appears as expected in sidebar."""
-    expect(app.get_by_test_id("stSidebar")).not_to_be_attached()
-    page_links = app.get_by_test_id("stPageLink-NavLink")
+    page_links = themed_app.get_by_test_id("stPageLink-NavLink")
 
     # Navigate to Page 4
-    page_links[2].click()
-    wait_for_app_run(app, wait_delay=500)
+    page_links.nth(3).click()
+    wait_for_app_run(themed_app, wait_delay=500)
 
-    page_links = app.get_by_test_id("stPageLink-NavLink")
-    expect(page_links).to_have_count(3)
+    page_links = themed_app.get_by_test_id("stPageLink-NavLink")
+    expect(page_links).to_have_count(5)
 
+    # Selected page
+    assert_snapshot(page_links.nth(3), name=f"current-page-link-sidebar")
+    page_links.nth(3).hover()
+    assert_snapshot(page_links.nth(3), name=f"current-page-link-sidebar-hover")
+    # Non-selected page
     assert_snapshot(page_links.nth(0), name=f"page-link-sidebar")
     page_links.nth(0).hover()
     assert_snapshot(page_links.nth(0), name=f"page-link-sidebar-hover")
-    assert_snapshot(page_links.nth(1), name=f"page-link-sidebar-disabled")
+    # Disabled page
+    assert_snapshot(page_links.nth(4), name=f"page-link-sidebar-disabled")
