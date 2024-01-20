@@ -63,7 +63,7 @@ nodeenv==1.8.0
 numpy==1.26.3
 opencv-python==4.9.0.80
 packaging==23.2
-pandas==2.1.4
+pandas==2.2.0
 parameterized==0.9.0
 pathspec==0.12.1
 pillow==10.2.0
