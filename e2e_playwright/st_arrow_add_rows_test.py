@@ -33,7 +33,7 @@ def test_correctly_adds_rows_to_charts(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     charts = app.get_by_test_id("stArrowVegaLiteChart")
-    for index in charts.count():
+    for index in range(charts.count()):
         assert_snapshot(charts.nth(index), name=f"arrowstArrowVegaLiteChart-{index}")
 
 
@@ -41,7 +41,7 @@ def test_correctly_adds_rows_to_dataframe(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     dataframes = app.locator(".element-container .stDataFrame")
-    for index in dataframes.count():
+    for index in range(dataframes.count()):
         assert_snapshot(dataframes.nth(index), name=f"dataFrame-{index}")
 
 
