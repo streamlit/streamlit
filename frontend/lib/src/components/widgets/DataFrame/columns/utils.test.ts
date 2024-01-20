@@ -286,7 +286,7 @@ describe("formatNumber", () => {
     [10, "period[h]", "1970-01-01 10:00"],
     [10, "period[min]", "1970-01-01 00:10"],
     [10, "period[D]", "1970-01-11"],
-    [10, "period[M]", "1970-11-01"],
+    [10, "period[M]", "1970-11"],
     [10, "period[Y]", "1980"],
     [10, "period[Q]", "1972Q3"],
     // sprintf format

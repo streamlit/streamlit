@@ -436,11 +436,14 @@ SPECIAL_TYPES_DF = pd.DataFrame(
 
 UNSUPPORTED_TYPES_DF = pd.DataFrame(
     {
-        "period[B]": [
-            (pd.Period("2022-03-10", freq="B") + pd.offsets.BusinessDay(i))
-            for i in range(3)
-        ]
-        + [None],
+        "period[us]": pd.Series(
+            [
+                pd.Period("1970-01-01", freq="us"),
+                pd.Period("2012-02-14", freq="us"),
+                pd.Period("2012-02-20T00:12:34.56780", freq="us"),
+                None,
+            ]
+        ),
         "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j, None]),
         "mixed_integer": pd.Series([1, 2, "3", None]),
         "mixed_types": pd.Series([2.1, "3", True, None]),

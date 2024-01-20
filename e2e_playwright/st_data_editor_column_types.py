@@ -63,5 +63,5 @@ st.subheader("Period dtypes in pd.DataFrame")
 st.data_editor(PERIOD_TYPES_DF, use_container_width=True)
 st.dataframe(PERIOD_DEPRECATED_TYPES_DF, use_container_width=True)
 
-st.subheader("Unsupported types")
+st.subheader("Unsupported types (string fallback)")
 st.data_editor(UNSUPPORTED_TYPES_DF, use_container_width=True)
