@@ -34,5 +34,5 @@ def test_dataframe_column_types_rendering(
     assert_snapshot(elements.nth(4), name="st_dataframe-interval_types")
     assert_snapshot(elements.nth(5), name="st_dataframe-special_types")
     assert_snapshot(elements.nth(6), name="st_dataframe-period_types")
-    assert_snapshot(elements.nth(7), name="st_dataframe-period_types_new")
+    assert_snapshot(elements.nth(7), name="st_dataframe-period_types_deprecated")
     assert_snapshot(elements.nth(8), name="st_dataframe-unsupported_types")

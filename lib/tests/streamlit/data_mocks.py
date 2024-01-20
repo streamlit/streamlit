@@ -368,7 +368,7 @@ INTERVAL_TYPES_DF = pd.DataFrame(
 )
 
 
-_offset_types = ["L", "S", "T", "H", "D", "W", "W-FRI", "Q", "Q-MAY"]
+_offset_types = ["ms", "s", "min", "h", "D", "M", "Y", "W", "W-FRI", "Q", "Q-MAY"]
 
 PERIOD_TYPES_DF = pd.DataFrame(
     {
@@ -380,17 +380,16 @@ PERIOD_TYPES_DF = pd.DataFrame(
     }
 )
 
+
 _offset_types = [
-    "ms",
-    "s",
-    "min",
-    "h",
-    "M",
+    "L",
+    "S",
+    "T",
+    "H",
     "A",
-    "Y",
 ]
 
-PERIOD_TYPES_NEW_DF = pd.DataFrame(
+PERIOD_DEPRECATED_TYPES_DF = pd.DataFrame(
     {
         offset_type: (
             [pd.Period(date, freq=offset_type) for date in ["1970-01-01", "2012-02-14"]]

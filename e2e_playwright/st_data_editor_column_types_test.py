@@ -34,5 +34,5 @@ def test_data_editor_column_types(
     assert_snapshot(elements.nth(4), name="st_data_editor-interval_types")
     assert_snapshot(elements.nth(5), name="st_data_editor-special_types")
     assert_snapshot(elements.nth(6), name="st_data_editor-period_types")
-    assert_snapshot(elements.nth(7), name="st_data_editor-period_types_new")
+    assert_snapshot(elements.nth(7), name="st_data_editor-period_types_deprecated")
     assert_snapshot(elements.nth(8), name="st_data_editor-unsupported_types")
