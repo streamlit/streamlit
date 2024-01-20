@@ -259,7 +259,7 @@ class ConfigOption:
                 from streamlit.logger import get_logger
 
                 LOGGER = get_logger(__name__)
-                LOGGER.warning(
+                LOGGER.error(
                     textwrap.dedent(
                         """
                     ════════════════════════════════════════════════
