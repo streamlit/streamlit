@@ -441,15 +441,15 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(1234, config._maybe_read_env_variable("env:RANDOM_TEST"))
 
     def test_update_config_with_toml(self):
-        self.assertEqual(True, config.get_option("browser.gatherUsageStats"))
+        self.assertEqual(True, config.get_option("client.showErrorDetails"))
         toml = textwrap.dedent(
             """
-           [browser]
-           gatherUsageStats = false
+           [client]
+           showErrorDetails = false
         """
         )
         config._update_config_with_toml(toml, "test")
-        self.assertEqual(False, config.get_option("browser.gatherUsageStats"))
+        self.assertEqual(False, config.get_option("client.showErrorDetails"))
 
     def test_set_option(self):
         with self.assertLogs(logger="streamlit.config", level="WARNING") as cm:
