@@ -988,7 +988,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return `${sign}${wholePart}` + (decimalPart ? `.${decimalPart}` : "")
   }
 
-  private static formatPeriodType(
+  public static formatPeriodType(
     duration: bigint,
     typeName: PeriodType
   ): string {

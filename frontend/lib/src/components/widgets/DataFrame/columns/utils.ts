@@ -31,7 +31,10 @@ import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
 
-import { Type as ArrowType } from "@streamlit/lib/src/dataframes/Quiver"
+import {
+  Type as ArrowType,
+  Quiver,
+} from "@streamlit/lib/src/dataframes/Quiver"
 import {
   notNullOrUndefined,
   isNullOrUndefined,
@@ -460,7 +463,10 @@ export function formatNumber(
     }).format(value)
   } else if (format === "duration[ns]") {
     return moment.duration(value / (1000 * 1000), "milliseconds").humanize()
+  } else if (format.startsWith("period[")) {
+    return Quiver.formatPeriodType(BigInt(value), format as any)
   }
+
   return sprintf(format, value)
 }
 
