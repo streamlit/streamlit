@@ -24,6 +24,7 @@ from tests.streamlit.data_mocks import (
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
     PERIOD_TYPES_DF,
+    PERIOD_TYPES_NEW_DF,
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
 )
@@ -60,6 +61,7 @@ st.data_editor(
 
 st.subheader("Period dtypes in pd.DataFrame")
 st.data_editor(PERIOD_TYPES_DF, use_container_width=True)
+st.data_editor(PERIOD_TYPES_NEW_DF, use_container_width=True)
 
 st.subheader("Unsupported types")
 st.data_editor(UNSUPPORTED_TYPES_DF, use_container_width=True)

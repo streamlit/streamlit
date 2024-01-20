@@ -22,7 +22,7 @@ def test_data_editor_column_types(
 ):
     """Test that st.data_editor render various column types correctly."""
     elements = themed_app.get_by_test_id("stDataFrame")
-    expect(elements).to_have_count(8)
+    expect(elements).to_have_count(9)
 
     # The dataframe component might require a bit more time for rendering the canvas
     themed_app.wait_for_timeout(250)
@@ -34,4 +34,5 @@ def test_data_editor_column_types(
     assert_snapshot(elements.nth(4), name="st_data_editor-interval_types")
     assert_snapshot(elements.nth(5), name="st_data_editor-special_types")
     assert_snapshot(elements.nth(6), name="st_data_editor-period_types")
-    assert_snapshot(elements.nth(7), name="st_data_editor-unsupported_types")
+    assert_snapshot(elements.nth(7), name="st_data_editor-period_types_new")
+    assert_snapshot(elements.nth(8), name="st_data_editor-unsupported_types")

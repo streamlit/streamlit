@@ -39,6 +39,7 @@ import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { logWarning } from "@streamlit/lib/src/util/log"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -124,16 +125,31 @@ type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 
 // The frequency strings defined in pandas.
 // See: https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
+// Not supported: "N" (nanoseconds), "U" & "us" (microseconds), and "B" (business days).
+// Reason is that these types are not supported by moment.js, but also they are not
+// very commonly used in practice.
 type SupportedPandasOffsetType =
-  | "W"
+  // yearly frequency:
+  | "A"
+  | "Y"
+  // quarterly frequency:
   | "Q"
+  // monthly frequency
+  | "M"
+  // weekly frequency:
+  | "W"
+  // calendar day frequency:
   | "D"
+  // hourly frequency:
   | "H"
   | "h"
+  // minutely frequency
   | "T"
   | "min"
+  // secondly frequency:
   | "S"
   | "s"
+  // milliseconds:
   | "L"
   | "ms"
 
@@ -160,8 +176,14 @@ const formatMin = (duration: number): string =>
 const formatHours = (duration: number): string =>
   moment("19700101", "YYYYMMDD").add(duration, "h").format("YYYY-MM-DD HH:mm")
 
-const formatDays = (duration: number): string =>
+const formatDay = (duration: number): string =>
   moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD")
+
+const formatMonth = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "M").format("YYYY-MM")
+
+const formatYear = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "y").format("YYYY")
 
 const formatWeeks = (duration: number, freqParam?: string): string => {
   if (!freqParam) {
@@ -193,8 +215,6 @@ const formatQuarter = (duration: number): string =>
     .endOf("quarter")
     .format("YYYY[Q]Q")
 
-// TODO: For now, we only support the most commonly used offset types.
-//  In the future, it is worth adding support for other types as needed.
 const PERIOD_TYPE_FORMATTERS: Record<
   SupportedPandasOffsetType,
   (duration: number, freqParam?: string) => string
@@ -207,9 +227,12 @@ const PERIOD_TYPE_FORMATTERS: Record<
   min: formatMin,
   H: formatHours,
   h: formatHours,
-  D: formatDays,
+  D: formatDay,
+  M: formatMonth,
   W: formatWeeks,
   Q: formatQuarter,
+  Y: formatYear,
+  A: formatYear,
 }
 
 /** Interval data type. */
@@ -971,7 +994,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   ): string {
     const match = typeName.match(/period\[(.*)]/)
     if (match === null) {
-      console.error(`Invalid period type: ${typeName}`)
+      logWarning(`Invalid period type: ${typeName}`)
       return String(duration)
     }
     const [, freq] = match
@@ -986,12 +1009,12 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     const momentConverter =
       PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
     if (!momentConverter) {
-      console.error(`Unsupported period frequency: ${freq}`)
+      logWarning(`Unsupported period frequency: ${freq}`)
       return String(duration)
     }
     const durationNumber = Number(duration)
     if (!Number.isSafeInteger(durationNumber)) {
-      console.error(
+      logWarning(
         `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
       )
       return String(duration)
