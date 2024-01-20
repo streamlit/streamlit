@@ -36,28 +36,29 @@ export interface Props {
 }
 
 function shouldUseContainerWidth(
-  useContainerWidth: string,
-  isSidebar: boolean
+  useContainerWidth: boolean | null | undefined,
+  isInSidebar: boolean
 ): boolean {
-  if (useContainerWidth === "" && isSidebar) {
+  if (useContainerWidth === null && isInSidebar) {
     return true
-  } else if (useContainerWidth === "" && !isSidebar) {
+  } else if (useContainerWidth === null && !isInSidebar) {
     return false
   }
-  return useContainerWidth === "True" ? true : false
+  return useContainerWidth === true ? true : false
 }
 
 function PageLink(props: Props): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
-  const isSidebar = React.useContext(IsSidebarContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
 
   const { disabled, element, width } = props
   const style = { width }
 
   const useContainerWidth = shouldUseContainerWidth(
     element.useContainerWidth,
-    isSidebar
+    isInSidebar
   )
+
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {

@@ -25,7 +25,7 @@ message PageLink {
   string icon = 3;
   string page_script_hash = 4;
   string help = 5;
-  string use_container_width = 6;
+  optional bool use_container_width = 6;
   bool disabled = 7;
   bool external = 8;
 }

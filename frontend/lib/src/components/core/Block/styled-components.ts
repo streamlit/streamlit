@@ -52,7 +52,6 @@ export interface StyledElementContainerProps {
   isStale: boolean
   width: number
   elementType: string
-  isInSidebar: boolean
 }
 
 const GLOBAL_ELEMENTS = ["balloons", "snow", "chatInput"]

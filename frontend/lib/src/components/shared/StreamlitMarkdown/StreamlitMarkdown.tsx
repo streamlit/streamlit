@@ -147,7 +147,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   children,
   tagProps,
 }) => {
-  const isSidebar = React.useContext(IsSidebarContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
@@ -183,7 +183,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     },
     [propsAnchor]
   )
-  if (isSidebar) {
+  if (isInSidebar) {
     return React.createElement(tag, tagProps, children)
   }
 

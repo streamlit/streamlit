@@ -84,7 +84,6 @@ import Maybe from "@streamlit/lib/src/components/core/Maybe"
 import { FormSubmitContent } from "@streamlit/lib/src/components/widgets/Form"
 import Heading from "@streamlit/lib/src/components/shared/StreamlitMarkdown/Heading"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import {
   BaseBlockProps,
@@ -726,7 +725,6 @@ const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
   const { isFullScreen } = React.useContext(LibContext)
-  const isInSidebar = React.useContext(IsSidebarContext)
   const { node } = props
 
   const elementType = node.element.type || ""
@@ -758,7 +756,6 @@ const ElementNodeRenderer = (
         className={"element-container"}
         data-testid={"element-container"}
         elementType={elementType}
-        isInSidebar={isInSidebar}
       >
         <ErrorBoundary width={width}>
           <Suspense fallback={<Skeleton />}>

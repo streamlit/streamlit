@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 import os
 from dataclasses import dataclass
@@ -429,11 +431,11 @@ class ButtonMixin:
         self,
         page: str,
         *,
-        label: Optional[str] = None,
-        icon: Optional[str] = None,
-        help: Optional[str] = None,
+        label: str | None = None,
+        icon: str | None = None,
+        help: str | None = None,
         disabled: bool = False,
-        use_container_width: Optional[bool] = None,
+        use_container_width: bool | None = None,
     ) -> "DeltaGenerator":
         """Display a link to another page in a multi-page app.
         When clicked, the page will be switched to the specified page.
@@ -543,11 +545,11 @@ class ButtonMixin:
         self,
         page: str,
         *,  # keyword-only arguments:
-        label: Optional[str] = None,
-        icon: Optional[str] = None,
-        help: Optional[str] = None,
+        label: str | None = None,
+        icon: str | None = None,
+        help: str | None = None,
         disabled: bool = False,
-        use_container_width: Optional[bool] = None,
+        use_container_width: bool | None = None,
     ) -> "DeltaGenerator":
         page_link_proto = PageLinkProto()
         page_link_proto.disabled = disabled
@@ -562,7 +564,7 @@ class ButtonMixin:
             page_link_proto.help = dedent(help)
 
         if use_container_width is not None:
-            page_link_proto.use_container_width = str(use_container_width)
+            page_link_proto.use_container_width = use_container_width
 
         # Handle external links:
         if page.startswith("http://") or page.startswith("https://"):
