@@ -124,7 +124,19 @@ type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 
 // The frequency strings defined in pandas.
 // See: https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
-type SupportedPandasOffsetType = "W" | "Q" | "D" | "H" | "T" | "S" | "L"
+type SupportedPandasOffsetType =
+  | "W"
+  | "Q"
+  | "D"
+  | "H"
+  | "h"
+  | "T"
+  | "min"
+  | "S"
+  | "s"
+  | "L"
+  | "ms"
+
 type PeriodFrequency =
   | SupportedPandasOffsetType
   | `${SupportedPandasOffsetType}-${string}`
@@ -132,59 +144,72 @@ type PeriodType = `period[${PeriodFrequency}]`
 
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
+const formatMs = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "ms")
+    .format("YYYY-MM-DD HH:mm:ss.SSS")
+
+const formatSec = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "s")
+    .format("YYYY-MM-DD HH:mm:ss")
+
+const formatMin = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "m").format("YYYY-MM-DD HH:mm")
+
+const formatHours = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "h").format("YYYY-MM-DD HH:mm")
+
+const formatDays = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD")
+
+const formatWeeks = (duration: number, freqParam?: string): string => {
+  if (!freqParam) {
+    throw new Error('Frequency "W" requires parameter')
+  }
+  const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
+  if (dayIndex < 0) {
+    throw new Error(
+      `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
+        WEEKDAY_SHORT
+      )}`
+    )
+  }
+  const startDate = moment("19700101", "YYYYMMDD")
+    .add(duration, "w")
+    .day(dayIndex - 6)
+    .format("YYYY-MM-DD")
+  const endDate = moment("19700101", "YYYYMMDD")
+    .add(duration, "w")
+    .day(dayIndex)
+    .format("YYYY-MM-DD")
+
+  return `${startDate}/${endDate}`
+}
+
+const formatQuarter = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "Q")
+    .endOf("quarter")
+    .format("YYYY[Q]Q")
+
 // TODO: For now, we only support the most commonly used offset types.
 //  In the future, it is worth adding support for other types as needed.
 const PERIOD_TYPE_FORMATTERS: Record<
   SupportedPandasOffsetType,
   (duration: number, freqParam?: string) => string
 > = {
-  L: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "ms")
-      .format("YYYY-MM-DD HH:mm:ss.SSS"),
-  S: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "s")
-      .format("YYYY-MM-DD HH:mm:ss"),
-  T: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "m")
-      .format("YYYY-MM-DD HH:mm"),
-  H: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "h")
-      .format("YYYY-MM-DD HH:mm"),
-  D: duration =>
-    moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD"),
-  W: (duration, freqParam) => {
-    if (!freqParam) {
-      throw new Error('Frequency "W" requires parameter')
-    }
-    const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
-    if (dayIndex < 0) {
-      throw new Error(
-        `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
-          WEEKDAY_SHORT
-        )}`
-      )
-    }
-    const startDate = moment("19700101", "YYYYMMDD")
-      .add(duration, "w")
-      .day(dayIndex - 6)
-      .format("YYYY-MM-DD")
-    const endDate = moment("19700101", "YYYYMMDD")
-      .add(duration, "w")
-      .day(dayIndex)
-      .format("YYYY-MM-DD")
-
-    return `${startDate}/${endDate}`
-  },
-  Q: duration => {
-    return moment("19700101", "YYYYMMDD")
-      .add(duration, "Q")
-      .endOf("quarter")
-      .format("YYYY[Q]Q")
-  },
+  L: formatMs,
+  ms: formatMs,
+  S: formatSec,
+  s: formatSec,
+  T: formatMin,
+  min: formatMin,
+  H: formatHours,
+  h: formatHours,
+  D: formatDays,
+  W: formatWeeks,
+  Q: formatQuarter,
 }
 
 /** Interval data type. */
