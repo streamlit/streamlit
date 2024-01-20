@@ -31,7 +31,7 @@ const getProps = (
     label: "Label",
     page: "streamlit_app",
     pageScriptHash: "main_page_hash",
-    useContainerWidth: "",
+    useContainerWidth: null,
     ...elementProps,
   }),
   width: 250,
@@ -85,14 +85,14 @@ describe("PageLink", () => {
   })
 
   it("follows useContainerWidth property if set to true", () => {
-    const props = getProps({ useContainerWidth: "True" })
+    const props = getProps({ useContainerWidth: true })
     render(<PageLink {...props} />)
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     expect(pageNavLink).toHaveStyle("width: 250px")
   })
 
   it("follows useContainerWidth property if set to false", () => {
-    const props = getProps({ useContainerWidth: "False" })
+    const props = getProps({ useContainerWidth: false })
     render(<PageLink {...props} />)
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     expect(pageNavLink).toHaveStyle("width: fit-content")
