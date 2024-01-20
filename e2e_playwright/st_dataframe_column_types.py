@@ -24,7 +24,6 @@ from tests.streamlit.data_mocks import (
     INTERVAL_TYPES_DF,
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
-    PERIOD_DEPRECATED_TYPES_DF,
     PERIOD_TYPES_DF,
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
@@ -55,7 +54,6 @@ st.dataframe(SPECIAL_TYPES_DF, use_container_width=True)
 
 st.subheader("Period dtypes in pd.DataFrame")
 st.dataframe(PERIOD_TYPES_DF, use_container_width=True)
-st.dataframe(PERIOD_DEPRECATED_TYPES_DF, use_container_width=True)
 
 st.subheader("Unsupported types (string fallback)")
 st.dataframe(UNSUPPORTED_TYPES_DF, use_container_width=True)

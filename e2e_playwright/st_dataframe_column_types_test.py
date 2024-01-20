@@ -22,7 +22,7 @@ def test_dataframe_column_types_rendering(
 ):
     """Test that st.dataframe renders various column types correctly via screenshot matching."""
     elements = themed_app.get_by_test_id("stDataFrame")
-    expect(elements).to_have_count(9)
+    expect(elements).to_have_count(8)
 
     # The dataframe component might require a bit more time for rendering the canvas
     themed_app.wait_for_timeout(250)
@@ -34,5 +34,4 @@ def test_dataframe_column_types_rendering(
     assert_snapshot(elements.nth(4), name="st_dataframe-interval_types")
     assert_snapshot(elements.nth(5), name="st_dataframe-special_types")
     assert_snapshot(elements.nth(6), name="st_dataframe-period_types")
-    assert_snapshot(elements.nth(7), name="st_dataframe-period_types_deprecated")
-    assert_snapshot(elements.nth(8), name="st_dataframe-unsupported_types")
+    assert_snapshot(elements.nth(7), name="st_dataframe-unsupported_types")
