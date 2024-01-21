@@ -368,7 +368,7 @@ INTERVAL_TYPES_DF = pd.DataFrame(
 )
 
 
-_offset_types = ["ms", "s", "min", "h", "D", "M", "Y", "W", "W-FRI", "Q", "Q-MAY"]
+_offset_types = ["ms", "s", "min", "h", "D", "M", "Y", "W", "W-FRI", "Q"]
 
 PERIOD_TYPES_DF = pd.DataFrame(
     {
