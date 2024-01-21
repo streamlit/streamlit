@@ -735,7 +735,7 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     ]:
         return True
 
-    if column.dtype in [
+    if str(column.dtype) in {
         # These period types are not yet supported by our frontend impl.
         # See comments in Quiver.ts for more details.
         "period[B]",
@@ -743,7 +743,7 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
         "period[ns]",
         "period[U]",
         "period[us]",
-    ]:
+    }:
         return True
 
     if column.dtype == "object":
