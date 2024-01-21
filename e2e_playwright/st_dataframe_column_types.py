@@ -15,7 +15,6 @@
 import random
 
 import numpy as np
-import pandas as pd
 
 import streamlit as st
 from tests.streamlit.data_mocks import (
@@ -46,13 +45,13 @@ st.dataframe(DATETIME_TYPES_DF, use_container_width=True)
 st.subheader("List types")
 st.dataframe(LIST_TYPES_DF, use_container_width=True)
 
-st.subheader("Interval dtypes in pd.DataFrame")
+st.subheader("Interval types")
 st.dataframe(INTERVAL_TYPES_DF, use_container_width=True)
 
 st.subheader("Special types")
 st.dataframe(SPECIAL_TYPES_DF, use_container_width=True)
 
-st.subheader("Period dtypes in pd.DataFrame")
+st.subheader("Period types")
 st.dataframe(PERIOD_TYPES_DF, use_container_width=True)
 
 st.subheader("Unsupported types (string fallback)")
