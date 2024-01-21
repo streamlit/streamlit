@@ -130,27 +130,27 @@ type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 // very commonly used in practice.
 type SupportedPandasOffsetType =
   // yearly frequency:
-  | "A"
+  | "A" // deprecated alias
   | "Y"
   // quarterly frequency:
   | "Q"
-  // monthly frequency
+  // monthly frequency:
   | "M"
   // weekly frequency:
   | "W"
   // calendar day frequency:
   | "D"
   // hourly frequency:
-  | "H"
+  | "H" // deprecated alias
   | "h"
   // minutely frequency
-  | "T"
+  | "T" // deprecated alias
   | "min"
   // secondly frequency:
-  | "S"
+  | "S" // deprecated alias
   | "s"
-  // milliseconds:
-  | "L"
+  // milliseconds frequency:
+  | "L" // deprecated alias
   | "ms"
 
 type PeriodFrequency =
