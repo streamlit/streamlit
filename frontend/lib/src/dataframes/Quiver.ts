@@ -124,7 +124,7 @@ type IntervalClosed = "left" | "right" | "both" | "neither"
 type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 
 // The frequency strings defined in pandas.
-// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
+// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#period-aliases
 // Not supported: "N" (nanoseconds), "U" & "us" (microseconds), and "B" (business days).
 // Reason is that these types are not supported by moment.js, but also they are not
 // very commonly used in practice.
@@ -159,7 +159,6 @@ type PeriodFrequency =
 type PeriodType = `period[${PeriodFrequency}]`
 
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
-
 const formatMs = (duration: number): string =>
   moment("19700101", "YYYYMMDD")
     .add(duration, "ms")
