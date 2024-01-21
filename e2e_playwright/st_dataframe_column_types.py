@@ -16,6 +16,7 @@ import random
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 import streamlit as st
 from tests.streamlit.data_mocks import (
@@ -34,26 +35,25 @@ random.seed(0)
 
 st.set_page_config(layout="wide")
 
-st.subheader("Base types")
-st.dataframe(BASE_TYPES_DF, use_container_width=True)
+a = pa.array([1, 2, 3, 4])
+b = pa.array([3, 10, 20, 50])
 
-st.subheader("Number types")
-st.dataframe(NUMBER_TYPES_DF, use_container_width=True)
+pydict = {"id": a, "age": b}
 
-st.subheader("Date, time and datetime types")
-st.dataframe(DATETIME_TYPES_DF, use_container_width=True)
+df = pd.DataFrame(pydict)
+df = pa.Table.from_pandas(df)
 
-st.subheader("List types")
-st.dataframe(LIST_TYPES_DF, use_container_width=True)
+st.dataframe(df)
 
-st.subheader("Interval dtypes in pd.DataFrame")
-st.dataframe(INTERVAL_TYPES_DF, use_container_width=True)
 
-st.subheader("Special types")
-st.dataframe(SPECIAL_TYPES_DF, use_container_width=True)
+a = pa.array([1, 2, 3, 4])
+b = pa.array([3, 10, 20, 50])
 
-st.subheader("Period dtypes in pd.DataFrame")
-st.dataframe(PERIOD_TYPES_DF, use_container_width=True)
+pydict = {"id": a, "age": b}
+df = pa.Table.from_pydict(pydict)
 
-st.subheader("Unsupported types")
-st.dataframe(UNSUPPORTED_TYPES_DF, use_container_width=True)
+# >>> df.schema
+# id: int64
+# age: int64
+
+st.dataframe(df)

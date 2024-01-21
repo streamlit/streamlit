@@ -389,6 +389,8 @@ export class Quiver {
 
   constructor(element: IArrow) {
     const table = tableFromIPC(element.data)
+    console.log(table)
+
     const schema = Quiver.parseSchema(table)
     const rawColumns = Quiver.getRawColumns(schema)
     const fields = Quiver.parseFields(table.schema)
@@ -417,6 +419,8 @@ export class Quiver {
   private static parseSchema(table: Table): Schema {
     const schema = table.schema.metadata.get("pandas")
     if (schema == null) {
+      // TODO: Return empty schema here to support pure
+      // Arrow tables
       // This should never happen!
       throw new Error("Table schema is missing.")
     }
