@@ -57,3 +57,4 @@ semver<3
 langchain>=0.0.216; python_version < '3.12'
 # 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
 cx-Oracle<8.0.0; python_version < '3.12'
+pillow>=10.2.0 # not directly required, pinned by Snyk to avoid a vulnerability
