@@ -359,7 +359,7 @@ describe("useColumnLoader hook", () => {
     }
   })
 
-  it("disallows hidden for editable columns that are required", () => {
+  it("disallows hidden for editable columns that are required for dynamic editing", () => {
     const element = ArrowProto.create({
       data: UNICODE,
       editingMode: ArrowProto.EditingMode.DYNAMIC,
