@@ -38,9 +38,9 @@ const BLOCK = block([
   ]),
 ])
 
-// Initialize new AppRoot with a main block node and two child block nodes - sidebar and events.
+// Initialize new AppRoot with a main block node and three child block nodes - sidebar, events and bottom.
 const ROOT = new AppRoot(
-  new BlockNode([BLOCK, new BlockNode(), new BlockNode()])
+  new BlockNode([BLOCK, new BlockNode(), new BlockNode(), new BlockNode()])
 )
 
 describe("AppNode.getIn", () => {
