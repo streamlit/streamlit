@@ -247,7 +247,6 @@ class ConfigOption:
         self.is_default = value == self.default_val
 
         if self.deprecated and self.where_defined != ConfigOption.DEFAULT_DEFINITION:
-
             details = {
                 "key": self.key,
                 "file": self.where_defined,
@@ -256,7 +255,11 @@ class ConfigOption:
             }
 
             if self.is_expired():
-                raise DeprecationError(
+                # Import here to avoid circular imports
+                from streamlit.logger import get_logger
+
+                LOGGER = get_logger(__name__)
+                LOGGER.error(
                     textwrap.dedent(
                         """
                     ════════════════════════════════════════════════
