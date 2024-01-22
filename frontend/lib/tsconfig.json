@@ -8,6 +8,9 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
+    // "paths": {
+    //   "react": [ "./node_modules/@types/react" ]
+    // }
   },
   "include": ["src", "declarations.d.ts"],
   "exclude": ["node_modules/**/*", "**/proto.js"]
