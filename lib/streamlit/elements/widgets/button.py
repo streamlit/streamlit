@@ -443,21 +443,45 @@ class ButtonMixin:
         Parameters
         ----------
         page : str
-            The file path (relative to the main script) of the page to switch to. Alternatively, this can also be
+            The file path (relative to the main script) of the page to switch to. Alternatively, this can be
             the url to an external page (must start with http:// or https://).
         label: str
-            The label for the page link button. Required for external pages.
+            The label for the page link button. Required for external pages. Labels
+            can optionally contain Markdown and supports the following
+            elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+
+            Unsupported elements are unwrapped so only their children (text contents)
+            render. Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
         icon: str
-            Emoji icon to be displayed in the label.
+            An optional argument that specifies an emoji to use as
+            the icon for the button. Shortcodes are not allowed, please use a
+            single character instead. E.g. "🚨", "🔥", "🤖", etc.
+            Defaults to None, which means no icon is displayed.
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
         disabled : bool
-            An optional boolean, which disables the link button if set to
+            An optional boolean, which disables the page link button if set to
             True. The default is False.
         use_container_width: bool
             An optional boolean, which makes the button stretch its width to match the
-            parent container.
+            parent container. The default is True for page links in the sidebar, and False
+            for those in the main app.
 
         Example
         -------
@@ -622,7 +646,7 @@ class ButtonMixin:
         # Handle retrieving the page_script_hash & page
         for page_data in all_app_pages:
             full_path = page_data["script_path"]
-            page_name = page_data["page_name"].replace("_", " ").replace("-", " ")
+            page_name = page_data["page_name"].replace("_", " ")
             if requested_page == full_path:
                 if label is None:
                     page_link_proto.label = page_name

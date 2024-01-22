@@ -19,6 +19,7 @@ import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
 import { BaseButtonTooltip } from "@streamlit/lib/src/components/shared/BaseButton"
+import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
@@ -96,7 +97,13 @@ function PageLink(props: Props): ReactElement {
           >
             {element.icon && <EmojiIcon size="lg">{element.icon}</EmojiIcon>}
             <StyledNavLinkText disabled={disabled}>
-              {element.label}
+              <StreamlitMarkdown
+                source={element.label}
+                allowHTML={false}
+                isLabel
+                largerLabel
+                disableLinks
+              />
             </StyledNavLinkText>
           </StyledNavLink>
         </StyledNavLinkContainer>
