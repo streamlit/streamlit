@@ -54,7 +54,7 @@ export interface StyledElementContainerProps {
   elementType: string
 }
 
-const GLOBAL_ELEMENTS = ["balloons", "snow", "chatInput"]
+const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, elementType }) => ({
     width,
@@ -82,9 +82,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       marginBottom: "-0.375rem",
     },
 
-    // We do not want the chat input to be faded out.
-    // TODO: Reconsider this when we implement fixed-sized chat containers
-    ...(isStale && elementType !== "chatInput" && elementType !== "skeleton"
+    ...(isStale && elementType !== "skeleton"
       ? {
           opacity: 0.33,
           transition: "opacity 1s ease-in 0.5s",
