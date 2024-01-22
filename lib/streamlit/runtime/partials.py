@@ -88,11 +88,13 @@ def partial(
         # at this point so that we can rewrite a specific part of the app in a partial
         # rerun. We'll eventually want to make changes to the DeltaGenerator class
         # itself to support this in a less hacky way.
-        _dg_stack = pickle.dumps(dg_stack.get())
         if len(dg_stack.get()) > 0:
+            _dg_stack = pickle.dumps(dg_stack.get())
             active_dg = dg_stack.get()[-1]._get_delta_path_str()
         else:
-            active_dg = "foobar"
+            with st.container():
+                _dg_stack = pickle.dumps(dg_stack.get())
+                active_dg = dg_stack.get()[-1]._get_delta_path_str()
 
         # TODO(lukasmasuch): Research more on what to include in the hash:
         h = hashlib.new("md5")
@@ -112,6 +114,7 @@ def partial(
 
             # HACK: See the corresponding comment above for an explanation of what's
             # going on here.
+            # old_dg_stack = dg_stack.get()
             dg_stack.set(pickle.loads(_dg_stack)[:])
 
             # Set dg stack to outside state
@@ -120,6 +123,7 @@ def partial(
             result = non_optional_func(*args, **kwargs)
 
             # TODO: always reset to None -> otherwise problems with exceptions
+            # dg_stack.set(old_dg_stack)
             ctx.current_partial_id = None
             return result
 
