@@ -263,8 +263,11 @@ function useColumnLoader(
             icon: "editable",
           }
 
-          // Make sure that required columns are not hidden:
-          if (updatedColumn.isRequired) {
+          // Make sure that required columns are not hidden when editing mode is dynamic:
+          if (
+            updatedColumn.isRequired &&
+            element.editingMode === ArrowProto.EditingMode.DYNAMIC
+          ) {
             updatedColumn = {
               ...updatedColumn,
               isHidden: false,
