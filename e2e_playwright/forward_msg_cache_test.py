@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
-from tests.streamlit import pyspark_mocks
+from playwright.sync_api import Page, expect
 
-st.write("This **markdown** is awesome! :sunglasses:")
+from e2e_playwright.conftest import rerun
 
-st.write("This <b>HTML tag</b> is escaped!")
 
-st.write(pyspark_mocks.DataFrame())
+def test_forward_msg_cache_receives_msg(app: Page):
+    app.evaluate("window.streamlitDebug.clearForwardMsgCache()")
+    rerun(app)
+    expect(app.get_by_role("dialog")).not_to_be_visible()
 
-st.write("This <b>HTML tag</b> is not escaped!", unsafe_allow_html=True)
+    app.expect_request("**/_stcore/message/")
