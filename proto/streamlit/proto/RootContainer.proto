@@ -19,7 +19,7 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "RootContainerProto";
 
-// Constants for our three "RootContainers" - the top-level containers
+// Constants for our "RootContainers" - the top-level containers
 // that `st.foo` and `st.sidebar.foo` write to. Each value corresponds
 // to the first index in any `delta_path` that uses these containers.
 // (This enum is not used in any protobuf messages; we declare it here so
@@ -28,4 +28,5 @@ enum RootContainer {
   MAIN = 0;
   SIDEBAR = 1;
   EVENT = 2;
+  BOTTOM = 3;
 }

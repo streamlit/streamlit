@@ -20,10 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ChatInputProto";
 
 message ChatInput {
-  enum Position {
-    BOTTOM = 0;
-  }
-
   string id = 1;
   string placeholder = 2;
   uint32 max_chars = 3;
@@ -31,5 +27,10 @@ message ChatInput {
   string value = 5;
   bool set_value = 6;
   string default = 7;
+
+  // DEPRECATED: position property is deprecated and unused.
+  enum Position {
+    BOTTOM = 0;
+  }
   Position position = 8;
 }

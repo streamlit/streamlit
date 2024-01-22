@@ -110,7 +110,8 @@ _config.on_config_parsed(_update_logger, True)
 
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
-event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
+_event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
+_bottom = _DeltaGenerator(root_container=_RootContainer.BOTTOM, parent=_main)
 
 secrets = _secrets_singleton
 
@@ -185,7 +186,7 @@ color_picker = _main.color_picker
 status = _main.status
 
 # Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
-toast = event.toast
+toast = _event.toast
 
 # Config
 get_option = _config.get_option
