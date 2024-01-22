@@ -202,10 +202,11 @@ class ChatTest(DeltaGeneratorTestCase):
             lambda: st.expander("Expand Me"),
             lambda: st.chat_message("user"),
             lambda: st.sidebar,
+            lambda: st.container(),
         ]
     )
     def test_chat_selects_inline_postion(self, container_call):
-        """Test that it selects inline position when called in any of the special containers."""
+        """Test that it selects inline position when nested in any of layout containers."""
         container_call().chat_input("Placeholder")
 
         self.assertNotEqual(
@@ -215,13 +216,12 @@ class ChatTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            lambda: st.container(),
             lambda: st,
             lambda: st._main,
         ]
     )
     def test_chat_selects_bottom_position(self, container_call):
-        """Test that it selects bottom position when called in st.container() or the main dg."""
+        """Test that it selects bottom position when called in the main dg."""
         container_call().chat_input("Placeholder")
 
         self.assertEqual(
