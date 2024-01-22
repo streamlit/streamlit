@@ -22,7 +22,7 @@ import { Selectbox as SelectboxProto } from "@streamlit/lib/src/proto"
 import { Selectbox, Props } from "./Selectbox"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, act } from "@testing-library/react"
 
 const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
   element: SelectboxProto.create({
@@ -103,7 +103,9 @@ describe("Selectbox widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    act(() => {
+      props.widgetMgr.submitForm("form")
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(screen.getByText("a")).toBeInTheDocument()

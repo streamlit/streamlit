@@ -16,7 +16,7 @@
 
 import React from "react"
 import { render } from "@streamlit/lib/src/test_util"
-import { screen, fireEvent } from "@testing-library/react"
+import { screen, fireEvent, act } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -190,7 +190,9 @@ describe("Radio widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    act(() => {
+      props.widgetMgr.submitForm("form")
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     // @ts-expect-error

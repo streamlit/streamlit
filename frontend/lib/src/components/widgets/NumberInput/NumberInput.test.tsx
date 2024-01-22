@@ -15,7 +15,7 @@
  */
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { screen, fireEvent, act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -181,7 +181,9 @@ describe("NumberInput widget", () => {
     })
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    act(() => {
+      props.widgetMgr.submitForm("form")
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)

@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
+import { screen, fireEvent, act } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
@@ -229,7 +229,9 @@ describe("TextArea widget", () => {
     expect(textArea).toHaveValue("TEST")
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    act(() => {
+      props.widgetMgr.submitForm("form")
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(textArea).toHaveValue(props.element.default)

@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, act } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import {
@@ -232,7 +232,9 @@ describe("DateInput widget", () => {
     )
 
     // "Submit" the form
-    props.widgetMgr.submitForm("form")
+    act(() => {
+      props.widgetMgr.submitForm("form")
+    })
 
     // Our widget should be reset, and the widgetMgr should be updated
     expect(dateInput).toHaveValue(fullOriginalDate)

@@ -16,7 +16,7 @@
 
 import React from "react"
 import "@testing-library/jest-dom"
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, act } from "@testing-library/react"
 import {
   render,
   ScriptRunState,
@@ -141,13 +141,15 @@ describe("StatusWidget element", () => {
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
-    )
+    act(() => {
+      sessionEventDispatcher.handleSessionEventMsg(
+        new SessionEvent({
+          scriptChangedOnDisk: true,
+          scriptWasManuallyStopped: null,
+          scriptCompilationException: null,
+        })
+      )
+    })
 
     const buttons = screen.getAllByRole("button")
     expect(buttons).toHaveLength(2)
@@ -175,13 +177,15 @@ describe("StatusWidget element", () => {
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
-    )
+    act(() => {
+      sessionEventDispatcher.handleSessionEventMsg(
+        new SessionEvent({
+          scriptChangedOnDisk: true,
+          scriptWasManuallyStopped: null,
+          scriptCompilationException: null,
+        })
+      )
+    })
 
     const buttons = screen.getAllByRole("button")
     expect(buttons).toHaveLength(2)
@@ -210,13 +214,16 @@ describe("StatusWidget element", () => {
       />
     )
 
-    sessionEventDispatcher.handleSessionEventMsg(
-      new SessionEvent({
-        scriptChangedOnDisk: true,
-        scriptWasManuallyStopped: null,
-        scriptCompilationException: null,
-      })
-    )
+    act(() => {
+      sessionEventDispatcher.handleSessionEventMsg(
+        new SessionEvent({
+          scriptChangedOnDisk: true,
+          scriptWasManuallyStopped: null,
+          scriptCompilationException: null,
+        })
+      )
+    })
+
     const buttons = screen.getAllByRole("button")
     expect(buttons).toHaveLength(1)
 

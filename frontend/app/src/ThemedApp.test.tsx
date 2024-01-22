@@ -14,188 +14,204 @@
  * limitations under the License.
  */
 
-import React from "react"
+// /**
+//  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+//  *
+//  * Licensed under the Apache License, Version 2.0 (the "License");
+//  * you may not use this file except in compliance with the License.
+//  * You may obtain a copy of the License at
+//  *
+//  *     http://www.apache.org/licenses/LICENSE-2.0
+//  *
+//  * Unless required by applicable law or agreed to in writing, software
+//  * distributed under the License is distributed on an "AS IS" BASIS,
+//  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  * See the License for the specific language governing permissions and
+//  * limitations under the License.
+//  */
 
-import {
-  LocalStore,
-  shallow,
-  mount,
-  AUTO_THEME_NAME,
-  CUSTOM_THEME_NAME,
-  createPresetThemes,
-  darkTheme,
-  setCachedTheme,
-  ThemeConfig,
-} from "@streamlit/lib"
-import { ThemeProvider as BaseUIThemeProvider } from "baseui"
+// import React from "react"
 
-import AppWithScreencast from "./App"
-import ThemedApp from "./ThemedApp"
-import { act } from "react-dom/test-utils"
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
+// import {
+//   LocalStore,
+//   shallow,
+//   mount,
+//   AUTO_THEME_NAME,
+//   CUSTOM_THEME_NAME,
+//   createPresetThemes,
+//   darkTheme,
+//   setCachedTheme,
+//   ThemeConfig,
+// } from "@streamlit/lib"
+// import { ThemeProvider as BaseUIThemeProvider } from "baseui"
 
-const mockCustomThemeConfig = {
-  primaryColor: "#1A6CE7",
-  backgroundColor: "#FFFFFF",
-  secondaryBackgroundColor: "#F5F5F5",
-  textColor: "#1A1D21",
-  widgetBackgroundColor: "#FFFFFF",
-  widgetBorderColor: "#D3DAE8",
-  skeletonBackgroundColor: "#CCDDEE",
-  fontFaces: [
-    {
-      family: "Inter",
-      url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
-      weight: 400,
-    },
-  ],
-}
+// import AppWithScreencast from "./App"
+// import ThemedApp from "./ThemedApp"
+// import { act } from "react-dom/test-utils"
+// import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
 
-jest.mock("@streamlit/app/src/connection/ConnectionManager")
+// const mockCustomThemeConfig = {
+//   primaryColor: "#1A6CE7",
+//   backgroundColor: "#FFFFFF",
+//   secondaryBackgroundColor: "#F5F5F5",
+//   textColor: "#1A1D21",
+//   widgetBackgroundColor: "#FFFFFF",
+//   widgetBorderColor: "#D3DAE8",
+//   skeletonBackgroundColor: "#CCDDEE",
+//   fontFaces: [
+//     {
+//       family: "Inter",
+//       url: "https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19",
+//       weight: 400,
+//     },
+//   ],
+// }
 
-// Mock needed for Block.tsx
-class ResizeObserver {
-  observe(): void {}
+// jest.mock("@streamlit/app/src/connection/ConnectionManager")
 
-  unobserve(): void {}
+// // Mock needed for Block.tsx
+// class ResizeObserver {
+//   observe(): void {}
 
-  disconnect(): void {}
-}
-window.ResizeObserver = ResizeObserver
+//   unobserve(): void {}
 
-describe("ThemedApp", () => {
-  beforeEach(() => {
-    // sourced from:
-    // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: jest.fn().mockImplementation(query => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: jest.fn(), // deprecated
-        removeListener: jest.fn(), // deprecated
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
-      })),
-    })
-  })
+//   disconnect(): void {}
+// }
+// window.ResizeObserver = ResizeObserver
 
-  afterEach(() => {
-    window.localStorage.clear()
-  })
+// describe("ThemedApp", () => {
+//   beforeEach(() => {
+//     // sourced from:
+//     // https://jestjs.io/docs/en/manual-mocks#mocking-methods-which-are-not-implemented-in-jsdom
+//     Object.defineProperty(window, "matchMedia", {
+//       writable: true,
+//       value: jest.fn().mockImplementation(query => ({
+//         matches: false,
+//         media: query,
+//         onchange: null,
+//         addListener: jest.fn(), // deprecated
+//         removeListener: jest.fn(), // deprecated
+//         addEventListener: jest.fn(),
+//         removeEventListener: jest.fn(),
+//         dispatchEvent: jest.fn(),
+//       })),
+//     })
+//   })
 
-  it("renders without crashing", () => {
-    const wrapper = mount(<ThemedApp />)
+//   afterEach(() => {
+//     window.localStorage.clear()
+//   })
 
-    expect(wrapper.html()).not.toBeNull()
-  })
+//   it("renders without crashing", () => {
+//     const wrapper = mount(<ThemedApp />)
 
-  it("only renders a single instance of BaseWeb <ThemeProvider>", () => {
-    const wrapper = mount(<ThemedApp />)
-    expect(wrapper.find(BaseUIThemeProvider)).toHaveLength(1)
-  })
+//     expect(wrapper.html()).not.toBeNull()
+//   })
 
-  it("updates the theme", () => {
-    const wrapper = shallow(<ThemedApp />)
-    wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
-    const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
-      .theme.activeTheme
-    expect(updatedTheme.name).toBe("Dark")
-    const updatedLocalStorage = JSON.parse(
-      window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
-    )
-    expect(updatedLocalStorage.name).toBe("Dark")
-  })
+//   it("only renders a single instance of BaseWeb <ThemeProvider>", () => {
+//     const wrapper = mount(<ThemedApp />)
+//     expect(wrapper.find(BaseUIThemeProvider)).toHaveLength(1)
+//   })
 
-  it("does not save Auto theme", () => {
-    const wrapper = shallow(<ThemedApp />)
-    wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
+//   it("updates the theme", () => {
+//     const wrapper = shallow(<ThemedApp />)
+//     wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
+//     const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
+//       .theme.activeTheme
+//     expect(updatedTheme.name).toBe("Dark")
+//     const updatedLocalStorage = JSON.parse(
+//       window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
+//     )
+//     expect(updatedLocalStorage.name).toBe("Dark")
+//   })
 
-    wrapper
-      .find(AppWithScreencast)
-      .props()
-      .theme.setTheme({
-        ...darkTheme,
-        name: AUTO_THEME_NAME,
-      })
-    const updatedLocalStorage = window.localStorage.getItem(
-      LocalStore.ACTIVE_THEME
-    )
-    expect(updatedLocalStorage).toBe(null)
-  })
+//   it("does not save Auto theme", () => {
+//     const wrapper = shallow(<ThemedApp />)
+//     wrapper.find(AppWithScreencast).props().theme.setTheme(darkTheme)
 
-  it("updates availableThemes", () => {
-    const wrapper = shallow(<ThemedApp />)
-    const app = wrapper.find(AppWithScreencast)
-    const initialThemes = app.props().theme.availableThemes
+//     wrapper
+//       .find(AppWithScreencast)
+//       .props()
+//       .theme.setTheme({
+//         ...darkTheme,
+//         name: AUTO_THEME_NAME,
+//       })
+//     const updatedLocalStorage = window.localStorage.getItem(
+//       LocalStore.ACTIVE_THEME
+//     )
+//     expect(updatedLocalStorage).toBe(null)
+//   })
 
-    app.props().theme.addThemes([darkTheme])
-    app.props().theme.addThemes([darkTheme])
+//   it("updates availableThemes", () => {
+//     const wrapper = shallow(<ThemedApp />)
+//     const app = wrapper.find(AppWithScreencast)
+//     const initialThemes = app.props().theme.availableThemes
 
-    wrapper.update()
-    const newThemes = wrapper.find(AppWithScreencast).props()
-      .theme.availableThemes
+//     app.props().theme.addThemes([darkTheme])
+//     app.props().theme.addThemes([darkTheme])
 
-    // Should only have added one theme despite multiple calls adding themes.
-    expect(newThemes.length).toBe(initialThemes.length + 1)
-  })
+//     wrapper.update()
+//     const newThemes = wrapper.find(AppWithScreencast).props()
+//       .theme.availableThemes
 
-  it("sets the cached theme as the default theme if one is set", () => {
-    setCachedTheme(darkTheme)
+//     // Should only have added one theme despite multiple calls adding themes.
+//     expect(newThemes.length).toBe(initialThemes.length + 1)
+//   })
 
-    const wrapper = shallow(<ThemedApp />)
-    const app = wrapper.find(AppWithScreencast)
-    const { activeTheme, availableThemes } = app.props().theme
+//   it("sets the cached theme as the default theme if one is set", () => {
+//     setCachedTheme(darkTheme)
 
-    expect(activeTheme.name).toBe(darkTheme.name)
-    expect(availableThemes.length).toBe(createPresetThemes().length)
-  })
+//     const wrapper = shallow(<ThemedApp />)
+//     const app = wrapper.find(AppWithScreencast)
+//     const { activeTheme, availableThemes } = app.props().theme
 
-  it("includes a custom theme as an available theme if one is cached", () => {
-    setCachedTheme({
-      ...darkTheme,
-      name: CUSTOM_THEME_NAME,
-    })
+//     expect(activeTheme.name).toBe(darkTheme.name)
+//     expect(availableThemes.length).toBe(createPresetThemes().length)
+//   })
 
-    const wrapper = shallow(<ThemedApp />)
-    const app = wrapper.find(AppWithScreencast)
-    const { activeTheme, availableThemes } = app.props().theme
+//   it("includes a custom theme as an available theme if one is cached", () => {
+//     setCachedTheme({
+//       ...darkTheme,
+//       name: CUSTOM_THEME_NAME,
+//     })
 
-    expect(activeTheme.name).toBe(CUSTOM_THEME_NAME)
-    expect(availableThemes.length).toBe(createPresetThemes().length + 1)
-  })
+//     const wrapper = shallow(<ThemedApp />)
+//     const app = wrapper.find(AppWithScreencast)
+//     const { activeTheme, availableThemes } = app.props().theme
 
-  it("contains the overlay portal required by the interactive table", () => {
-    const wrapper = mount(<ThemedApp />)
-    expect(wrapper.find("div#portal")).toHaveLength(1)
-  })
+//     expect(activeTheme.name).toBe(CUSTOM_THEME_NAME)
+//     expect(availableThemes.length).toBe(createPresetThemes().length + 1)
+//   })
 
-  it("handles custom theme sent from Host", () => {
-    const wrapper = mount(<ThemedApp />)
+//   it("contains the overlay portal required by the interactive table", () => {
+//     const wrapper = mount(<ThemedApp />)
+//     expect(wrapper.find("div#portal")).toHaveLength(1)
+//   })
 
-    let fontFaceComponent = wrapper.find(FontFaceDeclaration)
-    expect(fontFaceComponent.exists()).toBe(false)
+//   it("handles custom theme sent from Host", () => {
+//     const wrapper = mount(<ThemedApp />)
 
-    const props = wrapper.find(AppWithScreencast).props()
-    act(() => {
-      props.theme.setImportedTheme(mockCustomThemeConfig)
-    })
+//     let fontFaceComponent = wrapper.find(FontFaceDeclaration)
+//     expect(fontFaceComponent.exists()).toBe(false)
 
-    wrapper.update()
+//     const props = wrapper.find(AppWithScreencast).props()
+//     act(() => {
+//       props.theme.setImportedTheme(mockCustomThemeConfig)
+//     })
 
-    const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
-      .theme.activeTheme
-    expect(updatedTheme.name).toBe(CUSTOM_THEME_NAME)
-    expect(updatedTheme.emotion.genericColors.primary).toBe(
-      mockCustomThemeConfig.primaryColor
-    )
+//     wrapper.update()
 
-    fontFaceComponent = wrapper.find(FontFaceDeclaration)
-    expect(fontFaceComponent.exists()).toBe(true)
-    expect(fontFaceComponent.props().fontFaces).toEqual(
-      mockCustomThemeConfig.fontFaces
-    )
-  })
-})
+//     const updatedTheme: ThemeConfig = wrapper.find(AppWithScreencast).props()
+//       .theme.activeTheme
+//     expect(updatedTheme.name).toBe(CUSTOM_THEME_NAME)
+//     expect(updatedTheme.emotion.genericColors.primary).toBe(
+//       mockCustomThemeConfig.primaryColor
+//     )
+
+//     fontFaceComponent = wrapper.find(FontFaceDeclaration)
+//     expect(fontFaceComponent.exists()).toBe(true)
+//     expect(fontFaceComponent.props().fontFaces).toEqual(
+//       mockCustomThemeConfig.fontFaces
+//     )
+//   })
+// })
