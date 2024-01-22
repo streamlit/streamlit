@@ -284,7 +284,7 @@ _create_option(
     type_=bool,
     deprecated=True,
     deprecation_text="global.disableWatchdogWarning has been deprecated and will be removed in a future version.",
-    expiration_date="2024-05-20",
+    expiration_date="2024-01-20",
 )
 
 
@@ -465,7 +465,7 @@ _create_option(
     scriptable=True,
     deprecated=True,
     deprecation_text="client.caching has been deprecated and is not required anymore for our new caching commands.",
-    expiration_date="2024-05-20",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -477,7 +477,7 @@ _create_option(
     scriptable=True,
     deprecated=True,
     deprecation_text="client.displayEnabled has been deprecated and will be removed in a future version.",
-    expiration_date="2024-05-20",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -552,7 +552,7 @@ _create_option(
     type_=bool,
     deprecated=True,
     deprecation_text="runner.installTracer has been deprecated and will be removed in a future version.",
-    expiration_date="2024-05-20",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -564,7 +564,7 @@ _create_option(
     default_val=True,
     deprecated=True,
     deprecation_text="runner.fixMatplotlib has been deprecated and will be removed in a future version.",
-    expiration_date="2024-05-20",
+    expiration_date="2024-01-20",
     type_=bool,
 )
 
@@ -911,7 +911,7 @@ _create_option(
     type_=bool,
     deprecated=True,
     deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
-    expiration_date="2024-05-20",
+    expiration_date="2024-01-20",
     visibility="hidden",
 )
 
