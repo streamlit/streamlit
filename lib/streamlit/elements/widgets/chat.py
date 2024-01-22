@@ -296,7 +296,14 @@ class ChatMixin:
         # they will have no script_run_ctx.
         if runtime.exists():
             if (
-                len(list(self.dg._active_dg._parent_block_types)) > 0
+                (
+                    len(list(self.dg._active_dg._parent_block_types)) > 0
+                    and ctx.current_partial_id == ""
+                )
+                or (
+                    len(list(self.dg._active_dg._parent_block_types)) > 1
+                    and ctx.current_partial_id != ""
+                )
                 or self.dg._active_dg._root_container == RootContainer.SIDEBAR
             ):
                 # TODO: This allows the user to create a chat_input inside a
