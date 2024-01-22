@@ -399,8 +399,9 @@ describe("useColumnLoader hook", () => {
       return useColumnLoader(element, data, false)
     })
 
-    expect(result.current.columns[1].isRequired).toBe(true)
-    expect(result.current.columns[1].isHidden).toBe(true)
+    // Test that the column is hidden (not part of columns).
+    // Column with index 1 should be c2:
+    expect(result.current.columns[1].name).toBe("c2")
   })
 
   it("doesn't configure any icon for non-editable columns", () => {
