@@ -40,10 +40,10 @@ def test_checkbox_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "table"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     checkboxes = app.get_by_test_id("stCheckbox")
@@ -57,10 +57,10 @@ def test_checkbox_labels_handle_markdown(
 
 def test_radio_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "heading1"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     radioes = app.get_by_test_id("stRadio")
@@ -72,14 +72,33 @@ def test_radio_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFu
         )
 
 
+def test_selectbox_labels_handle_markdown(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    cases = [
+        ["invalid", "heading2"],
+        ["valid", "markdown"],
+        ["valid", "colored"],
+        ["valid", "link"],
+    ]
+
+    selectboxes = app.get_by_test_id("stSelectbox")
+    expect(selectboxes).to_have_count(4)
+    for index, case in enumerate(cases):
+        assert_snapshot(
+            selectboxes.nth(index).get_by_test_id("stWidgetLabel"),
+            name=f"st_selectbox-{case[0]}_{case[1]}",
+        )
+
+
 def test_multiselect_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "ordered-list"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     multiselects = app.get_by_test_id("stMultiSelect")
@@ -95,10 +114,14 @@ def test_slider_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "unordered-list"],
+        ["invalid", "task_list"],
+        ["valid", "markdown"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "colored"],
+        ["valid", "link"],
+        ["valid", "link"],
     ]
 
     sliders = app.get_by_test_id("stSlider")
@@ -120,10 +143,10 @@ def test_text_input_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "blockquote"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     text_inputs = app.get_by_test_id("stTextInput")
@@ -139,10 +162,10 @@ def test_number_input_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "horizontal-rule"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     number_inputs = app.get_by_test_id("stNumberInput")
@@ -161,7 +184,7 @@ def test_text_area_labels_handle_markdown(
         ["invalid", "image"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     text_areas = app.get_by_test_id("stTextArea")
@@ -196,10 +219,10 @@ def test_time_input_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "table"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     time_inputs = app.get_by_test_id("stTimeInput")
@@ -215,10 +238,10 @@ def test_file_uploader_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "heading2"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     file_uploaders = app.get_by_test_id("stFileUploader")
@@ -234,10 +257,10 @@ def test_color_picker_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "ordered-list"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     color_pickers = app.get_by_test_id("stColorPicker")
@@ -253,10 +276,10 @@ def test_metric_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "unordered-list"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     metrics = app.get_by_test_id("stMetric")
@@ -272,10 +295,10 @@ def test_expander_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "task-list"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     expanders = app.get_by_test_id("stExpander")
@@ -289,10 +312,10 @@ def test_expander_labels_handle_markdown(
 
 def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "blockquote-and-hr"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     tabs = app.get_by_test_id("stTab")
