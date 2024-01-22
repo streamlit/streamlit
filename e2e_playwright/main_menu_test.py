@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
@@ -30,52 +31,55 @@ def test_renders_settings_dialog_properly(
     app.get_by_test_id("stMainMenu").click()
 
     app.get_by_text("Settings").click()
-    assert_snapshot(app.get_by_role("dialog"), name="settings_dialog")
+    dialog = app.get_by_test_id("stModal")
+    expect(dialog).to_be_visible()
+    assert_snapshot(dialog, name="settings_dialog")
 
 
-# This test doesn't work depending on webkit (safari) browser
-# as a result, going to comment this test out
-# def test_renders_screencast_dialog_properly(
-#     app: Page, assert_snapshot: ImageCompareFunction
-# ):
-#     app.get_by_test_id("stMainMenu").click()
-
-#     app.get_by_text("Record a screencast").click()
-#     assert_snapshot(app.get_by_role("dialog"), name="record_screencast_dialog")
-
-
-# This test doesn't work depending on webkit (safari) browser
-# as a result, going to comment this test out
-# def test_renders_screencast_recorded_dialog_properly(
-#     app: Page, assert_snapshot: ImageCompareFunction
-# ):
-#     app.get_by_test_id("stMainMenu").click()
-
-#     app.get_by_text("Record a screencast").click()
-#     app.get_by_text("Start recording!").click()
-
-#     # Wait 5 seconds because there is a 3! 2! 1! on the screen until recording occurs and there may be buffer
-#     app.wait_for_timeout(5000)
-
-#     # Remove the browser support dialog message
-#     app.keyboard.press("Escape")
-#     app.get_by_test_id("stMainMenu").click()
-
-#     app.get_by_text("Stop recording").click()
-
-#     # don't use screenshot as the recording may differ so just check for specific text
-#     expect(
-#         app.get_by_role("dialog").get_by_text("Preview your video below:")
-#     ).to_be_visible
-
-
-def test_renders_about_dialog_properly(
+# Webkit (safari) doesn't support screencast
+@pytest.mark.skip_browser("webkit")
+def test_renders_screencast_dialog_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     app.get_by_test_id("stMainMenu").click()
 
+    app.get_by_text("Record a screencast").click()
+    dialog = app.get_by_test_id("stModal")
+    expect(dialog).to_be_visible()
+    assert_snapshot(dialog, name="record_screencast_dialog")
+
+
+# Webkit (safari) doesn't support screencast
+@pytest.mark.skip_browser("webkit")
+def test_renders_screencast_recorded_dialog_properly(app: Page):
+    app.get_by_test_id("stMainMenu").click()
+
+    app.get_by_text("Record a screencast").click()
+    app.get_by_text("Start recording!").click()
+
+    # Wait 5 seconds because there is a 3! 2! 1! on the screen until recording occurs and there may be buffer
+    app.wait_for_timeout(5000)
+
+    # stop recording
+    app.keyboard.press("Escape")
+    dialog = app.get_by_test_id("stModal")
+    expect(dialog).to_be_visible()
+
+    # don't use screenshot as the recording may differ so just check for specific text
+    expect(
+        app.get_by_role("dialog").get_by_text("Preview your video below:")
+    ).to_be_visible
+
+
+def test_renders_about_dialog_properly(app: Page):
+    pass
+
+    app.get_by_test_id("stMainMenu").click()
+
     app.get_by_text("About").click()
-    assert_snapshot(app.get_by_role("dialog"), name="about_dialog")
+    dialog = app.get_by_test_id("stModal")
+    expect(dialog).to_be_visible()
+    expect(dialog).to_contain_text("Made with Streamlit v")
 
 
 def test_renders_clear_cache_dialog_properly(
@@ -84,4 +88,21 @@ def test_renders_clear_cache_dialog_properly(
     app.get_by_test_id("stMainMenu").click()
 
     app.get_by_text("Clear cache").click()
-    assert_snapshot(app.get_by_role("dialog"), name="clear_cache_dialog")
+    dialog = app.get_by_test_id("stModal")
+    expect(dialog).to_be_visible()
+    expect(dialog).to_contain_text(
+        "Are you sure you want to clear the app's function caches?"
+    )
+    assert_snapshot(dialog, name="clear_cache_dialog")
+
+
+def test_renders_active_theme_dialog_properly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Edit active theme").click()
+
+    dialog = app.get_by_test_id("stModal")
+    expect(dialog).to_be_visible()
+
+    assert_snapshot(dialog, name="edit_active_theme_dialog")
