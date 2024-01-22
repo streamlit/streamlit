@@ -15,7 +15,7 @@
 import streamlit as st
 from streamlit import runtime
 
-v1 = st.chat_input("Chat input 1 (inline)", position="inline")
+v1 = st.container().chat_input("Chat input 1 (inline)")
 st.write("Chat input 1 (inline) - value:", v1)
 
 col1, _ = st.columns(2)
@@ -28,11 +28,8 @@ if runtime.exists():
     def on_submit():
         st.text("chat input submitted")
 
-    st.chat_input(
-        "Chat input 3 (callback)",
-        key="chat_input_3",
-        on_submit=on_submit,
-        position="inline",
+    st.container().chat_input(
+        "Chat input 3 (callback)", key="chat_input_3", on_submit=on_submit
     )
     st.write("Chat input 3 (callback) - value:", st.session_state.get("chat_input_3"))
 

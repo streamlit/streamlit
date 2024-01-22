@@ -216,7 +216,6 @@ class ChatMixin:
         key: Key | None = None,
         max_chars: int | None = None,
         disabled: bool = False,
-        position: Literal["inline", "bottom"] | None = None,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -274,6 +273,20 @@ class ChatMixin:
             https://doc-chat-input.streamlit.app/
             height: 350px
 
+        The chat input can also be used inline instead of pinned to the
+        bottom if it is nested inside any other layout container
+        (container, columns, tabs, sidebar, etc).:
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container():
+        >>>     prompt = st.chat_input("Say something")
+        >>> if prompt:
+        ...     st.write(f"User has sent the following prompt: {prompt}")
+
+        .. output ::
+            https://doc-chat-input-inline.streamlit.app/
+            height: 350px
         """
         # We default to an empty string here and disallow user choice intentionally
         default = ""
@@ -288,7 +301,6 @@ class ChatMixin:
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
-            position=position,
             page=ctx.page_script_hash if ctx else None,
         )
 
@@ -302,18 +314,18 @@ class ChatMixin:
                     "`st.chat_input()` can't be used in a `st.form()`."
                 )
 
-        if position is None:
-            # Determine the position of the chat input:
-            # Use bottom position if chat input is within the main container
-            # either directly or within a vertical container. If it has any
-            # other container types as parents, we use inline position.
-            parent_block_types = set(self.dg._active_dg._parent_block_types)
-            if self.dg._active_dg._root_container == RootContainer.MAIN and (
-                not parent_block_types or parent_block_types == {"vertical"}
-            ):
-                position = "bottom"
-            else:
-                position = "inline"
+        # Determine the position of the chat input:
+        # Use bottom position if chat input is within the main container
+        # either directly or within a vertical container. If it has any
+        # other container types as parents, we use inline position.
+        parent_block_types = set(self.dg._active_dg._parent_block_types)
+        if (
+            self.dg._active_dg._root_container == RootContainer.MAIN
+            and not parent_block_types
+        ):
+            position = "bottom"
+        else:
+            position = "inline"
 
         chat_input_proto = ChatInputProto()
         chat_input_proto.id = id

@@ -185,15 +185,6 @@ class ChatTest(DeltaGeneratorTestCase):
         self.assertEqual(c.max_chars, 100)
         self.assertEqual(c.disabled, False)
 
-    def test_chat_input_inline_position(self):
-        """Test that it correctly adds chat input to main dg."""
-        st.chat_input("Placeholder", position="inline")
-
-        self.assertEqual(
-            self.get_message_from_queue().metadata.delta_path[0],
-            RootContainerProto.MAIN,
-        )
-
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
         with pytest.raises(StreamlitAPIException) as exception_message:
