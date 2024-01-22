@@ -274,7 +274,7 @@ class ChatMixin:
             height: 350px
 
         The chat input can also be used inline instead of pinned to the
-        bottom if it is nested inside any other layout container
+        bottom by nesting it inside any other layout container
         (container, columns, tabs, sidebar, etc).:
 
         >>> import streamlit as st
