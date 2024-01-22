@@ -101,6 +101,7 @@ function PageLink(props: Props): ReactElement {
                 source={element.label}
                 allowHTML={false}
                 isLabel
+                boldLabel={isCurrentPage}
                 largerLabel
                 disableLinks
               />

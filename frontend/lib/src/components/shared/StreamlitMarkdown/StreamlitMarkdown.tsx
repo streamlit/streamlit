@@ -83,6 +83,11 @@ export interface Props {
   isLabel?: boolean
 
   /**
+   * Make the label bold
+   */
+  boldLabel?: boolean
+
+  /**
    * Checkbox labels have larger font sizing
    */
   largerLabel?: boolean
@@ -399,6 +404,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       style,
       isCaption,
       isLabel,
+      boldLabel,
       largerLabel,
       disableLinks,
       isToast,
@@ -410,6 +416,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        boldLabel={boldLabel}
         largerLabel={largerLabel}
         isToast={isToast}
         style={style}

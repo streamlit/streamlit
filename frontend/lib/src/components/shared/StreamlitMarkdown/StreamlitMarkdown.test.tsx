@@ -281,6 +281,22 @@ describe("StreamlitMarkdown", () => {
     expect(textTag).toHaveStyle("font-size: inherit")
   })
 
+  it("renders bold label text when boldLabel is true", () => {
+    const source = "Here is some checkbox label text"
+    render(
+      <StreamlitMarkdown
+        source={source}
+        allowHTML={false}
+        isLabel
+        boldLabel
+        largerLabel
+      />
+    )
+
+    const textTag = screen.getByText("Here is some checkbox label text")
+    expect(textTag).toHaveStyle("font-weight: 600")
+  })
+
   it("colours text properly", () => {
     const colorMapping = new Map([
       ["red", colors.red80],

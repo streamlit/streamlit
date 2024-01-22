@@ -29,68 +29,61 @@ export interface StyledNavLinkProps {
 }
 
 export const StyledNavLink = styled.a<StyledNavLinkProps>(
-  ({ disabled, isCurrentPage, fluidWidth, theme }) => {
-    const defaultPageLinkStyles = {
-      textDecoration: "none",
-      fontWeight: isCurrentPage ? 600 : 400,
-    }
+  ({ disabled, isCurrentPage, fluidWidth, theme }) => ({
+    textDecoration: "none",
+    width: typeof fluidWidth == "number" ? `${fluidWidth}px` : "fit-content",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: theme.spacing.sm,
+    borderRadius: theme.spacing.twoXS,
 
-    return {
-      ...defaultPageLinkStyles,
-      width: typeof fluidWidth == "number" ? `${fluidWidth}px` : "fit-content",
-      display: "flex",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      gap: theme.spacing.sm,
-      borderRadius: theme.spacing.twoXS,
+    paddingLeft: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
+    marginTop: theme.spacing.threeXS,
+    marginBottom: theme.spacing.threeXS,
+    lineHeight: theme.lineHeights.menuItem,
 
-      paddingLeft: theme.spacing.sm,
-      paddingRight: theme.spacing.sm,
-      marginTop: theme.spacing.threeXS,
-      marginBottom: theme.spacing.threeXS,
-      lineHeight: theme.lineHeights.menuItem,
+    backgroundColor: isCurrentPage
+      ? theme.colors.darkenedBgMix15
+      : "transparent",
 
+    "&:hover": {
       backgroundColor: isCurrentPage
-        ? theme.colors.darkenedBgMix15
-        : "transparent",
+        ? theme.colors.darkenedBgMix25
+        : theme.colors.darkenedBgMix15,
+    },
 
-      "&:hover": {
-        backgroundColor: isCurrentPage
-          ? theme.colors.darkenedBgMix25
-          : theme.colors.darkenedBgMix15,
-      },
+    "&:active,&:visited,&:hover": {
+      textDecoration: "none",
+    },
 
-      "&:active,&:visited,&:hover": {
-        ...defaultPageLinkStyles,
-      },
+    "&:focus": {
+      outline: "none",
+    },
 
-      "&:focus": {
-        outline: "none",
-      },
+    "&:focus-visible": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
 
-      "&:focus-visible": {
-        backgroundColor: theme.colors.darkenedBgMix15,
-      },
+    [`@media print`]: {
+      paddingLeft: theme.spacing.none,
+    },
 
-      [`@media print`]: {
-        paddingLeft: theme.spacing.none,
-      },
-
-      ...(disabled
-        ? {
-            borderColor: theme.colors.fadedText10,
-            backgroundColor: theme.colors.transparent,
+    ...(disabled
+      ? {
+          borderColor: theme.colors.fadedText10,
+          backgroundColor: theme.colors.transparent,
+          color: theme.colors.fadedText40,
+          cursor: "not-allowed",
+          "&:hover": {
             color: theme.colors.fadedText40,
-            cursor: "not-allowed",
-            "&:hover": {
-              color: theme.colors.fadedText40,
-              backgroundColor: theme.colors.transparent,
-            },
-          }
-        : {}),
-    }
-  }
+            backgroundColor: theme.colors.transparent,
+          },
+        }
+      : {}),
+  })
 )
 
 export interface StyledNavLinkTextProps {
