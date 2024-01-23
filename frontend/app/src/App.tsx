@@ -82,7 +82,6 @@ import {
   ForwardMsgMetadata,
   GitInfo,
   IAppPage,
-  ICustomThemeConfig,
   IGitInfo,
   Initialize,
   NewSession,
@@ -125,16 +124,11 @@ import withScreencast, {
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
 import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
+import { ThemeManager } from "./util/useThemeManager"
 
 export interface Props {
   screenCast: ScreenCastHOC
-  theme: {
-    activeTheme: ThemeConfig
-    availableThemes: ThemeConfig[]
-    setTheme: (theme: ThemeConfig) => void
-    addThemes: (themes: ThemeConfig[]) => void
-    setImportedTheme: (themeInfo: ICustomThemeConfig) => void
-  }
+  theme: ThemeManager
 }
 
 interface State {
