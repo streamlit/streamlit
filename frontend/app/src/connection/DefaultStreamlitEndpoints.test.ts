@@ -191,7 +191,6 @@ describe("DefaultStreamlitEndpoints", () => {
       ).resolves.toBeUndefined()
 
       const expectedData = new FormData()
-      expectedData.append("sessionId", "mockSessionId")
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
@@ -224,7 +223,6 @@ describe("DefaultStreamlitEndpoints", () => {
       ).resolves.toBeUndefined()
 
       const expectedData = new FormData()
-      expectedData.append("sessionId", "mockSessionId")
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
