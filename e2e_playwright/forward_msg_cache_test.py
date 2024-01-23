@@ -12,6 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+from playwright.sync_api import Page, expect
 
-st.chat_input(placeholder="Please enter your message here...", max_chars=200)
+from e2e_playwright.conftest import rerun
+
+
+def test_forward_msg_cache_receives_msg(app: Page):
+    app.evaluate("window.streamlitDebug.clearForwardMsgCache()")
+    rerun(app)
+    expect(app.get_by_role("dialog")).not_to_be_visible()
+
+    app.expect_request("**/_stcore/message/")
