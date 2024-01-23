@@ -13,7 +13,7 @@ chart-studio==1.1.0
 click==8.1.7
 contourpy==1.2.0
 coverage==7.4.0
-cryptography==41.0.7
+cryptography==42.0.0
 cycler==0.12.1
 distlib==0.3.8
 docutils==0.20.1
@@ -24,7 +24,7 @@ gitdb==4.0.11
 GitPython==3.1.41
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.96.2
+hypothesis==6.96.3
 identify==2.5.33
 idna==3.6
 importlib-metadata==7.0.1
