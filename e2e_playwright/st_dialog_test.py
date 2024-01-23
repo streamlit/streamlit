@@ -25,6 +25,68 @@ def test_displays_dialog_properly(app: Page):
     expect(main_dialog).to_have_count(1)
 
 
+def test_dialog_closes_properly(app: Page):
+    """Test that dialog closes after clicking on action button."""
+    app.get_by_text("Open Dialog").click()
+    wait_for_app_run(app)
+    main_dialog = app.locator("[data-testid='stModal']")
+    expect(main_dialog).to_have_count(1)
+    close_button = main_dialog.get_by_test_id("stButton").locator("button").first
+    close_button.scroll_into_view_if_needed()
+    close_button.click()
+    wait_for_app_run(app)
+    main_dialog = app.locator("[data-testid='stModal']")
+    expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_dismisses_properly(app: Page):
+    """Test that dialog is dismissed properly after clicking on modal close (= dismiss)."""
+    app.get_by_text("Open Dialog").click()
+    wait_for_app_run(app)
+    main_dialog = app.locator("[data-testid='stModal']")
+    expect(main_dialog).to_have_count(1)
+    app.get_by_label("Close", exact=True).click()
+    wait_for_app_run(app)
+    main_dialog = app.locator("[data-testid='stModal']")
+    expect(main_dialog).to_have_count(0)
+
+
+def test_dialog_reopens_properly_after_dismiss(app: Page):
+    # import time
+
+    """Test that dialog reopens after dismiss."""
+    # open and close the dialog multiple times
+    for _ in range(0, 10):
+        app.get_by_text("Open Dialog").click()
+        wait_for_app_run(app)
+        main_dialog = app.locator("[data-testid='stModal']")
+        expect(main_dialog).to_have_count(1)
+        app.get_by_label("Close", exact=True).click()
+        wait_for_app_run(app)
+        main_dialog = app.locator("[data-testid='stModal']")
+        expect(main_dialog).to_have_count(0)
+        # time.sleep(0.01)
+
+
+def test_dialog_reopens_properly_after_close(app: Page):
+    # import time
+
+    """Test that dialog reopens properly after closing by action button click."""
+    # open and close the dialog multiple times
+    for _ in range(0, 10):
+        app.get_by_text("Open Dialog").click()
+        wait_for_app_run(app)
+        main_dialog = app.locator("[data-testid='stModal']")
+        expect(main_dialog).to_have_count(1)
+        close_button = main_dialog.get_by_test_id("stButton").locator("button").first
+        close_button.scroll_into_view_if_needed()
+        close_button.click()
+        wait_for_app_run(app)
+        main_dialog = app.locator("[data-testid='stModal']")
+        expect(main_dialog).to_have_count(0)
+        # time.sleep(0.01)
+
+
 def test_dialog_is_scrollable(app: Page):
     """Test that the dialog is scrollable"""
     app.get_by_text("Open Dialog").click()

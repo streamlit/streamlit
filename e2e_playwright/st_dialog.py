@@ -32,7 +32,7 @@ with dialog:
     for i in range(0, 3):
         st.image(np.repeat(0, 1000000).reshape(1000, 1000))
 
-    if st.button("Close"):
+    if st.button("Submit", key="button"):
         dialog.close()
 
 
