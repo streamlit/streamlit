@@ -18,7 +18,9 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_displays_altair_chart(app: Page):
-    expect(app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")).to_be_visible()
+    expect(app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")).to_have_count(
+        8
+    )
 
 
 def test_altair_chart_displays_correctly(
