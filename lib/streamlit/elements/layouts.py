@@ -24,6 +24,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
@@ -709,6 +710,12 @@ class LayoutsMixin:
         return StatusContainer._create(
             self.dg, label=label, expanded=expanded, state=state
         )
+
+    @gather_metrics("dialog")
+    def dialog(self, title: str, *, dismissible: bool = True) -> "Dialog":
+        from streamlit.elements.lib.dialog import Dialog
+
+        return Dialog._create(self.dg, title, dismissible=dismissible)
 
     @property
     def dg(self) -> DeltaGenerator:
