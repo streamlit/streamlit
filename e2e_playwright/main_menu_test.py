@@ -72,8 +72,6 @@ def test_renders_screencast_recorded_dialog_properly(app: Page):
 
 
 def test_renders_about_dialog_properly(app: Page):
-    pass
-
     app.get_by_test_id("stMainMenu").click()
 
     app.get_by_text("About").click()
@@ -100,6 +98,7 @@ def test_renders_active_theme_dialog_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Settings").click()
     app.get_by_text("Edit active theme").click()
 
     dialog = app.get_by_test_id("stModal")
