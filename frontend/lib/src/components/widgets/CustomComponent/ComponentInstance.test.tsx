@@ -60,7 +60,7 @@ const MOCK_WIDGET_ID = "mock_widget_id"
 const MOCK_COMPONENT_NAME = "mock_component_name"
 
 describe("ComponentInstance", () => {
-  const getComponetRegistry = (): ComponentRegistry => {
+  const getComponentRegistry = (): ComponentRegistry => {
     return new ComponentRegistry(mockEndpoints())
   }
 
@@ -74,7 +74,7 @@ describe("ComponentInstance", () => {
   })
 
   it("registers a message listener on render", () => {
-    const componentRegistry = getComponetRegistry()
+    const componentRegistry = getComponentRegistry()
     const registerListener = jest.spyOn(componentRegistry, "registerListener")
     render(
       <ComponentInstance
@@ -95,7 +95,7 @@ describe("ComponentInstance", () => {
   })
 
   it("deregisters its message listener on rerender", () => {
-    const componentRegistry = getComponetRegistry()
+    const componentRegistry = getComponentRegistry()
     const deregisterListener = jest.spyOn(
       componentRegistry,
       "deregisterListener"
@@ -120,7 +120,7 @@ describe("ComponentInstance", () => {
   })
 
   it("renders its iframe correctly", () => {
-    const componentRegistry = getComponetRegistry()
+    const componentRegistry = getComponentRegistry()
     render(
       <ComponentInstance
         element={createElementProp()}
@@ -145,61 +145,10 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("sandbox", DEFAULT_IFRAME_SANDBOX_POLICY)
   })
 
-  // TODO: implement test to check sends dataframe args to iframe
-
-  it("renders with json arguments", () => {
-    const jsonArgs = { foo: "string", bar: 5 }
-    const element = createElementProp(jsonArgs, [])
-    render(
-      <ComponentInstance
-        element={element}
-        registry={getComponetRegistry()}
-        width={100}
-        disabled={false}
-        theme={mockTheme.emotion}
-        widgetMgr={
-          new WidgetStateManager({
-            sendRerunBackMsg: jest.fn(),
-            formsDataChanged: jest.fn(),
-          })
-        }
-      />
-    )
-    expect(screen.getByTitle(MOCK_COMPONENT_NAME)).toBeVisible()
-  })
-
-  it("renders with bytes", () => {
-    // Bytes are passed from the backend as "SpecialArgs".
-    const key1 = "bytes1"
-    const bytes1 = new Uint8Array([0, 1, 2, 3])
-    const key2 = "bytes2"
-    const bytes2 = new Uint8Array([4, 5, 6, 7])
-    const element = createElementProp({}, [
-      SpecialArg.create({ key: key1, bytes: bytes1 }),
-      SpecialArg.create({ key: key2, bytes: bytes2 }),
-    ])
-    render(
-      <ComponentInstance
-        element={element}
-        registry={getComponetRegistry()}
-        width={100}
-        disabled={false}
-        theme={mockTheme.emotion}
-        widgetMgr={
-          new WidgetStateManager({
-            sendRerunBackMsg: jest.fn(),
-            formsDataChanged: jest.fn(),
-          })
-        }
-      />
-    )
-    expect(screen.getByTitle(MOCK_COMPONENT_NAME)).toBeVisible()
-  })
-
   describe("COMPONENT_READY handler", () => {
     it("posts a RENDER message to the iframe", () => {
       const jsonArgs = { foo: "string", bar: 5 }
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       render(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -236,7 +185,7 @@ describe("ComponentInstance", () => {
 
     it("prevents RENDER message until component is ready", () => {
       const jsonArgs = { foo: "string", bar: 5 }
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       render(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -263,7 +212,7 @@ describe("ComponentInstance", () => {
       // (This can happen during development, when the component's devserver
       // reloads.)
       const jsonArgs = { foo: "string", bar: 5 }
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       render(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -314,7 +263,7 @@ describe("ComponentInstance", () => {
     it("errors on unrecognized API version", () => {
       const badAPIVersion = CUSTOM_COMPONENT_API_VERSION + 1
       const jsonArgs = { foo: "string", bar: 5 }
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       render(
         <ComponentInstance
           element={createElementProp(jsonArgs)}
@@ -352,7 +301,7 @@ describe("ComponentInstance", () => {
       const element = createElementProp(jsonArgs, [
         new SpecialArg({ key: "foo" }),
       ])
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       render(
         <ComponentInstance
           element={element}
@@ -374,7 +323,7 @@ describe("ComponentInstance", () => {
     })
 
     it("warns if COMPONENT_READY hasn't been received after a timeout", () => {
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       const { rerender } = render(
         <ComponentInstance
           element={createElementProp()}
@@ -422,7 +371,7 @@ describe("ComponentInstance", () => {
         list: [1, "foo", false],
       }
 
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       const element = createElementProp(jsonValue)
       render(
         <ComponentInstance
@@ -478,7 +427,7 @@ describe("ComponentInstance", () => {
     it("handles bytes values", () => {
       const jsonValue = {}
 
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       const element = createElementProp(jsonValue)
       render(
         <ComponentInstance
@@ -544,7 +493,7 @@ describe("ComponentInstance", () => {
         list: [1, "foo", false],
       }
 
-      const componentRegistry = getComponetRegistry()
+      const componentRegistry = getComponentRegistry()
       const element = createElementProp(jsonValue)
       render(
         <ComponentInstance
@@ -588,7 +537,7 @@ describe("ComponentInstance", () => {
     describe("SET_FRAME_HEIGHT handler", () => {
       it("updates the frameHeight without re-rendering", () => {
         const jsonValue = {}
-        const componentRegistry = getComponetRegistry()
+        const componentRegistry = getComponentRegistry()
         const element = createElementProp(jsonValue)
         const { rerender } = render(
           <ComponentInstance
@@ -662,7 +611,7 @@ describe("ComponentInstance", () => {
           list: [1, "foo", false],
         }
 
-        const componentRegistry = getComponetRegistry()
+        const componentRegistry = getComponentRegistry()
         const element = createElementProp(jsonValue)
         render(
           <ComponentInstance
