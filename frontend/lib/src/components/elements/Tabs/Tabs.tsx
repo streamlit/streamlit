@@ -83,6 +83,7 @@ function Tabs(props: TabProps): ReactElement {
       isOverflowing={isOverflowing}
       tabHeight={TAB_HEIGHT}
       className="stTabs"
+      data-testid="stTab"
     >
       <UITabs
         activateOnFocus
