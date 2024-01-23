@@ -63,6 +63,7 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private activeSettings: UserSettings
 
   static contextType = LibContext
+  context!: React.ContextType<typeof LibContext>
 
   constructor(props: Props) {
     super(props)
