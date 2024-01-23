@@ -443,7 +443,7 @@ class ButtonMixin:
         stops the current page execution and runs the specified page as if the
         user clicked on it in the sidebar navigation.
 
-        If an external page is specificed, clicking ``st.page_link`` opens a new
+        If an external page is specified, clicking ``st.page_link`` opens a new
         tab to the specified page. The current script run will continue if not
         complete.
 
@@ -454,8 +454,8 @@ class ButtonMixin:
             Alternatively, this can be the URL to an external page (must start
             with "http://" or "https://").
         label : str
-            The label for the page link button. Labels are required for external
-            pages. Labels can optionally contain Markdown and supports the following
+            The label for the page link. Labels are required for external pages.
+            Labels can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
 
             This also supports:
@@ -477,17 +477,17 @@ class ButtonMixin:
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
         icon : str
             An optional argument that specifies an emoji to use as
-            the icon for the button. Shortcodes are not allowed. Please use a
+            the icon for the link. Shortcodes are not allowed. Please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to ``None``, which means no icon is displayed.
         help : str
-            An optional tooltip that gets displayed when the button is
+            An optional tooltip that gets displayed when the link is
             hovered over.
         disabled : bool
-            An optional boolean, which disables the page link button if set to
+            An optional boolean, which disables the page link if set to
             ``True``. The default is ``False``.
         use_container_width : bool
-            An optional boolean, which makes the button stretch its width to
+            An optional boolean, which makes the link stretch its width to
             match the parent container. The default is ``True`` for page links
             in the sidebar, and ``False`` for those in the main app.
 
@@ -507,6 +507,15 @@ class ButtonMixin:
         >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣")
         >>> st.page_link("pages/page_2.py", label="Page 2", icon="2️⃣")
         >>> st.page_link("http://www.google.com", label="Google", icon="🌎")
+
+        The default navigation is shown here for comparison, but you can hide
+        the default navigation using the |client.showSidebarNavigation|_
+        configuration option. This allows you to create custom, dynamic
+        navigation menus for your apps!
+
+        .. |client.showSidebarNavigation| replace:: ``client.showSidebarNavigation``
+        .. _client.showSidebarNavigation: https://docs.streamlit.io/library\
+            /advanced-features/configuration#client
 
         .. output ::
             https://doc-page-link.streamlit.app/
