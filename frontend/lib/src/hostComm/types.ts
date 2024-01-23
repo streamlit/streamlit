@@ -147,6 +147,10 @@ export type IGuestToHostMessage =
       title: string
     }
   | {
+      type: "SET_PAGE_HEAD"
+      head: string
+    }
+  | {
       type: "SET_QUERY_PARAM"
       queryParams: string
     }

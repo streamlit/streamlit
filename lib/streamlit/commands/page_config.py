@@ -118,6 +118,7 @@ def set_page_config(
     layout: Layout = "centered",
     initial_sidebar_state: InitialSideBarState = "auto",
     menu_items: Optional[MenuItems] = None,
+    head: Optional[str] = None,
 ) -> None:
     """
     Configures the default settings of the page.
@@ -184,6 +185,9 @@ def set_page_config(
 
     if page_title is not None:
         msg.page_config_changed.title = page_title
+
+    if head is not None:
+        msg.page_config_changed.head = head
 
     if page_icon is not None:
         msg.page_config_changed.favicon = _get_favicon_string(page_icon)

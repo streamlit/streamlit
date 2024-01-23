@@ -642,7 +642,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
-    const { title, favicon, layout, initialSidebarState, menuItems } =
+    const { title, head, favicon, layout, initialSidebarState, menuItems } =
       pageConfig
 
     if (title) {
@@ -652,6 +652,19 @@ export class App extends PureComponent<Props, State> {
       })
 
       document.title = title
+    }
+
+    if (head) {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_PAGE_HEAD",
+        head,
+      })
+
+      const headElement = document.querySelector("head")
+      if (headElement) {
+        // Prepend the string to the head element.
+        headElement.insertAdjacentHTML("afterbegin", head)
+      }
     }
 
     if (favicon) {

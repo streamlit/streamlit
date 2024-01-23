@@ -26,6 +26,7 @@ message PageConfig {
   Layout layout = 3;
   SidebarState initial_sidebar_state = 4;
   MenuItems menu_items = 5;
+  string head = 6;
 
   message MenuItems {
     string get_help_url = 1;
