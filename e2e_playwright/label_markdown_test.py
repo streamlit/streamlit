@@ -200,10 +200,10 @@ def test_date_input_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "image"],
+        ["invalid", "table"],
         ["valid", "markdown"],
         ["valid", "colored"],
-        ["invalid", "link"],
+        ["valid", "link"],
     ]
 
     date_inputs = app.get_by_test_id("stDateInput")
@@ -219,7 +219,7 @@ def test_time_input_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
-        ["invalid", "table"],
+        ["invalid", "heading1"],
         ["valid", "markdown"],
         ["valid", "colored"],
         ["valid", "link"],
