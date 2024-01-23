@@ -27,8 +27,36 @@ def _get_user_info() -> UserInfo:
     return ctx.user_info
 
 
+# Class attributes are listed as "Parameters" in the docstring as a workaround
+# for the docstring parser for docs.strreamlit.io
 class UserInfoProxy(Mapping[str, Optional[str]]):
-    """A dict like proxy object for accessing information about current user."""
+    """
+    A read-only, dict-like object for accessing information about current user.
+
+    ``st.experimental_user`` is dependant on the host platform running the
+    Streamlit app. If the host platform has not configured the function, it
+    will behave as it does in a locally running app.
+
+    Properties can by accessed via key or attribute notation. For example,
+    ``st.experimental_user["email"]`` or ``st.experimental_user.email``.
+
+    Parameters
+    ----------
+    email:str
+        If running locally, this property returns the string literal
+        ``"test@example.com"``.
+
+        If running on Streamlit Community Cloud, this
+        property returns one of two values:
+
+        * ``None`` if the user is not logged in or not a member of the app's\
+        workspace. Such users appear under anonymous pseudonyms in the app's\
+        analytics.
+        * The user's email if the the user is logged in and a member of the\
+        app's workspace. Such users are identified by their email in the app's\
+        analytics.
+
+    """
 
     def __getitem__(self, key: str) -> Optional[str]:
         return _get_user_info()[key]
@@ -52,4 +80,16 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
         return len(_get_user_info())
 
     def to_dict(self) -> UserInfo:
+        """
+        Get user info as a dictionary.
+
+        This method primarily exists for internal use and is not needed for
+        most cases. ``st.experimental_user`` returns an object that inherits from
+        ``dict`` by default.
+
+        Returns
+        -------
+        Dict[str,str]
+            A dictionary of the current user's information.
+        """
         return _get_user_info()

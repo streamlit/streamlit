@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
-import { ChatInput as ChatInputProto } from "@streamlit/lib/src/proto"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 
 export interface StyledChatInputContainerProps {
   width: number
-  position: ChatInputProto.Position
 }
 
 export const StyledChatInputContainer =
-  styled.div<StyledChatInputContainerProps>(({ theme, width, position }) => {
-    const lightTheme = hasLightBackgroundColor(theme)
+  styled.div<StyledChatInputContainerProps>(({ theme, width }) => {
     return {
       borderRadius: theme.radii.lg,
       display: "flex",
-      ...(position === ChatInputProto.Position.BOTTOM && {
-        backgroundColor: lightTheme
-          ? theme.colors.gray20
-          : theme.colors.gray90,
-      }),
+      backgroundColor:
+        theme.colors.widgetBackgroundColor ?? theme.colors.secondaryBg,
       width: `${width}px`,
     }
   })
@@ -96,22 +90,6 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
     }
   }
 )
-
-export const StyledFloatingChatInputContainer = styled.div(({ theme }) => ({
-  position: "fixed",
-  bottom: "0px",
-  paddingBottom: "70px",
-  paddingTop: theme.spacing.lg,
-  backgroundColor: theme.colors.bgColor,
-  zIndex: theme.zIndices.chatInput,
-  [`@media (max-width: ${theme.breakpoints.md})`]: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    left: 0,
-    width: "100vw",
-  },
-}))
 
 export const StyledSendIconButtonContainer = styled.div(() => ({
   display: "flex",
