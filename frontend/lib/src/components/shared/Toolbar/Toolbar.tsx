@@ -97,7 +97,7 @@ export interface ToolbarProps {
   target?: StyledComponent<any, any, any>
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({
+const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   onExpand,
   onCollapse,
   isFullScreen,

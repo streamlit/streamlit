@@ -90,7 +90,7 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
   }, [ignoreScrollEventBeforeRef, isAnimatingRef, setIsAnimating, setIsSticky])
 
   const handleScroll = useCallback(
-    ({ timeStampLow }) => {
+    ({ timeStampLow }: any) => {
       const { current: target } = scrollableRef
       const animating = isAnimatingRef.current
 

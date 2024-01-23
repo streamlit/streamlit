@@ -30,9 +30,9 @@ export interface Props {
 type WrapperProps<P> = Omit<P & Props, "isFullScreen" | "collapse" | "expand">
 
 function withFullScreenWrapper<P>(
-  WrappedComponent: ComponentType<P>,
+  WrappedComponent: ComponentType<React.PropsWithChildren<P>>,
   hideFullScreenButton = false
-): ComponentType<WrapperProps<P>> {
+): ComponentType<React.PropsWithChildren<WrapperProps<P>>> {
   class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps<P>> {
     public static readonly displayName = `withFullScreenWrapper(${
       WrappedComponent.displayName || WrappedComponent.name

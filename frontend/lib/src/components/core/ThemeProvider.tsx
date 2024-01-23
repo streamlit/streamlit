@@ -36,6 +36,7 @@ function ThemeProvider({
   children,
 }: ThemeProviderProps): ReactElement {
   return (
+    // @ts-expect-error
     <BaseUIThemeProvider theme={baseuiTheme || baseuiLightTheme}>
       <EmotionThemeProvider theme={theme}>{children}</EmotionThemeProvider>
     </BaseUIThemeProvider>
