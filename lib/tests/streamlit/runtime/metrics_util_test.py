@@ -272,6 +272,9 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # which causes it not to be executed before an Exception is raised due to a
             # lack of required arguments.
             "connection",
+            # We need to ignore `dialog` because it is a decorator and, thus, cannot
+            # be called like the other components.
+            "experimental_dialog",
             "experimental_connection",
             "spinner",
             "empty",
