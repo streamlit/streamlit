@@ -36,8 +36,8 @@ def test_renders_settings_dialog_properly(
     assert_snapshot(dialog, name="settings_dialog")
 
 
-# Webkit (safari) doesn't support screencast
-@pytest.mark.skip_browser("webkit")
+# Webkit (safari) and firefox doesn't support screencast on linux machines
+@pytest.mark.skip_browser("webkit", "firefox")
 def test_renders_screencast_dialog_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -49,8 +49,8 @@ def test_renders_screencast_dialog_properly(
     assert_snapshot(dialog, name="record_screencast_dialog")
 
 
-# Webkit (safari) doesn't support screencast
-@pytest.mark.skip_browser("webkit")
+# Webkit (safari) and firefox doesn't support screencast on linux machines
+@pytest.mark.skip_browser("webkit", "firefox")
 def test_renders_screencast_recorded_dialog_properly(app: Page):
     app.get_by_test_id("stMainMenu").click()
 
