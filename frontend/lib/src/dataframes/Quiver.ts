@@ -1206,7 +1206,7 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     // TODO(lukasmasuch): this._index[0].length can be 0 if there are rows
     // but only an empty index. Probably not the best way to cross check the number
     // of rows.
-    const [headerColumns, dataRowsCheck] = this._index.length
+    const [headerColumns, _] = this._index.length
       ? [this._index.length, this._index[0].length]
       : [1, 0]
 
@@ -1219,18 +1219,20 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       : // If there is no data, default to the number of header columns.
         [0, dataColumnsCheck]
 
+    // TODO: Fix this, we shouldn't check this._index[0].length since it might
+    // not reflect the actual number of rows.
     // Sanity check: ensure the schema is not messed up. If this happens,
     // something screwy probably happened in addRows.
-    if (
-      (dataRows !== 0 && dataRows !== dataRowsCheck) ||
-      (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
-    ) {
-      throw new Error(
-        "Dataframe dimensions don't align: " +
-          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-          `cols(${dataColumns} != ${dataColumnsCheck})`
-      )
-    }
+    // if (
+    //   (dataRows !== 0 && dataRows !== dataRowsCheck) ||
+    //   (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
+    // ) {
+    //   throw new Error(
+    //     "Dataframe dimensions don't align: " +
+    //       `rows(${dataRows} != ${dataRowsCheck}) OR ` +
+    //       `cols(${dataColumns} != ${dataColumnsCheck})`
+    //   )
+    // }
 
     const rows = headerRows + dataRows
     const columns = headerColumns + dataColumns
