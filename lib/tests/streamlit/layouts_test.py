@@ -335,3 +335,47 @@ class TabsTest(DeltaGeneratorTestCase):
         self.assertEqual(len(tabs_block), 5)
         for index, tabs_block in enumerate(tabs_block):
             self.assertEqual(tabs_block.add_block.tab.label, f"tab {index}")
+
+
+class DialogTest(DeltaGeneratorTestCase):
+    def test_title_required(self):
+        """Test that the title is required"""
+        with self.assertRaises(TypeError):
+            st.dialog()
+
+    def test_usage_with_context_manager(self):
+        title = "Test Dialog"
+        dialog = st.dialog(title)
+
+        with dialog:
+            pass
+
+        dialog_block = self.get_delta_from_queue()
+        self.assertEqual(dialog_block.add_block.dialog.title, title)
+        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
+        self.assertEqual(dialog_block.add_block.dialog.dismissible, True)
+
+    def test_dialog_opens_and_closes(self):
+        """Test that dialog opens and closes"""
+        dialog = st.dialog("Test Dialog")
+
+        self.assertIsNotNone(dialog)
+        dialog_block = self.get_delta_from_queue()
+        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
+
+        dialog.open()
+        dialog_block = self.get_delta_from_queue()
+        self.assertEqual(dialog_block.add_block.dialog.is_open, True)
+
+        dialog.close()
+        dialog_block = self.get_delta_from_queue()
+        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
+
+    def test_dismissible_param(self):
+        title = "Test Dialog"
+        st.dialog(title, dismissible=False)
+
+        dialog_block = self.get_delta_from_queue()
+        self.assertEqual(dialog_block.add_block.dialog.title, title)
+        self.assertEqual(dialog_block.add_block.dialog.dismissible, False)
+        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
