@@ -107,6 +107,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
         """
         Get all query parameters as a dictionary.
 
+        This method primarily exists for internal use and is not needed for
+        most cases. ``st.query_params`` returns an object that inherits from
+        ``dict`` by default.
+
         When a key is repeated as a query parameter within the URL, this method
         will return only the last value of each unique key.
 

@@ -96,11 +96,11 @@ def experimental_rerun() -> NoReturn:
 def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
-    When ``st.switch_page()`` is called, the current page execution stops and
+    When ``st.switch_page`` is called, the current page execution stops and
     the specified page runs as if the user clicked on it in the sidebar
     navigation. The specified page must be recognized by Streamlit's multipage
     architecture (your main Python file or a Python file in a ``pages/``
-    folder). Arbitrary Python scripts cannot be passed to ``st.switch_pages``.
+    folder). Arbitrary Python scripts cannot be passed to ``st.switch_page``.
 
     Parameters
     ----------
