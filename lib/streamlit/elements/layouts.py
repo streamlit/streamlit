@@ -45,9 +45,9 @@ class LayoutsMixin:
         Parameters
         ----------
         height : int or None
-            Desired height of the container expressed in pixels. If None (default)
+            Desired height of the container expressed in pixels. If ``None`` (default)
             the container grows to fit its content. If a fixed height, scrolling is
-            enabled for large content, and a grey border is shown around the container
+            enabled for large content and a grey border is shown around the container
             to visually separate its scroll surface from the rest of the app.
 
             .. note::
@@ -57,9 +57,9 @@ class LayoutsMixin:
                 on mobile devices, which makes it hard to scroll the rest of the app.
 
         border : bool or None
-            Whether to show a border around the container. If None (default), a
-            border is shown automatically if the container is set to a fixed height,
-            so you can visually distinguish the scroll surfaces.
+            Whether to show a border around the container. If ``None`` (default), a
+            border is shown if the container is set to a fixed height and not
+            shown otherwise.
 
 
         Examples
@@ -103,7 +103,7 @@ class LayoutsMixin:
         >>> row2 = st.columns(3)
         >>>
         >>> for col in row1 + row2:
-        >>>     tile = col.container(height=120, border=True)
+        >>>     tile = col.container(height=120)
         >>>     tile.title(":balloon:")
 
         .. output ::
