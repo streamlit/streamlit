@@ -437,17 +437,25 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
     ) -> "DeltaGenerator":
-        """Display a link to another page in a multi-page app, or an external page.
-        When clicked, the page will be switched to the specified page or open the external page in a new tab.
+        """Display a link to another page in a multipage app or to an external page.
+
+        If another page in a multipage app is specified, clicking ``st.page_link``
+        stops the current page execution and runs the specified page as if the
+        user clicked on it in the sidebar navigation.
+
+        If an external page is specificed, clicking ``st.page_link`` opens a new
+        tab to the specified page. The current script run will continue if not
+        complete.
 
         Parameters
         ----------
         page : str
-            The file path (relative to the main script) of the page to switch to. Alternatively, this can be
-            the url to an external page (must start with http:// or https://).
-        label: str
-            The label for the page link button. Required for external pages. Labels
-            can optionally contain Markdown and supports the following
+            The file path (relative to the main script) of the page to switch to.
+            Alternatively, this can be the URL to an external page (must start
+            with "http://" or "https://").
+        label : str
+            The label for the page link button. Labels are required for external
+            pages. Labels can optionally contain Markdown and supports the following
             elements: Bold, Italics, Strikethroughs, Inline Code, and Emojis.
 
             This also supports:
@@ -467,28 +475,42 @@ class ButtonMixin:
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
-        icon: str
+        icon : str
             An optional argument that specifies an emoji to use as
-            the icon for the button. Shortcodes are not allowed, please use a
+            the icon for the button. Shortcodes are not allowed. Please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
+            Defaults to ``None``, which means no icon is displayed.
         help : str
             An optional tooltip that gets displayed when the button is
             hovered over.
         disabled : bool
             An optional boolean, which disables the page link button if set to
-            True. The default is False.
-        use_container_width: bool
-            An optional boolean, which makes the button stretch its width to match the
-            parent container. The default is True for page links in the sidebar, and False
-            for those in the main app.
+            ``True``. The default is ``False``.
+        use_container_width : bool
+            An optional boolean, which makes the button stretch its width to
+            match the parent container. The default is ``True`` for page links
+            in the sidebar, and ``False`` for those in the main app.
 
         Example
         -------
+        Consider the following example given this file structure:
+
+        >>> your-repository/
+        >>> ├── pages/
+        >>> │   ├── page_1.py.py
+        >>> │   └── page_2.py.py
+        >>> └── your_app.py
+
         >>> import streamlit as st
         >>>
-        >>> st.page_link("./streamlit_app.py", label="Home Page", icon="🏠")
-        >>> st.page_link("http://google.com", label="Google", icon="🌎")
+        >>> st.page_link("your_app.py", label="Home", icon="🏠")
+        >>> st.page_link("pages/page_1.py", label="Page 1", icon="1️⃣")
+        >>> st.page_link("pages/page_2.py", label="Page 2", icon="2️⃣")
+        >>> st.page_link("http://www.google.com", label="Google", icon="🌎")
+
+        .. output ::
+            https://doc-page-link.streamlit.app/
+            height: 350px
 
         """
 
