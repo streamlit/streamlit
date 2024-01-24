@@ -197,6 +197,50 @@ export const showDevelopmentOptions = (
   return hostIsOwner || isLocalhost()
 }
 
+/**
+ * Function to add scripts to the head of the document
+ * This is used to add scripts that are dynamically loaded by the
+ * head parameter of the page config
+ **/
+
+export const addScriptsToHead = (scriptString: string) => {
+  const tempDiv = document.createElement("div")
+  tempDiv.innerHTML = scriptString
+  const headElement = document.querySelector("head")
+
+  if (headElement) {
+    Array.from(tempDiv.getElementsByTagName("script")).forEach(
+      originalScript => {
+        // For external scripts, check if the script src already exists
+        if (originalScript.src) {
+          if (
+            !Array.from(document.scripts).some(
+              script => script.src === originalScript.src
+            )
+          ) {
+            const script = document.createElement("script")
+            script.src = originalScript.src
+            script.async = originalScript.async
+            headElement.appendChild(script)
+          }
+        } else {
+          // For inline scripts, assuming they have an identifiable content
+          const scriptContent = originalScript.textContent
+          if (
+            !Array.from(headElement.getElementsByTagName("script")).some(
+              script => script.textContent === scriptContent
+            )
+          ) {
+            const script = document.createElement("script")
+            script.textContent = scriptContent
+            headElement.appendChild(script)
+          }
+        }
+      }
+    )
+  }
+}
+
 export class App extends PureComponent<Props, State> {
   private readonly endpoints: StreamlitEndpoints
 
@@ -223,6 +267,7 @@ export class App extends PureComponent<Props, State> {
    * (If `pendingElementsBuffer === this.state.elements` - the default state -
    * then we have no pending elements.)
    */
+
   private pendingElementsBuffer: AppRoot
 
   private pendingElementsTimerRunning: boolean
@@ -660,11 +705,7 @@ export class App extends PureComponent<Props, State> {
         head,
       })
 
-      const headElement = document.querySelector("head")
-      if (headElement) {
-        // Prepend the string to the head element.
-        headElement.insertAdjacentHTML("afterbegin", head)
-      }
+      addScriptsToHead(head)
     }
 
     if (favicon) {
