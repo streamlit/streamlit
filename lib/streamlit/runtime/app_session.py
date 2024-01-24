@@ -819,6 +819,12 @@ def _populate_config_msg(msg: Config) -> None:
     if config.get_option("client.showSidebarNavigation") == False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
+    analytics_opts = config.get_options_for_section("analytics")
+    if not any(analytics_opts.values()):
+        return
+    for option_name, option_val in analytics_opts.items():
+        if option_val is not None:
+            setattr(msg, to_snake_case(option_name), option_val)
 
 
 def _populate_theme_msg(msg: CustomThemeConfig) -> None:

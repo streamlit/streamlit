@@ -118,6 +118,11 @@ message Config {
   }
   ToolbarMode toolbar_mode = 8;
 
+  // See config section "analytics.googleAnalyticsMeasurementId".
+  string google_analytics_measurement_id = 9;
+  // See config section "analytics.mixpanelToken".
+  string mixpanel_token = 10;
+
   reserved 1;
 }
 

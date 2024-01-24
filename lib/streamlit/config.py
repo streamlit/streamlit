@@ -888,6 +888,28 @@ _create_option(
     ),
 )
 
+# Config Section: Analytics #
+
+_create_section("analytics", "Configuration of third-party analytics.")
+
+_create_option(
+    "analytics.googleAnalyticsMeasurementId",
+    description="""
+        Google Analytics Measurement ID for tracking usage.
+        """,
+    default_val="",
+    type_=str,
+)
+
+_create_option(
+    "analytics.mixpanelToken",
+    description="""
+        Mixpanel token for tracking usage.
+        """,
+    default_val="",
+    type_=str,
+)
+
 # Config Section: UI #
 
 _create_section("ui", "Configuration of UI elements displayed in the browser.")
