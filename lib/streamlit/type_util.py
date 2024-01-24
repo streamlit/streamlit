@@ -740,7 +740,7 @@ def _maybe_truncate_table(
     max_message_size = int(config.get_option("server.maxMessageSize")) * int(1e6)
     # We add 1 MB for other overhead related to the protobuf message.
     # This is a very conservative estimate, but it should be good enough.
-    table_size = sys.getsizeof(table.nbytes) + 1 * int(1e6)
+    table_size = int(table.nbytes) + 1 * int(1e6)
     table_rows = table.num_rows
 
     if table_rows > 1 and table_size > max_message_size:
