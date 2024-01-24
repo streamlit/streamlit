@@ -759,10 +759,18 @@ def _maybe_truncate_table(
         )
 
     if truncated_rows:
+        displayed_rows = string_util.simplify_number(table.num_rows)
+        total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
+
+        if displayed_rows == total_rows:
+            # If the simplified numbers are the same,
+            # we just display the exact numbers.
+            displayed_rows = str(table.num_rows)
+            total_rows = str(table.num_rows + truncated_rows)
+
         st.caption(
-            f"⚠️ Showing only {string_util.simplify_number(table.num_rows)} rows "
-            f"from a total of {string_util.simplify_number(table.num_rows + truncated_rows)} "
-            "to comply with data size limitations."
+            f"⚠️ Showing {displayed_rows} out of {total_rows} "
+            "rows due to data size limitations."
         )
 
     return table
