@@ -735,6 +735,11 @@ def _maybe_truncate_table(
     if config.get_option("server.enableDataframeTruncation") is not True:
         return table
 
+    # This is an optimization problem: We don't know at what row
+    # the perfect cut-off is to comply with the max size. But we want to figure
+    # it out in as few iterations as possible. We almost always will cut out
+    # more than required to keep the iterations low.
+
     # The maximum size allowed for protobuf messages in bytes:
     max_message_size = int(config.get_option("server.maxMessageSize")) * int(1e6)
     # We add 1 MB for other overhead related to the protobuf message.
