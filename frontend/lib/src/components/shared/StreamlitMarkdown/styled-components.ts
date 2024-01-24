@@ -21,6 +21,7 @@ export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInSidebar: boolean
   isLabel?: boolean
+  boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
 }
@@ -39,7 +40,15 @@ function sharedMarkdownStyle(theme: Theme): any {
 
 export const StyledStreamlitMarkdown =
   styled.div<StyledStreamlitMarkdownProps>(
-    ({ theme, isCaption, isInSidebar, isLabel, largerLabel, isToast }) => {
+    ({
+      theme,
+      isCaption,
+      isInSidebar,
+      isLabel,
+      boldLabel,
+      largerLabel,
+      isToast,
+    }) => {
       // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
       // Toasts also have smaller font size
       const labelFontSize = (isLabel && !largerLabel) || isToast
@@ -51,6 +60,7 @@ export const StyledStreamlitMarkdown =
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? 0 : "",
+          fontWeight: boldLabel ? 600 : "",
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },
 

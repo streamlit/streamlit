@@ -83,6 +83,11 @@ export interface Props {
   isLabel?: boolean
 
   /**
+   * Make the label bold
+   */
+  boldLabel?: boolean
+
+  /**
    * Checkbox labels have larger font sizing
    */
   largerLabel?: boolean
@@ -147,7 +152,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   children,
   tagProps,
 }) => {
-  const isSidebar = React.useContext(IsSidebarContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
@@ -183,7 +188,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     },
     [propsAnchor]
   )
-  if (isSidebar) {
+  if (isInSidebar) {
     return React.createElement(tag, tagProps, children)
   }
 
@@ -399,6 +404,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       style,
       isCaption,
       isLabel,
+      boldLabel,
       largerLabel,
       disableLinks,
       isToast,
@@ -410,6 +416,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        boldLabel={boldLabel}
         largerLabel={largerLabel}
         isToast={isToast}
         style={style}

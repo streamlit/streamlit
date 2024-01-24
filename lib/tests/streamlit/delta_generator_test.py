@@ -136,6 +136,7 @@ class RunWarningTest(unittest.TestCase):
                 "metric",
                 "multiselect",
                 "number_input",
+                "page_link",
                 "plotly_chart",
                 "progress",
                 "pydeck_chart",
