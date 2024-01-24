@@ -19,6 +19,7 @@ import {
   SessionInfo,
 } from "@streamlit/lib/src/SessionInfo"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { IAppPage } from "@streamlit/lib/src/proto"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(
@@ -54,7 +55,13 @@ export function mockEndpoints(
     buildComponentURL: jest.fn(),
     buildMediaURL: jest.fn(),
     buildFileUploadURL: jest.fn(),
-    buildAppPageURL: jest.fn(),
+    buildAppPageURL: jest
+      .fn()
+      .mockImplementation(
+        (pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
+          return `http://mock/app/page/${page.pageName}.${pageIndex}`
+        }
+      ),
     uploadFileUploaderFile: jest
       .fn()
       .mockRejectedValue(new Error("unimplemented mock endpoint")),

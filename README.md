@@ -96,9 +96,9 @@ Our vibrant creators community also extends Streamlit capabilities using  🧩 
 ## Get inspired
 
 There's so much you can build with Streamlit:
+- 🤖  [LLMs & chatbot apps](https://streamlit.io/gallery?category=llms)
 - 🧬  [Science & technology apps](https://streamlit.io/gallery?category=science-technology)
 - 💬  [NLP & language apps](https://streamlit.io/gallery?category=nlp-language)
-- 👀  [Computer vision apps](https://streamlit.io/gallery?category=computer-vision-images)
 - 🏦  [Finance & business apps](https://streamlit.io/gallery?category=finance-business)
 - 🗺  [Geography & society apps](https://streamlit.io/gallery?category=geography-society)
 - and more!

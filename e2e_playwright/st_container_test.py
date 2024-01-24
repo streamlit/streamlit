@@ -54,20 +54,27 @@ def test_renders_container_with_border(
 def test_renders_scroll_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.container(height=<pixels>) renders a scroll container."""
 
-    scroll_container_chat = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4)
-    expect(scroll_container_chat).to_have_css("overflow", "auto")
-    expect(scroll_container_chat).to_have_css("height", "200px")
-    assert_snapshot(scroll_container_chat, name="st_container-scroll_container")
+    scroll_container = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(4)
+    expect(scroll_container).to_have_css("overflow", "auto")
+    expect(scroll_container).to_have_css("height", "200px")
+    expect(scroll_container).to_have_attribute("data-test-scroll-behavior", "normal")
+    assert_snapshot(scroll_container, name="st_container-scroll_container")
 
     scroll_container_empty = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5)
-    expect(scroll_container_chat).to_have_css("overflow", "auto")
+    expect(scroll_container_empty).to_have_css("overflow", "auto")
     expect(scroll_container_empty).to_have_css("height", "100px")
+    expect(scroll_container_empty).to_have_attribute(
+        "data-test-scroll-behavior", "normal"
+    )
     assert_snapshot(scroll_container_empty, name="st_container-scroll_container_empty")
 
     # This one should be pinned to the bottom:
     scroll_container_chat = app.get_by_test_id("stVerticalBlockBorderWrapper").nth(6)
     expect(scroll_container_chat).to_have_css("overflow", "auto")
     expect(scroll_container_chat).to_have_css("height", "200px")
+    expect(scroll_container_chat).to_have_attribute(
+        "data-test-scroll-behavior", "scroll-to-bottom"
+    )
     assert_snapshot(scroll_container_chat, name="st_container-scroll_container_chat")
 
 
@@ -81,6 +88,11 @@ def test_correctly_handles_first_chat_message(
     app.get_by_test_id("stButton").nth(2).locator("button").click()
 
     wait_for_app_run(app)
+
+    # Wait for the stVerticalBlockBorderWrapper container to switch to scroll-to-bottom:
+    expect(app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5)).to_have_attribute(
+        "data-test-scroll-behavior", "scroll-to-bottom"
+    )
 
     assert_snapshot(
         app.get_by_test_id("stVerticalBlockBorderWrapper").nth(5),
