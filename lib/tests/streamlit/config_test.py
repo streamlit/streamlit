@@ -391,6 +391,7 @@ class ConfigTest(unittest.TestCase):
                 "server.maxUploadSize",
                 "server.maxMessageSize",
                 "server.enableStaticServing",
+                "server.enableDataframeTruncation",
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "ui.hideTopBar",
