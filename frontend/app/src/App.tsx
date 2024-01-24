@@ -125,8 +125,6 @@ import withScreencast, {
 import "@streamlit/app/src/assets/css/theme.scss"
 import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
 import { ThemeManager } from "./util/useThemeManager"
-import { mix } from "color2k"
-import { add } from "lodash"
 
 export interface Props {
   screenCast: ScreenCastHOC
