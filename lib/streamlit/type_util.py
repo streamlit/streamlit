@@ -714,7 +714,61 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     return version.parse(pa.__version__) < version.parse(v)
 
 
-def pyarrow_table_to_bytes(table: pa.Table, truncated_rows: int | None = None) -> bytes:
+def _maybe_truncate_table(
+    table: pa.Table, truncated_rows: int | None = None
+) -> pa.Table:
+    """Experimental feature to automatically truncate tables that
+    are larger than the maximum allowed message size. It needs to be enabled
+    via the server.enableDataframeTruncation config option.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table to truncate.
+
+    truncated_rows : int or None
+        The number of rows that have been truncated so far. This is used by
+        the recursion logic to keep track of the total number of truncated
+        rows.
+
+    """
+
+    if config.get_option("server.enableDataframeTruncation") is not True:
+        return table
+
+    # The maximum size allowed for protobuf messages in bytes:
+    max_message_size = int(config.get_option("server.maxMessageSize")) * int(1e6)
+    # We add 1 MB for other overhead related to the protobuf message.
+    # This is a very conservative estimate, but it should be good enough.
+    table_size = sys.getsizeof(table.nbytes) + 1 * int(1e6)
+    table_rows = table.num_rows
+
+    if table_rows > 1 and table_size > max_message_size:
+        # Calculate an approximation of how many rows we need to truncate to.
+        targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
+        # The targeted_rows is just an approximation. We cut out another
+        # 5% of the number of truncated rows to make sure that we don't
+        # execute this truncation logic too many times since it is quite
+        # inefficient and its running in a recursion.
+        rows_overhead = math.floor((table_rows - targeted_rows) * 0.05)
+        # Make sure to cut out at least a couple of rows to avoid infinite recursion.
+        targeted_rows = max(min(targeted_rows - rows_overhead, table_rows - 5), 1)
+        sliced_table = table.slice(0, targeted_rows)
+        return _maybe_truncate_table(
+            sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
+        )
+
+    if truncated_rows:
+        st.caption(
+            f"⚠️ Showing only {string_util.simplify_number(table.num_rows)} rows "
+            f"from a total of {string_util.simplify_number(table.num_rows + truncated_rows)} "
+            "to comply with data size limitations."
+        )
+
+    return table
+
+
+def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to bytes using Apache Arrow.
 
     Parameters
@@ -723,41 +777,14 @@ def pyarrow_table_to_bytes(table: pa.Table, truncated_rows: int | None = None) -
         A table to convert.
 
     """
+    table = _maybe_truncate_table(table)
+
+    # Convert table to bytes
     sink = pa.BufferOutputStream()
     writer = pa.RecordBatchStreamWriter(sink, table.schema)
     writer.write_table(table)
     writer.close()
-    table_bytes = cast(bytes, sink.getvalue().to_pybytes())
-
-    if config.get_option("server.enableDataframeTruncation") is True:
-        max_message_size = int(config.get_option("server.maxMessageSize")) * int(1e6)
-        # We add 1 MB for other overhead related to the protobuf message.
-        # This is a very conservative estimate, but it should be good enough.
-        table_size = sys.getsizeof(table_bytes) + 1 * int(1e6)
-        table_rows = table.num_rows
-        if table_rows > 1 and table_size > max_message_size:
-            # Calculate an approximation of how many rows we need to truncate to.
-            targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
-            # The targeted_rows is just an approximation. We cut out another
-            # 5% of the number of truncated rows to make sure that we don't
-            # execute this truncation logic too many times since it is quite
-            # inefficient.
-            # Also, this function is using recursion and we want to minimize
-            # that this is running too many times.
-            rows_overhead = math.floor((table_rows - targeted_rows) * 0.05)
-            # Make sure to cut out at least five rows to avoid infinite recursion.
-            targeted_rows = max(min(targeted_rows - rows_overhead, table_rows - 5), 1)
-            sliced_table = table.slice(0, targeted_rows)
-            return pyarrow_table_to_bytes(
-                sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
-            )
-    if truncated_rows:
-        st.caption(
-            f"⚠️ Showing only {string_util.simplify_number(table.num_rows)} rows "
-            f"from a total of {string_util.simplify_number(table.num_rows + truncated_rows)} "
-            "to comply with data size limitations."
-        )
-    return table_bytes
+    return cast(bytes, sink.getvalue().to_pybytes())
 
 
 def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
