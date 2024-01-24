@@ -83,7 +83,8 @@ def test_selectbox_labels_handle_markdown(
     ]
 
     selectboxes = app.get_by_test_id("stSelectbox")
-    expect(selectboxes).to_have_count(4)
+    # There is an extra selectbox at the bottom with an empty label
+    expect(selectboxes).to_have_count(5)
     for index, case in enumerate(cases):
         assert_snapshot(
             selectboxes.nth(index).get_by_test_id("stWidgetLabel"),
@@ -325,3 +326,9 @@ def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunc
             tabs.nth(index),
             name=f"st_tab-{case[0]}_{case[1]}",
         )
+
+
+def test_empty_label_works_with_widgets(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    assert_snapshot(app.get_by_test_id("stSelectbox").last, name="empty_label")
