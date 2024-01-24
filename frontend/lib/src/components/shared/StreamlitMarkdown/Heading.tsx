@@ -56,7 +56,7 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
 function Heading(props: HeadingProtoProps): ReactElement {
   const { width, element } = props
   const { tag, anchor, body, help, hideAnchor, divider } = element
-  const isSidebar = React.useContext(IsSidebarContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
@@ -66,7 +66,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
       <div className="stMarkdown" style={{ width }}>
         <StyledStreamlitMarkdown
           isCaption={Boolean(false)}
-          isInSidebar={isSidebar}
+          isInSidebar={isInSidebar}
           style={{ width }}
           data-testid="stMarkdownContainer"
         >
