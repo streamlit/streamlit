@@ -1203,10 +1203,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
-    const headerColumns = this._index.length || 1
+    const headerColumns = this._index.length || this.types.index.length || 1
     const headerRows = this._columns.length || 1
     const dataRows = this._data.numRows || 0
-    const dataColumns = this._data.numCols || this._columns[0].length || 0
+    const dataColumns = this._data.numCols || this._columns?.[0]?.length || 0
 
     const rows = headerRows + dataRows
     const columns = headerColumns + dataColumns
