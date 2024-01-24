@@ -78,6 +78,7 @@ const withMapboxToken =
       })`
 
       static contextType = LibContext
+
       context!: React.ContextType<typeof LibContext>
 
       public constructor(props: WrappedMapboxProps<P>) {

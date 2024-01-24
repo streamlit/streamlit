@@ -372,6 +372,7 @@ export function RenderedMarkdown({
  */
 class StreamlitMarkdown extends PureComponent<Props> {
   static contextType = IsSidebarContext
+
   context!: React.ContextType<typeof IsSidebarContext>
 
   public componentDidCatch = (): void => {
