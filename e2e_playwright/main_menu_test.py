@@ -104,4 +104,4 @@ def test_renders_active_theme_dialog_properly(
     dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
 
-    assert_snapshot(dialog, name="edit_active_theme_dialog")
+    assert_snapshot(dialog.get_by_role("dialog"), name="edit_active_theme_dialog")
