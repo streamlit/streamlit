@@ -718,8 +718,9 @@ class TypeUtilTest(unittest.TestCase):
 class TestArrowTruncation(DeltaGeneratorTestCase):
     """Test class for the automatic arrow truncation feature."""
 
-    @patch_config_options({"server.enableArrowTruncation": True})
-    @patch_config_options({"server.maxMessageSize": 3})
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
     def test_truncate_larger_table(self):
         """Test that `truncate_table` correctly truncates a table that is
         larger than the max message size.
@@ -749,8 +750,9 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         self.assertIn("due to data size limitations", el.markdown.body)
         self.assertTrue(el.markdown.is_caption)
 
-    @patch_config_options({"server.enableArrowTruncation": True})
-    @patch_config_options({"server.maxMessageSize": 3})
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
     def test_dont_truncate_smaller_table(self):
         """Test that `truncate_table` doesn't truncate smaller tables."""
         col_data = list(range(100))
@@ -792,8 +794,9 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         self.assertLessEqual(truncated_table.nbytes, original_table.nbytes)
         self.assertLessEqual(truncated_table.num_rows, original_table.num_rows)
 
-    @patch_config_options({"server.enableArrowTruncation": True})
-    @patch_config_options({"server.maxMessageSize": 3})
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
     def test_st_dataframe_truncates_data(self):
         """Test that `st.dataframe` truncates the data if server.enableArrowTruncation==True."""
         col_data = list(range(100000))
