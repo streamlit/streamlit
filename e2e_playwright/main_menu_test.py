@@ -33,7 +33,7 @@ def test_renders_settings_dialog_properly(
     themed_app.get_by_text("Settings").click()
     dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
-    assert_snapshot(dialog, name="settings_dialog")
+    assert_snapshot(dialog.get_by_role("dialog"), name="settings_dialog")
 
 
 # Webkit (safari) and firefox doesn't support screencast on linux machines
