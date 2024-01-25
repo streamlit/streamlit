@@ -73,6 +73,8 @@ export const customRenderLibContext = (
     setTheme: jest.fn(),
     availableThemes: [],
     addThemes: jest.fn(),
+    onPageChange: jest.fn(),
+    currentPageScriptHash: "",
     libConfig: {},
   }
 

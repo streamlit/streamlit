@@ -77,6 +77,11 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: 1000,
     },
 
+    ":has(> .stPageLink)": {
+      marginTop: "-0.375rem",
+      marginBottom: "-0.375rem",
+    },
+
     ...(isStale && elementType !== "skeleton"
       ? {
           opacity: 0.33,
