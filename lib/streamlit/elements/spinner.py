@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import contextlib
 import threading
 from typing import Iterator
@@ -73,7 +74,8 @@ def spinner(text: str = "In progress...", *, cache: bool = False) -> Iterator[No
                             spinner_proto.cache = cache
                             message._enqueue("spinner", spinner_proto)
 
-        add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
+        asyncio.get_event_loop().call_later(DELAY_SECS, set_message)
+        # add_script_run_ctx(threading.Timer(DELAY_SECS, set_message)).start()
 
         # Yield control back to the context.
         yield

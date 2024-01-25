@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import gc
 import sys
 import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
+from inspect import CO_COROUTINE
 from timeit import default_timer as timer
 from typing import Callable, Dict, Optional
 
@@ -181,7 +183,8 @@ class ScriptRunner:
         self._execing = False
 
         # This is initialized in start()
-        self._script_thread: Optional[threading.Thread] = None
+        # self._script_thread: Optional[threading.Thread] = None
+        self._script_task: Optional[asyncio.Task] = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -215,14 +218,15 @@ class ScriptRunner:
         This must be called only once.
 
         """
-        if self._script_thread is not None:
+        if self._script_task is not None:
             raise Exception("ScriptRunner was already started")
 
-        self._script_thread = threading.Thread(
-            target=self._run_script_thread,
-            name="ScriptRunner.scriptThread",
-        )
-        self._script_thread.start()
+        self._script_task = asyncio.create_task(self._run_script_thread())
+        # self._script_thread = threading.Thread(
+        #     target=self._run_script_thread,
+        #     name="ScriptRunner.scriptThread",
+        # )
+        # self._script_thread.start()
 
     def _get_script_run_ctx(self) -> ScriptRunContext:
         """Get the ScriptRunContext for the current thread.
@@ -250,7 +254,7 @@ class ScriptRunner:
             )
         return ctx
 
-    def _run_script_thread(self) -> None:
+    async def _run_script_thread(self) -> None:
         """The entry point for the script thread.
 
         Processes the ScriptRequestQueue, which will at least contain the RERUN
@@ -284,7 +288,7 @@ class ScriptRunner:
             # request that we'll handle immediately. When the script finishes,
             # it's possible that another request has come in that we need to
             # handle, which is why we call _run_script in a loop.
-            self._run_script(request.rerun_data)
+            await self._run_script(request.rerun_data)
             request = self._requests.on_scriptrunner_ready()
 
         assert request.type == ScriptRequestType.STOP
@@ -300,7 +304,8 @@ class ScriptRunner:
 
     def _is_in_script_thread(self) -> bool:
         """True if the calling function is running in the script thread"""
-        return self._script_thread == threading.current_thread()
+        # return self._script_thread == threading.current_thread()
+        return self._script_task == asyncio.current_task()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg to our browser queue.
@@ -383,7 +388,7 @@ class ScriptRunner:
         finally:
             self._execing = False
 
-    def _run_script(self, rerun_data: RerunData) -> None:
+    async def _run_script(self, rerun_data: RerunData) -> None:
         """Run our script.
 
         Parameters
@@ -532,7 +537,11 @@ class ScriptRunner:
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
-                exec(code, module.__dict__)
+                if code.co_flags & CO_COROUTINE:
+                    # The source code includes top-level awaits, so the compiled code object is a coroutine.
+                    await eval(code, module.__dict__)
+                else:
+                    exec(code, module.__dict__)
                 self._session_state.maybe_check_serializable()
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
@@ -590,7 +599,7 @@ class ScriptRunner:
         _log_if_error(_clean_problem_modules)
 
         if rerun_exception_data is not None:
-            self._run_script(rerun_exception_data)
+            await self._run_script(rerun_exception_data)
 
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
