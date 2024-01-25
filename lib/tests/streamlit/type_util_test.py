@@ -715,8 +715,8 @@ class TypeUtilTest(unittest.TestCase):
         )
 
 
-class TestDataframeTruncation(DeltaGeneratorTestCase):
-    """Test class for the automatic dataframe truncation feature."""
+class TestArrowTruncation(DeltaGeneratorTestCase):
+    """Test class for the automatic arrow truncation feature."""
 
     @patch_config_options({"server.enableArrowTruncation": True})
     @patch_config_options({"server.maxMessageSize": 3})
