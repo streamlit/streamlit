@@ -23,6 +23,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import pyarrow as pa
 import pytest
 from pandas.api.types import infer_dtype
 from parameterized import parameterized
@@ -710,6 +711,50 @@ class TypeUtilTest(unittest.TestCase):
             ),
             {0: None, 1: None, 2: None, 3: None},
         )
+
+    @patch_config_options({"server.enableDataframeTruncation": True})
+    @patch_config_options({"server.maxMessageSize": 3})
+    def test_truncate_larger_table(self):
+        """Test that `truncate_table` correctly truncates a table that is
+        larger than the max message size.
+        """
+        col_data = list(range(10000))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+
+        truncated_table = type_util._maybe_truncate_table(original_table)
+
+        # Test that the table should have been truncated
+        self.assertLessEqual(truncated_table.nbytes, 1 * int(1e6))
+        self.assertLessEqual(truncated_table.num_rows, original_table.num_rows)
+
+    @patch_config_options({"server.enableDataframeTruncation": True})
+    @patch_config_options({"server.maxMessageSize": 3})
+    def test_dont_truncate_smaller_table(self):
+        """Test that `truncate_table` doesn't truncate smaller tables."""
+        col_data = list(range(100))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+
+        truncated_table = type_util._maybe_truncate_table(original_table)
+
+        # Test that the tables have the same metrics:
+        self.assertLessEqual(truncated_table.nbytes, original_table.nbytes)
+        self.assertLessEqual(truncated_table.num_rows, original_table.num_rows)
 
 
 class TestEnumCoercion:
