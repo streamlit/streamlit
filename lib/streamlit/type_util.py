@@ -718,7 +718,7 @@ def _maybe_truncate_table(
 ) -> pa.Table:
     """Experimental feature to automatically truncate tables that
     are larger than the maximum allowed message size. It needs to be enabled
-    via the server.enableDataframeTruncation config option.
+    via the server.enableArrowTruncation config option.
 
     Parameters
     ----------
@@ -732,7 +732,7 @@ def _maybe_truncate_table(
 
     """
 
-    if config.get_option("server.enableDataframeTruncation") is not True:
+    if config.get_option("server.enableArrowTruncation") is not True:
         return table
 
     # This is an optimization problem: We don't know at what row

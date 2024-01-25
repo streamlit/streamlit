@@ -718,7 +718,7 @@ class TypeUtilTest(unittest.TestCase):
 class TestDataframeTruncation(DeltaGeneratorTestCase):
     """Test class for the automatic dataframe truncation feature."""
 
-    @patch_config_options({"server.enableDataframeTruncation": True})
+    @patch_config_options({"server.enableArrowTruncation": True})
     @patch_config_options({"server.maxMessageSize": 3})
     def test_truncate_larger_table(self):
         """Test that `truncate_table` correctly truncates a table that is
@@ -749,7 +749,7 @@ class TestDataframeTruncation(DeltaGeneratorTestCase):
         self.assertIn("due to data size limitations", el.markdown.body)
         self.assertTrue(el.markdown.is_caption)
 
-    @patch_config_options({"server.enableDataframeTruncation": True})
+    @patch_config_options({"server.enableArrowTruncation": True})
     @patch_config_options({"server.maxMessageSize": 3})
     def test_dont_truncate_smaller_table(self):
         """Test that `truncate_table` doesn't truncate smaller tables."""
@@ -770,10 +770,10 @@ class TestDataframeTruncation(DeltaGeneratorTestCase):
         self.assertLessEqual(truncated_table.nbytes, original_table.nbytes)
         self.assertLessEqual(truncated_table.num_rows, original_table.num_rows)
 
-    @patch_config_options({"server.enableDataframeTruncation": False})
+    @patch_config_options({"server.enableArrowTruncation": False})
     def test_dont_truncate_if_deactivated(self):
         """Test that `_maybe_truncate_table` doesn't do anything
-        when server.enableDataframeTruncation is decatived
+        when server.enableArrowTruncation is decatived
         """
         col_data = list(range(100000))
         original_df = pd.DataFrame(
@@ -792,10 +792,10 @@ class TestDataframeTruncation(DeltaGeneratorTestCase):
         self.assertLessEqual(truncated_table.nbytes, original_table.nbytes)
         self.assertLessEqual(truncated_table.num_rows, original_table.num_rows)
 
-    @patch_config_options({"server.enableDataframeTruncation": True})
+    @patch_config_options({"server.enableArrowTruncation": True})
     @patch_config_options({"server.maxMessageSize": 3})
     def test_st_dataframe_truncates_data(self):
-        """Test that `st.dataframe` truncates the data if server.enableDataframeTruncation==True."""
+        """Test that `st.dataframe` truncates the data if server.enableArrowTruncation==True."""
         col_data = list(range(100000))
         original_df = pd.DataFrame(
             {

@@ -23,16 +23,16 @@ from playwright.sync_api import Page, expect
 
 @pytest.fixture(scope="module")
 @pytest.mark.early
-def configure_dataframe_truncation():
-    """Configure dataframe truncation and max message size."""
-    os.environ["STREAMLIT_SERVER_ENABLE_DATAFRAME_TRUNCATION"] = "True"
+def configure_arrow_truncation():
+    """Configure arrow truncation and max message size."""
+    os.environ["STREAMLIT_SERVER_ENABLE_ARROW_TRUNCATION"] = "True"
     os.environ["STREAMLIT_SERVER_MAX_MESSAGE_SIZE"] = "3"
     yield
-    del os.environ["STREAMLIT_SERVER_ENABLE_DATAFRAME_TRUNCATION"]
+    del os.environ["STREAMLIT_SERVER_ENABLE_ARROW_TRUNCATION"]
     del os.environ["STREAMLIT_SERVER_MAX_MESSAGE_SIZE"]
 
 
-def test_shows_limitation_message(app: Page, configure_dataframe_truncation):
+def test_shows_limitation_message(app: Page, configure_arrow_truncation):
     caption_elements = app.get_by_test_id("stCaptionContainer")
     expect(caption_elements).to_have_count(2)
     expect(caption_elements.nth(0)).to_have_text(

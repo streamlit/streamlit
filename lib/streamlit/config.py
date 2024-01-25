@@ -795,9 +795,10 @@ _create_option(
 )
 
 _create_option(
-    "server.enableDataframeTruncation",
+    "server.enableArrowTruncation",
     description="""
-        Enable automatically truncating DataFrames to ensure that the size is under `server.maxMessageSize`.
+        Enable automatically truncating all data structures that get serialized into Arrow (e.g. DataFrames)
+        to ensure that the size is under `server.maxMessageSize`.
         """,
     visibility="hidden",
     default_val=False,
