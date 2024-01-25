@@ -2,11 +2,26 @@
 
 <img src="https://user-images.githubusercontent.com/7164864/217935870-c0bc60a3-6fc0-4047-b011-7b4c59488c91.png" alt="Streamlit logo" style="margin-top:50px"></img>
 
-# Welcome to Streamlit 👋
+# Streamlit: Turn Data Scripts into Web Apps in Minutes
 
-**A faster way to build and share data apps.**
+**Welcome to Streamlit!**  Want to share your data insights and analysis without weeks of web development? Streamlit lets you transform Python scripts into interactive web apps in minutes, all with simple, expressive code. Once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app.
 
-Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app.
+
+
+## What can you do with Streamlit?
+
+* **Explore and visualize data:** Plot charts, build dashboards, and generate reports effortlessly.
+* **Build interactive prototypes:** Let others interact with your data and provide feedback directly.
+* **Share your work:** Deploy your app to the Streamlit Cloud or embed it anywhere on the web.
+* **Collaborate with others:** Seamlessly work with co-developers and contribute to shared apps.
+
+## Why choose Streamlit?
+
+* **Simple and Pythonic:** Write beautiful code that's easy to read and understand.
+* **Fast and Efficient:** Streamlit apps run lightning-fast, with minimal setup and dependencies.
+* **Highly Customizable:** Build apps that match your brand and style with complete control over layout and design.
+* **Open-Source and Free:** Join a vibrant community and contribute to Streamlit's future.
+
 
 
 ## Installation
@@ -105,20 +120,37 @@ There's so much you can build with Streamlit:
 
 **Check out [our gallery!](https://streamlit.io/gallery)** 🎈
 
+## Bonus Features
+
+* **Live Editing:** See your app update instantly as you edit your script.
+* **Magic Commands:** Write less code with expressive functions for common tasks.
+* **Components:** Build reusable UI elements for cleaner and more modular apps.
+* **Enterprise Features:** Secure and scalable deployment options for teams.
+
 ## Community Cloud
 
 Deploy, manage and share your apps for free using our [Community Cloud](https://streamlit.io/cloud)! Sign-up [here](https://share.streamlit.io/signup). <br><br>
 <img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400"></img>
 
 ## Resources
-
-- Streamlit [docs](https://docs.streamlit.io), [community forum](https://discuss.streamlit.io) and [blog](https://blog.streamlit.io).
+- **Docs:** [https://docs.streamlit.io/](https://docs.streamlit.io/)
+- **Tutorials:** [https://docs.streamlit.io/knowledge-base/tutorials](https://docs.streamlit.io/knowledge-base/tutorials)
+- **Examples:** [https://docs.streamlit.io/streamlit-community-cloud/share-your-app](https://docs.streamlit.io/streamlit-community-cloud/share-your-app)
+- **Community Forum:** [https://discuss.streamlit.io/](https://discuss.streamlit.io/)
+- **Blog:** [https://blog.streamlit.io](https://blog.streamlit.io).
 - Extend Streamlit's capabilities by installing or creating your own [Streamlit Components](http://components.streamlit.app/).
 - Help others find and play with your app by using the Streamlit GitHub badge in your repository:
 ```markdown
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](URL_TO_YOUR_APP)
 ```
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/roadmap)
+
+## Ready to dive in?
+
+Start building your first Streamlit app today!  We're excited to see what you create.
+
+**Make your data sing with Streamlit!**
+
 
 ## License
 
