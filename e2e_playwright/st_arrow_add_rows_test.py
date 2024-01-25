@@ -17,33 +17,33 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_that_no_new_elements_are_created(app: Page):
-    expect(app.get_by_test_id("stTable")).to_be_visible()
-    expect(app.get_by_test_id("stDataFrame")).to_be_visible()
-    expect(app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(6)
+def test_that_no_new_elements_are_created(themed_app: Page):
+    expect(themed_app.get_by_test_id("stTable")).to_be_visible()
+    expect(themed_app.get_by_test_id("stDataFrame")).to_be_visible()
+    expect(themed_app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(6)
 
 
-def test_correctly_adds_rows_to_table(app: Page):
+def test_correctly_adds_rows_to_table(themed_app: Page):
     expect(
-        app.locator(".element-container [data-testid='stTable'] tbody tr")
+        themed_app.locator(".element-container [data-testid='stTable'] tbody tr")
     ).to_have_count(4)
 
 
 def test_correctly_adds_rows_to_charts(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    charts = app.get_by_test_id("stArrowVegaLiteChart")
+    charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
     for index in range(charts.count()):
         assert_snapshot(charts.nth(index), name=f"arrowstArrowVegaLiteChart-{index}")
 
 
 def test_correctly_adds_rows_to_dataframe(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    dataframes = app.locator(".element-container .stDataFrame")
+    dataframes = themed_app.locator(".element-container .stDataFrame")
     for index in range(dataframes.count()):
         assert_snapshot(dataframes.nth(index), name=f"dataFrame-{index}")
 
 
-def test_raises_an_exception_when_shapes_dont_match(app: Page):
-    expect(app.get_by_test_id("stAlert")).to_be_visible()
+def test_raises_an_exception_when_shapes_dont_match(themed_app: Page):
+    expect(themed_app.get_by_test_id("stAlert")).to_be_visible()
