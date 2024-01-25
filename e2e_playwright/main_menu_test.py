@@ -89,7 +89,7 @@ def test_renders_clear_cache_dialog_properly(
     dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
     expect(dialog).to_contain_text(
-        "Are you sure you want to clear the themed_app's function caches?"
+        "Are you sure you want to clear the app's function caches?"
     )
     assert_snapshot(dialog, name="clear_cache_dialog")
 
