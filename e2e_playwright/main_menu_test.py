@@ -46,7 +46,7 @@ def test_renders_screencast_dialog_properly(
     themed_app.get_by_text("Record a screencast").click()
     dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
-    assert_snapshot(dialog, name="record_screencast_dialog")
+    assert_snapshot(dialog.get_by_role("dialog"), name="record_screencast_dialog")
 
 
 # Webkit (safari) and firefox doesn't support screencast on linux machines
