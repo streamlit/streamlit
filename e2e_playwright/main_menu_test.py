@@ -26,12 +26,12 @@ def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunctio
 
 
 def test_renders_settings_dialog_properly(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    app.get_by_test_id("stMainMenu").click()
+    themed_app.get_by_test_id("stMainMenu").click()
 
-    app.get_by_text("Settings").click()
-    dialog = app.get_by_test_id("stModal")
+    themed_app.get_by_text("Settings").click()
+    dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
     assert_snapshot(dialog, name="settings_dialog")
 
@@ -39,69 +39,69 @@ def test_renders_settings_dialog_properly(
 # Webkit (safari) and firefox doesn't support screencast on linux machines
 @pytest.mark.only_browser("chromium")
 def test_renders_screencast_dialog_properly(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    app.get_by_test_id("stMainMenu").click()
+    themed_app.get_by_test_id("stMainMenu").click()
 
-    app.get_by_text("Record a screencast").click()
-    dialog = app.get_by_test_id("stModal")
+    themed_app.get_by_text("Record a screencast").click()
+    dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
     assert_snapshot(dialog, name="record_screencast_dialog")
 
 
 # Webkit (safari) and firefox doesn't support screencast on linux machines
 @pytest.mark.only_browser("chromium")
-def test_renders_screencast_recorded_dialog_properly(app: Page):
-    app.get_by_test_id("stMainMenu").click()
+def test_renders_screencast_recorded_dialog_properly(themed_app: Page):
+    themed_app.get_by_test_id("stMainMenu").click()
 
-    app.get_by_text("Record a screencast").click()
-    app.get_by_text("Start recording!").click()
+    themed_app.get_by_text("Record a screencast").click()
+    themed_app.get_by_text("Start recording!").click()
 
     # Wait 5 seconds because there is a 3! 2! 1! on the screen until recording occurs and there may be buffer
-    app.wait_for_timeout(5000)
+    themed_app.wait_for_timeout(5000)
 
     # stop recording
-    app.keyboard.press("Escape")
-    dialog = app.get_by_test_id("stModal")
+    themed_app.keyboard.press("Escape")
+    dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
 
     # don't use screenshot as the recording may differ so just check for specific text
     expect(
-        app.get_by_role("dialog").get_by_text("Preview your video below:")
+        themed_app.get_by_role("dialog").get_by_text("Preview your video below:")
     ).to_be_visible
 
 
-def test_renders_about_dialog_properly(app: Page):
-    app.get_by_test_id("stMainMenu").click()
+def test_renders_about_dialog_properly(themed_app: Page):
+    themed_app.get_by_test_id("stMainMenu").click()
 
-    app.get_by_text("About").click()
-    dialog = app.get_by_test_id("stModal")
+    themed_app.get_by_text("About").click()
+    dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
     expect(dialog).to_contain_text("Made with Streamlit v")
 
 
 def test_renders_clear_cache_dialog_properly(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    app.get_by_test_id("stMainMenu").click()
+    themed_app.get_by_test_id("stMainMenu").click()
 
-    app.get_by_text("Clear cache").click()
-    dialog = app.get_by_test_id("stModal")
+    themed_app.get_by_text("Clear cache").click()
+    dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
     expect(dialog).to_contain_text(
-        "Are you sure you want to clear the app's function caches?"
+        "Are you sure you want to clear the themed_app's function caches?"
     )
     assert_snapshot(dialog, name="clear_cache_dialog")
 
 
 def test_renders_active_theme_dialog_properly(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    app.get_by_test_id("stMainMenu").click()
-    app.get_by_text("Settings").click()
-    app.get_by_text("Edit active theme").click()
+    themed_app.get_by_test_id("stMainMenu").click()
+    themed_app.get_by_text("Settings").click()
+    themed_app.get_by_text("Edit active theme").click()
 
-    dialog = app.get_by_test_id("stModal")
+    dialog = themed_app.get_by_test_id("stModal")
     expect(dialog).to_be_visible()
 
     assert_snapshot(dialog, name="edit_active_theme_dialog")
