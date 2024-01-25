@@ -24,9 +24,7 @@ def test_that_no_new_elements_are_created(themed_app: Page):
 
 
 def test_correctly_adds_rows_to_table(themed_app: Page):
-    expect(
-        themed_app.locator(".element-container [data-testid='stTable'] tbody tr")
-    ).to_have_count(4)
+    expect(themed_app.get_by_test_id("stTable").locator("tbody tr")).to_have_count(4)
 
 
 def test_correctly_adds_rows_to_charts(
@@ -34,15 +32,16 @@ def test_correctly_adds_rows_to_charts(
 ):
     charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
     for index in range(charts.count()):
-        assert_snapshot(charts.nth(index), name=f"arrowstArrowVegaLiteChart-{index}")
+        assert_snapshot(
+            charts.nth(index), name=f"st_vega_lite_chart-added_rows-{index}"
+        )
 
 
 def test_correctly_adds_rows_to_dataframe(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    dataframes = themed_app.locator(".element-container .stDataFrame")
-    for index in range(dataframes.count()):
-        assert_snapshot(dataframes.nth(index), name=f"dataFrame-{index}")
+    dataframe = themed_app.locator(".element-container .stDataFrame")
+    assert_snapshot(dataframe, name=f"st_dataFrame-added_rows")
 
 
 def test_raises_an_exception_when_shapes_dont_match(themed_app: Page):
