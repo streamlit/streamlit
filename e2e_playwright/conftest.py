@@ -542,8 +542,3 @@ def assert_snapshot(
 
     if test_failure_messages:
         pytest.fail("Missing snapshots: \n" + "\n".join(test_failure_messages))
-
-
-def rerun(page: Page):
-    page.keyboard.press("r")
-    wait_for_app_run(page)
