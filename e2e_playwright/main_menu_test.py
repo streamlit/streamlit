@@ -91,7 +91,7 @@ def test_renders_clear_cache_dialog_properly(
     expect(dialog).to_contain_text(
         "Are you sure you want to clear the app's function caches?"
     )
-    assert_snapshot(dialog, name="clear_cache_dialog")
+    assert_snapshot(dialog.get_by_role("dialog"), name="clear_cache_dialog")
 
 
 def test_renders_active_theme_dialog_properly(
