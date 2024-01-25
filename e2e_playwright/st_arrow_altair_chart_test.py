@@ -17,16 +17,16 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_displays_altair_chart(app: Page):
-    expect(app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")).to_have_count(
-        8
-    )
+def test_displays_altair_chart(themed_app: Page):
+    expect(
+        themed_app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
+    ).to_have_count(8)
 
 
 def test_altair_chart_displays_correctly(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    charts = app.get_by_test_id("stArrowVegaLiteChart")
+    charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
     expect(charts).to_have_count(8)
     for index in range(charts.count()):
         assert_snapshot(
