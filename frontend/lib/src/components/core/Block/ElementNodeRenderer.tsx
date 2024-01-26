@@ -217,6 +217,7 @@ const StreamlitSyntaxHighlighter = React.lazy(
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width?: number
+  hideFullScreenButton?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -242,21 +243,21 @@ const RawElementNodeRenderer = (
     disabled: props.widgetsDisabled,
   }
 
-  let height: number | undefined
-
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
   // since leaf elements are always direct children of a VerticalBlock, which always calculates
-  const width = props.width ?? 0
-
+  const elementProps = {
+    width: props.width ?? 0,
+    hideFullScreenButton: props.hideFullScreenButton,
+  }
   switch (node.element.type) {
     case "alert": {
       const alertProto = node.element.alert as AlertProto
       return (
         <AlertElement
-          width={width}
           icon={alertProto.icon}
           body={alertProto.body}
           kind={getAlertElementKind(alertProto.format)}
+          {...elementProps}
         />
       )
     }
@@ -264,9 +265,9 @@ const RawElementNodeRenderer = (
     case "audio":
       return (
         <Audio
-          width={width}
           element={node.element.audio as AudioProto}
           endpoints={props.endpoints}
+          {...elementProps}
         />
       )
 
@@ -278,38 +279,38 @@ const RawElementNodeRenderer = (
 
     case "arrowTable":
       return (
-        <ArrowTable element={node.quiverElement as Quiver} width={width} />
+        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
       )
 
     case "arrowVegaLiteChart":
       return (
         <ArrowVegaLiteChart
           element={node.vegaLiteChartElement as VegaLiteChartElement}
-          width={width}
+          {...elementProps}
         />
       )
 
     case "bokehChart":
       return (
         <DebouncedBokehChart
-          width={width}
           element={node.element.bokehChart as BokehChartProto}
+          {...elementProps}
         />
       )
 
     case "deckGlJsonChart":
       return (
         <DeckGlJsonChart
-          width={width}
           element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
+          {...elementProps}
         />
       )
 
     case "docString":
       return (
         <DocString
-          width={width}
           element={node.element.docString as DocStringProto}
+          {...elementProps}
         />
       )
 
@@ -319,8 +320,8 @@ const RawElementNodeRenderer = (
     case "exception":
       return (
         <ExceptionElement
-          width={width}
           element={node.element.exception as ExceptionProto}
+          {...elementProps}
         />
       )
 
@@ -328,40 +329,45 @@ const RawElementNodeRenderer = (
       return (
         <GraphVizChart
           element={node.element.graphvizChart as GraphVizChartProto}
-          width={width}
+          {...elementProps}
         />
       )
 
     case "iframe":
       return (
-        <IFrame element={node.element.iframe as IFrameProto} width={width} />
+        <IFrame
+          element={node.element.iframe as IFrameProto}
+          {...elementProps}
+        />
       )
 
     case "imgs":
       return (
         <ImageList
-          width={width}
           element={node.element.imgs as ImageListProto}
           endpoints={props.endpoints}
+          {...elementProps}
         />
       )
 
     case "json":
-      return <Json width={width} element={node.element.json as JsonProto} />
+      return (
+        <Json element={node.element.json as JsonProto} {...elementProps} />
+      )
 
     case "markdown":
       return (
         <Markdown
-          width={width}
           element={node.element.markdown as MarkdownProto}
+          {...elementProps}
         />
       )
 
     case "heading":
       return (
         <Heading
-          width={width}
           element={node.element.heading as HeadingProto}
+          {...elementProps}
         />
       )
 
@@ -371,8 +377,8 @@ const RawElementNodeRenderer = (
       return (
         <PageLink
           element={pageLinkProto}
-          width={width}
           disabled={isDisabled}
+          {...elementProps}
         />
       )
     }
@@ -380,31 +386,34 @@ const RawElementNodeRenderer = (
     case "plotlyChart":
       return (
         <PlotlyChart
-          width={width}
-          height={height}
           element={node.element.plotlyChart as PlotlyChartProto}
+          height={undefined}
+          {...elementProps}
         />
       )
 
     case "progress":
       return (
         <Progress
-          width={width}
           element={node.element.progress as ProgressProto}
+          {...elementProps}
         />
       )
 
     case "spinner":
       return (
         <Spinner
-          width={width}
           element={node.element.spinner as SpinnerProto}
+          {...elementProps}
         />
       )
 
     case "text":
       return (
-        <TextElement width={width} element={node.element.text as TextProto} />
+        <TextElement
+          element={node.element.text as TextProto}
+          {...elementProps}
+        />
       )
 
     case "metric":
@@ -413,9 +422,9 @@ const RawElementNodeRenderer = (
     case "video":
       return (
         <Video
-          width={width}
           element={node.element.video as VideoProto}
           endpoints={props.endpoints}
+          {...elementProps}
         />
       )
 
@@ -423,13 +432,10 @@ const RawElementNodeRenderer = (
     case "arrowDataFrame": {
       const arrowProto = node.element.arrowDataFrame as ArrowProto
       widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
-
       return (
         <ArrowDataFrame
           element={arrowProto}
           data={node.quiverElement as Quiver}
-          width={width}
-          height={height}
           // Arrow dataframe can be used as a widget (data_editor) or
           // an element (dataframe). We only want to set the key in case of
           // it being used as a widget. For the non-widget usage, the id will
@@ -438,6 +444,7 @@ const RawElementNodeRenderer = (
             key: arrowProto.id,
           })}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -452,13 +459,15 @@ const RawElementNodeRenderer = (
         return (
           <FormSubmitContent
             element={buttonProto}
-            width={width}
             hasInProgressUpload={hasInProgressUpload}
             {...widgetProps}
+            {...elementProps}
           />
         )
       }
-      return <Button element={buttonProto} width={width} {...widgetProps} />
+      return (
+        <Button element={buttonProto} {...widgetProps} {...elementProps} />
+      )
     }
 
     case "downloadButton": {
@@ -471,8 +480,8 @@ const RawElementNodeRenderer = (
           endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -480,7 +489,11 @@ const RawElementNodeRenderer = (
       const linkButtonProto = node.element.linkButton as LinkButtonProto
       widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
       return (
-        <LinkButton element={linkButtonProto} width={width} {...widgetProps} />
+        <LinkButton
+          element={linkButtonProto}
+          {...widgetProps}
+          {...elementProps}
+        />
       )
     }
     case "cameraInput": {
@@ -491,8 +504,8 @@ const RawElementNodeRenderer = (
           key={cameraInputProto.id}
           element={cameraInputProto}
           uploadClient={props.uploadClient}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -504,8 +517,8 @@ const RawElementNodeRenderer = (
         <ChatInput
           key={chatInputProto.id}
           element={chatInputProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -517,8 +530,8 @@ const RawElementNodeRenderer = (
         <Checkbox
           key={checkboxProto.id}
           element={checkboxProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -530,8 +543,8 @@ const RawElementNodeRenderer = (
         <ColorPicker
           key={colorPickerProto.id}
           element={colorPickerProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -541,8 +554,8 @@ const RawElementNodeRenderer = (
         <ComponentInstance
           registry={props.componentRegistry}
           element={node.element.componentInstance as ComponentInstanceProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
 
@@ -553,8 +566,8 @@ const RawElementNodeRenderer = (
         <DateInput
           key={dateInputProto.id}
           element={dateInputProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -566,10 +579,10 @@ const RawElementNodeRenderer = (
         <FileUploader
           key={fileUploaderProto.id}
           element={fileUploaderProto}
-          width={width}
           widgetMgr={widgetProps.widgetMgr}
           uploadClient={props.uploadClient}
           disabled={widgetProps.disabled}
+          {...elementProps}
         />
       )
     }
@@ -581,8 +594,8 @@ const RawElementNodeRenderer = (
         <Multiselect
           key={multiSelectProto.id}
           element={multiSelectProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -594,8 +607,8 @@ const RawElementNodeRenderer = (
         <NumberInput
           key={numberInputProto.id}
           element={numberInputProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -607,8 +620,8 @@ const RawElementNodeRenderer = (
         <Radio
           key={radioProto.id}
           element={radioProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -620,8 +633,8 @@ const RawElementNodeRenderer = (
         <Selectbox
           key={selectboxProto.id}
           element={selectboxProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -637,8 +650,8 @@ const RawElementNodeRenderer = (
         <Slider
           key={sliderProto.id}
           element={sliderProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -656,8 +669,8 @@ const RawElementNodeRenderer = (
         <TextArea
           key={textAreaProto.id}
           element={textAreaProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -669,8 +682,8 @@ const RawElementNodeRenderer = (
         <TextInput
           key={textInputProto.id}
           element={textInputProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -682,8 +695,8 @@ const RawElementNodeRenderer = (
         <TimeInput
           key={timeInputProto.id}
           element={timeInputProto}
-          width={width}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -709,7 +722,7 @@ const RawElementNodeRenderer = (
           key={node.scriptRunId}
           body={toastProto.body}
           icon={toastProto.icon}
-          width={width}
+          {...elementProps}
         />
       )
     }

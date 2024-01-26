@@ -75,7 +75,11 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 
   const childProps = { ...props, ...{ node } }
-  const child: ReactElement = <LayoutBlock {...childProps} />
+  // TODO: We will set the value to disallow fullscreen mode within dialogs in a follow-up PR
+  const hideFullScreenButton = false
+  const child: ReactElement = (
+    <LayoutBlock {...childProps} hideFullScreenButton={hideFullScreenButton} />
+  )
 
   if (node.deltaBlock.expandable) {
     return (
@@ -263,7 +267,10 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ? ScrollToBottomVerticalBlockWrapper
     : StyledVerticalBlockBorderWrapper
 
-  const propsWithNewWidth = { ...props, ...{ width } }
+  const propsWithNewWidth = {
+    ...props,
+    ...{ width },
+  }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.
