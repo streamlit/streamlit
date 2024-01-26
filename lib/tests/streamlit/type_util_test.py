@@ -722,7 +722,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
     )
     def test_truncate_larger_table(self):
-        """Test that `truncate_table` correctly truncates a table that is
+        """Test that `_maybe_truncate_table` correctly truncates a table that is
         larger than the max message size.
         """
         col_data = list(range(200000))
@@ -734,19 +734,26 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
             }
         )
 
-        # We use from_pandas two times here since a pyarrow table cannot be
-        # easily cloned and the operation does changes inplace.
         original_table = pa.Table.from_pandas(original_df)
         truncated_table = type_util._maybe_truncate_table(
             pa.Table.from_pandas(original_df)
         )
+        from streamlit import config
+
+        print(
+            config.get_option("server.enableArrowTruncation"),
+            config.get_option("server.maxMessageSize"),
+            truncated_table.nbytes,
+            original_table.nbytes,
+            truncated_table.num_rows,
+            original_table.num_rows,
+        )
+        # Should be under the configured 3MB limit:
+        self.assertLess(truncated_table.nbytes, 3 * int(1e6))
 
         # Test that the table should have been truncated
         self.assertLess(truncated_table.nbytes, original_table.nbytes)
         self.assertLess(truncated_table.num_rows, original_table.num_rows)
-
-        # Should be under the configured 3MB limit:
-        self.assertLess(truncated_table.nbytes, 3 * int(1e6))
 
         # Test that it prints out a caption test:
         el = self.get_delta_from_queue().new_element
@@ -757,7 +764,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
     )
     def test_dont_truncate_smaller_table(self):
-        """Test that `truncate_table` doesn't truncate smaller tables."""
+        """Test that `_maybe_truncate_table` doesn't truncate smaller tables."""
         col_data = list(range(100))
         original_df = pd.DataFrame(
             {
