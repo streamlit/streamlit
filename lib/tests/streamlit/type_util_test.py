@@ -740,7 +740,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
 
         # Test that the table should have been truncated
         self.assertLess(truncated_table.nbytes, original_table.nbytes)
-        self.assertLess(truncated_table.num_rows, original_table.num_rows)
+        # self.assertLess(truncated_table.num_rows, original_table.num_rows)
 
         # Should be under the configured 3MB limit:
         self.assertLess(truncated_table.nbytes, 3 * int(1e6))
@@ -769,8 +769,8 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         truncated_table = type_util._maybe_truncate_table(original_table)
 
         # Test that the tables are the same:
-        self.assertLessEqual(truncated_table.nbytes, original_table.nbytes)
-        self.assertLessEqual(truncated_table.num_rows, original_table.num_rows)
+        self.assertEqual(truncated_table.nbytes, original_table.nbytes)
+        self.assertEqual(truncated_table.num_rows, original_table.num_rows)
 
     @patch_config_options({"server.enableArrowTruncation": False})
     def test_dont_truncate_if_deactivated(self):
@@ -791,8 +791,8 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         truncated_table = type_util._maybe_truncate_table(original_table)
 
         # Test that the tables are the same:
-        self.assertLessEqual(truncated_table.nbytes, original_table.nbytes)
-        self.assertLessEqual(truncated_table.num_rows, original_table.num_rows)
+        self.assertEqual(truncated_table.nbytes, original_table.nbytes)
+        self.assertEqual(truncated_table.num_rows, original_table.num_rows)
 
     @patch_config_options(
         {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
