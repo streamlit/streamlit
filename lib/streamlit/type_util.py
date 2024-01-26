@@ -797,7 +797,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
         _LOGGER.warning(
             "Recursion error while truncating Arrow table. This is not "
             "supposed to happen.",
-            exec_info=err,
+            exc_info=err,
         )
 
     # Convert table to bytes
