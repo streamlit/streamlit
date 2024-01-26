@@ -739,10 +739,10 @@ def _maybe_truncate_table(
         # more than required to keep the iterations low.
 
         # The maximum size allowed for protobuf messages in bytes:
-        max_message_size = int(config.get_option("server.maxMessageSize")) * int(1e6)
+        max_message_size = int(config.get_option("server.maxMessageSize") * 1e6)
         # We add 1 MB for other overhead related to the protobuf message.
         # This is a very conservative estimate, but it should be good enough.
-        table_size = int(table.nbytes) + 1 * int(1e6)
+        table_size = int(table.nbytes + 1 * 1e6)
         table_rows = table.num_rows
 
         if table_rows > 1 and table_size > max_message_size:
