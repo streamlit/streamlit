@@ -33,7 +33,7 @@ def test_stream_generator(app: Page, assert_snapshot: ImageCompareFunction):
     expect(markdown_elements.nth(1)).to_contain_text("This is the end of the stream.")
 
     main_container = app.get_by_test_id("stVerticalBlock").nth(0)
-    assert_snapshot(main_container.nth(0), name="st_stream-generator_output")
+    assert_snapshot(main_container.nth(0), name="st_write_stream-generator_output")
 
     expect(app.get_by_test_id("stVerticalBlock")).to_have_count(1)
 
@@ -49,4 +49,4 @@ def test_stream_generator(app: Page, assert_snapshot: ImageCompareFunction):
 
     main_container = app.get_by_test_id("stVerticalBlock").nth(0)
     # Test with the same snapshot name to make sure the output is the same:
-    assert_snapshot(main_container.nth(0), name="st_stream-generator_output")
+    assert_snapshot(main_container.nth(0), name="st_write_stream-generator_output")
