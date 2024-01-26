@@ -45,7 +45,7 @@ def stream_example():
 
 
 if st.button("Stream data"):
-    st.session_state["written_content"] = st.experimental_stream(stream_example)
+    st.session_state["written_content"] = st.write_stream(stream_example)
 else:
     if "written_content" in st.session_state:
         st.write(st.session_state["written_content"])
