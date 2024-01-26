@@ -38,6 +38,3 @@ def test_shows_limitation_message(app: Page, configure_arrow_truncation):
     expect(caption_elements.nth(0)).to_have_text(
         "⚠️ Showing 12k out of 50k rows due to data size limitations. "
     )
-    # expect(caption_elements.nth(1)).to_have_text(
-    #     "⚠️ Showing 80k out of 200k rows due to data size limitations."
-    # )
