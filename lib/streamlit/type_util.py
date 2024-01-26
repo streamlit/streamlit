@@ -764,8 +764,6 @@ def _maybe_truncate_table(
                     1,  # but it should always have at least 1 row
                 )
             )
-            # Thereby, the max recursion depth should be < 100 since we cut
-            # out at least 1% of the table size in each recursion.
             sliced_table = table.slice(0, targeted_rows)
             return _maybe_truncate_table(
                 sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
