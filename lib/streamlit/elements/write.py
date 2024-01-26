@@ -134,7 +134,7 @@ class WriteMixin:
         >>>
         >>>
         >>> if st.button("Stream data"):
-        >>>     st.experimental_stream(stream_data)
+        >>>     st.write_stream(stream_data)
 
         ..  output::
             https://doc-stream-data.streamlit.app/
@@ -158,7 +158,7 @@ class WriteMixin:
         >>>     st.session_state.messages.append({"role": "user", "content": prompt})
         >>>
         >>>     with st.chat_message("assistant"):
-        >>>         response = st.experimental_stream(
+        >>>         response = st.write_stream(
         >>>             client.chat.completions.create(
         >>>                 model="gpt-3.5-turbo",
         >>>                 messages=[
@@ -263,13 +263,13 @@ class WriteMixin:
                 See docs for st.markdown for more.
             - write(data_frame)     : Displays the DataFrame as a table.
             - write(error)          : Prints an exception specially.
-            - write(generator)      : Streams the output of the generator.
             - write(func)           : Displays information about a function.
             - write(module)         : Displays information about the module.
             - write(class)          : Displays information about a class.
             - write(dict)           : Displays dict in an interactive widget.
             - write(mpl_fig)        : Displays a Matplotlib figure.
-            - write(openai.Stream)  : Stream the output of the OpenAI stream.
+            - write(generator)      : Streams the output of a generator.
+            - write(openai.Stream)  : Streams the output of an OpenAI stream.
             - write(altair)         : Displays an Altair chart.
             - write(keras)          : Displays a Keras model.
             - write(graphviz)       : Displays a Graphviz graph.
