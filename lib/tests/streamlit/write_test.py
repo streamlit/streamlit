@@ -412,11 +412,11 @@ class StreamlitWriteTest(unittest.TestCase):
 
 
 class StreamlitStreamTest(unittest.TestCase):
-    """Test st.stream."""
+    """Test st.write_stream."""
 
     @patch("streamlit.type_util.is_type")
     def test_with_openai_chunk(self, is_type):
-        """Test st.stream with openai Chunks."""
+        """Test st.write_stream with openai Chunks."""
 
         is_type.side_effect = make_is_type_mock(
             "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
@@ -436,7 +436,7 @@ class StreamlitStreamTest(unittest.TestCase):
         self.assertEqual(stream_return, "Hello World")
 
     def test_with_generator_text(self):
-        """Test st.stream with generator text content."""
+        """Test st.write_stream with generator text content."""
 
         def test_stream():
             yield "Hello "
@@ -449,7 +449,7 @@ class StreamlitStreamTest(unittest.TestCase):
         self.assertEqual(stream_return, "Hello World")
 
     def test_with_generator_misc(self):
-        """Test st.stream with generator with different content."""
+        """Test st.write_stream with generator with different content."""
 
         def test_stream():
             yield "This is "
@@ -472,7 +472,7 @@ class StreamlitStreamTest(unittest.TestCase):
             )
 
     def test_with_list_output(self):
-        """Test st.stream with a list."""
+        """Test st.write_stream with a list."""
 
         data = [
             "This is ",
