@@ -136,7 +136,7 @@ class ColumnConfig(TypedDict, total=False):
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -212,7 +212,7 @@ def Column(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -288,7 +288,7 @@ def NumberColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -396,7 +396,7 @@ def TextColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -492,7 +492,7 @@ def LinkColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -519,18 +519,18 @@ def LinkColumn(
     display_text: str or None
         The text that is displayed in the cell. Can be one of:
 
-        * None (default) to display the URL itself.
+        * ``None`` (default) to display the URL itself.
 
-        * A string that is displayed in every cell, e.g. “Open link”.
+        * A string that is displayed in every cell, e.g. ``"Open link"``.
 
         * A regular expression (JS flavor, detected by usage of parentheses)
-          to extract a part of the URL via a capture group, e.g. "https://(.*?)\.streamlit\.app”
-          to extract the display text “foo” from the URL “https://foo.streamlit.app”.
+          to extract a part of the URL via a capture group, e.g. ``"https://(.*?)\.streamlit\.app"``
+          to extract the display text "foo" from the URL "\https://foo.streamlit.app".
 
-        For more complex cases, you may use [Pandas Styler's format function on the underlying
-        dataframe](https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html).
-        Note that this makes the app slow, doesn't work with editable columns, and might
-        be removed in the future.
+        For more complex cases, you may use `Pandas Styler's format \
+        <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
+        function on the underlying dataframe. Note that this makes the app slow,
+        doesn't work with editable columns, and might be removed in the future.
 
 
     Examples
@@ -618,7 +618,7 @@ def CheckboxColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -701,7 +701,7 @@ def SelectboxColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -719,7 +719,7 @@ def SelectboxColumn(
 
     options: Iterable of str or None
         The options that can be selected during editing. If None (default), this will be
-        inferred from the underlying dataframe column if its dtype is “category”
+        inferred from the underlying dataframe column if its dtype is "category"
         (`see Pandas docs on categorical data <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
 
     Examples
@@ -798,7 +798,7 @@ def BarChartColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -878,7 +878,7 @@ def LineChartColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -965,7 +965,7 @@ def ImageColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1028,7 +1028,7 @@ def ListColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1102,7 +1102,7 @@ def DatetimeColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1221,7 +1221,7 @@ def TimeColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1335,7 +1335,7 @@ def DateColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1444,7 +1444,7 @@ def ProgressColumn(
         the column name is used.
 
     width : "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help : str or None

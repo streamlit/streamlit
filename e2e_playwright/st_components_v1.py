@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import streamlit as st
 import streamlit.components.v1 as components
 
 html = r"<h1>Hello, Streamlit!</h1>"
@@ -19,6 +20,10 @@ components.html(html, width=200, height=500, scrolling=False)
 
 src = "http://not.a.real.url"
 components.iframe(src, width=200, height=500, scrolling=True)
+
+# Set a query parameter to ensure that it doesn't affect the path of the custom component,
+# since that would trigger a reload if the query param changes
+st.query_params["hello"] = "world"
 
 url = "http://not.a.real.url"
 test_component = components.declare_component("test_component", url=url)

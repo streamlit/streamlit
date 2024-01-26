@@ -106,7 +106,7 @@ describe("linkReference", () => {
 })
 
 describe("StreamlitMarkdown", () => {
-  it("renders header anchors when isSidebar is false", () => {
+  it("renders header anchors when isInSidebar is false", () => {
     const source = "# header"
     render(
       <IsSidebarContext.Provider value={false}>
@@ -127,7 +127,7 @@ describe("StreamlitMarkdown", () => {
     expect(screen.getByText("Some Page")).toHaveAttribute("target", "_self")
   })
 
-  it("doesn't render header anchors when isSidebar is true", () => {
+  it("doesn't render header anchors when isInSidebar is true", () => {
     const source = "# header"
     render(
       <IsSidebarContext.Provider value={true}>
@@ -279,6 +279,22 @@ describe("StreamlitMarkdown", () => {
 
     const textTag = screen.getByText("Here is some checkbox label text")
     expect(textTag).toHaveStyle("font-size: inherit")
+  })
+
+  it("renders bold label text when boldLabel is true", () => {
+    const source = "Here is some checkbox label text"
+    render(
+      <StreamlitMarkdown
+        source={source}
+        allowHTML={false}
+        isLabel
+        boldLabel
+        largerLabel
+      />
+    )
+
+    const textTag = screen.getByText("Here is some checkbox label text")
+    expect(textTag).toHaveStyle("font-weight: 600")
   })
 
   it("colours text properly", () => {
