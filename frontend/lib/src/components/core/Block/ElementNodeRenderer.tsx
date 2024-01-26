@@ -217,6 +217,7 @@ const StreamlitSyntaxHighlighter = React.lazy(
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width: number
+  hideFullScreenButton?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -443,6 +444,7 @@ const RawElementNodeRenderer = (
             key: arrowProto.id,
           })}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -459,6 +461,7 @@ const RawElementNodeRenderer = (
             element={buttonProto}
             hasInProgressUpload={hasInProgressUpload}
             {...widgetProps}
+            {...elementProps}
           />
         )
       }
@@ -476,6 +479,7 @@ const RawElementNodeRenderer = (
           key={downloadButtonProto.id}
           element={downloadButtonProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -493,6 +497,7 @@ const RawElementNodeRenderer = (
           element={cameraInputProto}
           uploadClient={props.uploadClient}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -505,6 +510,7 @@ const RawElementNodeRenderer = (
           key={chatInputProto.id}
           element={chatInputProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -517,6 +523,7 @@ const RawElementNodeRenderer = (
           key={checkboxProto.id}
           element={checkboxProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -529,6 +536,7 @@ const RawElementNodeRenderer = (
           key={colorPickerProto.id}
           element={colorPickerProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -539,6 +547,7 @@ const RawElementNodeRenderer = (
           registry={props.componentRegistry}
           element={node.element.componentInstance as ComponentInstanceProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
 
@@ -550,6 +559,7 @@ const RawElementNodeRenderer = (
           key={dateInputProto.id}
           element={dateInputProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -575,6 +585,7 @@ const RawElementNodeRenderer = (
           key={multiSelectProto.id}
           element={multiSelectProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -587,6 +598,7 @@ const RawElementNodeRenderer = (
           key={numberInputProto.id}
           element={numberInputProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -607,6 +619,7 @@ const RawElementNodeRenderer = (
           key={selectboxProto.id}
           element={selectboxProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -637,6 +650,7 @@ const RawElementNodeRenderer = (
           key={textAreaProto.id}
           element={textAreaProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -649,6 +663,7 @@ const RawElementNodeRenderer = (
           key={textInputProto.id}
           element={textInputProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
@@ -661,6 +676,7 @@ const RawElementNodeRenderer = (
           key={timeInputProto.id}
           element={timeInputProto}
           {...widgetProps}
+          {...elementProps}
         />
       )
     }
