@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
-import pytest
 
 import streamlit as st
 from streamlit import type_util
@@ -176,13 +175,13 @@ class StreamlitWriteTest(unittest.TestCase):
             yield "world"
 
         # Should support it as a generator function
-        with patch("streamlit.delta_generator.DeltaGenerator.experimental_stream") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
             st.write(gen_function)
 
             p.assert_called_once()
 
         # Should support it as a generator function call
-        with patch("streamlit.delta_generator.DeltaGenerator.experimental_stream") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
             st.write(gen_function())
 
             p.assert_called_once()
@@ -195,7 +194,7 @@ class StreamlitWriteTest(unittest.TestCase):
         class FakeOpenaiStream(object):
             pass
 
-        with patch("streamlit.delta_generator.DeltaGenerator.experimental_stream") as p:
+        with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
             st.write(FakeOpenaiStream())
 
             p.assert_called_once()
@@ -433,7 +432,7 @@ class StreamlitStreamTest(unittest.TestCase):
             mock_chunk.choices[0].delta.content = "World"
             yield mock_chunk
 
-        stream_return = st.experimental_stream(openai_stream)
+        stream_return = st.write_stream(openai_stream)
         self.assertEqual(stream_return, "Hello World")
 
     def test_with_generator_text(self):
@@ -443,10 +442,10 @@ class StreamlitStreamTest(unittest.TestCase):
             yield "Hello "
             yield "World"
 
-        stream_return = st.experimental_stream(test_stream)
+        stream_return = st.write_stream(test_stream)
         self.assertEqual(stream_return, "Hello World")
 
-        stream_return = st.experimental_stream(test_stream())
+        stream_return = st.write_stream(test_stream())
         self.assertEqual(stream_return, "Hello World")
 
     def test_with_generator_misc(self):
@@ -459,7 +458,7 @@ class StreamlitStreamTest(unittest.TestCase):
             yield "Text under dataframe"
 
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
-            stream_return = st.experimental_stream(test_stream)
+            stream_return = st.write_stream(test_stream)
             p_dataframe.assert_called_once()
             self.assertEqual(
                 str(stream_return),
@@ -483,7 +482,7 @@ class StreamlitStreamTest(unittest.TestCase):
         ]
 
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
-            stream_return = st.experimental_stream(data)
+            stream_return = st.write_stream(data)
             p_dataframe.assert_called_once()
             self.assertEqual(
                 str(stream_return),

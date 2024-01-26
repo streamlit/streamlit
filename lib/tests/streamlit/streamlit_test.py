@@ -129,6 +129,7 @@ class StreamlitTest(unittest.TestCase):
                 "video",
                 "warning",
                 "write",
+                "write_stream",
                 "color_picker",
                 "sidebar",
                 # Other modules the user should have access to:
@@ -153,7 +154,6 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_rerun",
                 "experimental_data_editor",
                 "experimental_connection",
-                "experimental_stream",
                 "get_option",
                 "set_option",
                 "connection",
