@@ -734,13 +734,16 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
             }
         )
 
+        # We use from_pandas two times here since a pyarrow table cannot be
+        # easily cloned and the operation does changes inplace.
         original_table = pa.Table.from_pandas(original_df)
-
-        truncated_table = type_util._maybe_truncate_table(original_table)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
 
         # Test that the table should have been truncated
         self.assertLess(truncated_table.nbytes, original_table.nbytes)
-        # self.assertLess(truncated_table.num_rows, original_table.num_rows)
+        self.assertLess(truncated_table.num_rows, original_table.num_rows)
 
         # Should be under the configured 3MB limit:
         self.assertLess(truncated_table.nbytes, 3 * int(1e6))
@@ -765,8 +768,9 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         )
 
         original_table = pa.Table.from_pandas(original_df)
-
-        truncated_table = type_util._maybe_truncate_table(original_table)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
 
         # Test that the tables are the same:
         self.assertEqual(truncated_table.nbytes, original_table.nbytes)
@@ -787,8 +791,9 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         )
 
         original_table = pa.Table.from_pandas(original_df)
-
-        truncated_table = type_util._maybe_truncate_table(original_table)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
 
         # Test that the tables are the same:
         self.assertEqual(truncated_table.nbytes, original_table.nbytes)
