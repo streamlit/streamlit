@@ -732,50 +732,48 @@ def _maybe_truncate_table(
 
     """
 
-    if config.get_option("server.enableArrowTruncation") is not True:
-        return table
+    if config.get_option("server.enableArrowTruncation"):
+        # This is an optimization problem: We don't know at what row
+        # the perfect cut-off is to comply with the max size. But we want to figure
+        # it out in as few iterations as possible. We almost always will cut out
+        # more than required to keep the iterations low.
 
-    # This is an optimization problem: We don't know at what row
-    # the perfect cut-off is to comply with the max size. But we want to figure
-    # it out in as few iterations as possible. We almost always will cut out
-    # more than required to keep the iterations low.
+        # The maximum size allowed for protobuf messages in bytes:
+        max_message_size = int(config.get_option("server.maxMessageSize")) * int(1e6)
+        # We add 1 MB for other overhead related to the protobuf message.
+        # This is a very conservative estimate, but it should be good enough.
+        table_size = int(table.nbytes) + 1 * int(1e6)
+        table_rows = table.num_rows
 
-    # The maximum size allowed for protobuf messages in bytes:
-    max_message_size = int(config.get_option("server.maxMessageSize")) * int(1e6)
-    # We add 1 MB for other overhead related to the protobuf message.
-    # This is a very conservative estimate, but it should be good enough.
-    table_size = int(table.nbytes) + 1 * int(1e6)
-    table_rows = table.num_rows
+        if table_rows > 1 and table_size > max_message_size:
+            # Calculate an approximation of how many rows we need to truncate to.
+            targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
+            # The targeted_rows is just an approximation. We cut out another
+            # 5% of the number of truncated rows to make sure that we don't
+            # execute this truncation logic too many times since it is quite
+            # inefficient and its running in a recursion.
+            rows_overhead = math.floor((table_rows - targeted_rows) * 0.05)
+            # Make sure to cut out at least a couple of rows to avoid infinite recursion.
+            targeted_rows = max(min(targeted_rows - rows_overhead, table_rows - 5), 1)
+            sliced_table = table.slice(0, targeted_rows)
+            return _maybe_truncate_table(
+                sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
+            )
 
-    if table_rows > 1 and table_size > max_message_size:
-        # Calculate an approximation of how many rows we need to truncate to.
-        targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
-        # The targeted_rows is just an approximation. We cut out another
-        # 5% of the number of truncated rows to make sure that we don't
-        # execute this truncation logic too many times since it is quite
-        # inefficient and its running in a recursion.
-        rows_overhead = math.floor((table_rows - targeted_rows) * 0.05)
-        # Make sure to cut out at least a couple of rows to avoid infinite recursion.
-        targeted_rows = max(min(targeted_rows - rows_overhead, table_rows - 5), 1)
-        sliced_table = table.slice(0, targeted_rows)
-        return _maybe_truncate_table(
-            sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
-        )
+        if truncated_rows:
+            displayed_rows = string_util.simplify_number(table.num_rows)
+            total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
 
-    if truncated_rows:
-        displayed_rows = string_util.simplify_number(table.num_rows)
-        total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
+            if displayed_rows == total_rows:
+                # If the simplified numbers are the same,
+                # we just display the exact numbers.
+                displayed_rows = str(table.num_rows)
+                total_rows = str(table.num_rows + truncated_rows)
 
-        if displayed_rows == total_rows:
-            # If the simplified numbers are the same,
-            # we just display the exact numbers.
-            displayed_rows = str(table.num_rows)
-            total_rows = str(table.num_rows + truncated_rows)
-
-        st.caption(
-            f"⚠️ Showing {displayed_rows} out of {total_rows} "
-            "rows due to data size limitations."
-        )
+            st.caption(
+                f"⚠️ Showing {displayed_rows} out of {total_rows} "
+                "rows due to data size limitations."
+            )
 
     return table
 
