@@ -68,7 +68,9 @@ PathWatcherType = Union[
 
 def report_watchdog_availability():
     if not watchdog_available:
-        if not config.get_option("global.disableWatchdogWarning"):
+        if not config.get_option("global.disableWatchdogWarning") and config.get_option(
+            "server.fileWatcherType"
+        ) not in ["poll", "none"]:
             msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
             click.secho(
