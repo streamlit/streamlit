@@ -749,13 +749,15 @@ def _maybe_truncate_table(
             # targeted rows == the number of rows the table should be truncated to.
             # Calculate an approximation of how many rows we need to truncate to.
             targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
-            # Make sure to cut out at least a couple of rows to avoid infinite recursion.
+            # Make sure to cut out at least a couple of rows to avoid running
+            # this logic too often since it is quite inefficient and could lead
+            # to infinity recursions without these precautions.
             targeted_rows = math.floor(
                 max(
                     min(
                         # Cut out:
                         # an additional 5% of the estimated num rows to cut out:
-                        math.floor((table_rows - targeted_rows) * 0.05),
+                        targeted_rows - math.floor((table_rows - targeted_rows) * 0.05),
                         # at least 1% of table size:
                         table_rows - (table_rows * 0.01),
                         # at least 5 rows:
@@ -801,7 +803,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     except RecursionError as err:
         # This is a very unlikely edge case, but we want to make sure that
         # it doesn't lead to unexpected behavior.
-        # If there is a recursion error, we just return the table as-is...
+        # If there is a recursion error, we just return the table as-is
         # which will lead to the normal message limit exceed error.
         _LOGGER.warning(
             "Recursion error while truncating Arrow table. This is not "
