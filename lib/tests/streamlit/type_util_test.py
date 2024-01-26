@@ -747,6 +747,10 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
             original_table.nbytes,
             truncated_table.num_rows,
             original_table.num_rows,
+            truncated_table.get_total_buffer_size(),
+            original_table.get_total_buffer_size(),
+            pa.Table.from_pandas(original_df).slice(0, 100).nbytes,
+            pa.Table.from_pandas(truncated_table.to_pandas()).nbytes,
         )
         # Should be under the configured 3MB limit:
         self.assertLess(truncated_table.nbytes, 3 * int(1e6))
