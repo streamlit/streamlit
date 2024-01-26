@@ -824,10 +824,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         )
         original_table = pa.Table.from_pandas(original_df)
         st.dataframe(original_df)
-
-        # Test that it prints out a caption test:
         el = self.get_delta_from_queue().new_element
-
         # Test that table bytes should be smaller than the full table
         self.assertLess(len(el.arrow_data_frame.data), original_table.nbytes)
         # Should be under the configured 3MB limit:
