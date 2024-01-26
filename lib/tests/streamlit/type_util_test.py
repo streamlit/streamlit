@@ -725,7 +725,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         """Test that `truncate_table` correctly truncates a table that is
         larger than the max message size.
         """
-        col_data = list(range(100000))
+        col_data = list(range(200000))
         original_df = pd.DataFrame(
             {
                 "col 1": col_data,
@@ -777,7 +777,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         """Test that `_maybe_truncate_table` doesn't do anything
         when server.enableArrowTruncation is decatived
         """
-        col_data = list(range(100000))
+        col_data = list(range(200000))
         original_df = pd.DataFrame(
             {
                 "col 1": col_data,
@@ -799,7 +799,7 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
     )
     def test_st_dataframe_truncates_data(self):
         """Test that `st.dataframe` truncates the data if server.enableArrowTruncation==True."""
-        col_data = list(range(100000))
+        col_data = list(range(200000))
         original_df = pd.DataFrame(
             {
                 "col 1": col_data,
