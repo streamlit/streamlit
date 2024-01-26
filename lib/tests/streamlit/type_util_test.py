@@ -23,12 +23,15 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import pyarrow as pa
 import pytest
 from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit import errors, type_util
 from streamlit.errors import StreamlitAPIException
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import (
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
@@ -710,6 +713,114 @@ class TypeUtilTest(unittest.TestCase):
             ),
             {0: None, 1: None, 2: None, 3: None},
         )
+
+
+class TestArrowTruncation(DeltaGeneratorTestCase):
+    """Test class for the automatic arrow truncation feature."""
+
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
+    def test_truncate_larger_table(self):
+        """Test that `_maybe_truncate_table` correctly truncates a table that is
+        larger than the max message size.
+        """
+        col_data = list(range(200000))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
+        # Should be under the configured 3MB limit:
+        self.assertLess(truncated_table.nbytes, 3 * int(1e6))
+
+        # Test that the table should have been truncated
+        self.assertLess(truncated_table.nbytes, original_table.nbytes)
+        self.assertLess(truncated_table.num_rows, original_table.num_rows)
+
+        # Test that it prints out a caption test:
+        el = self.get_delta_from_queue().new_element
+        self.assertIn("due to data size limitations", el.markdown.body)
+        self.assertTrue(el.markdown.is_caption)
+
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
+    def test_dont_truncate_smaller_table(self):
+        """Test that `_maybe_truncate_table` doesn't truncate smaller tables."""
+        col_data = list(range(100))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
+
+        # Test that the tables are the same:
+        self.assertEqual(truncated_table.nbytes, original_table.nbytes)
+        self.assertEqual(truncated_table.num_rows, original_table.num_rows)
+
+    @patch_config_options({"server.enableArrowTruncation": False})
+    def test_dont_truncate_if_deactivated(self):
+        """Test that `_maybe_truncate_table` doesn't do anything
+        when server.enableArrowTruncation is decatived
+        """
+        col_data = list(range(200000))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
+
+        # Test that the tables are the same:
+        self.assertEqual(truncated_table.nbytes, original_table.nbytes)
+        self.assertEqual(truncated_table.num_rows, original_table.num_rows)
+
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
+    def test_st_dataframe_truncates_data(self):
+        """Test that `st.dataframe` truncates the data if server.enableArrowTruncation==True."""
+        col_data = list(range(200000))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+        original_table = pa.Table.from_pandas(original_df)
+        st.dataframe(original_df)
+        el = self.get_delta_from_queue().new_element
+        # Test that table bytes should be smaller than the full table
+        self.assertLess(len(el.arrow_data_frame.data), original_table.nbytes)
+        # Should be under the configured 3MB limit:
+        self.assertLess(len(el.arrow_data_frame.data), 3 * int(1e6))
+
+        # Test that it prints out a caption test:
+        el = self.get_delta_from_queue(-2).new_element
+        self.assertIn("due to data size limitations", el.markdown.body)
+        self.assertTrue(el.markdown.is_caption)
 
 
 class TestEnumCoercion:

@@ -1203,34 +1203,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
-    // TODO(lukasmasuch): this._index[0].length can be 0 if there are rows
-    // but only an empty index. Probably not the best way to cross check the number
-    // of rows.
-    const [headerColumns, dataRowsCheck] = this._index.length
-      ? [this._index.length, this._index[0].length]
-      : [1, 0]
-
-    const [headerRows, dataColumnsCheck] = this._columns.length
-      ? [this._columns.length, this._columns[0].length]
-      : [1, 0]
-
-    const [dataRows, dataColumns] = this._data.numRows
-      ? [this._data.numRows, this._data.numCols]
-      : // If there is no data, default to the number of header columns.
-        [0, dataColumnsCheck]
-
-    // Sanity check: ensure the schema is not messed up. If this happens,
-    // something screwy probably happened in addRows.
-    if (
-      (dataRows !== 0 && dataRows !== dataRowsCheck) ||
-      (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
-    ) {
-      throw new Error(
-        "Dataframe dimensions don't align: " +
-          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-          `cols(${dataColumns} != ${dataColumnsCheck})`
-      )
-    }
+    const headerColumns = this._index.length || this.types.index.length || 1
+    const headerRows = this._columns.length || 1
+    const dataRows = this._data.numRows || 0
+    const dataColumns = this._data.numCols || this._columns?.[0]?.length || 0
 
     const rows = headerRows + dataRows
     const columns = headerColumns + dataColumns
