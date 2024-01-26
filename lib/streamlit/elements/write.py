@@ -66,8 +66,8 @@ class StreamingOutput(List[Any]):
 
 
 class WriteMixin:
-    @gather_metrics("experimental_stream")
-    def experimental_stream(
+    @gather_metrics("write_stream")
+    def write_stream(
         self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
     ) -> List[Any] | str:
         """Stream a generator or iterable to the app.
@@ -455,7 +455,7 @@ class WriteMixin:
                 or type_util.is_type(arg, "openai.Stream")
             ):
                 flush_buffer()
-                self.experimental_stream(arg, unsafe_allow_html=unsafe_allow_html)
+                self.write_stream(arg, unsafe_allow_html=unsafe_allow_html)
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 self.dg.help(arg)
