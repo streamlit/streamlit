@@ -1,7 +1,7 @@
 altair==5.2.0
 anyio==3.7.1
 attrs==23.2.0
-black==23.12.1
+black==24.1.0
 blinker==1.7.0
 bokeh==2.4.3
 cachetools==5.3.2
