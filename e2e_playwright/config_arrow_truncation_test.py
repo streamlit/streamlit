@@ -34,7 +34,7 @@ def configure_arrow_truncation():
 
 def test_shows_limitation_message(app: Page, configure_arrow_truncation):
     caption_elements = app.get_by_test_id("stCaptionContainer")
-    expect(caption_elements).to_have_count(2)
+    expect(caption_elements).to_have_count(1)
     expect(caption_elements.nth(0)).to_have_text(
         "⚠️ Showing 12k out of 50k rows due to data size limitations. "
     )
