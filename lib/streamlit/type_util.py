@@ -746,15 +746,26 @@ def _maybe_truncate_table(
         table_rows = table.num_rows
 
         if table_rows > 1 and table_size > max_message_size:
+            # targeted rows == the number of rows the table should be truncated to.
             # Calculate an approximation of how many rows we need to truncate to.
             targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
-            # The targeted_rows is just an approximation. We cut out another
-            # 5% of the number of truncated rows to make sure that we don't
-            # execute this truncation logic too many times since it is quite
-            # inefficient and its running in a recursion.
-            rows_overhead = math.floor((table_rows - targeted_rows) * 0.05)
             # Make sure to cut out at least a couple of rows to avoid infinite recursion.
-            targeted_rows = max(min(targeted_rows - rows_overhead, table_rows - 10), 1)
+            targeted_rows = math.floor(
+                max(
+                    min(
+                        # Cut out:
+                        # an additional 5% of the estimated num rows to cut out:
+                        math.floor((table_rows - targeted_rows) * 0.05),
+                        # at least 1% of table size:
+                        table_rows - (table_rows * 0.01),
+                        # at least 5 rows:
+                        table_rows - 5,
+                    ),
+                    1,  # but it should always have at least 1 row
+                )
+            )
+            # Thereby, the max recursion depth should be < 100 since we cut
+            # out at least 1% of the table size in each recursion.
             sliced_table = table.slice(0, targeted_rows)
             return _maybe_truncate_table(
                 sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
