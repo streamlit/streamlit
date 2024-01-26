@@ -237,12 +237,6 @@ def rerun_app(page: Page):
     wait_for_app_run(page)
 
 
-def rerun_app(page: Page):
-    """Rerun the app."""
-    page.keyboard.press("r")
-    wait_for_app_run(page)
-
-
 @pytest.fixture(scope="module")
 def app_port(worker_id: str) -> int:
     """Fixture that returns an available port on localhost."""
