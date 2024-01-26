@@ -983,4 +983,3 @@ class TestEnumCoercion:
     def test_coerce_enum_bad_config_value(self, EnumAOrig, EnumAEqual):
         with pytest.raises(errors.StreamlitAPIException):
             type_util.coerce_enum(EnumAOrig.A, EnumAEqual)
-            type_util.coerce_enum(EnumAOrig.A, EnumAEqual)

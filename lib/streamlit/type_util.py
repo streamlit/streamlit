@@ -754,7 +754,7 @@ def _maybe_truncate_table(
             # inefficient and its running in a recursion.
             rows_overhead = math.floor((table_rows - targeted_rows) * 0.05)
             # Make sure to cut out at least a couple of rows to avoid infinite recursion.
-            targeted_rows = max(min(targeted_rows - rows_overhead, table_rows - 5), 1)
+            targeted_rows = max(min(targeted_rows - rows_overhead, table_rows - 10), 1)
             sliced_table = table.slice(0, targeted_rows)
             return _maybe_truncate_table(
                 sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
@@ -787,7 +787,18 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
         A table to convert.
 
     """
-    table = _maybe_truncate_table(table)
+    try:
+        table = _maybe_truncate_table(table)
+    except RecursionError as err:
+        # This is a very unlikely edge case, but we want to make sure that
+        # it doesn't lead to unexpected behavior.
+        # If there is a recursion error, we just return the table as-is...
+        # which will lead to the normal message limit exceed error.
+        _LOGGER.warning(
+            "Recursion error while truncating Arrow table. This is not "
+            "supposed to happen.",
+            exec_info=err,
+        )
 
     # Convert table to bytes
     sink = pa.BufferOutputStream()
