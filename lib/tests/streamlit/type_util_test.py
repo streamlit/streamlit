@@ -738,19 +738,6 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         truncated_table = type_util._maybe_truncate_table(
             pa.Table.from_pandas(original_df)
         )
-        from streamlit import config
-
-        print(
-            config.get_option("server.enableArrowTruncation"),
-            config.get_option("server.maxMessageSize"),
-            truncated_table.nbytes,
-            original_table.nbytes,
-            truncated_table.num_rows,
-            original_table.num_rows,
-            pa.__version__,
-            pa.Table.from_pandas(original_df).slice(0, 100).nbytes,
-            pa.Table.from_pandas(truncated_table.to_pandas()).nbytes,
-        )
         # Should be under the configured 3MB limit:
         self.assertLess(truncated_table.nbytes, 3 * int(1e6))
 
