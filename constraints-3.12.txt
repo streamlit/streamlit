@@ -13,7 +13,7 @@ chart-studio==1.1.0
 click==8.1.7
 contourpy==1.2.0
 coverage==7.4.0
-cryptography==42.0.0
+cryptography==42.0.1
 cycler==0.12.1
 distlib==0.3.8
 docutils==0.20.1
@@ -24,7 +24,7 @@ gitdb==4.0.11
 GitPython==3.1.41
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.96.4
+hypothesis==6.97.0
 identify==2.5.33
 idna==3.6
 importlib-metadata==7.0.1
@@ -82,7 +82,7 @@ pytest-playwright==0.4.3
 pytest-rerunfailures==13.0
 pytest-xdist==3.5.0
 python-dateutil==2.8.2
-python-slugify==8.0.1
+python-slugify==8.0.2
 pytz==2023.3.post1
 PyYAML==6.0.1
 readme-renderer==42.0
@@ -95,7 +95,7 @@ rfc3986==2.0.0
 rich==13.7.0
 rpds-py==0.17.1
 scipy==1.12.0
-seaborn==0.13.1
+seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
 setuptools==69.0.3
@@ -116,8 +116,8 @@ types-click==7.1.8
 types-protobuf==4.24.0.20240106
 types-python-dateutil==2.8.19.20240106
 types-pytz==2023.3.1.1
-types-requests==2.31.0.20240106
-types-setuptools==69.0.0.20240115
+types-requests==2.31.0.20240125
+types-setuptools==69.0.0.20240125
 types-toml==0.10.8.7
 types-typed-ast==1.5.8.7
 typing_extensions==4.9.0
