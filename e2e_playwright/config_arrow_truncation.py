@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Nothing to do here since the deploy button is part of the frontend even
-# without any Streamlit element being rendered.
-
 import numpy as np
 import pandas as pd
 
