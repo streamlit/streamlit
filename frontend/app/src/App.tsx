@@ -15,6 +15,7 @@
  */
 
 import React, { PureComponent, ReactNode } from "react"
+import { flushSync } from "react-dom"
 import moment from "moment"
 import { HotKeys, KeyMap } from "react-hotkeys"
 import { enableAllPlugins as enableImmerPlugins } from "immer"
@@ -361,6 +362,22 @@ export class App extends PureComponent<Props, State> {
       disconnectWebsocket: this.debugDisconnectWebsocket,
       shutdownRuntime: this.debugShutdownRuntime,
     }
+  }
+
+  setState<K extends keyof State>(
+    state:
+      | State
+      | ((
+          prevState: Readonly<State>,
+          props: Readonly<Props>
+        ) => State | Pick<State, K> | null)
+      | Pick<State, K>
+      | null,
+    callback?: (() => void) | undefined
+  ): void {
+    flushSync(() => {
+      super.setState(state, callback)
+    })
   }
 
   /**
