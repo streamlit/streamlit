@@ -20,7 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.toggle renders correctly."""
-    toggle_elements = themed_app.locator(".stCheckbox")
+    toggle_elements = themed_app.get_by_test_id("stCheckbox")
     expect(toggle_elements).to_have_count(8)
 
     for i, element in enumerate(toggle_elements.all()):
@@ -29,7 +29,7 @@ def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFu
 
 def test_toggle_initial_values(app: Page):
     """Test that st.toggle has the correct initial values."""
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
     expect(markdown_elements).to_have_count(9)
 
     expected = [
@@ -50,14 +50,14 @@ def test_toggle_initial_values(app: Page):
 
 def test_toggle_values_on_click(app: Page):
     """Test that st.toggle updates values correctly when user clicks."""
-    toggle_elements = app.locator(".stCheckbox")
+    toggle_elements = app.get_by_test_id("stCheckbox")
     expect(toggle_elements).to_have_count(8)
 
     for toggle_element in toggle_elements.all():
         toggle_element.click(delay=50)
         wait_for_app_run(app)
 
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
     expected = [
         "toggle 1 - value: False",
         "toggle 2 - value: True",
