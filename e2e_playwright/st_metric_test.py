@@ -39,14 +39,14 @@ def test_third_metric_in_first_row(app: Page):
 def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(0),
-        name="stMetric-green",
+        name="st_metric-green",
     )
 
 
 def test_red_down_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(2),
-        name="stMetric-red",
+        name="st_metric-red",
     )
 
 
@@ -55,7 +55,7 @@ def test_gray_down_arrow_render(
 ):
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(4),
-        name="stMetric-gray",
+        name="st_metric-gray",
     )
 
 
@@ -64,7 +64,7 @@ def test_help_shows_up_without_columns(
 ):
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(6),
-        name="metric-with-help",
+        name="st_metric-with_help",
     )
 
 
@@ -73,7 +73,7 @@ def test_none_results_in_dash_in_value(
 ):
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(7),
-        name="metric-with-none-value",
+        name="st_metric-with_none_value",
     )
 
 
@@ -83,7 +83,7 @@ def test_label_visibility_set_to_hidden(
     expect(themed_app.get_by_test_id("stMetricLabel").nth(3)).to_have_text("Test 4")
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(3),
-        name="metric-label-hidden",
+        name="st_metric-label_hidden",
     )
 
 
@@ -93,7 +93,7 @@ def test_label_visibility_set_to_collapse(
     expect(themed_app.get_by_test_id("stMetricLabel").nth(5)).to_have_text("Test 5")
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(5),
-        name="metric-label-collapse",
+        name="st_metric-label_collapse",
     )
 
 
@@ -102,5 +102,5 @@ def test_ellipses_and_help_shows_up_properly(
 ):
     assert_snapshot(
         themed_app.get_by_test_id("stMetric").nth(8),
-        name="metric-help-and-ellipses",
+        name="st_metric-help_and_ellipses",
     )
