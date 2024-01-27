@@ -153,18 +153,6 @@ def find_available_port(
     raise RuntimeError("Unable to find an available port.")
 
 
-# TODO(lukasmasuch): This was the previous method to rely on the OS to find a free port.
-# but when running the tests in parallel, it can happen that the OS assigns the same port
-# to multiple tests. This is why we now use the find_available_port method above.
-
-# def find_available_port(host: str = "localhost") -> int:
-#     """Find an available port on the given host."""
-#     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-#         s.bind((host, 0))  # 0 means that the OS chooses a random port
-#         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#         return int(s.getsockname()[1])  # [1] contains the randomly selected port number
-
-
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
     """Check if the app server is running."""
     try:
