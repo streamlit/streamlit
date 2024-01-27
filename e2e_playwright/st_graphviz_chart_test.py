@@ -68,7 +68,7 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     wait_until(app, lambda: svg_dimensions["width"] == 1256)
     wait_until(app, lambda: svg_dimensions["height"] == 662)
 
-    assert_snapshot(first_graph_svg, name="graphviz_fullscreen")
+    assert_snapshot(first_graph_svg, name="st_graphviz-fullscreen")
 
 
 def test_first_graph_after_exit_fullscreen(
@@ -86,7 +86,7 @@ def test_first_graph_after_exit_fullscreen(
     first_graph_svg = get_first_graph_svg(app)
     expect(first_graph_svg).to_have_attribute("width", "79pt")
     expect(first_graph_svg).to_have_attribute("height", "116pt")
-    assert_snapshot(first_graph_svg, name="graphviz_after_exit_fullscreen")
+    assert_snapshot(first_graph_svg, name="st_graphviz-after_exit_fullscreen")
 
 
 def test_renders_with_specified_engines(
@@ -117,5 +117,5 @@ def test_dot_string(app: Page, assert_snapshot: ImageCompareFunction):
 
     assert_snapshot(
         app.get_by_test_id("stGraphVizChart").nth(5).locator("svg"),
-        name="st_graphviz_chart_dot_string",
+        name="st_graphviz-chart_dot_string",
     )
