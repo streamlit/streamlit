@@ -22,15 +22,15 @@ EXPANDER_HEADER_IDENTIFIER = "summary"
 def test_displays_expander_and_regular_containers_properly(app: Page):
     """Test that expanders and regular containers are displayed properly."""
 
-    main_expanders = app.locator(".main [data-testid='stExpander']")
+    main_expanders = app.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(5)
 
     for expander in main_expanders.all():
         expect(expander.locator(EXPANDER_HEADER_IDENTIFIER)).to_be_visible()
 
-    sidebar_expander = app.locator(
-        "[data-testid='stSidebar'] [data-testid='stExpander']"
-    ).first
+    sidebar_expander = (
+        app.get_by_test_id("stSidebar").get_by_test_id("stExpander").first
+    )
     expect(sidebar_expander.locator(EXPANDER_HEADER_IDENTIFIER)).to_be_visible()
 
 
@@ -39,10 +39,10 @@ def test_expander_displays_correctly(
 ):
     """Test that sidebar and main container expanders are displayed correctly."""
     # Focus the button, then ensure it's not cut off
-    themed_app.locator(".stButton button").first.focus()
+    themed_app.get_by_test_id("stButton").first.locator("button").focus()
     assert_snapshot(themed_app.locator(".main"), name="expanders-in-main")
     assert_snapshot(
-        themed_app.locator("[data-testid='stSidebar']"),
+        themed_app.get_by_test_id("stSidebar"),
         name="expanders-in-sidebar",
     )
 
@@ -53,19 +53,19 @@ def test_expander_long_displays_correctly(
     """Test that long expanders are displayed correctly."""
     assert_snapshot(
         # expander_long
-        themed_app.locator(".main [data-testid='stExpander']").nth(3),
+        themed_app.get_by_test_id("stExpander").nth(3),
         name="stExpander-long-expanded",
     )
     assert_snapshot(
         # collapsed_long
-        themed_app.locator(".main [data-testid='stExpander']").nth(4),
+        themed_app.get_by_test_id("stExpander").nth(4),
         name="stExpander-long-collapsed",
     )
 
 
 def test_expander_collapses_and_expands(app: Page):
     """Test that an expander collapses and expands."""
-    main_expanders = app.locator(".main [data-testid='stExpander']")
+    main_expanders = app.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(5)
 
     expanders = main_expanders.all()
@@ -95,11 +95,11 @@ def test_empty_expander_not_rendered(app: Page):
 
 def test_expander_session_state_set(app: Page):
     """Test that session state updates are propagated to expander content"""
-    main_expanders = app.locator(".main [data-testid='stExpander']")
+    main_expanders = app.get_by_test_id("stExpander")
     expect(main_expanders).to_have_count(5)
 
     # Show the Number Input
-    num_input = main_expanders.nth(2).locator(".stNumberInput input")
+    num_input = main_expanders.nth(2).get_by_test_id("stNumberInput").locator("input")
     num_input.fill("10")
     num_input.press("Enter")
 
@@ -112,13 +112,8 @@ def test_expander_session_state_set(app: Page):
     app.get_by_text("Print State Value").click()
     wait_for_app_run(app)
 
-    text_elements = app.locator("[data-testid='stText']")
+    text_elements = app.get_by_test_id("stText")
     expect(text_elements).to_have_count(2)
-    text_elements = text_elements.all_inner_texts()
-    texts = [text.strip() for text in text_elements]
 
-    expected = [
-        "0.0",
-        "0.0",
-    ]
-    assert texts == expected
+    expect(text_elements.nth(0)).to_have_text("0.0", use_inner_text=True)
+    expect(text_elements.nth(1)).to_have_text("0.0", use_inner_text=True)
