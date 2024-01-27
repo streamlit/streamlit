@@ -354,7 +354,6 @@ def assert_snapshot(
     """Fixture that compares a screenshot with screenshot from a past run."""
     root_path = Path(os.getcwd()).resolve()
     platform = str(sys.platform)
-    # TODO(lukasmasuch): Is there a better way to get the module name?
     module_name = request.module.__name__.split(".")[-1]
     test_function_name = request.node.originalname
 
