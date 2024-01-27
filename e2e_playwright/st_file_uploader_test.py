@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
 
 
 def test_file_uploader_render_correctly(
@@ -119,8 +119,7 @@ def test_uploads_and_deletes_single_file_only(
         files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
     )
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     expect(app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
@@ -134,10 +133,7 @@ def test_uploads_and_deletes_single_file_only(
         app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
     ).to_have_text("True", use_inner_text=True)
 
-    app.get_by_test_id("stHeader").press("r")
-
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    rerun_app(app)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content2), use_inner_text=True
@@ -145,8 +141,7 @@ def test_uploads_and_deletes_single_file_only(
 
     app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
@@ -176,8 +171,7 @@ def test_uploads_and_deletes_multiple_files(
     file_chooser = fc_info.value
     file_chooser.set_files(files=files)
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     uploaded_file_names = app.locator(".uploadedFileName")
 
@@ -206,8 +200,7 @@ def test_uploads_and_deletes_multiple_files(
     #  most recently uploaded. The first file should still exist.
     app.get_by_test_id("fileDeleteBtn").first.click()
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
@@ -247,17 +240,13 @@ def test_does_not_call_callback_when_not_changed(app: Page):
         ]
     )
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     # Make sure callback called
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "1", use_inner_text=True
     )
-    app.get_by_test_id("stHeader").press("r")
-
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    rerun_app(app)
 
     # Counter should be still equal 1
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
