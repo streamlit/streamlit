@@ -192,7 +192,7 @@ class WriteMixin:
         stream = stream() if inspect.isgeneratorfunction(stream) else stream
 
         try:
-            iter(stream)
+            iter(stream)  # type: ignore
         except TypeError as exc:
             raise StreamlitAPIException(
                 f"The provided input (type: {type(stream)}) cannot be iterated. "
@@ -202,12 +202,18 @@ class WriteMixin:
         # Iterate through the generator and write each chunk to the app
         # with a type writer effect.
         for chunk in stream:  # type: ignore
+            print(type(chunk))
             if type_util.is_type(
                 chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
             ):
                 # Try to convert openai chat completion chunk to a string:
                 with contextlib.suppress(Exception):
                     chunk = chunk.choices[0].delta.content or ""
+
+            if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
+                # Try to convert langchain_core message chunk to a string:
+                with contextlib.suppress(Exception):
+                    chunk = chunk.content or ""
 
             if isinstance(chunk, str):
                 first_text = False
