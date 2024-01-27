@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def get_first_graph_svg(app: Page):
-    return app.locator(".stGraphVizChart > svg").nth(0)
+    return app.get_by_test_id("stGraphVizChart").nth(0).locator("svg")
 
 
 def click_fullscreen(app: Page):
@@ -55,7 +55,7 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     """Test if the first graph shows in fullscreen."""
 
     # Hover over the parent div
-    app.locator(".stGraphVizChart").nth(0).hover()
+    app.get_by_test_id("stGraphVizChart").nth(0).hover()
 
     # Enter fullscreen
     click_fullscreen(app)
@@ -64,7 +64,6 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     # The width and height unset on the element on fullscreen
     expect(first_graph_svg).not_to_have_attribute("width", "79pt")
     expect(first_graph_svg).not_to_have_attribute("height", "116pt")
-
     svg_dimensions = first_graph_svg.bounding_box()
     assert svg_dimensions["width"] == 1256
     assert svg_dimensions["height"] == 662
@@ -77,7 +76,7 @@ def test_first_graph_after_exit_fullscreen(
     """Test if the first graph has correct size after exiting fullscreen."""
 
     # Hover over the parent div
-    app.locator(".stGraphVizChart").nth(0).hover()
+    app.get_by_test_id("stGraphVizChart").nth(0).hover()
 
     # Enter and exit fullscreen
     click_fullscreen(app)
@@ -104,7 +103,7 @@ def test_renders_with_specified_engines(
         expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(engine)
 
         assert_snapshot(
-            app.locator(".stGraphVizChart > svg").nth(2),
+            app.get_by_test_id("stGraphVizChart").nth(2).locator("svg"),
             name=f"st_graphviz_chart_engine-{engine}",
         )
 
@@ -116,6 +115,6 @@ def test_dot_string(app: Page, assert_snapshot: ImageCompareFunction):
     expect(title).to_have_text("Dot")
 
     assert_snapshot(
-        app.locator(".stGraphVizChart > svg").nth(5),
+        app.get_by_test_id("stGraphVizChart").nth(5).locator("svg"),
         name="st_graphviz_chart_dot_string",
     )
