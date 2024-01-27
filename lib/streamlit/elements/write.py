@@ -202,7 +202,6 @@ class WriteMixin:
         # Iterate through the generator and write each chunk to the app
         # with a type writer effect.
         for chunk in stream:  # type: ignore
-            print(type(chunk))
             if type_util.is_type(
                 chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
             ):
