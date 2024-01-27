@@ -163,6 +163,7 @@ class RunWarningTest(unittest.TestCase):
                 "video",
                 "warning",
                 "write",
+                "write_stream",
             },
         )
 

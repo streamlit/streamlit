@@ -12,11 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import contextlib
 import dataclasses
 import inspect
 import json as json
 import types
-from typing import TYPE_CHECKING, Any, List, Tuple, Type, cast
+from io import StringIO
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generator,
+    Iterable,
+    List,
+    Tuple,
+    Type,
+    cast,
+)
 
 import numpy as np
 from typing_extensions import Final
@@ -44,8 +58,186 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
 
 _LOGGER = get_logger(__name__)
 
+_TEXT_CURSOR = "▕"
+
+
+class StreamingOutput(List[Any]):
+    pass
+
 
 class WriteMixin:
+    @gather_metrics("write_stream")
+    def write_stream(
+        self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
+    ) -> List[Any] | str:
+        """Stream a generator, iterable, or stream-like sequence to the app.
+
+        This is done by iterating through the sequences and writing all
+        chunks to the app. String chunks will be written using a typewriter effect.
+        Other data types will be written using ``st.write``.
+
+        Parameters
+        ----------
+        arg : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
+            The generator or iterable to stream.
+
+        Returns
+        -------
+        str or list.
+            The full response as a string if the streamed output only contains text or
+            a list of all the streamed objects otherwise. The return value is fully compatible
+            as input for ``st.write``.
+
+
+        Example
+        -------
+
+        You can pass a generator function as input:
+
+        >>> import time
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> import streamlit as st
+        >>>
+        >>> _LOREM_IPSUM = \"\"\"
+        >>> Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+        >>> labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
+        >>> laboris nisi ut aliquip ex ea commodo consequat.
+        >>> \"\"\"
+        >>>
+        >>>
+        >>> def stream_data():
+        >>>     for word in _LOREM_IPSUM.split():
+        >>>         yield word + " "
+        >>>         time.sleep(0.02)
+        >>>
+        >>>     yield pd.DataFrame(
+        >>>         np.random.randn(5, 10),
+        >>>         columns=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
+        >>>     )
+        >>>
+        >>>     for word in _LOREM_IPSUM.split():
+        >>>         yield word + " "
+        >>>         time.sleep(0.02)
+        >>>
+        >>>
+        >>> if st.button("Stream data"):
+        >>>     st.write_stream(stream_data)
+
+        ..  output::
+            https://doc-write-stream-data.streamlit.app/
+            height: 350px
+
+        Or an OpenAI stream:
+
+        >>> from openai import OpenAI
+        >>> import streamlit as st
+        >>>
+        >>> client = OpenAI(api_key=st.secrets["openai_api_key"])
+        >>>
+        >>> if "messages" not in st.session_state:
+        >>>     st.session_state.messages = []
+        >>>
+        >>> for message in st.session_state.messages:
+        >>>     st.chat_message(message["role"]).write(message["content"])
+        >>>
+        >>> if prompt := st.chat_input("What is up?"):
+        >>>     st.chat_message("user").write(prompt)
+        >>>     st.session_state.messages.append({"role": "user", "content": prompt})
+        >>>
+        >>>     with st.chat_message("assistant"):
+        >>>         response = st.write_stream(
+        >>>             client.chat.completions.create(
+        >>>                 model="gpt-3.5-turbo",
+        >>>                 messages=st.session_state.messages,
+        >>>                 stream=True,
+        >>>             )
+        >>>         )
+        >>>        st.session_state.messages.append({"role": "assistant", "content": response})
+
+        ..  output::
+            https://doc-write-stream-openai.streamlit.app/
+            height: 400px
+
+        """
+
+        # Just apply some basic checks for common iterable types that should
+        # not be passed in here.
+        if isinstance(stream, str) or type_util.is_dataframe_like(stream):
+            raise StreamlitAPIException(
+                "`st.stream_write` expects a generator or stream-like object as input "
+                f"not {type(stream)}. Please use `st.write` instead for "
+                "this data type."
+            )
+
+        stream_container: DeltaGenerator | None = None
+        streamed_response: str = ""
+        written_content: List[Any] = StreamingOutput()
+
+        def flush_stream_response():
+            """Write the full response to the app."""
+            nonlocal streamed_response
+            nonlocal stream_container
+
+            if streamed_response and stream_container:
+                # Replace the stream_container element the full response
+                stream_container.write(streamed_response)
+                written_content.append(streamed_response)
+                stream_container = None
+                streamed_response = ""
+
+        # Make sure we have a generator and not just a generator function.
+        stream = stream() if inspect.isgeneratorfunction(stream) else stream
+
+        try:
+            iter(stream)  # type: ignore
+        except TypeError as exc:
+            raise StreamlitAPIException(
+                f"The provided input (type: {type(stream)}) cannot be iterated. "
+                "Please make sure that it is a generator, generator function or iterable."
+            ) from exc
+
+        # Iterate through the generator and write each chunk to the app
+        # with a type writer effect.
+        for chunk in stream:  # type: ignore
+            if type_util.is_type(
+                chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
+            ):
+                # Try to convert openai chat completion chunk to a string:
+                with contextlib.suppress(Exception):
+                    chunk = chunk.choices[0].delta.content or ""
+
+            if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
+                # Try to convert langchain_core message chunk to a string:
+                with contextlib.suppress(Exception):
+                    chunk = chunk.content or ""
+
+            if isinstance(chunk, str):
+                first_text = False
+                if not stream_container:
+                    stream_container = self.dg.empty()
+                    first_text = True
+                streamed_response += chunk
+                # Only add the streaming symbol on the second text chunk
+                stream_container.write(
+                    streamed_response + ("" if first_text else _TEXT_CURSOR),
+                )
+            elif callable(chunk):
+                flush_stream_response()
+                chunk()
+            else:
+                flush_stream_response()
+                self.write(chunk)
+                written_content.append(chunk)
+
+        flush_stream_response()
+
+        # If the output only contains a single string, return it as a string
+        if len(written_content) == 1 and isinstance(written_content[0], str):
+            return written_content[0]
+        # Otherwise return it as a list
+        return written_content
+
     @gather_metrics("write")
     def write(self, *args: Any, unsafe_allow_html: bool = False, **kwargs) -> None:
         """Write arguments to the app.
@@ -65,24 +257,26 @@ class WriteMixin:
 
             Arguments are handled as follows:
 
-            - write(string)     : Prints the formatted Markdown string, with
+            - write(string)         : Prints the formatted Markdown string, with
                 support for LaTeX expression, emoji shortcodes, and colored text.
                 See docs for st.markdown for more.
-            - write(data_frame) : Displays the DataFrame as a table.
-            - write(error)      : Prints an exception specially.
-            - write(func)       : Displays information about a function.
-            - write(module)     : Displays information about the module.
-            - write(class)      : Displays information about a class.
-            - write(dict)       : Displays dict in an interactive widget.
-            - write(mpl_fig)    : Displays a Matplotlib figure.
-            - write(altair)     : Displays an Altair chart.
-            - write(keras)      : Displays a Keras model.
-            - write(graphviz)   : Displays a Graphviz graph.
-            - write(plotly_fig) : Displays a Plotly figure.
-            - write(bokeh_fig)  : Displays a Bokeh figure.
-            - write(sympy_expr) : Prints SymPy expression using LaTeX.
-            - write(htmlable)   : Prints _repr_html_() for the object if available.
-            - write(obj)        : Prints str(obj) if otherwise unknown.
+            - write(data_frame)     : Displays the DataFrame as a table.
+            - write(error)          : Prints an exception specially.
+            - write(func)           : Displays information about a function.
+            - write(module)         : Displays information about the module.
+            - write(class)          : Displays information about a class.
+            - write(dict)           : Displays dict in an interactive widget.
+            - write(mpl_fig)        : Displays a Matplotlib figure.
+            - write(generator)      : Streams the output of a generator.
+            - write(openai.Stream)  : Streams the output of an OpenAI stream.
+            - write(altair)         : Displays an Altair chart.
+            - write(keras)          : Displays a Keras model.
+            - write(graphviz)       : Displays a Graphviz graph.
+            - write(plotly_fig)     : Displays a Plotly figure.
+            - write(bokeh_fig)      : Displays a Bokeh figure.
+            - write(sympy_expr)     : Prints SymPy expression using LaTeX.
+            - write(htmlable)       : Prints _repr_html_() for the object if available.
+            - write(obj)            : Prints str(obj) if otherwise unknown.
 
         unsafe_allow_html : bool
             This is a keyword-only argument that defaults to False.
@@ -182,8 +376,12 @@ class WriteMixin:
 
         def flush_buffer():
             if string_buffer:
-                self.dg.markdown(
-                    " ".join(string_buffer),
+                text_content = " ".join(string_buffer)
+                # The usage of empty here prevents
+                # some grey out effects:
+                text_container = self.dg.empty()
+                text_container.markdown(
+                    text_content,
                     unsafe_allow_html=unsafe_allow_html,
                 )
                 string_buffer[:] = []
@@ -192,6 +390,14 @@ class WriteMixin:
             # Order matters!
             if isinstance(arg, str):
                 string_buffer.append(arg)
+            elif isinstance(arg, StreamingOutput):
+                flush_buffer()
+                for item in arg:
+                    if callable(item):
+                        flush_buffer()
+                        item()
+                    else:
+                        self.write(item, unsafe_allow_html=unsafe_allow_html)
             elif type_util.is_snowpark_or_pyspark_data_object(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
@@ -204,12 +410,6 @@ class WriteMixin:
             elif isinstance(arg, Exception):
                 flush_buffer()
                 self.dg.exception(arg)
-            elif isinstance(arg, HELP_TYPES):
-                flush_buffer()
-                self.dg.help(arg)
-            elif dataclasses.is_dataclass(arg):
-                flush_buffer()
-                self.dg.help(arg)
             elif type_util.is_altair_chart(arg):
                 flush_buffer()
                 self.dg.altair_chart(arg)
@@ -245,6 +445,22 @@ class WriteMixin:
             elif type_util.is_pydeck(arg):
                 flush_buffer()
                 self.dg.pydeck_chart(arg)
+            elif isinstance(arg, StringIO):
+                flush_buffer()
+                self.dg.markdown(arg.getvalue())
+            elif (
+                inspect.isgenerator(arg)
+                or inspect.isgeneratorfunction(arg)
+                or type_util.is_type(arg, "openai.Stream")
+            ):
+                flush_buffer()
+                self.write_stream(arg)
+            elif isinstance(arg, HELP_TYPES):
+                flush_buffer()
+                self.dg.help(arg)
+            elif dataclasses.is_dataclass(arg):
+                flush_buffer()
+                self.dg.help(arg)
             elif inspect.isclass(arg):
                 flush_buffer()
                 # We cast arg to type here to appease mypy, due to bug in mypy:

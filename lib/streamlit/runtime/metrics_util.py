@@ -88,6 +88,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "xarray",
     "ray",
     # ML & LLM Tools:
+    "mistralai",
     "openai",
     "langchain",
     "llama_index",

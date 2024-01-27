@@ -183,6 +183,7 @@ vega_lite_chart = _main.vega_lite_chart
 video = _main.video
 warning = _main.warning
 write = _main.write
+write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
 
