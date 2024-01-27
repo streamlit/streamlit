@@ -18,8 +18,8 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_that_no_new_elements_are_created(themed_app: Page):
-    expect(themed_app.get_by_test_id("stTable")).to_be_visible()
-    expect(themed_app.get_by_test_id("stDataFrame")).to_be_visible()
+    expect(themed_app.get_by_test_id("stTable")).to_have_count(1)
+    expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     expect(themed_app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(6)
 
 
@@ -38,10 +38,10 @@ def test_correctly_adds_rows_to_charts(
 
 
 def test_correctly_adds_rows_to_dataframe(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
-    dataframe = themed_app.locator(".element-container .stDataFrame")
-    assert_snapshot(dataframe, name=f"st_dataFrame-added_rows")
+    dataframe = app.get_by_test_id("stDataFrame")
+    assert_snapshot(dataframe, name=f"st_dataframe-added_rows")
 
 
 def test_raises_an_exception_when_shapes_dont_match(themed_app: Page):
