@@ -448,6 +448,15 @@ class StreamlitStreamTest(unittest.TestCase):
         stream_return = st.write_stream(test_stream())
         self.assertEqual(stream_return, "Hello World")
 
+    def test_with_wrong_input(self):
+        """Test st.write_stream with string or dataframe input generates exception."""
+
+        with self.assertRaises(StreamlitAPIException):
+            st.write_stream("Hello World")
+
+        with self.assertRaises(StreamlitAPIException):
+            st.write_stream(pd.DataFrame([[1, 2], [3, 4]]))
+
     def test_with_generator_misc(self):
         """Test st.write_stream with generator with different content."""
 
