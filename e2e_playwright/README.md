@@ -1,8 +1,8 @@
-# Playwright E2E Tests
+# Playwright e2e Tests
 
 As we transition from Cypress to Playwright for end-to-end (e2e) testing, this guide will help you understand the structure and execution of Playwright tests. All Playwright tests are stored in the `e2e_playwright` directory. Each test includes a corresponding Streamlit app script (for instance, `st_dataframe.py`) and a Playwright Pytest file (like `st_dataframe_test.py`). During the test run, the Pytest file will execute the Streamlit script automatically. All the `_test` files are executed automatically in our CI pipeline on every Pull Request (PR).
 
-## Running Tests Locally
+## Running test locally
 
 To execute all e2e tests locally, use the following command:
 
@@ -15,7 +15,7 @@ make playwright
 
 This command runs all tests in the `e2e_playwright` directory concurrently. Screenshot tests will only operate against your local operating system version, typically found in the `e2e_playwright/__snapshots__/darwin/` folder. This is because our CI pipeline runs on Ubuntu, which may generate slightly different snapshots. To update screenshots locally, simply delete outdated snapshots in `e2e_playwright/__snapshots__/darwin/` and run `make playwright` once. The initial run may fail due to the absence of screenshots.
 
-## Executing a Single Test Locally
+## Executing a single test locally
 
 Before running a single test, ensure you have executed `make playwright` at least once and installed all necessary test dependencies. Follow the commands below to run an individual test:
 
@@ -27,7 +27,7 @@ pytest name_of_the_test.py -s
 > **Note**:
 > If you have implemented changes in the frontend, you might also need to run `make frontend-fast` before running an e2e test. Otherwise, it might use old frontend assets.
 
-## Debugging Tests
+## Debugging tests
 
 You can record traces and videos upon failures via:
 
@@ -43,11 +43,11 @@ cd e2e_playwright
 PWDEBUG=1 pytest name_of_the_test.py -s
 ```
 
-## Accessing Local Test Results
+## Accessing local test results
 
 All screenshots are stored in a test-specific folder under `e2e_playwright/__snapshots__/<os>/`. Any missing screenshots will be generated in this location. For any failed e2e tests, additional resources such as videos, differential screenshots, and traces will be stored in `e2e_playwright/test_results/`. The `snapshot_updates` folder contains all screenshots updated during the test run.
 
-## Accessing GitHub Test Results
+## Accessing GitHub test results
 
 Upon completion of every [Playwright E2E Tests workflow](https://github.com/streamlit/streamlit/actions/workflows/playwright.yml), test results will be uploaded and can be accessed from the Artifacts section of the workflow run summary.
 
@@ -55,7 +55,7 @@ Upon completion of every [Playwright E2E Tests workflow](https://github.com/stre
 
 The `playwright_test_results` folder, uploaded only when tests fail, contains data such as videos, differential screenshots as well as all updated screenshots within the `snapshot_updates` folder.
 
-## Updating Screenshots
+## Updating screenshots
 
 To update screenshots, delete all outdated screenshots locally and push the changes to your PR. After the CI workflow completes, you can obtain all updated screenshots from the uploaded workflow artifacts. If the updated screenshots are as expected, push them back to your branch.
 
