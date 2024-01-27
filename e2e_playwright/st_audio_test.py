@@ -19,4 +19,4 @@ def test_audio_has_correct_properties(app: Page):
     audio = app.get_by_test_id("stAudio")
     expect(audio).to_be_visible()
     expect(audio).to_have_attribute("controls", "")
-    expect(audio).to_have_attribute("src")
+    expect(audio).to_have_attribute("src", "https://www.w3schools.com/html/horse.ogg")
