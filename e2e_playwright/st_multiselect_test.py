@@ -72,24 +72,9 @@ def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
     text_elements = app.get_by_test_id("stText")
     expect(text_elements).to_have_count(12)
-    text_elements = text_elements.all_inner_texts()
-    texts = [text.strip() for text in text_elements]
 
-    expected = [
-        "value 1: []",
-        "value 2: []",
-        "value 3: []",
-        "value 4: ['tea', 'water']",
-        "value 5: []",
-        "value 6: []",
-        "value 7: []",
-        "value 8: []",
-        "value 9: []",
-        "value 10: []",
-        "value 11: []",
-        "multiselect changed: False",
-    ]
-    assert texts == expected
+    for text_element, expected_text in zip(text_elements.all(), expected):
+        expect(text_element).to_have_text(expected_text, use_inner_text=True)
 
 
 def test_multiselect_clear_all(app: Page):
@@ -105,8 +90,9 @@ def test_multiselect_show_values_in_dropdown(
     """Screenshot test to check that values are shown in dropdown."""
     multiselect_elem = app.get_by_test_id("stMultiSelect").nth(0)
     multiselect_elem.locator("input").click()
+    wait_for_app_run(app)
     dropdown_elems = app.locator("li").all()
-    assert len(dropdown_elems) == 2
+    expect(dropdown_elems).to_have_count(2)
     for idx, el in enumerate(dropdown_elems):
         assert_snapshot(el, name="multiselect-dropdown-" + str(idx))
 
@@ -117,6 +103,7 @@ def test_multiselect_long_values_in_dropdown(
     """Should show long values correctly (with ellipses) in the dropdown menu."""
     multiselect_elem = app.get_by_test_id("stMultiSelect").nth(4)
     multiselect_elem.locator("input").click()
+    wait_for_app_run(app)
     dropdown_elems = app.locator("li").all()
     for idx, el in enumerate(dropdown_elems):
         assert_snapshot(el, name="multiselect-dropdown-long-label-" + str(idx))
