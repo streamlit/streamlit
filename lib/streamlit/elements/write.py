@@ -163,6 +163,15 @@ class WriteMixin:
 
         """
 
+        # Just apply some basic checks for common iterable types that should
+        # not be passed in here.
+        if isinstance(stream, str) or type_util.is_dataframe_like(stream):
+            raise StreamlitAPIException(
+                "`st.stream_write` expects a generator or stream-like object as input "
+                f"not {type(stream)}. Please use `st.write` instead for "
+                "this data type."
+            )
+
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
         written_content: List[Any] = StreamingOutput()
