@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, rerun_app
 
 
 def test_renders_chat_messages_correctly_1(
