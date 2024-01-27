@@ -41,6 +41,3 @@ services:
 
 volumes:
   hard_source_webpack_plugin_cache:
-# TODO
-# multi stage builds
-# update image and container names
