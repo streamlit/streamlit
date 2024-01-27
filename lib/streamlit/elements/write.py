@@ -73,25 +73,12 @@ class WriteMixin:
         """Stream a generator or iterable to the app.
 
         This is done by iterating through the generator and writing all
-        chunks to the app. String chunks will be written using a type writer effect.
+        chunks to the app. String chunks will be written using a typewriter effect.
 
         Parameters
         ----------
         arg : Callable, Generator, Iterable or OpenAI Stream
             The generator or iterable to stream.
-
-        unsafe_allow_html : bool
-            This is a keyword-only argument that defaults to False.
-
-            By default, any HTML tags found in strings will be escaped and
-            therefore treated as pure text. This behavior may be turned off by
-            setting this argument to True.
-
-            That said, *we strongly advise against it*. It is hard to write secure
-            HTML, so by using this argument you may be compromising your users'
-            security. For more information, see:
-
-            https://github.com/streamlit/streamlit/issues/152
 
         Returns
         -------
@@ -137,8 +124,8 @@ class WriteMixin:
         >>>     st.write_stream(stream_data)
 
         ..  output::
-            https://doc-stream-data.streamlit.app/
-            height: 300px
+            https://doc-write-stream-data.streamlit.app/
+            height: 350px
 
         Or an OpenAI stream:
 
@@ -171,7 +158,7 @@ class WriteMixin:
         >>>        st.session_state.messages.append({"role": "assistant", "content": response})
 
         ..  output::
-            https://doc-stream-openai.streamlit.app/
+            https://doc-write-stream-openai.streamlit.app/
             height: 400px
 
         """
@@ -455,7 +442,7 @@ class WriteMixin:
                 or type_util.is_type(arg, "openai.Stream")
             ):
                 flush_buffer()
-                self.write_stream(arg, unsafe_allow_html=unsafe_allow_html)
+                self.write_stream(arg)
             elif isinstance(arg, HELP_TYPES):
                 flush_buffer()
                 self.dg.help(arg)
