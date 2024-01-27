@@ -19,5 +19,4 @@ def test_audio_has_correct_properties(app: Page):
     audio = app.get_by_test_id("stAudio")
     expect(audio).to_be_visible()
     expect(audio).to_have_attribute("controls", "")
-    # the src attribute will change based off of machine so do a non None check
-    assert audio.get_attribute("src") != None
+    expect(audio).to_have_attribute("src")
