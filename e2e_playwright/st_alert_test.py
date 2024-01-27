@@ -51,3 +51,12 @@ def test_alert_displays_a_success_message(
     expect(alert_elements.nth(3)).to_have_text("This is a success message")
 
     assert_snapshot(alert_elements.nth(3), name="st_alert_success")
+
+
+def test_alerts_render_markdown(app: Page, assert_snapshot: ImageCompareFunction):
+    alert_elements = app.get_by_test_id("stAlert")
+
+    assert_snapshot(alert_elements.nth(4), name="st_alert-info_markdown")
+    assert_snapshot(alert_elements.nth(5), name="st_alert-success_markdown")
+    assert_snapshot(alert_elements.nth(6), name="st_alert-warning_markdown")
+    assert_snapshot(alert_elements.nth(7), name="st_alert-error_markdown")
