@@ -14,15 +14,19 @@
 
 from playwright.sync_api import Page, expect
 
+from conftest import wait_for_app_run
+
 
 def test_expandable_state(app: Page):
     """Test whether expander state is not retained for a distinct expander."""
     app.get_by_test_id("stButton").nth(0).locator("button").click()
+    wait_for_app_run(app, wait_delay=500)
     app.get_by_test_id("stExpander").locator("summary").click()
 
     expect(app.get_by_test_id("stExpanderDetails")).to_contain_text("b0_write")
 
     app.get_by_test_id("stButton").nth(1).locator("button").click()
+    wait_for_app_run(app, wait_delay=500)
 
     expect(app.get_by_test_id("stExpanderDetails")).not_to_contain_text("b0_write")
     expect(app.get_by_test_id("stExpanderDetails")).to_be_hidden()
