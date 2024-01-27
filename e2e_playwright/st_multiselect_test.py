@@ -70,7 +70,7 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
 
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
-    text_elements = app.locator("[data-testid='stText']")
+    text_elements = app.get_by_test_id("stText")
     expect(text_elements).to_have_count(12)
     text_elements = text_elements.all_inner_texts()
     texts = [text.strip() for text in text_elements]
@@ -96,7 +96,7 @@ def test_multiselect_clear_all(app: Page):
     """Should clear all options when clicking clear all."""
     select_for_kth_multiselect(app, "Female", 1, True)
     app.locator('.stMultiSelect [role="button"][aria-label="Clear all"]').first.click()
-    expect(app.locator("[data-testid='stText']").nth(1)).to_have_text("value 2: []")
+    expect(app.get_by_test_id("stText").nth(1)).to_have_text("value 2: []")
 
 
 def test_multiselect_show_values_in_dropdown(
@@ -126,10 +126,8 @@ def test_multiselect_register_callback(app: Page):
     """Should call the callback when an option is selected."""
     app.locator(".stMultiSelect").nth(10).locator("input").click()
     app.locator("li").first.click()
-    expect(app.locator("[data-testid='stText']").nth(10)).to_have_text(
-        "value 11: ['male']"
-    )
-    expect(app.locator("[data-testid='stText']").nth(11)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(10)).to_have_text("value 11: ['male']")
+    expect(app.get_by_test_id("stText").nth(11)).to_have_text(
         "multiselect changed: True"
     )
 
@@ -183,7 +181,7 @@ def test_multiselect_single_selection(app: Page, assert_snapshot: ImageCompareFu
         "Female", use_inner_text=True
     )
     assert_snapshot(app.locator(".stMultiSelect").nth(1), name="multiselect-selection")
-    expect(app.locator("[data-testid='stText']").nth(1)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(1)).to_have_text(
         "value 2: ['female']", use_inner_text=True
     )
 
@@ -193,9 +191,7 @@ def test_multiselect_deselect_option(app: Page):
     select_for_kth_multiselect(app, "Female", 1, True)
     select_for_kth_multiselect(app, "Male", 1, True)
     del_from_kth_multiselect(app, "Female", 1)
-    expect(app.locator("[data-testid='stText']").nth(1)).to_have_text(
-        "value 2: ['male']"
-    )
+    expect(app.get_by_test_id("stText").nth(1)).to_have_text("value 2: ['male']")
 
 
 def test_multiselect_option_over_max_selections(app: Page):
@@ -210,6 +206,6 @@ def test_multiselect_double_selection(app: Page):
     """Should allow multiple selections."""
     select_for_kth_multiselect(app, "Female", 1, True)
     select_for_kth_multiselect(app, "Male", 1, True)
-    expect(app.locator("[data-testid='stText']").nth(1)).to_have_text(
+    expect(app.get_by_test_id("stText").nth(1)).to_have_text(
         "value 2: ['female', 'male']"
     )
