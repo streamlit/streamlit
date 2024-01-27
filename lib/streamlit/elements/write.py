@@ -70,20 +70,21 @@ class WriteMixin:
     def write_stream(
         self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
     ) -> List[Any] | str:
-        """Stream a generator or iterable to the app.
+        """Stream a generator, iterable, or stream-like sequence to the app.
 
-        This is done by iterating through the generator and writing all
+        This is done by iterating through the sequences and writing all
         chunks to the app. String chunks will be written using a typewriter effect.
+        Other data types will be written using ``st.write``.
 
         Parameters
         ----------
-        arg : Callable, Generator, Iterable or OpenAI Stream
+        arg : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
             The generator or iterable to stream.
 
         Returns
         -------
         str or list.
-            The full response as a string if the streamed output only contains a text or
+            The full response as a string if the streamed output only contains text or
             a list of all the streamed objects otherwise. The return value is fully compatible
             as input for ``st.write``.
 
