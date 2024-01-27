@@ -68,6 +68,7 @@ The following **utility methods** are available within `conftest.py`:
 | `wait_for_app_run(app: Page)` | Wait for an app run to finish. |
 | `wait_for_app_loaded(app: Page)` | Wait for the app to fully load during its first execution. |
 | `rerun_app(app: Page)` | Triggers an app rerun and waits for the run to be finished. |
+| `wait_until(app: Page, fn: callable)` | Run a test function in a loop until it evaluates to `True` or times out. |
 
 The following pytest **fixtures** are available within `conftest.py`:
 
@@ -82,7 +83,7 @@ The following pytest **fixtures** are available within `conftest.py`:
 
 1. Leverage the [**`expect`** method](https://playwright.dev/python/docs/test-assertions) for assertions wherever possible. **`assert`** is **evil** 😈 (causes flakiness), please don't use it!
 2. Use [**`get_by_test_id`**](https://playwright.dev/python/docs/api/class-page#page-get-by-test-id) to locate elements wherever possible. Use `.locator` only for aspects that are not accessible via a test-id!
-3. Don't use `assert`!
+3. Don't use `assert`! But `expect` doesn't work with my case? Use the `wait_until` utility method instead.
 
 ## Other Tips & Tricks
 

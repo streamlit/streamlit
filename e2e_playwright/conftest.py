@@ -545,3 +545,57 @@ def rerun_app(page: Page):
     # Press "r" to rerun the app:
     page.keyboard.press("r")
     wait_for_app_run(page)
+
+
+def wait_until(page: Page, fn: callable, timeout: int = 5000, interval: int = 100):
+    """Run a test function in a loop until it evaluates to True
+    or times out.
+
+    For example:
+
+    >>> wait_until(lambda: x.values() == ['x'], page)
+
+    Parameters
+    ----------
+    page : playwright.sync_api.Page
+        Playwright page
+    fn : callable
+        Callback
+    timeout : int, optional
+        Total timeout in milliseconds, by default 5000
+    interval : int, optional
+        Waiting interval, by default 100
+
+    Adapted from panel.
+    """
+    # Hide this function traceback from the pytest output if the test fails
+    __tracebackhide__ = True
+
+    start = time.time()
+
+    def timed_out():
+        elapsed = time.time() - start
+        elapsed_ms = elapsed * 1000
+        return elapsed_ms > timeout
+
+    timeout_msg = f"wait_until timed out in {timeout} milliseconds"
+
+    while True:
+        try:
+            result = fn()
+        except AssertionError as e:
+            if timed_out():
+                raise TimeoutError(timeout_msg) from e
+        else:
+            if result not in (None, True, False):
+                raise ValueError(
+                    "`wait_until` callback must return None, True or "
+                    f"False, returned {result!r}"
+                )
+            # Stop is result is True or None
+            # None is returned when the function has an assert
+            if result is None or result:
+                return
+            if timed_out():
+                raise TimeoutError(timeout_msg)
+        page.wait_for_timeout(interval)

@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 
 
 def get_first_graph_svg(app: Page):
@@ -65,8 +65,9 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     expect(first_graph_svg).not_to_have_attribute("width", "79pt")
     expect(first_graph_svg).not_to_have_attribute("height", "116pt")
     svg_dimensions = first_graph_svg.bounding_box()
-    assert svg_dimensions["width"] == 1256
-    assert svg_dimensions["height"] == 662
+    wait_until(app, lambda: svg_dimensions["width"] == 1256)
+    wait_until(app, lambda: svg_dimensions["height"] == 662)
+
     assert_snapshot(first_graph_svg, name="graphviz_fullscreen")
 
 
