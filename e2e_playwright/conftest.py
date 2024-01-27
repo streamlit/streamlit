@@ -201,42 +201,6 @@ def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
     return True
 
 
-def wait_for_app_run(page: Page, wait_delay: int = 100):
-    """Wait for the given page to finish running."""
-    page.wait_for_selector(
-        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
-    )
-
-    if wait_delay > 0:
-        # Give the app a little more time to render everything
-        page.wait_for_timeout(wait_delay)
-
-
-def wait_for_app_loaded(page: Page, embedded: bool = False):
-    """Wait for the app to fully load."""
-    # Wait for the app view container to appear:
-    page.wait_for_selector(
-        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
-    )
-
-    # Wait for the main menu to appear:
-    if not embedded:
-        page.wait_for_selector(
-            "[data-testid='stMainMenu']", timeout=20000, state="attached"
-        )
-
-    wait_for_app_run(page)
-
-
-def rerun_app(page: Page):
-    """Triggers an app rerun and waits for the run to be finished."""
-    # Click somewhere to clear the focus from elements:
-    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
-    # Press "r" to rerun the app:
-    page.keyboard.press("r")
-    wait_for_app_run(page)
-
-
 @pytest.fixture(scope="module")
 def app_port(worker_id: str) -> int:
     """Fixture that returns an available port on localhost."""
@@ -542,3 +506,42 @@ def assert_snapshot(
 
     if test_failure_messages:
         pytest.fail("Missing snapshots: \n" + "\n".join(test_failure_messages))
+
+
+# Public utility methods:
+
+
+def wait_for_app_run(page: Page, wait_delay: int = 100):
+    """Wait for the given page to finish running."""
+    page.wait_for_selector(
+        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
+    )
+
+    if wait_delay > 0:
+        # Give the app a little more time to render everything
+        page.wait_for_timeout(wait_delay)
+
+
+def wait_for_app_loaded(page: Page, embedded: bool = False):
+    """Wait for the app to fully load."""
+    # Wait for the app view container to appear:
+    page.wait_for_selector(
+        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
+    )
+
+    # Wait for the main menu to appear:
+    if not embedded:
+        page.wait_for_selector(
+            "[data-testid='stMainMenu']", timeout=20000, state="attached"
+        )
+
+    wait_for_app_run(page)
+
+
+def rerun_app(page: Page):
+    """Triggers an app rerun and waits for the run to be finished."""
+    # Click somewhere to clear the focus from elements:
+    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    # Press "r" to rerun the app:
+    page.keyboard.press("r")
+    wait_for_app_run(page)
