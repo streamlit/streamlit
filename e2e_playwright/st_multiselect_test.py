@@ -73,6 +73,21 @@ def test_multiselect_initial_value(app: Page):
     text_elements = app.get_by_test_id("stText")
     expect(text_elements).to_have_count(12)
 
+    expected = [
+        "value 1: []",
+        "value 2: []",
+        "value 3: []",
+        "value 4: ['tea', 'water']",
+        "value 5: []",
+        "value 6: []",
+        "value 7: []",
+        "value 8: []",
+        "value 9: []",
+        "value 10: []",
+        "value 11: []",
+        "multiselect changed: False",
+    ]
+
     for text_element, expected_text in zip(text_elements.all(), expected):
         expect(text_element).to_have_text(expected_text, use_inner_text=True)
 
