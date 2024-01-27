@@ -21,10 +21,10 @@ test_dicts = [{"x": "y"}, {"x": "y", "a": "b"}, {"x": ("y", 1, 2.34)}, {"x": ""}
 def test_app_with_query_params(app_with_query_params: Page):
     page, test_dict = app_with_query_params
     for key, value in test_dict.items():
-        expect(page.get_by_text(key)).to_be_visible()
+        expect(page.get_by_text(str(key)).first).to_be_visible()
 
         if isinstance(value, (list, tuple)):
             for item in value:
-                expect(page.get_by_text(item)).to_be_visible()
+                expect(page.get_by_text(str(item)).first).to_be_visible()
         else:
-            expect(page.get_by_text(value)).to_be_visible()
+            expect(page.get_by_text(str(value)).first).to_be_visible()
