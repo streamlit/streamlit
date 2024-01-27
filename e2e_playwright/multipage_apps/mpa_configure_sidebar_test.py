@@ -45,15 +45,15 @@ def test_page_links_in_main(
     expect(page_links).to_have_count(5)
 
     # Selected page
-    assert_snapshot(page_links.nth(0), name=f"current-page-link")
+    assert_snapshot(page_links.nth(0), name="current-page-link")
     page_links.nth(0).hover()
-    assert_snapshot(page_links.nth(0), name=f"current-page-link-hover")
+    assert_snapshot(page_links.nth(0), name="current-page-link-hover")
     # Non-selected page
-    assert_snapshot(page_links.nth(1), name=f"page-link")
+    assert_snapshot(page_links.nth(1), name="page-link")
     page_links.nth(1).hover()
-    assert_snapshot(page_links.nth(1), name=f"page-link-hover")
+    assert_snapshot(page_links.nth(1), name="page-link-hover")
     # Disabled page
-    assert_snapshot(page_links.nth(2), name=f"page-link-disabled")
+    assert_snapshot(page_links.nth(2), name="page-link-disabled")
 
 
 def test_page_links_in_sidebar(
@@ -70,12 +70,12 @@ def test_page_links_in_sidebar(
     expect(page_links).to_have_count(5)
 
     # Selected page
-    assert_snapshot(page_links.nth(3), name=f"current-page-link-sidebar")
+    assert_snapshot(page_links.nth(3), name="current-page-link-sidebar")
     page_links.nth(3).hover()
-    assert_snapshot(page_links.nth(3), name=f"current-page-link-sidebar-hover")
+    assert_snapshot(page_links.nth(3), name="current-page-link-sidebar-hover")
     # Non-selected page
-    assert_snapshot(page_links.nth(0), name=f"page-link-sidebar")
+    assert_snapshot(page_links.nth(0), name="page-link-sidebar")
     page_links.nth(0).hover()
-    assert_snapshot(page_links.nth(0), name=f"page-link-sidebar-hover")
+    assert_snapshot(page_links.nth(0), name="page-link-sidebar-hover")
     # Disabled page
-    assert_snapshot(page_links.nth(4), name=f"page-link-sidebar-disabled")
+    assert_snapshot(page_links.nth(4), name="page-link-sidebar-disabled")
