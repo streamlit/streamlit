@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from conftest import wait_for_app_run
+from e2e_playwright.conftest import wait_for_app_run
 
 
 def test_no_concurrent_changes(app: Page):
