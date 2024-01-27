@@ -70,6 +70,18 @@ export interface LibContextProps {
    */
   addThemes: (themes: ThemeConfig[]) => void
 
+  /**
+   * Change the page in a multi-page app.
+   * @see PageLink
+   */
+  onPageChange: (pageScriptHash: string) => void
+
+  /**
+   * The current page of a multi-page app.
+   * @see PageLink
+   */
+  currentPageScriptHash: string
+
   /** The lib-specific configuration from the apps host which is requested via the
    * _stcore/host-config endpoint.
    */
@@ -85,5 +97,7 @@ export const LibContext = React.createContext<LibContextProps>({
   setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
+  onPageChange: () => {},
+  currentPageScriptHash: "",
   libConfig: {},
 })

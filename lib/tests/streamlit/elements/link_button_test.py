@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""link_button unit t Nest."""
+"""link_button unit tests."""
 
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase

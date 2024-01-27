@@ -104,6 +104,7 @@ class StreamlitTest(unittest.TestCase):
                 "metric",
                 "multiselect",
                 "number_input",
+                "page_link",
                 "plotly_chart",
                 "progress",
                 "pyplot",
@@ -130,7 +131,6 @@ class StreamlitTest(unittest.TestCase):
                 "write",
                 "color_picker",
                 "sidebar",
-                "event",
                 # Other modules the user should have access to:
                 "echo",
                 "spinner",

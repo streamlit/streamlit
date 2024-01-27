@@ -48,6 +48,7 @@ import {
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
   Metric as MetricProto,
+  PageLink as PageLinkProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Text as TextProto,
@@ -138,6 +139,10 @@ const ImageList = React.lazy(
 
 const LinkButton = React.lazy(
   () => import("@streamlit/lib/src/components/elements/LinkButton")
+)
+
+const PageLink = React.lazy(
+  () => import("@streamlit/lib/src/components/elements/PageLink")
 )
 
 const PlotlyChart = React.lazy(
@@ -359,6 +364,18 @@ const RawElementNodeRenderer = (
           element={node.element.heading as HeadingProto}
         />
       )
+
+    case "pageLink": {
+      const pageLinkProto = node.element.pageLink as PageLinkProto
+      const isDisabled = widgetProps.disabled || pageLinkProto.disabled
+      return (
+        <PageLink
+          element={pageLinkProto}
+          width={width}
+          disabled={isDisabled}
+        />
+      )
+    }
 
     case "plotlyChart":
       return (

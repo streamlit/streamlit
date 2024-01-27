@@ -299,9 +299,9 @@ export function getEmptyIndexColumn(): BaseColumnProps {
 export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
-  // TODO(lukasmasuch): use data.dimensions instead here?
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
+  const { dimensions } = data
+  const numIndices = dimensions.headerColumns
+  const numColumns = dimensions.dataColumns
 
   if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
