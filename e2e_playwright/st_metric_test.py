@@ -29,9 +29,7 @@ def test_second_metric_in_first_row(app: Page):
 
 
 def test_third_metric_in_first_row(app: Page):
-    expect(app.get_by_test_id("stMetricLabel]").nth(4)).to_have_text(
-        "Apples I've eaten"
-    )
+    expect(app.get_by_test_id("stMetricLabel").nth(4)).to_have_text("Apples I've eaten")
     expect(app.get_by_test_id("stMetricValue").nth(4)).to_have_text(" 23k ")
     expect(app.get_by_test_id("stMetricDelta").nth(4)).to_have_text(" -20 ")
 
