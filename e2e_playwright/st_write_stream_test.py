@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction, rerun_app, wait_for_ap
 
 
 def test_stream_generator(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that `st.stream` can correctly streams content.
+    """Test that `st.write_stream` can correctly streams content.
     This also tests that the return value can be rendered via `st.write`.
     """
 

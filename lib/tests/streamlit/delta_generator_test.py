@@ -118,7 +118,6 @@ class RunWarningTest(unittest.TestCase):
                 "exception",
                 "expander",
                 "experimental_data_editor",
-                "experimental_stream",
                 "file_uploader",
                 "form",
                 "form_submit_button",
@@ -164,6 +163,7 @@ class RunWarningTest(unittest.TestCase):
                 "video",
                 "warning",
                 "write",
+                "write_stream",
             },
         )
 
