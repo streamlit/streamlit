@@ -94,3 +94,16 @@ The following pytest **fixtures** are available within `conftest.py`:
     ```
 - `assert_snapshot` is a none-waiting assertion. This can potentially lead to some flakiness if an element hasn't fully loaded yet. Make sure that you have some waiting checks before calling `assert_snapshot` if necessary (this depends on a case by case basis).
 - Every dedicated test file requires to start a new Streamlit app server during our CI run. Therefore, it is more time efficient to group tests into more high-level test scripts (e.g. based on a command) instead of splitting it into many smaller test scripts.
+- You can run your test with **specific Streamlit config options** by adding and using a module-scoped fixture marked with `@pytest.mark.early` in your test file:
+  ```python
+  @pytest.fixture(scope="module")
+  @pytest.mark.early
+  def configure_options():
+      """Configure Streamlit config options."""
+      os.environ["STREAMLIT_SERVER_MAX_MESSAGE_SIZE"] = "3"
+      yield
+      del os.environ["STREAMLIT_SERVER_MAX_MESSAGE_SIZE"]
+
+  def test_something(app: Page, configure_options):
+      # Test code
+  ```
