@@ -19,7 +19,7 @@ def test_displays_markdown(app: Page):
     """Test that markdown is displayed correctly."""
 
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(9)
+    expect(markdown_elements).to_have_count(12)
 
     expect(markdown_elements.nth(0)).to_contain_text("Hello World")
     expect(markdown_elements.nth(1)).to_contain_text("This markdown is awesome! 😎")
@@ -32,6 +32,9 @@ def test_displays_markdown(app: Page):
     expect(markdown_elements.nth(6)).to_contain_text("None")
     expect(markdown_elements.nth(7)).to_contain_text("2021-01-01 00:00:00")
     expect(markdown_elements.nth(8)).to_contain_text("1.0")
+    expect(markdown_elements.nth(9)).to_contain_text("This is a string IO object!")
+    expect(markdown_elements.nth(10)).to_contain_text("This is streamed text")
+    expect(markdown_elements.nth(11)).to_contain_text("This is streamed text")
 
 
 def test_display_dataframe(app: Page):
