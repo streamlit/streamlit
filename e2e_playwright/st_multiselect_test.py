@@ -106,10 +106,10 @@ def test_multiselect_show_values_in_dropdown(
     multiselect_elem = app.get_by_test_id("stMultiSelect").nth(0)
     multiselect_elem.locator("input").click()
     wait_for_app_run(app)
-    dropdown_elems = app.locator("li").all()
-    expect(dropdown_elems).to_have_count(2)
-    for idx, el in enumerate(dropdown_elems):
-        assert_snapshot(el, name="multiselect-dropdown-" + str(idx))
+    dropdown_elements = app.locator("li")
+    expect(dropdown_elements).to_have_count(2)
+    assert_snapshot(dropdown_elements.nth(0), name="multiselect-dropdown-0")
+    assert_snapshot(dropdown_elements.nth(1), name="multiselect-dropdown-1")
 
 
 def test_multiselect_long_values_in_dropdown(
