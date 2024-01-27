@@ -85,6 +85,7 @@
     "react-markdown": "^8.0.7",
     "react-plotly.js": "^2.6.0",
     "react-responsive-carousel": "^3.2.23",
+    "react-select": "5.8.0",
     "react-syntax-highlighter": "^15.5.0",
     "react-webcam": "7.1.1",
     "react-window": "^1.8.8",
