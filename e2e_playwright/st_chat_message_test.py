@@ -31,6 +31,7 @@ def test_renders_chat_messages_correctly_1(
     expect(chat_message_elements).to_have_count(14)
     for i, element in enumerate(chat_message_elements.all()):
         element.scroll_into_view_if_needed()
+        expect(element).to_be_in_viewport()
         # Wait a bit more to allow the avatar images to load:
         themed_app.wait_for_timeout(100)
         assert_snapshot(element, name=f"chat_message-{i}")
