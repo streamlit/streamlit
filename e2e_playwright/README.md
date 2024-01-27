@@ -87,13 +87,14 @@ The following pytest **fixtures** are available within `conftest.py`:
 ## Other Tips & Tricks
 
 - If a test isn't compatible with a specific browser, you can use the `@pytest.mark.skip_browser("firefox")` decorator to skip it.
+- `assert_snapshot` is a none-waiting assertion. This can potentially lead to some flakiness if an element hasn't fully loaded yet. Make sure that you have some waiting checks before calling `assert_snapshot` if necessary (this depends on a case by case basis).
+- Every dedicated test file requires to start a new Streamlit app server during our CI run. Therefore, it is more time efficient to **group tests into more high-level test scripts** (e.g. based on a command) instead of splitting it into many smaller test scripts.
+- **Minimize the number of pixels to test** for better time efficiency and less flakiness. E.g instead of doing fullscreen tests, only screenshot the relevant part. And try to not add redundant screenshot tests for that are just testing the same scenarios.
 - If you want to run tests in slow-motion, you can specify the [`--slowmo` parameter](https://playwright.dev/python/docs/test-runners#configure-slow-mo). Useful so that you can see what is going on. E.g., to run a test locally in slow-mo with video recording
     ```bash
     cd e2e_playwright
     pytest name_of_the_test.py -s --video on --slowmo 500
     ```
-- `assert_snapshot` is a none-waiting assertion. This can potentially lead to some flakiness if an element hasn't fully loaded yet. Make sure that you have some waiting checks before calling `assert_snapshot` if necessary (this depends on a case by case basis).
-- Every dedicated test file requires to start a new Streamlit app server during our CI run. Therefore, it is more time efficient to group tests into more high-level test scripts (e.g. based on a command) instead of splitting it into many smaller test scripts.
 - You can run your test with **specific Streamlit config options** by adding and using a module-scoped fixture marked with `@pytest.mark.early` in your test file:
   ```python
   @pytest.fixture(scope="module")
