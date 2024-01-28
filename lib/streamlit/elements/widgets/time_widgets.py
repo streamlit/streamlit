@@ -738,10 +738,10 @@ class TimeWidgetsMixin:
             # the id to change.
 
             session_state = get_session_state().filtered_state
-            state_value = session_state[key]
 
             if key is not None and key in session_state:
                 print("AAAAAAAAA MAMA JAN!")
+                state_value = session_state[key]
                 _session_state_parsed_values = _DateInputValues.from_raw_values(
                     value=state_value,
                     min_value=min_value,
