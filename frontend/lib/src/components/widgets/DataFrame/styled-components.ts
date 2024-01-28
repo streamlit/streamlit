@@ -16,22 +16,29 @@
 
 import styled from "@emotion/styled"
 
+export interface StyledResizableContainerProps {
+  hasCustomizedScrollbars: boolean
+}
+
 /**
  * A resizable data grid container component.
  */
-export const StyledResizableContainer = styled.div(({ theme }) => ({
-  position: "relative",
-  display: "inline-block",
+export const StyledResizableContainer =
+  styled.div<StyledResizableContainerProps>(
+    ({ hasCustomizedScrollbars, theme }) => ({
+      position: "relative",
+      display: "inline-block",
 
-  "& .glideDataEditor": {
-    height: "100%",
-    minWidth: "100%",
-    borderRadius: theme.radii.lg,
-  },
+      "& .glideDataEditor": {
+        height: "100%",
+        minWidth: "100%",
+        borderRadius: theme.radii.lg,
+      },
 
-  "& .dvn-scroller": {
-    scrollbarWidth: "thin",
-    ["overflowX" as any]: "auto !important",
-    ["overflowY" as any]: "auto !important",
-  },
-}))
+      "& .dvn-scroller": {
+        ...(!hasCustomizedScrollbars && { scrollbarWidth: "thin" }),
+        ["overflowX" as any]: "auto !important",
+        ["overflowY" as any]: "auto !important",
+      },
+    })
+  )
