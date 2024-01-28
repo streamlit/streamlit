@@ -208,7 +208,7 @@ class WriteMixin:
                     chunk = chunk.choices[0].delta.content or ""
                 except AttributeError as err:
                     raise StreamlitAPIException(
-                        "Failed to parse the OpenAI ChatCompletionChunk."
+                        "Failed to parse the OpenAI ChatCompletionChunk. "
                         "You might be able to fix this by downgrading the OpenAI library "
                         "or upgrading Streamlit. Also, please report this issue to: "
                         "https://github.com/streamlit/streamlit/issues."
@@ -220,7 +220,7 @@ class WriteMixin:
                     chunk = chunk.content or ""
                 except AttributeError as err:
                     raise StreamlitAPIException(
-                        "Failed to parse the LangChain AIMessageChunk."
+                        "Failed to parse the LangChain AIMessageChunk. "
                         "You might be able to fix this by downgrading the LangChain library "
                         "or upgrading Streamlit. Also, please report this issue to: "
                         "https://github.com/streamlit/streamlit/issues."
