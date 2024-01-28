@@ -203,14 +203,28 @@ class WriteMixin:
             if type_util.is_type(
                 chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
             ):
-                # Try to convert openai chat completion chunk to a string:
-                with contextlib.suppress(Exception):
+                # Try to convert OpenAI chat completion chunk to a string:
+                try:
                     chunk = chunk.choices[0].delta.content or ""
+                except AttributeError as err:
+                    raise StreamlitAPIException(
+                        "Failed to parse the OpenAI ChatCompletionChunk."
+                        "You might be able to fix this by downgrading the OpenAI library "
+                        "or upgrading Streamlit. Also, please report this issue to: "
+                        "https://github.com/streamlit/streamlit/issues."
+                    ) from err
 
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
-                # Try to convert langchain_core message chunk to a string:
-                with contextlib.suppress(Exception):
+                # Try to convert LangChain message chunk to a string:
+                try:
                     chunk = chunk.content or ""
+                except AttributeError as err:
+                    raise StreamlitAPIException(
+                        "Failed to parse the LangChain AIMessageChunk."
+                        "You might be able to fix this by downgrading the LangChain library "
+                        "or upgrading Streamlit. Also, please report this issue to: "
+                        "https://github.com/streamlit/streamlit/issues."
+                    ) from err
 
             if isinstance(chunk, str):
                 first_text = False
