@@ -63,14 +63,13 @@ DateWidgetReturn: TypeAlias = Union[
 ]
 
 DEFAULT_STEP_MINUTES = 15
-DEFAULT_VALUE_TODAY = "default_value_today"
 ALLOWED_DATE_FORMATS = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
 
 
 def _parse_date_value(
-    value: DateValue | Literal["today"] | Literal[DEFAULT_VALUE_TODAY],
+    value: DateValue | Literal["today"] | Literal["default_value_today"],
 ) -> Tuple[List[date] | None, bool]:
     parsed_dates: List[date]
     range_value: bool = False
@@ -78,7 +77,7 @@ def _parse_date_value(
         return None, range_value
     if value == "today":
         parsed_dates = [datetime.now().date()]
-    elif value == DEFAULT_VALUE_TODAY:
+    elif value == "default_value_today":
         # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
@@ -154,7 +153,7 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue | Literal["today"] | Literal[DEFAULT_VALUE_TODAY],
+        value: DateValue | Literal["today"] | Literal["default_value_today"],
         min_value: SingleDateValue,
         max_value: SingleDateValue,
     ) -> "_DateInputValues":
@@ -500,7 +499,7 @@ class TimeWidgetsMixin:
         label: str,
         value: DateValue
         | Literal["today"]
-        | Literal[DEFAULT_VALUE_TODAY] = DEFAULT_VALUE_TODAY,
+        | Literal["default_value_today"] = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -656,7 +655,7 @@ class TimeWidgetsMixin:
         label: str,
         value: DateValue
         | Literal["today"]
-        | Literal[DEFAULT_VALUE_TODAY] = DEFAULT_VALUE_TODAY,
+        | Literal["default_value_today"] = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -673,13 +672,13 @@ class TimeWidgetsMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=value if value != DEFAULT_VALUE_TODAY else None, key=key
+            default_value=value if value != "default_value_today" else None, key=key
         )
 
         maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic(
-            v: SingleDateValue | Literal["today"] | Literal[DEFAULT_VALUE_TODAY],
+            v: SingleDateValue | Literal["today"] | Literal["default_value_today"],
         ) -> str | None:
             if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
@@ -691,7 +690,7 @@ class TimeWidgetsMixin:
         parsed_max_date = parse_date_deterministic(max_value)
 
         parsed: str | None | List[str | None]
-        if value == "today" or value == DEFAULT_VALUE_TODAY or value is None:
+        if value == "today" or value == "default_value_today" or value is None:
             parsed = None
         elif isinstance(value, (datetime, date)):
             parsed = parse_date_deterministic(value)
@@ -726,12 +725,12 @@ class TimeWidgetsMixin:
             max_value=max_value,
         )
 
-        use_session_state_value = False
         _session_state_parsed_values = None
         value_for_proto = parsed_values.value
         is_range = parsed_values.is_range
+        serde_value = parsed_values
 
-        if value == DEFAULT_VALUE_TODAY:
+        if value == "default_value_today":
             # We need to know if this is a single or range date_input, but don't have
             # a default value, so we check if session_state can tell us.
             # We already calculated the id, so there is no risk of this causing
@@ -747,9 +746,9 @@ class TimeWidgetsMixin:
                     min_value=min_value,
                     max_value=max_value,
                 )
-                use_session_state_value = True
                 is_range = _session_state_parsed_values.is_range
                 value_for_proto = _session_state_parsed_values.value
+                serde_value = _session_state_parsed_values
                 print("MAMA JAN, PARSED VALUE: ", _session_state_parsed_values)
 
         del value, min_value, max_value
@@ -779,11 +778,7 @@ class TimeWidgetsMixin:
         if help is not None:
             date_input_proto.help = dedent(help)
 
-        serde = DateInputSerde(
-            parsed_values
-            if not use_session_state_value
-            else _session_state_parsed_values
-        )
+        serde = DateInputSerde(serde_value)
 
         widget_state = register_widget(
             "date_input",
