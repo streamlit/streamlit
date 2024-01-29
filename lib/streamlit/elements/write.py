@@ -208,9 +208,10 @@ class WriteMixin:
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the OpenAI ChatCompletionChunk. "
-                        "You might be able to fix this by downgrading the OpenAI library "
-                        "or upgrading Streamlit. Also, please report this issue to: "
-                        "https://github.com/streamlit/streamlit/issues."
+                        "The most likely cause is a change of the chunk object structure "
+                        "due to a recent OpenAI update. You might be able to fix this "
+                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
                     ) from err
 
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
@@ -220,9 +221,10 @@ class WriteMixin:
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
-                        "You might be able to fix this by downgrading the LangChain library "
-                        "or upgrading Streamlit. Also, please report this issue to: "
-                        "https://github.com/streamlit/streamlit/issues."
+                        "The most likely cause is a change of the chunk object structure "
+                        "due to a recent LangChain update. You might be able to fix this "
+                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
                     ) from err
 
             if isinstance(chunk, str):
