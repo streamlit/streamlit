@@ -62,7 +62,6 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 // Render BlockNodes (i.e. container nodes).
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
-  const { libConfig } = useContext(LibContext)
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
@@ -77,12 +76,14 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 
   const childProps = { ...props, ...{ node } }
-  // TODO: also disable for Dialog in a follow-up PR
-  const disableFullScreenMode = libConfig.disableFullscreenMode
+
+  // TODO: overwrite props.disableFullScreenMode for Dialog in a follow-up PR, e.g.:
+  // const disableFullScreenMode = props.disableFullScreenMode || node.deltaBlock.dialog
+  // and pass to LayoutBlock as props
   const child: ReactElement = (
     <LayoutBlock
       {...childProps}
-      disableFullScreenMode={disableFullScreenMode}
+      // disableFullScreenMode={disableFullScreenMode}
     />
   )
 
@@ -158,18 +159,28 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  const { libConfig } = useContext(LibContext)
+
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useTheme())
+
   return (
     <>
       {props.node.children &&
         props.node.children.map(
           (node: AppNode, index: number): ReactElement => {
+            const disableFullScreenMode =
+              libConfig.disableFullscreenMode || props.disableFullScreenMode
+
             // Base case: render a leaf node.
             if (node instanceof ElementNode) {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = { ...props, node: node as ElementNode }
+              const childProps = {
+                ...props,
+                disableFullScreenMode,
+                node: node as ElementNode,
+              }
 
               const key = getElementWidgetID(node.element) || index
               return <ElementNodeRenderer key={key} {...childProps} />
@@ -180,7 +191,11 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             if (node instanceof BlockNode) {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = { ...props, node: node as BlockNode }
+              const childProps = {
+                ...props,
+                disableFullScreenMode,
+                node: node as BlockNode,
+              }
 
               return <BlockNodeRenderer key={index} {...childProps} />
             }
@@ -272,10 +287,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     ? ScrollToBottomVerticalBlockWrapper
     : StyledVerticalBlockBorderWrapper
 
-  const propsWithNewWidth = {
-    ...props,
-    ...{ width },
-  }
+  const propsWithNewWidth = { ...props, ...{ width } }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
   // the width value coming from the parent via props.

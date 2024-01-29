@@ -532,7 +532,6 @@ const RawElementNodeRenderer = (
           key={colorPickerProto.id}
           element={colorPickerProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -565,10 +564,8 @@ const RawElementNodeRenderer = (
         <FileUploader
           key={fileUploaderProto.id}
           element={fileUploaderProto}
-          widgetMgr={widgetProps.widgetMgr}
           uploadClient={props.uploadClient}
-          disabled={widgetProps.disabled}
-          {...elementProps}
+          {...widgetProps}
         />
       )
     }
