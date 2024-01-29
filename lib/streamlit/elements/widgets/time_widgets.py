@@ -723,11 +723,6 @@ class TimeWidgetsMixin:
             max_value=max_value,
         )
 
-        _session_state_parsed_values = None
-        value_for_proto = parsed_values.value
-        is_range = parsed_values.is_range
-        serde_value = parsed_values
-
         if value == "default_value_today":
             # We need to know if this is a single or range date_input, but don't have
             # a default value, so we check if session_state can tell us.
@@ -738,34 +733,31 @@ class TimeWidgetsMixin:
 
             if key is not None and key in session_state:
                 state_value = session_state[key]
-                _session_state_parsed_values = _DateInputValues.from_raw_values(
+                parsed_values = _DateInputValues.from_raw_values(
                     value=state_value,
                     min_value=min_value,
                     max_value=max_value,
                 )
-                is_range = _session_state_parsed_values.is_range
-                value_for_proto = _session_state_parsed_values.value
-                serde_value = _session_state_parsed_values
 
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
         date_input_proto.id = id
-        date_input_proto.is_range = is_range
+        date_input_proto.is_range = parsed_values.is_range
         date_input_proto.disabled = disabled
         date_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
         date_input_proto.format = format
         date_input_proto.label = label
-        if value_for_proto is None:
+        if parsed_values.value is None:
             # An empty array represents the empty state. The reason for using an empty
             # array here is that we cannot optional keyword for repeated fields
             # in protobuf.
             date_input_proto.default[:] = []
         else:
             date_input_proto.default[:] = [
-                date.strftime(v, "%Y/%m/%d") for v in value_for_proto
+                date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
             ]
         date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
         date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
@@ -774,7 +766,7 @@ class TimeWidgetsMixin:
         if help is not None:
             date_input_proto.help = dedent(help)
 
-        serde = DateInputSerde(serde_value)
+        serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
             "date_input",
