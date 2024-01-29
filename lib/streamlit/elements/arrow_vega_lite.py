@@ -15,8 +15,9 @@
 """A Python wrapper around Vega-Lite."""
 from __future__ import annotations
 
+import inspect
 import json
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union, cast
 
 from typing_extensions import Final, Literal
 
@@ -29,12 +30,58 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state.session_state_proxy import SessionStateProxy
+from streamlit.runtime.state.widgets import register_widget
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
 LOGGER: Final = get_logger(__name__)
+
+
+def _on_selection(
+    proto: ArrowVegaLiteChartProto,
+    on_selection: Union[str, Callable[..., None], None] = None,
+):
+    if on_selection is not None:
+
+        def deserialize_vega_lite_event(ui_value, widget_id=""):
+            print(f"{ui_value=}")
+            if ui_value is None:
+                return {}
+            if isinstance(ui_value, str):
+                return json.loads(ui_value)
+
+            return ui_value
+
+        def serialize_vega_lite_event(v):
+            return json.dumps(v, default=str)
+
+        current_value = register_widget(
+            "arrow_vega_lite_chart",
+            proto,
+            user_key=str(proto),
+            on_change_handler=None,
+            args=None,
+            kwargs=None,
+            deserializer=deserialize_vega_lite_event,
+            serializer=serialize_vega_lite_event,
+            ctx=get_script_run_ctx(),
+        )
+
+        if isinstance(on_selection, str):
+            # Set in session state
+            session_state = SessionStateProxy()
+            session_state[on_selection] = current_value.value
+        elif callable(on_selection):
+            # Call the callback function
+            kwargs_callback = {}
+            arguments = inspect.getfullargspec(on_selection).args
+            if "selections" in arguments:
+                kwargs_callback["selections"] = current_value
+            on_selection(**kwargs_callback)
 
 
 class ArrowVegaLiteMixin:
@@ -45,6 +92,7 @@ class ArrowVegaLiteMixin:
         spec: Dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
+        on_selection: Union[str, Callable[..., None], None] = None,
         **kwargs: Any,
     ) -> "DeltaGenerator":
         """Display a chart using the Vega-Lite library.
@@ -106,6 +154,8 @@ class ArrowVegaLiteMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         proto = ArrowVegaLiteChartProto()
+        if on_selection:
+            _on_selection(proto, on_selection)
         marshall(
             proto,
             data,

@@ -18,10 +18,22 @@ a nice JSON schema for expressing graphs and charts.
 """
 from __future__ import annotations
 
+import hashlib
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Collection, Dict, List, Sequence, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    List,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 import pandas as pd
 from pandas.api.types import infer_dtype, is_integer_dtype
@@ -751,6 +763,8 @@ class ArrowAltairMixin:
         altair_chart: alt.Chart,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
+        on_selection: Union[str, Callable[..., None], None] = None,
+        key: str = "",
     ) -> DeltaGenerator:
         """Display a chart using the Altair library.
 
@@ -798,6 +812,11 @@ class ArrowAltairMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         proto = ArrowVegaLiteChartProto()
+        if on_selection:
+            arrow_vega_lite._on_selection(proto, on_selection)
+            hash_object = hashlib.sha256(altair_chart.encode())
+            hash_hex = hash_object.hexdigest()
+            proto.id = hash_hex if key is "" or None else ""
         marshall(
             proto,
             altair_chart,

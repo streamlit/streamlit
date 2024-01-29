@@ -20,6 +20,11 @@ import embed from "vega-embed"
 import * as vega from "vega"
 import { expressionInterpreter } from "vega-interpreter"
 
+import {
+  WidgetInfo,
+  WidgetStateManager,
+} from "@streamlit/lib/src/WidgetStateManager"
+import { debounce } from "@streamlit/lib/src/util/utils"
 import { logMessage } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
@@ -57,6 +62,7 @@ interface Props {
   element: VegaLiteChartElement
   theme: EmotionTheme
   width: number
+  widgetMgr: WidgetStateManager
 }
 
 /** All of the data that makes up a VegaLite chart. */
@@ -85,6 +91,9 @@ export interface VegaLiteChartElement {
 
   /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
   vegaLiteTheme: string
+
+  id: string | null
+  formId: string | null
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
@@ -105,6 +114,7 @@ export interface PropsWithHeight extends Props {
 
 interface State {
   error?: Error
+  selections: Record<string, any>
 }
 
 export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
@@ -131,6 +141,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   readonly state = {
     error: undefined,
+    selections: {} as Record<string, any>,
   }
 
   public async componentDidMount(): Promise<void> {
@@ -343,6 +354,62 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)
 
     this.vegaView = view
+
+    function getSelectorsFromChart(spec: any): string[] {
+      if ("params" in spec) {
+        const select: any[] = []
+        spec.params.forEach((item: any) => {
+          select.push(item.name)
+        })
+        return select
+      }
+      return []
+    }
+
+    function getSelectorsFromCombinedChart(spec: any, type: string): string[] {
+      const selectors: string[] = []
+      if (type in spec && spec[type]) {
+        for (const chart of Object.keys(spec[type])) {
+          selectors.push(...getSelectorsFromChart(spec[type][chart]))
+        }
+      }
+      return selectors
+    }
+
+    function getSelectors(spec: any): string[] {
+      const selectors: string[] = []
+      selectors.push(...getSelectorsFromChart(spec))
+      selectors.push(...getSelectorsFromCombinedChart(spec, "hconcat"))
+      selectors.push(...getSelectorsFromCombinedChart(spec, "vconcat"))
+      return selectors
+    }
+
+    console.log(this.props.element.id)
+    console.log(this.props.widgetMgr)
+    if (this.props.widgetMgr && this.props.element.id !== undefined) {
+      getSelectors(spec).forEach((item, _index) => {
+        view.addSignalListener(
+          item,
+          debounce(150, (name: string, value: any) => {
+            const updatedSelections = {
+              ...this.state.selections,
+              [name]: value,
+            }
+            this.setState({
+              selections: updatedSelections,
+            })
+            this.props.widgetMgr?.setJsonValue(
+              this.props.element as WidgetInfo,
+              updatedSelections,
+              {
+                fromUi: true,
+              }
+            )
+          })
+        )
+      })
+    }
+
     this.vegaFinalizer = finalize
 
     const datasets = getDataArrays(el)
