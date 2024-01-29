@@ -77,10 +77,13 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 
   const childProps = { ...props, ...{ node } }
-  // TODO: Also disallow fullscreen mode within dialogs in a follow-up PR
-  const disableFullScreen = libConfig.disableFullscreenMode
+  // TODO: also disable for Dialog in a follow-up PR
+  const disableFullScreenMode = libConfig.disableFullscreenMode
   const child: ReactElement = (
-    <LayoutBlock {...childProps} disableFullScreen={disableFullScreen} />
+    <LayoutBlock
+      {...childProps}
+      disableFullScreenMode={disableFullScreenMode}
+    />
   )
 
   if (node.deltaBlock.expandable) {

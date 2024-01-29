@@ -216,8 +216,8 @@ const StreamlitSyntaxHighlighter = React.lazy(
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
-  width?: number
-  hideFullScreenButton?: boolean
+  width: number
+  disableFullScreenMode?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -241,8 +241,8 @@ const RawElementNodeRenderer = (
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
   // since leaf elements are always direct children of a VerticalBlock, which always calculates
   const elementProps = {
-    width: props.width ?? 0,
-    hideFullScreenButton: props.hideFullScreenButton,
+    width: props.width,
+    disableFullScreenMode: props.disableFullScreenMode,
   }
 
   const widgetProps = {
@@ -708,7 +708,7 @@ const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
   const { isFullScreen } = React.useContext(LibContext)
-  const { node } = props
+  const { node, width } = props
 
   const elementType = node.element.type || ""
   const enable = shouldComponentBeEnabled(elementType, props.scriptRunState)
@@ -718,11 +718,6 @@ const ElementNodeRenderer = (
     props.scriptRunState,
     props.scriptRunId
   )
-
-  // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
-  // since leaf elements are always direct children of a VerticalBlock, which always calculates
-  // and propagates widths.
-  const width = props.width ?? 0
 
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a

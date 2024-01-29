@@ -95,7 +95,7 @@ export interface DataFrameProps {
   isFullScreen?: boolean
   expand?: () => void
   collapse?: () => void
-  disableFullScreen?: boolean
+  disableFullScreenMode?: boolean
 }
 
 /**
@@ -117,7 +117,7 @@ function DataFrame({
   disabled,
   widgetMgr,
   isFullScreen,
-  disableFullScreen,
+  disableFullScreenMode,
   expand,
   collapse,
 }: DataFrameProps): ReactElement {
@@ -461,7 +461,7 @@ function DataFrame({
     >
       <Toolbar
         isFullScreen={isFullScreen}
-        disableFullScreen={disableFullScreen}
+        disableFullScreenMode={disableFullScreenMode}
         // Lock the toolbar in some specific situations:
         locked={
           isRowSelected || isCellSelected || (isTouchDevice && isFocused)
