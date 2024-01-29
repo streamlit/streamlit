@@ -18,4 +18,4 @@ from playwright.sync_api import Page, expect
 def test_fullscreen_button_exists(app: Page):
     """Test that element has the fullscreen button."""
     # check that the image has the fullscreen button
-    expect(app.locator("[data-testid='StyledFullScreenButton']")).to_have_count(1)
+    expect(app.get_by_test_id("StyledFullScreenButton")).to_have_count(1)
