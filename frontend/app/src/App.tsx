@@ -82,7 +82,6 @@ import {
   ForwardMsgMetadata,
   GitInfo,
   IAppPage,
-  ICustomThemeConfig,
   IGitInfo,
   Initialize,
   NewSession,
@@ -125,16 +124,11 @@ import withScreencast, {
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
 import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
+import { ThemeManager } from "./util/useThemeManager"
 
 export interface Props {
   screenCast: ScreenCastHOC
-  theme: {
-    activeTheme: ThemeConfig
-    availableThemes: ThemeConfig[]
-    setTheme: (theme: ThemeConfig) => void
-    addThemes: (themes: ThemeConfig[]) => void
-    setImportedTheme: (themeInfo: ICustomThemeConfig) => void
-  }
+  theme: ThemeManager
 }
 
 interface State {
@@ -172,6 +166,7 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
+  inputsDisabled: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -285,6 +280,7 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
+      inputsDisabled: false,
     }
 
     this.connectionManager = null
@@ -301,6 +297,9 @@ export class App extends PureComponent<Props, State> {
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
       sendAppHeartbeat: this.sendAppHeartbeat,
+      setInputsDisabled: inputsDisabled => {
+        this.setState({ inputsDisabled })
+      },
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
@@ -1116,15 +1115,19 @@ export class App extends PureComponent<Props, State> {
     scriptRunId: string,
     scriptName: string
   ): void {
+    const { hideSidebarNav, elements } = this.state
+    // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
+    const sidebarElements = (hideSidebarNav && elements.sidebar) || undefined
+
     this.setState(
       {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(false),
+        elements: AppRoot.empty(false, sidebarElements),
       },
       () => {
-        this.pendingElementsBuffer = this.state.elements
+        this.pendingElementsBuffer = elements
         this.widgetMgr.removeInactive(new Set([]))
       }
     )
@@ -1653,6 +1656,7 @@ export class App extends PureComponent<Props, State> {
       hostToolbarItems,
       libConfig,
       appConfig,
+      inputsDisabled,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1674,6 +1678,9 @@ export class App extends PureComponent<Props, State> {
           onClose: this.closeDialog,
         })
       : null
+
+    const widgetsDisabled =
+      inputsDisabled || connectionState !== ConnectionState.CONNECTED
 
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
@@ -1707,6 +1714,8 @@ export class App extends PureComponent<Props, State> {
             setTheme: this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
+            onPageChange: this.onPageChange,
+            currentPageScriptHash,
             libConfig,
           }}
         >
@@ -1778,7 +1787,7 @@ export class App extends PureComponent<Props, State> {
                 scriptRunId={scriptRunId}
                 scriptRunState={scriptRunState}
                 widgetMgr={this.widgetMgr}
-                widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+                widgetsDisabled={widgetsDisabled}
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}

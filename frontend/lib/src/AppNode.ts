@@ -409,7 +409,10 @@ export class AppRoot {
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(isInitialRender = true): AppRoot {
+  public static empty(
+    isInitialRender = true,
+    sidebarElements?: BlockNode | undefined
+  ): AppRoot {
     const mainNodes: AppNode[] = []
 
     let waitElement: Element | undefined
@@ -447,11 +450,9 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    const sidebar = new BlockNode(
-      [],
-      new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
-    )
+    const sidebar =
+      sidebarElements ||
+      new BlockNode([], new BlockProto({ allowEmpty: true }), NO_SCRIPT_RUN_ID)
 
     const event = new BlockNode(
       [],
@@ -459,26 +460,33 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    return new AppRoot(new BlockNode([main, sidebar, event]))
+    const bottom = new BlockNode(
+      [],
+      new BlockProto({ allowEmpty: true }),
+      NO_SCRIPT_RUN_ID
+    )
+
+    return new AppRoot(new BlockNode([main, sidebar, event, bottom]))
   }
 
   public constructor(root: BlockNode) {
     this.root = root
 
-    // Verify that our root node has exactly 3 children: a 'main' block,
-    // a 'sidebar' block, and an 'event' block.
+    // Verify that our root node has exactly 4 children: a 'main' block,
+    // a 'sidebar' block, a `bottom` block and an 'event' block.
     if (
-      this.root.children.length !== 3 ||
+      this.root.children.length !== 4 ||
       this.main == null ||
       this.sidebar == null ||
-      this.event == null
+      this.event == null ||
+      this.bottom == null
     ) {
       throw new Error(`Invalid root node children! ${root}`)
     }
   }
 
   public get main(): BlockNode {
-    const [main, ,] = this.root.children
+    const [main] = this.root.children
     return main as BlockNode
   }
 
@@ -490,6 +498,11 @@ export class AppRoot {
   public get event(): BlockNode {
     const [, , event] = this.root.children
     return event as BlockNode
+  }
+
+  public get bottom(): BlockNode {
+    const [, , , bottom] = this.root.children
+    return bottom as BlockNode
   }
 
   public applyDelta(
@@ -548,10 +561,12 @@ export class AppRoot {
       this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
     const event =
       this.event.clearStaleNodes(currentScriptRunId) || new BlockNode()
+    const bottom =
+      this.bottom.clearStaleNodes(currentScriptRunId) || new BlockNode()
 
     return new AppRoot(
       new BlockNode(
-        [main, sidebar, event],
+        [main, sidebar, event, bottom],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       )
@@ -564,6 +579,7 @@ export class AppRoot {
     this.main.getElements(elements)
     this.sidebar.getElements(elements)
     this.event.getElements(elements)
+    this.bottom.getElements(elements)
     return elements
   }
 
