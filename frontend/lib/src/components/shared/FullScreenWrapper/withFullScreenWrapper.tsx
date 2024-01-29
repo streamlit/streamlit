@@ -32,7 +32,7 @@ type WrapperProps<P> = Omit<P & Props, "isFullScreen" | "collapse" | "expand">
 
 function withFullScreenWrapper<P>(
   WrappedComponent: ComponentType<P>,
-  defaultHideFullScreenButton = false
+  forceDisableFullScreen = false
 ): ComponentType<WrapperProps<P>> {
   class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps<P>> {
     public static readonly displayName = `withFullScreenWrapper(${
@@ -45,9 +45,7 @@ function withFullScreenWrapper<P>(
         <FullScreenWrapper
           width={width}
           height={height}
-          hideFullScreenButton={
-            defaultHideFullScreenButton || hideFullScreenButton
-          }
+          hideFullScreenButton={forceDisableFullScreen || hideFullScreenButton}
         >
           {({ width, height, expanded, expand, collapse }) => (
             // `(this.props as P)` is required due to a TS bug:

@@ -154,5 +154,5 @@ export interface BaseBlockProps {
    * If true , the element should not allow going into fullscreen. Right now we plan
    * to use it, for example, in Dialogs to prevent fullscreen issues.
    */
-  hideFullScreenButton?: boolean
+  disableFullScreen?: boolean
 }

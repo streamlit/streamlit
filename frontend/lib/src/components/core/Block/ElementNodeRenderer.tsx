@@ -238,17 +238,19 @@ const RawElementNodeRenderer = (
     throw new Error("ElementNode not found.")
   }
 
-  const widgetProps = {
-    widgetMgr: props.widgetMgr,
-    disabled: props.widgetsDisabled,
-  }
-
   // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
   // since leaf elements are always direct children of a VerticalBlock, which always calculates
   const elementProps = {
     width: props.width ?? 0,
     hideFullScreenButton: props.hideFullScreenButton,
   }
+
+  const widgetProps = {
+    ...elementProps,
+    widgetMgr: props.widgetMgr,
+    disabled: props.widgetsDisabled,
+  }
+
   switch (node.element.type) {
     case "alert": {
       const alertProto = node.element.alert as AlertProto
@@ -444,7 +446,6 @@ const RawElementNodeRenderer = (
             key: arrowProto.id,
           })}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -461,13 +462,10 @@ const RawElementNodeRenderer = (
             element={buttonProto}
             hasInProgressUpload={hasInProgressUpload}
             {...widgetProps}
-            {...elementProps}
           />
         )
       }
-      return (
-        <Button element={buttonProto} {...widgetProps} {...elementProps} />
-      )
+      return <Button element={buttonProto} {...widgetProps} />
     }
 
     case "downloadButton": {
@@ -481,20 +479,13 @@ const RawElementNodeRenderer = (
           key={downloadButtonProto.id}
           element={downloadButtonProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
     case "linkButton": {
       const linkButtonProto = node.element.linkButton as LinkButtonProto
       widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
-      return (
-        <LinkButton
-          element={linkButtonProto}
-          {...widgetProps}
-          {...elementProps}
-        />
-      )
+      return <LinkButton element={linkButtonProto} {...widgetProps} />
     }
     case "cameraInput": {
       const cameraInputProto = node.element.cameraInput as CameraInputProto
@@ -505,7 +496,6 @@ const RawElementNodeRenderer = (
           element={cameraInputProto}
           uploadClient={props.uploadClient}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -518,7 +508,6 @@ const RawElementNodeRenderer = (
           key={chatInputProto.id}
           element={chatInputProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -531,7 +520,6 @@ const RawElementNodeRenderer = (
           key={checkboxProto.id}
           element={checkboxProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -555,7 +543,6 @@ const RawElementNodeRenderer = (
           registry={props.componentRegistry}
           element={node.element.componentInstance as ComponentInstanceProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
 
@@ -567,7 +554,6 @@ const RawElementNodeRenderer = (
           key={dateInputProto.id}
           element={dateInputProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -595,7 +581,6 @@ const RawElementNodeRenderer = (
           key={multiSelectProto.id}
           element={multiSelectProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -608,7 +593,6 @@ const RawElementNodeRenderer = (
           key={numberInputProto.id}
           element={numberInputProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -617,12 +601,7 @@ const RawElementNodeRenderer = (
       const radioProto = node.element.radio as RadioProto
       widgetProps.disabled = widgetProps.disabled || radioProto.disabled
       return (
-        <Radio
-          key={radioProto.id}
-          element={radioProto}
-          {...widgetProps}
-          {...elementProps}
-        />
+        <Radio key={radioProto.id} element={radioProto} {...widgetProps} />
       )
     }
 
@@ -634,7 +613,6 @@ const RawElementNodeRenderer = (
           key={selectboxProto.id}
           element={selectboxProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -647,12 +625,7 @@ const RawElementNodeRenderer = (
       const sliderProto = node.element.slider as SliderProto
       widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
       return (
-        <Slider
-          key={sliderProto.id}
-          element={sliderProto}
-          {...widgetProps}
-          {...elementProps}
-        />
+        <Slider key={sliderProto.id} element={sliderProto} {...widgetProps} />
       )
     }
 
@@ -670,7 +643,6 @@ const RawElementNodeRenderer = (
           key={textAreaProto.id}
           element={textAreaProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -683,7 +655,6 @@ const RawElementNodeRenderer = (
           key={textInputProto.id}
           element={textInputProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
@@ -696,7 +667,6 @@ const RawElementNodeRenderer = (
           key={timeInputProto.id}
           element={timeInputProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }

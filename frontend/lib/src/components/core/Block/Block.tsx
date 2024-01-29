@@ -16,13 +16,14 @@
 
 import React, {
   ReactElement,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   ReactNode,
 } from "react"
 import { useTheme } from "@emotion/react"
-
+import { LibContext } from "@streamlit/lib"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
@@ -61,6 +62,7 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 // Render BlockNodes (i.e. container nodes).
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
+  const { libConfig } = useContext(LibContext)
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
@@ -75,10 +77,10 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 
   const childProps = { ...props, ...{ node } }
-  // TODO: We will set the value to disallow fullscreen mode within dialogs in a follow-up PR
-  const hideFullScreenButton = false
+  // TODO: Also disallow fullscreen mode within dialogs in a follow-up PR
+  const disableFullScreen = libConfig.disableFullscreenMode
   const child: ReactElement = (
-    <LayoutBlock {...childProps} hideFullScreenButton={hideFullScreenButton} />
+    <LayoutBlock {...childProps} disableFullScreen={disableFullScreen} />
   )
 
   if (node.deltaBlock.expandable) {
