@@ -149,4 +149,10 @@ export interface BaseBlockProps {
    * from that callback.
    */
   formsData: FormsData
+
+  /**
+   * If true , the element should not allow going into fullscreen. Right now we plan
+   * to use it, for example, in Dialogs to prevent fullscreen issues.
+   */
+  disableFullscreenMode?: boolean
 }

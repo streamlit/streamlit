@@ -204,7 +204,7 @@ def test_clicking_on_fullscreen_toolbar_button(
 
     fullscreen_toolbar_button = dataframe_toolbar.get_by_test_id(
         "stElementToolbarButton"
-    ).nth(2)
+    ).last
 
     # Activate toolbar:
     dataframe_element.hover()
