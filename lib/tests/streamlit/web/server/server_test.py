@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -510,7 +510,7 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        server = Server("mock/script/path", "test command line")
+        server = Server("mock/script/path", is_hello=False)
         server._runtime.does_script_run_without_error = (
             self.does_script_run_without_error
         )
@@ -548,7 +548,7 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
         super().tearDown()
 
     def get_app(self):
-        server = Server("mock/script/path", "test command line")
+        server = Server("mock/script/path", is_hello=False)
         server._runtime.does_script_run_without_error = (
             self.does_script_run_without_error
         )

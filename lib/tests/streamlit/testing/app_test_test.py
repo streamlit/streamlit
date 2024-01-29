@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -181,3 +181,27 @@ def test_query_narrowing():
     assert len(at.text) == 4
     # querying elements via a block only returns the elements in that block
     assert len(at.get("expandable")[0].text) == 2
+
+
+def test_out_of_order_blocks() -> None:
+    # Regression test for #7711
+    def script():
+        import streamlit as st
+
+        container = st.container()
+        with container:
+            st.markdown("BarFoo")
+
+            def button_one_clicked(cont):
+                cont.info("Hi!")
+                cont.markdown("FooBar")
+
+            st.button("one", on_click=button_one_clicked, args=[container])
+
+    at = AppTest.from_function(script).run()
+
+    at.button[0].click().run()
+
+    assert at.markdown.len == 2
+    assert at.info[0].value == "Hi!"
+    assert at.markdown.values == ["FooBar", "BarFoo"]

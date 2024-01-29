@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ from e2e_playwright.conftest import wait_for_app_run
 
 def test_regression_with_file_uploader_and_chat_input(app: Page):
     """Test issue described in https://github.com/streamlit/streamlit/issues/7556."""
-    chat_input_element = app.get_by_test_id("stChatInput").first
-    chat_input_element.fill("Hello world!")
+    chat_input_element = app.get_by_test_id("stChatInputTextArea").first
+    chat_input_element.type("Hello world!")
     chat_input_element.press("Enter")
     wait_for_app_run(app)
     last_chat_message = app.get_by_test_id("stChatMessageContent").last

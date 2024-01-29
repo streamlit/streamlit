@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -200,11 +200,11 @@ def test_clicking_on_fullscreen_toolbar_button(
 
     dataframe_element = app.get_by_test_id("stDataFrame").nth(0)
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
-    fullscreen_wrapper = app.get_by_test_id("stStyledFullScreenFrame").nth(0)
+    fullscreen_wrapper = app.get_by_test_id("stFullScreenFrame").nth(0)
 
     fullscreen_toolbar_button = dataframe_toolbar.get_by_test_id(
         "stElementToolbarButton"
-    ).nth(2)
+    ).last
 
     # Activate toolbar:
     dataframe_element.hover()

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,11 +76,6 @@ def _create_connection(
       * Allow the user to specify ttl and max_entries when calling st.connection.
     """
 
-    @cache_resource(
-        max_entries=max_entries,
-        show_spinner="Running `st.connection(...)`.",
-        ttl=ttl,
-    )
     def __create_connection(
         name: str, connection_class: Type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
@@ -90,6 +85,21 @@ def _create_connection(
         raise StreamlitAPIException(
             f"{connection_class} is not a subclass of BaseConnection!"
         )
+
+    # We modify our helper function's `__qualname__` here to work around default
+    # `@st.cache_resource` behavior. Otherwise, `st.connection` being called with
+    # different `ttl` or `max_entries` values will reset the cache with each call.
+    ttl_str = str(ttl).replace(  # Avoid adding extra `.` characters to `__qualname__`
+        ".", "_"
+    )
+    __create_connection.__qualname__ = (
+        f"{__create_connection.__qualname__}_{ttl_str}_{max_entries}"
+    )
+    __create_connection = cache_resource(
+        max_entries=max_entries,
+        show_spinner="Running `st.connection(...)`.",
+        ttl=ttl,
+    )(__create_connection)
 
     return __create_connection(name, connection_class, **kwargs)
 

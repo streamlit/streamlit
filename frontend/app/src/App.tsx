@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,6 @@ import {
   isColoredLineDisplayed,
   isDarkTheme,
   isEmbed,
-  isFooterDisplayed,
   isInChildFrame,
   isLightTheme,
   isPaddingDisplayed,
@@ -83,7 +82,6 @@ import {
   ForwardMsgMetadata,
   GitInfo,
   IAppPage,
-  ICustomThemeConfig,
   IGitInfo,
   Initialize,
   NewSession,
@@ -109,7 +107,8 @@ import {
   LibConfig,
   AppConfig,
 } from "@streamlit/lib"
-import { concat, noop, without } from "lodash"
+import noop from "lodash/noop"
+import without from "lodash/without"
 
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 
@@ -124,16 +123,12 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
+import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
+import { ThemeManager } from "./util/useThemeManager"
 
 export interface Props {
   screenCast: ScreenCastHOC
-  theme: {
-    activeTheme: ThemeConfig
-    availableThemes: ThemeConfig[]
-    setTheme: (theme: ThemeConfig) => void
-    addThemes: (themes: ThemeConfig[]) => void
-    setImportedTheme: (themeInfo: ICustomThemeConfig) => void
-  }
+  theme: ThemeManager
 }
 
 interface State {
@@ -171,9 +166,12 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
+  inputsDisabled: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
+
+const INITIAL_SCRIPT_RUN_ID = "<null>"
 
 // eslint-disable-next-line
 declare global {
@@ -241,10 +239,10 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(true),
       isFullScreen: false,
       scriptName: "",
-      scriptRunId: "<null>",
+      scriptRunId: INITIAL_SCRIPT_RUN_ID,
       appHash: null,
       scriptRunState: ScriptRunState.NOT_RUNNING,
       userSettings: {
@@ -282,6 +280,7 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
+      inputsDisabled: false,
     }
 
     this.connectionManager = null
@@ -297,9 +296,21 @@ export class App extends PureComponent<Props, State> {
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
       clearCache: this.clearCache,
+      sendAppHeartbeat: this.sendAppHeartbeat,
+      setInputsDisabled: inputsDisabled => {
+        this.setState({ inputsDisabled })
+      },
       themeChanged: this.props.theme.setImportedTheme,
       pageChanged: this.onPageChange,
       isOwnerChanged: isOwner => this.setState({ isOwner }),
+      jwtHeaderChanged: ({ jwtHeaderName, jwtHeaderValue }) => {
+        if (
+          this.endpoints.setJWTHeader !== undefined &&
+          this.state.appConfig.useExternalAuthToken
+        ) {
+          this.endpoints.setJWTHeader({ jwtHeaderName, jwtHeaderValue })
+        }
+      },
       hostMenuItemsChanged: hostMenuItems => {
         this.setState({ hostMenuItems })
       },
@@ -550,7 +561,7 @@ export class App extends PureComponent<Props, State> {
       this.widgetMgr.sendUpdateWidgetsMessage()
       this.setState({ dialog: null })
     } else {
-      setCookie("_xsrf", "")
+      setCookie("_streamlit_xsrf", "")
 
       if (this.sessionInfo.isSet) {
         this.sessionInfo.clearCurrent()
@@ -862,9 +873,10 @@ export class App extends PureComponent<Props, State> {
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
       if (prevPageName !== newPageName) {
-        const queryString = this.getQueryString()
-
+        // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
+        const queryString = preserveEmbedQueryParams()
         const qs = queryString ? `?${queryString}` : ""
+
         const basePathPrefix = basePath ? `/${basePath}` : ""
 
         const pagePath = viewingMainPage ? "" : newPageName
@@ -1103,15 +1115,19 @@ export class App extends PureComponent<Props, State> {
     scriptRunId: string,
     scriptName: string
   ): void {
+    const { hideSidebarNav, elements } = this.state
+    // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
+    const sidebarElements = (hideSidebarNav && elements.sidebar) || undefined
+
     this.setState(
       {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(),
+        elements: AppRoot.empty(false, sidebarElements),
       },
       () => {
-        this.pendingElementsBuffer = this.state.elements
+        this.pendingElementsBuffer = elements
         this.widgetMgr.removeInactive(new Set([]))
       }
     )
@@ -1300,12 +1316,20 @@ export class App extends PureComponent<Props, State> {
 
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
-    const queryString = this.getQueryString()
+    let queryString = this.getQueryString()
     let pageName = ""
 
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
+      if (pageScriptHash != currentPageScriptHash) {
+        // clear non-embed query parameters within a page change
+        queryString = preserveEmbedQueryParams()
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_QUERY_PARAM",
+          queryParams: queryString,
+        })
+      }
     } else if (currentPageScriptHash) {
       // The user didn't specify which page to run, which happens when they
       // click the "Rerun" button in the main menu. In this case, we
@@ -1411,6 +1435,19 @@ export class App extends PureComponent<Props, State> {
       this.sendBackMsg(backMsg)
     } else {
       logError("Cannot clear cache: disconnected from server")
+    }
+  }
+
+  /**
+   * Sends an app heartbeat message through the websocket
+   */
+  sendAppHeartbeat = (): void => {
+    if (this.isServerConnected()) {
+      const backMsg = new BackMsg({ appHeartbeat: true })
+      backMsg.type = "appHeartbeat"
+      this.sendBackMsg(backMsg)
+    } else {
+      logError("Cannot send app heartbeat: disconnected from server")
     }
   }
 
@@ -1529,7 +1566,7 @@ export class App extends PureComponent<Props, State> {
   addScriptFinishedHandler = (func: () => void): void => {
     this.setState((prevState, _) => {
       return {
-        scriptFinishedHandlers: concat(prevState.scriptFinishedHandlers, func),
+        scriptFinishedHandlers: prevState.scriptFinishedHandlers.concat(func),
       }
     })
   }
@@ -1619,6 +1656,7 @@ export class App extends PureComponent<Props, State> {
       hostToolbarItems,
       libConfig,
       appConfig,
+      inputsDisabled,
     } = this.state
     const developmentMode = showDevelopmentOptions(
       this.state.isOwner,
@@ -1641,6 +1679,9 @@ export class App extends PureComponent<Props, State> {
         })
       : null
 
+    const widgetsDisabled =
+      inputsDisabled || connectionState !== ConnectionState.CONNECTED
+
     // Attach and focused props provide a way to handle Global Hot Keys
     // https://github.com/greena13/react-hotkeys/issues/41
     // attach: DOM element the keyboard listeners should attach to
@@ -1653,7 +1694,6 @@ export class App extends PureComponent<Props, State> {
           embedded: isEmbed(),
           showPadding: !isEmbed() || isPaddingDisplayed(),
           disableScrolling: isScrollingHidden(),
-          showFooter: !isEmbed() || isFooterDisplayed(),
           showToolbar: !isEmbed() || isToolbarDisplayed(),
           showColoredLine: !isEmbed() || isColoredLineDisplayed(),
           // host communication manager elements
@@ -1674,6 +1714,8 @@ export class App extends PureComponent<Props, State> {
             setTheme: this.setAndSendTheme,
             availableThemes: this.props.theme.availableThemes,
             addThemes: this.props.theme.addThemes,
+            onPageChange: this.onPageChange,
+            currentPageScriptHash,
             libConfig,
           }}
         >
@@ -1683,7 +1725,15 @@ export class App extends PureComponent<Props, State> {
             attach={window}
             focused={true}
           >
-            <StyledApp className={outerDivClass}>
+            <StyledApp
+              className={outerDivClass}
+              data-testid="stApp"
+              data-teststate={
+                scriptRunId == INITIAL_SCRIPT_RUN_ID
+                  ? "initial"
+                  : scriptRunState
+              }
+            >
               {/* The tabindex below is required for testing. */}
               <Header>
                 {!hideTopBar && (
@@ -1737,7 +1787,7 @@ export class App extends PureComponent<Props, State> {
                 scriptRunId={scriptRunId}
                 scriptRunState={scriptRunState}
                 widgetMgr={this.widgetMgr}
-                widgetsDisabled={connectionState !== ConnectionState.CONNECTED}
+                widgetsDisabled={widgetsDisabled}
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}

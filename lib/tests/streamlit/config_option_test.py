@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -120,8 +120,9 @@ class ConfigOptionTest(unittest.TestCase):
             expiration_date="2000-01-01",
         )
 
-        with self.assertRaises(DeprecationError):
-            c.set_value(my_value, where_defined)
+        # Expired options behave like deprecated options
+        # just a slightly different text.
+        c.set_value(my_value, where_defined)
 
         self.assertTrue(c.is_expired())
 

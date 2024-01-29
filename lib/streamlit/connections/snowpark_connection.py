@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ class SnowparkConnection(BaseConnection["Session"]):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
 
         Example
@@ -144,13 +144,22 @@ class SnowparkConnection(BaseConnection["Session"]):
             retry=retry_if_exception_type(SnowparkServerException),
             wait=wait_fixed(1),
         )
-        @cache_data(
-            show_spinner="Running `snowpark.query(...)`.",
-            ttl=ttl,
-        )
         def _query(sql: str) -> pd.DataFrame:
             with self._lock:
                 return self._instance.sql(sql).to_pandas()
+
+        # We modify our helper function's `__qualname__` here to work around default
+        # `@st.cache_data` behavior. Otherwise, `.query()` being called with different
+        # `ttl` values will reset the cache with each call, and the query caches won't
+        # be scoped by connection.
+        ttl_str = str(  # Avoid adding extra `.` characters to `__qualname__`
+            ttl
+        ).replace(".", "_")
+        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
+        _query = cache_data(
+            show_spinner="Running `snowpark.query(...)`.",
+            ttl=ttl,
+        )(_query)
 
         return _query(sql)
 

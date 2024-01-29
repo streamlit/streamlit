@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,18 +21,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Collection,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Collection, Dict, List, Sequence, Tuple, cast
 
 import pandas as pd
 from pandas.api.types import infer_dtype, is_integer_dtype
@@ -824,7 +813,7 @@ class ArrowAltairMixin:
         return cast("DeltaGenerator", self)
 
 
-def _is_date_column(df: pd.DataFrame, name: Optional[str]) -> bool:
+def _is_date_column(df: pd.DataFrame, name: str | None) -> bool:
     """True if the column with the given name stores datetime.date values.
 
     This function just checks the first value in the given column, so
@@ -854,7 +843,7 @@ def _is_date_column(df: pd.DataFrame, name: Optional[str]) -> bool:
 def _melt_data(
     df: pd.DataFrame,
     columns_to_leave_alone: List[str],
-    columns_to_melt: Optional[List[str]],
+    columns_to_melt: List[str] | None,
     new_y_column_name: str,
     new_color_column_name: str,
 ) -> pd.DataFrame:
@@ -894,11 +883,11 @@ def _melt_data(
 
 def prep_data(
     df: pd.DataFrame,
-    x_column: Optional[str],
+    x_column: str | None,
     y_column_list: List[str],
-    color_column: Optional[str],
-    size_column: Optional[str],
-) -> Tuple[pd.DataFrame, Optional[str], Optional[str], Optional[str], Optional[str]]:
+    color_column: str | None,
+    size_column: str | None,
+) -> Tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
     """Prepares the data for charting. This is also used in add_rows.
 
     Returns the prepared dataframe and the new names of the x column (taking the index reset into
@@ -938,14 +927,14 @@ def prep_data(
 
 def _generate_chart(
     chart_type: ChartType,
-    data: Optional[Data],
-    x_from_user: Optional[str] = None,
-    y_from_user: Union[str, Sequence[str], None] = None,
-    color_from_user: Union[str, Color, List[Color], None] = None,
-    size_from_user: Union[str, float, None] = None,
+    data: Data | None,
+    x_from_user: str | None = None,
+    y_from_user: str | Sequence[str] | None = None,
+    color_from_user: str | Color | List[Color] | None = None,
+    size_from_user: str | float | None = None,
     width: int = 0,
     height: int = 0,
-) -> alt.Chart:
+) -> Tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
@@ -1030,8 +1019,8 @@ def _generate_chart(
 
 
 def _maybe_reset_index_in_place(
-    df: pd.DataFrame, x_column: Optional[str], y_column_list: List[str]
-) -> Optional[str]:
+    df: pd.DataFrame, x_column: str | None, y_column_list: List[str]
+) -> str | None:
     if x_column is None and len(y_column_list) > 0:
         if df.index.name is None:
             # Pick column name that is unlikely to collide with user-given names.
@@ -1046,9 +1035,7 @@ def _maybe_reset_index_in_place(
     return x_column
 
 
-def _drop_unused_columns(
-    df: pd.DataFrame, *column_names: Optional[str]
-) -> pd.DataFrame:
+def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.DataFrame:
     """Returns a subset of df, selecting only column_names that aren't None."""
 
     # We can't just call set(col_names) because sets don't have stable ordering,
@@ -1069,7 +1056,7 @@ def _drop_unused_columns(
     return df[keep]
 
 
-def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: Optional[str]):
+def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: str | None):
     """If needed, convert color column to a format Vega understands."""
     if color_column is None or len(df[color_column]) == 0:
         return
@@ -1090,11 +1077,11 @@ def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: Optiona
 
 def _convert_col_names_to_str_in_place(
     df: pd.DataFrame,
-    x_column: Optional[str],
+    x_column: str | None,
     y_column_list: List[str],
-    color_column: Optional[str],
-    size_column: Optional[str],
-) -> Tuple[Optional[str], List[str], Optional[str], Optional[str]]:
+    color_column: str | None,
+    size_column: str | None,
+) -> Tuple[str | None, List[str], str | None, str | None]:
     """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
     column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
     str_column_names = [str(c) for c in column_names]
@@ -1110,7 +1097,7 @@ def _convert_col_names_to_str_in_place(
 
 def _parse_generic_column(
     df: pd.DataFrame, column_or_value: Any
-) -> Tuple[Optional[str], Any]:
+) -> Tuple[str | None, Any]:
     if isinstance(column_or_value, str) and column_or_value in df.columns:
         column_name = column_or_value
         value = None
@@ -1121,7 +1108,7 @@ def _parse_generic_column(
     return column_name, value
 
 
-def _parse_x_column(df: pd.DataFrame, x_from_user: Optional[str]) -> Optional[str]:
+def _parse_x_column(df: pd.DataFrame, x_from_user: str | None) -> str | None:
     if x_from_user is None:
         return None
 
@@ -1141,8 +1128,8 @@ def _parse_x_column(df: pd.DataFrame, x_from_user: Optional[str]) -> Optional[st
 
 def _parse_y_columns(
     df: pd.DataFrame,
-    y_from_user: Union[str, Sequence[str], None],
-    x_column: Union[str, None],
+    y_from_user: str | Sequence[str] | None,
+    x_column: str | None,
 ) -> List[str]:
     y_column_list: List[str] = []
 
@@ -1173,8 +1160,8 @@ def _parse_y_columns(
 
 
 def _get_opacity_encoding(
-    chart_type: ChartType, color_column: Optional[str]
-) -> Optional[alt.OpacityValue]:
+    chart_type: ChartType, color_column: str | None
+) -> alt.OpacityValue | None:
     import altair as alt
 
     if color_column and chart_type == ChartType.AREA:
@@ -1183,7 +1170,7 @@ def _get_opacity_encoding(
     return None
 
 
-def _get_scale(df: pd.DataFrame, column_name: Optional[str]) -> alt.Scale:
+def _get_scale(df: pd.DataFrame, column_name: str | None) -> alt.Scale:
     import altair as alt
 
     # Set the X and Y axes' scale to "utc" if they contain date values.
@@ -1197,9 +1184,7 @@ def _get_scale(df: pd.DataFrame, column_name: Optional[str]) -> alt.Scale:
     return alt.Scale()
 
 
-def _get_axis_config(
-    df: pd.DataFrame, column_name: Optional[str], grid: bool
-) -> alt.Axis:
+def _get_axis_config(df: pd.DataFrame, column_name: str | None, grid: bool) -> alt.Axis:
     import altair as alt
 
     if column_name is not None and is_integer_dtype(df[column_name]):
@@ -1212,13 +1197,13 @@ def _get_axis_config(
 
 def _maybe_melt(
     df: pd.DataFrame,
-    x_column: Optional[str],
+    x_column: str | None,
     y_column_list: List[str],
-    color_column: Optional[str],
-    size_column: Optional[str],
-) -> Tuple[pd.DataFrame, Optional[str], Optional[str]]:
+    color_column: str | None,
+    size_column: str | None,
+) -> Tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
-    y_column: Optional[str]
+    y_column: str | None
 
     if len(y_column_list) == 0:
         y_column = None
@@ -1246,8 +1231,8 @@ def _maybe_melt(
 
 def _get_x_encoding(
     df: pd.DataFrame,
-    x_column: Optional[str],
-    x_from_user: Optional[str],
+    x_column: str | None,
+    x_from_user: str | None,
     chart_type: ChartType,
 ) -> alt.X:
     import altair as alt
@@ -1286,8 +1271,8 @@ def _get_x_encoding(
 
 def _get_y_encoding(
     df: pd.DataFrame,
-    y_column: Optional[str],
-    y_from_user: Union[str, Sequence[str], None],
+    y_column: str | None,
+    y_from_user: str | Sequence[str] | None,
 ) -> alt.Y:
     import altair as alt
 
@@ -1325,11 +1310,11 @@ def _get_y_encoding(
 
 def _get_color_encoding(
     df: pd.DataFrame,
-    color_value: Optional[Color],
-    color_column: Optional[str],
+    color_value: Color | None,
+    color_column: str | None,
     y_column_list: List[str],
-    color_from_user: Union[str, Color, List[Color], None],
-) -> alt.Color:
+    color_from_user: str | Color | List[Color] | None,
+) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
     has_color_value = color_value not in [None, [], tuple()]
@@ -1365,7 +1350,7 @@ def _get_color_encoding(
         raise StreamlitInvalidColorError(df, color_from_user)
 
     elif color_column is not None:
-        column_type: Union[str, Tuple[str, List[Any]]]
+        column_type: str | Tuple[str, List[Any]]
 
         if color_column == MELTED_COLOR_COLUMN_NAME:
             column_type = "nominal"
@@ -1405,9 +1390,9 @@ def _get_color_encoding(
 
 def _get_size_encoding(
     chart_type: ChartType,
-    size_column: Optional[str],
-    size_value: Union[str, float, None],
-) -> alt.Size:
+    size_column: str | None,
+    size_value: str | float | None,
+) -> alt.Size | alt.SizeValue | None:
     import altair as alt
 
     if chart_type == ChartType.SCATTER:
@@ -1438,9 +1423,9 @@ def _get_size_encoding(
 def _get_tooltip_encoding(
     x_column: str,
     y_column: str,
-    size_column: Optional[str],
-    color_column: Optional[str],
-    color_enc: alt.Color,
+    size_column: str | None,
+    color_column: str | None,
+    color_enc: alt.Color | alt.ColorValue | None,
 ) -> list[alt.Tooltip]:
     import altair as alt
 
@@ -1489,8 +1474,8 @@ def _get_tooltip_encoding(
 
 
 def _get_x_encoding_type(
-    df: pd.DataFrame, chart_type: ChartType, x_column: Optional[str]
-) -> Union[str, Tuple[str, List[Any]]]:
+    df: pd.DataFrame, chart_type: ChartType, x_column: str | None
+) -> type_util.VegaLiteType:
     if x_column is None:
         return "quantitative"  # Anything. If None, Vega-Lite may hide the axis.
 
@@ -1503,8 +1488,8 @@ def _get_x_encoding_type(
 
 
 def _get_y_encoding_type(
-    df: pd.DataFrame, y_column: Optional[str]
-) -> Union[str, Tuple[str, List[Any]]]:
+    df: pd.DataFrame, y_column: str | None
+) -> type_util.VegaLiteType:
     if y_column:
         return type_util.infer_vegalite_type(df[y_column])
 
@@ -1515,7 +1500,7 @@ def marshall(
     vega_lite_chart: ArrowVegaLiteChartProto,
     altair_chart: alt.Chart,
     use_container_width: bool = False,
-    theme: Union[None, Literal["streamlit"]] = "streamlit",
+    theme: None | Literal["streamlit"] = "streamlit",
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""
@@ -1536,13 +1521,13 @@ def marshall(
         datasets[name] = data
         return {"name": name}
 
-    alt.data_transformers.register("id", id_transform)
+    alt.data_transformers.register("id", id_transform)  # type: ignore[attr-defined,unused-ignore]
 
     # The default altair theme has some width/height defaults defined
     # which are not useful for Streamlit. Therefore, we change the theme to
     # "none" to avoid those defaults.
-    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():
-        with alt.data_transformers.enable("id"):
+    with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():  # type: ignore[attr-defined,unused-ignore]
+        with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
             # Put datasets back into the chart dict but note how they weren't

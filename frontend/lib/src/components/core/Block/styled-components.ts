@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ export interface StyledElementContainerProps {
   elementType: string
 }
 
-const GLOBAL_ELEMENTS = ["balloons", "snow", "chatInput"]
+const GLOBAL_ELEMENTS = ["balloons", "snow"]
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({ theme, isStale, width, elementType }) => ({
     width,
@@ -77,9 +77,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: 1000,
     },
 
-    // We do not want the chat input to be faded out.
-    // TODO: Reconsider this when we implement fixed-sized chat containers
-    ...(isStale && elementType !== "chatInput"
+    ":has(> .stPageLink)": {
+      marginTop: "-0.375rem",
+      marginBottom: "-0.375rem",
+    },
+
+    ...(isStale && elementType !== "skeleton"
       ? {
           opacity: 0.33,
           transition: "opacity 1s ease-in 0.5s",
@@ -136,7 +139,6 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
   ({ width, theme }) => ({
     width,
     position: "relative", // Required for the automatic width computation.
-
     display: "flex",
     flex: 1,
     flexDirection: "column",
@@ -154,13 +156,20 @@ export const StyledVerticalBlockWrapper = styled.div<StyledVerticalBlockProps>(
 
 export interface StyledVerticalBlockBorderWrapperProps {
   border: boolean
+  height?: number
 }
 
 export const StyledVerticalBlockBorderWrapper =
-  styled.div<StyledVerticalBlockBorderWrapperProps>(({ theme, border }) => ({
-    ...(border && {
-      border: `1px solid ${theme.colors.fadedText10}`,
-      borderRadius: theme.radii.lg,
-      padding: "calc(1em - 1px)", // 1px to account for border.
-    }),
-  }))
+  styled.div<StyledVerticalBlockBorderWrapperProps>(
+    ({ theme, border, height }) => ({
+      ...(border && {
+        border: `1px solid ${theme.colors.fadedText10}`,
+        borderRadius: theme.radii.lg,
+        padding: "calc(1em - 1px)", // 1px to account for border.
+      }),
+      ...(height && {
+        height: `${height}px`,
+        overflow: "auto",
+      }),
+    })
+  )

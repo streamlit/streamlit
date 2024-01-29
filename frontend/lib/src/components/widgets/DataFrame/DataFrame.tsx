@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,6 +95,7 @@ export interface DataFrameProps {
   isFullScreen?: boolean
   expand?: () => void
   collapse?: () => void
+  disableFullscreenMode?: boolean
 }
 
 /**
@@ -116,6 +117,7 @@ function DataFrame({
   disabled,
   widgetMgr,
   isFullScreen,
+  disableFullscreenMode,
   expand,
   collapse,
 }: DataFrameProps): ReactElement {
@@ -459,6 +461,7 @@ function DataFrame({
     >
       <Toolbar
         isFullScreen={isFullScreen}
+        disableFullscreenMode={disableFullscreenMode}
         // Lock the toolbar in some specific situations:
         locked={
           isRowSelected || isCellSelected || (isTouchDevice && isFocused)

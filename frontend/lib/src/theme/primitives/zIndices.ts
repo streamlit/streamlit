@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ const sidebar = 100
 const menuButton = sidebar + 10
 const balloons = 1000000
 const header = balloons - 10
-const chatInput = sidebar - 1
+const bottom = sidebar - 1
 const sidebarMobile = balloons - 5
 const popupMenu = balloons + 40
 const fullscreenWrapper = balloons + 50
@@ -36,5 +36,5 @@ export const zIndices = {
   popupMenu,
   fullscreenWrapper,
   tablePortal,
-  chatInput,
+  bottom,
 }

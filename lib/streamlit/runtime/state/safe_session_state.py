@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,13 @@
 # limitations under the License.
 
 import threading
-from typing import Any, Callable, Dict, List, Optional, Set
+from contextlib import contextmanager
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.state.session_state import SessionState
 
 
@@ -123,3 +125,9 @@ class SafeSessionState:
         kv = ((k, self._state[k]) for k in self._state._keys())
         s = ", ".join(f"{k}: {v!r}" for k, v in kv)
         return f"{{{s}}}"
+
+    @contextmanager
+    def query_params(self) -> Iterator[QueryParams]:
+        self._yield_callback()
+        with self._lock:
+            yield self._state.query_params

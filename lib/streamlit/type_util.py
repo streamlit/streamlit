@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import math
 import re
 import types
 from enum import Enum, EnumMeta, auto
@@ -49,6 +50,7 @@ import streamlit as st
 from streamlit import config, errors
 from streamlit import logger as _logger
 from streamlit import string_util
+from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     import graphviz
@@ -140,6 +142,8 @@ OptionSequence: TypeAlias = Union[
 Key: TypeAlias = Union[str, int]
 
 LabelVisibility = Literal["visible", "hidden", "collapsed"]
+
+VegaLiteType = Literal["quantitative", "ordinal", "temporal", "nominal"]
 
 
 class SupportsStr(Protocol):
@@ -654,6 +658,24 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
         return list(it)
 
 
+def check_python_comparable(seq: Sequence[Any]) -> None:
+    """Check if the sequence elements support "python comparison".
+    That means that the equality operator (==) returns a boolean value.
+    Which is not True for e.g. numpy arrays and pandas series."""
+    try:
+        bool(seq[0] == seq[0])
+    except LookupError:
+        # In case of empty sequences, the check not raise an exception.
+        pass
+    except ValueError:
+        raise StreamlitAPIException(
+            "Invalid option type provided. Options must be comparable, returning a "
+            f"boolean when used with *==*. \n\nGot **{type(seq[0]).__name__}**, "
+            "which cannot be compared. Refactor your code to use elements of "
+            "comparable types as options, e.g. use indices instead."
+        )
+
+
 def is_pandas_version_less_than(v: str) -> bool:
     """Return True if the current Pandas version is less than the input version.
 
@@ -691,6 +713,82 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     return version.parse(pa.__version__) < version.parse(v)
 
 
+def _maybe_truncate_table(
+    table: pa.Table, truncated_rows: int | None = None
+) -> pa.Table:
+    """Experimental feature to automatically truncate tables that
+    are larger than the maximum allowed message size. It needs to be enabled
+    via the server.enableArrowTruncation config option.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table to truncate.
+
+    truncated_rows : int or None
+        The number of rows that have been truncated so far. This is used by
+        the recursion logic to keep track of the total number of truncated
+        rows.
+
+    """
+
+    if config.get_option("server.enableArrowTruncation"):
+        # This is an optimization problem: We don't know at what row
+        # the perfect cut-off is to comply with the max size. But we want to figure
+        # it out in as few iterations as possible. We almost always will cut out
+        # more than required to keep the iterations low.
+
+        # The maximum size allowed for protobuf messages in bytes:
+        max_message_size = int(config.get_option("server.maxMessageSize") * 1e6)
+        # We add 1 MB for other overhead related to the protobuf message.
+        # This is a very conservative estimate, but it should be good enough.
+        table_size = int(table.nbytes + 1 * 1e6)
+        table_rows = table.num_rows
+
+        if table_rows > 1 and table_size > max_message_size:
+            # targeted rows == the number of rows the table should be truncated to.
+            # Calculate an approximation of how many rows we need to truncate to.
+            targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
+            # Make sure to cut out at least a couple of rows to avoid running
+            # this logic too often since it is quite inefficient and could lead
+            # to infinity recursions without these precautions.
+            targeted_rows = math.floor(
+                max(
+                    min(
+                        # Cut out:
+                        # an additional 5% of the estimated num rows to cut out:
+                        targeted_rows - math.floor((table_rows - targeted_rows) * 0.05),
+                        # at least 1% of table size:
+                        table_rows - (table_rows * 0.01),
+                        # at least 5 rows:
+                        table_rows - 5,
+                    ),
+                    1,  # but it should always have at least 1 row
+                )
+            )
+            sliced_table = table.slice(0, targeted_rows)
+            return _maybe_truncate_table(
+                sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
+            )
+
+        if truncated_rows:
+            displayed_rows = string_util.simplify_number(table.num_rows)
+            total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
+
+            if displayed_rows == total_rows:
+                # If the simplified numbers are the same,
+                # we just display the exact numbers.
+                displayed_rows = str(table.num_rows)
+                total_rows = str(table.num_rows + truncated_rows)
+
+            st.caption(
+                f"⚠️ Showing {displayed_rows} out of {total_rows} "
+                "rows due to data size limitations."
+            )
+
+    return table
+
+
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to bytes using Apache Arrow.
 
@@ -700,6 +798,20 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
         A table to convert.
 
     """
+    try:
+        table = _maybe_truncate_table(table)
+    except RecursionError as err:
+        # This is a very unlikely edge case, but we want to make sure that
+        # it doesn't lead to unexpected behavior.
+        # If there is a recursion error, we just return the table as-is
+        # which will lead to the normal message limit exceed error.
+        _LOGGER.warning(
+            "Recursion error while truncating Arrow table. This is not "
+            "supposed to happen.",
+            exc_info=err,
+        )
+
+    # Convert table to bytes
     sink = pa.BufferOutputStream()
     writer = pa.RecordBatchStreamWriter(sink, table.schema)
     writer.write_table(table)
@@ -1054,7 +1166,9 @@ def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[
 # STREAMLIT MOD: I changed the type for the data argument from "pd.Series" to Series,
 # and the return type to a Union including a (str, list) tuple, since the function does
 # return that in some situations.
-def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
+def infer_vegalite_type(
+    data: Series[Any],
+) -> VegaLiteType:
     """
     From an array-like input, infer the correct vega typecode
     ('ordinal', 'nominal', 'quantitative', or 'temporal')
@@ -1075,8 +1189,15 @@ def infer_vegalite_type(data: Series[Any]) -> Union[str, Tuple[str, List[Any]]]:
         "complex",
     ]:
         return "quantitative"
+
     elif typ == "categorical" and data.cat.ordered:
-        return ("ordinal", data.cat.categories.tolist())
+        # STREAMLIT MOD: The original code returns a tuple here:
+        # return ("ordinal", data.cat.categories.tolist())
+        # But returning the tuple here isn't compatible with our
+        # built-in chart implementation. And it also doesn't seem to be necessary.
+        # Altair already extracts the correct sort order somewhere else.
+        # More info about the issue here: https://github.com/streamlit/streamlit/issues/7776
+        return "ordinal"
     elif typ in ["string", "bytes", "categorical", "boolean", "mixed", "unicode"]:
         return "nominal"
     elif typ in [

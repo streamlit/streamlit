@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1915,6 +1915,13 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 children[idx] = child
             assert isinstance(child, Block)
             current_node = child
+
+        # Handle a block when we already have a placeholder for that location
+        if isinstance(new_node, Block):
+            placeholder_block = current_node.children.get(delta_path[-1])
+            if placeholder_block is not None:
+                new_node.children = placeholder_block.children
+
         current_node.children[delta_path[-1]] = new_node
 
     return root

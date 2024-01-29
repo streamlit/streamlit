@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,7 +68,9 @@ PathWatcherType = Union[
 
 def report_watchdog_availability():
     if not watchdog_available:
-        if not config.get_option("global.disableWatchdogWarning"):
+        if not config.get_option("global.disableWatchdogWarning") and config.get_option(
+            "server.fileWatcherType"
+        ) not in ["poll", "none"]:
             msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
             click.secho(

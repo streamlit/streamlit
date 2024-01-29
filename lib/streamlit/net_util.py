@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,9 @@ from streamlit.logger import get_logger
 
 LOGGER = get_logger(__name__)
 
-# URL for checking the current machine's external IP address.
+# URLs for checking the current machine's external IP address.
 _AWS_CHECK_IP: Final = "http://checkip.amazonaws.com"
+_AWS_CHECK_IP_HTTPS: Final = "https://checkip.amazonaws.com"
 
 _external_ip: Optional[str] = None
 _internal_ip: Optional[str] = None
@@ -44,6 +45,9 @@ def get_external_ip() -> Optional[str]:
         return _external_ip
 
     response = _make_blocking_http_get(_AWS_CHECK_IP, timeout=5)
+
+    if response is None:
+        response = _make_blocking_http_get(_AWS_CHECK_IP_HTTPS, timeout=5)
 
     if _looks_like_an_ip_adress(response):
         _external_ip = response

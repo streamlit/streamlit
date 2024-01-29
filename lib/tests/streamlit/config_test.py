@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,15 +54,15 @@ class ConfigTest(unittest.TestCase):
     def test_set_user_option_scriptable(self):
         """Test that scriptable options can be set from API."""
         # This is set in lib/tests/conftest.py to off
-        self.assertEqual(True, config.get_option("client.displayEnabled"))
+        self.assertEqual(True, config.get_option("client.showErrorDetails"))
 
         try:
-            # client.displayEnabled and client.caching can be set after run starts.
-            config.set_user_option("client.displayEnabled", False)
-            self.assertEqual(False, config.get_option("client.displayEnabled"))
+            # client.showErrorDetails can be set after run starts.
+            config.set_user_option("client.showErrorDetails", False)
+            self.assertEqual(False, config.get_option("client.showErrorDetails"))
         finally:
             # Restore original value
-            config.set_user_option("client.displayEnabled", True)
+            config.set_user_option("client.showErrorDetails", True)
 
     def test_set_user_option_unscriptable(self):
         """Test that unscriptable options cannot be set with st.set_option."""
@@ -340,6 +340,7 @@ class ConfigTest(unittest.TestCase):
                 "client.caching",
                 "client.displayEnabled",
                 "client.showErrorDetails",
+                "client.showSidebarNavigation",
                 "client.toolbarMode",
                 "theme.base",
                 "theme.primaryColor",
@@ -357,6 +358,7 @@ class ConfigTest(unittest.TestCase):
                 "global.maxCachedMessageAge",
                 "global.minCachedMessageSize",
                 "global.showWarningOnDirectExecution",
+                "global.storeCachedForwardMessagesInMemory",
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
                 "global.dataFrameSerialization",
@@ -389,6 +391,7 @@ class ConfigTest(unittest.TestCase):
                 "server.maxUploadSize",
                 "server.maxMessageSize",
                 "server.enableStaticServing",
+                "server.enableArrowTruncation",
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "ui.hideTopBar",
@@ -439,15 +442,15 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(1234, config._maybe_read_env_variable("env:RANDOM_TEST"))
 
     def test_update_config_with_toml(self):
-        self.assertEqual(True, config.get_option("client.caching"))
+        self.assertEqual(True, config.get_option("client.showErrorDetails"))
         toml = textwrap.dedent(
             """
            [client]
-           caching = false
+           showErrorDetails = false
         """
         )
         config._update_config_with_toml(toml, "test")
-        self.assertEqual(False, config.get_option("client.caching"))
+        self.assertEqual(False, config.get_option("client.showErrorDetails"))
 
     def test_set_option(self):
         with self.assertLogs(logger="streamlit.config", level="WARNING") as cm:
@@ -458,8 +461,8 @@ class ConfigTest(unittest.TestCase):
             cm.output[0],
         )
 
-        config._set_option("client.caching", "test", "test")
-        self.assertEqual("test", config.get_option("client.caching"))
+        config._set_option("browser.gatherUsageStats", "test", "test")
+        self.assertEqual("test", config.get_option("browser.gatherUsageStats"))
 
     def test_is_manually_set(self):
         config._set_option("browser.serverAddress", "some.bucket", "test")
@@ -605,7 +608,7 @@ class ConfigLoadingTest(unittest.TestCase):
             path_exists.return_value = False
             config.get_config_options()
 
-            self.assertEqual(True, config.get_option("client.caching"))
+            self.assertEqual(True, config.get_option("browser.gatherUsageStats"))
             self.assertIsNone(config.get_option("theme.font"))
 
     def test_load_global_config(self):

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,6 +54,6 @@ def is_repl():
 
 def is_executable_in_path(name):
     """Check if executable is in OS path."""
-    from distutils.spawn import find_executable
+    from shutil import which
 
-    return find_executable(name) is not None
+    return which(name) is not None

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,11 +144,7 @@ class ImageMixin:
         Example
         -------
         >>> import streamlit as st
-        >>> from PIL import Image
-        >>>
-        >>> image = Image.open('sunrise.jpg')
-        >>>
-        >>> st.image(image, caption='Sunrise by the mountains')
+        >>> st.image('sunrise.jpg', caption='Sunrise by the mountains')
 
         .. output::
            https://doc-image.streamlit.app/

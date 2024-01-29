@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,18 +18,17 @@ import dataclasses
 import time
 import unittest
 from collections import namedtuple
-from unittest.mock import Mock, PropertyMock, call, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
-import pytest
 
 import streamlit as st
 from streamlit import type_util
 from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.state import SessionStateProxy
+from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -168,6 +167,38 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
+    def test_generator(self):
+        """Test st.write with generator function."""
+
+        def gen_function():
+            yield "hello"
+            yield "world"
+
+        # Should support it as a generator function
+        with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
+            st.write(gen_function)
+
+            p.assert_called_once()
+
+        # Should support it as a generator function call
+        with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
+            st.write(gen_function())
+
+            p.assert_called_once()
+
+    @patch("streamlit.type_util.is_type")
+    def test_openai_stream(self, is_type):
+        """Test st.write with openai.Stream."""
+        is_type.side_effect = make_is_type_mock("openai.Stream")
+
+        class FakeOpenaiStream(object):
+            pass
+
+        with patch("streamlit.delta_generator.DeltaGenerator.write_stream") as p:
+            st.write(FakeOpenaiStream())
+
+            p.assert_called_once()
+
     def test_list(self):
         """Test st.write with list."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
@@ -188,6 +219,13 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with st.session_state."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write(SessionStateProxy())
+
+            p.assert_called_once()
+
+    def test_query_params(self):
+        """Test st.write with st.query_params."""
+        with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
+            st.write(QueryParamsProxy())
 
             p.assert_called_once()
 
@@ -371,6 +409,100 @@ class StreamlitWriteTest(unittest.TestCase):
                 top_level.return_value = False
 
                 placeholder.write("But", "multiple", "args", "should", "fail")
+
+
+class StreamlitStreamTest(unittest.TestCase):
+    """Test st.write_stream."""
+
+    @patch("streamlit.type_util.is_type")
+    def test_with_openai_chunk(self, is_type):
+        """Test st.write_stream with openai Chunks."""
+
+        is_type.side_effect = make_is_type_mock(
+            "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
+        )
+
+        # Create a mock for ChatCompletionChunk
+        mock_chunk = MagicMock()
+        mock_chunk.choices = [MagicMock()]
+
+        def openai_stream():
+            mock_chunk.choices[0].delta.content = "Hello "
+            yield mock_chunk
+            mock_chunk.choices[0].delta.content = "World"
+            yield mock_chunk
+
+        stream_return = st.write_stream(openai_stream)
+        self.assertEqual(stream_return, "Hello World")
+
+    def test_with_generator_text(self):
+        """Test st.write_stream with generator text content."""
+
+        def test_stream():
+            yield "Hello "
+            yield "World"
+
+        stream_return = st.write_stream(test_stream)
+        self.assertEqual(stream_return, "Hello World")
+
+        stream_return = st.write_stream(test_stream())
+        self.assertEqual(stream_return, "Hello World")
+
+    def test_with_wrong_input(self):
+        """Test st.write_stream with string or dataframe input generates exception."""
+
+        with self.assertRaises(StreamlitAPIException):
+            st.write_stream("Hello World")
+
+        with self.assertRaises(StreamlitAPIException):
+            st.write_stream(pd.DataFrame([[1, 2], [3, 4]]))
+
+    def test_with_generator_misc(self):
+        """Test st.write_stream with generator with different content."""
+
+        def test_stream():
+            yield "This is "
+            yield "a dataframe:"
+            yield pd.DataFrame([[1, 2], [3, 4]])
+            yield "Text under dataframe"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
+            stream_return = st.write_stream(test_stream)
+            p_dataframe.assert_called_once()
+            self.assertEqual(
+                str(stream_return),
+                str(
+                    [
+                        "This is a dataframe:",
+                        pd.DataFrame([[1, 2], [3, 4]]),
+                        "Text under dataframe",
+                    ]
+                ),
+            )
+
+    def test_with_list_output(self):
+        """Test st.write_stream with a list."""
+
+        data = [
+            "This is ",
+            "a dataframe:",
+            pd.DataFrame([[1, 2], [3, 4]]),
+            "Text under dataframe",
+        ]
+
+        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p_dataframe:
+            stream_return = st.write_stream(data)
+            p_dataframe.assert_called_once()
+            self.assertEqual(
+                str(stream_return),
+                str(
+                    [
+                        "This is a dataframe:",
+                        pd.DataFrame([[1, 2], [3, 4]]),
+                        "Text under dataframe",
+                    ]
+                ),
+            )
 
 
 def make_is_type_mock(true_type_matchers):

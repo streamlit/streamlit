@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -179,14 +179,12 @@ def calc_md5(s: Union[bytes, str]) -> str:
     return h.hexdigest()
 
 
-def exclude_key_query_params(
-    query_params: Dict[str, List[str]], keys_to_exclude: List[str]
-) -> Dict[str, List[str]]:
-    """Returns new object query_params : Dict[str, List[str]], but without keys defined with keys_to_drop : List[str]."""
+def exclude_keys_in_dict(
+    d: Dict[str, Any], keys_to_exclude: List[str]
+) -> Dict[str, Any]:
+    """Returns new object but without keys defined in keys_to_exclude"""
     return {
-        key: value
-        for key, value in query_params.items()
-        if key.lower() not in keys_to_exclude
+        key: value for key, value in d.items() if key.lower() not in keys_to_exclude
     }
 
 

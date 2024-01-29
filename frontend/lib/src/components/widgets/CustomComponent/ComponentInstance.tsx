@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -374,10 +374,13 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
         src = this.props.registry.getComponentURL(componentName, "index.html")
       }
 
+      // Create a URL object from window.location
+      const currentUrl = new URL(window.location.href)
+
       // Add streamlitUrl query parameter to src.
       src = queryString.stringifyUrl({
         url: src,
-        query: { streamlitUrl: window.location.href },
+        query: { streamlitUrl: currentUrl.origin + currentUrl.pathname },
       })
 
       // Parse arguments. Our JSON arguments are just stored in a JSON string.
@@ -464,6 +467,7 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
           src={src}
           width={this.props.width}
           height={this.frameHeight}
+          style={{ colorScheme: "light dark" }}
           scrolling="no"
           sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
           title={componentName}

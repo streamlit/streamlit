@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,7 +64,12 @@ class WebsocketSessionManager(SessionManager):
         script_data: ScriptData,
         user_info: Dict[str, Optional[str]],
         existing_session_id: Optional[str] = None,
+        session_id_override: Optional[str] = None,
     ) -> str:
+        assert not (
+            existing_session_id and session_id_override
+        ), "Only one of existing_session_id and session_id_override should be truthy"
+
         if existing_session_id in self._active_session_info_by_id:
             LOGGER.warning(
                 "Session with id %s is already connected! Connecting to a new session.",
@@ -97,6 +102,7 @@ class WebsocketSessionManager(SessionManager):
             message_enqueued_callback=self._message_enqueued_callback,
             local_sources_watcher=LocalSourcesWatcher(script_data.main_script_path),
             user_info=user_info,
+            session_id_override=session_id_override,
         )
 
         LOGGER.debug(

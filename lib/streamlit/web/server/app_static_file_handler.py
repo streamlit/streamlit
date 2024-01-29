@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class AppStaticFileHandler(tornado.web.StaticFileHandler):
             # we don't want to serve directories, and serve only files
             raise tornado.web.HTTPError(404)
 
-        if os.path.commonprefix([full_path, root]) != root:
+        if os.path.commonpath([full_path, root]) != root:
             # Don't allow misbehaving clients to break out of the static files directory
             _LOGGER.warning(
                 "Serving files outside of the static directory is not supported"

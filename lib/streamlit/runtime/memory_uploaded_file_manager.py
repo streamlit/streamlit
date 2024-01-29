@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from typing import Dict, List, Sequence
 
 from streamlit import util
 from streamlit.logger import get_logger
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CacheStat, group_stats
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
@@ -125,7 +125,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
         for session_storage in file_storage_copy.values():
             all_files.extend(session_storage.values())
 
-        return [
+        stats: List[CacheStat] = [
             CacheStat(
                 category_name="UploadedFileManager",
                 cache_name="",
@@ -133,3 +133,4 @@ class MemoryUploadedFileManager(UploadedFileManager):
             )
             for file in all_files
         ]
+        return group_stats(stats)

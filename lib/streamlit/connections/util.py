@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,8 +81,11 @@ def load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
 
 def running_in_sis() -> bool:
     """Return whether this app is running in SiS."""
-    from snowflake.snowpark._internal.utils import (  # type: ignore[import]  # isort: skip
-        is_in_stored_procedure,
-    )
+    try:
+        from snowflake.snowpark._internal.utils import (  # type: ignore[import]  # isort: skip
+            is_in_stored_procedure,
+        )
 
-    return cast(bool, is_in_stored_procedure())
+        return cast(bool, is_in_stored_procedure())
+    except ModuleNotFoundError:
+        return False

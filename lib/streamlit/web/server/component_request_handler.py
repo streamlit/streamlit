@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,18 +43,14 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         abspath = os.path.realpath(os.path.join(component_root, filename))
 
         # Do NOT expose anything outside of the component root.
-        if os.path.commonprefix([component_root, abspath]) != component_root or (
-            not os.path.normpath(abspath).startswith(
-                component_root
-            )  # this is a recommendation from CodeQL, probably a bit redundant
-        ):
+        if os.path.commonpath([component_root, abspath]) != component_root:
             self.write("forbidden")
             self.set_status(403)
             return
         try:
             with open(abspath, "rb") as file:
                 contents = file.read()
-        except (OSError) as e:
+        except OSError as e:
             _LOGGER.error(
                 "ComponentRequestHandler: GET %s read error", abspath, exc_info=e
             )

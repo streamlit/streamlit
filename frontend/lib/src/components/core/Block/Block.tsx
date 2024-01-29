@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,16 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useMemo, useRef } from "react"
+import React, {
+  ReactElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  ReactNode,
+} from "react"
 import { useTheme } from "@emotion/react"
-
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
@@ -24,6 +31,7 @@ import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
+import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
 
 import {
   BaseBlockProps,
@@ -39,6 +47,7 @@ import {
   StyledVerticalBlock,
   StyledVerticalBlockWrapper,
   StyledVerticalBlockBorderWrapper,
+  StyledVerticalBlockBorderWrapperProps,
 } from "./styled-components"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
@@ -67,7 +76,16 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 
   const childProps = { ...props, ...{ node } }
-  const child: ReactElement = <LayoutBlock {...childProps} />
+
+  // TODO: overwrite props.disableFullscreenMode for Dialog in a follow-up PR, e.g.:
+  // const disableFullscreenMode = props.disableFullscreenMode || node.deltaBlock.dialog
+  // and pass to LayoutBlock as props
+  const child: ReactElement = (
+    <LayoutBlock
+      {...childProps}
+      // disableFullscreenMode={disableFullscreenMode}
+    />
+  )
 
   if (node.deltaBlock.expandable) {
     return (
@@ -141,18 +159,28 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  const { libConfig } = useContext(LibContext)
+
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useTheme())
+
   return (
     <>
       {props.node.children &&
         props.node.children.map(
           (node: AppNode, index: number): ReactElement => {
+            const disableFullscreenMode =
+              libConfig.disableFullscreenMode || props.disableFullscreenMode
+
             // Base case: render a leaf node.
             if (node instanceof ElementNode) {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = { ...props, node: node as ElementNode }
+              const childProps = {
+                ...props,
+                disableFullscreenMode,
+                node: node as ElementNode,
+              }
 
               const key = getElementWidgetID(node.element) || index
               return <ElementNodeRenderer key={key} {...childProps} />
@@ -163,7 +191,11 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             if (node instanceof BlockNode) {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = { ...props, node: node as BlockNode }
+              const childProps = {
+                ...props,
+                disableFullscreenMode,
+                node: node as BlockNode,
+              }
 
               return <BlockNodeRenderer key={index} {...childProps} />
             }
@@ -176,6 +208,31 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 }
 
+export interface ScrollToBottomVerticalBlockWrapperProps
+  extends StyledVerticalBlockBorderWrapperProps {
+  children: ReactNode
+}
+
+// A wrapper for Vertical Block that adds scrolling with pinned to bottom behavior.
+function ScrollToBottomVerticalBlockWrapper(
+  props: ScrollToBottomVerticalBlockWrapperProps
+): ReactElement {
+  const { border, height, children } = props
+  const scrollContainerRef = useScrollToBottom()
+
+  return (
+    <StyledVerticalBlockBorderWrapper
+      border={border}
+      height={height}
+      data-testid="stVerticalBlockBorderWrapper"
+      data-test-scroll-behavior="scroll-to-bottom"
+      ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
+    >
+      {children}
+    </StyledVerticalBlockBorderWrapper>
+  )
+}
+
 // Currently, only VerticalBlocks will ever contain leaf elements. But this is only enforced on the
 // Python side.
 const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
@@ -185,12 +242,31 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   const observer = useMemo(
     () =>
       new ResizeObserver(([entry]) => {
-        // We need to determine the available width here to be able to set
-        // an explicit width for the `StyledVerticalBlock`.
-        setWidth(entry.target.getBoundingClientRect().width)
+        // Since the setWidth will perform changes to the DOM,
+        // we need wrap it in a requestAnimationFrame to avoid this error:
+        // ResizeObserver loop completed with undelivered notifications.
+        window.requestAnimationFrame(() => {
+          // We need to determine the available width here to be able to set
+          // an explicit width for the `StyledVerticalBlock`.
+
+          // The width should never be set to 0 since it can cause
+          // flickering effects.
+          setWidth(entry.target.getBoundingClientRect().width || -1)
+        })
       }),
     [setWidth]
   )
+
+  const border = props.node.deltaBlock.vertical?.border ?? false
+  const height = props.node.deltaBlock.vertical?.height || undefined
+
+  const activateScrollToBottom =
+    height &&
+    props.node.children.find(node => {
+      return (
+        node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
+      )
+    }) !== undefined
 
   useEffect(() => {
     if (wrapperElement.current) {
@@ -199,9 +275,18 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
     return () => {
       observer.disconnect()
     }
-  }, [wrapperElement, observer])
+    // We need to update the observer whenever the scrolling is activated or deactivated
+    // Otherwise, it still tries to measure the width of the old wrapper element.
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [observer, activateScrollToBottom])
 
-  const border = props.node.deltaBlock.vertical?.border ?? false
+  // Decide which wrapper to use based on whether we need to activate scrolling to bottom
+  // This is done for performance reasons, to prevent the usage of useScrollToBottom
+  // if it is not needed.
+  const VerticalBlockBorderWrapper = activateScrollToBottom
+    ? ScrollToBottomVerticalBlockWrapper
+    : StyledVerticalBlockBorderWrapper
+
   const propsWithNewWidth = { ...props, ...{ width } }
   // Widths of children autosizes to container width (and therefore window width).
   // StyledVerticalBlocks are the only things that calculate their own widths. They should never use
@@ -210,16 +295,18 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   // To apply a border, we need to wrap the StyledVerticalBlockWrapper again, otherwise the width
   // calculation would not take the padding into consideration.
   return (
-    <StyledVerticalBlockBorderWrapper
+    <VerticalBlockBorderWrapper
       border={border}
+      height={height}
       data-testid="stVerticalBlockBorderWrapper"
+      data-test-scroll-behavior="normal"
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
         <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>
       </StyledVerticalBlockWrapper>
-    </StyledVerticalBlockBorderWrapper>
+    </VerticalBlockBorderWrapper>
   )
 }
 

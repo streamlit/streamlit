@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,11 +52,14 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     def _connect(self, **kwargs) -> "InternalSnowflakeConnection":
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
-        from snowflake.snowpark.context import get_active_session  # type:ignore[import]
 
         # If we're running in SiS, just call get_active_session() and retrieve the
         # lower-level connection from it.
         if running_in_sis():
+            from snowflake.snowpark.context import (  # type:ignore[import]  # isort: skip
+                get_active_session,
+            )
+
             session = get_active_session()
 
             if hasattr(session, "connection"):
@@ -151,7 +154,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
 
         Example
@@ -199,14 +202,23 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ),
             wait=wait_fixed(1),
         )
-        @cache_data(
-            show_spinner=show_spinner,
-            ttl=ttl,
-        )
         def _query(sql: str) -> pd.DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()
+
+        # We modify our helper function's `__qualname__` here to work around default
+        # `@st.cache_data` behavior. Otherwise, `.query()` being called with different
+        # `ttl` values will reset the cache with each call, and the query caches won't
+        # be scoped by connection.
+        ttl_str = str(  # Avoid adding extra `.` characters to `__qualname__`
+            ttl
+        ).replace(".", "_")
+        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
+        _query = cache_data(
+            show_spinner=show_spinner,
+            ttl=ttl,
+        )(_query)
 
         return _query(sql)
 

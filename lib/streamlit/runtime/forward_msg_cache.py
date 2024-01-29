@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from weakref import WeakKeyDictionary
 from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
@@ -107,7 +107,7 @@ class ForwardMsgCache(CacheStatsProvider):
 
         """
 
-        def __init__(self, msg: ForwardMsg):
+        def __init__(self, msg: Optional[ForwardMsg]):
             self.msg = msg
             self._session_script_run_counts: MutableMapping[
                 "AppSession", int
@@ -184,7 +184,10 @@ class ForwardMsgCache(CacheStatsProvider):
         populate_hash_if_needed(msg)
         entry = self._entries.get(msg.hash, None)
         if entry is None:
-            entry = ForwardMsgCache.Entry(msg)
+            if config.get_option("global.storeCachedForwardMessagesInMemory"):
+                entry = ForwardMsgCache.Entry(msg)
+            else:
+                entry = ForwardMsgCache.Entry(None)
             self._entries[msg.hash] = entry
         entry.add_session_ref(session, script_run_count)
 
@@ -286,7 +289,7 @@ class ForwardMsgCache(CacheStatsProvider):
                 CacheStat(
                     category_name="ForwardMessageCache",
                     cache_name="",
-                    byte_length=entry.msg.ByteSize(),
+                    byte_length=entry.msg.ByteSize() if entry.msg is not None else 0,
                 )
             )
-        return stats
+        return group_stats(stats)

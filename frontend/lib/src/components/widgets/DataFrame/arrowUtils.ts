@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ import {
   DateTimeColumn,
   TimeColumn,
   DateColumn,
+  LinkCell,
   removeLineBreaks,
 } from "./columns"
 
@@ -298,9 +299,9 @@ export function getEmptyIndexColumn(): BaseColumnProps {
 export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
-  // TODO(lukasmasuch): use data.dimensions instead here?
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
+  const { dimensions } = data
+  const numIndices = dimensions.headerColumns
+  const numColumns = dimensions.dataColumns
 
   if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
@@ -445,6 +446,17 @@ export function getCellFromArrow(
             displayDate: displayData,
           },
         } as DatePickerType
+      } else if (
+        cellTemplate.kind === GridCellKind.Custom &&
+        (cellTemplate as LinkCell).data?.kind === "link-cell"
+      ) {
+        cellTemplate = {
+          ...cellTemplate,
+          data: {
+            ...(cellTemplate as LinkCell).data,
+            displayText: displayData,
+          },
+        } as LinkCell
       }
     }
 

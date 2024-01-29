@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,9 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.28.2"  # PEP-440
-
-NAME = "streamlit"
+VERSION = "1.30.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -36,7 +34,7 @@ INSTALL_REQUIRES = [
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
     # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
-    "importlib-metadata>=1.4, <7",
+    "importlib-metadata>=1.4, <8",
     "numpy>=1.19.3, <2",
     "packaging>=16.8, <24",
     # Lowest version with available wheel for 3.7 + amd64 + linux
@@ -50,7 +48,7 @@ INSTALL_REQUIRES = [
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
-    "pyarrow>=6.0",
+    "pyarrow>=7.0",
     "python-dateutil>=2.7.3, <3",
     "requests>=2.27, <3",
     "rich>=10.14.0, <14",
@@ -113,7 +111,7 @@ else:
     long_description = ""
 
 setuptools.setup(
-    name=NAME,
+    name="streamlit",
     version=VERSION,
     description="A faster way to build and share data apps",
     long_description=long_description,

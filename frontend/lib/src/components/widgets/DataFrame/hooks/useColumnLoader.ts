@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 import React from "react"
 
-import { merge } from "lodash"
+import merge from "lodash/merge"
 
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
@@ -261,6 +261,17 @@ function useColumnLoader(
           updatedColumn = {
             ...updatedColumn,
             icon: "editable",
+          }
+
+          // Make sure that required columns are not hidden when editing mode is dynamic:
+          if (
+            updatedColumn.isRequired &&
+            element.editingMode === ArrowProto.EditingMode.DYNAMIC
+          ) {
+            updatedColumn = {
+              ...updatedColumn,
+              isHidden: false,
+            }
           }
         }
 

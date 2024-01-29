@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,7 +94,9 @@ class PollingPathWatcher:
         modification_time = util.path_modification_time(
             self._path, self._allow_nonexistent
         )
-        if modification_time <= self._modification_time:
+        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+        # modification_time is always 0.0 because of file system limitations.
+        if modification_time != 0.0 and modification_time <= self._modification_time:
             self._schedule()
             return
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import itertools
 from abc import abstractmethod
 from typing import List, NamedTuple
 
@@ -62,6 +62,28 @@ class CacheStat(NamedTuple):
         metric_point.gauge_value.int_value = self.byte_length
 
 
+def group_stats(stats: List[CacheStat]) -> List[CacheStat]:
+    """Group a list of CacheStats by category_name and cache_name and sum byte_length"""
+
+    def key_function(individual_stat):
+        return individual_stat.category_name, individual_stat.cache_name
+
+    result: List[CacheStat] = []
+
+    sorted_stats = sorted(stats, key=key_function)
+    grouped_stats = itertools.groupby(sorted_stats, key=key_function)
+
+    for (category_name, cache_name), single_group_stats in grouped_stats:
+        result.append(
+            CacheStat(
+                category_name=category_name,
+                cache_name=cache_name,
+                byte_length=sum(map(lambda item: item.byte_length, single_group_stats)),
+            )
+        )
+    return result
+
+
 @runtime_checkable
 class CacheStatsProvider(Protocol):
     @abstractmethod
@@ -85,4 +107,5 @@ class StatsManager:
         all_stats: List[CacheStat] = []
         for provider in self._cache_stats_providers:
             all_stats.extend(provider.get_stats())
+
         return all_stats

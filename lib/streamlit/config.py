@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -283,7 +283,7 @@ _create_option(
     default_val=False,
     type_=bool,
     deprecated=True,
-    deprecation_text="global.disableWatchdogWarning has been deprecated has been deprecated and will be removed in a future version.",
+    deprecation_text="global.disableWatchdogWarning has been deprecated and will be removed in a future version.",
     expiration_date="2024-01-20",
 )
 
@@ -373,6 +373,16 @@ _create_option(
     visibility="hidden",
     default_val=2,
     type_=int,
+)
+
+_create_option(
+    "global.storeCachedForwardMessagesInMemory",
+    description="""If True, store cached ForwardMsgs in backend memory.
+        This is an internal flag to validate a potential removal of the in-memory
+        forward message cache.""",
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
 )
 
 _create_option(
@@ -506,6 +516,14 @@ _create_option(
 """,
     default_val="auto",
     type_=str,
+    scriptable=True,
+)
+
+_create_option(
+    "client.showSidebarNavigation",
+    description="""Controls whether the default sidebar page navigation in a multi-page app is displayed.""",
+    default_val=True,
+    type_=bool,
     scriptable=True,
 )
 
@@ -712,7 +730,7 @@ _create_option(
     "server.scriptHealthCheckEnabled",
     visibility="hidden",
     description="""
-    Flag for enabling the script health check endpoint. It used for checking if
+    Flag for enabling the script health check endpoint. It's used for checking if
     a script loads successfully. On success, the endpoint will return a 200
     HTTP status code. On failure, the endpoint will return a 503 HTTP status code.
 
@@ -774,6 +792,18 @@ _create_option(
         """,
     default_val=200,
     type_=int,
+)
+
+_create_option(
+    "server.enableArrowTruncation",
+    description="""
+        Enable automatically truncating all data structures that get serialized into Arrow (e.g. DataFrames)
+        to ensure that the size is under `server.maxMessageSize`.
+        """,
+    visibility="hidden",
+    default_val=False,
+    scriptable=True,
+    type_=bool,
 )
 
 _create_option(
@@ -891,6 +921,9 @@ _create_option(
     description="Flag to hide the sidebar page navigation component.",
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
+    expiration_date="2024-01-20",
     visibility="hidden",
 )
 

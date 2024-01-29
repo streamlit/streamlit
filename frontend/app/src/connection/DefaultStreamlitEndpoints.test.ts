@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -191,7 +191,6 @@ describe("DefaultStreamlitEndpoints", () => {
       ).resolves.toBeUndefined()
 
       const expectedData = new FormData()
-      expectedData.append("sessionId", "mockSessionId")
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
@@ -199,6 +198,7 @@ describe("DefaultStreamlitEndpoints", () => {
         method: "PUT",
         responseType: "text",
         data: expectedData,
+        headers: {},
         cancelToken: mockCancelToken,
         onUploadProgress: mockOnUploadProgress,
       })
@@ -223,7 +223,6 @@ describe("DefaultStreamlitEndpoints", () => {
       ).resolves.toBeUndefined()
 
       const expectedData = new FormData()
-      expectedData.append("sessionId", "mockSessionId")
       expectedData.append(MOCK_FILE.name, MOCK_FILE)
 
       expect(spyRequest).toHaveBeenCalledWith({
@@ -231,6 +230,7 @@ describe("DefaultStreamlitEndpoints", () => {
         method: "PUT",
         responseType: "text",
         data: expectedData,
+        headers: {},
         cancelToken: mockCancelToken,
         onUploadProgress: mockOnUploadProgress,
       })
@@ -306,7 +306,7 @@ describe("DefaultStreamlitEndpoints", () => {
 
     beforeEach(() => {
       prevDocumentCookie = document.cookie
-      document.cookie = "_xsrf=mockXsrfCookie;"
+      document.cookie = "_streamlit_xsrf=mockXsrfCookie;"
     })
 
     afterEach(() => {

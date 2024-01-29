@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ jest.dontMock("fs")
 
 // Current hashes for our preloaded font assets:
 const REGULAR_HASH = "0d69e5ff5e92ac64a0c9"
-const SEMI_BOLD_HASH = "5c1d378dd5990ef334ca"
+const SEMI_BOLD_HASH = "abed79cd0df1827e18cf"
 const BOLD_HASH = "118dea98980e20a81ced"
 
 // Render a copy of index.html file to test

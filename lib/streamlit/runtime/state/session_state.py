@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,8 @@ from streamlit.runtime.state.common import (
     is_keyed_widget_id,
     is_widget_id,
 )
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.state.query_params import QueryParams
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
 from streamlit.vendor.pympler.asizeof import asizeof
 
@@ -297,6 +298,9 @@ class SessionState:
 
     # Keys used for widgets will be eagerly converted to the matching widget id
     _key_id_mapping: dict[str, str] = field(default_factory=dict)
+
+    # query params are stored in session state because query params will be tied with widget state at one point.
+    query_params: QueryParams = field(default_factory=QueryParams)
 
     def __repr__(self):
         return util.repr_(self)
@@ -673,4 +677,4 @@ class SessionStateStatProvider(CacheStatsProvider):
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
             stats.extend(session_state.get_stats())
-        return stats
+        return group_stats(stats)

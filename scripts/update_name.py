@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # "<post_match>" named group. Text between these pre- and post-match
 # groups will be replaced with the specified project_name text.
 FILES_AND_REGEXES = {
-    "lib/setup.py": r"(?P<pre_match>.*NAME = \").*(?P<post_match>\")",
+    "lib/setup.py": r"(?P<pre_match>.*name=\").*(?P<post_match>\")",
     "lib/streamlit/version.py": r"(?P<pre_match>.*_version\(\").*(?P<post_match>\"\)$)",
 }
 

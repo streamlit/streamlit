@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import NoReturn
 
 import streamlit as st
+from streamlit import source_util
 from streamlit.deprecation_util import make_deprecated_name_warning
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
@@ -53,7 +56,7 @@ def stop() -> NoReturn:  # type: ignore[misc]
 def rerun() -> NoReturn:  # type: ignore[misc]
     """Rerun the script immediately.
 
-    When `st.rerun()` is called, the script is halted - no more statements will
+    When ``st.rerun()`` is called, the script is halted - no more statements will
     be run, and the script will be queued to re-run from the top.
     """
 
@@ -77,7 +80,7 @@ def rerun() -> NoReturn:  # type: ignore[misc]
 def experimental_rerun() -> NoReturn:
     """Rerun the script immediately.
 
-    When `st.experimental_rerun()` is called, the script is halted - no
+    When ``st.experimental_rerun()`` is called, the script is halted - no
     more statements will be run, and the script will be queued to re-run
     from the top.
     """
@@ -87,3 +90,76 @@ def experimental_rerun() -> NoReturn:
     # be seen.
     _LOGGER.warning(msg)
     rerun()
+
+
+@gather_metrics("switch_page")
+def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
+    """Programmatically switch the current page in a multipage app.
+
+    When ``st.switch_page`` is called, the current page execution stops and
+    the specified page runs as if the user clicked on it in the sidebar
+    navigation. The specified page must be recognized by Streamlit's multipage
+    architecture (your main Python file or a Python file in a ``pages/``
+    folder). Arbitrary Python scripts cannot be passed to ``st.switch_page``.
+
+    Parameters
+    ----------
+    page: str
+        The file path (relative to the main script) of the page to switch to.
+
+    Example
+    -------
+    Consider the following example given this file structure:
+
+    >>> your-repository/
+    >>> ├── pages/
+    >>> │   ├── page_1.py.py
+    >>> │   └── page_2.py.py
+    >>> └── your_app.py
+
+    >>> import streamlit as st
+    >>>
+    >>> if st.button("Home"):
+    >>>     st.switch_page("your_app.py")
+    >>> if st.button("Page 1"):
+    >>>     st.switch_page("pages/page_1.py")
+    >>> if st.button("Page 2"):
+    >>>     st.switch_page("pages/page_2.py")
+
+    .. output ::
+        https://doc-switch-page.streamlit.app/
+        height: 350px
+
+    """
+
+    ctx = get_script_run_ctx()
+
+    if not ctx or not ctx.script_requests:
+        # This should never be the case
+        raise NoSessionContext()
+
+    main_script_path = os.path.join(os.getcwd(), ctx.main_script_path)
+    main_script_directory = os.path.dirname(main_script_path)
+
+    # Convenience for handling ./ notation and ensure leading / doesn't refer to root directory
+    page = os.path.normpath(page.strip("/"))
+
+    # Build full path
+    requested_page = os.path.join(main_script_directory, page)
+    all_app_pages = source_util.get_pages(ctx.main_script_path).values()
+
+    matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
+
+    if len(matched_pages) == 0:
+        raise StreamlitAPIException(
+            f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
+        )
+
+    ctx.script_requests.request_rerun(
+        RerunData(
+            query_string=ctx.query_string,
+            page_script_hash=matched_pages[0]["page_script_hash"],
+        )
+    )
+    # Force a yield point so the runner can do the rerun
+    st.empty()

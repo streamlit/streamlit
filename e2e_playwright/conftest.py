@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ This file is automatically run by pytest before tests are executed.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shlex
@@ -31,20 +32,34 @@ from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
 from types import ModuleType
-from typing import Any, Dict, Generator, List, Literal, Protocol
+from typing import Any, Dict, Generator, List, Literal, Protocol, Tuple
+from urllib import parse
 
 import pytest
 import requests
 from PIL import Image
-from playwright.sync_api import (
-    Browser,
-    BrowserContext,
-    BrowserType,
-    ElementHandle,
-    Locator,
-    Page,
-)
+from playwright.sync_api import ElementHandle, Locator, Page
 from pytest import FixtureRequest
+
+
+def reorder_early_fixtures(metafunc: pytest.Metafunc):
+    """Put fixtures with `pytest.mark.early` first during execution
+
+    This allows patch of configurations before the application is initialized
+
+    Copied from: https://github.com/pytest-dev/pytest/issues/1216#issuecomment-456109892
+    """
+    for fixturedef in metafunc._arg2fixturedefs.values():
+        fixturedef = fixturedef[0]
+        for mark in getattr(fixturedef.func, "pytestmark", []):
+            if mark.name == "early":
+                order = metafunc.fixturenames
+                order.insert(0, order.pop(order.index(fixturedef.argname)))
+                break
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc):
+    reorder_early_fixtures(metafunc)
 
 
 class AsyncSubprocess:
@@ -107,6 +122,15 @@ def resolve_test_to_script(test_module: ModuleType) -> str:
     """Resolve the test module to the corresponding test script filename."""
     assert test_module.__file__ is not None
     return test_module.__file__.replace("_test.py", ".py")
+
+
+def hash_to_range(
+    text: str,
+    min: int = 10000,
+    max: int = 65535,
+) -> int:
+    sha256_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return min + (int(sha256_hash, 16) % (max - min + 1))
 
 
 def is_port_available(port: int, host: str) -> bool:
@@ -188,24 +212,40 @@ def wait_for_app_run(page: Page, wait_delay: int = 100):
         page.wait_for_timeout(wait_delay)
 
 
-def wait_for_app_loaded(page: Page):
+def wait_for_app_loaded(page: Page, embedded: bool = False):
     """Wait for the app to fully load."""
     # Wait for the app view container to appear:
     page.wait_for_selector(
         "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
     )
-    # Wait for the main app container to appear:
-    page.wait_for_selector(
-        "[data-testid='block-container']", timeout=20000, state="attached"
-    )
+
     # Wait for the main menu to appear:
-    page.wait_for_selector("#MainMenu", timeout=20000, state="attached")
+    if not embedded:
+        page.wait_for_selector(
+            "[data-testid='stMainMenu']", timeout=20000, state="attached"
+        )
+
+    wait_for_app_run(page)
+
+
+def rerun_app(page: Page):
+    """Triggers an app rerun and waits for the run to be finished."""
+    # Click somewhere to clear the focus from elements:
+    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    # Press "r" to rerun the app:
+    page.keyboard.press("r")
     wait_for_app_run(page)
 
 
 @pytest.fixture(scope="module")
-def app_port() -> int:
+def app_port(worker_id: str) -> int:
     """Fixture that returns an available port on localhost."""
+    if worker_id and worker_id != "master":
+        # This is run with xdist, we try to get a port by hashing the worker ID
+        port = hash_to_range(worker_id)
+        if is_port_available(port, "localhost"):
+            return port
+    # Find a random available port:
     return find_available_port()
 
 
@@ -246,6 +286,22 @@ def app(page: Page, app_port: int) -> Page:
     page.goto(f"http://localhost:{app_port}/")
     wait_for_app_loaded(page)
     return page
+
+
+@pytest.fixture(scope="function")
+def app_with_query_params(
+    page: Page, app_port: int, request: FixtureRequest
+) -> Tuple[Page, Dict]:
+    """Fixture that opens the app with additional query parameters.
+    The query parameters are passed as a dictionary in the 'param' key of the request.
+    """
+    query_params = request.param
+    query_string = parse.urlencode(query_params, doseq=True)
+    url = f"http://localhost:{app_port}/?{query_string}"
+    page.goto(url)
+    wait_for_app_loaded(page)
+
+    return page, query_params
 
 
 @pytest.fixture(scope="session")

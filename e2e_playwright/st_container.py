@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,23 @@ if c.checkbox("Step 1: Check me"):
 
 with st.container(border=True):
     st.markdown(
-        "This is inside a container with a border. And it doesn't overflow the borders if the text requires multiple lines."
+        "This is inside a container with a border. And it doesn't overflow "
+        "the borders if the text requires multiple lines."
     )
     st.button("Stretch full width", use_container_width=True)
+
+with st.container(height=200):
+    st.markdown("This is inside a scrolling container.")
+    st.text_input("Widget in scroll container")
+
+    for i in range(10):
+        st.markdown(f"Message {i}")
+
+empty_container = st.container(height=100)
+
+if st.button("Add message"):
+    empty_container.chat_message("user").write("Hello world")
+
+with st.container(height=200):
+    for i in range(10):
+        st.chat_message("user").write(f"Message {i}")

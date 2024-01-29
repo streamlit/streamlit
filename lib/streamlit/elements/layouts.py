@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,9 @@ SpecType = Union[int, Sequence[Union[int, float]]]
 
 class LayoutsMixin:
     @gather_metrics("container")
-    def container(self, *, border: bool | None = None) -> "DeltaGenerator":
+    def container(
+        self, *, height: int | None = None, border: bool | None = None
+    ) -> "DeltaGenerator":
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -42,8 +44,22 @@ class LayoutsMixin:
 
         Parameters
         ----------
+        height : int or None
+            Desired height of the container expressed in pixels. If ``None`` (default)
+            the container grows to fit its content. If a fixed height, scrolling is
+            enabled for large content and a grey border is shown around the container
+            to visually separate its scroll surface from the rest of the app.
+
+            .. note::
+                Use containers with scroll sparingly. If you do, try to keep
+                the height small (below 500 pixels). Otherwise, the scroll
+                surface of the container might cover the majority of the screen
+                on mobile devices, which makes it hard to scroll the rest of the app.
+
         border : bool or None
-            Whether to show a border around the container.
+            Whether to show a border around the container. If ``None`` (default), a
+            border is shown if the container is set to a fixed height and not
+            shown otherwise.
 
 
         Examples
@@ -68,7 +84,7 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> container = st.container()
+        >>> container = st.container(border=True)
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
         >>>
@@ -77,10 +93,49 @@ class LayoutsMixin:
 
         .. output ::
             https://doc-container2.streamlit.app/
-            height: 480px
+            height: 300px
+
+        Using ``height`` to make a grid:
+
+        >>> import streamlit as st
+        >>>
+        >>> row1 = st.columns(3)
+        >>> row2 = st.columns(3)
+        >>>
+        >>> for col in row1 + row2:
+        >>>     tile = col.container(height=120)
+        >>>     tile.title(":balloon:")
+
+        .. output ::
+            https://doc-container3.streamlit.app/
+            height: 350px
+
+        Using ``height`` to create a scrolling container for long content:
+
+        >>> import streamlit as st
+        >>>
+        >>> long_text = "Lorem ipsum. " * 1000
+        >>>
+        >>> with st.container(height=300):
+        >>>     st.markdown(long_text)
+
+        .. output ::
+            https://doc-container4.streamlit.app/
+            height: 400px
+
         """
         block_proto = BlockProto()
+        block_proto.allow_empty = False
         block_proto.vertical.border = border or False
+        if height:
+            # Activate scrolling container behavior:
+            block_proto.allow_empty = True
+            block_proto.vertical.height = height
+            if border is None:
+                # If border is None, we activated the
+                # border as default setting for scrolling
+                # containers.
+                block_proto.vertical.border = True
 
         return self.dg._block(block_proto)
 

@@ -15,7 +15,6 @@ scipy>=1.7.3
 seaborn>=0.11.2
 setuptools>=65.5.1
 watchdog>=2.1.5
-
 urllib3>=1.9
 
 hypothesis>=6.17.4
@@ -25,6 +24,9 @@ pytest-cov
 requests>=2.27, <3
 requests-mock
 testfixtures
+# Playwright 1.40 installs a broken webkit version.
+# Eventually unpin once a fixed version is rolled out.
+playwright<1.40
 pytest-playwright>=0.1.2
 pixelmatch>=0.3.0
 pytest-xdist

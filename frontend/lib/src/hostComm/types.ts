@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,8 +57,14 @@ export type IHostToGuestMessage = {
       pageScriptHash: string
     }
   | {
+      type: "SET_INPUTS_DISABLED"
+      disabled: boolean
+    }
+  | {
       type: "SET_AUTH_TOKEN"
       authToken: string
+      jwtHeaderName?: string
+      jwtHeaderValue?: string
     }
   | {
       type: "SET_IS_OWNER"

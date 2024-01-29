@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,9 +66,12 @@ from streamlit.runtime.connection_factory import (
 )
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
-from streamlit.runtime.state import SessionStateProxy as _SessionStateProxy
+from streamlit.runtime.state import (
+    SessionStateProxy as _SessionStateProxy,
+    QueryParamsProxy as _QueryParamsProxy,
+)
 from streamlit.user_info import UserInfoProxy as _UserInfoProxy
-from streamlit.commands.query_params import (
+from streamlit.commands.experimental_query_params import (
     get_query_params as _get_query_params,
     set_query_params as _set_query_params,
 )
@@ -85,6 +88,7 @@ from streamlit.commands.execution_control import (
     stop as stop,
     rerun as rerun,
     experimental_rerun as _experimental_rerun,
+    switch_page as switch_page,
 )
 
 # We add the metrics tracking for caching here,
@@ -106,7 +110,8 @@ _config.on_config_parsed(_update_logger, True)
 
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
-event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
+_event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
+_bottom = _DeltaGenerator(root_container=_RootContainer.BOTTOM, parent=_main)
 
 secrets = _secrets_singleton
 
@@ -155,6 +160,7 @@ markdown = _main.markdown
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
+page_link = _main.page_link
 plotly_chart = _main.plotly_chart
 plotly_chart_widget = _main.plotly_chart_widget
 progress = _main.progress
@@ -178,11 +184,12 @@ vega_lite_chart = _main.vega_lite_chart
 video = _main.video
 warning = _main.warning
 write = _main.write
+write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
 
 # Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
-toast = event.toast
+toast = _event.toast
 
 # Config
 get_option = _config.get_option
@@ -192,6 +199,8 @@ set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
 session_state = _SessionStateProxy()
+
+query_params = _QueryParamsProxy()
 
 # Caching
 cache_data = _cache_data
@@ -207,8 +216,23 @@ connection = _connection
 experimental_user = _UserInfoProxy()
 experimental_singleton = _experimental_singleton
 experimental_memo = _experimental_memo
-experimental_get_query_params = _get_query_params
-experimental_set_query_params = _set_query_params
+
+_EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
+
+experimental_get_query_params = _deprecate_func_name(
+    _get_query_params,
+    "experimental_get_query_params",
+    "2024-04-11",
+    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
+    name_override="query_params",
+)
+experimental_set_query_params = _deprecate_func_name(
+    _set_query_params,
+    "experimental_set_query_params",
+    "2024-04-11",
+    _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG,
+    name_override="query_params",
+)
 experimental_rerun = _experimental_rerun
 experimental_data_editor = _main.experimental_data_editor
 experimental_connection = _deprecate_func_name(

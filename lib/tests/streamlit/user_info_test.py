@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -102,6 +102,7 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                     query_string="",
                     session_state=SafeSessionState(SessionState(), lambda: None),
                     uploaded_file_mgr=None,
+                    main_script_path="",
                     page_script_hash="",
                     user_info={"email": "something@else.com"},
                 ),

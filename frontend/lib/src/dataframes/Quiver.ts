@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,10 @@ import {
   util,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip, zip, trimEnd } from "lodash"
+import range from "lodash/range"
+import unzip from "lodash/unzip"
+import zip from "lodash/zip"
+import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
@@ -120,68 +123,114 @@ type IntervalClosed = "left" | "right" | "both" | "neither"
 type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 
 // The frequency strings defined in pandas.
-// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
-type SupportedPandasOffsetType = "W" | "Q" | "D" | "H" | "T" | "S" | "L"
+// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#period-aliases
+// Not supported: "N" (nanoseconds), "U" & "us" (microseconds), and "B" (business days).
+// Reason is that these types are not supported by moment.js, but also they are not
+// very commonly used in practice.
+type SupportedPandasOffsetType =
+  // yearly frequency:
+  | "A" // deprecated alias
+  | "Y"
+  // quarterly frequency:
+  | "Q"
+  // monthly frequency:
+  | "M"
+  // weekly frequency:
+  | "W"
+  // calendar day frequency:
+  | "D"
+  // hourly frequency:
+  | "H" // deprecated alias
+  | "h"
+  // minutely frequency
+  | "T" // deprecated alias
+  | "min"
+  // secondly frequency:
+  | "S" // deprecated alias
+  | "s"
+  // milliseconds frequency:
+  | "L" // deprecated alias
+  | "ms"
+
 type PeriodFrequency =
   | SupportedPandasOffsetType
   | `${SupportedPandasOffsetType}-${string}`
 type PeriodType = `period[${PeriodFrequency}]`
 
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+const formatMs = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "ms")
+    .format("YYYY-MM-DD HH:mm:ss.SSS")
 
-// TODO: For now, we only support the most commonly used offset types.
-//  In the future, it is worth adding support for other types as needed.
+const formatSec = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "s")
+    .format("YYYY-MM-DD HH:mm:ss")
+
+const formatMin = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "m").format("YYYY-MM-DD HH:mm")
+
+const formatHours = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "h").format("YYYY-MM-DD HH:mm")
+
+const formatDay = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD")
+
+const formatMonth = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "M").format("YYYY-MM")
+
+const formatYear = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "y").format("YYYY")
+
+const formatWeeks = (duration: number, freqParam?: string): string => {
+  if (!freqParam) {
+    throw new Error('Frequency "W" requires parameter')
+  }
+  const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
+  if (dayIndex < 0) {
+    throw new Error(
+      `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
+        WEEKDAY_SHORT
+      )}`
+    )
+  }
+  const startDate = moment("19700101", "YYYYMMDD")
+    .add(duration, "w")
+    .day(dayIndex - 6)
+    .format("YYYY-MM-DD")
+  const endDate = moment("19700101", "YYYYMMDD")
+    .add(duration, "w")
+    .day(dayIndex)
+    .format("YYYY-MM-DD")
+
+  return `${startDate}/${endDate}`
+}
+
+const formatQuarter = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "Q")
+    .endOf("quarter")
+    .format("YYYY[Q]Q")
+
 const PERIOD_TYPE_FORMATTERS: Record<
   SupportedPandasOffsetType,
   (duration: number, freqParam?: string) => string
 > = {
-  L: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "ms")
-      .format("YYYY-MM-DD HH:mm:ss.SSS"),
-  S: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "s")
-      .format("YYYY-MM-DD HH:mm:ss"),
-  T: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "m")
-      .format("YYYY-MM-DD HH:mm"),
-  H: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "h")
-      .format("YYYY-MM-DD HH:mm"),
-  D: duration =>
-    moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD"),
-  W: (duration, freqParam) => {
-    if (!freqParam) {
-      throw new Error('Frequency "W" requires parameter')
-    }
-    const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
-    if (dayIndex < 0) {
-      throw new Error(
-        `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
-          WEEKDAY_SHORT
-        )}`
-      )
-    }
-    const startDate = moment("19700101", "YYYYMMDD")
-      .add(duration, "w")
-      .day(dayIndex - 6)
-      .format("YYYY-MM-DD")
-    const endDate = moment("19700101", "YYYYMMDD")
-      .add(duration, "w")
-      .day(dayIndex)
-      .format("YYYY-MM-DD")
-
-    return `${startDate}/${endDate}`
-  },
-  Q: duration => {
-    return moment("19700101", "YYYYMMDD")
-      .add(duration, "Q")
-      .endOf("quarter")
-      .format("YYYY[Q]Q")
-  },
+  L: formatMs,
+  ms: formatMs,
+  S: formatSec,
+  s: formatSec,
+  T: formatMin,
+  min: formatMin,
+  H: formatHours,
+  h: formatHours,
+  D: formatDay,
+  M: formatMonth,
+  W: formatWeeks,
+  Q: formatQuarter,
+  Y: formatYear,
+  A: formatYear,
 }
 
 /** Interval data type. */
@@ -1154,34 +1203,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
-    // TODO(lukasmasuch): this._index[0].length can be 0 if there are rows
-    // but only an empty index. Probably not the best way to cross check the number
-    // of rows.
-    const [headerColumns, dataRowsCheck] = this._index.length
-      ? [this._index.length, this._index[0].length]
-      : [1, 0]
-
-    const [headerRows, dataColumnsCheck] = this._columns.length
-      ? [this._columns.length, this._columns[0].length]
-      : [1, 0]
-
-    const [dataRows, dataColumns] = this._data.numRows
-      ? [this._data.numRows, this._data.numCols]
-      : // If there is no data, default to the number of header columns.
-        [0, dataColumnsCheck]
-
-    // Sanity check: ensure the schema is not messed up. If this happens,
-    // something screwy probably happened in addRows.
-    if (
-      (dataRows !== 0 && dataRows !== dataRowsCheck) ||
-      (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
-    ) {
-      throw new Error(
-        "Dataframe dimensions don't align: " +
-          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-          `cols(${dataColumns} != ${dataColumnsCheck})`
-      )
-    }
+    const headerColumns = this._index.length || this.types.index.length || 1
+    const headerRows = this._columns.length || 1
+    const dataRows = this._data.numRows || 0
+    const dataColumns = this._data.numCols || this._columns?.[0]?.length || 0
 
     const rows = headerRows + dataRows
     const columns = headerColumns + dataColumns
