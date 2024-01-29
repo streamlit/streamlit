@@ -22,6 +22,7 @@ import FullScreenWrapper from "./FullScreenWrapper"
 export interface Props {
   width: number
   height?: number
+  disableFullscreenMode?: boolean
 }
 
 // Our wrapper takes the wrapped component's props, plus "width", "height?".
@@ -31,7 +32,7 @@ type WrapperProps<P> = Omit<P & Props, "isFullScreen" | "collapse" | "expand">
 
 function withFullScreenWrapper<P>(
   WrappedComponent: ComponentType<P>,
-  hideFullScreenButton = false
+  forceDisableFullScreenMode = false
 ): ComponentType<WrapperProps<P>> {
   class ComponentWithFullScreenWrapper extends PureComponent<WrapperProps<P>> {
     public static readonly displayName = `withFullScreenWrapper(${
@@ -39,13 +40,15 @@ function withFullScreenWrapper<P>(
     })`
 
     public render = (): ReactNode => {
-      const { width, height } = this.props
+      const { width, height, disableFullscreenMode } = this.props
 
       return (
         <FullScreenWrapper
           width={width}
           height={height}
-          hideFullScreenButton={hideFullScreenButton}
+          disableFullscreenMode={
+            forceDisableFullScreenMode || disableFullscreenMode
+          }
         >
           {({ width, height, expanded, expand, collapse }) => (
             // `(this.props as P)` is required due to a TS bug:
