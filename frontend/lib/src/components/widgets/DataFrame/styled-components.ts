@@ -36,6 +36,9 @@ export const StyledResizableContainer =
       },
 
       "& .dvn-scroller": {
+        // We only want to configure scrollbar aspects for browsers that
+        // don't support custom scrollbars (e.g. Firefox). Also, applying this
+        // in Chrome causes the scrollbar to change to the default scrollbar style.
         ...(!hasCustomizedScrollbars && { scrollbarWidth: "thin" }),
         ["overflowX" as any]: "auto !important",
         ["overflowY" as any]: "auto !important",
