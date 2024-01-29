@@ -52,8 +52,6 @@ def test_dialog_dismisses_properly(app: Page):
 
 
 def test_dialog_reopens_properly_after_dismiss(app: Page):
-    # import time
-
     """Test that dialog reopens after dismiss."""
     # open and close the dialog multiple times
     for _ in range(0, 10):
@@ -65,12 +63,9 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
         wait_for_app_run(app)
         main_dialog = app.locator("[data-testid='stModal']")
         expect(main_dialog).to_have_count(0)
-        # time.sleep(0.01)
 
 
 def test_dialog_reopens_properly_after_close(app: Page):
-    # import time
-
     """Test that dialog reopens properly after closing by action button click."""
     # open and close the dialog multiple times
     for _ in range(0, 10):
@@ -84,7 +79,6 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app)
         main_dialog = app.locator("[data-testid='stModal']")
         expect(main_dialog).to_have_count(0)
-        # time.sleep(0.01)
 
 
 def test_dialog_is_scrollable(app: Page):
@@ -96,6 +90,22 @@ def test_dialog_is_scrollable(app: Page):
     expect(close_button).not_to_be_in_viewport()
     close_button.scroll_into_view_if_needed()
     expect(close_button).to_be_in_viewport()
+
+
+def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
+    """Test that elemenets within the dialog do not show the fullscreen option."""
+    app.get_by_text("Open Dialog").click()
+    wait_for_app_run(app)
+    main_dialog = app.locator("[data-testid='stModal']")
+    expect(main_dialog).to_have_count(1)
+
+    # check that the images do not have the fullscreen button
+    expect(app.locator("[data-testid='StyledFullScreenButton']")).to_have_count(0)
+
+    # check that the dataframe does not have the fullscreen button
+    dataframe_toolbar = app.locator("[data-testid='stElementToolbarButton']")
+    # 2 elements are in the toolbar as of today: download, search
+    expect(dataframe_toolbar).to_have_count(2)
 
 
 def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
