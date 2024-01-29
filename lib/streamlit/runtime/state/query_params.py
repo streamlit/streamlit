@@ -99,6 +99,10 @@ class QueryParams(MutableMapping[str, str]):
             {key for key in self._query_params if key not in EMBED_QUERY_PARAMS_KEYS}
         )
 
+    def __str__(self) -> str:
+        self._ensure_single_query_api_used()
+        return str(self._query_params)
+
     def _send_query_param_msg(self) -> None:
         # Avoid circular imports
         from streamlit.runtime.scriptrunner import get_script_run_ctx
