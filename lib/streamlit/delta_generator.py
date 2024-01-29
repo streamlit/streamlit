@@ -600,7 +600,7 @@ class DeltaGenerator(
             )
         if block_type == "popover" and block_type in frozenset(parent_block_types):
             raise StreamlitAPIException(
-                "Popover may not be nested inside other popover."
+                "Popovers may not be nested inside other popovers."
             )
 
         if dg._root_container is None or dg._cursor is None:
