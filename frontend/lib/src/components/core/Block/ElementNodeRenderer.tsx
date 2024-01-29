@@ -217,7 +217,6 @@ const StreamlitSyntaxHighlighter = React.lazy(
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width: number
-  disableFullScreenMode?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -238,11 +237,9 @@ const RawElementNodeRenderer = (
     throw new Error("ElementNode not found.")
   }
 
-  // TODO: Move this into type signature of props. The width is actually guaranteed to be nonzero
-  // since leaf elements are always direct children of a VerticalBlock, which always calculates
   const elementProps = {
     width: props.width,
-    disableFullScreenMode: props.disableFullScreenMode,
+    disableFullscreenMode: props.disableFullscreenMode,
   }
 
   const widgetProps = {

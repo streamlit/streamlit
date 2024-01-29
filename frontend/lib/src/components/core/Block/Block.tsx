@@ -23,7 +23,7 @@ import React, {
   ReactNode,
 } from "react"
 import { useTheme } from "@emotion/react"
-import { LibContext } from "@streamlit/lib"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
 import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
@@ -77,13 +77,13 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   const childProps = { ...props, ...{ node } }
 
-  // TODO: overwrite props.disableFullScreenMode for Dialog in a follow-up PR, e.g.:
-  // const disableFullScreenMode = props.disableFullScreenMode || node.deltaBlock.dialog
+  // TODO: overwrite props.disableFullscreenMode for Dialog in a follow-up PR, e.g.:
+  // const disableFullscreenMode = props.disableFullscreenMode || node.deltaBlock.dialog
   // and pass to LayoutBlock as props
   const child: ReactElement = (
     <LayoutBlock
       {...childProps}
-      // disableFullScreenMode={disableFullScreenMode}
+      // disableFullscreenMode={disableFullscreenMode}
     />
   )
 
@@ -169,8 +169,8 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
       {props.node.children &&
         props.node.children.map(
           (node: AppNode, index: number): ReactElement => {
-            const disableFullScreenMode =
-              libConfig.disableFullscreenMode || props.disableFullScreenMode
+            const disableFullscreenMode =
+              libConfig.disableFullscreenMode || props.disableFullscreenMode
 
             // Base case: render a leaf node.
             if (node instanceof ElementNode) {
@@ -178,7 +178,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               // guarantee it doesn't get overwritten by {...childProps}.
               const childProps = {
                 ...props,
-                disableFullScreenMode,
+                disableFullscreenMode,
                 node: node as ElementNode,
               }
 
@@ -193,7 +193,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
               // guarantee it doesn't get overwritten by {...childProps}.
               const childProps = {
                 ...props,
-                disableFullScreenMode,
+                disableFullscreenMode,
                 node: node as BlockNode,
               }
 

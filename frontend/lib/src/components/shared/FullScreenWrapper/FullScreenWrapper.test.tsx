@@ -57,7 +57,7 @@ describe("FullScreenWrapper", () => {
   })
 
   it("hides StyledFullScreenScreenButton when disableFullscreenMode is true", () => {
-    const props = getProps({ hideFullScreenButton: true })
+    const props = getProps({ disableFullscreenMode: true })
 
     customRenderLibContext(<FullScreenWrapper {...props} />, {})
 

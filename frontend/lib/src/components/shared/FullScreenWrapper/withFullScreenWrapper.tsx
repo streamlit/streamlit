@@ -22,7 +22,7 @@ import FullScreenWrapper from "./FullScreenWrapper"
 export interface Props {
   width: number
   height?: number
-  disableFullScreenMode?: boolean
+  disableFullscreenMode?: boolean
 }
 
 // Our wrapper takes the wrapped component's props, plus "width", "height?".
@@ -40,14 +40,14 @@ function withFullScreenWrapper<P>(
     })`
 
     public render = (): ReactNode => {
-      const { width, height, disableFullScreenMode } = this.props
+      const { width, height, disableFullscreenMode } = this.props
 
       return (
         <FullScreenWrapper
           width={width}
           height={height}
-          disableFullScreenMode={
-            forceDisableFullScreenMode || disableFullScreenMode
+          disableFullscreenMode={
+            forceDisableFullScreenMode || disableFullscreenMode
           }
         >
           {({ width, height, expanded, expand, collapse }) => (

@@ -43,7 +43,7 @@ export interface FullScreenWrapperProps {
   width: number
   height?: number
   theme: EmotionTheme
-  disableFullScreenMode?: boolean
+  disableFullscreenMode?: boolean
 }
 
 interface State {
@@ -132,7 +132,7 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
 
   public render(): JSX.Element {
     const { expanded, fullWidth, fullHeight } = this.state
-    const { children, width, height, disableFullScreenMode } = this.props
+    const { children, width, height, disableFullscreenMode } = this.props
 
     let buttonImage = FullscreenEnter
     let buttonOnClick = this.zoomIn
@@ -144,14 +144,12 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
       buttonTitle = "Exit fullscreen"
     }
 
-    // const disableFullScreen = disableFullScreen ?? false
-
     return (
       <StyledFullScreenFrame
         isExpanded={expanded}
         data-testid={"stFullScreenFrame"}
       >
-        {!disableFullScreenMode && (
+        {!disableFullscreenMode && (
           <StyledFullScreenButton
             data-testid={"StyledFullScreenButton"}
             onClick={buttonOnClick}

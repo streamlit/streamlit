@@ -94,7 +94,7 @@ export interface ToolbarProps {
   isFullScreen?: boolean
   locked?: boolean
   target?: StyledComponent<any, any, any>
-  disableFullScreenMode?: boolean
+  disableFullscreenMode?: boolean
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -104,7 +104,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   locked,
   children,
   target,
-  disableFullScreenMode,
+  disableFullscreenMode,
 }): ReactElement => {
   return (
     <StyledToolbarWrapper
@@ -115,14 +115,14 @@ const Toolbar: React.FC<ToolbarProps> = ({
     >
       <StyledToolbar>
         {children}
-        {onExpand && !disableFullScreenMode && !isFullScreen && (
+        {onExpand && !disableFullscreenMode && !isFullScreen && (
           <ToolbarAction
             label={"Fullscreen"}
             icon={Fullscreen}
             onClick={() => onExpand()}
           />
         )}
-        {onCollapse && !disableFullScreenMode && isFullScreen && (
+        {onCollapse && !disableFullscreenMode && isFullScreen && (
           <ToolbarAction
             label={"Close fullscreen"}
             icon={FullscreenExit}
