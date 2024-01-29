@@ -33,6 +33,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             return len(qp)
 
+    def __str__(self) -> str:
+        with get_session_state().query_params() as qp:
+            return str(qp)
+
     @gather_metrics("query_params.get_item")
     def __getitem__(self, key: str) -> str:
         with get_session_state().query_params() as qp:

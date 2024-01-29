@@ -14,4 +14,4 @@
 
 import streamlit as st
 
-st.write(st.query_params)
+st.markdown(str(st.query_params))
