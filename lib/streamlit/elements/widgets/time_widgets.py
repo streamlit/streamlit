@@ -737,7 +737,6 @@ class TimeWidgetsMixin:
             session_state = get_session_state().filtered_state
 
             if key is not None and key in session_state:
-                print("AAAAAAAAA MAMA JAN!")
                 state_value = session_state[key]
                 _session_state_parsed_values = _DateInputValues.from_raw_values(
                     value=state_value,
@@ -747,7 +746,6 @@ class TimeWidgetsMixin:
                 is_range = _session_state_parsed_values.is_range
                 value_for_proto = _session_state_parsed_values.value
                 serde_value = _session_state_parsed_values
-                print("MAMA JAN, PARSED VALUE: ", _session_state_parsed_values)
 
         del value, min_value, max_value
 
