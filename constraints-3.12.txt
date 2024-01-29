@@ -83,10 +83,10 @@ pytest-rerunfailures==13.0
 pytest-xdist==3.5.0
 python-dateutil==2.8.2
 python-slugify==8.0.2
-pytz==2023.3.post1
+pytz==2023.4
 PyYAML==6.0.1
 readme-renderer==42.0
-referencing==0.32.1
+referencing==0.33.0
 requests==2.31.0
 requests-mock==1.11.0
 requests-toolbelt==1.0.0
