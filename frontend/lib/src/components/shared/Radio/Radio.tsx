@@ -184,7 +184,6 @@ class Radio extends React.PureComponent<Props, State> {
                 allowHTML={false}
                 isLabel
                 largerLabel
-                disableLinks
               />
               {hasCaptions && (
                 <StreamlitMarkdown

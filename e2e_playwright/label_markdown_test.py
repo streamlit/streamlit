@@ -72,6 +72,14 @@ def test_radio_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFu
         )
 
 
+def test_radio_option_supports_links(app: Page, assert_snapshot: ImageCompareFunction):
+    radio_option = app.get_by_test_id("stRadio").nth(3).locator("p").nth(0)
+    assert_snapshot(
+        radio_option,
+        name="st_radio-supports_links_in_options",
+    )
+
+
 def test_selectbox_labels_handle_markdown(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

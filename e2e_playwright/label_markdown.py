@@ -158,7 +158,10 @@ with st.container():
 with st.container():
     st.subheader("✅ Allowed outside of buttons - Links")
     st.checkbox(link_label)
-    st.radio(link_label, ["Option 1", "Option 2", "Option 3"])
+    st.radio(
+        link_label,
+        ["Option 1 - [Streamlit](https://streamlit.io)", "Option 2", "Option 3"],
+    )
     st.selectbox(link_label, ["Option 1", "Option 2", "Option 3"])
     st.multiselect(link_label, ["Blue", "Purple", "Green"])
     st.slider(link_label, 0, 10, 1)
