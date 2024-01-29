@@ -14,7 +14,6 @@
 
 """Streamlit support for Plotly charts."""
 
-import hashlib
 import json
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
@@ -176,25 +175,25 @@ class PlotlyWidgetMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
-        # Custom serializer
-        def serialize(obj):
-            # Here, you might need to implement custom serialization logic for
-            # each type to ensure it's converted to a string or byte representation properly.
-            if isinstance(obj, (go.Figure, go.Data)):
-                return json.dumps(obj, default=str)  # or use obj.to_json() if available
-            elif isinstance(obj, list):
-                return json.dumps([serialize(sub_obj) for sub_obj in obj])
-            elif isinstance(obj, dict):
-                return json.dumps({key: serialize(value) for key, value in obj.items()})
-            # Add serialization for other types as needed
+        # # Custom serializer
+        # def serialize(obj):
+        #     # Here, you might need to implement custom serialization logic for
+        #     # each type to ensure it's converted to a string or byte representation properly.
+        #     if isinstance(obj, (go.Figure, go.Data)):
+        #         return json.dumps(obj, default=str)  # or use obj.to_json() if available
+        #     elif isinstance(obj, list):
+        #         return json.dumps([serialize(sub_obj) for sub_obj in obj])
+        #     elif isinstance(obj, dict):
+        #         return json.dumps({key: serialize(value) for key, value in obj.items()})
+        #     # Add serialization for other types as needed
 
-        # Hash function
-        def get_hash(obj):
-            serialized_obj = serialize(obj).encode("utf-8")
-            return hashlib.sha256(serialized_obj).hexdigest()
+        # # Hash function
+        # def get_hash(obj):
+        #     serialized_obj = serialize(obj).encode("utf-8")
+        #     return hashlib.sha256(serialized_obj).hexdigest()
 
         # Example usage
-        figure_id = get_hash(figure_or_data)
+        # figure_id = get_hash(figure_or_data)
         plotly_chart_proto.form_id = current_form_id(self.dg)
         marshall(
             plotly_chart_proto,
@@ -202,7 +201,6 @@ class PlotlyWidgetMixin:
             use_container_width,
             sharing,
             theme,
-            figure_id,
             on_select,
             on_hover,
             on_click,

@@ -18,14 +18,21 @@ import json
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
 
+import plotly.graph_objs as go
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit import type_util
+from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state.common import compute_widget_id
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import matplotlib
@@ -85,8 +92,11 @@ class PlotlyMixin:
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
         theme: Union[None, Literal["streamlit"]] = "streamlit",
+        key: Key | None = None,
+        on_select: bool | WidgetCallback = None,
         **kwargs: Any,
-    ) -> "DeltaGenerator":
+        # What we return will be an json dictionary and will need to fix this type after
+    ) -> Union["DeltaGenerator", Dict]:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -155,20 +165,77 @@ class PlotlyMixin:
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
 
+        key = to_key(key)
+        if not isinstance(on_select, (bool)):
+            check_callback_rules(self.dg, on_select)
+        check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
+
+        plotly_chart_proto.form_id = current_form_id(self.dg)
         marshall(
             plotly_chart_proto,
             figure_or_data,
             use_container_width,
             sharing,
             theme,
+            key,
+            on_select,
             **kwargs,
         )
+
+        def deserialize(ui_value, widget_id=""):
+            if ui_value is None:
+                return {}
+            # if isinstance(ui_value, str):
+            #     return_value = json.loads(ui_value)
+            #     points, point_indices, range = tuple(return_value[key] for key in return_value)
+            #     return (points, point_indices, range)
+
+            # if isinstance(ui_value, dict):
+            #     try:
+            #         points, point_indices, range = tuple(ui_value[key] for key in ui_value)
+            #     # not a box or lasso selection
+            #     except ValueError:
+            #         try:
+            #             points, point_indices = tuple(ui_value[key] for key in ui_value)
+            #             range = None
+            #         except ValueError:
+            #             return ([], [], None)
+            #     return (points, point_indices, range)
+
+            return ui_value
+
+        def serialize(v):
+            print("serializing")
+            return json.dumps(v, default=str)
+
+        ctx = get_script_run_ctx()
+
+        widget_callback = None
+        if isinstance(on_select, bool):
+            widget_callback = None
+        else:
+            widget_callback = on_select
+        widget_state = register_widget(
+            "plotly_chart_widget",
+            plotly_chart_proto,
+            user_key=key,
+            on_change_handler=widget_callback,
+            args=None,
+            kwargs=None,
+            deserializer=deserialize,
+            serializer=serialize,
+            ctx=ctx,
+        )
         self.dg._enqueue("plotly_chart", plotly_chart_proto)
+        if on_select != None and on_select != False:
+            return widget_state.value
+        else:
+            return self.dg
 
     @property
     def dg(self) -> "DeltaGenerator":
@@ -182,6 +249,8 @@ def marshall(
     use_container_width: bool,
     sharing: SharingMode,
     theme: Union[None, Literal["streamlit"]],
+    key: Key | None,
+    on_select: bool | WidgetCallback | None,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -224,6 +293,13 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
+    if on_select == False or on_select == None:
+        proto.on_select = False
+    else:
+        proto.on_select = True
+    if key is None:
+        key = ""
+    proto.id = key
 
 
 @caching.cache
