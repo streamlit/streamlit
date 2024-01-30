@@ -83,7 +83,7 @@ class WriteMixin:
 
         Returns
         -------
-        str or list.
+        str or list
             The full response. If the streamed output only contains text, this
             is a string. Otherwise, this is a list of all the streamed objects.
             The return value is fully compatible as input for ``st.write``.
@@ -128,7 +128,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write-stream-data.streamlit.app/
-            height: 450px
+            height: 550px
 
         """
 
