@@ -277,7 +277,7 @@ class ChatMixin:
 
         >>> import streamlit as st
         >>>
-        >>> with st.sidebar:
+        >>> with st.container():
         >>>     prompt = st.chat_input("Say something")
         >>> if prompt:
         ...     st.write(f"User has sent the following prompt: {prompt}")
