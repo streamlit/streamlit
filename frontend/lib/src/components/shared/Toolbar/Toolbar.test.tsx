@@ -20,7 +20,7 @@ import "@testing-library/jest-dom"
 import { screen, fireEvent } from "@testing-library/react"
 import { Info } from "@emotion-icons/material-outlined"
 
-import { render, customRenderLibContext } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 
 import Toolbar, {
   ToolbarAction,
@@ -127,14 +127,13 @@ describe("Toolbar element", () => {
     expect(onCollapse).toHaveBeenCalled()
   })
 
-  it("deactivates fullscreen mode via lib config", async () => {
-    customRenderLibContext(
-      <Toolbar {...getToolbarProps({ locked: false })}>
+  it("deactivates fullscreen mode via props", async () => {
+    render(
+      <Toolbar
+        {...getToolbarProps({ locked: false, disableFullscreenMode: true })}
+      >
         <ToolbarAction {...getToolbarActionsProps()} />
-      </Toolbar>,
-      {
-        libConfig: { disableFullscreenMode: true },
-      }
+      </Toolbar>
     )
 
     // Check that there is only one toolbar button.

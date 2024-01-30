@@ -12,19 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
-test_dicts = [{"x": "y"}, {"x": "y", "a": "b"}, {"x": ("y", 1, 2.34)}, {"x": ""}]
+test_dicts = [{"x": "y"}, {"x": "y", "a": "b"}, {"x": ["y", "1", "2.34"]}, {"x": ""}]
 
 
 @pytest.mark.parametrize("app_with_query_params", test_dicts, indirect=True)
 def test_app_with_query_params(app_with_query_params: Page):
     page, test_dict = app_with_query_params
-    for key, value in test_dict.items():
-        assert page.get_by_text(key) is not None
-
-        if isinstance(value, (list, tuple)):
-            for item in value:
-                assert page.get_by_text(item) is not None
-        else:
-            assert page.get_by_text(value) is not None
+    expect(page.get_by_test_id("stMarkdownContainer")).to_have_text(str(test_dict))

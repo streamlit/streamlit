@@ -52,6 +52,26 @@ class FileWatcherTest(unittest.TestCase):
         ]
         mock_echo.assert_has_calls(calls)
 
+    @patch_config_options({"server.fileWatcherType": "poll"})
+    def test_no_watchdog_suggestion_for_poll_type(self):
+        with patch(
+            "streamlit.watcher.path_watcher.watchdog_available", new=False
+        ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
+            "click.secho"
+        ) as mock_echo:
+            streamlit.watcher.path_watcher.report_watchdog_availability()
+        mock_echo.assert_not_called()
+
+    @patch_config_options({"server.fileWatcherType": "none"})
+    def test_no_watchdog_suggestion_for_none_type(self):
+        with patch(
+            "streamlit.watcher.path_watcher.watchdog_available", new=False
+        ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
+            "click.secho"
+        ) as mock_echo:
+            streamlit.watcher.path_watcher.report_watchdog_availability()
+        mock_echo.assert_not_called()
+
     def test_report_watchdog_availability_nonmac(self):
         with patch(
             "streamlit.watcher.path_watcher.watchdog_available", new=False

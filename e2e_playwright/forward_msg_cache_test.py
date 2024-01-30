@@ -14,12 +14,12 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import rerun
+from e2e_playwright.conftest import rerun_app
 
 
 def test_forward_msg_cache_receives_msg(app: Page):
     app.evaluate("window.streamlitDebug.clearForwardMsgCache()")
-    rerun(app)
+    rerun_app(app)
     expect(app.get_by_role("dialog")).not_to_be_visible()
 
     app.expect_request("**/_stcore/message/")

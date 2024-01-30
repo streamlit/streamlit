@@ -16,22 +16,32 @@
 
 import styled from "@emotion/styled"
 
+export interface StyledResizableContainerProps {
+  hasCustomizedScrollbars: boolean
+}
+
 /**
  * A resizable data grid container component.
  */
-export const StyledResizableContainer = styled.div(({ theme }) => ({
-  position: "relative",
-  display: "inline-block",
+export const StyledResizableContainer =
+  styled.div<StyledResizableContainerProps>(
+    ({ hasCustomizedScrollbars, theme }) => ({
+      position: "relative",
+      display: "inline-block",
 
-  "& .glideDataEditor": {
-    height: "100%",
-    minWidth: "100%",
-    borderRadius: theme.radii.lg,
-  },
+      "& .glideDataEditor": {
+        height: "100%",
+        minWidth: "100%",
+        borderRadius: theme.radii.lg,
+      },
 
-  "& .dvn-scroller": {
-    scrollbarWidth: "thin",
-    ["overflowX" as any]: "auto !important",
-    ["overflowY" as any]: "auto !important",
-  },
-}))
+      "& .dvn-scroller": {
+        // We only want to configure scrollbar aspects for browsers that
+        // don't support custom scrollbars (e.g. Firefox). Also, applying this
+        // in Chrome causes the scrollbar to change to the default scrollbar style.
+        ...(!hasCustomizedScrollbars && { scrollbarWidth: "thin" }),
+        ["overflowX" as any]: "auto !important",
+        ["overflowY" as any]: "auto !important",
+      },
+    })
+  )
