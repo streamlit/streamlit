@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useEffect, useState } from "react"
+import React, { ReactElement, useEffect, useState } from "react"
+
+import { SIZE } from "baseui/modal"
+
 import Modal, {
   ModalHeader,
   ModalBody,
@@ -24,14 +27,31 @@ import { Block as BlockProto } from "@streamlit/lib/src/proto"
 
 export interface Props {
   element: BlockProto.Dialog
-  children?: ReactNode
+}
+
+const DIALOG_WIDTH = {
+  small: "20rem",
+  medium: "default",
+  large: "60vw",
+  xlarge: "80vw",
+}
+
+function parseWidthConfig(width?: string): string {
+  if (width === undefined) {
+    return SIZE.default
+  }
+
+  if (!isNaN(Number(width))) {
+    return `${width}vw`
+  }
+
+  return DIALOG_WIDTH[width as keyof typeof DIALOG_WIDTH] ?? SIZE.default
 }
 
 const Dialog: React.FC<Props> = ({ element, children }): ReactElement => {
-  const { title, dismissible, isOpen: initialIsOpen } = element
+  const { title, dismissible, width, isOpen: initialIsOpen } = element
 
   const [isOpen, setIsOpen] = useState<boolean>(initialIsOpen || false)
-  console.log(isOpen, initialIsOpen)
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialIsOpen)) {
@@ -44,6 +64,7 @@ const Dialog: React.FC<Props> = ({ element, children }): ReactElement => {
       isOpen={isOpen}
       closeable={dismissible}
       onClose={() => setIsOpen(false)}
+      size={parseWidthConfig(width ?? SIZE.default)}
     >
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>{children}</ModalBody>
