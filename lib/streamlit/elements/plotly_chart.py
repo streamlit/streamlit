@@ -22,6 +22,7 @@ import plotly.graph_objs as go
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit import type_util
+from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
@@ -82,9 +83,6 @@ FigureOrData: TypeAlias = Union[
     "BaseFigure",
     "matplotlib.figure.Figure",
 ]
-
-ON_SELECTION_RERUN = "rerun"
-ON_SELECTION_IGNORE = "ignore"
 
 
 class PlotlyMixin:
