@@ -22,18 +22,19 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
 class Dialog(DeltaGenerator):
-    _is_open: bool = False
-
     @staticmethod
     def _create(
         parent: DeltaGenerator,
         title: str,
         *,
         dismissible: bool = True,
+        width: "DialogWidth" = None,
     ) -> "Dialog":
         block_proto = Block_pb2.Block()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
+        if width is not None:
+            block_proto.dialog.width = str(width)
 
         delta_path: List[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
@@ -42,6 +43,8 @@ class Dialog(DeltaGenerator):
 
         dialog._delta_path = delta_path
         dialog._current_proto = block_proto
+        # We add a sleep here to give the web app time to react to the update. Otherwise,
+        #  we might run into issues where the dialog cannot be opened again after closing
         time.sleep(0.05)
         return dialog
 
@@ -57,6 +60,8 @@ class Dialog(DeltaGenerator):
         self._current_proto = msg.delta.add_block
 
         _enqueue_message(msg)
+        # We add a sleep here to give the web app time to react to the update. Otherwise,
+        #  we might run into issues where the dialog cannot be opened again after closing
         time.sleep(0.05)
 
     def open(self) -> None:

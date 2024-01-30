@@ -221,7 +221,6 @@ const StreamlitSyntaxHighlighter = React.lazy(
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
   width: number
-  hideFullScreenButton?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -572,7 +571,6 @@ const RawElementNodeRenderer = (
           key={colorPickerProto.id}
           element={colorPickerProto}
           {...widgetProps}
-          {...elementProps}
         />
       )
     }
