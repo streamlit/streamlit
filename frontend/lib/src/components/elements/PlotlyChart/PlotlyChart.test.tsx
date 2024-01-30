@@ -24,6 +24,7 @@ import { PlotlyChart as PlotlyChartProto } from "@streamlit/lib/src/proto"
 import mock from "./mock"
 
 import { PlotlyChart, DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 const DEFAULT_PLOTLY_WIDTH = "700"
 const DEFAULT_PLOTLY_HEIGHT = "450"

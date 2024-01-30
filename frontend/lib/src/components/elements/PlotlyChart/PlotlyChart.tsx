@@ -35,12 +35,7 @@ import {
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
-import {
-  PlotHoverEvent,
-  PlotMouseEvent,
-  PlotRelayoutEvent,
-  PlotSelectionEvent,
-} from "plotly.js"
+import { PlotRelayoutEvent, PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 export interface PlotlyChartProps {
   width: number
@@ -53,6 +48,12 @@ export interface PlotlyIFrameProps {
   width: number
   height: number | undefined
   url: string
+}
+
+// Copied and Pasted from Plotly type def
+export interface SelectionRange {
+  x: number[]
+  y: number[]
 }
 
 function extractNonObjects(obj: any): any {
@@ -73,6 +74,30 @@ function isFullScreen(height: number | undefined): boolean {
   return !!height
 }
 
+function parseLassoPath(pathData: string): SelectionRange {
+  // Remove the 'M' and 'Z' from the string and then split by 'L'
+  const points = pathData.replace("M", "").replace("Z", "").split("L")
+
+  const x: number[] = []
+  const y: number[] = []
+
+  // Iterate through the points and split them into x and y
+  points.forEach(point => {
+    const [xVal, yVal] = point.split(",").map(Number)
+    x.push(xVal)
+    y.push(yVal)
+  })
+
+  // Return the object with x and y arrays
+  return { x, y }
+}
+
+function parseBoxSelection(selection: any): SelectionRange {
+  const x: number[] = [selection.x0, selection.x1]
+  const y: number[] = [selection.y0, selection.y1]
+  return { x, y }
+}
+
 /** Render an iframed Plotly chart from a URL */
 function renderIFrame({
   url,
@@ -87,20 +112,6 @@ function renderIFrame({
       style={{ width, height, colorScheme: "light dark" }}
     />
   )
-}
-
-// TODO: Could convert array to set to make plotly faster
-
-const pointsAreEqual = (point1: any, point2: any): boolean => {
-  return (
-    point1.curveNumber === point2.curveNumber &&
-    point1.pointNumber === point2.pointNumber &&
-    point1.binNumber === point2.binNumber
-  )
-}
-
-const arrayIncludesPoint = (array: Array<any>, wantedPoint: any): boolean => {
-  return array.some((point): any => pointsAreEqual(point, wantedPoint))
 }
 
 /** Render a Plotly chart from a FigureProto */
@@ -173,8 +184,8 @@ function PlotlyFigure({
     setSpec(
       JSON.parse(replaceTemporaryColors(figure.spec, theme, element.theme))
     )
-  }, [figure.spec, theme, element.theme])
-
+    // reset plotly if element.onSelect changes
+  }, [figure.spec, theme, element.theme, element.onSelect])
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
 
@@ -215,10 +226,15 @@ function PlotlyFigure({
   ])
 
   const handleSelect = (event: PlotSelectionEvent): void => {
-    const returnValue: any = {}
+    console.log("handleSelect")
+    console.log(event)
+    const returnValue: any = { select: {} }
     const pointIndices: number[] = []
-    const xs: any[] = []
-    const ys: any[] = []
+    const xs: number[] = []
+    const ys: number[] = []
+    const selectedBoxes: SelectionRange[] = []
+    const selectedLassos: SelectionRange[] = []
+
     // Build array of points to return
     const selectedPoints: Array<any> = []
     event.points.forEach(function (point: any) {
@@ -227,24 +243,37 @@ function PlotlyFigure({
         legendgroup: point.data.legendgroup
           ? point.data.legendgroup
           : undefined,
-        // name: point.data.name,
       })
       xs.push(point.x)
       ys.push(point.y)
       pointIndices.push(point.pointIndex)
     })
-    // console.log(event)
 
-    returnValue.points = selectedPoints
+    returnValue.select.points = selectedPoints
     // point_indices to replicate pythonic return value
-    returnValue.point_indices = pointIndices
-    // returnValue.data = event.points.length > 0 ? event.points[0].data : {}
-    if (event.range || event.lassoPoints) {
-      returnValue.range = event.range
-      // lasso_points to replicate pythonic return value
-      returnValue.lasso_points = event.lassoPoints
+    returnValue.select.point_indices = pointIndices
+
+    // event.selections doesn't show up in the PlotSelectionEvent
+    // @ts-expect-error
+    if (event.selections) {
+      // @ts-expect-error
+      event.selections.forEach((selection: any) => {
+        // box selection
+        if (selection.type === "rect") {
+          selectedBoxes.push(parseBoxSelection(selection))
+        }
+        // lasso selection
+        if (selection.type === "path") {
+          selectedLassos.push(parseLassoPath(selection.path))
+        }
+      })
     }
-    // console.log(returnValue)
+    // select_box to replicate pythonic return value
+    returnValue.select_box =
+      selectedBoxes.length > 0 ? selectedBoxes : undefined
+    // lasso_points to replicate pythonic return value
+    returnValue.select_lasso =
+      selectedLassos.length > 0 ? selectedLassos : undefined
 
     widgetMgr.setJsonValue(element, returnValue, { fromUi: true })
     console.log("Done handling select")
@@ -265,7 +294,6 @@ function PlotlyFigure({
       onDeselect={
         element.onSelect
           ? () => {
-              console.log("deselecting")
               selectedPoints.current = []
               widgetMgr.setJsonValue(element, {}, { fromUi: true })
             }
