@@ -42,14 +42,7 @@ import {
   getEmbeddingIdClassName,
   getIFrameEnclosingApp,
   hashString,
-  isColoredLineDisplayed,
-  isDarkTheme,
-  isEmbed,
   isInChildFrame,
-  isLightTheme,
-  isPaddingDisplayed,
-  isScrollingHidden,
-  isToolbarDisplayed,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
@@ -123,7 +116,6 @@ import withScreencast, {
 
 // Used to import fonts + responsive reboot items
 import "@streamlit/app/src/assets/css/theme.scss"
-import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
 import { ThemeManager } from "./util/useThemeManager"
 
 export interface Props {
@@ -404,12 +396,16 @@ export class App extends PureComponent<Props, State> {
           disableFullscreenMode,
           enableCustomParentMessages,
           mapboxToken,
+          embed,
+          embedOptions,
         } = response
 
         const appConfig: AppConfig = {
           allowedOrigins,
           useExternalAuthToken,
           enableCustomParentMessages,
+          embed,
+          embedOptions,
         }
         const libConfig: LibConfig = { mapboxToken, disableFullscreenMode }
 

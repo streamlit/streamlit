@@ -33,8 +33,6 @@ import {
 import { Quiver } from "./dataframes/Quiver"
 import { ensureError } from "./util/ErrorHandling"
 import {
-  getLoadingScreenType,
-  LoadingScreenType,
   makeElementWithErrorText,
   makeElementWithInfoText,
   makeSkeletonElement,

@@ -197,6 +197,18 @@ export type AppConfig = {
    * Enables custom string messages to be sent to the host
    */
   enableCustomParentMessages?: boolean
+
+  /**
+   * If true, the should use the optimized embedding mode. The same option specified
+   * via the `embed` query parameter takes precedence over this configuration.
+   */
+  embed?: boolean
+
+  /**
+   * Allows granular control over the embedding behavior. The same option specified
+   * via the `embedOptions` query parameter takes precedence over this configuration.
+   */
+  embedOptions?: string[]
 }
 
 /**
