@@ -83,6 +83,9 @@ FigureOrData: TypeAlias = Union[
     "matplotlib.figure.Figure",
 ]
 
+ON_SELECTION_RERUN = "rerun"
+ON_SELECTION_IGNORE = "ignore"
+
 
 class PlotlyMixin:
     @gather_metrics("plotly_chart")
@@ -93,7 +96,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Union[None, Literal["streamlit"]] = "streamlit",
         key: Key | None = None,
-        on_select: bool | WidgetCallback = None,
+        on_select: bool | str | WidgetCallback = None,
         **kwargs: Any,
         # What we return will be an json dictionary and will need to fix this type after
     ) -> Union["DeltaGenerator", Dict]:
@@ -190,49 +193,41 @@ class PlotlyMixin:
         def deserialize(ui_value, widget_id=""):
             if ui_value is None:
                 return {}
-            # if isinstance(ui_value, str):
-            #     return_value = json.loads(ui_value)
-            #     points, point_indices, range = tuple(return_value[key] for key in return_value)
-            #     return (points, point_indices, range)
-
-            # if isinstance(ui_value, dict):
-            #     try:
-            #         points, point_indices, range = tuple(ui_value[key] for key in ui_value)
-            #     # not a box or lasso selection
-            #     except ValueError:
-            #         try:
-            #             points, point_indices = tuple(ui_value[key] for key in ui_value)
-            #             range = None
-            #         except ValueError:
-            #             return ([], [], None)
-            #     return (points, point_indices, range)
-
             return ui_value
 
         def serialize(v):
-            print("serializing")
             return json.dumps(v, default=str)
 
         ctx = get_script_run_ctx()
 
         widget_callback = None
-        if isinstance(on_select, bool):
+        if (
+            isinstance(on_select, bool)
+            or on_select == ON_SELECTION_RERUN
+            or on_select == ON_SELECTION_IGNORE
+        ):
             widget_callback = None
         else:
             widget_callback = on_select
-        widget_state = register_widget(
-            "plotly_chart_widget",
-            plotly_chart_proto,
-            user_key=key,
-            on_change_handler=widget_callback,
-            args=None,
-            kwargs=None,
-            deserializer=deserialize,
-            serializer=serialize,
-            ctx=ctx,
-        )
+        if on_select != False and on_select != ON_SELECTION_IGNORE:
+            widget_state = register_widget(
+                # TODO(willhuang1997): This should likely be changed to just "plotly_chart"
+                "plotly_chart_widget",
+                plotly_chart_proto,
+                user_key=key,
+                on_change_handler=widget_callback,
+                args=None,
+                kwargs=None,
+                deserializer=deserialize,
+                serializer=serialize,
+                ctx=ctx,
+            )
         self.dg._enqueue("plotly_chart", plotly_chart_proto)
-        if on_select != None and on_select != False:
+        if (
+            on_select != None
+            and on_select != False
+            and on_select != ON_SELECTION_IGNORE
+        ):
             return widget_state.value
         else:
             return self.dg
@@ -250,7 +245,7 @@ def marshall(
     sharing: SharingMode,
     theme: Union[None, Literal["streamlit"]],
     key: Key | None,
-    on_select: bool | WidgetCallback | None,
+    on_select: bool | str | WidgetCallback | None,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -293,7 +288,8 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
-    if on_select == False or on_select == None:
+    # TODO(willhuang1997): changing between onSelect doesn't change whether or not selection can be picked
+    if on_select == False or on_select == None or on_select == ON_SELECTION_IGNORE:
         proto.on_select = False
     else:
         proto.on_select = True
