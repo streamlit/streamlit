@@ -140,7 +140,7 @@ twine==4.0.2
 types-click==7.1.8
 types-protobuf==4.24.0.20240129
 types-python-dateutil==2.8.19.20240106
-types-pytz==2023.3.1.1
+types-pytz==2023.4.0.20240130
 types-requests==2.31.0.6
 types-setuptools==69.0.0.20240125
 types-toml==0.10.8.7
