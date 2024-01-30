@@ -59,7 +59,10 @@ message Block {
   message Dialog {
     string title = 1;
     bool dismissible = 2;
-    optional bool is_open = 3;
+    // we use string as width because the user is supposed to provide
+    //   predefined values (e.g. small, medium, ...)
+    optional string width = 3;
+    optional bool is_open = 4;
   }
 
   message Form {
@@ -94,6 +97,6 @@ message Block {
     string avatar = 2;
     AvatarType avatar_type = 3;
   }
-
-  // Next ID: 12
+ 
+  // Next ID: 12 
 }
