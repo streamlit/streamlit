@@ -13,7 +13,7 @@ chart-studio==1.1.0
 click==8.1.7
 contourpy==1.2.0
 coverage==7.4.1
-cryptography==42.0.1
+cryptography==42.0.2
 cycler==0.12.1
 distlib==0.3.8
 docutils==0.20.1
@@ -24,7 +24,7 @@ gitdb==4.0.11
 GitPython==3.1.41
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.97.1
+hypothesis==6.97.3
 identify==2.5.33
 idna==3.6
 importlib-metadata==7.0.1
@@ -56,7 +56,7 @@ pathspec==0.12.1
 pillow==10.2.0
 pixelmatch==0.3.0
 pkginfo==1.9.6
-platformdirs==4.1.0
+platformdirs==4.2.0
 playwright==1.39.0
 plotly==5.18.0
 pluggy==1.4.0
@@ -123,7 +123,7 @@ types-typed-ast==1.5.8.7
 typing_extensions==4.9.0
 tzdata==2023.4
 tzlocal==5.2
-urllib3==2.1.0
+urllib3==2.2.0
 validators==0.22.0
 virtualenv==20.25.0
 watchdog==3.0.0
