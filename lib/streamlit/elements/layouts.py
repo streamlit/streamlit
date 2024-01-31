@@ -202,7 +202,7 @@ class LayoutsMixin:
             https://doc-columns1.streamlit.app/
             height: 620px
 
-        Or you can just call methods directly in the returned objects:
+        Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>> import numpy as np
@@ -337,7 +337,7 @@ class LayoutsMixin:
             https://doc-tabs1.streamlit.app/
             height: 620px
 
-        Or you can just call methods directly in the returned objects:
+        Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>> import numpy as np
@@ -441,7 +441,7 @@ class LayoutsMixin:
             https://doc-expander.streamlit.app/
             height: 750px
 
-        Or you can just call methods directly in the returned objects:
+        Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>>
@@ -527,7 +527,7 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> with st.popover( "Open popover"):
+        >>> with st.popover("Open popover"):
         >>>     st.markdown("Hello World 👋")
         >>>     name = st.text_input("What's your name?")
         >>>
@@ -537,7 +537,7 @@ class LayoutsMixin:
             https://doc-popover.streamlit.app/
             height: 400px
 
-        Or you can just call methods directly in the returned objects:
+        Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>>

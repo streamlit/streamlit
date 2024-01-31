@@ -86,5 +86,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 10
+  // Next ID: 11
 }

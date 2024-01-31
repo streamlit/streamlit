@@ -67,25 +67,26 @@ const Popover: React.FC<PopoverProps> = ({
             style: () => ({
               marginRight: theme.spacing.lg,
               marginBottom: theme.spacing.lg,
+
               maxHeight: "70vh",
               overflow: "auto",
               maxWidth: "80vw",
               minWidth: "20rem",
 
-              paddingRight: "calc(1em - 1px)", // 1px to account for border.
-              paddingLeft: "calc(1em - 1px)",
-              paddingBottom: "calc(1em - 1px)",
-              paddingTop: "calc(1em - 1px)",
+              borderLeftRadius: theme.radii.lg,
+              borderRightRadius: theme.radii.lg,
+              borderTopRadius: theme.radii.lg,
+              borderBottomRadius: theme.radii.lg,
 
               borderLeftWidth: "1px",
               borderRightWidth: "1px",
               borderTopWidth: "1px",
               borderBottomWidth: "1px",
 
-              borderLeftRadius: theme.radii.lg,
-              borderRightRadius: theme.radii.lg,
-              borderTopRadius: theme.radii.lg,
-              borderBottomRadius: theme.radii.lg,
+              paddingRight: "calc(1em - 1px)", // 1px to account for border.
+              paddingLeft: "calc(1em - 1px)",
+              paddingBottom: "calc(1em - 1px)",
+              paddingTop: "calc(1em - 1px)",
 
               borderLeftStyle: "solid",
               borderRightStyle: "solid",

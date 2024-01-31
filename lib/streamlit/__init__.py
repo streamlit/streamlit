@@ -162,6 +162,7 @@ multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
 plotly_chart = _main.plotly_chart
+popover = _main.popover
 progress = _main.progress
 pyplot = _main.pyplot
 radio = _main.radio
@@ -186,7 +187,6 @@ write = _main.write
 write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
-popover = _main.popover
 
 # Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
 toast = _event.toast
