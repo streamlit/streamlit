@@ -72,7 +72,7 @@ class WriteMixin:
     ) -> List[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
-        This is done by iterating through the sequences and writing all
+        ``st.write_stream`` iterates through the given sequences and writes all
         chunks to the app. String chunks will be written using a typewriter effect.
         Other data types will be written using ``st.write``.
 
@@ -83,16 +83,18 @@ class WriteMixin:
 
         Returns
         -------
-        str or list.
-            The full response as a string if the streamed output only contains text or
-            a list of all the streamed objects otherwise. The return value is fully compatible
-            as input for ``st.write``.
+        str or list
+            The full response. If the streamed output only contains text, this
+            is a string. Otherwise, this is a list of all the streamed objects.
+            The return value is fully compatible as input for ``st.write``.
 
 
         Example
         -------
-
-        You can pass a generator function as input:
+        You can pass an OpenAI stream as shown in our tutorial, `Build a \
+        basic LLM chat app <https://docs.streamlit.io/knowledge-base/tutorials\
+        /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
+        you can pass a generic generator function as input:
 
         >>> import time
         >>> import numpy as np
@@ -100,9 +102,9 @@ class WriteMixin:
         >>> import streamlit as st
         >>>
         >>> _LOREM_IPSUM = \"\"\"
-        >>> Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-        >>> labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
-        >>> laboris nisi ut aliquip ex ea commodo consequat.
+        >>> Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+        >>> incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+        >>> nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
         >>> \"\"\"
         >>>
         >>>
@@ -126,38 +128,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write-stream-data.streamlit.app/
-            height: 350px
-
-        Or an OpenAI stream:
-
-        >>> from openai import OpenAI
-        >>> import streamlit as st
-        >>>
-        >>> client = OpenAI(api_key=st.secrets["openai_api_key"])
-        >>>
-        >>> if "messages" not in st.session_state:
-        >>>     st.session_state.messages = []
-        >>>
-        >>> for message in st.session_state.messages:
-        >>>     st.chat_message(message["role"]).write(message["content"])
-        >>>
-        >>> if prompt := st.chat_input("What is up?"):
-        >>>     st.chat_message("user").write(prompt)
-        >>>     st.session_state.messages.append({"role": "user", "content": prompt})
-        >>>
-        >>>     with st.chat_message("assistant"):
-        >>>         response = st.write_stream(
-        >>>             client.chat.completions.create(
-        >>>                 model="gpt-3.5-turbo",
-        >>>                 messages=st.session_state.messages,
-        >>>                 stream=True,
-        >>>             )
-        >>>         )
-        >>>        st.session_state.messages.append({"role": "assistant", "content": response})
-
-        ..  output::
-            https://doc-write-stream-openai.streamlit.app/
-            height: 400px
+            height: 550px
 
         """
 
