@@ -35,6 +35,7 @@ def test_popover_container_rendering(
 ):
     """Test that the popover container is correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
+    # Get the widgets popover container:
     popover_elements.nth(3).locator("button").click()
 
     popover_container = themed_app.get_by_test_id("stPopoverBody")
@@ -46,6 +47,7 @@ def test_popover_container_rendering(
 def test_applying_changes_from_popover_container(app: Page):
     """Test that changes made in the popover container are applied correctly."""
     popover_elements = app.get_by_test_id("stPopover")
+    # Get the widgets popover container:
     popover_elements.nth(3).locator("button").click()
 
     popover_container = app.get_by_test_id("stPopoverBody")
@@ -70,6 +72,7 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     """Test that the fullscreen mode is disabled within a popover container."""
     # Open popover
     popover_elements = app.get_by_test_id("stPopover")
+    # Get the fullscreen elements popover container:
     popover_elements.nth(4).locator("button").click()
 
     popover_container = app.get_by_test_id("stPopoverBody")
