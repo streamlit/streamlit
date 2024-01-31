@@ -17,7 +17,7 @@
 import React, { ReactElement } from "react"
 
 import { useTheme } from "@emotion/react"
-import { ExpandMore } from "@emotion-icons/material-outlined"
+import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"
@@ -27,6 +27,7 @@ import BaseButton, {
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import { Popover as UIPopover, TRIGGER_TYPE, PLACEMENT } from "baseui/popover"
 
@@ -43,6 +44,7 @@ const Popover: React.FC<PopoverProps> = ({
   children,
 }): ReactElement => {
   const [open, setOpen] = React.useState(false)
+  const isInSidebar = React.useContext(IsSidebarContext)
   const theme = useTheme()
 
   const lightBackground = hasLightBackgroundColor(theme)
@@ -55,6 +57,7 @@ const Popover: React.FC<PopoverProps> = ({
         content={() => children}
         isOpen={open}
         onClickOutside={() => setOpen(false)}
+        ignoreBoundary={isInSidebar}
         overrides={{
           Body: {
             props: {
@@ -120,7 +123,7 @@ const Popover: React.FC<PopoverProps> = ({
             />
             <StyledPopoverButtonIcon>
               <StyledIcon
-                as={ExpandMore}
+                as={open ? ExpandLess : ExpandMore}
                 color="inherit"
                 aria-hidden="true"
                 size="lg"
