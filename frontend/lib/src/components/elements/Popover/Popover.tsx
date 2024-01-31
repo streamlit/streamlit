@@ -28,11 +28,7 @@ import BaseButton, {
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
-import {
-  StatefulPopover as UIPopover,
-  TRIGGER_TYPE,
-  PLACEMENT,
-} from "baseui/popover"
+import { Popover as UIPopover, TRIGGER_TYPE, PLACEMENT } from "baseui/popover"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
 
@@ -46,7 +42,9 @@ const Popover: React.FC<PopoverProps> = ({
   empty,
   children,
 }): ReactElement => {
+  const [open, setOpen] = React.useState(false)
   const theme = useTheme()
+
   const lightBackground = hasLightBackgroundColor(theme)
 
   return (
@@ -55,8 +53,13 @@ const Popover: React.FC<PopoverProps> = ({
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
         content={() => children}
+        isOpen={open}
+        onClickOutside={() => setOpen(false)}
         overrides={{
           Body: {
+            props: {
+              "data-testid": "stPopover-Container",
+            },
             style: () => ({
               marginRight: theme.spacing.lg,
               marginBottom: theme.spacing.lg,
@@ -105,7 +108,8 @@ const Popover: React.FC<PopoverProps> = ({
             size={BaseButtonSize.SMALL}
             disabled={empty}
             fluidWidth={element.useContainerWidth}
-            data-testid="stPopoverButton"
+            data-testid="stPopover-Button"
+            onClick={() => setOpen(!open)}
           >
             <StreamlitMarkdown
               source={element.label}
@@ -117,7 +121,7 @@ const Popover: React.FC<PopoverProps> = ({
             <StyledPopoverButtonIcon>
               <StyledIcon
                 as={ExpandMore}
-                color={"inherit"}
+                color="inherit"
                 aria-hidden="true"
                 size="lg"
                 margin=""
