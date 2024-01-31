@@ -35,15 +35,26 @@ def test_popover_container_rendering(
 ):
     """Test that the popover container is correctly rendered via screenshot matching."""
     # Get the widgets popover container:
-    popover_elements = themed_app.get_by_test_id("stPopover").nth(3)
+    popover_element = themed_app.get_by_test_id("stPopover").nth(3)
+    # Click the button to open it:
+    popover_element.locator("button").click()
 
-    popover_elements.locator("button").click()
+    # Check that it is open:
+    popover_container = themed_app.get_by_test_id("stPopoverBody")
+    expect(popover_container).to_be_visible()
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
+
+    # Click somewhere outside the close popover container:
+    themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    expect(popover_container).not_to_be_visible()
+
+    # Click the button to open it:
+    popover_element.locator("button").click()
 
     popover_container = themed_app.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
     expect(popover_container.get_by_test_id("stTextInput")).to_have_count(4)
-    # Close and open again to guarantee persistent width
-    themed_app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
 
     assert_snapshot(popover_container, name="st_popover-container")
 
@@ -55,12 +66,17 @@ def test_applying_changes_from_popover_container(app: Page):
     # Click the button to open it:
     popover_element.locator("button").click()
 
-    # Check that it is open
+    # Check that it is open:
     popover_container = app.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
     expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
 
-    # Click somewhere outside the close popover container
+    # Fill in the text:
+    text_input_element = popover_container.get_by_test_id("stTextInput").nth(0)
+    text_input_element.locator("input").first.fill("Input text in popover")
+    wait_for_app_run(app)
+
+    # Click somewhere outside the close popover container:
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
     expect(popover_container).not_to_be_visible()
 
@@ -78,6 +94,10 @@ def test_applying_changes_from_popover_container(app: Page):
     # Check that it is still open after rerun:
     expect(popover_container).to_be_visible()
     expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello World 👋")
+
+    # Click somewhere outside the close popover container
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    expect(popover_container).not_to_be_visible()
 
     # The main app should render this text:
     expect(app.get_by_test_id("stMarkdown")).to_have_text("Input text in popover")
