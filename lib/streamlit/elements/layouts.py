@@ -519,7 +519,8 @@ class LayoutsMixin:
 
         use_container_width : bool
             An optional boolean, which makes the popover button stretch its width
-            to match the parent container.
+            to match the parent container. This only affects the button and not
+            the width of the popover container.
 
         Examples
         --------
