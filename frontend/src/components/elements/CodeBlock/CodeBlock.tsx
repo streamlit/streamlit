@@ -16,7 +16,7 @@
 
 import React, { ReactElement, ReactNode, FunctionComponent } from "react"
 import { ReactMarkdownProps } from "react-markdown/src/ast-to-react"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { PrismAsync as SyntaxHighlighter } from "react-syntax-highlighter"
 
 import CopyButton from "./CopyButton"
 import {
