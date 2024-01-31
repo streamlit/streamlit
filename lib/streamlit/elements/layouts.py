@@ -485,11 +485,11 @@ class LayoutsMixin:
         Inserts a multi-element container as a popover. It consists of a button-like
         element and a container that opens when the button is clicked.
 
-        To add elements to the returned container, you can use "with" notation (preferred) or
-        just call methods directly on the returned object. See examples below.
+        To add elements to the returned container, you can use "with" notation (preferred)
+        or just call methods directly on the returned object. See examples below.
 
         .. warning::
-            You may not put expanders or popovers inside another popover.
+            You may not a popover inside another popover.
 
         Parameters
         ----------
@@ -516,6 +516,7 @@ class LayoutsMixin:
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
         use_container_width : bool
             An optional boolean, which makes the popover button stretch its width
             to match the parent container.
@@ -526,20 +527,29 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
+        >>> with st.popover( "Open popover"):
+        >>>     st.markdown("Hello World 👋")
+        >>>     name = st.text_input("What's your name?")
+        >>>
+        >>> st.write("Your name:", name)
 
         .. output ::
             https://doc-popover.streamlit.app/
-            height: 500px
+            height: 400px
 
         Or you can just call methods directly in the returned objects:
 
         >>> import streamlit as st
         >>>
+        >>> popover = st.popover("Open popover")
+        >>> popover.markdown("Hello World 👋")
+        >>> name = popover.text_input("What's your name?")
+        >>>
+        >>> st.write("Your name:", name)
 
         .. output ::
             https://doc-popover.streamlit.app/
-            height: 500px
-
+            height: 400px
         """
         if label is None:
             raise StreamlitAPIException("A label is required for a popover")
