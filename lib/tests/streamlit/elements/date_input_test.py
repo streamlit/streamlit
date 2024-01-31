@@ -173,7 +173,7 @@ class DateInputTest(DeltaGeneratorTestCase):
 
     def test_range_session_state(self):
         """Test a range set by session state."""
-        date_range_input = [datetime.today(), datetime.today() + timedelta(2)]
+        date_range_input = [date(2024, 1, 15), date(2024, 1, 15) + timedelta(2)]
         state = st.session_state
         state["date_range"] = date_range_input[:]
 
@@ -182,10 +182,15 @@ class DateInputTest(DeltaGeneratorTestCase):
             key="date_range",
         )
 
+        c = self.get_delta_from_queue().new_element.date_input
+
         assert date_range == date_range_input
 
+        self.assertEqual(c.value, ["2024/01/15", "2024/01/17"])
+        self.assertEqual(c.is_range, True)
+
     def test_inside_column(self):
-        """Test that it works correctly inside of a column."""
+        """Test that it works correctly inside a column."""
         col1, col2 = st.columns(2)
 
         with col1:

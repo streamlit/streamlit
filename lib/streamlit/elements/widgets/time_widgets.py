@@ -47,6 +47,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
@@ -68,13 +69,15 @@ ALLOWED_DATE_FORMATS = re.compile(
 
 
 def _parse_date_value(
-    value: DateValue | Literal["today"],
+    value: DateValue | Literal["today"] | Literal["default_value_today"],
 ) -> Tuple[List[date] | None, bool]:
     parsed_dates: List[date]
     range_value: bool = False
     if value is None:
         return None, range_value
     if value == "today":
+        parsed_dates = [datetime.now().date()]
+    elif value == "default_value_today":
         # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
@@ -150,7 +153,7 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue | Literal["today"],
+        value: DateValue | Literal["today"] | Literal["default_value_today"],
         min_value: SingleDateValue,
         max_value: SingleDateValue,
     ) -> "_DateInputValues":
@@ -494,7 +497,7 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue | Literal["today"] = "today",
+        value: DateValue | Literal["today"] = "default_value_today",  # type: ignore[assignment]
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -648,7 +651,9 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value: DateValue | Literal["today"] = "today",
+        value: DateValue
+        | Literal["today"]
+        | Literal["default_value_today"] = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -665,13 +670,13 @@ class TimeWidgetsMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=value if value != "today" else None, key=key
+            default_value=value if value != "default_value_today" else None, key=key
         )
 
         maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic(
-            v: SingleDateValue | Literal["today"],
+            v: SingleDateValue | Literal["today"] | Literal["default_value_today"],
         ) -> str | None:
             if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
@@ -683,7 +688,7 @@ class TimeWidgetsMixin:
         parsed_max_date = parse_date_deterministic(max_value)
 
         parsed: str | None | List[str | None]
-        if value == "today" or value is None:
+        if value == "today" or value == "default_value_today" or value is None:
             parsed = None
         elif isinstance(value, (datetime, date)):
             parsed = parse_date_deterministic(value)
@@ -717,6 +722,23 @@ class TimeWidgetsMixin:
             min_value=min_value,
             max_value=max_value,
         )
+
+        if value == "default_value_today":
+            # We need to know if this is a single or range date_input, but don't have
+            # a default value, so we check if session_state can tell us.
+            # We already calculated the id, so there is no risk of this causing
+            # the id to change.
+
+            session_state = get_session_state().filtered_state
+
+            if key is not None and key in session_state:
+                state_value = session_state[key]
+                parsed_values = _DateInputValues.from_raw_values(
+                    value=state_value,
+                    min_value=min_value,
+                    max_value=max_value,
+                )
+
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
