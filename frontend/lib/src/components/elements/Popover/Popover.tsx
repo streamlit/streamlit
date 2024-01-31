@@ -57,11 +57,12 @@ const Popover: React.FC<PopoverProps> = ({
         content={() => children}
         isOpen={open}
         onClickOutside={() => setOpen(false)}
+        onEsc={() => setOpen(false)}
         ignoreBoundary={isInSidebar}
         overrides={{
           Body: {
             props: {
-              "data-testid": "stPopover-Container",
+              "data-testid": "stPopoverBody",
             },
             style: () => ({
               marginRight: theme.spacing.lg,
@@ -104,14 +105,14 @@ const Popover: React.FC<PopoverProps> = ({
         }}
       >
         {/* This needs to be wrapped into a div, otherwise
-      the BaseWeb popover implementation throws an error. */}
+        the BaseWeb popover implementation will not work correctly. */}
         <div>
           <BaseButton
             kind={BaseButtonKind.SECONDARY}
             size={BaseButtonSize.SMALL}
             disabled={empty}
             fluidWidth={element.useContainerWidth}
-            data-testid="stPopover-Button"
+            data-testid="stPopoverButton"
             onClick={() => setOpen(!open)}
           >
             <StreamlitMarkdown

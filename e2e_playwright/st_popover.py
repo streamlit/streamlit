@@ -20,24 +20,32 @@ import streamlit as st
 
 # Create random dataframe:
 np.random.seed(0)
-df = pd.DataFrame(np.random.randn(100, 5), columns=["a", "b", "c", "d", "e"])
+df = pd.DataFrame(np.random.randn(50, 5), columns=["a", "b", "c", "d", "e"])
 
 st.popover("popover 1 (empty)")
 
 with st.popover("popover 2 (use_container_width)", use_container_width=True):
-    st.write("Hello")
+    st.markdown("Hello")
 
 with st.popover(
-    "Click here to open the popover container",
+    "popover 3 (with widgets)",
 ):
-    st.write("Hello World 👋")
+    st.markdown("Hello World 👋")
     text = st.text_input("Text input")
     col1, col2, col3 = st.columns(3)
-    col1.number_input("Column 1")
-
+    col1.text_input("Column 1")
     col2.text_input("Column 2")
     col3.text_input("Column 3")
     st.selectbox("Selectbox", ["a", "b", "c"])
+
+
+with st.popover("popover 4 (with dataframe)"):
+    st.markdown("Popover with dataframe")
+    st.dataframe(df, use_container_width=True)
+    st.image(np.repeat(0, 100).reshape(10, 10))
+
+with st.sidebar.popover("popover 5 (in sidebar)"):
+    st.markdown("Popover in sidebar with dataframe")
     st.dataframe(df, use_container_width=True)
 
-st.write(text)
+st.markdown(text)
