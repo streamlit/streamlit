@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -57,5 +57,20 @@ describe("Popover container", () => {
       </Popover>
     )
     expect(screen.getByText(props.element.label)).toBeInTheDocument()
+  })
+
+  it("should render the text when opened", () => {
+    const props = getProps()
+    render(
+      <Popover {...props}>
+        <div>test</div>
+      </Popover>
+    )
+    // Text should not exist
+    expect(screen.queryByText("test")).toBeNull()
+
+    fireEvent.click(screen.getByText("label"))
+    // Text should be visible now
+    expect(screen.queryByText("test")).toBeVisible()
   })
 })
