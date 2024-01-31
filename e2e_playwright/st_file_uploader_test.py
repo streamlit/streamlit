@@ -265,7 +265,60 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     )
 
 
+def test_works_inside_form(app: Page):
+    """Test that uploading a file inside form works as expected."""
+    file_name1 = "form_file1.txt"
+    file_content1 = b"form_file1content"
+
+    uploader_index = 3
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
+    )
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
+
+    # We should be showing the uploaded file name
+    expect(app.locator(".uploadedFileName")).to_have_text(
+        file_name1, use_inner_text=True
+    )
+    # But our uploaded text should contain nothing yet, as we haven't submitted.
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        "No upload", use_inner_text=True
+    )
+
+    # Submit the form
+    app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
+
+    # Now we should see the file's contents
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        str(file_content1), use_inner_text=True
+    )
+
+    # Press the delete button. Again, nothing should happen - we
+    # should still see the file's contents.
+    app.get_by_test_id("fileDeleteBtn").first.click()
+    app.wait_for_timeout(1000)
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        str(file_content1), use_inner_text=True
+    )
+
+    # Submit again. Now the file should be gone.
+    app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
+
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        "No upload", use_inner_text=True
+    )
+
+
 # TODO(kajarenc): Migrate missing test from cypress test spec st_file_uploader.spec.js
 #  to playwright:
 #  - uploads and deletes multiple files quickly / slowly
-#  - works inside st.form()
