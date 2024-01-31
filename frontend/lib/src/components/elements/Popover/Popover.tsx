@@ -35,10 +35,10 @@ import {
 } from "baseui/popover"
 
 import { StyledPopoverButtonIcon } from "./styled-components"
+
 export interface PopoverProps {
   element: BlockProto.Popover
   empty: boolean
-  width: number
 }
 
 const Popover: React.FC<PopoverProps> = ({
@@ -50,81 +50,84 @@ const Popover: React.FC<PopoverProps> = ({
   const lightBackground = hasLightBackgroundColor(theme)
 
   return (
-    <UIPopover
-      data-testid="stPopover"
-      triggerType={TRIGGER_TYPE.click}
-      placement={PLACEMENT.bottomLeft}
-      content={() => children}
-      overrides={{
-        Body: {
-          style: () => ({
-            marginRight: theme.spacing.lg,
-            marginBottom: theme.spacing.lg,
-            maxHeight: "70vh",
-            overflow: "auto",
-            maxWidth: "80vw",
-            minWidth: "20rem",
+    <div data-testid="stPopover">
+      <UIPopover
+        triggerType={TRIGGER_TYPE.click}
+        placement={PLACEMENT.bottomLeft}
+        content={() => children}
+        overrides={{
+          Body: {
+            style: () => ({
+              marginRight: theme.spacing.lg,
+              marginBottom: theme.spacing.lg,
+              maxHeight: "70vh",
+              overflow: "auto",
+              maxWidth: "80vw",
+              minWidth: "20rem",
 
-            paddingRight: "calc(1em - 1px)", // 1px to account for border.
-            paddingLeft: "calc(1em - 1px)",
-            paddingBottom: "calc(1em - 1px)",
-            paddingTop: "calc(1em - 1px)",
+              paddingRight: "calc(1em - 1px)", // 1px to account for border.
+              paddingLeft: "calc(1em - 1px)",
+              paddingBottom: "calc(1em - 1px)",
+              paddingTop: "calc(1em - 1px)",
 
-            borderLeftWidth: "1px",
-            borderRightWidth: "1px",
-            borderTopWidth: "1px",
-            borderBottomWidth: "1px",
+              borderLeftWidth: "1px",
+              borderRightWidth: "1px",
+              borderTopWidth: "1px",
+              borderBottomWidth: "1px",
 
-            borderLeftRadius: theme.radii.lg,
-            borderRightRadius: theme.radii.lg,
-            borderTopRadius: theme.radii.lg,
-            borderBottomRadius: theme.radii.lg,
+              borderLeftRadius: theme.radii.lg,
+              borderRightRadius: theme.radii.lg,
+              borderTopRadius: theme.radii.lg,
+              borderBottomRadius: theme.radii.lg,
 
-            borderLeftStyle: "solid",
-            borderRightStyle: "solid",
-            borderTopStyle: "solid",
-            borderBottomStyle: "solid",
+              borderLeftStyle: "solid",
+              borderRightStyle: "solid",
+              borderTopStyle: "solid",
+              borderBottomStyle: "solid",
 
-            borderLeftColor: theme.colors.fadedText10,
-            borderRightColor: theme.colors.fadedText10,
-            borderTopColor: theme.colors.fadedText10,
-            borderBottomColor: theme.colors.fadedText10,
+              borderLeftColor: theme.colors.fadedText10,
+              borderRightColor: theme.colors.fadedText10,
+              borderTopColor: theme.colors.fadedText10,
+              borderBottomColor: theme.colors.fadedText10,
 
-            boxShadow: lightBackground
-              ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-              : "0px 4px 16px rgba(0, 0, 0, 0.7)",
-          }),
-        },
-      }}
-    >
-      <div>
-        <BaseButton
-          kind={BaseButtonKind.SECONDARY}
-          size={BaseButtonSize.SMALL}
-          disabled={empty}
-          fluidWidth={element.useContainerWidth}
-          data-testid="stPopoverButton"
-        >
-          <StreamlitMarkdown
-            source={element.label}
-            allowHTML={false}
-            isLabel
-            largerLabel
-            disableLinks
-          />
-          <StyledPopoverButtonIcon>
-            <StyledIcon
-              as={ExpandMore}
-              color={"inherit"}
-              aria-hidden="true"
-              size="lg"
-              margin=""
-              padding=""
+              boxShadow: lightBackground
+                ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
+                : "0px 4px 16px rgba(0, 0, 0, 0.7)",
+            }),
+          },
+        }}
+      >
+        {/* This needs to be wrapped into a div, otherwise
+      the BaseWeb popover implementation throws an error. */}
+        <div>
+          <BaseButton
+            kind={BaseButtonKind.SECONDARY}
+            size={BaseButtonSize.SMALL}
+            disabled={empty}
+            fluidWidth={element.useContainerWidth}
+            data-testid="stPopoverButton"
+          >
+            <StreamlitMarkdown
+              source={element.label}
+              allowHTML={false}
+              isLabel
+              largerLabel
+              disableLinks
             />
-          </StyledPopoverButtonIcon>
-        </BaseButton>
-      </div>
-    </UIPopover>
+            <StyledPopoverButtonIcon>
+              <StyledIcon
+                as={ExpandMore}
+                color={"inherit"}
+                aria-hidden="true"
+                size="lg"
+                margin=""
+                padding=""
+              />
+            </StyledPopoverButtonIcon>
+          </BaseButton>
+        </div>
+      </UIPopover>
+    </div>
   )
 }
 
