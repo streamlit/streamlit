@@ -20,7 +20,7 @@ import {
   StyledCodeBlock,
 } from "./styled-components"
 import CopyButton from "./CopyButton"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { PrismAsync as SyntaxHighlighter } from "react-syntax-highlighter"
 import React, { ReactElement } from "react"
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
