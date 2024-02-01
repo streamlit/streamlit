@@ -410,6 +410,9 @@ def assert_snapshot(
         nonlocal module_snapshot_failures_dir
         nonlocal snapshot_file_suffix
 
+        # Apply a short timeout to lower some flakiness:
+        element.wait_for_timeout(10)
+
         if file_type == "jpg":
             file_extension = ".jpg"
             img_bytes = element.screenshot(
