@@ -66,9 +66,12 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     # The width and height unset on the element on fullscreen
     expect(first_graph_svg).not_to_have_attribute("width", "79pt")
     expect(first_graph_svg).not_to_have_attribute("height", "116pt")
-    svg_dimensions = first_graph_svg.bounding_box()
-    wait_until(app, lambda: svg_dimensions["width"] == 1256)
-    wait_until(app, lambda: svg_dimensions["height"] == 662)
+
+    def check_dimensions():
+        svg_dimensions = first_graph_svg.bounding_box()
+        return svg_dimensions["width"] == 1256 and svg_dimensions["height"] == 662
+
+    wait_until(app, check_dimensions)
 
     assert_snapshot(first_graph_svg, name="graphviz_fullscreen")
 
