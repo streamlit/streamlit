@@ -335,7 +335,7 @@ def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunc
         ["valid", "link"],
     ]
 
-    tabs = app.get_by_test_id("stTabs")
+    tabs = app.get_by_test_id("stTab")
     expect(tabs).to_have_count(4)
 
     for index, case in enumerate(cases):
