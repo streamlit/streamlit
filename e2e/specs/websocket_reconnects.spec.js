@@ -62,7 +62,7 @@ describe("websocket reconnects", () => {
 
     cy.fixture(fileName1).then((file1) => {
       cy.getIndexed(
-        "[data-testid='stFileUploadDropzone']",
+        "[data-testid='stFileUploaderDropzone']",
         uploaderIndex
       ).attachFile(
         {
