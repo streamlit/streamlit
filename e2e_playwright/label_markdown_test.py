@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_button_labels_handle_markdown(
@@ -27,6 +27,7 @@ def test_button_labels_handle_markdown(
         ["invalid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     buttons = app.get_by_test_id("stButton")
     expect(buttons).to_have_count(4)
     for index, case in enumerate(cases):
@@ -46,6 +47,7 @@ def test_checkbox_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     checkboxes = app.get_by_test_id("stCheckbox")
     expect(checkboxes).to_have_count(4)
     for index, case in enumerate(cases):
@@ -63,16 +65,18 @@ def test_radio_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFu
         ["valid", "link"],
     ]
 
-    radioes = app.get_by_test_id("stRadio")
-    expect(radioes).to_have_count(4)
+    wait_for_app_run(app, wait_delay=3000)
+    radios = app.get_by_test_id("stRadio")
+    expect(radios).to_have_count(4)
     for index, case in enumerate(cases):
         assert_snapshot(
-            radioes.nth(index).get_by_test_id("stWidgetLabel"),
+            radios.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_radio-{case[0]}_{case[1]}",
         )
 
 
 def test_radio_option_supports_links(app: Page, assert_snapshot: ImageCompareFunction):
+    wait_for_app_run(app, wait_delay=3000)
     radio_option = app.get_by_test_id("stRadio").nth(3).locator("p").nth(0)
     assert_snapshot(
         radio_option,
@@ -90,6 +94,7 @@ def test_selectbox_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     selectboxes = app.get_by_test_id("stSelectbox")
     expect(selectboxes).to_have_count(4)
     for index, case in enumerate(cases):
@@ -109,6 +114,7 @@ def test_multiselect_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     multiselects = app.get_by_test_id("stMultiSelect")
     expect(multiselects).to_have_count(4)
     for index, case in enumerate(cases):
@@ -132,6 +138,7 @@ def test_slider_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     sliders = app.get_by_test_id("stSlider")
     expect(sliders).to_have_count(8)
     for index, case in enumerate(cases):
@@ -157,6 +164,7 @@ def test_text_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     text_inputs = app.get_by_test_id("stTextInput")
     assert text_inputs.count() == 4
     for index, case in enumerate(cases):
@@ -176,6 +184,7 @@ def test_number_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     number_inputs = app.get_by_test_id("stNumberInput")
     assert number_inputs.count() == 4
     for index, case in enumerate(cases):
@@ -195,6 +204,7 @@ def test_text_area_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     text_areas = app.get_by_test_id("stTextArea")
     assert text_areas.count() == 4
     for index, case in enumerate(cases):
@@ -214,6 +224,7 @@ def test_date_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     date_inputs = app.get_by_test_id("stDateInput")
     assert date_inputs.count() == 4
     for index, case in enumerate(cases):
@@ -233,6 +244,7 @@ def test_time_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     time_inputs = app.get_by_test_id("stTimeInput")
     assert time_inputs.count() == 4
     for index, case in enumerate(cases):
@@ -252,6 +264,7 @@ def test_file_uploader_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     file_uploaders = app.get_by_test_id("stFileUploader")
     assert file_uploaders.count() == 4
     for index, case in enumerate(cases):
@@ -271,6 +284,7 @@ def test_color_picker_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     color_pickers = app.get_by_test_id("stColorPicker")
     assert color_pickers.count() == 4
     for index, case in enumerate(cases):
@@ -290,6 +304,7 @@ def test_metric_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     metrics = app.get_by_test_id("stMetric")
     assert metrics.count() == 4
     for index, case in enumerate(cases):
@@ -309,6 +324,7 @@ def test_expander_labels_handle_markdown(
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     expanders = app.get_by_test_id("stExpander")
     assert expanders.count() == 4
     for index, case in enumerate(cases):
@@ -326,6 +342,7 @@ def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunc
         ["valid", "link"],
     ]
 
+    wait_for_app_run(app, wait_delay=3000)
     tabs = app.get_by_test_id("stTab")
     assert tabs.count() == 4
     for index, case in enumerate(cases):
