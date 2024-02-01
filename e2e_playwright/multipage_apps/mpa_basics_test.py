@@ -161,9 +161,8 @@ def test_switch_page_removes_query_params(page: Page, app_port: int):
     # Trigger st.switch_page
     page.get_by_test_id("stButton").locator("button").first.click()
     wait_for_app_loaded(page)
-
     # Check that query params don't persist
-    assert page.url == f"http://localhost:{app_port}/page2"
+    expect(page).to_have_url(f"http://localhost:{app_port}/page2")
 
 
 def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
@@ -174,8 +173,7 @@ def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
 
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
     wait_for_app_loaded(page)
-
-    assert page.url == f"http://localhost:{app_port}/page3"
+    expect(page).to_have_url(f"http://localhost:{app_port}/page3")
 
 
 def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port: int):
@@ -189,7 +187,6 @@ def test_removes_non_embed_query_params_when_swapping_pages(page: Page, app_port
     page.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
     wait_for_app_loaded(page)
 
-    assert (
-        page.url
-        == f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
+    expect(page).to_have_url(
+        f"http://localhost:{app_port}/page3?embed=true&embed_options=show_toolbar&embed_options=show_colored_line"
     )
