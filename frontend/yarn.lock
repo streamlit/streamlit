@@ -1984,28 +1984,28 @@
   resolved "https://registry.yarnpkg.com/@floating-ui/utils/-/utils-0.2.1.tgz#16308cea045f0fc777b6ff20a9f25474dd8293d2"
   integrity sha512-9TANp6GPoMtYzQdt54kfAyMmz1+osLlXdg2ENroU7zzrtflTLrrC/lgrIfaSe+Wu0b89GKccT7vxXA0MoAIO+Q==
 
-"@glideapps/glide-data-grid-cells@6.0.2-beta1":
-  version "6.0.2-beta1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-6.0.2-beta1.tgz#9da2988c0eef30f86795e19982eb2ad1f2a34fa5"
-  integrity sha512-3vZnYKQmxo2lcfrRiunZdKVtdTpNEPKS0NflbRSG5j7wk1QiE1x+qLewgCytAf40Bs72piODS/NJfexLEmMPig==
+"@glideapps/glide-data-grid-cells@6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-cells/-/glide-data-grid-cells-6.0.2.tgz#132a0db921497e3d38fc27ee53f0ef7aa228a834"
+  integrity sha512-ZeUMFgh2JNFHlmB2ACZxLkk263OM1JqeCNHhD/XoHKnVaNUgIqRE2ZW/SKR8TVbhAdrQ+BqPqC+ym35e/eSdDQ==
   dependencies:
-    "@glideapps/glide-data-grid" "6.0.2-beta1"
+    "@glideapps/glide-data-grid" "6.0.2"
     "@linaria/react" "^4.5.3"
     "@toast-ui/editor" "3.1.10"
     "@toast-ui/react-editor" "3.1.10"
-    react-select "^5.2.2"
+    react-select "^5.8.0"
 
-"@glideapps/glide-data-grid-source@6.0.2-beta1":
-  version "6.0.2-beta1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-6.0.2-beta1.tgz#b0383d3ca7a55c6c36d85bf7db450f17e024de02"
-  integrity sha512-H6TRzUFevaSrI0c2SjeUEwpK2yNKuIgaSgt93XXwYzzKQy/sPWSLN/IW6BKZGmcG6UgoaTVqGwVuyaFQkjsDUg==
+"@glideapps/glide-data-grid-source@6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid-source/-/glide-data-grid-source-6.0.2.tgz#23da33a0f8a280cb976880b50d2bef35391c8caa"
+  integrity sha512-7mWj4z7BEzdPUcEUMOXyNcMCTmLV4RI7pFJZK6cz7EEbHbcafDrdwXt6OJ9rBLj3su90PWKupOSkZSJdY39Xhg==
   dependencies:
-    "@glideapps/glide-data-grid" "6.0.2-beta1"
+    "@glideapps/glide-data-grid" "6.0.2"
 
-"@glideapps/glide-data-grid@6.0.2-beta1":
-  version "6.0.2-beta1"
-  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-6.0.2-beta1.tgz#8cfb6623008473e5f5c9fd357d680ee4d980ff91"
-  integrity sha512-nEBAaRx48cW2tRucJVXhy3L9dWbJp18RrTQnckMw5pxgUBA9DFE09fv0GzfvjTQs1/gMPr7gFsc2afQj3FHQHA==
+"@glideapps/glide-data-grid@6.0.2":
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/@glideapps/glide-data-grid/-/glide-data-grid-6.0.2.tgz#6b0f57aee11e6278d58760a1f9afff685a086024"
+  integrity sha512-C2tt1iHPete02FtzrgMtyx/wqJnYq3DVEN9jPYHRkS2ACK+U6v4LkwMQhbpNeXENUN8buxbLipxAItfWoLXQ8w==
   dependencies:
     "@linaria/react" "^4.5.3"
     canvas-hypertxt "^1.0.3"
@@ -12112,7 +12112,7 @@ memfs@^3.1.2, memfs@^3.4.3:
   dependencies:
     fs-monkey "^1.0.3"
 
-"memoize-one@>=3.1.1 <6", memoize-one@^5.0.0, memoize-one@^5.1.1:
+"memoize-one@>=3.1.1 <6", memoize-one@^5.1.1:
   version "5.2.1"
   resolved "https://registry.yarnpkg.com/memoize-one/-/memoize-one-5.2.1.tgz#8337aa3c4335581839ec01c3d594090cebe8f00e"
   integrity sha512-zYiwtZUcYyXKo/np96AGZAckk+FWWsUdJ3cHGGmld7+AhvcWmQyGCYUh1hc4Q/pkOhb65dQR/pqCyK0cOaHz4Q==
@@ -14827,7 +14827,7 @@ react-scripts@5.0.1:
   optionalDependencies:
     fsevents "^2.3.2"
 
-react-select@5.8.0:
+react-select@5.8.0, react-select@^5.8.0:
   version "5.8.0"
   resolved "https://registry.yarnpkg.com/react-select/-/react-select-5.8.0.tgz#bd5c467a4df223f079dd720be9498076a3f085b5"
   integrity sha512-TfjLDo58XrhP6VG5M/Mi56Us0Yt8X7xD6cDybC7yoRMUNm7BGO7qk8J0TLQOua/prb8vUOtsfnXZwfm30HGsAA==
@@ -14841,19 +14841,6 @@ react-select@5.8.0:
     prop-types "^15.6.0"
     react-transition-group "^4.3.0"
     use-isomorphic-layout-effect "^1.1.2"
-
-react-select@^5.2.2:
-  version "5.4.0"
-  resolved "https://registry.yarnpkg.com/react-select/-/react-select-5.4.0.tgz#81f6ac73906126706f104751ee14437bd16798f4"
-  integrity sha512-CjE9RFLUvChd5SdlfG4vqxZd55AZJRrLrHzkQyTYeHlpOztqcgnyftYAolJ0SGsBev6zAs6qFrjm6KU3eo2hzg==
-  dependencies:
-    "@babel/runtime" "^7.12.0"
-    "@emotion/cache" "^11.4.0"
-    "@emotion/react" "^11.8.1"
-    "@types/react-transition-group" "^4.4.0"
-    memoize-one "^5.0.0"
-    prop-types "^15.6.0"
-    react-transition-group "^4.3.0"
 
 react-shallow-renderer@^16.13.1:
   version "16.14.1"
