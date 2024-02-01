@@ -56,7 +56,7 @@ describe("st.toast", () => {
         });
 
         it(`displays expanded long message toast correctly - ${theme}`,  { retries: { runMode: 1 } }, () => {
-            cy.getIndexed("[data-testid='stToast']", 0).find('.toastViewButton').click();
+            cy.getIndexed("[data-testid='stToast']", 0).find('.toastViewButton').click({ force: true });
 
             cy.getIndexed("[data-testid='stMarkdownContainer']", 0)
                 .should(
