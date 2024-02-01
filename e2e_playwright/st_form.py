@@ -50,11 +50,16 @@ st.write("Toggle Input:", toggle_input)
 with st.form("form_2"):
     st.write("Inside form 2")
     text_input = st.text_input("Form 2 - Text Input")
-    st.form_submit_button(
-        "Form 2 - Submit (use_container_width + help)",
+    col1, col2 = st.columns(2)
+    col1.form_submit_button(
+        "Form 2 - Submit (use_container_width, help)",
         use_container_width=True,
         help="Submit by clicking",
     )
+    col2.form_submit_button(
+        "Form 2 - Submit 2 (use_container_width)", use_container_width=True
+    )
+
 
 with st.form("form_3", border=False):
     st.write("Inside form 3 (border=False)")

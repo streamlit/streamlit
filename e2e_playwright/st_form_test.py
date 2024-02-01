@@ -120,7 +120,10 @@ def test_form_with_stretched_button(
 
     assert_snapshot(form_2, name="st_form-with_stretched_submit_button")
 
-    submit_button = form_2.get_by_test_id("stFormSubmitButton").nth(0)
+    submit_buttons = form_2.get_by_test_id("stFormSubmitButton")
+    expect(submit_buttons).to_have_count(2)
+
+    submit_button = submit_buttons.nth(0)
     submit_button.hover()
     expect(themed_app.get_by_test_id("stTooltipContent")).to_have_text(
         "Submit by clicking"
