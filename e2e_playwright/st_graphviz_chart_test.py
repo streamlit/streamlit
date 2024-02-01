@@ -14,22 +14,24 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 
 
 def get_first_graph_svg(app: Page):
-    return app.locator(".stGraphVizChart > svg").nth(0)
+    return app.get_by_test_id("stGraphVizChart").nth(0).locator("svg")
 
 
 def click_fullscreen(app: Page):
-    app.locator('[data-testid="StyledFullScreenButton"]').nth(0).click()
+    app.get_by_test_id("StyledFullScreenButton").nth(0).click()
     # Wait for the animation to finish
     app.wait_for_timeout(1000)
 
 
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
-    expect(app.locator(".stGraphVizChart > svg > g > title")).to_have_count(6)
+    expect(
+        app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
+    ).to_have_count(6)
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -55,7 +57,7 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     """Test if the first graph shows in fullscreen."""
 
     # Hover over the parent div
-    app.locator(".stGraphVizChart").nth(0).hover()
+    app.get_by_test_id("stGraphVizChart").nth(0).hover()
 
     # Enter fullscreen
     click_fullscreen(app)
@@ -64,10 +66,10 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     # The width and height unset on the element on fullscreen
     expect(first_graph_svg).not_to_have_attribute("width", "79pt")
     expect(first_graph_svg).not_to_have_attribute("height", "116pt")
-
     svg_dimensions = first_graph_svg.bounding_box()
-    assert svg_dimensions["width"] == 1256
-    assert svg_dimensions["height"] == 662
+    wait_until(app, lambda: svg_dimensions["width"] == 1256)
+    wait_until(app, lambda: svg_dimensions["height"] == 662)
+
     assert_snapshot(first_graph_svg, name="graphviz_fullscreen")
 
 
@@ -77,7 +79,7 @@ def test_first_graph_after_exit_fullscreen(
     """Test if the first graph has correct size after exiting fullscreen."""
 
     # Hover over the parent div
-    app.locator(".stGraphVizChart").nth(0).hover()
+    app.get_by_test_id("stGraphVizChart").nth(0).hover()
 
     # Enter and exit fullscreen
     click_fullscreen(app)
@@ -104,7 +106,7 @@ def test_renders_with_specified_engines(
         expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(engine)
 
         assert_snapshot(
-            app.locator(".stGraphVizChart > svg").nth(2),
+            app.get_by_test_id("stGraphVizChart").nth(2).locator("svg"),
             name=f"st_graphviz_chart_engine-{engine}",
         )
 
@@ -116,6 +118,6 @@ def test_dot_string(app: Page, assert_snapshot: ImageCompareFunction):
     expect(title).to_have_text("Dot")
 
     assert_snapshot(
-        app.locator(".stGraphVizChart > svg").nth(5),
+        app.get_by_test_id("stGraphVizChart").nth(5).locator("svg"),
         name="st_graphviz_chart_dot_string",
     )
