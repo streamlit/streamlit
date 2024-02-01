@@ -33,6 +33,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             return len(qp)
 
+    def __str__(self) -> str:
+        with get_session_state().query_params() as qp:
+            return str(qp)
+
     @gather_metrics("query_params.get_item")
     def __getitem__(self, key: str) -> str:
         with get_session_state().query_params() as qp:
@@ -106,6 +110,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
     def to_dict(self) -> Dict[str, str]:
         """
         Get all query parameters as a dictionary.
+
+        This method primarily exists for internal use and is not needed for
+        most cases. ``st.query_params`` returns an object that inherits from
+        ``dict`` by default.
 
         When a key is repeated as a query parameter within the URL, this method
         will return only the last value of each unique key.

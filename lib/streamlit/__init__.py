@@ -110,7 +110,8 @@ _config.on_config_parsed(_update_logger, True)
 
 _main = _DeltaGenerator(root_container=_RootContainer.MAIN)
 sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
-event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
+_event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
+_bottom = _DeltaGenerator(root_container=_RootContainer.BOTTOM, parent=_main)
 
 secrets = _secrets_singleton
 
@@ -159,6 +160,7 @@ markdown = _main.markdown
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
+page_link = _main.page_link
 plotly_chart = _main.plotly_chart
 progress = _main.progress
 pyplot = _main.pyplot
@@ -181,11 +183,12 @@ vega_lite_chart = _main.vega_lite_chart
 video = _main.video
 warning = _main.warning
 write = _main.write
+write_stream = _main.write_stream
 color_picker = _main.color_picker
 status = _main.status
 
 # Events - Note: these methods cannot be called directly on sidebar (ex: st.sidebar.toast)
-toast = event.toast
+toast = _event.toast
 
 # Config
 get_option = _config.get_option

@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.29.0"  # PEP-440
+VERSION = "1.30.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -48,7 +48,7 @@ INSTALL_REQUIRES = [
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
-    "pyarrow>=6.0",
+    "pyarrow>=7.0",
     "python-dateutil>=2.7.3, <3",
     "requests>=2.27, <3",
     "rich>=10.14.0, <14",

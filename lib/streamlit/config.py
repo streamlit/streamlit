@@ -795,6 +795,18 @@ _create_option(
 )
 
 _create_option(
+    "server.enableArrowTruncation",
+    description="""
+        Enable automatically truncating all data structures that get serialized into Arrow (e.g. DataFrames)
+        to ensure that the size is under `server.maxMessageSize`.
+        """,
+    visibility="hidden",
+    default_val=False,
+    scriptable=True,
+    type_=bool,
+)
+
+_create_option(
     "server.enableWebsocketCompression",
     description="""
         Enables support for websocket compression.
