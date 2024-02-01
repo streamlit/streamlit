@@ -16,12 +16,11 @@ from datetime import date, time
 
 import streamlit as st
 
-# Tests all widgets, sans file_uploader, inside a form.
-# st.file_uploader is omitted because it's so different; its form-related
-# test lives inside the `st_file_uploader.py` spec instead.
-with st.form("form"):
+# Tests all widgets, sans file_uploader, color picker, camera input and data editor,
+# inside a form. These widgets are a lot more complicated to test, and
+# are tested separately within the e2e tests for those components.
+with st.form("form_1"):
     checkbox = st.checkbox("Checkbox", False)
-    color_picker = st.color_picker("Color Picker")
     date_input = st.date_input("Date Input", date(2019, 7, 6))
     multiselect = st.multiselect("Multiselect", ["foo", "bar"], default=["foo"])
     number_input = st.number_input("Number Input")
@@ -32,10 +31,10 @@ with st.form("form"):
     text_area = st.text_area("Text Area", value="foo")
     text_input = st.text_input("Text Input", value="foo")
     time_input = st.time_input("Time Input", time(8, 45))
+    toggle_input = st.toggle("Toggle Input", value=False)
     st.form_submit_button("Submit")
 
 st.write("Checkbox:", checkbox)
-st.write("Color Picker:", color_picker)
 st.write("Date Input:", date_input)
 st.write("Multiselect:", ", ".join(multiselect))
 st.write("Number Input:", number_input)
@@ -46,3 +45,21 @@ st.write("Slider:", slider)
 st.write("Text Area:", text_area)
 st.write("Text Input:", text_input)
 st.write("Time Input:", time_input)
+st.write("Toggle Input:", toggle_input)
+
+with st.form("form_2"):
+    st.write("Inside form 2")
+    text_input = st.text_input("Form 2 - Text Input")
+    st.form_submit_button(
+        "Form 2 - Submit (use_container_width + help)",
+        use_container_width=True,
+        help="Submit by clicking",
+    )
+
+with st.form("form_3", border=False):
+    st.write("Inside form 3 (border=False)")
+    text_input = st.text_input("Form 3 - Text Input")
+    st.form_submit_button(
+        "Form 3 - Submit (use_container_width)",
+        use_container_width=True,
+    )
