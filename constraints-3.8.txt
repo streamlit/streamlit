@@ -34,7 +34,7 @@ gitdb==4.0.11
 GitPython==3.1.41
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.97.3
+hypothesis==6.97.4
 identify==2.5.33
 idna==3.6
 importlib-metadata==7.0.1
@@ -97,14 +97,14 @@ pyOpenSSL==23.3.0
 pyparsing==3.1.1
 pyspark==3.5.0
 pytest==7.4.4
-pytest-base-url==2.0.0
+pytest-base-url==2.1.0
 pytest-cov==4.1.0
 pytest-github-actions-annotate-failures==0.2.0
 pytest-playwright==0.4.3
 pytest-rerunfailures==13.0
 pytest-xdist==3.5.0
 python-dateutil==2.8.2
-python-slugify==8.0.2
+python-slugify==8.0.3
 pytz==2023.4
 PyYAML==6.0.1
 readme-renderer==42.0
