@@ -34,7 +34,7 @@ describe("FileDropzoneInstructions widget", () => {
     render(<FileDropzoneInstructions {...props} />)
 
     expect(
-      screen.getByTestId("stFileDropzoneInstructions")
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
     ).toBeInTheDocument()
   })
 

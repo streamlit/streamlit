@@ -41,7 +41,7 @@ def test_file_uploader_error_message_disallowed_files(
     uploader_index = 0
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -54,11 +54,10 @@ def test_file_uploader_error_message_disallowed_files(
         ]
     )
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     expect(
-        app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
+        app.get_by_test_id("stFileUploaderFileErrorMessage").nth(uploader_index)
     ).to_have_text("application/json files are not allowed.", use_inner_text=True)
 
     file_uploader_in_error_state = app.get_by_test_id("stFileUploader").nth(
@@ -81,16 +80,15 @@ def test_uploads_and_deletes_single_file_only(
     uploader_index = 0
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
-    expect(app.locator(".uploadedFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
@@ -112,7 +110,7 @@ def test_uploads_and_deletes_single_file_only(
 
     # Upload a second file. This one will replace the first.
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -121,7 +119,7 @@ def test_uploads_and_deletes_single_file_only(
 
     wait_for_app_run(app, wait_delay=500)
 
-    expect(app.locator(".uploadedFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
         file_name2, use_inner_text=True
     )
 
@@ -139,7 +137,7 @@ def test_uploads_and_deletes_single_file_only(
         str(file_content2), use_inner_text=True
     )
 
-    app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
+    app.get_by_test_id("stFileUploaderDeleteBtn").nth(uploader_index).click()
 
     wait_for_app_run(app, wait_delay=500)
 
@@ -166,14 +164,14 @@ def test_uploads_and_deletes_multiple_files(
     uploader_index = 2
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(files=files)
 
     wait_for_app_run(app, wait_delay=500)
 
-    uploaded_file_names = app.locator(".uploadedFileName")
+    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
 
     # The widget should show the names of the uploaded files in reverse order
     file_names = [files[1]["name"], files[0]["name"]]
@@ -198,7 +196,7 @@ def test_uploads_and_deletes_multiple_files(
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    app.get_by_test_id("fileDeleteBtn").first.click()
+    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
 
     wait_for_app_run(app, wait_delay=500)
 
@@ -227,7 +225,7 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     )
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
@@ -262,17 +260,16 @@ def test_works_inside_form(app: Page):
     uploader_index = 3
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     # We should be showing the uploaded file name
-    expect(app.locator(".uploadedFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
         file_name1, use_inner_text=True
     )
     # But our uploaded text should contain nothing yet, as we haven't submitted.
@@ -282,8 +279,7 @@ def test_works_inside_form(app: Page):
 
     # Submit the form
     app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     # Now we should see the file's contents
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
@@ -292,16 +288,15 @@ def test_works_inside_form(app: Page):
 
     # Press the delete button. Again, nothing should happen - we
     # should still see the file's contents.
-    app.get_by_test_id("fileDeleteBtn").first.click()
-    app.wait_for_timeout(1000)
+    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
+    wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content1), use_inner_text=True
     )
 
     # Submit again. Now the file should be gone.
     app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
