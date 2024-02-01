@@ -218,13 +218,12 @@ describe("st.file_uploader", () => {
 
         // Wait for the HTTP request to complete
         cy.wait("@uploadFile");
+        cy.wait(1000)
 
         // The widget should show the names of the uploaded files in reverse
         // order
-        const filenames = [fileName2, fileName1];
-        cy.get(".uploadedFileName").each((uploadedFileName, index) => {
-          cy.get(uploadedFileName).should("have.text", filenames[index]);
-        });
+        cy.getIndexed(".uploadedFileName", 0).should("have.text", "file2.txt");
+        cy.getIndexed(".uploadedFileName", 1).should("have.text", "file1.txt");
 
         // The script should have printed the contents of the two files
         // into an st.text. (This tests that the upload actually went

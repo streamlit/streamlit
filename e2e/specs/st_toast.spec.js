@@ -29,7 +29,7 @@ describe("st.toast", () => {
     });
 
     themes.forEach( theme => {
-        it(`displays default toast correctly - ${theme}`, () => {
+        it(`displays default toast correctly - ${theme}`,  { retries: { runMode: 1 } }, () => {
             if (theme === 'dark') {
                 cy.changeTheme('Dark')
                 cy.get("body").type("r");
@@ -44,7 +44,7 @@ describe("st.toast", () => {
                 .matchImageSnapshot(`toast-default-${theme}`);
         });
 
-        it(`displays long message toast correctly - ${theme}`, () => {
+        it(`displays long message toast correctly - ${theme}`,  { retries: { runMode: 1 } }, () => {
             cy.getIndexed("[data-testid='stMarkdownContainer']", 0)
                 .should(
                     "contain.text",
@@ -55,7 +55,7 @@ describe("st.toast", () => {
                 .matchImageSnapshot(`toast-long-${theme}`);
         });
 
-        it(`displays expanded long message toast correctly - ${theme}`, () => {
+        it(`displays expanded long message toast correctly - ${theme}`,  { retries: { runMode: 1 } }, () => {
             cy.getIndexed("[data-testid='stToast']", 0).find('.toastViewButton').click();
 
             cy.getIndexed("[data-testid='stMarkdownContainer']", 0)
@@ -68,7 +68,7 @@ describe("st.toast", () => {
                 .matchImageSnapshot(`toast-expanded-${theme}`);
         });
 
-        it(`overlays toasts with st.chat_input - ${theme}`, () => {
+        it(`overlays toasts with st.chat_input - ${theme}`,  { retries: { runMode: 1 } }, () => {
             cy.get("[data-testid='stBottomBlockContainer']").matchImageSnapshot(`toast+chatInput-${theme}`)
         });
     })

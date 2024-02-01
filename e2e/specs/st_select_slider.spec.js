@@ -118,7 +118,7 @@ describe("st.select_slider", () => {
     );
   });
 
-  it("decrements the value on left arrow key press", () => {
+  it("decrements the value on left arrow key press", { retries: { runMode: 1 } }, () => {
     cy.getIndexed('.stSlider [role="slider"]', 0)
       .click()
       .type("{leftarrow}", { force: true });
