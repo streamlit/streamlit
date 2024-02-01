@@ -251,9 +251,7 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
 
           // The width should never be set to 0 since it can cause
           // flickering effects.
-          setWidth(
-            Math.floor(entry.target.getBoundingClientRect().width) || -1
-          )
+          setWidth(entry.target.getBoundingClientRect().width || -1)
         })
       }),
     [setWidth]
