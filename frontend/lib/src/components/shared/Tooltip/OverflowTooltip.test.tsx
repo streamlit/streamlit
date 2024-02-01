@@ -48,7 +48,7 @@ describe("Tooltip component", () => {
       </OverflowTooltip>
     )
 
-    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
     fireEvent.mouseOver(tooltip)
 
     expect(useRefSpy).toHaveBeenCalledWith(null)
@@ -76,7 +76,7 @@ describe("Tooltip component", () => {
       </OverflowTooltip>
     )
 
-    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
     fireEvent.mouseOver(tooltip)
 
     const tooltipContent = await screen.findByText("the content")

@@ -39,7 +39,7 @@ with st.popover(
     st.selectbox("Selectbox", ["a", "b", "c"])
 
 
-with st.popover("popover 4 (with dataframe)"):
+with st.popover("popover 4 (with dataframe)", help="help text"):
     st.markdown("Popover with dataframe")
     st.dataframe(df, use_container_width=True)
     st.image(np.repeat(0, 100).reshape(10, 10))
