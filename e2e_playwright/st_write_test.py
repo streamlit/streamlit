@@ -65,7 +65,7 @@ def test_display_exception(app: Page):
 def test_display_images(app: Page):
     """Test that st.write displays images (including matplotlib charts)."""
     image_elements = app.get_by_test_id("stImage")
-    expect(image_elements).to_have_count(1)
+    expect(image_elements).to_have_count(2)
 
 
 def test_display_altair(app: Page):
