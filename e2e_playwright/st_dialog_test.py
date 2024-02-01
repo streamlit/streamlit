@@ -19,9 +19,17 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 modal_test_id = "stModal"
 
 
+def open_dialog_with_images(app: Page):
+    app.get_by_text("Open Dialog with Images").click()
+
+
+def open_dialog_without_images(app: Page):
+    app.get_by_text("Open Dialog without Images").click()
+
+
 def test_displays_dialog_properly(app: Page):
     """Test that dialog is displayed properly."""
-    app.get_by_text("Open Dialog").click()
+    open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
@@ -29,7 +37,7 @@ def test_displays_dialog_properly(app: Page):
 
 def test_dialog_closes_properly(app: Page):
     """Test that dialog closes after clicking on action button."""
-    app.get_by_text("Open Dialog").click()
+    open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
@@ -43,7 +51,7 @@ def test_dialog_closes_properly(app: Page):
 
 def test_dialog_dismisses_properly(app: Page):
     """Test that dialog is dismissed properly after clicking on modal close (= dismiss)."""
-    app.get_by_text("Open Dialog").click()
+    open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
@@ -57,7 +65,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
     # open and close the dialog multiple times
     for _ in range(0, 10):
-        app.get_by_text("Open Dialog").click()
+        open_dialog_with_images(app)
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
@@ -71,7 +79,7 @@ def test_dialog_reopens_properly_after_close(app: Page):
     """Test that dialog reopens properly after closing by action button click."""
     # open and close the dialog multiple times
     for _ in range(0, 10):
-        app.get_by_text("Open Dialog").click()
+        open_dialog_with_images(app)
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
@@ -85,7 +93,7 @@ def test_dialog_reopens_properly_after_close(app: Page):
 
 def test_dialog_is_scrollable(app: Page):
     """Test that the dialog is scrollable"""
-    app.get_by_text("Open Dialog").click()
+    open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     close_button = main_dialog.get_by_test_id("stButton")
@@ -96,7 +104,7 @@ def test_dialog_is_scrollable(app: Page):
 
 def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
     """Test that elemenets within the dialog do not show the fullscreen option."""
-    app.get_by_text("Open Dialog").click()
+    open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
@@ -111,6 +119,8 @@ def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
 
 
 def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
-    app.get_by_text("Open Dialog").click()
+    open_dialog_without_images(app)
     wait_for_app_run(app)
-    assert_snapshot(app.get_by_role("dialog"), name="dialog-in-main")
+    dialog = app.get_by_role("dialog")
+    expect(dialog.get_by_test_id("stButton")).to_be_visible()
+    assert_snapshot(dialog, name="dialog-in-main")
