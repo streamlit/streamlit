@@ -26,6 +26,11 @@ export interface VideoProps {
   element: VideoProto
 }
 
+export interface Subtitle {
+  label: string
+  url: string
+}
+
 export default function Video({
   element,
   width,
@@ -35,7 +40,7 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
 
-  const { type, url, startTime } = element
+  const { type, url, startTime, subtitles } = element
 
   // Handle startTime changes
   useEffect(() => {
@@ -106,8 +111,20 @@ export default function Video({
       ref={videoRef}
       controls
       src={endpoints.buildMediaURL(url)}
+      crossOrigin="anonymous"
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
-    />
+    >
+      {subtitles &&
+        subtitles.map((subtitle: Subtitle, idx: number) => (
+          <track
+            key={idx}
+            kind="captions"
+            src={endpoints.buildMediaURL(subtitle.url)}
+            label={subtitle.label}
+            default={idx === 0}
+          />
+        ))}
+    </video>
   )
 }
