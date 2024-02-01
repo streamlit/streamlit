@@ -32,6 +32,7 @@ from typing import (
 )
 
 import numpy as np
+from PIL import Image, ImageFile
 from typing_extensions import Final
 
 from streamlit import type_util
@@ -256,6 +257,7 @@ class WriteMixin:
             - write(generator)      : Streams the output of a generator.
             - write(openai.Stream)  : Streams the output of an OpenAI stream.
             - write(altair)         : Displays an Altair chart.
+            - write(PIL.Image)      : Displays an image.
             - write(keras)          : Displays a Keras model.
             - write(graphviz)       : Displays a Graphviz graph.
             - write(plotly_fig)     : Displays a Plotly figure.
@@ -414,6 +416,9 @@ class WriteMixin:
             elif type_util.is_sympy_expession(arg):
                 flush_buffer()
                 self.dg.latex(arg)
+            elif isinstance(arg, (ImageFile.ImageFile, Image.Image)):
+                flush_buffer()
+                self.dg.image(arg)
             elif type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
