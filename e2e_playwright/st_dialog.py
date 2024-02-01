@@ -17,7 +17,7 @@ import pandas as pd
 
 import streamlit as st
 
-dialog = st.dialog("Test Dialog")
+dialog = st.dialog("Test Dialog with Images")
 with dialog:
     st.write("Hello!")
     st.slider("Slide me!", 0, 10)
@@ -32,9 +32,23 @@ with dialog:
     for i in range(0, 3):
         st.image(np.repeat(0, 1000000).reshape(1000, 1000))
 
-    if st.button("Submit", key="button"):
+    if st.button("Submit", key="dialog-btn"):
         dialog.close()
 
 
-if st.button("Open Dialog"):
+if st.button("Open Dialog with Images"):
+    dialog.open()
+
+# We use this dialog for a screenshot test as loading images via the browser
+#   is non-deterministic
+dialog = st.dialog("Simple Dialog")
+with dialog:
+    st.write("Hello again!")
+    st.text_input("Enter something!")
+
+    if st.button("Submit", key="dialog2-btn"):
+        dialog.close()
+
+
+if st.button("Open Dialog without Images"):
     dialog.open()
