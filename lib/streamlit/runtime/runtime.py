@@ -634,13 +634,19 @@ class Runtime:
                     # Break out of the thread loop if we encounter any other state.
                     break
 
-                await asyncio.wait(
+                _, pending = await asyncio.wait(
                     (
                         # asyncio.create_task(async_objs.must_stop.wait()),
                         asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+                for task in pending:
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():
