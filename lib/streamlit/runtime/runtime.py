@@ -305,7 +305,7 @@ class Runtime:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
-            LOGGER.error("Runtime stopping...")
+            LOGGER.debug("Runtime stopping...")
             self._set_state(RuntimeState.STOPPING)
             async_objs.must_stop.set()
 
