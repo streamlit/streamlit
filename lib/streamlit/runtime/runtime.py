@@ -304,7 +304,7 @@ class Runtime:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
-            LOGGER.debug("Runtime stopping...")
+            LOGGER.error("Runtime stopping...")
             self._set_state(RuntimeState.STOPPING)
             async_objs.must_stop.set()
 
@@ -604,8 +604,8 @@ class Runtime:
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
                     await asyncio.wait(  # type: ignore[unreachable]
                         (
-                            async_objs.must_stop.wait(),
-                            async_objs.has_connection.wait(),
+                            asyncio.create_task(async_objs.must_stop.wait()),
+                            asyncio.create_task(async_objs.has_connection.wait()),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
@@ -636,8 +636,8 @@ class Runtime:
 
                 await asyncio.wait(
                     (
-                        async_objs.must_stop.wait(),
-                        async_objs.need_send_data.wait(),
+                        # asyncio.create_task(async_objs.must_stop.wait()),
+                        asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
