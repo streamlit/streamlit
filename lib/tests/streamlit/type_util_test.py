@@ -714,6 +714,20 @@ class TypeUtilTest(unittest.TestCase):
             {0: None, 1: None, 2: None, 3: None},
         )
 
+    def test_ensure_indexable_object_is_indexable(self):
+        l1 = ["a", "b", "c"]
+        l2 = type_util.ensure_indexable(l1)
+
+        # Assert that l1 was shallow copied into l2.
+        self.assertFalse(l1 is l2)
+        self.assertEqual(l1, l2)
+
+    def test_ensure_indexable_object_not_indexable(self):
+        l = type_util.ensure_indexable({"a", "b", "c"})
+        self.assertIn("a", l)
+        self.assertIn("b", l)
+        self.assertIn("c", l)
+
 
 class TestArrowTruncation(DeltaGeneratorTestCase):
     """Test class for the automatic arrow truncation feature."""
