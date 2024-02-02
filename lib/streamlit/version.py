@@ -14,7 +14,7 @@
 
 """Streamlit version utilities."""
 import random
-
+import os
 import packaging.version
 from importlib_metadata import version as _version
 from typing_extensions import Final
@@ -28,7 +28,8 @@ PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 # Probability that we'll make a network call to PyPI to check
 # the latest version of streamlit. This is used each time
 # should_show_new_version_notice() is called.
-CHECK_PYPI_PROBABILITY = 0.10
+# CHECK_PYPI_PROBABILITY = 0.10
+CHECK_PYPI_PROBABILITY = float(os.getenv("CHECK_PYPI_PROBABILITY", "0.10"))
 
 STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit")
 
