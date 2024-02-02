@@ -141,6 +141,25 @@ class AsyncObjects(NamedTuple):
     stopped: asyncio.Future[None]
 
 
+async def _cancel_async_task(task: asyncio.Task) -> None:
+    """Cancel a task and wait for it to finish.
+
+    Implementation inspired by:
+    https://github.com/python/cpython/issues/103486
+    """
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        if asyncio.current_task().cancelling() == 0:
+            raise
+        else:
+            return  # this is the only non-exceptional return
+    else:
+        raise RuntimeError("Cancelled task did not end with an exception")
+
+
 class Runtime:
     _instance: Optional[Runtime] = None
 
@@ -603,18 +622,16 @@ class Runtime:
                 if self._state == RuntimeState.NO_SESSIONS_CONNECTED:  # type: ignore[comparison-overlap]
                     # mypy 1.4 incorrectly thinks this if-clause is unreachable,
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
-                    _, pending = await asyncio.wait(  # type: ignore[unreachable]
+                    _, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
                         (
                             asyncio.create_task(async_objs.must_stop.wait()),
                             asyncio.create_task(async_objs.has_connection.wait()),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
-                    # Clean up pending tasks (see the comment below)
-                    for task in pending:
-                        task.cancel()
-                        with contextlib.suppress(asyncio.CancelledError):
-                            await task
+                    # Clean up pending tasks to avoid memory leaks
+                    for task in pending_tasks:
+                        _cancel_async_task(task)
 
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
@@ -640,23 +657,19 @@ class Runtime:
                     # Break out of the thread loop if we encounter any other state.
                     break
 
-                _, pending = await asyncio.wait(
+                _, pending_tasks = await asyncio.wait(
                     (
                         asyncio.create_task(async_objs.must_stop.wait()),
                         asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
-                # We need to cancel the pending task (must_stop in most situations).
+                # We need to cancel the pending task (the `must_stop` one in most situations).
                 # Otherwise, this would stack up one waiting task per loop
                 # (e.g. per forward message). These tasks cannot be garbage collected
                 # causing an increase in memory (-> memory leak).
-                for task in pending:
-                    # See the example here on how to correctly cancel asyncio tasks:
-                    # https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel
-                    task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await task
+                for task in pending_tasks:
+                    _cancel_async_task(task)
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():
