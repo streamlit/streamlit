@@ -54,7 +54,7 @@ langchain-community==0.0.17
 langchain-core==0.1.18
 langsmith==0.0.86
 markdown-it-py==3.0.0
-MarkupSafe==2.1.4
+MarkupSafe==2.1.5
 marshmallow==3.20.2
 matplotlib==3.7.4
 mdurl==0.1.2
@@ -96,11 +96,11 @@ pyodbc==5.0.1
 pyOpenSSL==23.3.0
 pyparsing==3.1.1
 pyspark==3.5.0
-pytest==7.4.4
+pytest==8.0.0
 pytest-base-url==2.1.0
 pytest-cov==4.1.0
 pytest-github-actions-annotate-failures==0.2.0
-pytest-playwright==0.4.3
+pytest-playwright==0.4.4
 pytest-rerunfailures==13.0
 pytest-xdist==3.5.0
 python-dateutil==2.8.2
