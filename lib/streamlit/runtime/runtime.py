@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -609,12 +610,11 @@ class Runtime:
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
+                    # Clean up pending tasks (see the comment below)
                     for task in pending:
                         task.cancel()
-                        try:
+                        with contextlib.suppress(asyncio.CancelledError):
                             await task
-                        except asyncio.CancelledError:
-                            pass
 
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
@@ -647,13 +647,16 @@ class Runtime:
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+                # We need to cancel the pending task (must_stop in most situations).
+                # Otherwise, this would stack up one waiting task per loop
+                # (e.g. per forward message). These tasks cannot be garbage collected
+                # causing an increase in memory (-> memory leak).
                 for task in pending:
-                    print("Cancel task 2")
+                    # See the example here on how to correctly cancel asyncio tasks:
+                    # https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel
                     task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await task
-                    except asyncio.CancelledError:
-                        pass
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():
