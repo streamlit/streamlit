@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
@@ -164,6 +165,13 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with dict."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write({"a": 1, "b": 2})
+
+            p.assert_called_once()
+
+    def test_pil_image(self):
+        """Test st.write with PIL image objects."""
+        with patch("streamlit.delta_generator.DeltaGenerator.image") as p:
+            st.write(Image.new("L", (10, 10), "black"))
 
             p.assert_called_once()
 
