@@ -602,13 +602,19 @@ class Runtime:
                 if self._state == RuntimeState.NO_SESSIONS_CONNECTED:  # type: ignore[comparison-overlap]
                     # mypy 1.4 incorrectly thinks this if-clause is unreachable,
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
-                    await asyncio.wait(  # type: ignore[unreachable]
+                    _, pending = await asyncio.wait(  # type: ignore[unreachable]
                         (
                             asyncio.create_task(async_objs.must_stop.wait()),
                             asyncio.create_task(async_objs.has_connection.wait()),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
+                    for task in pending:
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
 
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
