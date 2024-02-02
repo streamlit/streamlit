@@ -604,8 +604,8 @@ class Runtime:
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
                     await asyncio.wait(  # type: ignore[unreachable]
                         (
-                            asyncio.create_task(async_objs.must_stop.wait()),
-                            asyncio.create_task(async_objs.has_connection.wait()),
+                            async_objs.must_stop.wait(),
+                            async_objs.has_connection.wait(),
                         ),
                         return_when=asyncio.FIRST_COMPLETED,
                     )
@@ -636,8 +636,8 @@ class Runtime:
 
                 await asyncio.wait(
                     (
-                        asyncio.create_task(async_objs.must_stop.wait()),
-                        asyncio.create_task(async_objs.need_send_data.wait()),
+                        async_objs.must_stop.wait(),
+                        async_objs.need_send_data.wait(),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
