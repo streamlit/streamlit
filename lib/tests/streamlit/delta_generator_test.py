@@ -112,6 +112,7 @@ class RunWarningTest(unittest.TestCase):
                 "data_editor",
                 "date_input",
                 "dg",
+                "dialog",
                 "divider",
                 "download_button",
                 "empty",
