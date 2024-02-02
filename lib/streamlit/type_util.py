@@ -653,7 +653,12 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
     if callable(index_fn):
-        return it  # type: ignore[return-value]
+        # We return a shallow copy of the Sequence here because the return value of
+        # this function is saved in a widget serde class instance to be used in later
+        # script runs, and we don't want mutations to the options object passed to a
+        # widget affect the widget.
+        # (See https://github.com/streamlit/streamlit/issues/7534)
+        return copy.copy(cast(Sequence[V_co], it))
     else:
         return list(it)
 
