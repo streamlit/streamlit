@@ -644,7 +644,7 @@ class Runtime:
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
-                # We need to cancel the pending task (the `must_stop` one in most situations).
+                # We need to cancel the pending tasks (the `must_stop` one in most situations).
                 # Otherwise, this would stack up one waiting task per loop
                 # (e.g. per forward message). These tasks cannot be garbage collected
                 # causing an increase in memory (-> memory leak).
