@@ -642,12 +642,13 @@ class Runtime:
 
                 _, pending = await asyncio.wait(
                     (
-                        # asyncio.create_task(async_objs.must_stop.wait()),
+                        asyncio.create_task(async_objs.must_stop.wait()),
                         asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
                 for task in pending:
+                    print("Cancel task 2")
                     task.cancel()
                     try:
                         await task
