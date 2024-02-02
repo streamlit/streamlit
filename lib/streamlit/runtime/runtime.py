@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -139,25 +138,6 @@ class AsyncObjects(NamedTuple):
 
     # Completed when the Runtime has stopped.
     stopped: asyncio.Future[None]
-
-
-async def _cancel_async_task(task: asyncio.Task) -> None:
-    """Cancel a task and wait for it to finish.
-
-    Implementation inspired by:
-    https://github.com/python/cpython/issues/103486
-    """
-
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        if asyncio.current_task().cancelling() == 0:
-            raise
-        else:
-            return  # this is the only non-exceptional return
-    else:
-        raise RuntimeError("Cancelled task did not end with an exception")
 
 
 class Runtime:
@@ -631,7 +611,7 @@ class Runtime:
                     )
                     # Clean up pending tasks to avoid memory leaks
                     for task in pending_tasks:
-                        _cancel_async_task(task)
+                        task.cancel()
 
                 elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
@@ -669,7 +649,7 @@ class Runtime:
                 # (e.g. per forward message). These tasks cannot be garbage collected
                 # causing an increase in memory (-> memory leak).
                 for task in pending_tasks:
-                    _cancel_async_task(task)
+                    task.cancel()
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():
