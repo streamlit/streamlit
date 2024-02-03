@@ -14,16 +14,18 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import wait_for_app_run
+
 
 def test_no_concurrent_changes(app: Page):
-    counters = app.locator(".stMarkdown")
+    counters = app.get_by_test_id("stMarkdown")
     expect(counters.first).to_have_text("0", use_inner_text=True)
 
-    button = app.locator(".stButton")
+    button = app.get_by_test_id("stButton")
     button.first.click()
-    app.wait_for_timeout(300)
+    wait_for_app_run(app)
 
-    counters = app.locator(".stMarkdown")
-    c1 = counters.nth(0).inner_text()
-    c2 = counters.nth(1).inner_text()
-    assert c1 == c2
+    counters = app.get_by_test_id("stMarkdown")
+    expect(counters.nth(0)).to_have_text(
+        counters.nth(1).inner_text(), use_inner_text=True
+    )
