@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import sys
+from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -352,6 +353,16 @@ class DeltaGenerator(
             raise StreamlitAPIException(message)
 
         return wrapper
+
+    def __deepcopy__(self, _memo):
+        dg = DeltaGenerator(
+            root_container=self._root_container,
+            cursor=deepcopy(self._cursor),
+            parent=deepcopy(self._parent),
+            block_type=self._block_type,
+        )
+        dg._form_data = deepcopy(self._form_data)
+        return dg
 
     @property
     def _parent_block_types(self) -> ParentBlockTypes:
