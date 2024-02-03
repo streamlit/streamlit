@@ -22,6 +22,7 @@ import logging
 import re
 import threading
 import unittest
+from copy import deepcopy
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -302,6 +303,27 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         dg = DeltaGenerator(root_container=RootContainer.MAIN, cursor=cursor)
         self.assertTrue(dg._cursor.is_locked)
         self.assertEqual(dg._cursor.index, 1234)
+
+    def test_can_deepcopy_delta_generators(self):
+        cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)
+        dg1 = DeltaGenerator(root_container=RootContainer.MAIN, cursor=cursor)
+        dg2 = deepcopy(dg1)
+
+        self.assertEqual(dg1._root_container, dg2._root_container)
+        self.assertIsNone(dg1._parent)
+        self.assertIsNone(dg2._parent)
+        self.assertEqual(dg1._block_type, dg2._block_type)
+
+        # Check that the internals of the Cursors look the same. Note the cursors
+        # themselves will be different objects so won't compare equal.
+        c1 = dg1._cursor
+        c2 = dg2._cursor
+        self.assertIsInstance(c1, LockedCursor)
+        self.assertIsInstance(c2, LockedCursor)
+        self.assertEqual(c1._root_container, c2._root_container)
+        self.assertEqual(c1._index, c2._index)
+        self.assertEqual(c1._parent_path, c2._parent_path)
+        self.assertEqual(c1._props, c2._props)
 
     def test_enqueue_null(self):
         # Test "Null" Delta generators
