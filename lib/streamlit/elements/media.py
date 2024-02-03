@@ -141,13 +141,18 @@ class MediaMixin:
         subtitles: str, dict, or io.BytesIO
             Optional subtitle data for the video, supporting several input types:
             * None (default): No subtitles.
-            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
-              If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
-            * A dictionary: Pairs of labels and file paths or raw subtitle content in '.vtt' or '.srt' formats.
-              Enables multiple subtitle tracks. The label will be shown in the video player.
-              Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
-            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
-            When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
+            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or
+              the raw content of subtitles conforming to these formats.
+              If providing raw content, the string must adhere to the WebVTT or SRT
+              format specifications.
+            * A dictionary: Pairs of labels and file paths or raw subtitle content in
+              '.vtt' or '.srt' formats.
+              Enables multiple subtitle tracks. The label will be shown in the video
+              player. Example:
+              {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt'
+              formatted subtitle data. When provided, subtitles are displayed
+              by default. For multiple tracks, the first one is displayed by default.
             Not supported for YouTube videos.
 
         Example
@@ -280,8 +285,8 @@ def is_probably_srt(stream: Union[str, io.BytesIO]) -> bool:
     stream.seek(0)
 
     # Read enough bytes to reliably check for SRT patterns
-    # This might be adjusted, but 33 bytes should be enough to read the first numeric line,
-    # the full timestamp line, and a bit of the next line
+    # This might be adjusted, but 33 bytes should be enough to read the first numeric
+    # line, the full timestamp line, and a bit of the next line
     header = stream.read(33)
 
     try:
@@ -291,7 +296,8 @@ def is_probably_srt(stream: Union[str, io.BytesIO]) -> bool:
         return False
 
     # Regular expression to match the SRT timestamp format
-    # It matches the "hours:minutes:seconds,milliseconds --> hours:minutes:seconds,milliseconds" format
+    # It matches the
+    # "hours:minutes:seconds,milliseconds --> hours:minutes:seconds,milliseconds" format
     timestamp_regex = re.compile(r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}")
 
     # Split the header into lines and process them
@@ -365,7 +371,8 @@ def process_subtitle_data(
 
             if file_extension not in allowed_formats:
                 raise ValueError(
-                    f"Incorrect subtitle format {file_extension}. Subtitles must be in one of the following formats: {', '.join(allowed_formats)}"
+                    f"Incorrect subtitle format {file_extension}. Subtitles must be in "
+                    f"one of the following formats: {', '.join(allowed_formats)}"
                 )
             content = get_data_from_file(data_str)
             return srt_to_vtt(content) if file_extension == ".srt" else data_str
