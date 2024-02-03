@@ -30,7 +30,7 @@ export const MIN_COLUMN_WIDTH = 50
 export const MAX_COLUMN_WIDTH = 1000
 // Max column width used for automatic column sizing
 export const MAX_COLUMN_AUTO_WIDTH = 500
-// The border size in pixels (2) + and one additional pixel
+// The border size in pixels (2)
 // to prevent overlap problem with selection ring.
 export const BORDER_THRESHOLD = 2
 // The default row height in pixels

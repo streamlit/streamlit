@@ -93,7 +93,10 @@ function useDataExporter(
   const exportToCsv = React.useCallback(async () => {
     try {
       // Lazy import to prevent weird breakage in some niche cases
-      // (e.g. usage in replay.io browser)
+      // (e.g. usage within the replay.io browser). The package works well
+      // in all of the common browser, but might cause some trouble in
+      // less common browsers. To not crash the whole app, we just lazy import
+      // this here.
       const nativeFileSystemAdapter = await import(
         "native-file-system-adapter"
       )

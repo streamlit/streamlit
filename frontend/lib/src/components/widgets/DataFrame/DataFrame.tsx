@@ -405,6 +405,7 @@ function DataFrame({
         // but it seems to cause "Maximum update depth exceeded" when scrollbars
         // are activated or deactivated.
         // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+        // Also see: https://github.com/glideapps/glide-data-grid/issues/784
 
         if (scrollAreaBounds) {
           setHasVerticalScroll(
@@ -420,7 +421,7 @@ function DataFrame({
   }, [resizableSize, numRows, glideColumns])
 
   React.useEffect(() => {
-    // Clear cell selections if it the fullscreen mode changes
+    // Clear cell selections if fullscreen mode changes
     clearCellSelection()
   }, [isFullScreen])
 
