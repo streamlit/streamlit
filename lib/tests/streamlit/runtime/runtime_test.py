@@ -449,6 +449,24 @@ class RuntimeTest(RuntimeTestCase):
         raise_disconnected_error.assert_called_once()
         self.assertFalse(self.runtime.is_active_session(session_id))
 
+    async def test_stable_number_of_async_tasks(self):
+        """Test that the number of async tasks remains stable.
+
+        This is a regression test for a memory leak issue where the number of
+        tasks would grow with every loop.
+        """
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        for _ in range(100):
+            self.enqueue_forward_msg(session_id, create_dataframe_msg([1, 2, 3]))
+            await self.tick_runtime_loop()
+
+        # It is expected that there are a couple of tasks, but not one per loop:
+        self.assertLess(len(asyncio.all_tasks()), 10)
+
     async def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
         await self.runtime.start()
