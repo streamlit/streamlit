@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 # Works just like an `empty` except animated by default.
 class SkeletonMixin:
-    def skeleton(self, width=None, height=None) -> "DeltaGenerator":
+    def skeleton(self, height: int = 107) -> "DeltaGenerator":
         """Insert a single-element container which displays a "skeleton" animation.
 
         Inserts a container into your app that can be used to hold a single element.
@@ -260,9 +260,7 @@ class SkeletonMixin:
         """
 
         skeleton_proto = SkeletonProto()
-        # TODO: it accepts width/height arguments
-        # skeleton_proto.width = _get_width(width)
-        # skeleton_proto.height = _get_height(height)
+        skeleton_proto.height = height
         return self.dg._enqueue("skeleton", skeleton_proto)
 
     @property

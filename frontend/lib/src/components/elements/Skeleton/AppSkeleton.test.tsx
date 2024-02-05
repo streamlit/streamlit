@@ -23,7 +23,7 @@ import { AppSkeleton } from "./AppSkeleton"
 
 describe("AppSkeleton element", () => {
   it("renders after a delay", async () => {
-    render(<AppSkeleton />)
+    render(<AppSkeleton height="12rem" />)
 
     // At first, the skeleton should not appear on screen.
     expect(screen.queryAllByTestId("stAppSkeleton")).toEqual([])

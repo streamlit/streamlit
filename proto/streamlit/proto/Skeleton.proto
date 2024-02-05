@@ -21,4 +21,6 @@ option java_outer_classname = "SkeletonProto";
 
 // An empty-like element that displays an app skeleton.
 message Skeleton {
+    // Height in CSS points
+    int32 height = 1;
 }

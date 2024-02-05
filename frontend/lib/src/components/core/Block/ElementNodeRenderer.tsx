@@ -32,6 +32,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   Radio as RadioProto,
+  Skeleton as SkeletonProto,
   Selectbox as SelectboxProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
@@ -612,7 +613,8 @@ const RawElementNodeRenderer = (
     }
 
     case "skeleton": {
-      return <AppSkeleton />
+      const skeletonProto = node.element.skeleton as SkeletonProto
+      return <AppSkeleton element={skeletonProto}/>
     }
 
     case "slider": {
