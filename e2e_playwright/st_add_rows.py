@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import altair as alt
 import numpy as np
 import pandas as pd
@@ -74,6 +76,24 @@ vega_element_1.add_rows(df)
 vega_element_2.add_rows(df)
 vega_element_3.add_rows(foo=df)
 altair_element.add_rows(df)
+
+# The following example was failing due to an issue (#3653) in st.add_rows.
+# In the previous implementation of Quiver, we were mutating the Quiver element
+# in the addRows function, which prevented re-rendering of the line chart.
+# This example reproduces the issue, so that we don't repeat the same mistake
+# in the future.
+
+current_time = pd.to_datetime("08:00:00 2021-01-01", utc=True)
+simulation_step = pd.Timedelta(seconds=10)
+
+df1 = pd.DataFrame(data=[[current_time, 1]], columns=["t", "y"]).set_index("t")
+line_chart = st.line_chart(df1, use_container_width=True)
+
+for count in range(5):
+    current_time += simulation_step
+    df2 = pd.DataFrame(data=[[current_time, count]], columns=["t", "y"]).set_index("t")
+    line_chart.add_rows(df2)
+    time.sleep(0.25)
 
 # Test that `add_rows` errors out when the dataframe dimensions don't match.
 # This should show an error!
