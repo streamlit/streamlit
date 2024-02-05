@@ -28,7 +28,11 @@ import {
 
 const SHOW_DELAY_MS = 500
 
-function RawAppSkeleton({element}: {element:SkeletonProto}): ReactElement {
+function RawAppSkeleton({
+  element,
+}: {
+  element: SkeletonProto
+}): ReactElement {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
