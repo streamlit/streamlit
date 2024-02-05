@@ -219,7 +219,7 @@ def test_uploads_and_deletes_multiple_files(
 
 
 def test_uploads_multiple_files_one_by_one_quickly(app: Page):
-    """Test that ploads and deletes multiple files quickly works correctly."""
+    """Test that uploads and deletes multiple files quickly works correctly."""
     file_name1 = "file1.txt"
     file_content1 = b"file1content"
 
