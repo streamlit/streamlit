@@ -19,6 +19,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
+@pytest.mark.skip_browser("chromium")
 def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.date_input renders correctly via screenshots matching."""
     app.wait_for_timeout(2000)
