@@ -54,6 +54,7 @@ def test_handles_changes_in_start_time(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     themed_app.wait_for_timeout(2000)
+
     # Change the start time of second video from 6 to 5
     themed_app.click(".element-container .stNumberInput .step-down")
     # Wait for the video start time to update
