@@ -34,7 +34,7 @@ def test_video_has_correct_properties(app: Page):
     app.wait_for_timeout(2000)
     video_element = app.get_by_test_id("stVideo").nth(2)
     expect(video_element).to_be_visible()
-    expect(video_element).to_have_attribute("src", re.compile(r".*media.*mp3"))
+    expect(video_element).to_have_attribute("src", re.compile(r".*media.*.mp4"))
 
 
 # describe("st.video", () => {
