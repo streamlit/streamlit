@@ -225,25 +225,25 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
     uploader_index = 2
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     file_chooser.set_files(files=files[0])
 
     # The widget should show the name of the uploaded file
-    expect(app.locator(".uploadedFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
 
     with app.expect_request("**/upload_file/**"):
         file_chooser.set_files(files=files[1])
 
-    uploaded_file_names = app.locator(".uploadedFileName")
+    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
 
     # The widget should show the names of the uploaded files in reverse order
     file_names = [files[1]["name"], files[0]["name"]]
@@ -265,7 +265,7 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    app.get_by_test_id("fileDeleteBtn").first.click()
+    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
@@ -297,7 +297,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
     uploader_index = 2
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
     # Here we wait for the first file to be uploaded before uploading the second
@@ -305,19 +305,19 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
         file_chooser.set_files(files=files[0])
 
     # The widget should show the name of the uploaded file
-    expect(app.locator(".uploadedFileName")).to_have_text(
+    expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
         file_name1, use_inner_text=True
     )
 
     with app.expect_file_chooser() as fc_info:
-        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+        app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index).click()
 
     file_chooser = fc_info.value
 
     with app.expect_request("**/upload_file/**"):
         file_chooser.set_files(files=files[1])
 
-    uploaded_file_names = app.locator(".uploadedFileName")
+    uploaded_file_names = app.get_by_test_id("stFileUploaderFileName")
 
     # The widget should show the names of the uploaded files in reverse order
     file_names = [files[1]["name"], files[0]["name"]]
@@ -339,7 +339,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
-    app.get_by_test_id("fileDeleteBtn").first.click()
+    app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
 
     wait_for_app_run(app)
     app.wait_for_timeout(1000)
