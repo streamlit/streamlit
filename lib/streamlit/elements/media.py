@@ -222,6 +222,42 @@ def _reshape_youtube_url(url: str) -> Optional[str]:
     return None
 
 
+def _is_srt(stream: Union[str, io.BytesIO]) -> bool:
+    # Convert str to io.BytesIO if 'stream' is a string
+    if isinstance(stream, str):
+        stream = io.BytesIO(stream.encode("utf-8"))
+
+    # Set the stream position to the beginning in case it's been moved
+    stream.seek(0)
+
+    # Read enough bytes to reliably check for SRT patterns
+    # This might be adjusted, but 33 bytes should be enough to read the first numeric
+    # line, the full timestamp line, and a bit of the next line
+    header = stream.read(33)
+
+    try:
+        header_str = header.decode("utf-8").strip()  # Decode and strip whitespace
+    except UnicodeDecodeError:
+        # If it's not valid utf-8, it's probably not a valid SRT file
+        return False
+
+    # Regular expression to match the SRT timestamp format
+    # It matches the
+    # "hours:minutes:seconds,milliseconds --> hours:minutes:seconds,milliseconds" format
+    timestamp_regex = re.compile(r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}")
+
+    # Split the header into lines and process them
+    lines = header_str.split("\n")
+
+    # Check for the pattern of an SRT file: digit(s), newline, timestamp
+    if len(lines) >= 2 and lines[0].isdigit():
+        match = timestamp_regex.search(lines[1])
+        if match:
+            return True
+
+    return False
+
+
 def _marshall_av_media(
     coordinates: str,
     proto: Union[AudioProto, VideoProto],
@@ -274,42 +310,6 @@ def _marshall_av_media(
         file_url = ""
 
     proto.url = file_url
-
-
-def is_probably_srt(stream: Union[str, io.BytesIO]) -> bool:
-    # Convert str to io.BytesIO if 'stream' is a string
-    if isinstance(stream, str):
-        stream = io.BytesIO(stream.encode("utf-8"))
-
-    # Set the stream position to the beginning in case it's been moved
-    stream.seek(0)
-
-    # Read enough bytes to reliably check for SRT patterns
-    # This might be adjusted, but 33 bytes should be enough to read the first numeric
-    # line, the full timestamp line, and a bit of the next line
-    header = stream.read(33)
-
-    try:
-        header_str = header.decode("utf-8").strip()  # Decode and strip whitespace
-    except UnicodeDecodeError:
-        # If it's not valid utf-8, it's probably not a valid SRT file
-        return False
-
-    # Regular expression to match the SRT timestamp format
-    # It matches the
-    # "hours:minutes:seconds,milliseconds --> hours:minutes:seconds,milliseconds" format
-    timestamp_regex = re.compile(r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}")
-
-    # Split the header into lines and process them
-    lines = header_str.split("\n")
-
-    # Check for the pattern of an SRT file: digit(s), newline, timestamp
-    if len(lines) >= 2 and lines[0].isdigit():
-        match = timestamp_regex.search(lines[1])
-        if match:
-            return True
-
-    return False
 
 
 def srt_to_vtt(srt_data: Union[str, bytes]) -> bytes:
@@ -380,7 +380,7 @@ def process_subtitle_data(
             content = data_str.strip()
             if content.startswith("WEBVTT"):
                 return content.encode("utf-8")
-            elif is_probably_srt(content):
+            elif _is_srt(content):
                 return srt_to_vtt(content)
             raise ValueError(
                 "The provided string neither matches valid VTT nor SRT format."
@@ -390,7 +390,7 @@ def process_subtitle_data(
         """Handles io.BytesIO data, assuming it's SRT content."""
         stream.seek(0)
         stream_data = stream.getvalue()
-        return srt_to_vtt(stream_data) if is_probably_srt(stream) else stream_data
+        return srt_to_vtt(stream_data) if _is_srt(stream) else stream_data
 
     # Determine the type of data and process accordingly
     if isinstance(data, str):
