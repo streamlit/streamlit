@@ -25,7 +25,7 @@ def test_header_display(app: Page, assert_snapshot: ImageCompareFunction):
 
     for i, element in enumerate(header_elements.all()):
         if i < 8:
-            assert_snapshot(element, name=f"header-divider-{i}")
+            assert_snapshot(element, name=f"st_header-divider_{i}")
 
 
 def test_subheader_display(app: Page, assert_snapshot: ImageCompareFunction):
@@ -35,4 +35,4 @@ def test_subheader_display(app: Page, assert_snapshot: ImageCompareFunction):
 
     for i, element in enumerate(subheader_elements.all()):
         if i > 7:
-            assert_snapshot(element, name=f"subheader-divider-{i}")
+            assert_snapshot(element, name=f"st_subheader-divider_{i}")

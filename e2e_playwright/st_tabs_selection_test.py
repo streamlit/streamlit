@@ -21,7 +21,7 @@ EXPANDER_HEADER_IDENTIFIER = ".streamlit-expanderHeader"
 
 def test_default_selection_first_tab(app: Page, assert_snapshot: ImageCompareFunction):
     """Test st.tabs has first tab selected as default."""
-    assert_snapshot(app.get_by_test_id("stTabs"), name="tabs-default")
+    assert_snapshot(app.get_by_test_id("stTabs"), name="st_tabs-default")
 
 
 def test_maintains_selection_when_other_tab_added(
@@ -36,7 +36,7 @@ def test_maintains_selection_when_other_tab_added(
     control_buttons.nth(0).click()
     # Wait for tabs to properly load
     wait_for_app_run(app, wait_delay=500)
-    assert_snapshot(app.get_by_test_id("stTabs"), name="tabs-selection-add-tab")
+    assert_snapshot(app.get_by_test_id("stTabs"), name="st_tabs-selection_add_tab")
 
 
 def test_maintains_selection_when_other_tab_removed(
@@ -56,7 +56,7 @@ def test_maintains_selection_when_other_tab_removed(
     control_buttons.nth(1).click()
     # Wait for tabs to properly load
     wait_for_app_run(app, wait_delay=500)
-    assert_snapshot(app.get_by_test_id("stTabs"), name="tabs-selection-remove-tab")
+    assert_snapshot(app.get_by_test_id("stTabs"), name="st_tabs-selection_remove_tab")
 
 
 def test_resets_selection_when_selected_tab_removed(
@@ -74,7 +74,7 @@ def test_resets_selection_when_selected_tab_removed(
     control_buttons.nth(2).click()
     # Wait for tabs to properly load
     wait_for_app_run(app, wait_delay=500)
-    assert_snapshot(app.get_by_test_id("stTabs"), name="tabs-remove-selected")
+    assert_snapshot(app.get_by_test_id("stTabs"), name="st_tabs-remove_selected")
 
 
 def test_maintains_selection_when_same_name_exists(
@@ -94,7 +94,7 @@ def test_maintains_selection_when_same_name_exists(
     control_buttons.nth(3).click()
     # Wait for tabs to properly load
     wait_for_app_run(app, wait_delay=500)
-    assert_snapshot(app.get_by_test_id("stTabs"), name="tabs-change-some-names")
+    assert_snapshot(app.get_by_test_id("stTabs"), name="st_tabs-change_some_names")
 
 
 def test_resets_selection_when_tab_names_change(
@@ -112,4 +112,4 @@ def test_resets_selection_when_tab_names_change(
     control_buttons.nth(4).click()
     # Wait for tabs to properly load
     wait_for_app_run(app, wait_delay=500)
-    assert_snapshot(app.get_by_test_id("stTabs"), name="tabs-change-all-names")
+    assert_snapshot(app.get_by_test_id("stTabs"), name="st_tabs-change_all_names")

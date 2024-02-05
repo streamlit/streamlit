@@ -24,7 +24,7 @@ def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFu
     expect(toggle_elements).to_have_count(8)
 
     for i, element in enumerate(toggle_elements.all()):
-        assert_snapshot(element, name=f"toggle-{i}")
+        assert_snapshot(element, name=f"st_toggle-{i}")
 
 
 def test_toggle_initial_values(app: Page):

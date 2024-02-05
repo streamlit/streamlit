@@ -24,11 +24,11 @@ def test_file_uploader_render_correctly(
     file_uploaders = themed_app.get_by_test_id("stFileUploader")
     expect(file_uploaders).to_have_count(7)
 
-    assert_snapshot(file_uploaders.nth(0), name="st_single-file-uploader")
-    assert_snapshot(file_uploaders.nth(1), name="st_disabled-file-uploader")
-    assert_snapshot(file_uploaders.nth(2), name="st_multi-file-uploader")
-    assert_snapshot(file_uploaders.nth(4), name="st_hidden-label-file-uploader")
-    assert_snapshot(file_uploaders.nth(5), name="st_collapsed-label-file-uploader")
+    assert_snapshot(file_uploaders.nth(0), name="st_file_uploader-single_file")
+    assert_snapshot(file_uploaders.nth(1), name="st_file_uploader-disabled")
+    assert_snapshot(file_uploaders.nth(2), name="st_file_uploader-multiple_files")
+    assert_snapshot(file_uploaders.nth(4), name="st_file_uploader-hidden_label")
+    assert_snapshot(file_uploaders.nth(5), name="st_file_uploader-collapsed_label")
 
 
 def test_file_uploader_error_message_disallowed_files(
@@ -101,12 +101,12 @@ def test_uploads_and_deletes_single_file_only(
     )
 
     assert_snapshot(
-        file_uploader_uploaded_state, name="st_single_file_uploader-uploaded"
+        file_uploader_uploaded_state, name="st_file_uploader-single_file_uploaded"
     )
 
-    expect(
-        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
-    ).to_have_text("True", use_inner_text=True)
+    expect(app.get_by_test_id("stMarkdown").nth(uploader_index + 1)).to_have_text(
+        "True", use_inner_text=True
+    )
 
     # Upload a second file. This one will replace the first.
     with app.expect_file_chooser() as fc_info:
@@ -127,9 +127,9 @@ def test_uploads_and_deletes_single_file_only(
         str(file_content2), use_inner_text=True
     )
 
-    expect(
-        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
-    ).to_have_text("True", use_inner_text=True)
+    expect(app.get_by_test_id("stMarkdown").nth(uploader_index + 1)).to_have_text(
+        "True", use_inner_text=True
+    )
 
     rerun_app(app)
 
@@ -192,7 +192,7 @@ def test_uploads_and_deletes_multiple_files(
     )
 
     file_uploader = app.get_by_test_id("stFileUploader").nth(uploader_index)
-    assert_snapshot(file_uploader, name="st_multi_file_uploader-uploaded")
+    assert_snapshot(file_uploader, name="st_file_uploader-multi_file_uploaded")
 
     #  Delete the second file. The second file is on top because it was
     #  most recently uploaded. The first file should still exist.
@@ -204,7 +204,7 @@ def test_uploads_and_deletes_multiple_files(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
 
@@ -271,7 +271,7 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
 
@@ -348,7 +348,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
+    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
 
