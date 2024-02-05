@@ -38,29 +38,15 @@ def test_video_has_correct_properties(app: Page):
     expect(video_element).to_have_attribute("src", re.compile(r".*media.*.mp4"))
 
 
-# describe("st.video", () => {
-#   before(() => {
-#     // Increasing timeout since we're requesting an external video file
-#     Cypress.config("defaultCommandTimeout", 10000);
-#     cy.loadApp("http://localhost:3000/");
-#   });
-#
-#   it("displays a video player", () => {
-#     cy.getIndexed(".element-container .stVideo", 0).should("have.attr", "src");
-#   });
-#
-# it("handles a start time", () => {
-#   cy.getIndexed(".element-container .stVideo", 1).should("have.attr", "src");
-# });
+@pytest.mark.skip_browser("chromium")
+def test_handles_changes_in_start_time(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    themed_app.wait_for_timeout(2000)
+    # Change the start time of second video from 6 to 5
+    themed_app.click(".element-container .stNumberInput .step-down")
+    # Wait for the video start time to update
+    themed_app.wait_for_timeout(2000)
 
-#   it("handles changes in start time", () => {
-#     // Change the start time from 6 to 5
-#     cy.get(".element-container .stNumberInput .step-down").click();
-#
-#     // Wait for the video start time to update
-#     cy.wait(3000);
-#
-#     // Confirm video updated
-#     cy.getIndexed(".element-container .stVideo", 1).matchImageSnapshot("video-updated-start");
-#   });
-# });
+    video_elements = themed_app.get_by_test_id("stVideo")
+    assert_snapshot(video_elements.nth(1), name="video-updated-start")
