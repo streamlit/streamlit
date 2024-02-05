@@ -55,7 +55,7 @@ def test_file_uploader_error_message_disallowed_files(
     )
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     expect(
         app.get_by_test_id("stUploadedFileErrorMessage").nth(uploader_index)
@@ -88,7 +88,7 @@ def test_uploads_and_deletes_single_file_only(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     expect(app.locator(".uploadedFileName")).to_have_text(
         file_name1, use_inner_text=True
@@ -120,7 +120,7 @@ def test_uploads_and_deletes_single_file_only(
     )
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     expect(app.locator(".uploadedFileName")).to_have_text(
         file_name2, use_inner_text=True
@@ -137,7 +137,7 @@ def test_uploads_and_deletes_single_file_only(
     app.get_by_test_id("stHeader").press("r")
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content2), use_inner_text=True
@@ -146,7 +146,7 @@ def test_uploads_and_deletes_single_file_only(
     app.get_by_test_id("fileDeleteBtn").nth(uploader_index).click()
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
@@ -177,7 +177,7 @@ def test_uploads_and_deletes_multiple_files(
     file_chooser.set_files(files=files)
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     uploaded_file_names = app.locator(".uploadedFileName")
 
@@ -207,7 +207,7 @@ def test_uploads_and_deletes_multiple_files(
     app.get_by_test_id("fileDeleteBtn").first.click()
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
@@ -248,7 +248,7 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     )
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     # Make sure callback called
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
@@ -257,7 +257,7 @@ def test_does_not_call_callback_when_not_changed(app: Page):
     app.get_by_test_id("stHeader").press("r")
 
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     # Counter should be still equal 1
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
@@ -280,7 +280,7 @@ def test_works_inside_form(app: Page):
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     # We should be showing the uploaded file name
     expect(app.locator(".uploadedFileName")).to_have_text(
@@ -294,7 +294,7 @@ def test_works_inside_form(app: Page):
     # Submit the form
     app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     # Now we should see the file's contents
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
@@ -304,7 +304,7 @@ def test_works_inside_form(app: Page):
     # Press the delete button. Again, nothing should happen - we
     # should still see the file's contents.
     app.get_by_test_id("fileDeleteBtn").first.click()
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content1), use_inner_text=True
     )
@@ -312,7 +312,7 @@ def test_works_inside_form(app: Page):
     # Submit again. Now the file should be gone.
     app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
     wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    app.wait_for_timeout(2000)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
