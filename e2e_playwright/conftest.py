@@ -539,24 +539,27 @@ def rerun_app(page: Page):
 
 def wait_until(page: Page, fn: callable, timeout: int = 5000, interval: int = 100):
     """Run a test function in a loop until it evaluates to True
-    or times out.
+        or times out.
 
-    For example:
+        For example:
+    <<<<<<< HEAD
 
-    >>> wait_until(lambda: x.values() == ['x'], page)
+    =======
+    >>>>>>> remote/develop
+        >>> wait_until(lambda: x.values() == ['x'], page)
 
-    Parameters
-    ----------
-    page : playwright.sync_api.Page
-        Playwright page
-    fn : callable
-        Callback
-    timeout : int, optional
-        Total timeout in milliseconds, by default 5000
-    interval : int, optional
-        Waiting interval, by default 100
+        Parameters
+        ----------
+        page : playwright.sync_api.Page
+            Playwright page
+        fn : callable
+            Callback
+        timeout : int, optional
+            Total timeout in milliseconds, by default 5000
+        interval : int, optional
+            Waiting interval, by default 100
 
-    Adapted from panel.
+        Adapted from panel.
     """
     # Hide this function traceback from the pytest output if the test fails
     __tracebackhide__ = True

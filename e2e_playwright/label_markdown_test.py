@@ -63,11 +63,11 @@ def test_radio_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFu
         ["valid", "link"],
     ]
 
-    radioes = app.get_by_test_id("stRadio")
-    expect(radioes).to_have_count(4)
+    radios = app.get_by_test_id("stRadio")
+    expect(radios).to_have_count(4)
     for index, case in enumerate(cases):
         assert_snapshot(
-            radioes.nth(index).get_by_test_id("stWidgetLabel"),
+            radios.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_radio-{case[0]}_{case[1]}",
         )
 
