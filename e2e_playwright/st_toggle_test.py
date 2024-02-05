@@ -54,6 +54,9 @@ def test_toggle_values_on_click(app: Page):
     expect(toggle_elements).to_have_count(8)
 
     for toggle_element in toggle_elements.all():
+        # Not sure if this is needed, but somehow it is slightly
+        # flaky with the last toggle without it.
+        toggle_element.scroll_into_view_if_needed()
         toggle_element.click(delay=50)
         wait_for_app_run(app)
 
