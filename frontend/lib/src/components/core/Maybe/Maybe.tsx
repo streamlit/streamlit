@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import React, { ReactNode } from "react"
 
 export interface MaybeProps {
   enable: boolean
-  children?: ReactElement
+  children?: ReactNode
 }
 
 export interface State {}
