@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import streamlit as st
 
-st.header("Main Page")
-st.slider("x")
-
-if st.button("`pages/02_page2.py`"):
-    st.switch_page("pages/02_page2.py")
-
-if st.button("`pages/08_slow_page.py`"):
-    st.switch_page("pages/08_slow_page.py")
+st.header("Slow page")
+time.sleep(10)
