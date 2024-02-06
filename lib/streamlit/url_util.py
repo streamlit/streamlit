@@ -103,7 +103,5 @@ def is_url(
             return bool(result.netloc)
         elif result.scheme in ["mailto", "data"]:
             return bool(result.path)
-        # This should never happen, all schemas should be covered above
-        return False
     except ValueError:
         return False
