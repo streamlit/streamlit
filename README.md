@@ -6,8 +6,16 @@
 
 **A faster way to build and share data apps.**
 
-Streamlit lets you turn data scripts into shareable web apps in minutes, not weeks. It’s all Python, open-source, and free! And once you’ve created an app you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app.
+## What is Streamlit?
 
+Streamlit lets you transform Python scripts into interactive web apps in minutes, instead of weeks. Build dashboards, generate reports, or create chat apps. Once you’ve created an app, you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app.
+
+### Why choose Streamlit?
+
+- **Simple and Pythonic:** Write beautiful, easy-to-read code.
+- **Fast, interactive prototyping:** Let others interact with your data and provide feedback quickly.
+- **Live editing:** See your app update instantly as you edit your script.
+- **Open-source and free:** Join a vibrant community and contribute to Streamlit's future.
 
 ## Installation
 
@@ -45,7 +53,6 @@ $ streamlit run streamlit_app.py
 ### Give me more!
 
 Streamlit comes in with [a ton of additional powerful elements](https://docs.streamlit.io/library/api-reference) to spice up your data apps and delight your viewers. Some examples:
-
 
 <table border="0">
   <tr>
@@ -111,8 +118,9 @@ Deploy, manage and share your apps for free using our [Community Cloud](https://
 <img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400"></img>
 
 ## Resources
-
-- Streamlit [docs](https://docs.streamlit.io), [community forum](https://discuss.streamlit.io) and [blog](https://blog.streamlit.io).
+- Explore our [docs](https://docs.streamlit.io) to learn how Streamlit works.
+- Ask questions and get help in our [community forum](https://discuss.streamlit.io).
+- Read our [blog](https://blog.streamlit.io) for tips from developers and creators.
 - Extend Streamlit's capabilities by installing or creating your own [Streamlit Components](http://components.streamlit.app/).
 - Help others find and play with your app by using the Streamlit GitHub badge in your repository:
 ```markdown
