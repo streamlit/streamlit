@@ -81,7 +81,6 @@ class GitHubUrlTest(unittest.TestCase):
 
 
 class UrlUtilTest(unittest.TestCase):
-
     @parameterized.expand(
         [
             # Valid URLs:
