@@ -341,8 +341,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
     #  most recently uploaded. The first file should still exist.
     app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
 
-    wait_for_app_run(app)
-    app.wait_for_timeout(1000)
+    wait_for_app_run(app, wait_delay=500)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
