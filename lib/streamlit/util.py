@@ -23,6 +23,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import weakref
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, TypeVar, Union
 
 from cachetools import TTLCache
@@ -220,14 +221,21 @@ class TimedCleanupCache(TTLCache):
         # the event loop might not exist yet.
         if self._task is None:
             try:
-                self._task = asyncio.create_task(expire_cache(self))
+                ref = weakref.ref(self)
+                self._task = asyncio.create_task(expire_cache(ref))
             except RuntimeError:
                 # Just continue if the event loop isn't started yet.
                 pass
         super().__setitem__(key, value)
 
+    def __del__(self):
+        if self._task is not None:
+            self._task.cancel()
+
 
 async def expire_cache(cache):
     while True:
         await asyncio.sleep(30)
-        cache.expire()
+        c = cache()
+        if c is not None:
+            c.expire()
