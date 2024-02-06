@@ -55,6 +55,9 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
 
+# TODO(vdonato): Have this class implement a get_stats method, then add a new
+# MemoryFragmentStorageStatProvider class to register with the StatsManager in
+# runtime.py (see SessionState and SessionStateStatProvider for an example).
 class MemoryFragmentStorage(FragmentStorage):
     """A simple, memory-backed implementation of FragmentStorage.
 
