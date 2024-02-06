@@ -15,12 +15,14 @@
 from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
+from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 # Works just like an `empty` except animated by default.
 class SkeletonMixin:
+    @gather_metrics("skeleton")
     def skeleton(self, height: int = 107) -> "DeltaGenerator":
         """Insert a single-element container which displays a "skeleton" animation.
 
