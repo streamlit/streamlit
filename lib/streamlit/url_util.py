@@ -90,12 +90,8 @@ def is_url(
     allowed_schemas : Tuple[str]
         The allowed URL schemas. Default is ("http", "https").
     """
-    if not isinstance(url, str):
-        return False
-
     try:
-        result = urlparse(url)
-
+        result = urlparse(str(url))
         if result.scheme not in allowed_schemas:
             return False
 
@@ -103,5 +99,7 @@ def is_url(
             return bool(result.netloc)
         elif result.scheme in ["mailto", "data"]:
             return bool(result.path)
+
     except ValueError:
         return False
+    return False
