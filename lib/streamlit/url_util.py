@@ -90,6 +90,9 @@ def is_url(
     allowed_schemas : Tuple[str]
         The allowed URL schemas. Default is ("http", "https").
     """
+    if not isinstance(url, str):
+        return False
+
     try:
         result = urlparse(url)
 
