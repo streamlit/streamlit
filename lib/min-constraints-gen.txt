@@ -18,5 +18,4 @@ toml==0.10.1
 tornado==6.0.3
 typing-extensions==4.3.0
 tzlocal==1.1
-validators==0.2
 watchdog==2.1.5
