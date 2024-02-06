@@ -98,6 +98,34 @@ function parseBoxSelection(selection: any): SelectionRange {
   return { x, y }
 }
 
+// Utility function to convert camelCase to snake_case
+function toSnakeCase(str: string): string {
+  return str.replace(/[\dA-Z]/g, letter => `_${letter.toLowerCase()}`)
+}
+
+// Function to convert all keys in an object to snake_case
+function keysToSnakeCase(obj: Record<string, any>): Record<string, any> {
+  return Object.keys(obj).reduce((acc, key) => {
+    const newKey = toSnakeCase(key)
+    let value = obj[key]
+
+    // Recursively convert nested objects
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      value = keysToSnakeCase(value)
+    }
+
+    // Handle array of objects
+    if (Array.isArray(value)) {
+      value = value.map(item =>
+        typeof item === "object" ? keysToSnakeCase(item) : item
+      )
+    }
+
+    acc[newKey] = value
+    return acc
+  }, {} as Record<string, any>)
+}
+
 /** Render an iframed Plotly chart from a URL */
 function renderIFrame({
   url,
@@ -275,6 +303,9 @@ function PlotlyFigure({
     returnValue.select_lasso =
       selectedLassos.length > 0 ? selectedLassos : undefined
 
+    returnValue.select.points = returnValue.select.points.map((point: any) =>
+      keysToSnakeCase(point)
+    )
     widgetMgr.setJsonValue(element, returnValue, { fromUi: true })
     console.log("Done handling select")
   }

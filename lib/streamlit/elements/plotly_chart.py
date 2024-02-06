@@ -22,6 +22,7 @@ import plotly.graph_objs as go
 from typing_extensions import Final, Literal, TypeAlias
 
 from streamlit import type_util
+from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
@@ -32,7 +33,7 @@ from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.session_state_proxy import SessionStateProxy
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -94,6 +95,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Union[None, Literal["streamlit"]] = "streamlit",
         key: Key | None = None,
+        # TODO(willhuang1997): This needs to be changed to False
         on_select: bool | str | WidgetCallback = None,
         **kwargs: Any,
         # What we return will be an json dictionary and will need to fix this type after
@@ -191,7 +193,7 @@ class PlotlyMixin:
         def deserialize(ui_value, widget_id=""):
             if ui_value is None:
                 return {}
-            return ui_value
+            return AttributeDictionary(ui_value)
 
         def serialize(v):
             return json.dumps(v, default=str)
@@ -220,6 +222,7 @@ class PlotlyMixin:
                 serializer=serialize,
                 ctx=ctx,
             )
+
         self.dg._enqueue("plotly_chart", plotly_chart_proto)
         if (
             on_select != None

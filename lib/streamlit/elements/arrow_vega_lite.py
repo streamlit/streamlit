@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union, cast
 from typing_extensions import Final, Literal
 
 import streamlit.elements.lib.dicttools as dicttools
+from streamlit.attribute_dictionary import AttributeDictionary
+from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.errors import StreamlitAPIException
@@ -45,16 +47,15 @@ def _on_selection(
     proto: ArrowVegaLiteChartProto,
     on_selection: Union[str, Callable[..., None], None] = None,
 ):
-    if on_selection is not None:
+    if on_selection is not None and on_selection != False:
 
         def deserialize_vega_lite_event(ui_value, widget_id=""):
-            print(f"{ui_value=}")
             if ui_value is None:
                 return {}
             if isinstance(ui_value, str):
                 return json.loads(ui_value)
 
-            return ui_value
+            return AttributeDictionary(ui_value)
 
         def serialize_vega_lite_event(v):
             return json.dumps(v, default=str)
@@ -74,7 +75,7 @@ def _on_selection(
         if isinstance(on_selection, str):
             # Set in session state
             session_state = SessionStateProxy()
-            session_state[on_selection] = current_value.value
+            session_state[on_selection] = AttributeDictionary(current_value.value)
         elif callable(on_selection):
             # Call the callback function
             kwargs_callback = {}
@@ -241,6 +242,7 @@ def marshall(
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
+    proto.id = proto.id
 
     if data is not None:
         arrow.marshall(proto.data, data)

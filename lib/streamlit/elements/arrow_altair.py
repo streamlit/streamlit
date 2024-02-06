@@ -48,6 +48,7 @@ from streamlit.color_util import (
     is_hex_color_like,
     to_css_color,
 )
+from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.utils import last_index_for_melted_dataframes
@@ -117,6 +118,8 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        on_selection: Union[str, Callable[..., None], True, False, None] = None,
+        key: str = "",
     ) -> DeltaGenerator:
         """Display a line chart.
 
@@ -258,6 +261,13 @@ class ArrowAltairMixin:
             width=width,
             height=height,
         )
+        if on_selection:
+            # TODO(willhuang1997): This seems like a hack so should fix this
+            hash_object = hashlib.sha256(chart.to_json().encode())
+            hash_hex = f"user_id-{hash_object.hexdigest()}"
+            proto.id = hash_hex if key == "" or key == None else key
+            arrow_vega_lite._on_selection(proto, on_selection)
+            # print(f"{proto.")
         marshall(proto, chart, use_container_width, theme="streamlit")
 
         return self.dg._enqueue(
@@ -275,6 +285,8 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        on_selection: Union[str, Callable[..., None], True, False, None] = None,
+        key: str = "",
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -417,6 +429,13 @@ class ArrowAltairMixin:
             width=width,
             height=height,
         )
+        if on_selection:
+            # TODO(willhuang1997): This seems like a hack so should fix this
+            hash_object = hashlib.sha256(chart.to_json().encode())
+            hash_hex = f"user_id-{hash_object.hexdigest()}"
+            proto.id = hash_hex if key == "" or key == None else key
+            arrow_vega_lite._on_selection(proto, on_selection)
+
         marshall(proto, chart, use_container_width, theme="streamlit")
 
         return self.dg._enqueue(
@@ -434,6 +453,8 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        on_selection: Union[str, Callable[..., None], True, False, None] = None,
+        key: str = "",
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -578,6 +599,12 @@ class ArrowAltairMixin:
             width=width,
             height=height,
         )
+        if on_selection:
+            # TODO(willhuang1997): This seems like a hack so should fix this
+            hash_object = hashlib.sha256(chart.to_json().encode())
+            hash_hex = f"user_id-{hash_object.hexdigest()}"
+            proto.id = hash_hex if key == "" or key == None else key
+            arrow_vega_lite._on_selection(proto, on_selection)
         marshall(proto, chart, use_container_width, theme="streamlit")
 
         return self.dg._enqueue(
@@ -596,6 +623,8 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        on_selection: Union[str, Callable[..., None], True, False, None] = None,
+        key: str = "",
     ) -> "DeltaGenerator":
         """Display a scatterplot chart.
 
@@ -751,10 +780,27 @@ class ArrowAltairMixin:
             width=width,
             height=height,
         )
+        if on_selection:
+            print("IN ON SELECTION")
+            # TODO(willhuang1997): This seems like a hack so should fix this
+            hash_object = hashlib.sha256(chart.to_json().encode())
+            hash_hex = f"user_id-{hash_object.hexdigest()}"
+            proto.id = hash_hex if key == "" or key == None else key
+            print(f"{proto.id=}")
+            arrow_vega_lite._on_selection(proto, on_selection)
+            import altair as alt
+
+            brush = alt.selection_interval(name="brush")
+            chart.add_selection(brush)
+            from pprint import pprint
+
+            pprint(chart.to_json())
+            # multi_selection = alt.selection_point(name="multi", toggle=True, encodings=["x"])
+            # chart.add_selection(multi_selection)
         marshall(proto, chart, use_container_width, theme="streamlit")
 
-        return self.dg._enqueue(
-            "arrow_scatter_chart", proto, add_rows_metadata=add_rows_metadata
+        self.dg._enqueue(
+            "arrow_vega_lite_chart", proto, add_rows_metadata=add_rows_metadata
         )
 
     @gather_metrics("altair_chart")
@@ -763,7 +809,7 @@ class ArrowAltairMixin:
         altair_chart: alt.Chart,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_selection: Union[str, Callable[..., None], None] = None,
+        on_selection: Union[str, Callable[..., None], True, False, None] = None,
         key: str = "",
     ) -> DeltaGenerator:
         """Display a chart using the Altair library.
@@ -812,11 +858,15 @@ class ArrowAltairMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         proto = ArrowVegaLiteChartProto()
+        # TODO(willhuang1997): This needs to be cleaned up probably
+        if on_selection == ON_SELECTION_IGNORE:
+            on_selection = False
         if on_selection:
+            print("IN HERE")
+            hash_object = hashlib.sha256(altair_chart.to_json().encode())
+            hash_hex = f"user_id-{hash_object.hexdigest()}"
+            proto.id = hash_hex if key == "" or key == None else key
             arrow_vega_lite._on_selection(proto, on_selection)
-            hash_object = hashlib.sha256(altair_chart.encode())
-            hash_hex = hash_object.hexdigest()
-            proto.id = hash_hex if key is "" or None else ""
         marshall(
             proto,
             altair_chart,
@@ -953,6 +1003,7 @@ def _generate_chart(
     size_from_user: str | float | None = None,
     width: int = 0,
     height: int = 0,
+    on_selection: Union[str, Callable[..., None], True, False, None] = None,
 ) -> Tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
@@ -1033,6 +1084,12 @@ def _generate_chart(
                 color_enc,
             )
         )
+
+    # if on_selection != False and on_selection != "ignore":
+    #     multi_selection = alt.selection_point(name="multi", toggle=True, encodings=["x"])
+    #     # brush = alt.selection_interval(name="interval")
+    #     chart = chart.add_params(brush)
+    #     chart = chart.add_params(multi_selection)
 
     return chart.interactive(), add_rows_metadata
 

@@ -493,3 +493,31 @@ export function extractPageNameFromPathName(
       .replace(new RegExp("/$"), "")
   )
 }
+
+// Utility function to convert camelCase to snake_case
+function toSnakeCase(str: string): string {
+  return str.replace(/[\dA-Z]/g, letter => `_${letter.toLowerCase()}`)
+}
+
+// Function to convert all keys in an object to snake_case
+function keysToSnakeCase(obj: Record<string, any>): Record<string, any> {
+  return Object.keys(obj).reduce((acc, key) => {
+    const newKey = toSnakeCase(key)
+    let value = obj[key]
+
+    // Recursively convert nested objects
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      value = keysToSnakeCase(value)
+    }
+
+    // Handle array of objects
+    if (Array.isArray(value)) {
+      value = value.map(item =>
+        typeof item === "object" ? keysToSnakeCase(item) : item
+      )
+    }
+
+    acc[newKey] = value
+    return acc
+  }, {} as Record<string, any>)
+}

@@ -338,6 +338,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     const el = this.props.element
     const spec = this.generateSpec()
+    console.log(spec)
     const options = {
       // Adds interpreter support for Vega expressions that is compliant with CSP
       ast: true,
@@ -384,27 +385,37 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       return selectors
     }
 
-    console.log(this.props.element.id)
     console.log(this.props.widgetMgr)
-    if (this.props.widgetMgr && this.props.element.id !== undefined) {
+    console.log(this.props.element.id)
+    if (
+      this.props.widgetMgr &&
+      this.props.element.id !== undefined &&
+      // if on_selection is False or "ignore", this will always be ""
+      // TODO(willhuang1997): This might need some refactoring as the above is kind of unclear and could be cleaner
+      this.props.element.id !== ""
+    ) {
       getSelectors(spec).forEach((item, _index) => {
         view.addSignalListener(
           item,
           debounce(150, (name: string, value: any) => {
-            const updatedSelections = {
-              ...this.state.selections,
-              [name]: value,
-            }
-            this.setState({
-              selections: updatedSelections,
-            })
-            this.props.widgetMgr?.setJsonValue(
-              this.props.element as WidgetInfo,
-              updatedSelections,
-              {
-                fromUi: true,
+            if (Object.keys(value).length !== 0) {
+              const updatedSelections = {
+                ...this.state.selections,
+                select: {
+                  [name]: value,
+                },
               }
-            )
+              this.setState({
+                selections: updatedSelections,
+              })
+              this.props.widgetMgr?.setJsonValue(
+                this.props.element as WidgetInfo,
+                updatedSelections,
+                {
+                  fromUi: true,
+                }
+              )
+            }
           })
         )
       })
