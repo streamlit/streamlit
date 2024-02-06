@@ -215,6 +215,9 @@ class TimedCleanupCache(TTLCache):
         super().__init__(*args, **kwargs)
 
     def __setitem__(self, key, value):
+        # Set an expiration task to run periodically
+        # Can't be created in init because that only runs once and
+        # the event loop might not exist yet.
         if self._task is None:
             try:
                 self._task = asyncio.create_task(expire_cache(self))
