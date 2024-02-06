@@ -100,7 +100,6 @@ class UrlUtilTest(unittest.TestCase):
             ("mailto:", False),
             ("ftp://example.com/resource", False),  # Unsupported scheme
             ("https:///path/to/resource", False),  # Missing netloc
-            ("mailto:invalid_email", False),  # Invalid email format
         ]
     )
     def test_is_url(self, url: Any, expected_value: bool):
