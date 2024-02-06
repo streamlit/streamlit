@@ -104,9 +104,9 @@ def test_uploads_and_deletes_single_file_only(
         file_uploader_uploaded_state, name="st_file_uploader-single_file_uploaded"
     )
 
-    expect(app.get_by_test_id("stMarkdown").nth(uploader_index + 1)).to_have_text(
-        "True", use_inner_text=True
-    )
+    expect(
+        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
+    ).to_have_text("True", use_inner_text=True)
 
     # Upload a second file. This one will replace the first.
     with app.expect_file_chooser() as fc_info:
@@ -127,9 +127,9 @@ def test_uploads_and_deletes_single_file_only(
         str(file_content2), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdown").nth(uploader_index + 1)).to_have_text(
-        "True", use_inner_text=True
-    )
+    expect(
+        app.get_by_test_id("stMarkdownContainer").nth(uploader_index + 1)
+    ).to_have_text("True", use_inner_text=True)
 
     rerun_app(app)
 
@@ -204,7 +204,7 @@ def test_uploads_and_deletes_multiple_files(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text(
+    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
 
@@ -271,7 +271,7 @@ def test_uploads_multiple_files_one_by_one_quickly(app: Page):
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text(
+    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
 
@@ -348,7 +348,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
     )
 
-    expect(app.get_by_test_id("stMarkdown").nth(5)).to_have_text(
+    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
         "True", use_inner_text=True
     )
 
