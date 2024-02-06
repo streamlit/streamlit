@@ -35,6 +35,7 @@ from streamlit.proto.NewSession_pb2 import (
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
@@ -158,6 +159,8 @@ class AppSession:
         self._user_info = user_info
 
         self._debug_last_backmsg_id: Optional[str] = None
+
+        self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
@@ -398,6 +401,7 @@ class AppSession:
             script_cache=self._script_cache,
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
+            fragment_storage=self._fragment_storage,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
