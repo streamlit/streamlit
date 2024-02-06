@@ -31,7 +31,7 @@ gitdb==4.0.11
 GitPython==3.1.41
 graphviz==0.20.1
 greenlet==3.0.0
-hypothesis==6.98.1
+hypothesis==6.98.2
 identify==2.5.33
 idna==3.6
 importlib-metadata==7.0.1
@@ -62,7 +62,7 @@ mypy-protobuf==3.3.0
 mysqlclient==2.2.3
 nh3==0.2.15
 nodeenv==1.8.0
-numpy==1.26.3
+numpy==1.26.4
 opencv-python==4.9.0.80
 packaging==23.2
 pandas==2.2.0
@@ -86,7 +86,7 @@ pydeck==0.8.1b0
 pydot==2.0.0
 pyee==11.0.1
 Pygments==2.17.2
-pyodbc==5.0.1
+pyodbc==5.1.0
 pyparsing==3.1.1
 pyspark==3.5.0
 pytest==8.0.0
