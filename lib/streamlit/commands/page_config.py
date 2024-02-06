@@ -15,7 +15,6 @@
 import random
 from textwrap import dedent
 from typing import TYPE_CHECKING, Mapping, Optional, Union, cast
-from urllib.parse import urlparse
 
 from typing_extensions import Final, Literal, TypeAlias
 
@@ -26,6 +25,7 @@ from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.string_util import is_emoji
+from streamlit.url_util import is_url
 from streamlit.util import lower_clean_dict_keys
 
 if TYPE_CHECKING:
@@ -259,21 +259,11 @@ def validate_menu_items(menu_items: MenuItems) -> None:
                 '"Get help", "Report a bug", and "About" '
                 f'("{k}" is not a valid key.)'
             )
-        if v is not None:
-            if not valid_url(v) and k != ABOUT_KEY:
-                raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
+        if v is not None and (
+            not is_url(v, ("http", "https", "mailto")) and k != ABOUT_KEY
+        ):
+            raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
 
 
 def valid_menu_item_key(key: str) -> "TypeGuard[MenuKey]":
     return key in {GET_HELP_KEY, REPORT_A_BUG_KEY, ABOUT_KEY}
-
-
-def valid_url(url: str) -> bool:
-    # Function taken from https://stackoverflow.com/questions/7160737/how-to-validate-a-url-in-python-malformed-or-not
-    try:
-        result = urlparse(url)
-        if result.scheme == "mailto":
-            return all([result.scheme, result.path])
-        return all([result.scheme, result.netloc])
-    except Exception:
-        return False

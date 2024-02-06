@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
+from typing import Any, Tuple
+
+from parameterized import parameterized
 
 from streamlit import url_util
 
@@ -63,13 +68,70 @@ INVALID_URLS = [
 
 class GitHubUrlTest(unittest.TestCase):
     def test_github_url_is_replaced(self):
-        for (target, processed) in GITHUB_URLS:
+        for target, processed in GITHUB_URLS:
             assert url_util.process_gitblob_url(target) == processed
 
     def test_gist_url_is_replaced(self):
-        for (target, processed) in GIST_URLS:
+        for target, processed in GIST_URLS:
             assert url_util.process_gitblob_url(target) == processed
 
     def test_nonmatching_url_is_not_replaced(self):
         for url in INVALID_URLS:
             assert url == url_util.process_gitblob_url(url)
+
+
+class UrlUtilTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            # Valid URLs:
+            ("http://www.cwi.nl:80/%7Eguido/Python.html", True),
+            ("https://stackoverflow.com", True),
+            ("mailto:test@example.com", True),
+            ("data:image/svg+xml;base64,PHN2ZyB4aHcvMjAwMC9zdmci", True),
+            ("data:application/pdf;base64,PHN2ZyB4aHcvMjAwMC9zdmci", True),
+            ("http://127.0.0.1", True),  # IP as domain
+            ("https://[::1]", True),  # IPv6 address in URL
+            # Invalid URLs:
+            ("/data/Python.html", False),
+            ("www.streamlit.io", False),  # Missing scheme
+            (532, False),
+            ("dkakasdkjdjakdjadjfalskdjfalk", False),
+            ("mailto:", False),
+            ("ftp://example.com/resource", False),  # Unsupported scheme
+            ("https:///path/to/resource", False),  # Missing netloc
+        ]
+    )
+    def test_is_url(self, url: Any, expected_value: bool):
+        """Test the is_url utility function."""
+        self.assertEqual(
+            url_util.is_url(url, ("http", "https", "data", "mailto")), expected_value
+        )
+
+    @parameterized.expand(
+        [
+            ("http://example.com", ("http",), True),
+            ("mailto:test@example.com", ("http", "https"), False),
+            ("mailto:test@example.com", ("http", "mailto"), True),
+            ("https://example.com", ("http",), False),
+            ("https://example.com", ("https",), True),
+            ("data:image/png;base64,abc123", ("data",), True),
+            ("data:image/png;base64,abc123", ("http", "https", "mailto"), False),
+            ("https://example.com", ("http", "https", "mailto"), True),
+            ("http://example.com", None, True),  # None schema == use default
+            ("https://example.com", None, True),  # None schema == use default
+            ("data:image/png;base64,abc123", None, False),  # None schema == use default
+            ("mailto:test@example.com", None, False),  # None schema == use default
+        ]
+    )
+    def test_is_url_limits_schema(
+        self,
+        url: str,
+        allowed_schemas: Tuple[url_util.UrlSchema, ...] | None,
+        expected_value: bool,
+    ):
+        """Test that is_ur applies the allowed schema parameter."""
+
+        if allowed_schemas is None:
+            self.assertEqual(url_util.is_url(url), expected_value)
+        else:
+            self.assertEqual(url_util.is_url(url, allowed_schemas), expected_value)

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, Union, cast
 from typing_extensions import Final, TypeAlias
 
 import streamlit as st
-from streamlit import runtime, type_util
+from streamlit import runtime, type_util, url_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
@@ -280,16 +280,16 @@ def marshall_video(
     start_time : int
         The time from which this element should start playing. (default: 0)
     """
-    from validators import url
 
     proto.start_time = start_time
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
 
-    if isinstance(data, str) and url(data):
-        youtube_url = _reshape_youtube_url(data)
-        if youtube_url:
+    if isinstance(data, str) and url_util.is_url(
+        data, allowed_schemas=("http", "https", "data")
+    ):
+        if youtube_url := _reshape_youtube_url(data):
             proto.url = youtube_url
             proto.type = VideoProto.Type.YOUTUBE_IFRAME
         else:
@@ -405,11 +405,12 @@ def marshall_audio(
     sample_rate: int or None
         Optional param to provide sample_rate in case of numpy array
     """
-    from validators import url
 
     proto.start_time = start_time
 
-    if isinstance(data, str) and url(data):
+    if isinstance(data, str) and url_util.is_url(
+        data, allowed_schemas=("http", "https", "data")
+    ):
         proto.url = data
 
     else:
