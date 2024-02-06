@@ -101,7 +101,7 @@ def is_url(
 
         if result.scheme in ["http", "https"]:
             return bool(result.netloc)
-        if result.scheme in ["mailto", "data"]:
+        elif result.scheme in ["mailto", "data"]:
             return bool(result.path)
         # This should never happen, all schemas should be covered above
         return False

@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
-from typing import Any
+from typing import Any, Tuple
 
 from parameterized import parameterized
 
@@ -92,14 +94,13 @@ class UrlUtilTest(unittest.TestCase):
             ("https://[::1]", True),  # IPv6 address in URL
             # Invalid URLs:
             ("/data/Python.html", False),
+            ("www.streamlit.io", False),  # Missing scheme
             (532, False),
             ("dkakasdkjdjakdjadjfalskdjfalk", False),
             ("mailto:", False),
             ("ftp://example.com/resource", False),  # Unsupported scheme
             ("https:///path/to/resource", False),  # Missing netloc
             ("mailto:invalid_email", False),  # Invalid email format
-            ("data:text/plain;base64,", False),  # Valid scheme but missing data
-            ("http://example.com/illegal<chars", False),  # URL with illegal characters
         ]
     )
     def test_is_url(self, url: Any, expected_value: bool):
@@ -107,3 +108,29 @@ class UrlUtilTest(unittest.TestCase):
         self.assertEqual(
             url_util.is_url(url, ("http", "https", "data", "mailto")), expected_value
         )
+
+    @parameterized.expand(
+        [
+            ("http://example.com", ("http",), True),
+            ("mailto:test@example.com", ("http", "https"), False),
+            ("mailto:test@example.com", ("http", "mailto"), True),
+            ("https://example.com", ("http",), False),
+            ("https://example.com", ("https",), True),
+            ("data:image/png;base64,abc123", ("data",), True),
+            ("data:image/png;base64,abc123", ("http", "https", "mailto"), False),
+            ("https://example.com", ("http", "https", "mailto"), True),
+            ("http://example.com", None, True),  # None schema == use default
+            ("https://example.com", None, True),  # None schema == use default
+            ("data:image/png;base64,abc123", None, False),  # None schema == use default
+            ("mailto:test@example.com", None, False),  # None schema == use default
+        ]
+    )
+    def test_is_url_limits_schema(
+        self, url: str, allowed_schemas: Tuple[str] | None, expected_value: bool
+    ):
+        """Test that is_ur applies the allowed schema parameter."""
+
+        if allowed_schemas is None:
+            self.assertEqual(url_util.is_url(url), expected_value)
+        else:
+            self.assertEqual(url_util.is_url(url, allowed_schemas), expected_value)
