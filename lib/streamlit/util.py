@@ -222,6 +222,7 @@ class TimedCleanupCache(TTLCache):
             try:
                 self._task = asyncio.create_task(expire_cache(self))
             except RuntimeError:
+                # Just continue if the event loop isn't started yet.
                 pass
         super().__setitem__(key, value)
 
