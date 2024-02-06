@@ -196,7 +196,7 @@ def main_run(target: str, args=None, **kwargs):
     will download the script to a temporary file and runs this file.
 
     """
-    from validators import url
+    from streamlit import url_util
 
     bootstrap.load_config_options(flag_options=kwargs)
 
@@ -211,13 +211,11 @@ def main_run(target: str, args=None, **kwargs):
                 f"Streamlit requires raw Python (.py) files, not {extension}.\nFor more information, please see https://docs.streamlit.io"
             )
 
-    if url(target):
+    if url_util.is_url(target):
         from streamlit.temporary_directory import TemporaryDirectory
 
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
-
-            from streamlit import url_util
 
             path = urlparse(target).path
             main_script_path = os.path.join(

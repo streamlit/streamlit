@@ -13,6 +13,9 @@
 # limitations under the License.
 
 import unittest
+from typing import Any, Set
+
+from parameterized import parameterized
 
 from streamlit import url_util
 
@@ -63,13 +66,35 @@ INVALID_URLS = [
 
 class GitHubUrlTest(unittest.TestCase):
     def test_github_url_is_replaced(self):
-        for (target, processed) in GITHUB_URLS:
+        for target, processed in GITHUB_URLS:
             assert url_util.process_gitblob_url(target) == processed
 
     def test_gist_url_is_replaced(self):
-        for (target, processed) in GIST_URLS:
+        for target, processed in GIST_URLS:
             assert url_util.process_gitblob_url(target) == processed
 
     def test_nonmatching_url_is_not_replaced(self):
         for url in INVALID_URLS:
             assert url == url_util.process_gitblob_url(url)
+
+
+class UrlUtilTest(unittest.TestCase):
+
+    @parameterized.expand(
+        [
+            ("http://www.cwi.nl:80/%7Eguido/Python.html", True),
+            ("/data/Python.html", False),
+            (532, False),
+            ("dkakasdkjdjakdjadjfalskdjfalk", False),
+            ("https://stackoverflow.com", True),
+            ("mailto:test@example.com", True),
+            ("mailto:", False),
+            ("data:image/svg+xml;base64,PHN2ZyB4aHcvMjAwMC9zdmci", True),
+            ("data:application/pdf;base64,PHN2ZyB4aHcvMjAwMC9zdmci", True),
+        ]
+    )
+    def test_is_url(self, url: Any, expected_value: bool):
+        """Test the is_url utility function."""
+        self.assertEqual(
+            url_util.is_url(url, ("http", "https", "data", "mailto")), expected_value
+        )
