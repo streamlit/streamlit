@@ -15,7 +15,6 @@
 import random
 from textwrap import dedent
 from typing import TYPE_CHECKING, Mapping, Optional, Union, cast
-from urllib.parse import urlparse
 
 from typing_extensions import Final, Literal, TypeAlias
 

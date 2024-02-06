@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import re
-from typing import Literal, Optional, Set
+from typing import Literal, Optional, Tuple
 from urllib.parse import urlparse
 
 from typing_extensions import TypeAlias
@@ -76,30 +76,31 @@ def print_url(title, url):
 
 def is_url(
     url: str,
-    allowed_schemas: Set[UrlSchema] = ("http", "https"),
+    allowed_schemas: Tuple[UrlSchema] = ("http", "https"),
 ) -> bool:
-    """Check if a string is a valid URL.
+    """Check if a string looks like an URL.
+
+    This doesn't check if the URL is actually valid or reachable.
 
     Parameters
     ----------
     url : str
         The URL to check.
 
-    allowed_schemas : Set[str]
+    allowed_schemas : Tuple[str]
         The allowed URL schemas. Default is ("http", "https").
     """
     try:
         result = urlparse(url)
-        if result is None:
-            return False
 
         if result.scheme not in allowed_schemas:
             return False
 
         if result.scheme in ["http", "https"]:
-            return all([result.scheme, result.netloc])
+            return bool(result.netloc)
         if result.scheme in ["mailto", "data"]:
-            return all([result.scheme, result.path])
+            return bool(result.path)
+        # This should never happen, all schemas should be covered above
         return False
     except ValueError:
         return False

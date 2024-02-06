@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import unittest
-from typing import Any, Set
+from typing import Any
 
 from parameterized import parameterized
 
