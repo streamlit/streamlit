@@ -207,14 +207,18 @@ def extract_key_query_params(
     )
 
 
-class TimedCleanupCache(TTLCache):
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class TimedCleanupCache(TTLCache[K, V]):
     """A TTLCache that asynchronously expires its entries."""
 
     def __init__(self, *args, **kwargs):
         self._task: Optional[asyncio.Task[Any]] = None
         super().__init__(*args, **kwargs)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: K, value: V) -> None:
         # Set an expiration task to run periodically
         # Can't be created in init because that only runs once and
         # the event loop might not exist yet.
@@ -231,7 +235,7 @@ class TimedCleanupCache(TTLCache):
             self._task.cancel()
 
 
-async def expire_cache(cache):
+async def expire_cache(cache: TTLCache) -> None:
     while True:
         await asyncio.sleep(30)
         cache.expire()
