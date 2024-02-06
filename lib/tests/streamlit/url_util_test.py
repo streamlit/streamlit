@@ -124,7 +124,10 @@ class UrlUtilTest(unittest.TestCase):
         ]
     )
     def test_is_url_limits_schema(
-        self, url: str, allowed_schemas: Tuple[str] | None, expected_value: bool
+        self,
+        url: str,
+        allowed_schemas: Tuple[url_util.UrlSchema, ...] | None,
+        expected_value: bool,
     ):
         """Test that is_ur applies the allowed schema parameter."""
 

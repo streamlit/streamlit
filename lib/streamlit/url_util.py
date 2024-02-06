@@ -76,7 +76,7 @@ def print_url(title, url):
 
 def is_url(
     url: str,
-    allowed_schemas: Tuple[UrlSchema] = ("http", "https"),
+    allowed_schemas: Tuple[UrlSchema, ...] = ("http", "https"),
 ) -> bool:
     """Check if a string looks like an URL.
 

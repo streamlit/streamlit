@@ -22,6 +22,7 @@
 import base64
 import io
 import mimetypes
+import os
 import re
 from enum import IntEnum
 from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
@@ -341,8 +342,15 @@ def image_to_url(
 
     # Strings
     if isinstance(image, str):
-        # Unpack local SVG image file to an SVG string
-        if image.endswith(".svg") and not image.startswith(("http://", "https://")):
+
+        if not os.path.isfile(image) and url_util.is_url(
+            image, allowed_schemas=("http", "https", "data")
+        ):
+            # If it's a url, return it directly.
+            return image
+
+        if image.endswith(".svg") and os.path.isfile(image):
+            # Unpack local SVG image file to an SVG string
             with open(image) as textfile:
                 image = textfile.read()
 
@@ -359,10 +367,6 @@ def image_to_url(
             image_b64_encoded = base64.b64encode(image.encode("utf-8")).decode("utf-8")
             # Return SVG as data URI:
             return f"data:image/svg+xml;base64,{image_b64_encoded}"
-
-        if url_util.is_url(image, allowed_schemas=("http", "https", "data")):
-            # If it's a url, return it directly.
-            return image
 
         # Otherwise, try to open it as a file.
         try:
