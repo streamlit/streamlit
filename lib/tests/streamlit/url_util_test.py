@@ -91,6 +91,16 @@ class UrlUtilTest(unittest.TestCase):
             ("mailto:", False),
             ("data:image/svg+xml;base64,PHN2ZyB4aHcvMjAwMC9zdmci", True),
             ("data:application/pdf;base64,PHN2ZyB4aHcvMjAwMC9zdmci", True),
+            ("ftp://example.com/resource", False),  # Unsupported scheme
+            ("https:///path/to/resource", False),  # Missing netloc
+            ("mailto:invalid_email", False),  # Invalid email format
+            ("data:text/plain;base64,", False),  # Valid scheme but missing data
+            (
+                "http://example.com/illegal<characters",
+                False,
+            ),  # URL with illegal characters
+            ("http://127.0.0.1", True),  # IP as domain
+            ("https://[::1]", True),  # IPv6 address in URL
         ]
     )
     def test_is_url(self, url: Any, expected_value: bool):
