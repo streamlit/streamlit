@@ -58,5 +58,5 @@ langchain>=0.0.216; python_version < '3.12'
 # 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
 cx-Oracle<8.0.0; python_version < '3.12'
 # Required for hashing test
-python-dateutil>=2.7.3, <3
-tzlocal>=1.1, <6
+python-dateutil>=2.7.3
+tzlocal>=1.1
