@@ -682,7 +682,7 @@ class ButtonMixin:
                 if label is None:
                     page_link_proto.label = page_name
                 page_link_proto.page_script_hash = page_data["page_script_hash"]
-                page_link_proto.page = full_path
+                page_link_proto.page = full_path.split("/").pop()
                 break
 
         if page_link_proto.page_script_hash == "":
