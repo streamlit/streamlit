@@ -23,7 +23,18 @@ import hashlib
 import os
 import subprocess
 import sys
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, TypeVar, Union
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    TypeVar,
+    Union,
+)
 
 from cachetools import TTLCache
 from typing_extensions import Final
@@ -211,7 +222,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class TimedCleanupCache(TTLCache[K, V]):
+class TimedCleanupCache(TTLCache, Generic[K, V]):
     """A TTLCache that asynchronously expires its entries."""
 
     def __init__(self, *args, **kwargs):
