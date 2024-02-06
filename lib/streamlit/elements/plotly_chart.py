@@ -229,7 +229,7 @@ class PlotlyMixin:
             and on_select != False
             and on_select != ON_SELECTION_IGNORE
         ):
-            return widget_state.value
+            return AttributeDictionary(widget_state.value)
         else:
             return self.dg
 

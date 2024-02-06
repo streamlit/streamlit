@@ -431,7 +431,22 @@ class ArrowAltairMixin:
         )
         if on_selection:
             # TODO(willhuang1997): This seems like a hack so should fix this
-            hash_object = hashlib.sha256(chart.to_json().encode())
+            chart_json = chart.to_json()
+            print(f"{chart_json=}")
+            if "params" not in chart_json:
+                raise StreamlitAPIException(
+                    "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
+                )
+            for param in chart_json["params"]:
+                if (
+                    "name" not in param
+                    or "select" not in param
+                    or "type" not in param["select"]
+                ):
+                    raise StreamlitAPIException(
+                        "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
+                    )
+            hash_object = hashlib.sha256(chart_json.encode())
             hash_hex = f"user_id-{hash_object.hexdigest()}"
             proto.id = hash_hex if key == "" or key == None else key
             arrow_vega_lite._on_selection(proto, on_selection)
@@ -862,7 +877,21 @@ class ArrowAltairMixin:
         if on_selection == ON_SELECTION_IGNORE:
             on_selection = False
         if on_selection:
-            print("IN HERE")
+            # TODO(willhuang1997): This seems like a hack so should fix this
+            chart_json = altair_chart.to_dict()
+            if "params" not in chart_json:
+                raise StreamlitAPIException(
+                    "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
+                )
+            for param in chart_json["params"]:
+                if (
+                    "name" not in param
+                    or "select" not in param
+                    or "type" not in param["select"]
+                ):
+                    raise StreamlitAPIException(
+                        "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
+                    )
             hash_object = hashlib.sha256(altair_chart.to_json().encode())
             hash_hex = f"user_id-{hash_object.hexdigest()}"
             proto.id = hash_hex if key == "" or key == None else key
