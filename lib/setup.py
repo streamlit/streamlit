@@ -33,8 +33,6 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
-    # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
-    "importlib-metadata>=1.4, <8",
     "numpy>=1.19.3, <2",
     "packaging>=16.8, <24",
     # Lowest version with available wheel for 3.7 + amd64 + linux

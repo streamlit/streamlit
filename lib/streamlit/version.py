@@ -14,9 +14,9 @@
 
 """Streamlit version utilities."""
 import random
+from importlib.metadata import version as _version
 
 import packaging.version
-from importlib_metadata import version as _version
 from typing_extensions import Final
 
 import streamlit.logger as logger
