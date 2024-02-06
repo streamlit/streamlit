@@ -216,7 +216,10 @@ class TimedCleanupCache(TTLCache):
 
     def __setitem__(self, key, value):
         if self._task is None:
-            self._task = asyncio.create_task(expire_cache(self))
+            try:
+                self._task = asyncio.create_task(expire_cache(self))
+            except RuntimeError:
+                pass
         super().__setitem__(key, value)
 
 
