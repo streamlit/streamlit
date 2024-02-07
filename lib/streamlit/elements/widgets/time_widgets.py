@@ -67,8 +67,8 @@ ALLOWED_DATE_FORMATS = re.compile(
 )
 
 
-def _adjust_years(input_date: date | datetime, years: int) -> date | datetime:
-    """Add or subtract years from a date or datetime."""
+def _adjust_years(input_date: date, years: int) -> date:
+    """Add or subtract years from a date."""
     try:
         # Attempt to directly add/subtract years
         return input_date.replace(year=input_date.year + years)
