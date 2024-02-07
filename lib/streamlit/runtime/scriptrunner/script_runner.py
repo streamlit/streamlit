@@ -28,6 +28,7 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
@@ -104,6 +105,7 @@ class ScriptRunner:
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: Dict[str, Optional[str]],
+        fragment_storage: FragmentStorage,
     ):
         """Initialize the ScriptRunner.
 
@@ -117,11 +119,17 @@ class ScriptRunner:
         main_script_path
             Path to our main app script.
 
+        session_state
+            The AppSession's SessionState instance.
+
         uploaded_file_mgr
             The File manager to store the data uploaded by the file_uploader widget.
 
         script_cache
             A ScriptCache instance.
+
+        initial_rerun_data
+            RerunData to initialize this ScriptRunner with.
 
         user_info
             A dict that contains information about the current user. For now,
@@ -134,16 +142,18 @@ class ScriptRunner:
             Information about the current user is optionally provided when a
             websocket connection is initialized via the "X-Streamlit-User" header.
 
+        fragment_storage
+            The AppSession's FragmentStorage instance.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
-        self._uploaded_file_mgr = uploaded_file_mgr
-        self._script_cache = script_cache
-        self._user_info = user_info
-
         self._session_state = SafeSessionState(
             session_state, yield_callback=self._maybe_handle_execution_control_request
         )
+        self._uploaded_file_mgr = uploaded_file_mgr
+        self._script_cache = script_cache
+        self._user_info = user_info
+        self._fragment_storage = fragment_storage
 
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)

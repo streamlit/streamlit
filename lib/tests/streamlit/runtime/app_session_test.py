@@ -35,6 +35,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import FragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.script_data import ScriptData
@@ -177,7 +178,15 @@ class AppSessionTest(unittest.TestCase):
 
     def test_creates_session_state_on_init(self):
         session = _create_test_session()
-        self.assertTrue(isinstance(session.session_state, SessionState))
+        self.assertIsInstance(session.session_state, SessionState)
+
+    def test_creates_fragment_storage_on_init(self):
+        session = _create_test_session()
+        # NOTE: We only call assertIsNotNone here because protocols can't be used with
+        # isinstance (there's no need to as the static type checker already ensures
+        # the field has the correct type), and we don't want to mark
+        # MemoryFragmentStorage as @runtime_checkable.
+        self.assertIsNotNone(session._fragment_storage)
 
     def test_clear_cache_resets_session_state(self):
         session = _create_test_session()
@@ -288,6 +297,7 @@ class AppSessionTest(unittest.TestCase):
             script_cache=session._script_cache,
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
+            fragment_storage=session._fragment_storage,
         )
 
         self.assertIsNotNone(session._scriptrunner)
