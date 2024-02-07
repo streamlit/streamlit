@@ -14,13 +14,13 @@
 
 """MediaFileStorage implementation that stores files in memory."""
 
+from __future__ import annotations
+
 import contextlib
 import hashlib
 import mimetypes
 import os.path
-from typing import Dict, List, NamedTuple, Optional, Union
-
-from typing_extensions import Final
+from typing import Dict, Final, List, NamedTuple
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
@@ -42,9 +42,7 @@ PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
 }
 
 
-def _calculate_file_id(
-    data: bytes, mimetype: str, filename: Optional[str] = None
-) -> str:
+def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) -> str:
     """Hash data, mimetype, and an optional filename to generate a stable file ID.
 
     Parameters
@@ -83,7 +81,7 @@ class MemoryFile(NamedTuple):
     content: bytes
     mimetype: str
     kind: MediaFileKind
-    filename: Optional[str]
+    filename: str | None
 
     @property
     def content_size(self) -> int:
@@ -105,10 +103,10 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
 
     def load_and_get_id(
         self,
-        path_or_data: Union[str, bytes],
+        path_or_data: str | bytes,
         mimetype: str,
         kind: MediaFileKind,
-        filename: Optional[str] = None,
+        filename: str | None = None,
     ) -> str:
         """Add a file to the manager and return its ID."""
         file_data: bytes

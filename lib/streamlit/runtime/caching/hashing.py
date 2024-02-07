@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """Hashing for st.cache_data and st.cache_resource."""
+
+from __future__ import annotations
+
 import collections
 import dataclasses
 import datetime
@@ -30,7 +33,7 @@ import unittest.mock
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
+from typing import Any, Callable, Dict, List, Pattern, Type
 
 from streamlit import type_util, util
 from streamlit.errors import StreamlitAPIException
@@ -47,7 +50,7 @@ _PANDAS_SAMPLE_SIZE = 10000
 _NP_SIZE_LARGE = 1000000
 _NP_SAMPLE_SIZE = 100000
 
-HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
+HashFuncsDict = Dict[str | Type[Any], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
@@ -60,7 +63,7 @@ class UserHashError(StreamlitAPIException):
         orig_exc,
         object_to_hash,
         hash_func,
-        cache_type: Optional[CacheType] = None,
+        cache_type: CacheType | None = None,
     ):
         self.alternate_name = type(orig_exc).__name__
         self.hash_func = hash_func
@@ -139,8 +142,8 @@ def update_hash(
     val: Any,
     hasher,
     cache_type: CacheType,
-    hash_source: Optional[Callable[..., Any]] = None,
-    hash_funcs: Optional[HashFuncsDict] = None,
+    hash_source: Callable[..., Any] | None = None,
+    hash_funcs: HashFuncsDict | None = None,
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
 
@@ -169,7 +172,7 @@ class _HashStack:
         self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
         # A function that we decorate with streamlit cache
         # primitive (st.cache_data or st.cache_resource).
-        self.hash_source: Optional[Callable[..., Any]] = None
+        self.hash_source: Callable[..., Any] | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -230,7 +233,7 @@ def _float_to_bytes(f: float) -> bytes:
     return struct.pack("<d", f)
 
 
-def _key(obj: Optional[Any]) -> Any:
+def _key(obj: Any | None) -> Any:
     """Return key for memoization."""
 
     if obj is None:
@@ -268,9 +271,7 @@ def _key(obj: Optional[Any]) -> Any:
 class _CacheFuncHasher:
     """A hasher that can hash objects with cycles."""
 
-    def __init__(
-        self, cache_type: CacheType, hash_funcs: Optional[HashFuncsDict] = None
-    ):
+    def __init__(self, cache_type: CacheType, hash_funcs: HashFuncsDict | None = None):
         # Can't use types as the keys in the internal _hash_funcs because
         # we always remove user-written modules from memory when rerunning a
         # script in order to reload it and grab the latest code changes.

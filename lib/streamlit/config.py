@@ -14,14 +14,15 @@
 
 """Loads the configuration data."""
 
+from __future__ import annotations
+
 import copy
 import os
 import secrets
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Dict, Optional, cast
+from typing import Any, Callable, Dict, cast
 
-import toml
 from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
@@ -49,7 +50,7 @@ _config_lock = threading.RLock()
 _config_options_template: Dict[str, ConfigOption] = OrderedDict()
 
 # Stores the current state of config options.
-_config_options: Optional[Dict[str, ConfigOption]] = None
+_config_options: Dict[str, ConfigOption] | None = None
 
 
 # Indicates that a config option was defined by the user.
@@ -183,14 +184,14 @@ def _create_section(section: str, description: str) -> None:
 
 def _create_option(
     key: str,
-    description: Optional[str] = None,
-    default_val: Optional[Any] = None,
+    description: str | None = None,
+    default_val: Any | None = None,
     scriptable: bool = False,
     visibility: str = "visible",
     deprecated: bool = False,
-    deprecation_text: Optional[str] = None,
-    expiration_date: Optional[str] = None,
-    replaced_by: Optional[str] = None,
+    deprecation_text: str | None = None,
+    expiration_date: str | None = None,
+    replaced_by: str | None = None,
     type_: type = str,
     sensitive: bool = False,
 ) -> ConfigOption:
@@ -707,7 +708,7 @@ _create_option(
 
 
 @_create_option("server.address")
-def _server_address() -> Optional[str]:
+def _server_address() -> str | None:
     """The address where the server will listen for client and browser
     connections. Use this if you want to bind the server to a specific address.
     If set, the server will only be accessible from this address, and not from
@@ -1174,6 +1175,8 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
         Tells the config system where this was set.
 
     """
+    import toml
+
     parsed_config_file = toml.loads(raw_toml)
 
     for section, options in parsed_config_file.items():
@@ -1242,7 +1245,7 @@ CONFIG_FILENAMES = [
 
 
 def get_config_options(
-    force_reparse=False, options_from_flags: Optional[Dict[str, Any]] = None
+    force_reparse=False, options_from_flags: Dict[str, Any] | None = None
 ) -> Dict[str, ConfigOption]:
     """Create and return a dict mapping config option names to their values,
     returning a cached dict if possible.
@@ -1260,7 +1263,7 @@ def get_config_options(
     force_reparse : bool
         Force config files to be parsed so that we pick up any changes to them.
 
-    options_from_flags : Optional[Dict[str, any]
+    options_from_flags : Dict[str, any] or None
         Config options that we received via CLI flag.
 
     Returns

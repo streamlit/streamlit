@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, MutableMapping, Optional
+from __future__ import annotations
+
+from typing import List, MutableMapping
 
 from cachetools import TTLCache
 
@@ -59,7 +61,7 @@ class MemorySessionStorage(SessionStorage):
             maxsize=maxsize, ttl=ttl_seconds
         )
 
-    def get(self, session_id: str) -> Optional[SessionInfo]:
+    def get(self, session_id: str) -> SessionInfo | None:
         return self._cache.get(session_id, None)
 
     def save(self, session_info: SessionInfo) -> None:

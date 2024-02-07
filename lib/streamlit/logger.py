@@ -14,11 +14,11 @@
 
 """Logging module."""
 
+from __future__ import annotations
+
 import logging
 import sys
-from typing import Dict, Union
-
-from typing_extensions import Final
+from typing import Dict, Final
 
 DEFAULT_LOG_MESSAGE: Final = "%(asctime)s %(levelname) -7s " "%(name)s: %(message)s"
 
@@ -29,7 +29,7 @@ _loggers: Dict[str, logging.Logger] = {}
 _global_log_level = logging.INFO
 
 
-def set_log_level(level: Union[str, int]) -> None:
+def set_log_level(level: str | int) -> None:
     """Set log level."""
     logger = get_logger(__name__)
 

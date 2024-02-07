@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import threading
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set
+from typing import Any, Callable, Dict, Iterator, List, Set
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -47,7 +49,7 @@ class SafeSessionState:
         object.__setattr__(self, "_yield_callback", yield_callback)
 
     def register_widget(
-        self, metadata: WidgetMetadata[T], user_key: Optional[str]
+        self, metadata: WidgetMetadata[T], user_key: str | None
     ) -> RegisterWidgetResult[T]:
         self._yield_callback()
         with self._lock:

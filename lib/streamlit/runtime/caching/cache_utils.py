@@ -26,9 +26,7 @@ import types
 from abc import abstractmethod
 from collections import defaultdict
 from datetime import timedelta
-from typing import Any, Callable, overload
-
-from typing_extensions import Literal
+from typing import Any, Callable, Literal, overload
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner

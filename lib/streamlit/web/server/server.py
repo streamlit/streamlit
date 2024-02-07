@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import errno
 import logging
 import os
@@ -19,16 +21,14 @@ import socket
 import ssl
 import sys
 from pathlib import Path
-from typing import Any, Awaitable, List, Optional, Union
+from typing import Any, Awaitable, Final, List
 
-import click
 import tornado.concurrent
 import tornado.locks
 import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
-from typing_extensions import Final
 
 from streamlit import config, file_util, source_util, util
 from streamlit.components.v1.components import ComponentRegistry
@@ -130,8 +130,8 @@ def start_listening(app: tornado.web.Application) -> None:
 
 
 def _get_ssl_options(
-    cert_file: Optional[str], key_file: Optional[str]
-) -> Union[ssl.SSLContext, None]:
+    cert_file: str | None, key_file: str | None
+) -> ssl.SSLContext | None:
     if bool(cert_file) != bool(key_file):
         LOGGER.error(
             "Options 'server.sslCertFile' and 'server.sslKeyFile' must "
@@ -395,6 +395,8 @@ class Server:
         return self._main_script_path == Hello.__file__
 
     def stop(self) -> None:
+        import click
+
         click.secho("  Stopping...", fg="blue")
         self._runtime.stop()
 

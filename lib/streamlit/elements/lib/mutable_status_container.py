@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import time
 from types import TracebackType
-from typing import List, Optional, Type, cast
+from typing import List, Literal, Type, cast
 
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.cursor import Cursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
@@ -158,9 +158,9 @@ class StatusContainer(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> Literal[False]:
         # Only update if the current state is running
         if self._current_state == "running":

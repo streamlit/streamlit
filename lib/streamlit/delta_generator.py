@@ -22,18 +22,16 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Hashable,
     Iterable,
+    Literal,
     NoReturn,
-    Optional,
     Type,
     TypeVar,
     cast,
     overload,
 )
-
-import click
-from typing_extensions import Final, Literal
 
 from streamlit import config, cursor, env_util, logger, runtime, type_util, util
 from streamlit.cursor import Cursor
@@ -130,6 +128,8 @@ def _maybe_print_use_warning() -> None:
     global _use_warning_has_been_displayed
 
     if not _use_warning_has_been_displayed:
+        import click
+
         _use_warning_has_been_displayed = True
 
         warning = click.style("Warning:", bold=True, fg="yellow")
@@ -417,7 +417,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -429,7 +429,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue],
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> None:
@@ -441,7 +441,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Value,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> Value:
@@ -453,7 +453,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -465,7 +465,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -476,7 +476,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Type[NoValue] | Value | None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -659,11 +659,9 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
+        **kwargs: (
+            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+        ),
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 

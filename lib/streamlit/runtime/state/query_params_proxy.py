@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, Iterator, List, MutableMapping, Union
+from __future__ import annotations
+
+from typing import Dict, Iterable, Iterator, List, MutableMapping
 
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.query_params import missing_key_error_message
@@ -47,7 +49,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
             del qp[key]
 
     @gather_metrics("query_params.set_item")
-    def __setitem__(self, key: str, value: Union[str, Iterable[str]]) -> None:
+    def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
@@ -67,7 +69,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
                 raise AttributeError(missing_key_error_message(key))
 
     @gather_metrics("query_params.set_attr")
-    def __setattr__(self, key: str, value: Union[str, Iterable[str]]) -> None:
+    def __setattr__(self, key: str, value: str | Iterable[str]) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 

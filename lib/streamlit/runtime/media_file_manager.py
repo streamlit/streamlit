@@ -14,9 +14,11 @@
 
 """Provides global MediaFileManager object as `media_file_manager`."""
 
+from __future__ import annotations
+
 import collections
 import threading
-from typing import Dict, Optional, Set, Union
+from typing import Dict, Set
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
@@ -136,7 +138,7 @@ class MediaFileManager:
         self._storage.delete_file(file_id)
         del self._file_metadata[file_id]
 
-    def clear_session_refs(self, session_id: Optional[str] = None) -> None:
+    def clear_session_refs(self, session_id: str | None = None) -> None:
         """Remove the given session's file references.
 
         (This does not remove any files from the manager - you must call
@@ -167,10 +169,10 @@ class MediaFileManager:
 
     def add(
         self,
-        path_or_data: Union[bytes, str],
+        path_or_data: bytes | str,
         mimetype: str,
         coordinates: str,
-        file_name: Optional[str] = None,
+        file_name: str | None = None,
         is_for_static_download: bool = False,
     ) -> str:
         """Add a new MediaFile with the given parameters and return its URL.

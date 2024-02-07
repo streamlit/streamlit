@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -28,7 +30,7 @@ class CodeMixin:
     def code(
         self,
         body: SupportsStr,
-        language: Optional[str] = "python",
+        language: str | None = "python",
         line_numbers: bool = False,
     ) -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.

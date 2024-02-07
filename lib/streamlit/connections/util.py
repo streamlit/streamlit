@@ -18,6 +18,7 @@
 # way to configure this at a per-line level :(
 # mypy: no-warn-unused-ignores
 
+from __future__ import annotations
 
 import configparser
 import os

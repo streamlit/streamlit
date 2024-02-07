@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Optional
+from __future__ import annotations
+
+from typing import Dict
 
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
@@ -21,7 +23,7 @@ from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandl
 
 
 @gather_metrics("_get_websocket_headers")
-def _get_websocket_headers() -> Optional[Dict[str, str]]:
+def _get_websocket_headers() -> Dict[str, str] | None:
     """Return a copy of the HTTP request headers for the current session's
     WebSocket connection. If there's no active session, return None instead.
 

@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
 
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.elements.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
@@ -50,7 +52,7 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
-        help: Optional[str] = None,
+        help: str | None = None,
         label_visibility: LabelVisibility = "visible",
     ) -> "DeltaGenerator":
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.

@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -29,7 +31,7 @@ class TextMixin:
         self,
         body: "SupportsStr",
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
     ) -> "DeltaGenerator":
         """Write fixed-width and preformatted text.
 

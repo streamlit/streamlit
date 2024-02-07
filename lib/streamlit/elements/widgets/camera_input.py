@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -41,7 +43,7 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedSnapshotFile = Union[UploadedFile, DeletedFile, None]
+SomeUploadedSnapshotFile = UploadedFile | DeletedFile | None
 
 
 @dataclass
@@ -64,7 +66,7 @@ class CameraInputSerde:
         return state_proto
 
     def deserialize(
-        self, ui_value: Optional[FileUploaderStateProto], widget_id: str
+        self, ui_value: FileUploaderStateProto | None, widget_id: str
     ) -> SomeUploadedSnapshotFile:
         upload_files = _get_upload_files(ui_value)
         if len(upload_files) == 0:
@@ -79,15 +81,15 @@ class CameraInputMixin:
     def camera_input(
         self,
         label: str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[UploadedFile]:
+    ) -> UploadedFile | None:
         r"""Display a widget that returns pictures from the user's webcam.
 
         Parameters
@@ -180,16 +182,16 @@ class CameraInputMixin:
     def _camera_input(
         self,
         label: str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> Optional[UploadedFile]:
+        ctx: ScriptRunContext | None = None,
+    ) -> UploadedFile | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)

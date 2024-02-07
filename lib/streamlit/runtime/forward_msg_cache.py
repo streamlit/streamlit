@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import hashlib
-from typing import TYPE_CHECKING, Dict, List, MutableMapping, Optional
+from typing import TYPE_CHECKING, Dict, List, MutableMapping
 from weakref import WeakKeyDictionary
 
 from streamlit import config, util
@@ -107,7 +109,7 @@ class ForwardMsgCache(CacheStatsProvider):
 
         """
 
-        def __init__(self, msg: Optional[ForwardMsg]):
+        def __init__(self, msg: ForwardMsg | None):
             self.msg = msg
             self._session_script_run_counts: MutableMapping[
                 "AppSession", int
@@ -191,7 +193,7 @@ class ForwardMsgCache(CacheStatsProvider):
             self._entries[msg.hash] = entry
         entry.add_session_ref(session, script_run_count)
 
-    def get_message(self, hash: str) -> Optional[ForwardMsg]:
+    def get_message(self, hash: str) -> ForwardMsg | None:
         """Return the message with the given ID if it exists in the cache.
 
         Parameters

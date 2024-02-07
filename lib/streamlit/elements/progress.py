@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import math
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import TypeAlias
 
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
 
 # Currently, equates to just float, but we can't use `numbers.Real` due to
 # https://github.com/python/mypy/issues/3186
-FloatOrInt: TypeAlias = Union[int, float]
+FloatOrInt: TypeAlias = int | float
 
 
 def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> bool:
@@ -78,7 +80,7 @@ def _get_value(value):
         )
 
 
-def _get_text(text: Optional[str]) -> Optional[str]:
+def _get_text(text: str | None) -> str | None:
     if text is None:
         return None
     if isinstance(text, str):
@@ -90,9 +92,7 @@ def _get_text(text: Optional[str]) -> Optional[str]:
 
 
 class ProgressMixin:
-    def progress(
-        self, value: FloatOrInt, text: Optional[str] = None
-    ) -> "DeltaGenerator":
+    def progress(self, value: FloatOrInt, text: str | None = None) -> "DeltaGenerator":
         r"""Display a progress bar.
 
         Parameters

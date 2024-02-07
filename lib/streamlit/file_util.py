@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import errno
 import fnmatch
@@ -29,7 +31,7 @@ CONFIG_FOLDER_NAME = ".streamlit"
 APP_STATIC_FOLDER_NAME = "static"
 
 
-def get_encoded_file_data(data, encoding="auto"):
+def get_encoded_file_data(data: bytes, encoding: str = "auto"):
     """Coerce bytes to a BytesIO or a StringIO.
 
     Parameters
@@ -116,7 +118,7 @@ def streamlit_write(path, binary=False):
         raise util.Error("\n".join(msg))
 
 
-def get_static_dir():
+def get_static_dir() -> str:
     """Get the folder where static HTML/JS/CSS files live."""
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, "static"))
@@ -150,7 +152,7 @@ def get_project_streamlit_file_path(*filepath):
     return os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, *filepath)
 
 
-def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
+def file_is_in_folder_glob(filepath: str, folderpath_glob: str) -> bool:
     """Test whether a file is in some folder with globbing support.
 
     Parameters
@@ -183,7 +185,7 @@ def get_directory_size(directory: str) -> int:
     return total_size
 
 
-def file_in_pythonpath(filepath) -> bool:
+def file_in_pythonpath(filepath: str) -> bool:
     """Test whether a filepath is in the same folder of a path specified in the PYTHONPATH env variable.
 
 

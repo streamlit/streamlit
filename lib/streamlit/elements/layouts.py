@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Literal, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, List, Literal, Sequence, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
-SpecType = Union[int, Sequence[Union[int, float]]]
+SpecType = int | Sequence[int | float]
 
 
 class LayoutsMixin:
@@ -142,7 +142,7 @@ class LayoutsMixin:
     # TODO: Enforce that columns are not nested or in Sidebar
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: Optional[str] = "small"
+        self, spec: SpecType, *, gap: str | None = "small"
     ) -> List["DeltaGenerator"]:
         """Insert containers laid out as side-by-side columns.
 

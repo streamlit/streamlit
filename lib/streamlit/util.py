@@ -22,9 +22,7 @@ import hashlib
 import os
 import subprocess
 import sys
-from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar, Union
-
-from typing_extensions import Final
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, Set, TypeVar
 
 from streamlit import env_util
 
@@ -39,7 +37,7 @@ HASHLIB_KWARGS: Dict[str, Any] = (
 )
 
 
-def memoize(func):
+def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to memoize the result of a no-args func."""
     result: List[Any] = []
 
@@ -52,7 +50,7 @@ def memoize(func):
     return wrapped_func
 
 
-def open_browser(url):
+def open_browser(url: str) -> None:
     """Open a web browser pointing to a given URL.
 
     We use this function instead of Python's `webbrowser` module because this
@@ -94,13 +92,13 @@ def open_browser(url):
     raise Error('Cannot open browser in platform "%s"' % platform.system())
 
 
-def _open_browser_with_webbrowser(url):
+def _open_browser_with_webbrowser(url: str) -> None:
     import webbrowser
 
     webbrowser.open(url)
 
 
-def _open_browser_with_command(command, url):
+def _open_browser_with_command(command: str, url: str) -> None:
     cmd_line = [command, url]
     with open(os.devnull, "w") as devnull:
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
@@ -169,7 +167,7 @@ class Error(Exception):
     pass
 
 
-def calc_md5(s: Union[bytes, str]) -> str:
+def calc_md5(s: bytes | str) -> str:
     """Return the md5 hash of the given string."""
     h = hashlib.new("md5", **HASHLIB_KWARGS)
 

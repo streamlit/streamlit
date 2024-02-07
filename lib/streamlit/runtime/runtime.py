@@ -19,9 +19,7 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Awaitable, Dict, NamedTuple, Optional, Tuple, Type
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Awaitable, Dict, Final, NamedTuple, Tuple, Type
 
 from streamlit import config
 from streamlit.logger import get_logger
@@ -85,7 +83,7 @@ class RuntimeConfig:
 
     # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
     # longer use this anywhere.
-    command_line: Optional[str]
+    command_line: str | None
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
@@ -141,7 +139,7 @@ class AsyncObjects(NamedTuple):
 
 
 class Runtime:
-    _instance: Optional[Runtime] = None
+    _instance: Runtime | None = None
 
     @classmethod
     def instance(cls) -> Runtime:
@@ -179,11 +177,11 @@ class Runtime:
         Runtime._instance = self
 
         # Will be created when we start.
-        self._async_objs: Optional[AsyncObjects] = None
+        self._async_objs: AsyncObjects | None = None
 
         # The task that runs our main loop. We need to save a reference
         # to it so that it doesn't get garbage collected while running.
-        self._loop_coroutine_task: Optional[asyncio.Task[None]] = None
+        self._loop_coroutine_task: asyncio.Task[None] | None = None
 
         self._main_script_path = config.script_path
         self._is_hello = config.is_hello
@@ -247,7 +245,7 @@ class Runtime:
     # happen to be threadsafe. This may change with future SessionManager implementations,
     # at which point we'll need to formalize our thread safety rules for each
     # SessionManager method.
-    def get_client(self, session_id: str) -> Optional[SessionClient]:
+    def get_client(self, session_id: str) -> SessionClient | None:
         """Get the SessionClient for the given session_id, or None
         if no such session exists.
 
@@ -322,9 +320,9 @@ class Runtime:
     def connect_session(
         self,
         client: SessionClient,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
-        session_id_override: Optional[str] = None,
+        user_info: Dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 
@@ -383,9 +381,9 @@ class Runtime:
     def create_session(
         self,
         client: SessionClient,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
-        session_id_override: Optional[str] = None,
+        user_info: Dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 

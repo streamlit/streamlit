@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import hashlib
 import json
-from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, Dict, Final, Mapping, cast
 
 from streamlit import config
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
@@ -39,7 +39,7 @@ class PydeckMixin:
     @gather_metrics("pydeck_chart")
     def pydeck_chart(
         self,
-        pydeck_obj: Optional["Deck"] = None,
+        pydeck_obj: "Deck" | None = None,
         use_container_width: bool = False,
     ) -> "DeltaGenerator":
         """Draw a chart using the PyDeck library.
@@ -134,7 +134,7 @@ class PydeckMixin:
         return cast("DeltaGenerator", self)
 
 
-def _get_pydeck_tooltip(pydeck_obj: Optional["Deck"]) -> Optional[Dict[str, str]]:
+def _get_pydeck_tooltip(pydeck_obj: "Deck" | None) -> Dict[str, str] | None:
     if pydeck_obj is None:
         return None
 
@@ -154,7 +154,7 @@ def _get_pydeck_tooltip(pydeck_obj: Optional["Deck"]) -> Optional[Dict[str, str]
 
 def marshall(
     pydeck_proto: PydeckProto,
-    pydeck_obj: Optional["Deck"],
+    pydeck_obj: "Deck" | None,
     use_container_width: bool,
 ) -> None:
     if pydeck_obj is None:

@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import random
 from textwrap import dedent
-from typing import TYPE_CHECKING, Mapping, Optional, Union, cast
+from typing import TYPE_CHECKING, Final, Literal, Mapping, cast
 
-from typing_extensions import Final, Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
@@ -35,14 +37,14 @@ GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
 ABOUT_KEY: Final = "about"
 
-PageIcon: TypeAlias = Union[image.AtomicImage, str]
+PageIcon: TypeAlias = image.AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
 InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"]
 _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
 MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
-MenuItems: TypeAlias = Mapping[MenuKey, Optional[str]]
+MenuItems: TypeAlias = Mapping[MenuKey, str | None]
 
 # Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
 # for the term "streamlit". Watch out for zero-width joiners,
@@ -113,11 +115,11 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
 
 @gather_metrics("set_page_config")
 def set_page_config(
-    page_title: Optional[str] = None,
-    page_icon: Optional[PageIcon] = None,
+    page_title: str | None = None,
+    page_icon: PageIcon | None = None,
     layout: Layout = "centered",
     initial_sidebar_state: InitialSideBarState = "auto",
-    menu_items: Optional[MenuItems] = None,
+    menu_items: MenuItems | None = None,
 ) -> None:
     """
     Configures the default settings of the page.

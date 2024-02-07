@@ -14,10 +14,12 @@
 
 """Tools for working with dicts."""
 
-from typing import Any, Dict, Mapping, Optional
+from __future__ import annotations
+
+from typing import Any, Dict, Mapping, Set
 
 
-def _unflatten_single_dict(flat_dict):
+def _unflatten_single_dict(flat_dict: Dict[Any, Any]) -> Dict[Any, Any]:
     """Convert a flat dict of key-value pairs to dict tree.
 
     Example
@@ -58,7 +60,7 @@ def _unflatten_single_dict(flat_dict):
     for pathstr, v in flat_dict.items():
         path = pathstr.split("_")
 
-        prev_dict: Optional[Dict[str, Any]] = None
+        prev_dict: Dict[str, Any] | None = None
         curr_dict = out
 
         for k in path:
@@ -73,7 +75,9 @@ def _unflatten_single_dict(flat_dict):
     return out
 
 
-def unflatten(flat_dict, encodings=None):
+def unflatten(
+    flat_dict: Dict[Any, Any], encodings: Set[str] | None = None
+) -> Dict[Any, Any]:
     """Converts a flat dict of key-value pairs to a spec tree.
 
     Example

@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import os
 import signal
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
-
-import click
 
 from streamlit import (
     config,
@@ -40,20 +40,6 @@ from streamlit.web.server import Server, server_address_is_unix_socket, server_u
 
 LOGGER = get_logger(__name__)
 
-NEW_VERSION_TEXT = """
-  %(new_version)s
-
-  See what's new at https://discuss.streamlit.io/c/announcements
-
-  Enter the following command to upgrade:
-  %(prompt)s %(command)s
-""" % {
-    "new_version": click.style(
-        "A new version of Streamlit is available.", fg="blue", bold=True
-    ),
-    "prompt": click.style("$", fg="blue"),
-    "command": click.style("pip install streamlit --upgrade", bold=True),
-}
 
 # The maximum possible total size of a static directory.
 # We agreed on these limitations for the initial release of static file sharing,
@@ -224,6 +210,23 @@ def _fix_pydantic_duplicate_validators_error():
 
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
+        import click
+
+        NEW_VERSION_TEXT = """
+  %(new_version)s
+
+  See what's new at https://discuss.streamlit.io/c/announcements
+
+  Enter the following command to upgrade:
+  %(prompt)s %(command)s
+""" % {
+            "new_version": click.style(
+                "A new version of Streamlit is available.", fg="blue", bold=True
+            ),
+            "prompt": click.style("$", fg="blue"),
+            "command": click.style("pip install streamlit --upgrade", bold=True),
+        }
+
         click.secho(NEW_VERSION_TEXT)
 
 
@@ -231,6 +234,8 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     """Prints a warning if the static folder is misconfigured."""
 
     if config.get_option("server.enableStaticServing"):
+        import click
+
         static_folder_path = file_util.get_app_static_dir(main_script_path)
         if not os.path.isdir(static_folder_path):
             click.secho(
@@ -253,6 +258,8 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
 
 
 def _print_url(is_running_hello: bool) -> None:
+    import click
+
     if is_running_hello:
         title_message = "Welcome to Streamlit. Check out our demo in your browser."
     else:
@@ -324,6 +331,8 @@ def _maybe_print_old_git_warning(main_script_path: str) -> None:
         and repo.git_version is not None
         and repo.git_version < MIN_GIT_VERSION
     ):
+        import click
+
         git_version_string = ".".join(str(val) for val in repo.git_version)
         min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
         click.secho("")

@@ -14,7 +14,9 @@
 
 """Runtime-related utility functions"""
 
-from typing import Any, Optional
+from __future__ import annotations
+
+from typing import Any
 
 from streamlit import config
 from streamlit.errors import MarkdownFormattedException
@@ -82,7 +84,7 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
-_max_message_size_bytes: Optional[int] = None
+_max_message_size_bytes: int | None = None
 
 
 def get_max_message_size_bytes() -> int:

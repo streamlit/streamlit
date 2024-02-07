@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 
 import tornado.web
@@ -24,7 +26,7 @@ from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 _LOGGER = get_logger(__name__)
 
 
-def allow_cross_origin_requests():
+def allow_cross_origin_requests() -> bool:
     """True if cross-origin requests are allowed.
 
     We only allow cross-origin requests when CORS protection has been disabled
@@ -38,12 +40,14 @@ def allow_cross_origin_requests():
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(self, path, default_filename, get_pages):
+    def initialize(
+        self, path: str, default_filename: str | None, get_pages: callable
+    ) -> None:
         self._pages = get_pages()
 
         super().initialize(path=path, default_filename=default_filename)
 
-    def set_extra_headers(self, path):
+    def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
 
         Other assets like JS and CSS are suffixed with their hash, so they can

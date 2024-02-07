@@ -32,11 +32,14 @@ How these classes work together
   listens to folder events, sees if registered paths changed, and fires
   callbacks if so.
 
+This module is lazy-loaded and used only if watchdog is installed.
 """
+
+from __future__ import annotations
 
 import os
 import threading
-from typing import Callable, Dict, Optional, cast
+from typing import Callable, Dict, cast
 
 from blinker import ANY, Signal
 from watchdog import events
@@ -65,7 +68,7 @@ class EventBasedPathWatcher:
         path: str,
         on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Constructor for EventBasedPathWatchers.
@@ -76,7 +79,7 @@ class EventBasedPathWatcher:
             The path to watch.
         on_changed : Callable[[str], None]
             Callback to call when the path changes.
-        glob_pattern : Optional[str]
+        glob_pattern : str or None
             A glob pattern to filter the files in a directory that should be
             watched. Only relevant when creating an EventBasedPathWatcher on a
             directory.
@@ -109,7 +112,7 @@ class EventBasedPathWatcher:
 class _MultiPathWatcher(object):
     """Watches multiple paths."""
 
-    _singleton: Optional["_MultiPathWatcher"] = None
+    _singleton: "_MultiPathWatcher" | None = None
 
     @classmethod
     def get_singleton(cls) -> "_MultiPathWatcher":
@@ -154,7 +157,7 @@ class _MultiPathWatcher(object):
         path: str,
         callback: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Start watching a path."""
@@ -223,7 +226,7 @@ class WatchedPath(object):
         md5: str,
         modification_time: float,
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ):
         self.md5 = md5
@@ -254,7 +257,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         super(_FolderEventHandler, self).__init__()
         self._watched_paths: Dict[str, WatchedPath] = {}
         self._lock = threading.Lock()  # for watched_paths mutations
-        self.watch: Optional[ObservedWatch] = None
+        self.watch: ObservedWatch | None = None
 
     def __repr__(self) -> str:
         return repr_(self)
@@ -264,7 +267,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         path: str,
         callback: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Add a path to this object's event filter."""

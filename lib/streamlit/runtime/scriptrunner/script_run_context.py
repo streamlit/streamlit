@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import collections
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, List, Optional, Set, Tuple
+from typing import Callable, Counter, Dict, Final, List, Set, Tuple
 from urllib import parse
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
@@ -32,7 +34,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 LOGGER: Final = get_logger(__name__)
 
-UserInfo: TypeAlias = Dict[str, Optional[str]]
+UserInfo: TypeAlias = Dict[str, str | None]
 
 
 # The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
@@ -77,7 +79,7 @@ class ScriptRunContext:
     widget_user_keys_this_run: Set[str] = field(default_factory=set)
     form_ids_this_run: Set[str] = field(default_factory=set)
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
-    script_requests: Optional[ScriptRequests] = None
+    script_requests: ScriptRequests | None = None
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
@@ -153,7 +155,7 @@ SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
 
 
 def add_script_run_ctx(
-    thread: Optional[threading.Thread] = None, ctx: Optional[ScriptRunContext] = None
+    thread: threading.Thread | None = None, ctx: ScriptRunContext | None = None
 ):
     """Adds the current ScriptRunContext to a newly-created thread.
 
@@ -183,7 +185,7 @@ def add_script_run_ctx(
     return thread
 
 
-def get_script_run_ctx(suppress_warning: bool = False) -> Optional[ScriptRunContext]:
+def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | None:
     """
     Parameters
     ----------
@@ -196,9 +198,7 @@ def get_script_run_ctx(suppress_warning: bool = False) -> Optional[ScriptRunCont
 
     """
     thread = threading.current_thread()
-    ctx: Optional[ScriptRunContext] = getattr(
-        thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
-    )
+    ctx: ScriptRunContext | None = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
     if ctx is None and runtime.exists() and not suppress_warning:
         # Only warn about a missing ScriptRunContext if suppress_warning is False, and
         # we were started via `streamlit run`. Otherwise, the user is likely running a

@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -34,7 +36,7 @@ class MarkdownMixin:
         body: SupportsStr,
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
     ) -> "DeltaGenerator":
         r"""Display string formatted as Markdown.
 
@@ -109,7 +111,7 @@ class MarkdownMixin:
     def code(
         self,
         body: SupportsStr,
-        language: Optional[str] = "python",
+        language: str | None = "python",
     ) -> "DeltaGenerator":
         """Display a code block with optional syntax highlighting.
 
@@ -149,7 +151,7 @@ class MarkdownMixin:
         body: SupportsStr,
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
     ) -> "DeltaGenerator":
         """Display text in small font.
 
@@ -210,9 +212,9 @@ class MarkdownMixin:
     @gather_metrics("latex")
     def latex(
         self,
-        body: Union[SupportsStr, "sympy.Expr"],
+        body: SupportsStr | "sympy.Expr",
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
     ) -> "DeltaGenerator":
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.

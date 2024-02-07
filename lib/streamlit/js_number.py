@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import numbers
-from typing import Optional, Union
 
 
 class JSNumberBoundsException(Exception):
@@ -41,7 +42,7 @@ class JSNumber(object):
     MIN_NEGATIVE_VALUE = -MAX_VALUE
 
     @classmethod
-    def validate_int_bounds(cls, value: int, value_name: Optional[str] = None) -> None:
+    def validate_int_bounds(cls, value: int, value_name: str | None = None) -> None:
         """Validate that an int value can be represented with perfect precision
         by a JavaScript Number.
 
@@ -72,9 +73,7 @@ class JSNumber(object):
             )
 
     @classmethod
-    def validate_float_bounds(
-        cls, value: Union[int, float], value_name: Optional[str]
-    ) -> None:
+    def validate_float_bounds(cls, value: int | float, value_name: str | None) -> None:
         """Validate that a float value can be represented by a JavaScript Number.
 
         Parameters

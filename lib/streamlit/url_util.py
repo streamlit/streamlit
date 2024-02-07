@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
-from typing import Literal, Optional, Tuple
+from typing import Literal, Tuple
 from urllib.parse import urlparse
 
 from typing_extensions import TypeAlias
@@ -55,7 +57,7 @@ def process_gitblob_url(url: str) -> str:
     return url
 
 
-def get_hostname(url: str) -> Optional[str]:
+def get_hostname(url: str) -> str | None:
     """Return the hostname of a URL (with or without protocol)."""
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)

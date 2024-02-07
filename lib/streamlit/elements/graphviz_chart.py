@@ -14,10 +14,12 @@
 
 """Streamlit support for GraphViz charts."""
 
-import hashlib
-from typing import TYPE_CHECKING, Union, cast
+from __future__ import annotations
 
-from typing_extensions import Final, TypeAlias
+import hashlib
+from typing import TYPE_CHECKING, Final, Union, cast
+
+from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException

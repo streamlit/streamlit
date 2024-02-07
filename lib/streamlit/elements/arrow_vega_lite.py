@@ -13,12 +13,11 @@
 # limitations under the License.
 
 """A Python wrapper around Vega-Lite."""
+
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
-
-from typing_extensions import Final, Literal
+from typing import TYPE_CHECKING, Any, Dict, Final, Literal, Union, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.elements import arrow
@@ -125,7 +124,7 @@ class ArrowVegaLiteMixin:
 def marshall(
     proto: ArrowVegaLiteChartProto,
     data: Data = None,
-    spec: Optional[Dict[str, Any]] = None,
+    spec: Dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: Union[None, Literal["streamlit"]] = "streamlit",
     **kwargs,
@@ -203,8 +202,8 @@ _CHANNELS = {
     "x2",
     "y2",
     "xError",
-    "yError2",
-    "xError",
+    "xError2",
+    "yError",
     "yError2",
     "longitude",
     "latitude",

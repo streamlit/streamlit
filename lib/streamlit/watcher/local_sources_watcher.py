@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import collections
 import os
 import sys
 import types
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Set
 
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
@@ -210,5 +212,5 @@ def get_module_paths(module: types.ModuleType) -> Set[str]:
     return all_paths
 
 
-def _is_valid_path(path: Optional[str]) -> bool:
+def _is_valid_path(path: str | None) -> bool:
     return isinstance(path, str) and (os.path.isfile(path) or os.path.isdir(path))

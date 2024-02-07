@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
@@ -39,7 +41,7 @@ class ToastMixin:
         self,
         body: SupportsStr,
         *,  # keyword-only args:
-        icon: Optional[str] = None,
+        icon: str | None = None,
     ) -> "DeltaGenerator":
         """Display a short message, known as a notification "toast".
         The toast appears in the app's bottom-right corner and disappears after four seconds.

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import inspect
 import os
@@ -22,9 +24,7 @@ import uuid
 from collections.abc import Sized
 from functools import wraps
 from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast, overload
-
-from typing_extensions import Final
+from typing import Any, Callable, Final, List, Set, TypeVar, cast, overload
 
 from streamlit import config, util
 from streamlit.logger import get_logger
@@ -173,7 +173,7 @@ def _get_machine_id_v3() -> str:
 
 class Installation:
     _instance_lock = threading.Lock()
-    _instance: Optional["Installation"] = None
+    _instance: "Installation" | None = None
 
     @classmethod
     def instance(cls) -> "Installation":
@@ -228,7 +228,7 @@ def _get_top_level_module(func: Callable[..., Any]) -> str:
     return module.__name__.split(".")[0]
 
 
-def _get_arg_metadata(arg: object) -> Optional[str]:
+def _get_arg_metadata(arg: object) -> str | None:
     """Get metadata information related to the value of the given object."""
     with contextlib.suppress(Exception):
         if isinstance(arg, (bool)):
@@ -245,7 +245,7 @@ def _get_command_telemetry(
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
     arg_keywords = inspect.getfullargspec(_command_func).args
-    self_arg: Optional[Any] = None
+    self_arg: Any | None = None
     arguments: List[Argument] = []
     is_method = inspect.ismethod(_command_func)
     name = _command_name
@@ -315,7 +315,7 @@ def gather_metrics(
     ...
 
 
-def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F], F]:
+def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
     """Function decorator to add telemetry tracking to commands.
 
     Parameters
@@ -351,7 +351,7 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
 
         return wrapper
     else:
-        # To make mypy type narrow Optional[F] -> F
+        # To make mypy type narrow F | None -> F
         non_optional_func = func
 
     @wraps(non_optional_func)
@@ -371,8 +371,7 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
-        deferred_exception: Optional[RerunException] = None
-        command_telemetry: Optional[Command] = None
+        command_telemetry: Command | None = None
 
         if ctx and tracking_activated:
             try:
@@ -424,7 +423,7 @@ def create_page_profile_message(
     commands: List[Command],
     exec_time: int,
     prep_time: int,
-    uncaught_exception: Optional[str] = None,
+    uncaught_exception: str | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
     msg = ForwardMsg()

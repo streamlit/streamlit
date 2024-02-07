@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Type, Union
+from __future__ import annotations
 
-import click
+from typing import Callable, Type, Union
 
 import streamlit.watcher
 from streamlit import config, env_util
@@ -50,7 +50,7 @@ class NoOpPathWatcher:
         _path_str: str,
         _on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ):
         pass
@@ -71,6 +71,8 @@ def report_watchdog_availability():
         if not config.get_option("global.disableWatchdogWarning") and config.get_option(
             "server.fileWatcherType"
         ) not in ["poll", "none"]:
+            import click
+
             msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
             click.secho(
@@ -89,9 +91,9 @@ def report_watchdog_availability():
 def _watch_path(
     path: str,
     on_path_changed: Callable[[str], None],
-    watcher_type: Optional[str] = None,
+    watcher_type: str | None = None,
     *,  # keyword-only arguments:
-    glob_pattern: Optional[str] = None,
+    glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> bool:
     """Create a PathWatcher for the given path if we have a viable
@@ -139,7 +141,7 @@ def _watch_path(
 def watch_file(
     path: str,
     on_file_changed: Callable[[str], None],
-    watcher_type: Optional[str] = None,
+    watcher_type: str | None = None,
 ) -> bool:
     return _watch_path(path, on_file_changed, watcher_type)
 
@@ -147,9 +149,9 @@ def watch_file(
 def watch_dir(
     path: str,
     on_dir_changed: Callable[[str], None],
-    watcher_type: Optional[str] = None,
+    watcher_type: str | None = None,
     *,  # keyword-only arguments:
-    glob_pattern: Optional[str] = None,
+    glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> bool:
     return _watch_path(

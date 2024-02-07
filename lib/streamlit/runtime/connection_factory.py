@@ -18,9 +18,7 @@ import importlib
 import os
 import re
 from datetime import timedelta
-from typing import Any, Dict, Type, TypeVar, overload
-
-from typing_extensions import Final, Literal
+from typing import Any, Dict, Final, Literal, Type, TypeVar, overload
 
 from streamlit.connections import (
     BaseConnection,

@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from typing import TYPE_CHECKING, Optional, Union, cast
+from __future__ import annotations
 
-from typing_extensions import Literal
+from enum import Enum
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
@@ -33,8 +33,8 @@ class HeadingProtoTag(Enum):
     SUBHEADER_TAG = "h3"
 
 
-Anchor = Optional[Union[str, Literal[False]]]
-Divider = Optional[Union[bool, str]]
+Anchor = str | Literal[False] | None
+Divider = bool | str | None
 
 
 class HeadingMixin:
@@ -44,7 +44,7 @@ class HeadingMixin:
         body: SupportsStr,
         anchor: Anchor = None,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
         divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in header formatting.
@@ -114,7 +114,7 @@ class HeadingMixin:
         body: SupportsStr,
         anchor: Anchor = None,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
         divider: Divider = False,
     ) -> "DeltaGenerator":
         """Display text in subheader formatting.
@@ -184,7 +184,7 @@ class HeadingMixin:
         body: SupportsStr,
         anchor: Anchor = None,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
     ) -> "DeltaGenerator":
         """Display text in title formatting.
 
@@ -244,7 +244,7 @@ class HeadingMixin:
         return cast("DeltaGenerator", self)
 
     @staticmethod
-    def _handle_divider_color(divider):
+    def _handle_divider_color(divider: Divider) -> str:
         if divider is True:
             return "auto"
         valid_colors = [
@@ -269,7 +269,7 @@ class HeadingMixin:
         tag: HeadingProtoTag,
         body: SupportsStr,
         anchor: Anchor = None,
-        help: Optional[str] = None,
+        help: str | None = None,
         divider: Divider = False,
     ) -> HeadingProto:
         proto = HeadingProto()

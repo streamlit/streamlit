@@ -14,17 +14,19 @@
 
 """Manage the user's Streamlit credentials."""
 
+from __future__ import annotations
+
 import json
 import os
 import sys
 import textwrap
 from collections import namedtuple
 from datetime import datetime
-from typing import Optional
+from typing import NoReturn
 from uuid import uuid4
 
+# TODO(lukasmasuch): Lazy-load click dependency
 import click
-import toml
 
 from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
@@ -152,7 +154,7 @@ def _send_email(email: str) -> None:
 class Credentials(object):
     """Credentials class."""
 
-    _singleton: Optional["Credentials"] = None
+    _singleton: "Credentials" | None = None
 
     @classmethod
     def get_current(cls):
@@ -177,11 +179,13 @@ class Credentials(object):
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def load(self, auto_resolve=False) -> None:
+    def load(self, auto_resolve: bool = False) -> None:
         """Load from toml file."""
         if self.activation is not None:
             LOGGER.error("Credentials already loaded. Not rereading file.")
             return
+
+        import toml
 
         try:
             with open(self._conf_file, "r") as f:
@@ -211,7 +215,7 @@ class Credentials(object):
                 % (self._conf_file)
             )
 
-    def _check_activated(self, auto_resolve=True):
+    def _check_activated(self, auto_resolve: bool = True) -> None:
         """Check if streamlit is activated.
 
         Used by `streamlit run script.py`
@@ -225,7 +229,7 @@ class Credentials(object):
             _exit("Activation email not valid.")
 
     @classmethod
-    def reset(cls):
+    def reset(cls) -> None:
         """Reset credentials by removing file.
 
         This is used by `streamlit activate reset` in case a user wants
@@ -239,7 +243,7 @@ class Credentials(object):
         except OSError as e:
             LOGGER.error("Error removing credentials file: %s" % e)
 
-    def save(self):
+    def save(self) -> None:
         """Save to toml file and send email."""
         from requests.exceptions import RequestException
 
@@ -251,6 +255,9 @@ class Credentials(object):
 
         # Write the file
         data = {"email": self.activation.email}
+
+        import toml
+
         with open(self._conf_file, "w") as f:
             toml.dump({"general": data}, f)
 
@@ -329,21 +336,21 @@ def _verify_email(email: str) -> _Activation:
     return _Activation(email, True)
 
 
-def _exit(message):  # pragma: nocover
+def _exit(message: str) -> NoReturn:
     """Exit program with error."""
     LOGGER.error(message)
     sys.exit(-1)
 
 
-def _get_credential_file_path():
+def _get_credential_file_path() -> str:
     return file_util.get_streamlit_file_path("credentials.toml")
 
 
-def _check_credential_file_exists():
+def _check_credential_file_exists() -> bool:
     return os.path.exists(_get_credential_file_path())
 
 
-def check_credentials():
+def check_credentials() -> None:
     """Check credentials and potentially activate.
 
     Note

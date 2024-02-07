@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from numbers import Integral, Real
@@ -19,8 +21,8 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     List,
-    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -28,7 +30,7 @@ from typing import (
     cast,
 )
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -119,7 +121,7 @@ def _datetime_to_micros(dt: datetime) -> int:
     return _delta_to_micros(utc_dt - UTC_EPOCH)
 
 
-def _micros_to_datetime(micros: int, orig_tz: Optional[tzinfo]) -> datetime:
+def _micros_to_datetime(micros: int, orig_tz: tzinfo | None) -> datetime:
     """Restore times/datetimes to original timezone (dates are always naive)"""
     utc_dt = UTC_EPOCH + timedelta(microseconds=micros)
     # Add the original timezone. No conversion is required here,
@@ -132,9 +134,9 @@ class SliderSerde:
     value: List[float]
     data_type: int
     single_value: bool
-    orig_tz: Optional[tzinfo]
+    orig_tz: tzinfo | None
 
-    def deserialize(self, ui_value: Optional[List[float]], widget_id: str = ""):
+    def deserialize(self, ui_value: List[float] | None, widget_id: str = ""):
         if ui_value is not None:
             val: Any = ui_value
         else:
@@ -174,16 +176,16 @@ class SliderMixin:
     def slider(
         self,
         label: str,
-        min_value: Optional[SliderScalar] = None,
-        max_value: Optional[SliderScalar] = None,
-        value: Optional[SliderValue] = None,
-        step: Optional[Step] = None,
-        format: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        min_value: SliderScalar | None = None,
+        max_value: SliderScalar | None = None,
+        value: SliderValue | None = None,
+        step: Step | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -359,17 +361,17 @@ class SliderMixin:
         min_value=None,
         max_value=None,
         value=None,
-        step: Optional[Step] = None,
-        format: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        step: Step | None = None,
+        format: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> SliderReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)

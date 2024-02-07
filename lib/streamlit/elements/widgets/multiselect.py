@@ -12,20 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    List,
-    Optional,
-    Sequence,
-    Union,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, List, Sequence, cast, overload
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -65,20 +56,20 @@ if TYPE_CHECKING:
 @overload
 def _check_and_convert_to_indices(  # type: ignore[misc]
     opt: Sequence[Any], default_values: None
-) -> Optional[List[int]]:
+) -> List[int] | None:
     ...
 
 
 @overload
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Sequence[Any], Any]
+    opt: Sequence[Any], default_values: Sequence[Any] | Any
 ) -> List[int]:
     ...
 
 
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Sequence[Any], Any, None]
-) -> Optional[List[int]]:
+    opt: Sequence[Any], default_values: Sequence[Any] | Any | None
+) -> List[int] | None:
     """Perform validation checks and return indices based on the default values."""
     if default_values is None and None not in opt:
         return None
@@ -105,7 +96,7 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def _get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
+def _get_default_count(default: Sequence[Any] | Any | None) -> int:
     if default is None:
         return 0
     if not is_iterable(default):
@@ -135,7 +126,7 @@ class MultiSelectSerde(Generic[T]):
 
     def deserialize(
         self,
-        ui_value: Optional[List[int]],
+        ui_value: List[int] | None,
         widget_id: str = "",
     ) -> List[T]:
         current_value: List[int] = (
@@ -150,15 +141,15 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        default: Optional[Any] = None,
+        default: Any | None = None,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        max_selections: Optional[int] = None,
+        max_selections: int | None = None,
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -276,19 +267,19 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        default: Union[Sequence[Any], Any, None] = None,
+        default: Sequence[Any] | Any | None = None,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        max_selections: Optional[int] = None,
+        max_selections: int | None = None,
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> List[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)

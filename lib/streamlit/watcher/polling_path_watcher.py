@@ -14,9 +14,11 @@
 
 """A class that watches a given path via polling."""
 
+from __future__ import annotations
+
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, Optional
+from typing import Callable
 
 from streamlit.logger import get_logger
 from streamlit.util import repr_
@@ -48,7 +50,7 @@ class PollingPathWatcher:
         path: str,
         on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Constructor.

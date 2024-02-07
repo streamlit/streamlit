@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 import traceback
-from typing import TYPE_CHECKING, List, Optional, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Final, List, cast
 
 import streamlit
 from streamlit.errors import (
@@ -213,7 +213,7 @@ def _get_stack_trace_str_list(
         The exception traceback as a list of strings
 
     """
-    extracted_traceback: Optional[traceback.StackSummary] = None
+    extracted_traceback: traceback.StackSummary | None = None
     if isinstance(exception, StreamlitAPIWarning):
         extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):

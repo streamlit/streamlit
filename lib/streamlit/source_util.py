@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Dict, Tuple, cast
 
 from blinker import Signal
 
@@ -26,7 +28,7 @@ from streamlit.util import calc_md5
 LOGGER = get_logger(__name__)
 
 
-def open_python_file(filename):
+def open_python_file(filename: str):
     """Open a read-only Python file taking proper care of its encoding.
 
     In Python 3, we would like all files to be opened with utf-8 encoding.
@@ -89,11 +91,11 @@ def page_icon_and_name(script_path: Path) -> Tuple[str, str]:
 
 
 _pages_cache_lock = threading.RLock()
-_cached_pages: Optional[Dict[str, Dict[str, str]]] = None
+_cached_pages: Dict[str, Dict[str, str]] | None = None
 _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 
 
-def invalidate_pages_cache():
+def invalidate_pages_cache() -> None:
     global _cached_pages
 
     LOGGER.debug("Pages directory changed")
@@ -162,7 +164,7 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
 
 def register_pages_changed_callback(
     callback: Callable[[str], None],
-):
+) -> Callable[[], None]:
     def disconnect():
         _on_pages_changed.disconnect(callback)
 

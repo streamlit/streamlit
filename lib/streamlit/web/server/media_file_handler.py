@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from __future__ import annotations
+
 from urllib.parse import quote
 
 import tornado.web
@@ -112,7 +113,7 @@ class MediaFileHandler(tornado.web.StaticFileHandler):
 
     @classmethod
     def get_content(
-        cls, abspath: str, start: Optional[int] = None, end: Optional[int] = None
+        cls, abspath: str, start: int | None = None, end: int | None = None
     ):
         _LOGGER.debug("MediaFileHandler: GET %s", abspath)
 

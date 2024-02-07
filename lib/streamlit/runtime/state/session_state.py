@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -20,15 +21,15 @@ from dataclasses import dataclass, field, replace
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Iterator,
     KeysView,
     List,
     MutableMapping,
-    Union,
     cast,
 )
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import config, util
@@ -71,7 +72,7 @@ class Value:
     value: Any
 
 
-WState: TypeAlias = Union[Value, Serialized]
+WState: TypeAlias = Value | Serialized
 
 
 @dataclass

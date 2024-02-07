@@ -23,19 +23,18 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Literal,
     Mapping,
-    Optional,
     Set,
     Tuple,
+    TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
-import pandas as pd
-import pyarrow as pa
-from typing_extensions import Literal, TypeAlias, TypedDict
+from typing_extensions import TypeAlias
 
 from streamlit import logger as _logger
 from streamlit import type_util
@@ -72,6 +71,8 @@ from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
@@ -99,11 +100,11 @@ EditableData = TypeVar(
 
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
-    pd.DataFrame,
-    pd.Series,
-    pd.Index,
+    "pd.DataFrame",
+    "pd.Series",
+    "pd.Index",
     "Styler",
-    pa.Table,
+    "pa.Table",
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
     List[Any],
@@ -137,7 +138,7 @@ class EditingState(TypedDict, total=False):
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> EditingState:
         data_editor_state: EditingState = (
             {
                 "edited_rows": {},
@@ -190,6 +191,8 @@ def _parse_value(
     """
     if value is None:
         return None
+
+    import pandas as pd
 
     try:
         if column_data_kind == ColumnDataKind.STRING:
@@ -294,6 +297,8 @@ def _apply_row_additions(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
+    import pandas as pd
+
     if not added_rows:
         return
 
@@ -392,6 +397,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     bool
         True if the index is supported, False otherwise.
     """
+    import pandas as pd
 
     return (
         type(df_index)
@@ -765,6 +771,7 @@ class DataEditorMixin:
            height: 350px
 
         """
+        import pyarrow as pa
 
         key = to_key(key)
         check_callback_rules(self.dg, on_change)

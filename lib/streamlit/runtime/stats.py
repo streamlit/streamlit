@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
 import itertools
 from abc import abstractmethod
-from typing import List, NamedTuple
-
-from typing_extensions import Protocol, runtime_checkable
+from typing import List, NamedTuple, Protocol, runtime_checkable
 
 from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
 

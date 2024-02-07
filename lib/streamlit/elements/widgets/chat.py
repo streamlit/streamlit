@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Tuple, cast
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Literal, Tuple, cast
 
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
@@ -102,7 +101,7 @@ def _process_avatar_input(
 @dataclass
 class ChatInputSerde:
     def deserialize(
-        self, ui_value: Optional[StringTriggerValueProto], widget_id: str = ""
+        self, ui_value: StringTriggerValueProto | None, widget_id: str = ""
     ) -> str | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None

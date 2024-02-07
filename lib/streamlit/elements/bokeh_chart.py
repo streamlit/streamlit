@@ -14,11 +14,11 @@
 
 """A Python wrapper around Bokeh."""
 
+from __future__ import annotations
+
 import hashlib
 import json
-from typing import TYPE_CHECKING, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto

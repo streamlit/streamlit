@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import cast, overload
-
-from typing_extensions import Literal
+from typing import Literal, cast, overload
 
 import streamlit
 from streamlit.elements.form import current_form_id

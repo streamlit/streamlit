@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Iterator, MutableMapping
+from __future__ import annotations
 
-from typing_extensions import Final
+from typing import Any, Dict, Final, Iterator, MutableMapping
 
 from streamlit import logger as _logger
 from streamlit import runtime

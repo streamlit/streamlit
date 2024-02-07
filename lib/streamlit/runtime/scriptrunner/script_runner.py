@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import gc
 import sys
 import threading
@@ -19,7 +21,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict
 
 from blinker import Signal
 
@@ -103,7 +105,7 @@ class ScriptRunner:
         uploaded_file_mgr: UploadedFileManager,
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
-        user_info: Dict[str, Optional[str]],
+        user_info: Dict[str, str | None],
     ):
         """Initialize the ScriptRunner.
 
@@ -181,7 +183,7 @@ class ScriptRunner:
         self._execing = False
 
         # This is initialized in start()
-        self._script_thread: Optional[threading.Thread] = None
+        self._script_thread: threading.Thread | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -492,7 +494,7 @@ class ScriptRunner:
 
         # This will be set to a RerunData instance if our execution
         # is interrupted by a RerunException.
-        rerun_exception_data: Optional[RerunData] = None
+        rerun_exception_data: RerunData | None = None
 
         # If the script stops early, we don't want to remove unseen widgets,
         # so we track this to potentially skip session state cleanup later.

@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import datetime
-from typing import Iterable, List, Union
+from typing import Iterable, List, Literal, TypedDict
 
-from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
+from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -167,22 +167,22 @@ class ColumnConfig(TypedDict, total=False):
     required: bool | None
     default: str | bool | int | float | None
     alignment: Literal["left", "center", "right"] | None
-    type_config: Union[
-        NumberColumnConfig,
-        TextColumnConfig,
-        CheckboxColumnConfig,
-        SelectboxColumnConfig,
-        LinkColumnConfig,
-        ListColumnConfig,
-        DatetimeColumnConfig,
-        DateColumnConfig,
-        TimeColumnConfig,
-        ProgressColumnConfig,
-        LineChartColumnConfig,
-        BarChartColumnConfig,
-        ImageColumnConfig,
-        None,
-    ]
+    type_config: (
+        NumberColumnConfig
+        | TextColumnConfig
+        | CheckboxColumnConfig
+        | SelectboxColumnConfig
+        | LinkColumnConfig
+        | ListColumnConfig
+        | DatetimeColumnConfig
+        | DateColumnConfig
+        | TimeColumnConfig
+        | ProgressColumnConfig
+        | LineChartColumnConfig
+        | BarChartColumnConfig
+        | ImageColumnConfig
+        | None
+    )
 
 
 @gather_metrics("column_config.Column")

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import mimetypes
 import os
 
@@ -63,7 +65,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
         self.set_extra_headers(path)
 
-    def set_extra_headers(self, path) -> None:
+    def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
@@ -86,7 +88,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     @staticmethod
-    def get_content_type(abspath) -> str:
+    def get_content_type(abspath: str) -> str:
         """Returns the ``Content-Type`` header to be used for this request.
         From tornado.web.StaticFileHandler.
         """

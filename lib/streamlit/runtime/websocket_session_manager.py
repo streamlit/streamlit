@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, List, Optional, cast
+from __future__ import annotations
 
-from typing_extensions import Final
+from typing import Callable, Dict, Final, List, cast
 
 from streamlit.logger import get_logger
 from streamlit.runtime.app_session import AppSession
@@ -48,7 +48,7 @@ class WebsocketSessionManager(SessionManager):
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
-        message_enqueued_callback: Optional[Callable[[], None]],
+        message_enqueued_callback: Callable[[], None] | None,
     ) -> None:
         self._session_storage = session_storage
         self._uploaded_file_mgr = uploaded_file_manager
@@ -62,9 +62,9 @@ class WebsocketSessionManager(SessionManager):
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
-        session_id_override: Optional[str] = None,
+        user_info: Dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         assert not (
             existing_session_id and session_id_override
@@ -133,7 +133,7 @@ class WebsocketSessionManager(SessionManager):
             )
             del self._active_session_info_by_id[session_id]
 
-    def get_active_session_info(self, session_id: str) -> Optional[ActiveSessionInfo]:
+    def get_active_session_info(self, session_id: str) -> ActiveSessionInfo | None:
         return self._active_session_info_by_id.get(session_id)
 
     def is_active_session(self, session_id: str) -> bool:
@@ -154,7 +154,7 @@ class WebsocketSessionManager(SessionManager):
             self._session_storage.delete(session_id)
             session_info.session.shutdown()
 
-    def get_session_info(self, session_id: str) -> Optional[SessionInfo]:
+    def get_session_info(self, session_id: str) -> SessionInfo | None:
         session_info = self.get_active_session_info(session_id)
         if session_info:
             return cast(SessionInfo, session_info)

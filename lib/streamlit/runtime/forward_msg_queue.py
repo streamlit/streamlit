@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Any, Dict, List, Tuple
 
 from streamlit.logger import get_logger
 from streamlit.proto.Delta_pb2 import Delta
@@ -107,7 +109,7 @@ def _is_composable_message(msg: ForwardMsg) -> bool:
     return delta_type != "add_rows" and delta_type != "arrow_add_rows"
 
 
-def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Optional[Delta]:
+def _maybe_compose_deltas(old_delta: Delta, new_delta: Delta) -> Delta | None:
     """Combines new_delta onto old_delta if possible.
 
     If the combination takes place, the function returns a new Delta that

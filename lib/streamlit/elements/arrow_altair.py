@@ -21,9 +21,17 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Collection, Dict, List, Sequence, Tuple, cast
-
-from typing_extensions import Literal
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Collection,
+    Dict,
+    List,
+    Literal,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util

@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Any, List, Tuple
 
 from streamlit import util
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -28,8 +30,8 @@ def make_delta_path(
 
 
 def get_container_cursor(
-    root_container: Optional[int],
-) -> Optional["RunningCursor"]:
+    root_container: int | None,
+) -> "RunningCursor" | None:
     """Return the top-level RunningCursor for the given container.
     This is the cursor that is used when user code calls something like
     `st.foo` (which uses the main container) or `st.sidebar.foo` (which uses

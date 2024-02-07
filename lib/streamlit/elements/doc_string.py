@@ -14,14 +14,14 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+from __future__ import annotations
+
 import ast
 import contextlib
 import inspect
 import re
 import types
-from typing import TYPE_CHECKING, Any, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
 from streamlit.logger import get_logger
@@ -151,7 +151,7 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
     doc_string_proto.members.extend(_get_members(obj))
 
 
-def _get_name(obj):
+def _get_name(obj: Any) -> str | None:
     # Try to get the fully-qualified name of the object.
     # For example:
     #   st.help(bar.Baz(123))
@@ -206,7 +206,7 @@ def _get_signature(obj):
     return sig
 
 
-def _get_docstring(obj):
+def _get_docstring(obj: Any) -> str | None:
     doc_string = inspect.getdoc(obj)
 
     # Sometimes an object has no docstring, but the object's type does.
@@ -230,7 +230,7 @@ def _get_docstring(obj):
     return None
 
 
-def _get_variable_name():
+def _get_variable_name() -> str | None:
     """Try to get the name of the variable in the current line, as set by the user.
 
     For example:
@@ -247,7 +247,7 @@ def _get_variable_name():
     return _get_variable_name_from_code_str(code)
 
 
-def _get_variable_name_from_code_str(code):
+def _get_variable_name_from_code_str(code: str) -> str | None:
     tree = ast.parse(code)
 
     # Example:
@@ -329,7 +329,7 @@ def _get_variable_name_from_code_str(code):
 _NEWLINES = re.compile(r"[\n\r]+")
 
 
-def _get_current_line_of_code_as_str():
+def _get_current_line_of_code_as_str() -> str | None:
     scriptrunner_frame = _get_scriptrunner_frame()
 
     if scriptrunner_frame is None:
@@ -402,14 +402,14 @@ def _get_stcommand_arg(tree):
     return None
 
 
-def _get_type_as_str(obj):
+def _get_type_as_str(obj: Any) -> str:
     if inspect.isclass(obj):
         return "class"
 
     return str(type(obj).__name__)
 
 
-def _get_first_line(text):
+def _get_first_line(text: str) -> str:
     if not text:
         return ""
 
@@ -417,7 +417,7 @@ def _get_first_line(text):
     return left
 
 
-def _get_weight(value):
+def _get_weight(value: Any) -> int:
     if inspect.ismodule(value):
         return 3
     if inspect.isclass(value):
@@ -427,7 +427,7 @@ def _get_weight(value):
     return 0
 
 
-def _get_value(obj, var_name):
+def _get_value(obj, var_name: str) -> Any:
     obj_value = _get_human_readable_value(obj)
 
     if obj_value is not None:
@@ -462,7 +462,7 @@ def _get_value(obj, var_name):
     return obj_value
 
 
-def _get_human_readable_value(value):
+def _get_human_readable_value(value: Any) -> str | None:
     if isinstance(value, Secrets):
         # Don't want to read secrets.toml because that will show a warning if there's no
         # secrets.toml file.
@@ -485,12 +485,12 @@ def _get_human_readable_value(value):
     return _shorten(value_str)
 
 
-def _shorten(s, length=300):
+def _shorten(s: str, length: int = 300) -> str:
     s = s.strip()
     return s[:length] + "..." if len(s) > length else s
 
 
-def _is_computed_property(obj, attr_name):
+def _is_computed_property(obj, attr_name: str) -> bool:
     obj_class = getattr(obj, "__class__", None)
 
     if not obj_class:
@@ -511,7 +511,7 @@ def _is_computed_property(obj, attr_name):
     return False
 
 
-def _get_members(obj):
+def _get_members(obj) -> list:
     members_for_sorting = []
 
     for attr_name in dir(obj):

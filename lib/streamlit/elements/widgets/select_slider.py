@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import (
@@ -20,7 +22,6 @@ from typing import (
     Callable,
     Generic,
     List,
-    Optional,
     Sequence,
     Tuple,
     Union,
@@ -79,7 +80,7 @@ class SelectSliderSerde(Generic[T]):
 
     def deserialize(
         self,
-        ui_value: Optional[List[int]],
+        ui_value: List[int] | None,
         widget_id: str = "",
     ) -> Union[T, Tuple[T, T]]:
         if not ui_value:
@@ -114,11 +115,11 @@ class SelectSliderMixin:
         options: OptionSequence[T] = (),
         value: object = None,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -251,14 +252,14 @@ class SelectSliderMixin:
         options: OptionSequence[T] = (),
         value: object = None,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> Union[T, Tuple[T, T]]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
