@@ -35,7 +35,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import FragmentStorage
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.script_data import ScriptData
@@ -639,6 +639,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
         )
         add_script_run_ctx(ctx=ctx)
 

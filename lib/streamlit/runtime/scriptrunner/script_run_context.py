@@ -16,7 +16,7 @@ import collections
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Callable, Counter, Dict, List, Optional, Set, Tuple
 from urllib import parse
 
 from typing_extensions import Final, TypeAlias
@@ -29,6 +29,9 @@ from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+if TYPE_CHECKING:
+    from streamlit.runtime.fragment import FragmentStorage
 
 LOGGER: Final = get_logger(__name__)
 
@@ -66,6 +69,7 @@ class ScriptRunContext:
     main_script_path: str
     page_script_hash: str
     user_info: UserInfo
+    fragment_storage: "FragmentStorage"
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False

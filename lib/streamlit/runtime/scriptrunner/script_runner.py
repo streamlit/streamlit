@@ -19,7 +19,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import Callable, Dict, Optional
+from typing import TYPE_CHECKING, Callable, Dict, Optional
 
 from blinker import Signal
 
@@ -28,7 +28,6 @@ from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_requests import (
     RerunData,
@@ -47,6 +46,9 @@ from streamlit.runtime.state import (
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
+
+if TYPE_CHECKING:
+    from streamlit.runtime.fragment import FragmentStorage
 
 _LOGGER = get_logger(__name__)
 
@@ -105,7 +107,7 @@ class ScriptRunner:
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: Dict[str, Optional[str]],
-        fragment_storage: FragmentStorage,
+        fragment_storage: "FragmentStorage",
     ):
         """Initialize the ScriptRunner.
 
@@ -285,6 +287,7 @@ class ScriptRunner:
             page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
+            fragment_storage=self._fragment_storage,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
