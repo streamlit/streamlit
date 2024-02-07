@@ -403,16 +403,20 @@ def process_subtitle_data(
     else:
         raise RuntimeError(f"Invalid binary data format for subtitle: {type(data)}.")
 
-    # Save the processed data and return the file URL
-    file_url = runtime.get_instance().media_file_mgr.add(
-        path_or_data=data_or_filename,
-        mimetype=mimetype,
-        coordinates=coordinates,
-        file_name=f"{coordinates}.vtt",
-    )
-    caching.save_media_data(data_or_filename, mimetype, coordinates)
+    if runtime.exists():
+        # Save the processed data and return the file URL
+        file_url = runtime.get_instance().media_file_mgr.add(
+            path_or_data=data_or_filename,
+            mimetype=mimetype,
+            coordinates=coordinates,
+            file_name=f"{coordinates}.vtt",
+        )
+        caching.save_media_data(data_or_filename, mimetype, coordinates)
 
-    return file_url
+        return file_url
+    else:
+        # When running in "raw mode", we can't access the MediaFileManager.
+        return ""
 
 
 def marshall_video(
@@ -485,7 +489,8 @@ def marshall_video(
             subtitle_items.extend(subtitles.items())
         else:
             raise StreamlitAPIException(
-                f"Unsupported data type for subtitles: {type(subtitles)}. Only str (file paths) and dict are supported."
+                f"Unsupported data type for subtitles: {type(subtitles)}. "
+                f"Only str (file paths) and dict are supported."
             )
 
         for label, path in subtitle_items:
