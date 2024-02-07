@@ -547,8 +547,10 @@ def convert_anything_to_df(
     pandas.DataFrame or pandas.Styler
 
     """
+    import pandas as pd
+
     if is_type(data, _PANDAS_DF_TYPE_STR):
-        return data.copy() if ensure_copy else cast(DataFrame, data)
+        return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
     if is_pandas_styler(data):
         # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
@@ -568,8 +570,8 @@ def convert_anything_to_df(
 
     if is_type(data, "numpy.ndarray"):
         if len(data.shape) == 0:
-            return DataFrame([])
-        return DataFrame(data)
+            return pd.DataFrame([])
+        return pd.DataFrame(data)
 
     if (
         is_type(data, _SNOWPARK_DF_TYPE_STR)
@@ -579,30 +581,30 @@ def convert_anything_to_df(
         if is_type(data, _PYSPARK_DF_TYPE_STR):
             data = data.limit(max_unevaluated_rows).toPandas()
         else:
-            data = DataFrame(data.take(max_unevaluated_rows))
+            data = pd.DataFrame(data.take(max_unevaluated_rows))
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return cast(DataFrame, data)
+        return cast(pd.DataFrame, data)
 
     # This is inefficient when data is a pyarrow.Table as it will be converted
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
-        return cast(DataFrame, data.to_pandas())
+        return cast(pd.DataFrame, data.to_pandas())
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-        return DataFrame(data)
+        return pd.DataFrame(data)
 
     except ValueError as ex:
         if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return DataFrame.from_dict(data, orient="index")
+                return pd.DataFrame.from_dict(data, orient="index")
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
@@ -973,7 +975,7 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
     import pyarrow as pa
 
     reader = pa.RecordBatchStreamReader(source)
-    return cast(DataFrame, reader.read_pandas())
+    return reader.read_pandas()  # type: ignore[no-any-return]
 
 
 def determine_data_format(input_data: Any) -> DataFormat:
