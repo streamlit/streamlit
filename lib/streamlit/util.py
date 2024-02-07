@@ -226,8 +226,8 @@ class TimedCleanupCache(TTLCache, Generic[K, V]):
     """A TTLCache that asynchronously expires its entries."""
 
     def __init__(self, *args, **kwargs):
-        self._task: Optional[asyncio.Task[Any]] = None
         super().__init__(*args, **kwargs)
+        self._task: Optional[asyncio.Task[Any]] = None
 
     def __setitem__(self, key: K, value: V) -> None:
         # Set an expiration task to run periodically
