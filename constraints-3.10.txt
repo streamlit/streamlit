@@ -46,7 +46,7 @@ jsonschema-specifications==2023.12.1
 keyring==24.3.0
 kiwisolver==1.4.5
 langchain==0.1.5
-langchain-community==0.0.17
+langchain-community==0.0.18
 langchain-core==0.1.19
 langsmith==0.0.86
 markdown-it-py==3.0.0
@@ -141,6 +141,6 @@ tzdata==2023.4
 tzlocal==5.2
 urllib3==2.2.0
 virtualenv==20.25.0
-watchdog==3.0.0
+watchdog==4.0.0
 yarl==1.9.4
 zipp==3.17.0

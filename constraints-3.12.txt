@@ -125,6 +125,6 @@ tzdata==2023.4
 tzlocal==5.2
 urllib3==2.2.0
 virtualenv==20.25.0
-watchdog==3.0.0
+watchdog==4.0.0
 wheel==0.42.0
 zipp==3.17.0
