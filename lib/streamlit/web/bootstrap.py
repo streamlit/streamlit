@@ -21,6 +21,9 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+# TODO(lukasmasuch): Lazy-load this module:
+import click
+
 from streamlit import (
     config,
     env_util,
@@ -38,8 +41,22 @@ from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
+NEW_VERSION_TEXT = """
+  %(new_version)s
+
+  See what's new at https://discuss.streamlit.io/c/announcements
+
+  Enter the following command to upgrade:
+  %(prompt)s %(command)s
+""" % {
+    "new_version": click.style(
+        "A new version of Streamlit is available.", fg="blue", bold=True
+    ),
+    "prompt": click.style("$", fg="blue"),
+    "command": click.style("pip install streamlit --upgrade", bold=True),
+}
 
 # The maximum possible total size of a static directory.
 # We agreed on these limitations for the initial release of static file sharing,
@@ -48,7 +65,7 @@ MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 
 
 def _set_up_signal_handler(server: Server) -> None:
-    LOGGER.debug("Setting up signal handler")
+    _LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and exit its loop.
@@ -154,7 +171,7 @@ def _on_server_start(server: Server) -> None:
     try:
         secrets.load_if_toml_exists()
     except Exception as ex:
-        LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
+        _LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
@@ -210,23 +227,6 @@ def _fix_pydantic_duplicate_validators_error():
 
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
-        import click
-
-        NEW_VERSION_TEXT = """
-  %(new_version)s
-
-  See what's new at https://discuss.streamlit.io/c/announcements
-
-  Enter the following command to upgrade:
-  %(prompt)s %(command)s
-""" % {
-            "new_version": click.style(
-                "A new version of Streamlit is available.", fg="blue", bold=True
-            ),
-            "prompt": click.style("$", fg="blue"),
-            "command": click.style("pip install streamlit --upgrade", bold=True),
-        }
-
         click.secho(NEW_VERSION_TEXT)
 
 
@@ -234,8 +234,6 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     """Prints a warning if the static folder is misconfigured."""
 
     if config.get_option("server.enableStaticServing"):
-        import click
-
         static_folder_path = file_util.get_app_static_dir(main_script_path)
         if not os.path.isdir(static_folder_path):
             click.secho(
@@ -258,8 +256,6 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
 
 
 def _print_url(is_running_hello: bool) -> None:
-    import click
-
     if is_running_hello:
         title_message = "Welcome to Streamlit. Check out our demo in your browser."
     else:
@@ -331,8 +327,6 @@ def _maybe_print_old_git_warning(main_script_path: str) -> None:
         and repo.git_version is not None
         and repo.git_version < MIN_GIT_VERSION
     ):
-        import click
-
         git_version_string = ".".join(str(val) for val in repo.git_version)
         min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
         click.secho("")
