@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import urllib.parse
-from typing import TYPE_CHECKING, Any, Dict, Final, List, Literal, Set, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Set, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -27,7 +27,6 @@ from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
@@ -41,8 +40,6 @@ if TYPE_CHECKING:
 
 # We need to configure the Plotly theme before any Plotly figures are created:
 configure_streamlit_plotly_theme()
-
-_LOGGER: Final = get_logger(__name__)
 
 SharingMode: TypeAlias = Literal["streamlit", "private", "public", "secret"]
 
