@@ -58,6 +58,7 @@ FD = FieldDescriptor
                 ("custom_theme", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("app_pages", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("page_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("fragment_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (
