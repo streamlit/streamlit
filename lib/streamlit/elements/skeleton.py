@@ -32,40 +32,49 @@ class SkeletonMixin:
 
         To insert/replace/clear an element on the returned container, you can
         use "with" notation or just call methods directly on the returned object.
-        See examples below.
+        See some of the examples below.
+
+        By default skeletons have a display height of 230pt, comprised of a 123pt header
+        and a 107pt adjustable-height block.
+
+        Parameters
+        ----------
+        height: int
+            An integer representing the height in CSS points of the adjustable-height block.
+
 
         Examples
         --------
-        st.skeleton is an st.empty with a future promise of additional content (typically one piece)
-        * height is optionally specified in units of CSS points.
+        st.skeleton is an st.empty with a future promise of additional content (typically one piece).
+        The primary use case is to enable users to build Streamlit applications which
+        render UI first and content second.
 
-        The primary use case is to enable users to build Streamlit applications which render UI first and content second.
         This means you can replace
 
-          # Draw UI
-          st.write("Census Data")
-          census_data_placeholder = st.empty()  # The empty is a collapsed element
-          year = st.selectbox("Select Year", options=[2022, 2023, 2024])
-
-          # Get data from source
-          # assume function call takes a long time
-          census_dataframe = get_census_data_from_database(year)
-
-          # Draw the data, causing it to "pop" in above the year selectbox.
-          census_data_placeholder.dataframe(census_dataframe)
+        >>> # Draw UI
+        >>> st.write("Census Data")
+        >>> census_data_placeholder = st.empty()  # The empty is a collapsed element
+        >>> year = st.selectbox("Select Year", options=[2022, 2023, 2024])
+        >>>
+        >>> # Get data from source
+        >>> # assume function call takes a long time
+        >>> census_dataframe = get_census_data_from_database(year)
+        >>>
+        >>> # Draw the data, causing it to "pop" in above the year selectbox.
+        >>> census_data_placeholder.dataframe(census_dataframe)
 
         with
 
-          # Draw UI
-          st.write("Census Data")
-          census_data_placeholder = st.skeleton(height=200)  # The skeleton holds space for the future data
-          year = st.selectbox("Select Year", options=[2022, 2023, 2024])
-
-          # Get data from source, assume this takes a long time
-          census_dataframe = get_census_data_from_database(year)
-
-          # Draw the data, replacing the skeleton animation that was previously there
-          census_data_placeholder.dataframe(census_dataframe)
+        >>> # Draw UI
+        >>> st.write("Census Data")
+        >>> census_data_placeholder = st.skeleton(height=200)  # The skeleton holds space for the future data
+        >>> year = st.selectbox("Select Year", options=[2022, 2023, 2024])
+        >>>
+        >>> # Get data from source, assume this takes a long time
+        >>> census_dataframe = get_census_data_from_database(year)
+        >>>
+        >>> # Draw the data, replacing the skeleton animation that was previously there
+        >>> census_data_placeholder.dataframe(census_dataframe)
 
         Overwriting elements in-place using "with" notation:
 
@@ -97,6 +106,18 @@ class SkeletonMixin:
         ...
         >>> # Clear all those elements and put the animation back:
         >>> placeholder.skeleton()
+
+        Replacing a skeleton with several elements:
+
+        >>> import streamlit as st
+        >>>
+        >>> placeholder = st.skeleton()
+        >>>
+        >>> # Keep in mind the animation will be replaced
+        >>> # as soon as placeholder.container() is called.
+        >>> with placeholder.container():
+        ...     placeholder.write("Hello")
+        ...     placeholder.write("Streamlit")
 
         """
 
