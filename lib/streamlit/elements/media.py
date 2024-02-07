@@ -375,6 +375,7 @@ def process_subtitle_data(
                     f"one of the following formats: {', '.join(allowed_formats)}"
                 )
             content = get_data_from_file(data_str)
+            # TODO: [kajarenc] probably bug in line below, should be `else content`
             return srt_to_vtt(content) if file_extension == ".srt" else data_str
         else:
             content = data_str.strip()
