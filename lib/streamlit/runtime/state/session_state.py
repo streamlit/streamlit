@@ -26,8 +26,8 @@ from typing import (
     KeysView,
     List,
     MutableMapping,
-    cast,
     Union,
+    cast,
 )
 
 from typing_extensions import TypeAlias
