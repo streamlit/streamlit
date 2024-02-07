@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import random
 from textwrap import dedent
-from typing import TYPE_CHECKING, Final, Literal, Mapping, cast
+from typing import TYPE_CHECKING, Final, Literal, Mapping, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -37,14 +37,14 @@ GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
 ABOUT_KEY: Final = "about"
 
-PageIcon: TypeAlias = image.AtomicImage | str
+PageIcon: TypeAlias = Union[image.AtomicImage, str]
 Layout: TypeAlias = Literal["centered", "wide"]
 InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"]
 _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
 MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
-MenuItems: TypeAlias = Mapping[MenuKey, str | None]
+MenuItems: TypeAlias = Mapping[MenuKey, Union[str, None]]
 
 # Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
 # for the term "streamlit". Watch out for zero-width joiners,

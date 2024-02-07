@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Union, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -43,7 +43,7 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedSnapshotFile = UploadedFile | DeletedFile | None
+SomeUploadedSnapshotFile = Union[UploadedFile, DeletedFile, None]
 
 
 @dataclass

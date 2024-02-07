@@ -19,7 +19,7 @@ import hashlib
 import threading
 import types
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterator, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Iterator, Protocol, Union, runtime_checkable
 
 from google.protobuf.message import Message
 
@@ -94,7 +94,7 @@ class BlockMsgData:
     returned_dgs_id: str
 
 
-MsgData = ElementMsgData | BlockMsgData
+MsgData = Union[ElementMsgData, BlockMsgData]
 
 """
 Note [Cache result structure]

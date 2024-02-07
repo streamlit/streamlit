@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Mapping, NoReturn
+from typing import Iterator, Mapping, NoReturn, Union
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import get_script_run_ctx as _get_script_run_ctx
@@ -31,7 +31,7 @@ def _get_user_info() -> UserInfo:
 
 # Class attributes are listed as "Parameters" in the docstring as a workaround
 # for the docstring parser for docs.strreamlit.io
-class UserInfoProxy(Mapping[str, str | None]):
+class UserInfoProxy(Mapping[str, Union[str, None]]):
     """
     A read-only, dict-like object for accessing information about current user.
 

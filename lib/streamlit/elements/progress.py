@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 # Currently, equates to just float, but we can't use `numbers.Real` due to
 # https://github.com/python/mypy/issues/3186
-FloatOrInt: TypeAlias = int | float
+FloatOrInt: TypeAlias = Union[int, float]
 
 
 def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> bool:

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Literal, Sequence, cast
+from typing import TYPE_CHECKING, List, Literal, Sequence, Union, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
-SpecType = int | Sequence[int | float]
+SpecType = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:

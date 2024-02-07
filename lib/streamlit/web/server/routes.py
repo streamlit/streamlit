@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any, Callable, List
 
 import tornado.web
 
@@ -41,7 +42,10 @@ def allow_cross_origin_requests() -> bool:
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
     def initialize(
-        self, path: str, default_filename: str | None, get_pages: callable
+        self,
+        path: str,
+        default_filename: str | None,
+        get_pages: Callable[[], List[Any]],
     ) -> None:
         self._pages = get_pages()
 

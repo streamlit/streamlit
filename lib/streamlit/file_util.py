@@ -31,7 +31,9 @@ CONFIG_FOLDER_NAME = ".streamlit"
 APP_STATIC_FOLDER_NAME = "static"
 
 
-def get_encoded_file_data(data: bytes, encoding: str = "auto"):
+def get_encoded_file_data(
+    data: bytes, encoding: str = "auto"
+) -> io.StringIO | io.BytesIO:
     """Coerce bytes to a BytesIO or a StringIO.
 
     Parameters
@@ -46,17 +48,14 @@ def get_encoded_file_data(data: bytes, encoding: str = "auto"):
         parameter is set), return a StringIO. Otherwise, return BytesIO.
 
     """
-    if encoding == "auto":
-        if is_binary_string(data):
-            encoding = None
-        else:
-            # If the file does not look like a pure binary file, assume
-            # it's utf-8. It would be great if we could guess it a little
-            # more smartly here, but it is what it is!
-            encoding = "utf-8"
 
-    if encoding:
-        return io.StringIO(data.decode(encoding))
+    if encoding == "auto":
+        data_encoding = None if is_binary_string(data) else "utf-8"
+    else:
+        data_encoding = encoding
+
+    if data_encoding:
+        return io.StringIO(data.decode(data_encoding))
 
     return io.BytesIO(data)
 

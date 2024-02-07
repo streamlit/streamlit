@@ -275,7 +275,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for name, func in mixin.__dict__.items():
+            for _name, func in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
 

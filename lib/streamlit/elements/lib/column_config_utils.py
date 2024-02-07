@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import TYPE_CHECKING, Dict, Final, List, Literal, Mapping
+from typing import TYPE_CHECKING, Dict, Final, List, Literal, Mapping, Union
 
 from typing_extensions import TypeAlias
 
@@ -394,10 +394,10 @@ def determine_dataframe_schema(
 
 
 # A mapping of column names/IDs to column configs.
-ColumnConfigMapping: TypeAlias = Dict[IndexIdentifierType | str, ColumnConfig]
+ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
 ColumnConfigMappingInput: TypeAlias = Mapping[
-    IndexIdentifierType | str,
-    ColumnConfig | None | str,
+    Union[IndexIdentifierType, str],
+    Union[ColumnConfig, None, str],
 ]
 
 

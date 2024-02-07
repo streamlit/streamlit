@@ -29,7 +29,7 @@ from typing import (
     cast,
 )
 
-from typing_extensions import TypeAlias
+from typing_extensions import TypeAlias, Union
 
 import streamlit as st
 from streamlit import config, util
@@ -72,7 +72,7 @@ class Value:
     value: Any
 
 
-WState: TypeAlias = Value | Serialized
+WState: TypeAlias = Union[Value, Serialized]
 
 
 @dataclass

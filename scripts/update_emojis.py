@@ -22,7 +22,7 @@ This script requires the emoji package to be installed: pip install emoji.
 import os
 import re
 
-from emoji.unicode_codes.data_dict import EMOJI_DATA  # type: ignore
+from emoji.unicode_codes.data_dict import EMOJI_DATA
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 EMOJI_SET_REGEX = re.compile(r"### EMOJIS START ###(.+?)### EMOJIS END ###", re.DOTALL)

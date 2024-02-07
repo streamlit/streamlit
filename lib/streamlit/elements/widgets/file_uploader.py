@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import List, Literal, Sequence, cast, overload
+from typing import List, Literal, Sequence, Union, cast, overload
 
 import streamlit
 from streamlit import config
@@ -41,9 +41,9 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = (
-    UploadedFile | DeletedFile | List[UploadedFile | DeletedFile] | None,
-)
+SomeUploadedFiles = Union[
+    UploadedFile, DeletedFile, List[Union[UploadedFile, DeletedFile]], None
+]
 
 
 TYPE_PAIRS = [

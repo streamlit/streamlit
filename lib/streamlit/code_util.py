@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import Any, List
 
 
 def extract_args(line: str) -> List[str]:
@@ -56,7 +56,7 @@ def extract_args(line: str) -> List[str]:
     return results
 
 
-def get_method_args_from_code(args: list, line: str) -> List[str]:
+def get_method_args_from_code(args: List[Any], line: str) -> List[str]:
     """Parse arguments from a stringified arguments list inside parentheses
 
     Parameters

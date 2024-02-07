@@ -15,7 +15,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
+
+from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
@@ -33,8 +35,8 @@ class HeadingProtoTag(Enum):
     SUBHEADER_TAG = "h3"
 
 
-Anchor = str | Literal[False] | None
-Divider = bool | str | None
+Anchor: TypeAlias = Union[str, Literal[False], None]
+Divider: TypeAlias = Union[bool, str, None]
 
 
 class HeadingMixin:
@@ -258,7 +260,7 @@ class HeadingMixin:
             "rainbow",
         ]
         if divider in valid_colors:
-            return divider
+            return cast(str, divider)
         else:
             raise StreamlitAPIException(
                 f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."

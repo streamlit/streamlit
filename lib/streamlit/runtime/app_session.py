@@ -145,7 +145,7 @@ class AppSession:
 
         self._local_sources_watcher: LocalSourcesWatcher | None = local_sources_watcher
         self._stop_config_listener: Callable[[], bool] | None = None
-        self._stop_pages_listener: Callable[[], bool] | None = None
+        self._stop_pages_listener: Callable[[], None] | None = None
 
         self.register_file_watchers()
 

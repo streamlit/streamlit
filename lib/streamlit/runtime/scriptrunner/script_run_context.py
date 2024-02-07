@@ -18,7 +18,7 @@ import collections
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, Final, List, Set, Tuple
+from typing import Callable, Counter, Dict, Final, List, Set, Tuple, Union
 from urllib import parse
 
 from typing_extensions import TypeAlias
@@ -34,7 +34,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 LOGGER: Final = get_logger(__name__)
 
-UserInfo: TypeAlias = Dict[str, str | None]
+UserInfo: TypeAlias = Dict[str, Union[str, None]]
 
 
 # The dg_stack tracks the currently active DeltaGenerator, and is pushed to when

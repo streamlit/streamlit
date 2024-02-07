@@ -20,7 +20,7 @@ import pickle
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, Literal, TypeVar, cast, overload
+from typing import Any, Callable, Literal, TypeVar, Union, cast, overload
 
 from typing_extensions import TypeAlias
 
@@ -67,7 +67,7 @@ _LOGGER = get_logger(__name__)
 CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
-CachePersistType: TypeAlias = Literal["disk"] | None
+CachePersistType: TypeAlias = Union[Literal["disk"], None]
 
 
 class CachedDataFuncInfo(CachedFuncInfo):

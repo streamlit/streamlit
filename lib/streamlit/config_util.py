@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import re
-from typing import Dict
+from typing import Dict, List
 
 from streamlit.config_option import ConfigOption
 
@@ -91,7 +91,7 @@ def show_config(
 
         for key, option in section_options.items():
             key = option.key.split(".")[1]
-            description_paragraphs = _clean_paragraphs(option.description)
+            description_paragraphs = _clean_paragraphs(option.description or "")
 
             last_paragraph_idx = len(description_paragraphs) - 1
 
@@ -165,7 +165,7 @@ def _clean(txt: str) -> str:
     return re.sub(" +", " ", txt)
 
 
-def _clean_paragraphs(txt: str) -> str:
+def _clean_paragraphs(txt: str) -> List[str]:
     """Split the text into paragraphs, preserve newlines within the paragraphs."""
     # Strip both leading and trailing newlines.
     txt = txt.strip("\n")

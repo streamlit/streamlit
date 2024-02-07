@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import io
 import re
-from typing import TYPE_CHECKING, Final, Tuple, cast
+from typing import TYPE_CHECKING, Final, Tuple, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -35,15 +35,9 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-MediaData: TypeAlias = (
-    str
-    | bytes
-    | io.BytesIO
-    | io.RawIOBase
-    | io.BufferedReader
-    | "npt.NDArray[Any]"
-    | None
-)
+MediaData: TypeAlias = Union[
+    str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
+]
 
 
 class MediaMixin:

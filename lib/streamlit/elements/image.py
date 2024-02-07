@@ -27,7 +27,7 @@ import mimetypes
 import os
 import re
 from enum import IntEnum
-from typing import TYPE_CHECKING, Final, List, Literal, Sequence, cast
+from typing import TYPE_CHECKING, Final, List, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -54,12 +54,12 @@ LOGGER: Final = get_logger(__name__)
 # DPI.
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
-PILImage: TypeAlias = (
-    "ImageFile.ImageFile" | "Image.Image" | "GifImagePlugin.GifImageFile"
-)
-AtomicImage: TypeAlias = PILImage | "npt.NDArray[Any]" | io.BytesIO | str
-ImageOrImageList: TypeAlias = AtomicImage | List[AtomicImage]
-UseColumnWith: TypeAlias = Literal["auto", "always", "never"] | bool | None
+PILImage: TypeAlias = Union[
+    "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
+]
+AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
+ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
+UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]

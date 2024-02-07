@@ -33,7 +33,7 @@ import unittest.mock
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Callable, Dict, List, Pattern, Type
+from typing import Any, Callable, Dict, List, Pattern, Type, Union
 
 from streamlit import type_util, util
 from streamlit.errors import StreamlitAPIException
@@ -50,7 +50,7 @@ _PANDAS_SAMPLE_SIZE = 10000
 _NP_SIZE_LARGE = 1000000
 _NP_SAMPLE_SIZE = 100000
 
-HashFuncsDict = Dict[str | Type[Any], Callable[[Any], Any]]
+HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.

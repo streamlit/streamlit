@@ -18,7 +18,9 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, cast
+from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
+
+from typing_extensions import TypeAlias
 
 from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
@@ -49,7 +51,7 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form).
 """
 
-DownloadButtonDataType = str | bytes | TextIO | BinaryIO | io.RawIOBase
+DownloadButtonDataType: TypeAlias = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
 
 
 @dataclass

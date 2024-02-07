@@ -159,14 +159,14 @@ def _get_name(obj: Any) -> str | None:
     #   The name is bar.Baz
     name = getattr(obj, "__qualname__", None)
     if name:
-        return name
+        return name  # type: ignore
 
     # Try to get the name of the object.
     # For example:
     #   st.help(bar.Baz(123))
     #
     #   The name is Baz
-    return getattr(obj, "__name__", None)
+    return getattr(obj, "__name__", None)  # type: ignore
 
 
 def _get_module(obj):
@@ -247,7 +247,7 @@ def _get_variable_name() -> str | None:
     return _get_variable_name_from_code_str(code)
 
 
-def _get_variable_name_from_code_str(code: str) -> str | None:
+def _get_variable_name_from_code_str(code: str):
     tree = ast.parse(code)
 
     # Example:
