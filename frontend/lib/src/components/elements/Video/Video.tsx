@@ -111,7 +111,6 @@ export default function Video({
       ref={videoRef}
       controls
       src={endpoints.buildMediaURL(url)}
-      crossOrigin="anonymous"
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
     >

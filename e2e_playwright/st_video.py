@@ -26,3 +26,13 @@ st.video(url, start_time=int(timestamp))
 
 # Test local file with video
 st.video("video_test_assets/sintel-short.mp4", start_time=17)
+
+# Test subtitle with video
+st.video(
+    "video_test_assets/sintel-short.webm",
+    start_time=32,
+    subtitles={
+        "English": "video_test_assets/sintel-en.vtt",
+        "Deutsch": "video_test_assets/sintel-de.vtt",
+    },
+)

@@ -37,6 +37,8 @@ IGNORE_PATTERN = re.compile(
     r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
     # Exclude videos.
     r"|\.(?:mp4)$"
+    # Exclude subtitle files we use for testing video.
+    r"|e2e_playwright/video_test_assets/.*\.(vtt|srt)$"
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments

@@ -19,19 +19,23 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
+# Chromium miss codecs required to play that videos
+# https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/
 @pytest.mark.skip_browser("chromium")
 def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly via screenshots matching."""
     video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(3)
+    expect(video_elements).to_have_count(4)
 
     expect(video_elements.nth(0)).to_be_visible()
     expect(video_elements.nth(1)).to_be_visible()
     expect(video_elements.nth(2)).to_be_visible()
+    expect(video_elements.nth(3)).to_be_visible()
 
     assert_snapshot(video_elements.nth(0), name="video_element_first")
     assert_snapshot(video_elements.nth(1), name="video_element_second")
     assert_snapshot(video_elements.nth(2), name="video_element_third")
+    assert_snapshot(video_elements.nth(3), name="video_element_with_subtitles")
 
 
 def test_displays_a_video_player(app: Page):
