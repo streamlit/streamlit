@@ -23,18 +23,6 @@ from streamlit.watcher.polling_path_watcher import PollingPathWatcher
 
 LOGGER = get_logger(__name__)
 
-try:
-    # Check if the watchdog module is installed.
-    from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
-
-    watchdog_available = True
-except ImportError:
-    watchdog_available = False
-    # Stub the EventBasedPathWatcher so it can be mocked by tests
-
-    class EventBasedPathWatcher:  # type: ignore
-        pass
-
 
 # local_sources_watcher.py caches the return value of
 # get_default_path_watcher_class(), so it needs to differentiate between the
@@ -66,26 +54,37 @@ PathWatcherType = Union[
 ]
 
 
+def _is_watchdog_available() -> bool:
+    """Check if the watchdog module is installed."""
+    try:
+        import watchdog  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 def report_watchdog_availability():
-    if not watchdog_available:
-        if not config.get_option("global.disableWatchdogWarning") and config.get_option(
-            "server.fileWatcherType"
-        ) not in ["poll", "none"]:
-            import click
+    if (
+        not config.get_option("global.disableWatchdogWarning")
+        and config.get_option("server.fileWatcherType") not in ["poll", "none"]
+        and not _is_watchdog_available()
+    ):
+        import click
 
-            msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
+        msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
-            click.secho(
-                "  %s" % "For better performance, install the Watchdog module:",
-                fg="blue",
-                bold=True,
-            )
-            click.secho(
-                """%s
-  $ pip install watchdog
-            """
-                % msg
-            )
+        click.secho(
+            "  %s" % "For better performance, install the Watchdog module:",
+            fg="blue",
+            bold=True,
+        )
+        click.secho(
+            """%s
+$ pip install watchdog
+        """
+            % msg
+        )
 
 
 def _watch_path(
@@ -174,13 +173,12 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
     """Return the PathWatcher class that corresponds to the given watcher_type
     string. Acceptable values are 'auto', 'watchdog', 'poll' and 'none'.
     """
-    if watcher_type == "auto":
-        if watchdog_available:
-            return EventBasedPathWatcher
-        else:
-            return PollingPathWatcher
-    elif watcher_type == "watchdog" and watchdog_available:
+    if watcher_type in {"watchdog", "auto"} and _is_watchdog_available():
+        from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
+
         return EventBasedPathWatcher
+    elif watcher_type == "auto":
+        return PollingPathWatcher
     elif watcher_type == "poll":
         return PollingPathWatcher
     else:

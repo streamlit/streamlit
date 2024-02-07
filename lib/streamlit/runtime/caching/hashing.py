@@ -29,7 +29,6 @@ import struct
 import sys
 import tempfile
 import threading
-import unittest.mock
 import uuid
 import weakref
 from enum import Enum
@@ -345,7 +344,9 @@ class _CacheFuncHasher:
 
         h = hashlib.new("md5", **HASHLIB_KWARGS)
 
-        if isinstance(obj, unittest.mock.Mock):
+        from unittest.mock import Mock
+
+        if isinstance(obj, Mock):
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
