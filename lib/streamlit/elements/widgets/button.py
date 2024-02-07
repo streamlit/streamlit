@@ -665,6 +665,7 @@ class ButtonMixin:
             ctx_main_script = ctx.main_script_path
 
         main_script_path = os.path.join(os.getcwd(), ctx_main_script)
+        main_script_path = os.path.normpath(main_script_path)
         main_script_directory = os.path.dirname(main_script_path)
 
         # Convenience for handling ./ notation and ensure leading / doesn't refer to root directory
