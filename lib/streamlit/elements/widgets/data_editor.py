@@ -297,10 +297,11 @@ def _apply_row_additions(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
-    import pandas as pd
 
     if not added_rows:
         return
+
+    import pandas as pd
 
     # This is only used if the dataframe has a range index:
     # There seems to be a bug in older pandas versions with RangeIndex in
@@ -424,6 +425,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
 def _fix_column_headers(data_df: pd.DataFrame) -> None:
     """Fix the column headers of the provided dataframe inplace to work
     correctly for data editing."""
+    import pandas as pd
 
     if isinstance(data_df.columns, pd.MultiIndex):
         # Flatten hierarchical column headers to a single level:
@@ -771,6 +773,7 @@ class DataEditorMixin:
            height: 350px
 
         """
+        import pandas as pd
         import pyarrow as pa
 
         key = to_key(key)

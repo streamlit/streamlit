@@ -975,7 +975,7 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
     import pyarrow as pa
 
     reader = pa.RecordBatchStreamReader(source)
-    return reader.read_pandas()  # type: ignore
+    return reader.read_pandas()
 
 
 def determine_data_format(input_data: Any) -> DataFormat:
