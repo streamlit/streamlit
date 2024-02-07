@@ -41,12 +41,7 @@ def allow_cross_origin_requests() -> bool:
 
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
-    def initialize(
-        self,
-        path: str,
-        default_filename: str | None,
-        get_pages: Callable[[], List[Any]],
-    ) -> None:
+    def initialize(self, path, default_filename, get_pages):
         self._pages = get_pages()
 
         super().initialize(path=path, default_filename=default_filename)
