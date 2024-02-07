@@ -27,9 +27,10 @@ from typing import (
     List,
     MutableMapping,
     cast,
+    Union,
 )
 
-from typing_extensions import TypeAlias, Union
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import config, util

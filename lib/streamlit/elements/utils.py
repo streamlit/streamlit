@@ -24,7 +24,6 @@ from typing import (
     Sequence,
     Tuple,
     Type,
-    Union,
     cast,
     overload,
 )

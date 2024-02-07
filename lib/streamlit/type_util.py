@@ -364,12 +364,14 @@ def is_sympy_expession(obj: object) -> TypeGuard[sympy.Expr]:
 
 _ALTAIR_RE: Final = re.compile(r"^altair\.vegalite\.v\d+\.api\.\w*Chart$")
 
+
 def is_altair_chart(obj: object) -> bool:
     """True if input looks like an Altair chart."""
     return is_type(obj, _ALTAIR_RE)
 
 
 _PILLOW_RE: Final = re.compile(r"^PIL\..*")
+
 
 def is_pillow_image(obj: object) -> bool:
     """True if input looks like a pillow image."""
