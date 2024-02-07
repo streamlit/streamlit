@@ -26,7 +26,7 @@ def test_default_toast_rendering(
     expect(toasts).to_have_count(2)
 
     expect(toasts.nth(1)).to_be_visible()
-    expect(toasts.nth(1)).to_have_text("This is a default toast message")
+    expect(toasts.nth(1)).to_have_text("🐶 This is a default toast messageClose")
 
 
 def test_collapsed_toast_rendering(
@@ -39,7 +39,7 @@ def test_collapsed_toast_rendering(
 
     expect(toasts.nth(0)).to_be_visible()
     expect(toasts.nth(0)).to_have_text(
-        "Random toast message that is a really really really really really really really long message, going way"
+        "🦄 Random toast message that is a really really really really really really really long message, going wayview moreClose"
     )
 
 
@@ -55,7 +55,7 @@ def test_expanded_toast_rendering(
 
     expect(toasts.nth(0)).to_be_visible()
     expect(toasts.nth(0)).to_have_text(
-        "Random toast message that is a really really really really really really really long message, going way past the 3 line limit"
+        "🦄 Random toast message that is a really really really really really really really long message, going way past the 3 line limitview lessClose"
     )
 
 
