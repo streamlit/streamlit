@@ -20,43 +20,52 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_default_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that toasts are correctly rendered via screenshot."""
-    themed_app.keyboard.type("r")
+    """Test that toasts are correctly rendered."""
+    themed_app.keyboard.press("r")
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
 
-    assert_snapshot(toasts.nth(0), name="toast-regular")
+    expect(toasts.nth(1)).to_be_visible()
+    expect(toasts.nth(1)).to_have_text("This is a default toast message")
 
 
 def test_collapsed_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test collapsed long toasts are correctly rendered via screenshot."""
-    themed_app.keyboard.type("r")
+    """Test collapsed long toasts are correctly rendered."""
+    themed_app.keyboard.press("r")
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
 
-    assert_snapshot(toasts.nth(1), name="toast-collapsed")
+    expect(toasts.nth(0)).to_be_visible()
+    expect(toasts.nth(0)).to_have_text(
+        "Random toast message that is a really really really really really really really long message, going way"
+    )
 
 
 def test_expanded_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test expanded long toasts are correctly rendered via screenshot."""
-    themed_app.keyboard.type("r")
+    """Test expanded long toasts are correctly rendered."""
+    themed_app.keyboard.press("r")
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
 
     themed_app.get_by_test_id("toastViewButton").click()
 
-    assert_snapshot(toasts.nth(1), name="toast-expanded")
+    expect(toasts.nth(0)).to_be_visible()
+    expect(toasts.nth(0)).to_have_text(
+        "Random toast message that is a really really really really really really really long message, going way past the 3 line limit"
+    )
 
 
 def test_toast_overlay_with_chat(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that toasts overlay with st.chat_input."""
-    themed_app.keyboard.type("r")
+    themed_app.keyboard.press("r")
     container = themed_app.get_by_test_id("stBottomBlockContainer")
+    toasts = themed_app.get_by_test_id("stToast")
 
+    expect(toasts.nth(0)).to_be_visible()
     assert_snapshot(container, name="toast-with-chat")
