@@ -33,8 +33,6 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
-    # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
-    "importlib-metadata>=1.4, <8",
     "numpy>=1.19.3, <2",
     "packaging>=16.8, <24",
     # Lowest version with available wheel for 3.7 + amd64 + linux
@@ -56,7 +54,6 @@ INSTALL_REQUIRES = [
     "toml>=0.10.1, <2",
     "typing-extensions>=4.3.0, <5",
     "tzlocal>=1.1, <6",
-    "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5; platform_system != 'Darwin'",

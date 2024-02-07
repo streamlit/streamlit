@@ -13,8 +13,13 @@
 # limitations under the License.
 
 import re
-import urllib
-from typing import Optional
+from typing import Literal, Optional, Tuple
+from urllib.parse import urlparse
+
+from typing_extensions import TypeAlias
+
+UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
+
 
 # Regular expression for process_gitblob_url
 _GITBLOB_RE = re.compile(
@@ -55,9 +60,9 @@ def get_hostname(url: str) -> Optional[str]:
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)
     if "://" not in url:
-        url = "http://%s" % url
+        url = f"http://{url}"
 
-    parsed = urllib.parse.urlparse(url)
+    parsed = urlparse(url)
     return parsed.hostname
 
 
@@ -65,5 +70,36 @@ def print_url(title, url):
     """Pretty-print a URL on the terminal."""
     import click
 
-    click.secho("  %s: " % title, nl=False, fg="blue")
+    click.secho(f"  {title}: ", nl=False, fg="blue")
     click.secho(url, bold=True)
+
+
+def is_url(
+    url: str,
+    allowed_schemas: Tuple[UrlSchema, ...] = ("http", "https"),
+) -> bool:
+    """Check if a string looks like an URL.
+
+    This doesn't check if the URL is actually valid or reachable.
+
+    Parameters
+    ----------
+    url : str
+        The URL to check.
+
+    allowed_schemas : Tuple[str]
+        The allowed URL schemas. Default is ("http", "https").
+    """
+    try:
+        result = urlparse(str(url))
+        if result.scheme not in allowed_schemas:
+            return False
+
+        if result.scheme in ["http", "https"]:
+            return bool(result.netloc)
+        elif result.scheme in ["mailto", "data"]:
+            return bool(result.path)
+
+    except ValueError:
+        return False
+    return False
