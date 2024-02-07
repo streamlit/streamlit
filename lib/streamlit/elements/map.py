@@ -371,7 +371,7 @@ def _get_value_and_col_name(
     data: DataFrame,
     value_or_name: Any,
     default_value: Any,
-) -> Tuple[Any, str | None]
+) -> Tuple[Any, str | None]:
     """Take a value_or_name passed in by the Streamlit developer and return a PyDeck
     argument and column name for that property.
 
@@ -440,7 +440,9 @@ def _convert_color_arg_or_column(
     return color_arg_out
 
 
-def _get_viewport_details(data: DataFrame, lat_col_name: str, lon_col_name: str, zoom: int | None) -> Tuple[int, float, float]:
+def _get_viewport_details(
+    data: DataFrame, lat_col_name: str, lon_col_name: str, zoom: int | None
+) -> Tuple[int, float, float]:
     """Auto-set viewport when not fully specified by user."""
     min_lat = data[lat_col_name].min()
     max_lat = data[lat_col_name].max()
