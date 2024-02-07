@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { createRoot } from "react-dom/client"
+import ReactDOM from "react-dom"
 
 import { Client as Styletron } from "styletron-engine-atomic"
 import { Provider as StyletronProvider } from "styletron-react"
@@ -23,11 +23,9 @@ import ThemedApp from "./ThemedApp"
 
 const engine = new Styletron({ prefix: "st-" })
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-const root = createRoot(document.getElementById("root")!)
-
-root.render(
+ReactDOM.render(
   <StyletronProvider value={engine}>
     <ThemedApp />
-  </StyletronProvider>
+  </StyletronProvider>,
+  document.getElementById("root")
 )
