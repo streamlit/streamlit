@@ -16,9 +16,8 @@ from __future__ import annotations
 
 from typing import List, MutableMapping
 
-from cachetools import TTLCache
-
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
+from streamlit.util import TimedCleanupCache
 
 
 class MemorySessionStorage(SessionStorage):
@@ -57,7 +56,7 @@ class MemorySessionStorage(SessionStorage):
             inaccessible and will be removed eventually.
         """
 
-        self._cache: MutableMapping[str, SessionInfo] = TTLCache(
+        self._cache: MutableMapping[str, SessionInfo] = TimedCleanupCache(
             maxsize=maxsize, ttl=ttl_seconds
         )
 
