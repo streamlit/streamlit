@@ -26,7 +26,7 @@ import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CH
 import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
 from streamlit import config
 from streamlit.watcher import local_sources_watcher
-from streamlit.watcher.path_watcher import NoOpPathWatcher, watchdog_available
+from streamlit.watcher.path_watcher import NoOpPathWatcher, _is_watchdog_available
 
 SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
 
@@ -242,7 +242,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         config.set_option("server.fileWatcherType", "watchdog")
         self.assertEqual(
             local_sources_watcher.get_default_path_watcher_class().__name__,
-            "EventBasedPathWatcher" if watchdog_available else "NoOpPathWatcher",
+            "EventBasedPathWatcher" if _is_watchdog_available() else "NoOpPathWatcher",
         )
 
         config.set_option("server.fileWatcherType", "auto")
