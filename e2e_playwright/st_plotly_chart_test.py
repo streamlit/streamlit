@@ -23,7 +23,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 # there should be no differences between chrome and safari and firefox
 @pytest.mark.only_browser("chromium")
 def test_plotly_has_consistent_visuals(
-    app: Page, assert_snapshot: ImageCompareFunction
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     expect(app.locator(".element-container")).to_have_count(16)
     assert_snapshot(
