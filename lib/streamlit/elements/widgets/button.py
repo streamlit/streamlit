@@ -678,17 +678,17 @@ class ButtonMixin:
         # Handle retrieving the page_script_hash & page
         for page_data in all_app_pages:
             full_path = page_data["script_path"]
-            page_name = page_data["page_name"].replace("_", " ")
+            page_name = page_data["page_name"]
             if requested_page == full_path:
                 if label is None:
-                    page_link_proto.label = page_name
+                    page_link_proto.label = page_name.replace("_", " ")
                 page_link_proto.page_script_hash = page_data["page_script_hash"]
-                page_link_proto.page = full_path
+                page_link_proto.page = page_name
                 break
 
         if page_link_proto.page_script_hash == "":
             raise StreamlitAPIException(
-                f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
+                f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}. Only the main app file and files in the `pages/` directory are supported."
             )
 
         return self.dg._enqueue("page_link", page_link_proto)
