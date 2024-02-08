@@ -363,7 +363,7 @@ def process_subtitle_data(
         with open(file_path, "r", encoding="utf-8") as file:
             return file.read().strip()
 
-    def handle_string_data(data_str: str) -> bytes:
+    def handle_string_data(data_str: str) -> Union[bytes, str]:
         """Handles string data, either as a file path or raw content."""
         if os.path.isfile(data_str):
             path = Path(data_str)
