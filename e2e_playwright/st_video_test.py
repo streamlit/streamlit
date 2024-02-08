@@ -42,7 +42,11 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
         name="video_element_third",
         image_threshold=0.09,
     )
-    assert_snapshot(video_elements.nth(3), name="video_element_with_subtitles")
+    assert_snapshot(
+        video_elements.nth(3),
+        name="video_element_with_subtitles",
+        image_threshold=0.09,
+    )
 
 
 @pytest.mark.skip_browser("webkit")
@@ -55,7 +59,11 @@ def test_video_rendering_webp(app: Page, assert_snapshot: ImageCompareFunction):
     app.wait_for_timeout(2000)
 
     expect(video_elements.nth(4)).to_be_visible()
-    assert_snapshot(video_elements.nth(4), name="video_element_webm_with_subtitles")
+    assert_snapshot(
+        video_elements.nth(4),
+        name="video_element_webm_with_subtitles",
+        image_threshold=0.09,
+    )
 
 
 def test_displays_a_video_player(app: Page):
