@@ -27,6 +27,9 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     video_elements = app.get_by_test_id("stVideo")
     expect(video_elements).to_have_count(4)
 
+    # Wait for the video to load
+    app.wait_for_timeout(5000)
+
     expect(video_elements.nth(0)).to_be_visible()
     expect(video_elements.nth(1)).to_be_visible()
     expect(video_elements.nth(2)).to_be_visible()

@@ -29,7 +29,7 @@ st.video("video_test_assets/sintel-short.mp4", start_time=17)
 
 # Test subtitle with video
 st.video(
-    "video_test_assets/sintel-short.webm",
+    "video_test_assets/sintel-short.mp4",
     start_time=32,
     subtitles={
         "English": "video_test_assets/sintel-en.vtt",
