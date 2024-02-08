@@ -12,22 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Tuple, cast
 
-from streamlit.emojis import ALL_EMOJIS
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
 
-
-# The ESCAPED_EMOJI list is sorted in descending order to make that longer emoji appear
-# first in the regex compiled below. This ensures that we grab the full emoji in a
-# multi-character emoji sequence that starts with a shorter emoji (emoji are weird...).
-ESCAPED_EMOJI = [re.escape(e) for e in sorted(ALL_EMOJIS, reverse=True)]
-EMOJI_EXTRACTION_REGEX = re.compile(f"^({'|'.join(ESCAPED_EMOJI)})[_ -]*(.*)")
+_ALPHANUMERIC_CHAR_REGEX = re.compile(r"^[a-zA-Z0-9_\- ]+$")
 
 
 def decode_ascii(string: bytes) -> str:
@@ -40,14 +36,29 @@ def clean_text(text: "SupportsStr") -> str:
     return textwrap.dedent(str(text)).strip()
 
 
+def _contains_special_chars(text: str) -> bool:
+    """Check if a string contains any special chars.
+
+    Special chars in that case are all chars that are not
+    alphanumeric, underscore, hyphen or whitespace.
+    """
+    return re.match(_ALPHANUMERIC_CHAR_REGEX, text) is None if text else False
+
+
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
+    if not _contains_special_chars(text):
+        return False
+
+    from streamlit.emojis import ALL_EMOJIS
+
     return text.replace("\U0000FE0F", "") in ALL_EMOJIS
 
 
-def validate_emoji(maybe_emoji: Optional[str]) -> str:
+def validate_emoji(maybe_emoji: str | None) -> str:
     if maybe_emoji is None:
         return ""
+
     elif is_emoji(maybe_emoji):
         return maybe_emoji
     else:
@@ -60,6 +71,15 @@ def extract_leading_emoji(text: str) -> Tuple[str, str]:
     """Return a tuple containing the first emoji found in the given string and
     the rest of the string (minus an optional separator between the two).
     """
+
+    if not _contains_special_chars(text):
+        # If the string only contains basic alphanumerical chars and/or
+        # underscores, hyphen & whitespaces, then it's guaranteed that there
+        # is no emoji in the string.
+        return "", text
+
+    from streamlit.emojis import EMOJI_EXTRACTION_REGEX
+
     re_match = re.search(EMOJI_EXTRACTION_REGEX, text)
     if re_match is None:
         return "", text
@@ -98,7 +118,7 @@ def escape_markdown(raw_string: str) -> str:
 TEXTCHARS = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7F})
 
 
-def is_binary_string(inp):
+def is_binary_string(inp: bytes) -> bool:
     """Guess if an input bytesarray can be encoded as a string."""
     # From https://stackoverflow.com/a/7392391
     return bool(inp.translate(None, TEXTCHARS))
