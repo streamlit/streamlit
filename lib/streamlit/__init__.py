@@ -50,7 +50,7 @@ For more detailed info, see https://docs.streamlit.io.
 # that's not the main thread, so here we set a safer backend as a fix.
 # This fix is OS-independent. We didn't see a good reason to make this
 # Mac-only. Consistency within Streamlit seemed more important.
-# This needs to run before any other import of matplotlib. could happen.
+# This needs to run before any other import of matplotlib could happen.
 import os as _os
 
 _os.environ["MPLBACKEND"] = "Agg"
