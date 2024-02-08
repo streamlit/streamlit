@@ -33,7 +33,6 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime, url_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
@@ -45,8 +44,6 @@ if TYPE_CHECKING:
     from PIL import GifImagePlugin, Image, ImageFile
 
     from streamlit.delta_generator import DeltaGenerator
-
-LOGGER: Final = get_logger(__name__)
 
 # This constant is related to the frontend maximum content width specified
 # in App.jsx main container

@@ -30,7 +30,7 @@ from streamlit.runtime.session_manager import (
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.watcher import LocalSourcesWatcher
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class WebsocketSessionManager(SessionManager):
@@ -71,7 +71,7 @@ class WebsocketSessionManager(SessionManager):
         ), "Only one of existing_session_id and session_id_override should be truthy"
 
         if existing_session_id in self._active_session_info_by_id:
-            LOGGER.warning(
+            _LOGGER.warning(
                 "Session with id %s is already connected! Connecting to a new session.",
                 existing_session_id,
             )
@@ -105,7 +105,7 @@ class WebsocketSessionManager(SessionManager):
             session_id_override=session_id_override,
         )
 
-        LOGGER.debug(
+        _LOGGER.debug(
             "Created new session for client %s. Session ID: %s", id(client), session.id
         )
 

@@ -20,7 +20,7 @@ import math
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, List, TypeVar, cast, overload
+from typing import Any, Callable, Final, List, TypeVar, cast, overload
 
 from typing_extensions import TypeAlias
 
@@ -49,7 +49,7 @@ from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.util import TimedCleanupCache
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 CACHE_RESOURCE_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.RESOURCE)

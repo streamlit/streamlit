@@ -32,7 +32,7 @@ from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
 
@@ -204,7 +204,7 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
         # we were started via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a session.
-        LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
+        _LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
 
     return ctx
 

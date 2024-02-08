@@ -24,7 +24,6 @@ import types
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
-from streamlit.logger import get_logger
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -36,9 +35,6 @@ from streamlit.string_util import is_mem_address_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
-
-LOGGER: Final = get_logger(__name__)
 
 
 CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)

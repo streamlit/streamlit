@@ -56,7 +56,7 @@ from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
@@ -133,7 +133,7 @@ def _get_ssl_options(
     cert_file: str | None, key_file: str | None
 ) -> ssl.SSLContext | None:
     if bool(cert_file) != bool(key_file):
-        LOGGER.error(
+        _LOGGER.error(
             "Options 'server.sslCertFile' and 'server.sslKeyFile' must "
             "be set together. Set missing options or delete existing options."
         )
@@ -143,10 +143,10 @@ def _get_ssl_options(
         # sufficiently user-friendly
         # FileNotFoundError: [Errno 2] No such file or directory
         if not Path(cert_file).exists():
-            LOGGER.error("Cert file '%s' does not exist.", cert_file)
+            _LOGGER.error("Cert file '%s' does not exist.", cert_file)
             sys.exit(1)
         if not Path(key_file).exists():
-            LOGGER.error("Key file '%s' does not exist.", key_file)
+            _LOGGER.error("Key file '%s' does not exist.", key_file)
             sys.exit(1)
 
         ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -156,7 +156,7 @@ def _get_ssl_options(
         try:
             ssl_ctx.load_cert_chain(cert_file, key_file)
         except ssl.SSLError:
-            LOGGER.error(
+            _LOGGER.error(
                 "Failed to load SSL certificate. Make sure "
                 "cert file '%s' and key file '%s' are correct.",
                 cert_file,
@@ -191,10 +191,10 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         except (OSError, socket.error) as e:
             if e.errno == errno.EADDRINUSE:
                 if server_port_is_manually_set():
-                    LOGGER.error("Port %s is already in use", port)
+                    _LOGGER.error("Port %s is already in use", port)
                     sys.exit(1)
                 else:
-                    LOGGER.debug(
+                    _LOGGER.debug(
                         "Port %s already in use, trying to use the next one.", port
                     )
                     port += 1
@@ -256,13 +256,13 @@ class Server:
         When this returns, Streamlit is ready to accept new sessions.
         """
 
-        LOGGER.debug("Starting server...")
+        _LOGGER.debug("Starting server...")
 
         app = self._create_app()
         start_listening(app)
 
         port = config.get_option("server.port")
-        LOGGER.debug("Server started on port %s", port)
+        _LOGGER.debug("Server started on port %s", port)
 
         await self._runtime.start()
 
@@ -348,10 +348,10 @@ class Server:
             )
 
         if config.get_option("global.developmentMode"):
-            LOGGER.debug("Serving static content from the Node dev server")
+            _LOGGER.debug("Serving static content from the Node dev server")
         else:
             static_path = file_util.get_static_dir()
-            LOGGER.debug("Serving static content from %s", static_path)
+            _LOGGER.debug("Serving static content from %s", static_path)
 
             routes.extend(
                 [

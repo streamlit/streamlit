@@ -16,11 +16,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-from streamlit.logger import get_logger
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-
-LOGGER = get_logger(__name__)
 
 
 class ForwardMsgQueue:

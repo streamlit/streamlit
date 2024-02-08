@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, Dict, Tuple, cast
+from typing import Any, Callable, Dict, Final, Tuple, cast
 
 from blinker import Signal
 
@@ -25,7 +25,7 @@ from streamlit.logger import get_logger
 from streamlit.string_util import extract_leading_emoji
 from streamlit.util import calc_md5
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 def open_python_file(filename: str):
@@ -98,7 +98,7 @@ _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 def invalidate_pages_cache() -> None:
     global _cached_pages
 
-    LOGGER.debug("Pages directory changed")
+    _LOGGER.debug("Pages directory changed")
     with _pages_cache_lock:
         _cached_pages = None
 

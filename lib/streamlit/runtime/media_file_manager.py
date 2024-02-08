@@ -18,12 +18,12 @@ from __future__ import annotations
 
 import collections
 import threading
-from typing import Dict, Set
+from typing import Dict, Final, Set
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 def _get_session_id() -> str:
@@ -115,7 +115,7 @@ class MediaFileManager:
 
         Safe to call from any thread.
         """
-        LOGGER.debug("Removing orphaned files...")
+        _LOGGER.debug("Removing orphaned files...")
 
         with self._lock:
             for file_id in self._get_inactive_file_ids():
@@ -134,7 +134,7 @@ class MediaFileManager:
 
         Thread safety: callers must hold `self._lock`.
         """
-        LOGGER.debug("Deleting File: %s", file_id)
+        _LOGGER.debug("Deleting File: %s", file_id)
         self._storage.delete_file(file_id)
         del self._file_metadata[file_id]
 
@@ -151,17 +151,17 @@ class MediaFileManager:
         if session_id is None:
             session_id = _get_session_id()
 
-        LOGGER.debug("Disconnecting files for session with ID %s", session_id)
+        _LOGGER.debug("Disconnecting files for session with ID %s", session_id)
 
         with self._lock:
             if session_id in self._files_by_session_and_coord:
                 del self._files_by_session_and_coord[session_id]
 
-        LOGGER.debug(
+        _LOGGER.debug(
             "Sessions still active: %r", self._files_by_session_and_coord.keys()
         )
 
-        LOGGER.debug(
+        _LOGGER.debug(
             "Files: %s; Sessions with files: %s",
             len(self._file_metadata),
             len(self._files_by_session_and_coord),

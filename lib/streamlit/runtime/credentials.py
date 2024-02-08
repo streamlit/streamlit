@@ -22,7 +22,7 @@ import sys
 import textwrap
 from collections import namedtuple
 from datetime import datetime
-from typing import NoReturn
+from typing import Final, NoReturn
 from uuid import uuid4
 
 # TODO(lukasmasuch): Lazy-load click dependency
@@ -31,7 +31,7 @@ import click
 from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 if env_util.IS_WINDOWS:
@@ -182,7 +182,7 @@ class Credentials(object):
     def load(self, auto_resolve: bool = False) -> None:
         """Load from toml file."""
         if self.activation is not None:
-            LOGGER.error("Credentials already loaded. Not rereading file.")
+            _LOGGER.error("Credentials already loaded. Not rereading file.")
             return
 
         import toml
@@ -241,7 +241,7 @@ class Credentials(object):
         try:
             os.remove(c._conf_file)
         except OSError as e:
-            LOGGER.error("Error removing credentials file: %s" % e)
+            _LOGGER.error("Error removing credentials file: %s" % e)
 
     def save(self) -> None:
         """Save to toml file and send email."""
@@ -264,7 +264,7 @@ class Credentials(object):
         try:
             _send_email(self.activation.email)
         except RequestException as e:
-            LOGGER.error(f"Error saving email: {e}")
+            _LOGGER.error(f"Error saving email: {e}")
 
     def activate(self, show_instructions: bool = True) -> None:
         """Activate Streamlit.
@@ -305,7 +305,7 @@ class Credentials(object):
                         click.secho(_INSTRUCTIONS_TEXT)
                     activated = True
                 else:  # pragma: nocover
-                    LOGGER.error("Please try again.")
+                    _LOGGER.error("Please try again.")
 
 
 def _verify_email(email: str) -> _Activation:
@@ -330,7 +330,7 @@ def _verify_email(email: str) -> _Activation:
     # We deliberately use simple email validation here
     # since we do not use email address anywhere to send emails.
     if len(email) > 0 and email.count("@") != 1:
-        LOGGER.error("That doesn't look like an email :(")
+        _LOGGER.error("That doesn't look like an email :(")
         return _Activation(None, False)
 
     return _Activation(email, True)
@@ -338,7 +338,7 @@ def _verify_email(email: str) -> _Activation:
 
 def _exit(message: str) -> NoReturn:
     """Exit program with error."""
-    LOGGER.error(message)
+    _LOGGER.error(message)
     sys.exit(-1)
 
 

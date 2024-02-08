@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import mimetypes
 import os
+from typing import Final
 
 import tornado.web
 
@@ -23,7 +24,7 @@ import streamlit.web.server.routes
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):

@@ -18,7 +18,7 @@ import inspect
 import json
 import os
 import threading
-from typing import TYPE_CHECKING, Any, Dict, Type
+from typing import TYPE_CHECKING, Any, Dict, Final, Type
 
 import streamlit
 from streamlit import type_util, util
@@ -37,7 +37,7 @@ from streamlit.type_util import to_bytes
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -371,13 +371,13 @@ class ComponentRegistry:
             self._components[component.name] = component
 
         if existing is not None and component != existing:
-            LOGGER.warning(
+            _LOGGER.warning(
                 "%s overriding previously-registered %s",
                 component,
                 existing,
             )
 
-        LOGGER.debug("Registered component %s", component)
+        _LOGGER.debug("Registered component %s", component)
 
     def get_component_path(self, name: str) -> str | None:
         """Return the filesystem path for the component with the given name.

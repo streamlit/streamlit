@@ -21,6 +21,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Final,
     Iterable,
     List,
     Literal,
@@ -77,7 +78,7 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-_LOGGER = _logger.get_logger("root")
+_LOGGER: Final = _logger.get_logger(__name__)
 
 # All formats that support direct editing, meaning that these
 # formats will be returned with the same type when used with data_editor.

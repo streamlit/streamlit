@@ -19,15 +19,12 @@ from collections import defaultdict
 from typing import Dict, List, Sequence
 
 from streamlit import util
-from streamlit.logger import get_logger
 from streamlit.runtime.stats import CacheStat, group_stats
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
     UploadFileUrlInfo,
 )
-
-LOGGER = get_logger(__name__)
 
 
 class MemoryUploadedFileManager(UploadedFileManager):

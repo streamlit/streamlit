@@ -20,7 +20,7 @@ from typing import Final
 from streamlit import util
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # URLs for checking the current machine's external IP address.
 _AWS_CHECK_IP: Final = "http://checkip.amazonaws.com"
@@ -52,7 +52,7 @@ def get_external_ip() -> str | None:
     if _looks_like_an_ip_adress(response):
         _external_ip = response
     else:
-        LOGGER.warning(
+        _LOGGER.warning(
             # fmt: off
             "Did not auto detect external IP.\n"
             "Please go to %s for debugging hints.",

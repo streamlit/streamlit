@@ -31,7 +31,7 @@ from streamlit.runtime.media_file_storage import (
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.util import HASHLIB_KWARGS
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # Mimetype -> filename extension map for the `get_extension_for_mimetype`
 # function. We use Python's `mimetypes.guess_extension` for most mimetypes,
@@ -119,7 +119,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         # given ID, we don't need to create a new one.
         file_id = _calculate_file_id(file_data, mimetype, filename)
         if file_id not in self._files_by_id:
-            LOGGER.debug("Adding media file %s", file_id)
+            _LOGGER.debug("Adding media file %s", file_id)
             media_file = MemoryFile(
                 content=file_data, mimetype=mimetype, kind=kind, filename=filename
             )

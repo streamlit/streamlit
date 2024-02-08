@@ -33,7 +33,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
@@ -124,7 +124,7 @@ def marshall(exception_proto: ExceptionProto, exception: BaseException) -> None:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
         exception_proto.message = ""
-        LOGGER.warning(
+        _LOGGER.warning(
             """
 
 Streamlit was unable to parse the data from an exception in the user's script.

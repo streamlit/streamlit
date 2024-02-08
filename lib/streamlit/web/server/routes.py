@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+from typing import Final
 
 import tornado.web
 
@@ -23,7 +24,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 def allow_cross_origin_requests() -> bool:

@@ -20,12 +20,9 @@ import tornado.httputil
 import tornado.web
 
 from streamlit import config
-from streamlit.logger import get_logger
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server import routes, server_util
-
-LOGGER = get_logger(__name__)
 
 
 class UploadFileRequestHandler(tornado.web.RequestHandler):

@@ -24,7 +24,7 @@ from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.type_util import Key
 
-LOGGER: Final = _logger.get_logger(__name__)
+_LOGGER: Final = _logger.get_logger(__name__)
 
 
 _state_use_warning_already_displayed: bool = False
@@ -48,7 +48,7 @@ def get_session_state() -> SafeSessionState:
         if not _state_use_warning_already_displayed:
             _state_use_warning_already_displayed = True
             if not runtime.exists():
-                LOGGER.warning(
+                _LOGGER.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )
         return SafeSessionState(SessionState(), lambda: None)

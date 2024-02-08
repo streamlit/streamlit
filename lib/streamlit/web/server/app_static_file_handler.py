@@ -17,13 +17,13 @@ from __future__ import annotations
 import mimetypes
 import os
 from pathlib import Path
+from typing import Final
 
 import tornado.web
 
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
-
+_LOGGER: Final = get_logger(__name__)
 
 # We agreed on these limitations for the initial release of static file sharing,
 # based on security concerns from the SiS and Community Cloud teams

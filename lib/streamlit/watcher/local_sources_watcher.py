@@ -29,7 +29,7 @@ from streamlit.watcher.path_watcher import (
     get_default_path_watcher_class,
 )
 
-LOGGER = get_logger(__name__)
+_LOGGER = get_logger(__name__)
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
@@ -79,7 +79,7 @@ class LocalSourcesWatcher:
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
-            LOGGER.error("Received event for non-watched file: %s", filepath)
+            _LOGGER.error("Received event for non-watched file: %s", filepath)
             return
 
         # Workaround:
@@ -204,7 +204,7 @@ def get_module_paths(module: types.ModuleType) -> Set[str]:
             # Some modules might not have __file__ or __spec__ attributes.
             pass
         except Exception as e:
-            LOGGER.warning(f"Examining the path of {module.__name__} raised: {e}")
+            _LOGGER.warning(f"Examining the path of {module.__name__} raised: {e}")
 
         all_paths.update(
             [os.path.abspath(str(p)) for p in potential_paths if _is_valid_path(p)]
