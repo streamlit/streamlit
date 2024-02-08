@@ -153,7 +153,7 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
 
     if len(matched_pages) == 0:
         raise StreamlitAPIException(
-            f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
+            f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}. Only the main app file and files in the `pages/` directory are supported."
         )
 
     ctx.script_requests.request_rerun(
