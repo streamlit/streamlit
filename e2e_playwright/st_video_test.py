@@ -48,7 +48,7 @@ def test_video_rendering_webp(app: Page, assert_snapshot: ImageCompareFunction):
     expect(video_elements).to_have_count(5)
 
     # Wait for the video to load
-    app.wait_for_timeout(10_000)
+    app.wait_for_timeout(2000)
 
     expect(video_elements.nth(4)).to_be_visible()
     assert_snapshot(video_elements.nth(4), name="video_element_webm_with_subtitles")
