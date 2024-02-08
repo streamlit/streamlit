@@ -23,6 +23,8 @@ from streamlit.errors import StreamlitAPIException
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
 
+_ALPHANUMERIC_CHAR_REGEX = re.compile(r"^[a-zA-Z0-9_\- ]+$")
+
 
 def decode_ascii(string: bytes) -> str:
     """Decodes a string as ascii."""
@@ -34,8 +36,20 @@ def clean_text(text: "SupportsStr") -> str:
     return textwrap.dedent(str(text)).strip()
 
 
+def _contains_special_chars(text: str) -> bool:
+    """Check if a string contains any special chars.
+
+    Special chars in that case are all chars that are not
+    alphanumeric, underscore, hyphen or whitespace.
+    """
+    return re.match(_ALPHANUMERIC_CHAR_REGEX, text) is None if text else False
+
+
 def is_emoji(text: str) -> bool:
     """Check if input string is a valid emoji."""
+    if not _contains_special_chars(text):
+        return False
+
     from streamlit.emojis import ALL_EMOJIS
 
     return text.replace("\U0000FE0F", "") in ALL_EMOJIS
@@ -44,6 +58,7 @@ def is_emoji(text: str) -> bool:
 def validate_emoji(maybe_emoji: str | None) -> str:
     if maybe_emoji is None:
         return ""
+
     elif is_emoji(maybe_emoji):
         return maybe_emoji
     else:
@@ -56,6 +71,13 @@ def extract_leading_emoji(text: str) -> Tuple[str, str]:
     """Return a tuple containing the first emoji found in the given string and
     the rest of the string (minus an optional separator between the two).
     """
+
+    if not _contains_special_chars(text):
+        # If the string only contains basic alphanumerical chars and/or
+        # underscores, hyphen & whitespaces, then it's guaranteed that there
+        # is no emoji in the string.
+        return "", text
+
     from streamlit.emojis import EMOJI_EXTRACTION_REGEX
 
     re_match = re.search(EMOJI_EXTRACTION_REGEX, text)
