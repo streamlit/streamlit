@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import gc
 import random
 import unittest
 from typing import Dict, List, Set
@@ -185,3 +187,26 @@ class UtilTest(unittest.TestCase):
             util.calc_md5("eventually bytes"),
             util.calc_md5("eventually bytes".encode("utf-8")),
         )
+
+    def test_timed_cleanup_cache_gc(self):
+        """Test that the TimedCleanupCache does not leave behind tasks when
+        the cache is not externally reachable"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def create_cache():
+            cache = util.TimedCleanupCache(maxsize=2, ttl=10)
+            cache["foo"] = "bar"
+
+            # expire_cache and create_cache
+            assert len(asyncio.all_tasks()) > 1
+
+        asyncio.run(create_cache())
+
+        gc.collect()
+
+        async def check():
+            # Only has this function running
+            assert len(asyncio.all_tasks()) == 1
+
+        asyncio.run(check())

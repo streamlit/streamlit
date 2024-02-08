@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import dataclasses
 import inspect
 import json as json
@@ -33,6 +32,7 @@ from typing import (
 )
 
 import numpy as np
+from PIL import Image, ImageFile
 from typing_extensions import Final
 
 from streamlit import type_util
@@ -174,14 +174,30 @@ class WriteMixin:
             if type_util.is_type(
                 chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
             ):
-                # Try to convert openai chat completion chunk to a string:
-                with contextlib.suppress(Exception):
+                # Try to convert OpenAI chat completion chunk to a string:
+                try:
                     chunk = chunk.choices[0].delta.content or ""
+                except AttributeError as err:
+                    raise StreamlitAPIException(
+                        "Failed to parse the OpenAI ChatCompletionChunk. "
+                        "The most likely cause is a change of the chunk object structure "
+                        "due to a recent OpenAI update. You might be able to fix this "
+                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                    ) from err
 
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
-                # Try to convert langchain_core message chunk to a string:
-                with contextlib.suppress(Exception):
+                # Try to convert LangChain message chunk to a string:
+                try:
                     chunk = chunk.content or ""
+                except AttributeError as err:
+                    raise StreamlitAPIException(
+                        "Failed to parse the LangChain AIMessageChunk. "
+                        "The most likely cause is a change of the chunk object structure "
+                        "due to a recent LangChain update. You might be able to fix this "
+                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                    ) from err
 
             if isinstance(chunk, str):
                 first_text = False
@@ -241,6 +257,7 @@ class WriteMixin:
             - write(generator)      : Streams the output of a generator.
             - write(openai.Stream)  : Streams the output of an OpenAI stream.
             - write(altair)         : Displays an Altair chart.
+            - write(PIL.Image)      : Displays an image.
             - write(keras)          : Displays a Keras model.
             - write(graphviz)       : Displays a Graphviz graph.
             - write(plotly_fig)     : Displays a Plotly figure.
@@ -399,6 +416,9 @@ class WriteMixin:
             elif type_util.is_sympy_expession(arg):
                 flush_buffer()
                 self.dg.latex(arg)
+            elif isinstance(arg, (ImageFile.ImageFile, Image.Image)):
+                flush_buffer()
+                self.dg.image(arg)
             elif type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 

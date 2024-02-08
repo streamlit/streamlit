@@ -28,7 +28,7 @@ const checkboxInsideForm = {
   form_6: true,
   form_7: true,
   form_8: true,
-  form_9: true
+  form_9: true,
 };
 
 describe("Form/column association", () => {

@@ -112,13 +112,10 @@ def test_expander_session_state_set(app: Page):
     app.get_by_text("Print State Value").click()
     wait_for_app_run(app)
 
+    text_elements = app.get_by_test_id("stText")
+
     text_elements = app.locator("[data-testid='stText']")
     expect(text_elements).to_have_count(2)
-    text_elements = text_elements.all_inner_texts()
-    texts = [text.strip() for text in text_elements]
 
-    expected = [
-        "0.0",
-        "0.0",
-    ]
-    assert texts == expected
+    expect(text_elements.nth(0)).to_have_text("0.0", use_inner_text=True)
+    expect(text_elements.nth(1)).to_have_text("0.0", use_inner_text=True)
