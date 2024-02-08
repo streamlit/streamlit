@@ -378,6 +378,14 @@ def is_keras_model(obj: object) -> bool:
     )
 
 
+_OPENAI_CHUNK: Final = re.compile(r"^openai\..+\.ChatCompletionChunk$")
+
+
+def is_openai_chunk(obj: object) -> bool:
+    """True if input looks like an OpenAI chat completion chunk."""
+    return is_type(obj, _OPENAI_CHUNK)
+
+
 def is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
     # Overview on all value that are interpreted as scalar:
