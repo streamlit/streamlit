@@ -25,9 +25,17 @@ lazy_loaded_modules = [
     "graphviz",
     "streamlit.emojis",
     "streamlit.external",
-    # TODO(lukasmasuch): "streamlit.hello",
-    # TODO(lukasmasuch): "streamlit.vendor.pympler",
-    # TODO(lukasmasuch): "streamlit.watcher.event_based_path_watcher",
+    # TODO(lukasmasuch): Lazy load more packages:
+    # "streamlit.hello",
+    # "streamlit.vendor.pympler",
+    # "streamlit.watcher.event_based_path_watcher",
+    # "pandas",
+    # "pyarrow",
+    # "numpy",
+    # "matplotlib",
+    # "plotly",
+    # "pillow",
+    # "watchdog",
 ]
 
 for module in lazy_loaded_modules:
