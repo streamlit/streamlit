@@ -32,4 +32,3 @@ ALL_EMOJIS = {"#⃣", "#️⃣", "*⃣", "*️⃣", "0⃣", "0️⃣", "1⃣", "
 # multi-character emoji sequence that starts with a shorter emoji (emoji are weird...).
 ESCAPED_EMOJI = [re.escape(e) for e in sorted(ALL_EMOJIS, reverse=True)]
 EMOJI_EXTRACTION_REGEX = re.compile(f"^({'|'.join(ESCAPED_EMOJI)})[_ -]*(.*)")
-EMOJI_EXTRACTION_REGEX = re.compile(f"^({'|'.join(ESCAPED_EMOJI)})[_ -]*(.*)")
