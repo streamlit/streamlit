@@ -394,6 +394,7 @@ class ScriptRunner:
         """
         assert self._is_in_script_thread()
 
+        # An explicit loop instead of recursion to avoid stack overflows
         while True:
             _LOGGER.debug("Running script %s", rerun_data)
             start_time: float = timer()
