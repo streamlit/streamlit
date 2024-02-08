@@ -18,7 +18,6 @@ wheel
 # mypy types
 types-click
 types-protobuf
-types-python-dateutil
 types-pytz
 types-requests
 types-setuptools
