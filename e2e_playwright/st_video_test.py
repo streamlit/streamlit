@@ -28,7 +28,7 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     expect(video_elements).to_have_count(5)
 
     # Wait for the video to load
-    app.wait_for_timeout(5000)
+    app.wait_for_timeout(2000)
 
     expect(video_elements.nth(0)).to_be_visible()
     expect(video_elements.nth(1)).to_be_visible()
@@ -42,7 +42,7 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 @pytest.mark.skip_browser("webkit")
-def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
+def test_video_rendering_webp(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly webm video via screenshots matching."""
     video_elements = app.get_by_test_id("stVideo")
     expect(video_elements).to_have_count(5)
