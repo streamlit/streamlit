@@ -18,12 +18,14 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
+from typing import Dict, Iterable, TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, \
+    cast
 
 from typing_extensions import Final, Literal
 
 from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
+from streamlit.elements.lib.url_tools import merge_query_params
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Button_pb2 import Button as ButtonProto
@@ -436,6 +438,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
+        query_params: Union[Dict[str, Union[str, Iterable[str]]], None] = None,
     ) -> "DeltaGenerator":
         """Display a link to another page in a multipage app or to an external page.
 
@@ -490,6 +493,9 @@ class ButtonMixin:
             An optional boolean, which makes the link stretch its width to
             match the parent container. The default is ``True`` for page links
             in the sidebar, and ``False`` for those in the main app.
+        query_params: dict[str, str | Iterable[str]] | None
+            An optional dictionary of query params to include in the generated
+            link. The default is ``None``.
 
         Example
         -------
@@ -530,6 +536,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             use_container_width=use_container_width,
+            query_params=query_params,
         )
 
     def _download_button(
@@ -632,6 +639,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
+        query_params: Union[Dict[str, Union[str, Iterable[str]]], None] = None,
     ) -> "DeltaGenerator":
         page_link_proto = PageLinkProto()
         page_link_proto.disabled = disabled
@@ -655,7 +663,8 @@ class ButtonMixin:
                     f"The label param is required for external links used with st.page_link - please provide a label."
                 )
             else:
-                page_link_proto.page = page
+                full_path = merge_query_params(page, query_params)
+                page_link_proto.page = full_path
                 page_link_proto.external = True
                 return self.dg._enqueue("page_link", page_link_proto)
 
@@ -683,7 +692,8 @@ class ButtonMixin:
                 if label is None:
                     page_link_proto.label = page_name.replace("_", " ")
                 page_link_proto.page_script_hash = page_data["page_script_hash"]
-                page_link_proto.page = page_name
+                page_name_params = merge_query_params(page_name, query_params)
+                page_link_proto.page = page_name_params
                 break
 
         if page_link_proto.page_script_hash == "":

@@ -106,3 +106,13 @@ class PageLinkTest(DeltaGeneratorTestCase):
         self.assertEqual(c.page, "https://streamlit.io")
         self.assertTrue(c.external)
         self.assertEqual(c.use_container_width, False)
+
+    def test_external_with_query_params(self):
+        st.page_link(
+            "https://streamlit.io", label="the label", query_params={"foo": "bar"}
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.page, "https://streamlit.io/?foo=bar")
+        self.assertTrue(c.external)
