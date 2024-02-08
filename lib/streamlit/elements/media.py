@@ -345,47 +345,42 @@ def srt_to_vtt(srt_data: Union[str, bytes]) -> bytes:
 
     # Add WebVTT file header
     vtt_content = "WEBVTT\n\n" + vtt_data
+    # Convert the vtt content to bytes
     vtt_content = vtt_content.strip().encode("utf-8")
 
-    # Convert the vtt content to bytes
     return vtt_content
 
 
 def process_subtitle_data(
     coordinates: str,
     data: Union[str, bytes, io.BytesIO],
-    mimetype: str = "text/vtt",
 ) -> str:
     allowed_formats = {".srt", ".vtt"}
 
-    def get_data_from_file(file_path: str) -> str:
-        """Reads the file and returns its content."""
-        with open(file_path, "r", encoding="utf-8") as file:
-            return file.read().strip()
-
-    def handle_string_data(data_str: str) -> Union[bytes, str]:
+    def handle_string_data(data_str: str) -> bytes:
         """Handles string data, either as a file path or raw content."""
         if os.path.isfile(data_str):
             path = Path(data_str)
             file_extension = path.suffix.lower()
 
             if file_extension not in allowed_formats:
+                # TODO [kajarenc]: maybe raise a StreamlitAPIException instead
                 raise ValueError(
                     f"Incorrect subtitle format {file_extension}. Subtitles must be in "
                     f"one of the following formats: {', '.join(allowed_formats)}"
                 )
-            content = get_data_from_file(data_str)
-            # TODO: [kajarenc] probably bug in line below, should be `else content`
-            return srt_to_vtt(content) if file_extension == ".srt" else data_str
-        else:
-            content = data_str.strip()
-            if content.startswith("WEBVTT"):
-                return content.encode("utf-8")
-            elif _is_srt(content):
-                return srt_to_vtt(content)
-            raise ValueError(
-                "The provided string neither matches valid VTT nor SRT format."
-            )
+            with open(data_str, "rb") as file:
+                content = file.read()
+            return srt_to_vtt(content) if file_extension == ".srt" else content
+
+        content = data_str.strip()
+        if content.startswith("WEBVTT"):
+            return content.encode("utf-8")
+        elif _is_srt(content):
+            return srt_to_vtt(content)
+        raise ValueError(
+            "The provided string neither matches valid VTT nor SRT format."
+        )
 
     def handle_stream_data(stream: io.BytesIO) -> bytes:
         """Handles io.BytesIO data, assuming it's SRT content."""
@@ -395,23 +390,23 @@ def process_subtitle_data(
 
     # Determine the type of data and process accordingly
     if isinstance(data, str):
-        data_or_filename = handle_string_data(data)
+        subtitle_data = handle_string_data(data)
     elif isinstance(data, bytes):
-        data_or_filename = data  # Assume bytes are already in the correct format.
+        subtitle_data = data  # Assume bytes are already in the correct format.
     elif isinstance(data, io.BytesIO):
-        data_or_filename = handle_stream_data(data)
+        subtitle_data = handle_stream_data(data)
     else:
         raise RuntimeError(f"Invalid binary data format for subtitle: {type(data)}.")
 
     if runtime.exists():
         # Save the processed data and return the file URL
         file_url = runtime.get_instance().media_file_mgr.add(
-            path_or_data=data_or_filename,
-            mimetype=mimetype,
+            path_or_data=subtitle_data,
+            mimetype="text/vtt",
             coordinates=coordinates,
             file_name=f"{coordinates}.vtt",
         )
-        caching.save_media_data(data_or_filename, mimetype, coordinates)
+        caching.save_media_data(subtitle_data, "text/vtt", coordinates)
 
         return file_url
     else:
@@ -493,11 +488,12 @@ def marshall_video(
                 f"Only str (file paths) and dict are supported."
             )
 
-        for label, path in subtitle_items:
+        for label, subtitle_data in subtitle_items:
             sub = proto.subtitles.add()
             sub.label = label
+            # TODO [kajarenc]: check line below correctness for coordinates with team
             subtitle_coordinates = f"{coordinates}/subtitle/{label}"
-            sub.url = process_subtitle_data(subtitle_coordinates, path)
+            sub.url = process_subtitle_data(subtitle_coordinates, subtitle_data)
 
 
 def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
