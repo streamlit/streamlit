@@ -66,6 +66,25 @@ class StringUtilTest(unittest.TestCase):
     def test_extract_leading_emoji(self, text, expected):
         self.assertEqual(string_util.extract_leading_emoji(text), expected)
 
+    @parameterized.expand(
+        [
+            ("A", False),
+            ("hello", False),
+            ("1_foo", False),
+            ("foo bar", False),
+            ("", False),
+            ("a 😃bc", True),
+            ("X😃", True),
+            ("%", True),
+            ("😃", True),
+            ("😃 page name", True),
+            ("👨‍👨‍👧‍👦_page name", True),
+            ("何_is_this", True),
+        ]
+    )
+    def test_contains_special_chars(self, text: str, expected: bool):
+        self.assertEqual(string_util._contains_special_chars(text), expected)
+
     def test_simplify_number(self):
         """Test streamlit.string_util.simplify_number."""
 
