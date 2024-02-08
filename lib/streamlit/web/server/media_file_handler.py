@@ -17,14 +17,13 @@ from urllib.parse import quote
 
 import tornado.web
 
-from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     get_extension_for_mimetype,
 )
-from streamlit.web.server import allow_cross_origin_requests, server_util
+from streamlit.web.server import allow_cross_origin_requests
 
 _LOGGER = get_logger(__name__)
 
