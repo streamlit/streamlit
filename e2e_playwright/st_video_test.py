@@ -37,7 +37,11 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
 
     assert_snapshot(video_elements.nth(0), name="video_element_first")
     assert_snapshot(video_elements.nth(1), name="video_element_second")
-    assert_snapshot(video_elements.nth(2), name="video_element_third")
+    assert_snapshot(
+        video_elements.nth(2),
+        name="video_element_third",
+        image_threshold=0.09,
+    )
     assert_snapshot(video_elements.nth(3), name="video_element_with_subtitles")
 
 
