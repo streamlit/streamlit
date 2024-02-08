@@ -23,7 +23,7 @@ from streamlit.errors import StreamlitAPIException
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
 
-_ALPHANUMERIC_CHAR_REGEX = re.compile(r"^[a-zA-Z0-9_\- ]+$")
+_ALPHANUMERIC_CHAR_REGEX = re.compile(r"^[a-zA-Z0-9_&\-\. ]+$")
 
 
 def decode_ascii(string: bytes) -> str:
