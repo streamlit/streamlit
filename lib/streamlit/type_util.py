@@ -67,7 +67,7 @@ if TYPE_CHECKING:
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
 
-_LOGGER = _logger.get_logger("root")
+_LOGGER = _logger.get_logger(__name__)
 
 # The array value field names are part of the larger set of possible value
 # field names. See the explanation for said set below. The message types
