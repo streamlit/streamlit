@@ -664,11 +664,12 @@ class ButtonMixin:
         if ctx:
             ctx_main_script = ctx.main_script_path
 
-        main_script_path = os.path.join(os.getcwd(), ctx_main_script)
+        normalized_ctx_main_script_path = os.path.normpath(ctx_main_script)
+        main_script_path = os.path.join(os.getcwd(), normalized_ctx_main_script_path)
         main_script_directory = os.path.dirname(main_script_path)
 
-        # Convenience for handling ./ notation and ensure leading / doesn't refer to root directory
-        page = os.path.normpath(page.strip("/"))
+        # Convenience for handling ./ notation
+        page = os.path.normpath(page)
 
         # Build full path
         requested_page = os.path.join(main_script_directory, page)

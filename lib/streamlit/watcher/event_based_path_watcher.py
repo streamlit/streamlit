@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Callable, Dict, cast
+from typing import Callable, Dict, Final, cast
 
 from blinker import ANY, Signal
 from watchdog import events
@@ -50,7 +50,7 @@ from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class EventBasedPathWatcher:
@@ -61,7 +61,7 @@ class EventBasedPathWatcher:
         """Close the _MultiPathWatcher singleton."""
         path_watcher = _MultiPathWatcher.get_singleton()
         path_watcher.close()
-        LOGGER.debug("Watcher closed")
+        _LOGGER.debug("Watcher closed")
 
     def __init__(
         self,
@@ -98,7 +98,7 @@ class EventBasedPathWatcher:
             glob_pattern=glob_pattern,
             allow_nonexistent=allow_nonexistent,
         )
-        LOGGER.debug("Watcher created for %s", self._path)
+        _LOGGER.debug("Watcher created for %s", self._path)
 
     def __repr__(self) -> str:
         return repr_(self)
@@ -121,7 +121,7 @@ class _MultiPathWatcher(object):
         Instantiates one if necessary.
         """
         if cls._singleton is None:
-            LOGGER.debug("No singleton. Registering one.")
+            _LOGGER.debug("No singleton. Registering one.")
             _MultiPathWatcher()
 
         return cast("_MultiPathWatcher", _MultiPathWatcher._singleton)
@@ -189,7 +189,7 @@ class _MultiPathWatcher(object):
             folder_handler = self._folder_handlers.get(folder_path)
 
             if folder_handler is None:
-                LOGGER.debug(
+                _LOGGER.debug(
                     "Cannot stop watching path, because it is already not being "
                     "watched. %s",
                     folder_path,
@@ -207,12 +207,12 @@ class _MultiPathWatcher(object):
             """Close this _MultiPathWatcher object forever."""
             if len(self._folder_handlers) != 0:
                 self._folder_handlers = {}
-                LOGGER.debug(
+                _LOGGER.debug(
                     "Stopping observer thread even though there is a non-zero "
                     "number of event observers!"
                 )
             else:
-                LOGGER.debug("Stopping observer thread")
+                _LOGGER.debug("Stopping observer thread")
 
             self._observer.stop()
             self._observer.join(timeout=5)
@@ -323,7 +323,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # the desired subtype from the event_type check
             event = cast(events.FileSystemMovedEvent, event)
 
-            LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
+            _LOGGER.debug(
+                "Move event: src %s; dest %s", event.src_path, event.dest_path
+            )
             changed_path = event.dest_path
         # On OSX with VI, on save, the file is deleted, the swap file is
         # modified and then the original file is created hence why we
@@ -331,14 +333,14 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         elif event.event_type == events.EVENT_TYPE_CREATED:
             changed_path = event.src_path
         else:
-            LOGGER.debug("Don't care about event type %s", event.event_type)
+            _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
         changed_path = os.path.abspath(changed_path)
 
         changed_path_info = self._watched_paths.get(changed_path, None)
         if changed_path_info is None:
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Ignoring changed path %s.\nWatched_paths: %s",
                 changed_path,
                 self._watched_paths,
@@ -355,7 +357,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             modification_time != 0.0
             and modification_time == changed_path_info.modification_time
         ):
-            LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
+            _LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
             return
 
         changed_path_info.modification_time = modification_time
@@ -366,10 +368,10 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             allow_nonexistent=changed_path_info.allow_nonexistent,
         )
         if new_md5 == changed_path_info.md5:
-            LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
+            _LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
             return
 
-        LOGGER.debug("File/dir MD5 changed: %s", changed_path)
+        _LOGGER.debug("File/dir MD5 changed: %s", changed_path)
         changed_path_info.md5 = new_md5
         changed_path_info.on_changed.send(changed_path)
 
