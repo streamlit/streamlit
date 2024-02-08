@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Callable, Dict, cast
+from typing import Callable, Dict, Final, cast
 
 from blinker import ANY, Signal
 from watchdog import events
@@ -50,7 +50,7 @@ from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class EventBasedPathWatcher:
