@@ -40,6 +40,9 @@ export function render(
       <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
     ),
     ...options,
+    // TODO: Remove this to have RTL run on React 18
+    // react-18-upgrade
+    legacyRoot: true,
   })
 }
 

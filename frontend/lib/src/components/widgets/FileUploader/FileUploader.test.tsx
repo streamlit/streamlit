@@ -179,19 +179,19 @@ describe("FileUploader widget tests", () => {
     expect(fileName.textContent).toContain("filename.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(fileToUpload)
 
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-    //   props.element,
-    //   buildFileUploaderStateProto([
-    //     {
-    //       fileId: "filename.txt",
-    //       uploadUrl: "filename.txt",
-    //       deleteUrl: "filename.txt",
-    //     },
-    //   ]),
-    //   {
-    //     fromUi: true,
-    //   }
-    // )
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("uploads a single file even if too many files are selected", async () => {
@@ -241,19 +241,19 @@ describe("FileUploader widget tests", () => {
     expect(errors[0].textContent).toContain("Only one file is allowed.")
     expect(errors[1].textContent).toContain("Only one file is allowed.")
 
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-    //   props.element,
-    //   buildFileUploaderStateProto([
-    //     {
-    //       fileId: "filename1.txt",
-    //       uploadUrl: "filename1.txt",
-    //       deleteUrl: "filename1.txt",
-    //     },
-    //   ]),
-    //   {
-    //     fromUi: true,
-    //   }
-    // )
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("replaces file on single file uploader", async () => {
@@ -337,24 +337,24 @@ describe("FileUploader widget tests", () => {
     const errorFileNames = screen.getAllByTestId("stUploadedFileErrorMessage")
     expect(errorFileNames.length).toBe(1)
 
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-    //   props.element,
-    //   buildFileUploaderStateProto([
-    //     {
-    //       fileId: "filename1.txt",
-    //       uploadUrl: "filename1.txt",
-    //       deleteUrl: "filename1.txt",
-    //     },
-    //     {
-    //       fileId: "filename2.txt",
-    //       uploadUrl: "filename2.txt",
-    //       deleteUrl: "filename2.txt",
-    //     },
-    //   ]),
-    //   {
-    //     fromUi: true,
-    //   }
-    // )
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
+        },
+        {
+          fileId: "filename2.txt",
+          uploadUrl: "filename2.txt",
+          deleteUrl: "filename2.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("can delete completed upload", async () => {
@@ -368,10 +368,12 @@ describe("FileUploader widget tests", () => {
     ) as HTMLInputElement
 
     // Upload two files
-    await waitFor(() => {
+    await act(() =>
       user.upload(fileDropZoneInput, createFile("filename1.txt"))
+    )
+    await act(() =>
       user.upload(fileDropZoneInput, createFile("filename2.txt"))
-    })
+    )
 
     const fileNames = await screen.findAllByTestId("stUploadedFile")
     expect(fileNames.length).toBe(2)
@@ -379,26 +381,26 @@ describe("FileUploader widget tests", () => {
     expect(fileNames[1].textContent).toContain("filename1.txt")
 
     // WidgetStateManager should have been called with our two file IDs and first time with empty state
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
 
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
-    //   props.element,
-    //   buildFileUploaderStateProto([
-    //     {
-    //       fileId: "filename1.txt",
-    //       uploadUrl: "filename1.txt",
-    //       deleteUrl: "filename1.txt",
-    //     },
-    //     {
-    //       fileId: "filename2.txt",
-    //       uploadUrl: "filename2.txt",
-    //       deleteUrl: "filename2.txt",
-    //     },
-    //   ]),
-    //   {
-    //     fromUi: true,
-    //   }
-    // )
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
+        },
+        {
+          fileId: "filename2.txt",
+          uploadUrl: "filename2.txt",
+          deleteUrl: "filename2.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
 
     const firstDeleteBtn = screen.getAllByTestId("fileDeleteBtn")[0]
 
@@ -412,20 +414,20 @@ describe("FileUploader widget tests", () => {
     // WidgetStateManager should have been called with the file ID
     // of the remaining file. This should be the fourth time WidgetStateManager
     // has been updated.
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(4)
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
-    //   props.element,
-    //   buildFileUploaderStateProto([
-    //     {
-    //       fileId: "filename1.txt",
-    //       uploadUrl: "filename1.txt",
-    //       deleteUrl: "filename1.txt",
-    //     },
-    //   ]),
-    //   {
-    //     fromUi: true,
-    //   }
-    // )
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(4)
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename1.txt",
+          uploadUrl: "filename1.txt",
+          deleteUrl: "filename1.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
   })
 
   it("can delete in-progress upload", async () => {
@@ -616,19 +618,19 @@ describe("FileUploader widget tests", () => {
     const fileName = screen.getByTestId("stUploadedFile")
     expect(fileName.textContent).toContain("filename.txt")
 
-    // expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-    //   props.element,
-    //   buildFileUploaderStateProto([
-    //     {
-    //       fileId: "filename.txt",
-    //       uploadUrl: "filename.txt",
-    //       deleteUrl: "filename.txt",
-    //     },
-    //   ]),
-    //   {
-    //     fromUi: true,
-    //   }
-    // )
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      }
+    )
 
     // "Submit" the form
     act(() => {
