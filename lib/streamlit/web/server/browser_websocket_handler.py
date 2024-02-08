@@ -105,6 +105,8 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             user_info["email"] = None
         else:
             user_info["email"] = email
+        
+        user_info["ip_addr"] = self.request.remote_ip
 
         existing_session_id = None
         try:
