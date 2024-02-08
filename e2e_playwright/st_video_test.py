@@ -34,11 +34,13 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     expect(video_elements.nth(1)).to_be_visible()
     expect(video_elements.nth(2)).to_be_visible()
     expect(video_elements.nth(3)).to_be_visible()
+    expect(video_elements.nth(4)).to_be_visible()
 
     assert_snapshot(video_elements.nth(0), name="video_element_first")
     assert_snapshot(video_elements.nth(1), name="video_element_second")
     assert_snapshot(video_elements.nth(2), name="video_element_third")
     assert_snapshot(video_elements.nth(3), name="video_element_with_subtitles")
+    assert_snapshot(video_elements.nth(3), name="video_webm_element_with_subtitles")
 
 
 def test_displays_a_video_player(app: Page):

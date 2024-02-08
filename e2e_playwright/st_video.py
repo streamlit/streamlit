@@ -36,3 +36,13 @@ st.video(
         "Deutsch": "video_test_assets/sintel-de.vtt",
     },
 )
+
+# Test subtitle with webm video
+st.video(
+    "video_test_assets/sintel-short.webm",
+    start_time=25,
+    subtitles={
+        "English": "video_test_assets/sintel-en.vtt",
+        "Deutsch": "video_test_assets/sintel-de.vtt",
+    },
+)
