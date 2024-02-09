@@ -26,10 +26,10 @@ lazy_loaded_modules = [
     "watchdog",
     "streamlit.emojis",
     "streamlit.external",
+    "streamlit.vendor.pympler",
     "streamlit.watcher.event_based_path_watcher",
     # TODO(lukasmasuch): Lazy load more packages:
     # "streamlit.hello",
-    # "streamlit.vendor.pympler",
     # "pandas",
     # "pyarrow",
     # "numpy",
