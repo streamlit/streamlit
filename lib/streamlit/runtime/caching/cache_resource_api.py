@@ -519,7 +519,7 @@ class ResourceCache(Cache):
             return result
 
     @gather_metrics("_cache_resource_object")
-    def write_result(self, key: str, value: Any, messages: List[MsgData]) -> None:
+    def write_result(self, key: str, value: Any, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
         ctx = get_script_run_ctx()
         if ctx is None:
