@@ -13,15 +13,14 @@
 # limitations under the License.
 
 import io
-import os
 import re
-from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union, cast
 
 from typing_extensions import Final, TypeAlias
 
 import streamlit as st
 from streamlit import runtime, type_util, url_util
+from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
@@ -222,42 +221,6 @@ def _reshape_youtube_url(url: str) -> Optional[str]:
     return None
 
 
-def _is_srt(stream: Union[str, io.BytesIO]) -> bool:
-    # Convert str to io.BytesIO if 'stream' is a string
-    if isinstance(stream, str):
-        stream = io.BytesIO(stream.encode("utf-8"))
-
-    # Set the stream position to the beginning in case it's been moved
-    stream.seek(0)
-
-    # Read enough bytes to reliably check for SRT patterns
-    # This might be adjusted, but 33 bytes should be enough to read the first numeric
-    # line, the full timestamp line, and a bit of the next line
-    header = stream.read(33)
-
-    try:
-        header_str = header.decode("utf-8").strip()  # Decode and strip whitespace
-    except UnicodeDecodeError:
-        # If it's not valid utf-8, it's probably not a valid SRT file
-        return False
-
-    # Regular expression to match the SRT timestamp format
-    # It matches the
-    # "hours:minutes:seconds,milliseconds --> hours:minutes:seconds,milliseconds" format
-    timestamp_regex = re.compile(r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}")
-
-    # Split the header into lines and process them
-    lines = header_str.split("\n")
-
-    # Check for the pattern of an SRT file: digit(s), newline, timestamp
-    if len(lines) >= 2 and lines[0].isdigit():
-        match = timestamp_regex.search(lines[1])
-        if match:
-            return True
-
-    return False
-
-
 def _marshall_av_media(
     coordinates: str,
     proto: Union[AudioProto, VideoProto],
@@ -310,108 +273,6 @@ def _marshall_av_media(
         file_url = ""
 
     proto.url = file_url
-
-
-def srt_to_vtt(srt_data: Union[str, bytes]) -> bytes:
-    """
-    Convert subtitles from SubRip (.srt) format to WebVTT (.vtt) format.
-    This function accepts the content of the .srt file either as a string
-    or as a BytesIO stream.
-    Parameters
-    ----------
-    srt_data : str or bytes
-        The content of the .srt file as a string or a bytes stream.
-    Returns
-    -------
-    bytes
-        The content converted into .vtt format.
-    """
-
-    # If the input is a bytes stream, convert it to a string
-    if isinstance(srt_data, bytes):
-        # Decode the bytes to a UTF-8 string
-        try:
-            srt_data = srt_data.decode("utf-8")
-        except UnicodeDecodeError as e:
-            raise ValueError("Could not decode the input stream as UTF-8.") from e
-    if not isinstance(srt_data, str):
-        # If it's not a string by this point, something is wrong.
-        raise TypeError(
-            f"Input must be a string or a bytes stream, not {type(srt_data)}."
-        )
-
-    # Replace SubRip timing with WebVTT timing
-    vtt_data = re.sub(r"(\d{2}:\d{2}:\d{2}),(\d{3})", r"\1.\2", srt_data)
-
-    # Add WebVTT file header
-    vtt_content = "WEBVTT\n\n" + vtt_data
-    # Convert the vtt content to bytes
-    vtt_content = vtt_content.strip().encode("utf-8")
-
-    return vtt_content
-
-
-def process_subtitle_data(
-    coordinates: str,
-    data: Union[str, bytes, io.BytesIO],
-) -> str:
-    allowed_formats = {".srt", ".vtt"}
-
-    def handle_string_data(data_str: str) -> bytes:
-        """Handles string data, either as a file path or raw content."""
-        if os.path.isfile(data_str):
-            path = Path(data_str)
-            file_extension = path.suffix.lower()
-
-            if file_extension not in allowed_formats:
-                # TODO [kajarenc]: maybe raise a StreamlitAPIException instead
-                raise ValueError(
-                    f"Incorrect subtitle format {file_extension}. Subtitles must be in "
-                    f"one of the following formats: {', '.join(allowed_formats)}"
-                )
-            with open(data_str, "rb") as file:
-                content = file.read()
-            return srt_to_vtt(content) if file_extension == ".srt" else content
-
-        content = data_str.strip()
-        if content.startswith("WEBVTT"):
-            return content.encode("utf-8")
-        elif _is_srt(content):
-            return srt_to_vtt(content)
-        raise ValueError(
-            "The provided string neither matches valid VTT nor SRT format."
-        )
-
-    def handle_stream_data(stream: io.BytesIO) -> bytes:
-        """Handles io.BytesIO data, assuming it's SRT content."""
-        stream.seek(0)
-        stream_data = stream.getvalue()
-        return srt_to_vtt(stream_data) if _is_srt(stream) else stream_data
-
-    # Determine the type of data and process accordingly
-    if isinstance(data, str):
-        subtitle_data = handle_string_data(data)
-    elif isinstance(data, bytes):
-        subtitle_data = data  # Assume bytes are already in the correct format.
-    elif isinstance(data, io.BytesIO):
-        subtitle_data = handle_stream_data(data)
-    else:
-        raise RuntimeError(f"Invalid binary data format for subtitle: {type(data)}.")
-
-    if runtime.exists():
-        # Save the processed data and return the file URL
-        file_url = runtime.get_instance().media_file_mgr.add(
-            path_or_data=subtitle_data,
-            mimetype="text/vtt",
-            coordinates=coordinates,
-            file_name=f"{coordinates}.vtt",
-        )
-        caching.save_media_data(subtitle_data, "text/vtt", coordinates)
-
-        return file_url
-    else:
-        # When running in "raw mode", we can't access the MediaFileManager.
-        return ""
 
 
 def marshall_video(
