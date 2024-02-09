@@ -359,6 +359,7 @@ class AppSession:
                 client_state.widget_states,
                 client_state.page_script_hash,
                 client_state.page_name,
+                client_state.fragment_id,
             )
         else:
             rerun_data = RerunData()
@@ -466,6 +467,7 @@ class AppSession:
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
         page_script_hash: Optional[str] = None,
+        fragment_id: Optional[str] = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -475,7 +477,13 @@ class AppSession:
         """
         self._event_loop.call_soon_threadsafe(
             lambda: self._handle_scriptrunner_event_on_event_loop(
-                sender, event, forward_msg, exception, client_state, page_script_hash
+                sender,
+                event,
+                forward_msg,
+                exception,
+                client_state,
+                page_script_hash,
+                fragment_id,
             )
         )
 
@@ -487,6 +495,7 @@ class AppSession:
         exception: Optional[BaseException] = None,
         client_state: Optional[ClientState] = None,
         page_script_hash: Optional[str] = None,
+        fragment_id: Optional[str] = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -517,6 +526,9 @@ class AppSession:
         page_script_hash : str | None
             A hash of the script path corresponding to the page currently being
             run. Set only for the SCRIPT_STARTED event.
+
+        fragment_id : str | None
+            The fragment ID if this script run corresponds to a fragment.
         """
 
         assert (
@@ -544,28 +556,31 @@ class AppSession:
 
             self._clear_queue()
             self._enqueue_forward_msg(
-                self._create_new_session_message(page_script_hash)
+                self._create_new_session_message(page_script_hash, fragment_id)
             )
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
             or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
+            or event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
         ):
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_NOT_RUNNING
 
-            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            if event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS:
+                status = ForwardMsg.FINISHED_SUCCESSFULLY
+            elif event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS:
+                status = ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+            else:
+                status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
-            script_finished_msg = self._create_script_finished_message(
-                ForwardMsg.FINISHED_SUCCESSFULLY
-                if script_succeeded
-                else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
-            )
-            self._enqueue_forward_msg(script_finished_msg)
-
+            self._enqueue_forward_msg(self._create_script_finished_message(status))
             self._debug_last_backmsg_id = None
 
-            if script_succeeded:
+            if (
+                event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+                or event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
+            ):
                 # The script completed successfully: update our
                 # LocalSourcesWatcher to account for any source code changes
                 # that change which modules should be watched.
@@ -584,11 +599,12 @@ class AppSession:
                 self._enqueue_forward_msg(msg)
 
         elif event == ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN:
-            script_finished_msg = self._create_script_finished_message(
-                ForwardMsg.FINISHED_EARLY_FOR_RERUN
-            )
             self._state = AppSessionState.APP_NOT_RUNNING
-            self._enqueue_forward_msg(script_finished_msg)
+            self._enqueue_forward_msg(
+                self._create_script_finished_message(
+                    ForwardMsg.FINISHED_EARLY_FOR_RERUN
+                )
+            )
             if self._local_sources_watcher:
                 self._local_sources_watcher.update_watched_modules()
 
@@ -632,7 +648,9 @@ class AppSession:
         msg.session_event.script_changed_on_disk = True
         return msg
 
-    def _create_new_session_message(self, page_script_hash: str) -> ForwardMsg:
+    def _create_new_session_message(
+        self, page_script_hash: str, fragment_id: Optional[str] = None
+    ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
@@ -640,6 +658,7 @@ class AppSession:
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._script_data.main_script_path
         msg.new_session.page_script_hash = page_script_hash
+        msg.new_session.fragment_id = fragment_id or ""
 
         _populate_app_pages(msg.new_session, self._script_data.main_script_path)
         _populate_config_msg(msg.new_session.config)

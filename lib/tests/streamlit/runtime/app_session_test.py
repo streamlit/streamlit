@@ -687,6 +687,49 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         add_script_run_ctx(ctx=orig_ctx)
 
+    @patch(
+        "streamlit.runtime.app_session._generate_scriptrun_id",
+        MagicMock(return_value="mock_scriptrun_id"),
+    )
+    async def test_new_session_message_includes_fragment_id(self):
+        session = _create_test_session(asyncio.get_running_loop())
+
+        orig_ctx = get_script_run_ctx()
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=session._enqueue_forward_msg,
+            query_string="",
+            session_state=MagicMock(),
+            uploaded_file_mgr=MagicMock(),
+            main_script_path="",
+            page_script_hash="",
+            user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
+        )
+        add_script_run_ctx(ctx=ctx)
+
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_id="my_fragment_id",
+        )
+
+        # Yield to let the AppSession's callbacks run.
+        await asyncio.sleep(0)
+
+        sent_messages = session._browser_queue._queue
+        self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
+
+        new_session_msg = sent_messages[0].new_session
+        self.assertEqual(new_session_msg.fragment_id, "my_fragment_id")
+
+        add_script_run_ctx(ctx=orig_ctx)
+
     async def test_events_handled_on_event_loop(self):
         """ScriptRunner events should be handled on the main thread only."""
         session = _create_test_session(asyncio.get_running_loop())
