@@ -344,9 +344,9 @@ class _CacheFuncHasher:
 
         h = hashlib.new("md5", **HASHLIB_KWARGS)
 
-        from unittest.mock import Mock
-
-        if isinstance(obj, Mock):
+        if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
+            obj, "unittest.mock.MagicMock"
+        ):
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))

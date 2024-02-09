@@ -28,7 +28,6 @@ import sys
 import tempfile
 import textwrap
 import threading
-import unittest.mock
 import weakref
 from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
 
@@ -412,7 +411,9 @@ class _CodeHasher:
 
         h = hashlib.new("md5", **HASHLIB_KWARGS)
 
-        if isinstance(obj, unittest.mock.Mock):
+        if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
+            obj, "unittest.mock.MagicMock"
+        ):
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
