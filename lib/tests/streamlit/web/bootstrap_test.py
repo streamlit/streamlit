@@ -18,7 +18,6 @@ from io import StringIO
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock, patch
 
-import matplotlib
 import pytest
 
 from streamlit import config
@@ -29,27 +28,6 @@ from streamlit.web.bootstrap import (
 )
 from tests import testutil
 from tests.testutil import patch_config_options, should_skip_pydantic_tests
-
-
-class BootstrapTest(unittest.TestCase):
-    @patch("streamlit.web.bootstrap.asyncio.run", Mock())
-    @patch("streamlit.web.bootstrap.Server", Mock())
-    @patch("streamlit.web.bootstrap._install_pages_watcher", Mock())
-    def test_fix_matplotlib_crash(self):
-        """Test that bootstrap.run sets the matplotlib backend to
-        "Agg".
-        """
-        # TODO: Find a proper way to mock sys.platform
-        ORIG_PLATFORM = sys.platform
-
-        for platform in ["darwin", "linux2"]:
-            sys.platform = platform
-
-            matplotlib.use("pdf", force=True)
-            bootstrap.run("/not/a/script", "", [], {})
-            self.assertEqual("agg", matplotlib.get_backend().lower())
-
-        sys.platform = ORIG_PLATFORM
 
 
 class BootstrapPydanticFixTest(unittest.TestCase):
