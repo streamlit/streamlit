@@ -429,7 +429,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
-    @patch("streamlit.web.bootstrap.LOGGER.error")
+    @patch("streamlit.web.bootstrap._LOGGER.error")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_error):
         """If secrets throws an error on startup, we catch and log it."""
