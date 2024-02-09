@@ -30,6 +30,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Final,
     Iterator,
     List,
     Optional,
@@ -58,9 +59,8 @@ from streamlit.runtime.legacy_caching.hashing import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider
 from streamlit.util import HASHLIB_KWARGS
-from streamlit.vendor.pympler.asizeof import asizeof
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
@@ -225,6 +225,9 @@ class _MemCaches(CacheStatsProvider):
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
             function_caches = self._function_caches.copy()
+
+        # Lazy-load vendored package to prevent import of numpy
+        from streamlit.vendor.pympler.asizeof import asizeof
 
         stats = [
             CacheStat("st_cache", cache.display_name, asizeof(c))
