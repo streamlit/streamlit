@@ -51,7 +51,7 @@ export interface SidebarProps {
   theme: EmotionTheme
   hasElements: boolean
   appPages: IAppPage[]
-  onPageChange: (pageName: string) => void
+  onPageChange: (pageName: string, queryParams?: Map<string, string[]>) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean
 }

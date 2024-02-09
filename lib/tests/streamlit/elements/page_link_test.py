@@ -35,6 +35,7 @@ class PageLinkTest(DeltaGeneratorTestCase):
         self.assertFalse(c.disabled)
         self.assertEqual(c.icon, "")
         self.assertEqual(c.help, "")
+        self.assertEqual(c.query_params, {})
 
     def test_external_https_page(self):
         """Test that it can be called with an external https page link."""

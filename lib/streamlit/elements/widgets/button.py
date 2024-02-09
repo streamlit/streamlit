@@ -18,11 +18,13 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Dict, Iterable, TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, \
+from typing import Iterable, Mapping, TYPE_CHECKING, BinaryIO, Optional, TextIO, \
+    Union, \
     cast
 
 from typing_extensions import Final, Literal
 
+from elements.lib.url_tools import normalize_query_params
 from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
 from streamlit.elements.lib.url_tools import merge_query_params
@@ -438,7 +440,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
-        query_params: Union[Dict[str, Union[str, Iterable[str]]], None] = None,
+        query_params: Union[Mapping[str, Union[str, Iterable[str]]], None] = None,
     ) -> "DeltaGenerator":
         """Display a link to another page in a multipage app or to an external page.
 
@@ -493,8 +495,8 @@ class ButtonMixin:
             An optional boolean, which makes the link stretch its width to
             match the parent container. The default is ``True`` for page links
             in the sidebar, and ``False`` for those in the main app.
-        query_params: dict[str, str | Iterable[str]] | None
-            An optional dictionary of query params to include in the generated
+        query_params: Mapping[str, str | Iterable[str]] | None
+            An optional map of query params to include in the generated
             link. The default is ``None``.
 
         Example
@@ -639,7 +641,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
-        query_params: Union[Dict[str, Union[str, Iterable[str]]], None] = None,
+        query_params: Union[Mapping[str, Union[str, Iterable[str]]], None] = None,
     ) -> "DeltaGenerator":
         page_link_proto = PageLinkProto()
         page_link_proto.disabled = disabled
@@ -694,6 +696,7 @@ class ButtonMixin:
                 page_link_proto.page_script_hash = page_data["page_script_hash"]
                 page_name_params = merge_query_params(page_name, query_params)
                 page_link_proto.page = page_name_params
+                page_link_proto.query_params = normalize_query_params(query_params)
                 break
 
         if page_link_proto.page_script_hash == "":

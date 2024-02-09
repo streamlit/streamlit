@@ -1287,8 +1287,8 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
-    this.sendRerunBackMsg(undefined, pageScriptHash)
+  onPageChange = (pageScriptHash: string, queryParams?: Map<string, string[]>): void => {
+    this.sendRerunBackMsg(undefined, pageScriptHash, queryParams)
   }
 
   isAppInReadyState = (prevState: Readonly<State>): boolean => {
@@ -1302,7 +1302,8 @@ export class App extends PureComponent<Props, State> {
 
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
-    pageScriptHash?: string
+    pageScriptHash?: string,
+    queryParams?: Map<string, string[]>,
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1316,7 +1317,12 @@ export class App extends PureComponent<Props, State> {
 
     const { currentPageScriptHash } = this.state
     const { basePath } = baseUriParts
-    let queryString = this.getQueryString()
+    let queryString: string;
+    if (queryParams !== undefined) {
+      queryString = this.queryParamsToString(queryParams)
+    } else {
+      queryString = this.getQueryString()
+    }
     let pageName = ""
 
     if (pageScriptHash) {
@@ -1596,6 +1602,13 @@ export class App extends PureComponent<Props, State> {
         : document.location.search
 
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
+  }
+
+  queryParamsToString = (queryParams: Map<string, string[]>): string => {
+    return [...queryParams.entries()]
+      .flatMap(([k, vs]) => vs.map((v) => [k, v]))
+      .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
+      .join("&")
   }
 
   isInCloudEnvironment = (): boolean => {
