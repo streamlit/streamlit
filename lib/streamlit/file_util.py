@@ -207,3 +207,38 @@ def file_in_pythonpath(filepath) -> bool:
         file_is_in_folder_glob(os.path.normpath(filepath), path)
         for path in absolute_paths
     )
+
+
+def normalize_path_join(*args):
+    """Return the normalized path of the joined path.
+
+    Parameters
+    ----------
+    *args : str
+        The path components to join.
+
+    Returns
+    -------
+    str
+        The normalized path of the joined path.
+    """
+    return os.path.normpath(os.path.join(*args))
+
+
+def get_main_script_directory(main_script):
+    """Return the full path to the main script directory.
+
+    Parameters
+    ----------
+    main_script : str
+        The main script path. The path can be an absolute path or a relative
+        path.
+
+    Returns
+    -------
+    str
+        The full path to the main script directory.
+    """
+    main_script_path = normalize_path_join(os.getcwd(), main_script)
+
+    return os.path.dirname(main_script_path)
