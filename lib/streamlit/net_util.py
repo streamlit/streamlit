@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import socket
 from typing import Final
 
 from streamlit import util
@@ -80,6 +79,8 @@ def get_internal_ip() -> str | None:
     if _internal_ip is not None:
         return _internal_ip
 
+    import socket
+
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         try:
             # Doesn't even have to be reachable
@@ -106,6 +107,8 @@ def _make_blocking_http_get(url: str, timeout: float = 5) -> str | None:
 def _looks_like_an_ip_adress(address: str | None) -> bool:
     if address is None:
         return False
+
+    import socket
 
     try:
         socket.inet_pton(socket.AF_INET, address)
