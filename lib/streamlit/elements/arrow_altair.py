@@ -21,11 +21,17 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Collection, Dict, List, Sequence, Tuple, cast
-
-import pandas as pd
-from pandas.api.types import infer_dtype, is_integer_dtype
-from typing_extensions import Literal
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Collection,
+    Dict,
+    List,
+    Literal,
+    Sequence,
+    Tuple,
+    cast,
+)
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
@@ -47,6 +53,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import altair as alt
+    import pandas as pd
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -848,6 +855,8 @@ def _melt_data(
     new_color_column_name: str,
 ) -> pd.DataFrame:
     """Converts a wide-format dataframe to a long-format dataframe."""
+    import pandas as pd
+    from pandas.api.types import infer_dtype
 
     melted_df = pd.melt(
         df,
@@ -1083,6 +1092,8 @@ def _convert_col_names_to_str_in_place(
     size_column: str | None,
 ) -> Tuple[str | None, List[str], str | None, str | None]:
     """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
+    import pandas as pd
+
     column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
     str_column_names = [str(c) for c in column_names]
     df.columns = pd.Index(str_column_names)
@@ -1186,6 +1197,7 @@ def _get_scale(df: pd.DataFrame, column_name: str | None) -> alt.Scale:
 
 def _get_axis_config(df: pd.DataFrame, column_name: str | None, grid: bool) -> alt.Axis:
     import altair as alt
+    from pandas.api.types import is_integer_dtype
 
     if column_name is not None and is_integer_dtype(df[column_name]):
         # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
