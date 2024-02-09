@@ -20,7 +20,6 @@
 
 from __future__ import annotations
 
-import configparser
 import os
 from typing import Any, Collection, Dict, cast
 
@@ -58,6 +57,9 @@ def load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
     snowsql_config_file = os.path.expanduser(SNOWSQL_CONNECTION_FILE)
     if not os.path.exists(snowsql_config_file):
         return {}
+
+    # Lazy-load config parser for better import / startup performance
+    import configparser
 
     config = configparser.ConfigParser(inline_comment_prefixes="#")
     config.read(snowsql_config_file)
