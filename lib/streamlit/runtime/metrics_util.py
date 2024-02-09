@@ -23,7 +23,6 @@ import time
 import uuid
 from collections.abc import Sized
 from functools import wraps
-from timeit import default_timer as timer
 from typing import Any, Callable, Final, List, Set, TypeVar, cast, overload
 
 from streamlit import config, util
@@ -356,6 +355,8 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
     @wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
+        from timeit import default_timer as timer
+
         exec_start = timer()
         # Local imports to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
