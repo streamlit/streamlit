@@ -44,7 +44,7 @@ more-itertools==10.2.0
 mypy==1.6.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
-mysqlclient==2.2.3
+mysqlclient==2.2.4
 nh3==0.2.15
 nodeenv==1.8.0
 numpy==1.26.4
@@ -82,7 +82,7 @@ pytest-playwright==0.4.4
 pytest-rerunfailures==13.0
 pytest-xdist==3.5.0
 python-dateutil==2.8.2
-python-slugify==8.0.3
+python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
 readme-renderer==42.0
