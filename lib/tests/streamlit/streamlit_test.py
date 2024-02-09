@@ -52,16 +52,22 @@ class StreamlitTest(unittest.TestCase):
 
     def test_matplotlib_uses_agg(self):
         """Test that Streamlit uses the 'Agg' backend for matplotlib."""
-        self.assertEqual(matplotlib.get_backend().lower(), "agg")
-        self.assertEqual(os.environ.get("MPLBACKEND").lower(), "agg")
+        ORIG_PLATFORM = sys.platform
 
-        # Force matplotlib to use a different backend
-        matplotlib.use("pdf", force=True)
-        self.assertEqual(matplotlib.get_backend().lower(), "pdf")
+        for platform in ["darwin", "linux2"]:
+            sys.platform = platform
 
-        # Reset the backend to 'Agg'
-        matplotlib.use("agg", force=True)
-        self.assertEqual(matplotlib.get_backend().lower(), "agg")
+            self.assertEqual(matplotlib.get_backend().lower(), "agg")
+            self.assertEqual(os.environ.get("MPLBACKEND").lower(), "agg")
+
+            # Force matplotlib to use a different backend
+            matplotlib.use("pdf", force=True)
+            self.assertEqual(matplotlib.get_backend().lower(), "pdf")
+
+            # Reset the backend to 'Agg'
+            matplotlib.use("agg", force=True)
+            self.assertEqual(matplotlib.get_backend().lower(), "agg")
+        sys.platform = ORIG_PLATFORM
 
     def test_public_api(self):
         """Test that we don't accidentally remove (or add) symbols
