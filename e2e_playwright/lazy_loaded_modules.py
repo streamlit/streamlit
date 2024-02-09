@@ -16,7 +16,7 @@ import sys
 
 import streamlit as st
 
-lazy_loaded_modules = {
+lazy_loaded_modules = [
     "bokeh",
     "tenacity",
     "rich",
@@ -27,18 +27,15 @@ lazy_loaded_modules = {
     "pandas",
     "pyarrow",
     "numpy",
-    "PIL",
     "streamlit.emojis",
     "streamlit.external",
     "streamlit.vendor.pympler",
     "streamlit.watcher.event_based_path_watcher",
-    # TODO(lukasmasuch): Lazy load more packages:
-    # "streamlit.hello",
-    # "numpy",
-    # "matplotlib",
-    # "plotly",
-    #
-}
+    # Pillow is lazy-loaded, but it gets imported by plotly,
+    # which we have to import in case it is installed to correctly
+    # configure the Streamlit theme. So, we cannot test this here.
+    # "PIL",
+]
 
 for module in lazy_loaded_modules:
     loaded = module in sys.modules
