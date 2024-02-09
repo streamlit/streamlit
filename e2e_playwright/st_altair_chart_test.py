@@ -30,7 +30,7 @@ def test_that_altair_charts_display_correct(
         f"{ST_ALTAIR_CHART}-grouped-bar-chart-default-theme",
         f"{ST_ALTAIR_CHART}-grouped-bar-chart-streamlit-theme",
     ]
-    expect(themed_app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(16)
+    expect(themed_app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(8)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.get_by_test_id("stArrowVegaLiteChart").nth(i),
