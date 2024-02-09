@@ -31,6 +31,7 @@ lazy_loaded_modules = [
     "streamlit.vendor.pympler",
     "streamlit.watcher.event_based_path_watcher",
     "streamlit.proto.openmetrics_data_model_pb2",
+    "unittest",
     # TODO(lukasmasuch): Lazy load more packages:
     # "streamlit.hello",
     # "numpy",
