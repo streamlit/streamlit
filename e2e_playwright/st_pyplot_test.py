@@ -15,36 +15,26 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_displays_a_pyplot_figures(app: Page, assert_snapshot: ImageCompareFunction):
+def test_displays_a_pyplot_figures(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that all pyplot figures are displayed correctly via screenshot matching."""
-    pyplot_elements = app.get_by_test_id("stImage")
-    assert_snapshot(pyplot_elements.nth(0), name="st_pyplot-figures")
+    pyplot_elements = themed_app.get_by_test_id("stImage")
+    expect(pyplot_elements).to_have_count(7)
+
+    assert_snapshot(pyplot_elements.nth(0), name="st_pyplot-normal_figure")
+    assert_snapshot(pyplot_elements.nth(1), name="st_pyplot-resized_figure")
+    assert_snapshot(pyplot_elements.nth(2), name="st_pyplot-container_width_true")
+    assert_snapshot(pyplot_elements.nth(3), name="st_pyplot-container_width_false")
+    assert_snapshot(pyplot_elements.nth(4), name="st_pyplot-seaborn")
+    assert_snapshot(pyplot_elements.nth(5), name="st_pyplot-seaborn_using_kwargs")
+    assert_snapshot(pyplot_elements.nth(6), name="st_pyplot-global_figure")
 
 
-def test_clears_the_figure_on_rerun(app: Page, assert_snapshot):
-    """Test that the pyplot figure is cleared on rerun."""
-    app.locator("[data-testid='stAppRerunButton']").click()
-
-    # Waiting for the 'data-stale' attribute to become 'false'
-    app.wait_for_selector(".element-container[data-stale='false']")
-
-    first_image = app.locator("[data-testid='stImage'] > img").first()
-    assert_snapshot(first_image, name="pyplot-check-if-cleared")
-
-
-def test_that_hiding_deprecation_warning_works(app: Page):
-    """Test that the deprecation warning & config works correctly."""
+def test_shows_deprecation_warning(app: Page):
+    """Test that the deprecation warning is displayed correctly."""
     deprecation_message = app.get_by_text("PyplotGlobalUseWarning")
     expect(deprecation_message).to_have_count(1)
-
-
-def test_use_container_width_false_displays_smaller_image(app: Page):
-    """Test if 'use_container_width=False' renders a smaller image than 'use_container_width=True'."""
-    large_image = app.get_by_test_id("stImage").nth(2).locator("img")
-    expect(large_image).to_have_css("width", "1200px")
-
-    small_image = app.get_by_test_id("stImage").nth(3).locator("img")
-    expect(small_image).to_have_css("width", "342px")

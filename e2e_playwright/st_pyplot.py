@@ -12,48 +12,78 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import textwrap
+
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from matplotlib import pyplot
 
 import streamlit as st
 
-st.set_page_config(layout="wide")
-
-import numpy as np
-import pandas as pd
-
-import streamlit as st
-
-help = """Some code block:
-
-```sql
-select *
-from table
-```
-"""
-
-st.metric("Ice-creams", 13, help=help)
-
-
-# Change default plot height, so they fit better for the tests
-pyplot.rcParams["figure.figsize"] = [6.4, 4.8 / 2]
-
 np.random.seed(0)
 
+
+st.write("Normal figure:")
 data = np.random.normal(1, 1, size=100)
+fig, ax = plt.subplots()
+ax.hist(data, bins=20)
+st.pyplot(fig)
+
+st.write("Resized figure:")
+# Resize plot. It is now 4 times smaller than the default value.
+fig.set_size_inches(6.4 / 4, 4.8 / 4)
+st.pyplot(fig)
+
+st.write("Resized figure with `use_container_width=True`:")
+st.pyplot(fig, use_container_width=True)
+
+st.write("Resized figure with `use_container_width=False`:")
+st.pyplot(fig, use_container_width=False)
+
+st.write("Advanced Seaborn figure:")
+# Generate data
+data_points = 100
+xData: "np.typing.NDArray[np.float_]" = (np.random.randn(data_points, 1) * 30) + 30
+yData: "np.typing.NDArray[np.float_]" = np.random.randn(data_points, 1) * 30
+data: "np.typing.NDArray[np.float_]" = np.random.randn(data_points, 2)
+
+# Generate plot
+fig, ax = plt.subplots(figsize=(4.5, 4.5))
+sns.set_context(rc={"font.size": 10})
+p = sns.regplot(x=xData, y=yData, data=data, ci=None, ax=ax, color="grey")
+
+p.set_title("An Extremely and Really Really Long Long Long Title", fontweight="bold")
+p.set_xlabel("Very long long x label")
+p.set_ylabel("Very long long y label")
+
+p.set_ylim(-30, 30)
+plot_text = textwrap.dedent(
+    """
+    some_var_1 = 'Some label 1'
+    some_var_2 = 'Some label 2'
+"""
+)
+
+txt = ax.text(0.90, 0.10, plot_text, transform=ax.transAxes)
+sns.despine()
+
+st.pyplot(fig)
+
+st.write("Advanced Seaborn figure using kwargs (low dpi):")
+
+kwargs = {
+    "dpi": 50,  # We use a low dpi to show a stark difference to the figure above.
+    "bbox_extra_artists": (txt,),
+    "bbox_inches": "tight",
+    "format": "png",  # Required for some Matplotlib backends.
+}
+
+# We need to set clear_figure=True, otherwise the global object
+# test below would not work.
+st.pyplot(fig, clear_figure=True, **kwargs)
+
+st.write("Figure using deprecated global object:")
 plot = pyplot.plot(data)
 st.pyplot()
 pyplot.clf()
-
-st.set_option("deprecation.showPyplotGlobalUse", False)
-plot = pyplot.plot(data)
-st.pyplot()
-st.set_option("deprecation.showPyplotGlobalUse", True)
-
-fig, ax = pyplot.subplots()
-
-# Resize plot. It is now 4 times smaller than the default value.
-fig.set_size_inches(6.4 / 4, 4.8 / 4)
-ax.plot(data)
-st.pyplot(fig)
-st.pyplot(fig, use_container_width=False)
