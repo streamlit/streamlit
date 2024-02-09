@@ -95,6 +95,7 @@ export interface DataFrameProps {
   isFullScreen?: boolean
   expand?: () => void
   collapse?: () => void
+  disableFullscreenMode?: boolean
 }
 
 /**
@@ -116,6 +117,7 @@ function DataFrame({
   disabled,
   widgetMgr,
   isFullScreen,
+  disableFullscreenMode,
   expand,
   collapse,
 }: DataFrameProps): ReactElement {
@@ -413,6 +415,7 @@ function DataFrame({
     <StyledResizableContainer
       data-testid="stDataFrame"
       className="stDataFrame"
+      hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
       onMouseDown={e => {
         if (resizableContainerRef.current && hasCustomizedScrollbars) {
@@ -459,6 +462,7 @@ function DataFrame({
     >
       <Toolbar
         isFullScreen={isFullScreen}
+        disableFullscreenMode={disableFullscreenMode}
         // Lock the toolbar in some specific situations:
         locked={
           isRowSelected || isCellSelected || (isTouchDevice && isFocused)

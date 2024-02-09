@@ -23,19 +23,19 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 
-import pandas as pd
-
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import running_in_sis
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from pandas import DataFrame
+    from snowflake.connector.cursor import SnowflakeCursor  # type:ignore[import]
+    from snowflake.snowpark.session import Session  # type:ignore[import]
+
     from snowflake.connector import (  # type:ignore[import] # isort: skip
         SnowflakeConnection as InternalSnowflakeConnection,
     )
-    from snowflake.connector.cursor import SnowflakeCursor  # type:ignore[import]
-    from snowflake.snowpark.session import Session  # type:ignore[import]
 
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
@@ -125,7 +125,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         show_spinner: bool | str = "Running `snowflake.query(...)`.",
         params=None,
         **kwargs,
-    ) -> pd.DataFrame:
+    ) -> DataFrame:
         """Run a read-only SQL query.
 
         This method implements both query result caching (with caching behavior
@@ -202,7 +202,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ),
             wait=wait_fixed(1),
         )
-        def _query(sql: str) -> pd.DataFrame:
+        def _query(sql: str) -> DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()
@@ -224,7 +224,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
     def write_pandas(
         self,
-        df: pd.DataFrame,
+        df: DataFrame,
         table_name: str,
         database: str | None = None,
         schema: str | None = None,

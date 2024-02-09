@@ -71,6 +71,22 @@ def test_handles_time_selection(app: Page, assert_snapshot: ImageCompareFunction
     )
 
 
+def test_correct_menu_font_colors(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that it uses the correct colors in the popover menu."""
+    themed_app.get_by_test_id("stTimeInput").nth(0).locator("input").click()
+
+    # Take a snapshot of the time selection dropdown:
+    selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
+
+    # Hover over another option:
+    selection_dropdown.get_by_text("08:30").hover()
+
+    # Take a sceenshot
+    assert_snapshot(selection_dropdown, name="st_time_input-menu_colors")
+
+
 def test_handles_step_correctly(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the step parameter is correctly applied."""
     app.get_by_test_id("stTimeInput").nth(6).locator("input").click()

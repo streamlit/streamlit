@@ -32,9 +32,11 @@ LICENSE_TEXT = (SCRIPT_DIR / "license-template.txt").read_text().splitlines()[0]
 
 IGNORE_PATTERN = re.compile(
     # Exclude CI files.
-    r"^\.(github|circleci)/"
+    r"^\.(github)/"
     # Exclude images.
     r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
+    # Exclude videos.
+    r"|\.(?:mp4)$"
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments

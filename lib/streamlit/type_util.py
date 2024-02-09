@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import math
 import re
 import types
 from enum import Enum, EnumMeta, auto
@@ -25,10 +26,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Final,
     Iterable,
     List,
+    Literal,
     NamedTuple,
-    Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -36,14 +39,11 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    get_args,
     overload,
 )
 
-import numpy as np
-import pyarrow as pa
-from pandas import DataFrame, Index, MultiIndex, Series
-from pandas.api.types import infer_dtype, is_dict_like, is_list_like
-from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
+from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
 from streamlit import config, errors
@@ -53,7 +53,10 @@ from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     import graphviz
+    import numpy as np
+    import pyarrow as pa
     import sympy
+    from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from pandas.io.formats.style_renderer import StyleRenderer
@@ -64,7 +67,7 @@ if TYPE_CHECKING:
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
 
-_LOGGER = _logger.get_logger("root")
+_LOGGER = _logger.get_logger(__name__)
 
 # The array value field names are part of the larger set of possible value
 # field names. See the explanation for said set below. The message types
@@ -367,6 +370,14 @@ def is_altair_chart(obj: object) -> bool:
     return is_type(obj, _ALTAIR_RE)
 
 
+_PILLOW_RE: Final = re.compile(r"^PIL\..*")
+
+
+def is_pillow_image(obj: object) -> bool:
+    """True if input looks like a pillow image."""
+    return is_type(obj, _PILLOW_RE)
+
+
 def is_keras_model(obj: object) -> bool:
     """True if input looks like a Keras model."""
     return (
@@ -379,6 +390,8 @@ def is_keras_model(obj: object) -> bool:
 
 def is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
+    from pandas.api.types import infer_dtype
+
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
     return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
@@ -534,8 +547,10 @@ def convert_anything_to_df(
     pandas.DataFrame or pandas.Styler
 
     """
+    import pandas as pd
+
     if is_type(data, _PANDAS_DF_TYPE_STR):
-        return data.copy() if ensure_copy else cast(DataFrame, data)
+        return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
     if is_pandas_styler(data):
         # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
@@ -555,8 +570,8 @@ def convert_anything_to_df(
 
     if is_type(data, "numpy.ndarray"):
         if len(data.shape) == 0:
-            return DataFrame([])
-        return DataFrame(data)
+            return pd.DataFrame([])
+        return pd.DataFrame(data)
 
     if (
         is_type(data, _SNOWPARK_DF_TYPE_STR)
@@ -566,30 +581,30 @@ def convert_anything_to_df(
         if is_type(data, _PYSPARK_DF_TYPE_STR):
             data = data.limit(max_unevaluated_rows).toPandas()
         else:
-            data = DataFrame(data.take(max_unevaluated_rows))
+            data = pd.DataFrame(data.take(max_unevaluated_rows))
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return cast(DataFrame, data)
+        return cast(pd.DataFrame, data)
 
     # This is inefficient when data is a pyarrow.Table as it will be converted
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
-        return cast(DataFrame, data.to_pandas())
+        return cast(pd.DataFrame, data.to_pandas())
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-        return DataFrame(data)
+        return pd.DataFrame(data)
 
     except ValueError as ex:
         if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return DataFrame.from_dict(data, orient="index")
+                return pd.DataFrame.from_dict(data, orient="index")
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
@@ -652,7 +667,12 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
     if callable(index_fn):
-        return it  # type: ignore[return-value]
+        # We return a shallow copy of the Sequence here because the return value of
+        # this function is saved in a widget serde class instance to be used in later
+        # script runs, and we don't want mutations to the options object passed to a
+        # widget affect the widget.
+        # (See https://github.com/streamlit/streamlit/issues/7534)
+        return copy.copy(cast(Sequence[V_co], it))
     else:
         return list(it)
 
@@ -707,9 +727,86 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     bool
 
     """
+    import pyarrow as pa
     from packaging import version
 
     return version.parse(pa.__version__) < version.parse(v)
+
+
+def _maybe_truncate_table(
+    table: pa.Table, truncated_rows: int | None = None
+) -> pa.Table:
+    """Experimental feature to automatically truncate tables that
+    are larger than the maximum allowed message size. It needs to be enabled
+    via the server.enableArrowTruncation config option.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        A table to truncate.
+
+    truncated_rows : int or None
+        The number of rows that have been truncated so far. This is used by
+        the recursion logic to keep track of the total number of truncated
+        rows.
+
+    """
+
+    if config.get_option("server.enableArrowTruncation"):
+        # This is an optimization problem: We don't know at what row
+        # the perfect cut-off is to comply with the max size. But we want to figure
+        # it out in as few iterations as possible. We almost always will cut out
+        # more than required to keep the iterations low.
+
+        # The maximum size allowed for protobuf messages in bytes:
+        max_message_size = int(config.get_option("server.maxMessageSize") * 1e6)
+        # We add 1 MB for other overhead related to the protobuf message.
+        # This is a very conservative estimate, but it should be good enough.
+        table_size = int(table.nbytes + 1 * 1e6)
+        table_rows = table.num_rows
+
+        if table_rows > 1 and table_size > max_message_size:
+            # targeted rows == the number of rows the table should be truncated to.
+            # Calculate an approximation of how many rows we need to truncate to.
+            targeted_rows = math.ceil(table_rows * (max_message_size / table_size))
+            # Make sure to cut out at least a couple of rows to avoid running
+            # this logic too often since it is quite inefficient and could lead
+            # to infinity recursions without these precautions.
+            targeted_rows = math.floor(
+                max(
+                    min(
+                        # Cut out:
+                        # an additional 5% of the estimated num rows to cut out:
+                        targeted_rows - math.floor((table_rows - targeted_rows) * 0.05),
+                        # at least 1% of table size:
+                        table_rows - (table_rows * 0.01),
+                        # at least 5 rows:
+                        table_rows - 5,
+                    ),
+                    1,  # but it should always have at least 1 row
+                )
+            )
+            sliced_table = table.slice(0, targeted_rows)
+            return _maybe_truncate_table(
+                sliced_table, (truncated_rows or 0) + (table_rows - targeted_rows)
+            )
+
+        if truncated_rows:
+            displayed_rows = string_util.simplify_number(table.num_rows)
+            total_rows = string_util.simplify_number(table.num_rows + truncated_rows)
+
+            if displayed_rows == total_rows:
+                # If the simplified numbers are the same,
+                # we just display the exact numbers.
+                displayed_rows = str(table.num_rows)
+                total_rows = str(table.num_rows + truncated_rows)
+
+            st.caption(
+                f"⚠️ Showing {displayed_rows} out of {total_rows} "
+                "rows due to data size limitations."
+            )
+
+    return table
 
 
 def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
@@ -721,6 +818,22 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
         A table to convert.
 
     """
+    try:
+        table = _maybe_truncate_table(table)
+    except RecursionError as err:
+        # This is a very unlikely edge case, but we want to make sure that
+        # it doesn't lead to unexpected behavior.
+        # If there is a recursion error, we just return the table as-is
+        # which will lead to the normal message limit exceed error.
+        _LOGGER.warning(
+            "Recursion error while truncating Arrow table. This is not "
+            "supposed to happen.",
+            exc_info=err,
+        )
+
+    import pyarrow as pa
+
+    # Convert table to bytes
     sink = pa.BufferOutputStream()
     writer = pa.RecordBatchStreamWriter(sink, table.schema)
     writer.write_table(table)
@@ -730,6 +843,8 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
 
 def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
+    from pandas.api.types import infer_dtype, is_dict_like, is_list_like
+
     if column.dtype.kind in [
         "c",  # complex64, complex128, complex256
     ]:
@@ -772,7 +887,7 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
 
 
 def fix_arrow_incompatible_column_types(
-    df: DataFrame, selected_columns: Optional[List[str]] = None
+    df: DataFrame, selected_columns: List[str] | None = None
 ) -> DataFrame:
     """Fix column types that are not supported by Arrow table.
 
@@ -787,13 +902,15 @@ def fix_arrow_incompatible_column_types(
     df : pandas.DataFrame
         A dataframe to fix.
 
-    selected_columns: Optional[List[str]]
+    selected_columns: List[str] or None
         A list of columns to fix. If None, all columns are evaluated.
 
     Returns
     -------
     The fixed dataframe.
     """
+    import pandas as pd
+
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy: DataFrame | None = None
     for col in selected_columns or df.columns:
@@ -809,7 +926,7 @@ def fix_arrow_incompatible_column_types(
     if not selected_columns and (
         not isinstance(
             df.index,
-            MultiIndex,
+            pd.MultiIndex,
         )
         and is_colum_type_arrow_incompatible(df.index)
     ):
@@ -828,6 +945,8 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         A dataframe to convert.
 
     """
+    import pyarrow as pa
+
     try:
         table = pa.Table.from_pandas(df)
     except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
@@ -853,8 +972,10 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
         A bytes object to convert.
 
     """
+    import pyarrow as pa
+
     reader = pa.RecordBatchStreamReader(source)
-    return cast(DataFrame, reader.read_pandas())
+    return reader.read_pandas()
 
 
 def determine_data_format(input_data: Any) -> DataFormat:
@@ -870,9 +991,13 @@ def determine_data_format(input_data: Any) -> DataFormat:
     DataFormat
         The data format of the input data.
     """
+    import numpy as np
+    import pandas as pd
+    import pyarrow as pa
+
     if input_data is None:
         return DataFormat.EMPTY
-    elif isinstance(input_data, DataFrame):
+    elif isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     elif isinstance(input_data, np.ndarray):
         if len(input_data.shape) == 1:
@@ -882,9 +1007,9 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.NUMPY_MATRIX
     elif isinstance(input_data, pa.Table):
         return DataFormat.PYARROW_TABLE
-    elif isinstance(input_data, Series):
+    elif isinstance(input_data, pd.Series):
         return DataFormat.PANDAS_SERIES
-    elif isinstance(input_data, Index):
+    elif isinstance(input_data, pd.Index):
         return DataFormat.PANDAS_INDEX
     elif is_pandas_styler(input_data):
         return DataFormat.PANDAS_STYLER
@@ -918,7 +1043,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
                 return DataFormat.COLUMN_INDEX_MAPPING
             if isinstance(first_value, (list, tuple)):
                 return DataFormat.COLUMN_VALUE_MAPPING
-            if isinstance(first_value, Series):
+            if isinstance(first_value, pd.Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
             # In the future, we could potentially also support the tight & split formats here
             if is_list_of_scalars(input_data.values()):
@@ -934,6 +1059,7 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     NaT, None, and pd.NA. This function replaces all of these values with None,
     which is the only missing value type that is supported by all data
     """
+    import numpy as np
 
     return df.fillna(np.nan).replace([np.nan], [None])
 
@@ -965,6 +1091,7 @@ def convert_df_to_data_format(
     pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
         The converted dataframe.
     """
+
     if data_format in [
         DataFormat.EMPTY,
         DataFormat.PANDAS_DATAFRAME,
@@ -975,14 +1102,20 @@ def convert_df_to_data_format(
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
+        import numpy as np
+
         # It's a 1-dimensional array, so we only return
         # the first column as numpy array
         # Calling to_numpy() on the full DataFrame would result in:
         # [[1], [2]] instead of [1, 2]
         return np.ndarray(0) if df.empty else df.iloc[:, 0].to_numpy()
     elif data_format == DataFormat.NUMPY_MATRIX:
+        import numpy as np
+
         return np.ndarray(0) if df.empty else df.to_numpy()
     elif data_format == DataFormat.PYARROW_TABLE:
+        import pyarrow as pa
+
         return pa.Table.from_pandas(df)
     elif data_format == DataFormat.PANDAS_SERIES:
         # Select first column in dataframe and create a new series based on the values
@@ -1040,7 +1173,7 @@ def to_key(key: Key) -> str:
     ...
 
 
-def to_key(key: Optional[Key]) -> Optional[str]:
+def to_key(key: Key | None) -> str | None:
     if key is None:
         return None
     else:
@@ -1052,7 +1185,7 @@ def maybe_tuple_to_list(item: Any) -> Any:
     return list(item) if isinstance(item, tuple) else item
 
 
-def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[str]):
+def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
     if not label:
         _LOGGER.warning(
             "`label` got an empty value. This is discouraged for accessibility "
@@ -1086,6 +1219,8 @@ def infer_vegalite_type(
     ----------
     data: Numpy array or Pandas Series
     """
+    from pandas.api.types import infer_dtype
+
     # STREAMLIT MOD: I'm using infer_dtype directly here, rather than using Altair's wrapper. Their
     # wrapper is only there to support Pandas < 0.20, but Streamlit requires Pandas 1.3.
     typ = infer_dtype(data)

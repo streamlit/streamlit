@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.30.0"  # PEP-440
+VERSION = "1.31.0"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -33,8 +33,6 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
-    # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
-    "importlib-metadata>=1.4, <8",
     "numpy>=1.19.3, <2",
     "packaging>=16.8, <24",
     # Lowest version with available wheel for 3.7 + amd64 + linux
@@ -48,15 +46,12 @@ INSTALL_REQUIRES = [
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
-    "pyarrow>=6.0",
-    "python-dateutil>=2.7.3, <3",
+    "pyarrow>=7.0",
     "requests>=2.27, <3",
     "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",
     "typing-extensions>=4.3.0, <5",
-    "tzlocal>=1.1, <6",
-    "validators>=0.2, <1",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5; platform_system != 'Darwin'",
