@@ -25,23 +25,24 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_plotly_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    ST_PLOTLY_CHART = f"{ST_PLOTLY_CHART}-"
     snapshot_names = [
-        "st_plotly_chart-none-theme",
-        "st_plotly_chart-streamlit-theme-use-container-width",
-        "st_plotly_chart-candlestick-streamlit-theme",
-        "st_plotly_chart-sunburst-custom-color",
-        "st_plotly_chart-contour-heatmap-together",
-        "st_plotly_chart-waterfall-chart-custom-height-and-width",
-        "st_plotly_chart-ternary-chart",
-        "st_plotly_chart-table-plot",
-        "st_plotly_chart-electric-colorscale",
-        "st_plotly_chart-discrete-sequence",
-        "st_plotly_chart-layout-customization",
-        "st_plotly_chart-template-customization",
-        "st_plotly_chart-histogram-chart",
-        "st_plotly_chart-line-chart-specific-height-width",
-        "st_plotly_chart-use-container-width-false-and-specified-height",
-        "st_plotly_chart-none-theme-and-use-container-width",
+        f"{ST_PLOTLY_CHART}-none-theme",
+        f"{ST_PLOTLY_CHART}-streamlit-theme-use-container-width",
+        f"{ST_PLOTLY_CHART}-candlestick-streamlit-theme",
+        f"{ST_PLOTLY_CHART}-sunburst-custom-color",
+        f"{ST_PLOTLY_CHART}-contour-heatmap-together",
+        f"{ST_PLOTLY_CHART}-waterfall-chart-custom-height-and-width",
+        f"{ST_PLOTLY_CHART}-ternary-chart",
+        f"{ST_PLOTLY_CHART}-table-plot",
+        f"{ST_PLOTLY_CHART}-electric-colorscale",
+        f"{ST_PLOTLY_CHART}-discrete-sequence",
+        f"{ST_PLOTLY_CHART}-layout-customization",
+        f"{ST_PLOTLY_CHART}-template-customization",
+        f"{ST_PLOTLY_CHART}-histogram-chart",
+        f"{ST_PLOTLY_CHART}-line-chart-specific-height-width",
+        f"{ST_PLOTLY_CHART}-use-container-width-false-and-specified-height",
+        f"{ST_PLOTLY_CHART}-none-theme-and-use-container-width",
     ]
     expect(themed_app.locator(".element-container")).to_have_count(16)
     for i, name in enumerate(snapshot_names):
