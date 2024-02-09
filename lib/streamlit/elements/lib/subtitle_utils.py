@@ -120,11 +120,12 @@ def process_subtitle_data(
                 content = file.read()
             return srt_to_vtt(content) if file_extension == ".srt" else content
 
-        content = data_str.strip()
-        if content.startswith("WEBVTT"):
-            return content.encode("utf-8")
-        elif _is_srt(content):
-            return srt_to_vtt(content)
+        content_string = data_str.strip()
+
+        if content_string.startswith("WEBVTT"):
+            return content_string.encode("utf-8")
+        elif _is_srt(content_string):
+            return srt_to_vtt(content_string)
         raise ValueError(
             "The provided string neither matches valid VTT nor SRT format."
         )
