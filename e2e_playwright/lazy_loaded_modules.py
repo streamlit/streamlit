@@ -16,7 +16,7 @@ import sys
 
 import streamlit as st
 
-lazy_loaded_modules = [
+lazy_loaded_modules = {
     "bokeh",
     "tenacity",
     "rich",
@@ -26,6 +26,8 @@ lazy_loaded_modules = [
     "watchdog",
     "pandas",
     "pyarrow",
+    "numpy",
+    "PIL",
     "streamlit.emojis",
     "streamlit.external",
     "streamlit.vendor.pympler",
@@ -35,8 +37,8 @@ lazy_loaded_modules = [
     # "numpy",
     # "matplotlib",
     # "plotly",
-    # "pillow",
-]
+    #
+}
 
 for module in lazy_loaded_modules:
     loaded = module in sys.modules
