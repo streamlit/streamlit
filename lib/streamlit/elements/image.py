@@ -21,7 +21,6 @@
 
 from __future__ import annotations
 
-import base64
 import io
 import mimetypes
 import os
@@ -372,6 +371,8 @@ def image_to_url(
                     "<svg", '<svg xmlns="http://www.w3.org/2000/svg" ', 1
                 )
             # Convert to base64 to prevent issues with encoding:
+            import base64
+
             image_b64_encoded = base64.b64encode(image.encode("utf-8")).decode("utf-8")
             # Return SVG as data URI:
             return f"data:image/svg+xml;base64,{image_b64_encoded}"
