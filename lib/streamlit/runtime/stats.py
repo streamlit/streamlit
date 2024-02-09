@@ -16,9 +16,10 @@ from __future__ import annotations
 
 import itertools
 from abc import abstractmethod
-from typing import List, NamedTuple, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, List, NamedTuple, Protocol, runtime_checkable
 
-from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
+if TYPE_CHECKING:
+    from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
 
 
 class CacheStat(NamedTuple):

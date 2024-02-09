@@ -14,14 +14,15 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import tornado.web
 
-from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
-from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.stats import CacheStat, StatsManager
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
+
+if TYPE_CHECKING:
+    from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 
 
 class StatsRequestHandler(tornado.web.RequestHandler):
@@ -73,6 +74,12 @@ class StatsRequestHandler(tornado.web.RequestHandler):
 
     @staticmethod
     def _stats_to_proto(stats: List[CacheStat]) -> MetricSetProto:
+        # Lazy load the import of this proto message for better performance:
+        from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
+        from streamlit.proto.openmetrics_data_model_pb2 import (
+            MetricSet as MetricSetProto,
+        )
+
         metric_set = MetricSetProto()
 
         metric_family = metric_set.metric_families.add()
