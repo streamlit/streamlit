@@ -39,11 +39,23 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-layout-customization",
         "st_plotly_chart-template-customization",
         "st_plotly_chart-histogram-chart",
+    ]
+    expect(themed_app.locator(".element-container")).to_have_count(16)
+    for i, name in enumerate(snapshot_names):
+        assert_snapshot(
+            themed_app.locator(".element-container .stPlotlyChart").nth(i),
+            name=name,
+        )
+
+
+def test_plotly_has_correct_visuals(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    snapshot_names = [
         "st_plotly_chart-line-chart-specific-height-width",
         "st_plotly_chart-use-container-width-false-and-specified-height",
         "st_plotly_chart-none-theme-and-use-container-width",
     ]
-    expect(themed_app.locator(".element-container")).to_have_count(16)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
             themed_app.locator(".element-container .stPlotlyChart").nth(i),
