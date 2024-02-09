@@ -25,68 +25,27 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_plotly_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    snapshot_names = [
+        "st_plotly_chart-none-theme",
+        "st_plotly_chart-streamlit-theme-use-container-width",
+        "st_plotly_chart-candlestick-streamlit-theme",
+        "st_plotly_chart-sunburst-custom-color",
+        "st_plotly_chart-contour-heatmap-together",
+        "st_plotly_chart-waterfall-chart-custom-height-and-width",
+        "st_plotly_chart-ternary-chart",
+        "st_plotly_chart-table-plot",
+        "st_plotly_chart-electric-colorscale",
+        "st_plotly_chart-discrete-sequence",
+        "st_plotly_chart-layout-customization",
+        "st_plotly_chart-template-customization",
+        "st_plotly_chart-histogram-chart",
+        "st_plotly_chart-line-chart-specific-height-width",
+        "st_plotly_chart-use-container-width-false-and-specified-height",
+        "st_plotly_chart-none-theme-and-use-container-width",
+    ]
     expect(themed_app.locator(".element-container")).to_have_count(16)
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(0),
-        name="st_plotly_chart-none-theme",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(1),
-        name="st_plotly_chart-streamlit-theme-use-container-width",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(2),
-        name="st_plotly_chart-candlestick-streamlit-theme",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(3),
-        name="st_plotly_chart-sunburst-custom-color",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(4),
-        name="st_plotly_chart-contour-heatmap-together",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(5),
-        name="st_plotly_chart-waterfall-chart-custom-height-and-width",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(6),
-        name="st_plotly_chart-ternary-chart",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(7),
-        name="st_plotly_chart-table-plot",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(8),
-        name="st_plotly_chart-electric-colorscale",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(9),
-        name="st_plotly_chart-discrete-sequence",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(10),
-        name="st_plotly_chart-layout-customization",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(11),
-        name="st_plotly_chart-template-customization",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(12),
-        name="st_plotly_chart-histogram-chart",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(13),
-        name="st_plotly_chart-line-chart-specific-height-width",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(14),
-        name="st_plotly_chart-use-container-width-false-and-specified-height",
-    )
-    assert_snapshot(
-        themed_app.locator(".element-container .stPlotlyChart").nth(15),
-        name="st_plotly_chart-none-theme-and-use-container-width",
-    )
+    for i, name in enumerate(snapshot_names):
+        assert_snapshot(
+            themed_app.locator(".element-container .stPlotlyChart").nth(i),
+            name=name,
+        )
