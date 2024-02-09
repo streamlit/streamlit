@@ -41,4 +41,9 @@ lazy_loaded_modules = [
 
 for module in lazy_loaded_modules:
     loaded = module in sys.modules
-    st.write(f"**{module}**:", ("loaded" if loaded else "not loaded"))
+    st.write(f"**{module}**:", ("imported" if loaded else "not loaded"))
+
+if st.button("Import lazy loaded modules"):
+    for module in lazy_loaded_modules:
+        __import__(module)
+    st.rerun()
