@@ -20,15 +20,14 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_that_altair_charts_display_correct(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    ST_ALTAIR_CHART = "st_altair_chart"
     snapshot_names = [
-        f"{ST_ALTAIR_CHART}-scatter-chart-default-theme",
-        f"{ST_ALTAIR_CHART}-scatter-chart-streamlit-theme",
-        f"{ST_ALTAIR_CHART}-scatter-chart-overwritten-theme",
-        f"{ST_ALTAIR_CHART}-bar-chart-overwritten-theme",
-        f"{ST_ALTAIR_CHART}-pie-chart-large-legend-items",
-        f"{ST_ALTAIR_CHART}-grouped-bar-chart-default-theme",
-        f"{ST_ALTAIR_CHART}-grouped-bar-chart-streamlit-theme",
+        "st_altair_chart-scatter-chart-default-theme",
+        "st_altair_chart-scatter-chart-streamlit-theme",
+        "st_altair_chart-scatter-chart-overwritten-theme",
+        "st_altair_chart-bar-chart-overwritten-theme",
+        "st_altair_chart-pie-chart-large-legend-items",
+        "st_altair_chart-grouped-bar-chart-default-theme",
+        "st_altair_chart-grouped-bar-chart-streamlit-theme",
     ]
     expect(themed_app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(8)
     for i, name in enumerate(snapshot_names):
