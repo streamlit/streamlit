@@ -278,6 +278,12 @@ export function toSafeArray(data: any): any[] {
     return [data]
   }
 
+  if (data instanceof Uint8Array) {
+    // Uint8Array might be used to represent string (json) data
+    // which needs to be decoded to a string here.
+    data = new TextDecoder("utf-8").decode(data)
+  }
+
   if (typeof data === "string") {
     if (data === "") {
       // Empty string
