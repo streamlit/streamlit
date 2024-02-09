@@ -20,7 +20,7 @@ import math
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, Final, List, TypeVar, cast, overload
+from typing import Any, Callable, Final, TypeVar, cast, overload
 
 from typing_extensions import TypeAlias
 
