@@ -49,11 +49,11 @@ export interface Props {
   scriptRunId: string
 }
 
-const Balloon: FC<ParticleProps> = ({ particleType }) => (
-  <StyledBalloon src={BALLOON_IMAGES[particleType]} />
-)
+const Balloon: FC<React.PropsWithChildren<ParticleProps>> = ({
+  particleType,
+}) => <StyledBalloon src={BALLOON_IMAGES[particleType]} />
 
-const Balloons: FC<Props> = ({ scriptRunId }) => (
+const Balloons: FC<React.PropsWithChildren<Props>> = ({ scriptRunId }) => (
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   <Particles

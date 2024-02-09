@@ -85,7 +85,7 @@ export default function useScrollAnimation(
   const animator = useRef(0)
 
   const animate = useCallback(
-    (from, index, start = Date.now()) => {
+    (from: any, index: any, start = Date.now()) => {
       cancelAnimationFrame(animator.current)
 
       animator.current = requestAnimationFrame(() => {

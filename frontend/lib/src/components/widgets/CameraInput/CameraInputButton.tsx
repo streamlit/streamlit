@@ -27,8 +27,8 @@ import {
 export interface CameraInputButtonProps {
   onClick?: (event: MouseEvent<HTMLButtonElement>) => any
   disabled?: boolean
-  children: ReactNode
   progress?: number | null
+  children?: ReactNode
 }
 
 function CameraInputButton({

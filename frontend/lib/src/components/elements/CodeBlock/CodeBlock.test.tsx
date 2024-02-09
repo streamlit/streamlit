@@ -28,7 +28,6 @@ const getBlockProps = (
     st.write("Hello")
   `,
   ],
-  node: {},
   ...props,
 })
 
