@@ -26,6 +26,7 @@ from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
+from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
@@ -664,15 +665,10 @@ class ButtonMixin:
         if ctx:
             ctx_main_script = ctx.main_script_path
 
-        normalized_ctx_main_script_path = os.path.normpath(ctx_main_script)
-        main_script_path = os.path.join(os.getcwd(), normalized_ctx_main_script_path)
-        main_script_directory = os.path.dirname(main_script_path)
-
-        # Convenience for handling ./ notation
-        page = os.path.normpath(page)
-
-        # Build full path
-        requested_page = os.path.join(main_script_directory, page)
+        main_script_directory = get_main_script_directory(ctx_main_script)
+        requested_page = os.path.realpath(
+            normalize_path_join(main_script_directory, page)
+        )
         all_app_pages = source_util.get_pages(ctx_main_script).values()
 
         # Handle retrieving the page_script_hash & page
@@ -688,7 +684,7 @@ class ButtonMixin:
 
         if page_link_proto.page_script_hash == "":
             raise StreamlitAPIException(
-                f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}. Only the main app file and files in the `pages/` directory are supported."
+                f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
             )
 
         return self.dg._enqueue("page_link", page_link_proto)
