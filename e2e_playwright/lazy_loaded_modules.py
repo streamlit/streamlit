@@ -23,13 +23,14 @@ lazy_loaded_modules = [
     "pydeck",
     "altair",
     "graphviz",
-    "watchdog",
     "pandas",
     "pyarrow",
     "numpy",
     "streamlit.emojis",
     "streamlit.external",
     "streamlit.vendor.pympler",
+    # Requires `server.fileWatcherType` to be configured with `none` or `poll`:
+    "watchdog",
     "streamlit.watcher.event_based_path_watcher",
     # Pillow is lazy-loaded, but it gets imported by plotly,
     # which we have to import in case it is installed to correctly
