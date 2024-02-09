@@ -21,21 +21,21 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Final,
     Iterable,
     List,
+    Literal,
     Mapping,
-    Optional,
     Set,
     Tuple,
+    TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
-import pandas as pd
-import pyarrow as pa
-from typing_extensions import Literal, TypeAlias, TypedDict
+from typing_extensions import TypeAlias
 
 from streamlit import logger as _logger
 from streamlit import type_util
@@ -72,11 +72,13 @@ from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
-_LOGGER = _logger.get_logger("root")
+_LOGGER: Final = _logger.get_logger(__name__)
 
 # All formats that support direct editing, meaning that these
 # formats will be returned with the same type when used with data_editor.
@@ -99,11 +101,11 @@ EditableData = TypeVar(
 
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
-    pd.DataFrame,
-    pd.Series,
-    pd.Index,
+    "pd.DataFrame",
+    "pd.Series",
+    "pd.Index",
     "Styler",
-    pa.Table,
+    "pa.Table",
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
     List[Any],
@@ -137,7 +139,7 @@ class EditingState(TypedDict, total=False):
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> EditingState:
         data_editor_state: EditingState = (
             {
                 "edited_rows": {},
@@ -190,6 +192,8 @@ def _parse_value(
     """
     if value is None:
         return None
+
+    import pandas as pd
 
     try:
         if column_data_kind == ColumnDataKind.STRING:
@@ -294,8 +298,11 @@ def _apply_row_additions(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
+
     if not added_rows:
         return
+
+    import pandas as pd
 
     # This is only used if the dataframe has a range index:
     # There seems to be a bug in older pandas versions with RangeIndex in
@@ -392,6 +399,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     bool
         True if the index is supported, False otherwise.
     """
+    import pandas as pd
 
     return (
         type(df_index)
@@ -418,6 +426,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
 def _fix_column_headers(data_df: pd.DataFrame) -> None:
     """Fix the column headers of the provided dataframe inplace to work
     correctly for data editing."""
+    import pandas as pd
 
     if isinstance(data_df.columns, pd.MultiIndex):
         # Flatten hierarchical column headers to a single level:
@@ -765,6 +774,8 @@ class DataEditorMixin:
            height: 350px
 
         """
+        import pandas as pd
+        import pyarrow as pa
 
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
