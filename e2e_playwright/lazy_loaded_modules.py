@@ -12,10 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 import streamlit as st
 
-st.header("Page 2")
+lazy_loaded_modules = [
+    "bokeh",
+    "tenacity",
+    "rich",
+    "pydeck",
+    "altair",
+    "graphviz",
+    "watchdog",
+    "streamlit.emojis",
+    "streamlit.external",
+    "streamlit.watcher.event_based_path_watcher",
+    # TODO(lukasmasuch): Lazy load more packages:
+    # "streamlit.hello",
+    # "streamlit.vendor.pympler",
+    # "pandas",
+    # "pyarrow",
+    # "numpy",
+    # "matplotlib",
+    # "plotly",
+    # "pillow",
+    # "watchdog",
+]
 
-page_6 = st.button("`pages/06_page_6.py`")
-if page_6:
-    st.switch_page("pages/06_page_6.py")
+for module in lazy_loaded_modules:
+    loaded = module in sys.modules
+    st.write(f"**{module}**:", ("loaded" if loaded else "not loaded"))

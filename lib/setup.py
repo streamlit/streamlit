@@ -47,13 +47,11 @@ INSTALL_REQUIRES = [
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
     "pyarrow>=7.0",
-    "python-dateutil>=2.7.3, <3",
     "requests>=2.27, <3",
     "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",
     "typing-extensions>=4.3.0, <5",
-    "tzlocal>=1.1, <6",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5; platform_system != 'Darwin'",

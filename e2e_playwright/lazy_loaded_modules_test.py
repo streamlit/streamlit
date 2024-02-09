@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+import re
 
-st.header("Page 2")
+from playwright.sync_api import Page, expect
 
-page_6 = st.button("`pages/06_page_6.py`")
-if page_6:
-    st.switch_page("pages/06_page_6.py")
+
+def test_lazy_loaded_modules_are_not_imported(app: Page):
+    """Test that lazy loaded modules are not imported when the page is loaded."""
+    markdown_elements = app.get_by_test_id("stMarkdown")
+    expect(markdown_elements).to_have_count(10)
+    for element in markdown_elements.all():
+        expect(element).to_have_text(re.compile(r".*not loaded.*"))
