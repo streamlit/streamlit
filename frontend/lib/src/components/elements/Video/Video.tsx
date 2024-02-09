@@ -17,6 +17,7 @@
 import React, { ReactElement, useEffect, useRef } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
 
 const DEFAULT_HEIGHT = 528
 
@@ -105,6 +106,10 @@ export default function Video({
     )
   }
 
+  // TODO[kajarenc] write explanatory comment here
+  const crossOriginProp = {
+    crossOrigin: IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined,
+  }
   return (
     <video
       data-testid="stVideo"
@@ -113,6 +118,7 @@ export default function Video({
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
+      {...crossOriginProp}
     >
       {subtitles &&
         subtitles.map((subtitle: Subtitle, idx: number) => (
