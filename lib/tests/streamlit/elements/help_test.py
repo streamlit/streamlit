@@ -19,7 +19,6 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 
 import streamlit as st
 from streamlit.elements.doc_string import _get_variable_name_from_code_str
