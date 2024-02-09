@@ -656,9 +656,11 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
-        **kwargs: (
-            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
-        ),
+        **kwargs: DataFrame
+        | npt.NDArray[Any]
+        | Iterable[Any]
+        | dict[Hashable, Any]
+        | None,
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
