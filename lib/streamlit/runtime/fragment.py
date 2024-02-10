@@ -15,10 +15,15 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar, overload
 
 from typing_extensions import Protocol
 
+from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import dg_stack
+
+F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
 
 
@@ -79,3 +84,32 @@ class MemoryFragmentStorage(FragmentStorage):
 
     def clear(self) -> None:
         self._fragments.clear()
+
+
+@overload
+def fragment(
+    func: F,
+    *,
+    run_every: float | None = None,
+) -> F:
+    ...
+
+
+# Support being able to pass parameters to this decorator (that is, being able to write
+# `@fragment(run_every=5.0)`).
+@overload
+def fragment(
+    func: None = None,
+    *,
+    run_every: float | None = None,
+) -> Callable[[F], F]:
+    ...
+
+
+@gather_metrics("experimental_fragment")
+def fragment(  # type: ignore[empty-body]
+    func: F | None = None,
+    *,
+    run_every: float | None = None,
+) -> Callable[[F], F] | F:
+    pass

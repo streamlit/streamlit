@@ -69,6 +69,10 @@ class ScriptRunnerEvent(Enum):
     # The script run stopped in order to start a script run with newer widget state.
     SCRIPT_STOPPED_FOR_RERUN = "SCRIPT_STOPPED_FOR_RERUN"
 
+    # The script run corresponding to a fragment ran to completion, or was interrupted
+    # by the user.
+    FRAGMENT_STOPPED_WITH_SUCCESS = "FRAGMENT_STOPPED_WITH_SUCCESS"
+
     # The ScriptRunner is done processing the ScriptEventQueue and
     # is shut down.
     SHUTDOWN = "SHUTDOWN"
@@ -461,6 +465,7 @@ class ScriptRunner:
             self,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash=page_script_hash,
+            fragment_id=rerun_data.fragment_id,
         )
 
         # Compile the script. Any errors thrown here will be surfaced
@@ -510,6 +515,7 @@ class ScriptRunner:
         # If the script stops early, we don't want to remove unseen widgets,
         # so we track this to potentially skip session state cleanup later.
         premature_stop: bool = False
+        fragment_run: bool = False
 
         try:
             # Create fake module. This gives us a name global namespace to
@@ -545,7 +551,26 @@ class ScriptRunner:
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
-                exec(code, module.__dict__)
+
+                if rerun_data.fragment_id:
+                    fragment_run = True
+
+                    try:
+                        wrapped_fragment = self._fragment_storage.get(
+                            rerun_data.fragment_id
+                        )
+                    except KeyError:
+                        raise RuntimeError(
+                            f"Could not find fragment with id {rerun_data.fragment_id}"
+                        )
+
+                    wrapped_fragment()
+                    # TODO(vdonato): Maybe implement reruns on non-None return values
+                    # depending on exactly what we decide on the product side.
+                else:
+                    self._fragment_storage.clear()
+                    exec(code, module.__dict__)
+
                 self._session_state.maybe_check_serializable()
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
         except RerunException as e:
@@ -569,7 +594,11 @@ class ScriptRunner:
 
         finally:
             if rerun_exception_data:
+                # The handling for when a full script run or a fragment is stopped early
+                # is the same, so we only have one ScriptRunnerEvent for this scenario.
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+            elif fragment_run:
+                finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
             else:
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 

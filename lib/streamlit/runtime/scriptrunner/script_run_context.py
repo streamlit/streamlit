@@ -82,6 +82,7 @@ class ScriptRunContext:
     form_ids_this_run: Set[str] = field(default_factory=set)
     cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: Optional[ScriptRequests] = None
+    current_fragment_id: Optional[str] = None
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
@@ -100,6 +101,7 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
+        self.current_fragment_id = None
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:

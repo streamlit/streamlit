@@ -251,6 +251,8 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_run_script(self, filename, text):
         """Tests that we can run a script to completion."""
         scriptrunner = TestScriptRunner(filename)
+        scriptrunner._fragment_storage = MagicMock()
+
         scriptrunner.request_rerun(RerunData())
         scriptrunner.start()
         scriptrunner.join()
@@ -266,6 +268,7 @@ class ScriptRunnerTest(AsyncTestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, [text])
+        scriptrunner._fragment_storage.clear.assert_called_once()
         # The following check is a requirement for the CodeHasher to
         # work correctly. The CodeHasher is scoped to
         # files contained in the directory of __main__.__file__, which we
@@ -275,6 +278,52 @@ class ScriptRunnerTest(AsyncTestCase):
             sys.modules["__main__"].__file__,
             (" ScriptRunner should set the __main__.__file__" "attribute correctly"),
         )
+
+    @patch("streamlit.exception")
+    def test_run_nonexistent_fragment(self, patched_st_exception):
+        """Tests that we raise an exception when trying to run a nonexistent fragment."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData(fragment_id="nonexistent_fragment"))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                # The only error ScriptRunnerEvent occurs when a script fails to
+                # compile. Other error types are displayed to the user via
+                # st.exception and from the ScriptRunner's perspective are still
+                # successful script runs.
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        self._assert_no_exceptions(scriptrunner)
+        patched_st_exception.assert_called_once()
+
+    def test_run_fragment(self):
+        """Tests that we can run a fragment."""
+        fragment = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment", fragment)
+
+        scriptrunner.request_rerun(RerunData(fragment_id="my_fragment"))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        fragment.assert_called_once()
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""

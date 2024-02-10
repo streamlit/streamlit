@@ -59,3 +59,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         self._storage.clear()
         assert len(self._storage._fragments) == 0
+
+
+class FragmentTest(unittest.TestCase):
+    pass
