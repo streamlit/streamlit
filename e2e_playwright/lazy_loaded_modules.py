@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib.util
 import sys
 
 import streamlit as st
@@ -40,8 +41,18 @@ lazy_loaded_modules = [
 ]
 
 for module in lazy_loaded_modules:
-    loaded = module in sys.modules
-    st.write(f"**{module}**:", ("imported" if loaded else "not loaded"))
+    if module in sys.modules:
+        label = "imported"
+    elif importlib.util.find_spec(module) is not None:
+        label = "not loaded"
+    else:
+        label = "not found"
+
+    st.write(
+        f"**{module}**:",
+        label,
+    )
+
 
 if st.button("Import lazy loaded modules"):
     for module in lazy_loaded_modules:
