@@ -291,6 +291,10 @@ class ScriptRunnerTest(AsyncTestCase):
             scriptrunner,
             [
                 ScriptRunnerEvent.SCRIPT_STARTED,
+                # The only error ScriptRunnerEvent occurs when a script fails to
+                # compile. Other error types are displayed to the user via
+                # st.exception and from the ScriptRunner's perspective are still
+                # successful script runs.
                 ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
                 ScriptRunnerEvent.SHUTDOWN,
             ],

@@ -95,6 +95,8 @@ def fragment(
     ...
 
 
+# Support being able to pass parameters to this decorator (that is, being able to write
+# `@fragment(run_every=5.0)`).
 @overload
 def fragment(
     func: None = None,

@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import asyncio
 import sys
 import uuid
@@ -528,7 +530,7 @@ class AppSession:
             run. Set only for the SCRIPT_STARTED event.
 
         fragment_id : str | None
-            The fragment ID if this script run corresponds to a fragment.
+            The fragment ID if this script run was triggered by a fragment.
         """
 
         assert (
@@ -649,7 +651,7 @@ class AppSession:
         return msg
 
     def _create_new_session_message(
-        self, page_script_hash: str, fragment_id: Optional[str] = None
+        self, page_script_hash: str, fragment_id: str | None = None
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()

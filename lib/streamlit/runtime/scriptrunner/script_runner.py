@@ -594,6 +594,8 @@ class ScriptRunner:
 
         finally:
             if rerun_exception_data:
+                # The handling for when a full script run or a fragment is stopped early
+                # is the same, so we only have one ScriptRunnerEvent for this scenario.
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
             elif fragment_run:
                 finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
