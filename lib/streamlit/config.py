@@ -1016,6 +1016,9 @@ _create_option(
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val=True,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="The support for global pyplot instances is planned to be removed soon.",
+    expiration_date="2024-04-15",
     type_=bool,
 )
 
