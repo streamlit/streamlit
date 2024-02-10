@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import inspect
 from abc import abstractmethod
 from copy import deepcopy
 from functools import wraps
@@ -137,6 +139,8 @@ def fragment(
         if ctx is None:
             return
 
+        # TODO(vdonato): Determine whether we can just always wrap the contents of a
+        # fragment in a new container.
         if len(dg_stack.get()) > 0:
             dg_stack_snapshot = deepcopy(dg_stack.get())
         else:
@@ -178,5 +182,11 @@ def fragment(
             pass
 
         return wrapped_fragment()
+
+    with contextlib.suppress(AttributeError):
+        # Make this a well-behaved decorator by preserving important function
+        # attributes.
+        wrap.__dict__.update(non_optional_func.__dict__)
+        wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
 
     return wrap
