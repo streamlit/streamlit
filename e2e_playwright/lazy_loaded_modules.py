@@ -24,6 +24,7 @@ lazy_loaded_modules = [
     "altair",
     "graphviz",
     "watchdog",
+    "matplotlib",
     "pandas",
     "pyarrow",
     "streamlit.emojis",
@@ -33,7 +34,6 @@ lazy_loaded_modules = [
     # TODO(lukasmasuch): Lazy load more packages:
     # "streamlit.hello",
     # "numpy",
-    # "matplotlib",
     # "plotly",
     # "pillow",
 ]
