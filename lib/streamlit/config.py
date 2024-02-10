@@ -721,7 +721,10 @@ def _server_address() -> Optional[str]:
 _create_option(
     "server.port",
     description="""
-        The port where the server will listen for browser connections.""",
+        The port where the server will listen for browser connections.
+
+        Don't use port 3000 which is reserved for internal development.
+        """,
     default_val=8501,
     type_=int,
 )
@@ -855,7 +858,14 @@ _create_option(
 )
 
 
-@_create_option("browser.serverPort", type_=int)
+@_create_option(
+    "browser.serverPort",
+    visibility="hidden",
+    deprecated=True,
+    deprecation_text="browser.serverPort has been deprecated. It will be removed in a future version.",
+    expiration_date="2024-04-01",
+    type_=int,
+)
 def _browser_server_port() -> int:
     """Port where users should point their browsers in order to connect to the
     app.
@@ -864,6 +874,8 @@ def _browser_server_port() -> int:
     - Set the correct URL for CORS and XSRF protection purposes.
     - Show the URL on the terminal
     - Open the browser
+
+    Don't use port 3000 which is reserved for internal development.
 
     Default: whatever value is set in server.port.
     """

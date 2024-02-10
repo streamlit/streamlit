@@ -53,14 +53,16 @@ class PydeckMixin:
         - DeckGL JSON docs: https://github.com/uber/deck.gl/tree/master/modules/json
 
         When using this command, Mapbox provides the map tiles to render map
-        content. Note that Mapbox is a third-party product, the use of which is
-        governed by Mapbox's Terms of Use.
+        content. Note that Mapbox is a third-party product and Streamlit accepts
+        no responsibility or liability of any kind for Mapbox or for any content
+        or information made available by Mapbox.
 
         Mapbox requires users to register and provide a token before users can
         request map tiles. Currently, Streamlit provides this token for you, but
         this could change at any time. We strongly recommend all users create and
         use their own personal Mapbox token to avoid any disruptions to their
-        experience. You can do this with the ``mapbox.token`` config option.
+        experience. You can do this with the ``mapbox.token`` config option. The
+        use of Mapbox is governed by Mapbox's Terms of Use.
 
         To get a token for yourself, create an account at https://mapbox.com.
         For more info on how to set config options, see
