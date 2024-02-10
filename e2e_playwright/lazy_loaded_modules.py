@@ -23,6 +23,7 @@ lazy_loaded_modules = [
     "pydeck",
     "altair",
     "graphviz",
+    "matplotlib",
     "pandas",
     "pyarrow",
     "numpy",

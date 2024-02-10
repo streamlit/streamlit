@@ -75,7 +75,7 @@ class WriteMixin:
 
         Parameters
         ----------
-        arg : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
+        stream : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
             The generator or iterable to stream.
 
         Returns
