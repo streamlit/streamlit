@@ -54,7 +54,7 @@ def test_file_uploader_error_message_disallowed_files(
         ]
     )
 
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     expect(
         app.get_by_test_id("stFileUploaderFileErrorMessage").nth(uploader_index)
@@ -86,7 +86,7 @@ def test_uploads_and_deletes_single_file_only(
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
         file_name1, use_inner_text=True
@@ -117,7 +117,7 @@ def test_uploads_and_deletes_single_file_only(
         files=[{"name": file_name2, "mimeType": "text/plain", "buffer": file_content2}]
     )
 
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
         file_name2, use_inner_text=True
@@ -139,7 +139,7 @@ def test_uploads_and_deletes_single_file_only(
 
     app.get_by_test_id("stFileUploaderDeleteBtn").nth(uploader_index).click()
 
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
@@ -198,7 +198,7 @@ def test_uploads_and_deletes_multiple_files(
     #  most recently uploaded. The first file should still exist.
     app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
 
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
@@ -341,7 +341,7 @@ def test_uploads_multiple_files_one_by_one_slowly(app: Page):
     #  most recently uploaded. The first file should still exist.
     app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
 
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         files[0]["buffer"].decode("utf-8"), use_inner_text=True
@@ -381,7 +381,7 @@ def test_does_not_call_callback_when_not_changed(app: Page):
         ]
     )
 
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     # Make sure callback called
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
@@ -409,7 +409,7 @@ def test_works_inside_form(app: Page):
     file_chooser.set_files(
         files=[{"name": file_name1, "mimeType": "text/plain", "buffer": file_content1}]
     )
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     # We should be showing the uploaded file name
     expect(app.get_by_test_id("stFileUploaderFileName")).to_have_text(
@@ -422,7 +422,7 @@ def test_works_inside_form(app: Page):
 
     # Submit the form
     app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     # Now we should see the file's contents
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
@@ -432,14 +432,14 @@ def test_works_inside_form(app: Page):
     # Press the delete button. Again, nothing should happen - we
     # should still see the file's contents.
     app.get_by_test_id("stFileUploaderDeleteBtn").first.click()
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         str(file_content1), use_inner_text=True
     )
 
     # Submit again. Now the file should be gone.
     app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
-    wait_for_app_run(app, wait_delay=500)
+    wait_for_app_run(app)
 
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
