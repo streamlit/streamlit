@@ -237,7 +237,7 @@ class CachedFunc:
             message = self._info.show_spinner
 
         if self._info.show_spinner or isinstance(self._info.show_spinner, str):
-            with spinner(message, cache=True):
+            with spinner(message, _cache=True):
                 return self._get_or_create_cached_value(args, kwargs)
         else:
             return self._get_or_create_cached_value(args, kwargs)

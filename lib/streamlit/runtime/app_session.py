@@ -583,6 +583,7 @@ class AppSession:
             script_finished_msg = self._create_script_finished_message(
                 ForwardMsg.FINISHED_EARLY_FOR_RERUN
             )
+            self._state = AppSessionState.APP_NOT_RUNNING
             self._enqueue_forward_msg(script_finished_msg)
             if self._local_sources_watcher:
                 self._local_sources_watcher.update_watched_modules()

@@ -267,6 +267,8 @@ def app_server(
             str(app_port),
             "--browser.gatherUsageStats",
             "false",
+            "--server.fileWatcherType",
+            "none",
         ],
         cwd=".",
     )

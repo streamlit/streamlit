@@ -218,6 +218,150 @@ def test_uploads_and_deletes_multiple_files(
     )
 
 
+def test_uploads_multiple_files_one_by_one_quickly(app: Page):
+    """Test that uploads and deletes multiple files quickly works correctly."""
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+
+    file_name2 = "file2.txt"
+    file_content2 = b"file2content"
+
+    files = [
+        {"name": file_name1, "mimeType": "text/plain", "buffer": file_content1},
+        {"name": file_name2, "mimeType": "text/plain", "buffer": file_content2},
+    ]
+
+    uploader_index = 2
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    file_chooser.set_files(files=files[0])
+
+    # The widget should show the name of the uploaded file
+    expect(app.locator(".uploadedFileName")).to_have_text(
+        file_name1, use_inner_text=True
+    )
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+
+    with app.expect_request("**/upload_file/**"):
+        file_chooser.set_files(files=files[1])
+
+    uploaded_file_names = app.locator(".uploadedFileName")
+
+    # The widget should show the names of the uploaded files in reverse order
+    file_names = [files[1]["name"], files[0]["name"]]
+
+    for i, element in enumerate(uploaded_file_names.all()):
+        expect(element).to_have_text(file_names[i], use_inner_text=True)
+
+    # The script should have printed the contents of the two files into a st.text.
+    # This tests that the upload actually went through.
+    content = "\n".join(
+        [
+            files[0]["buffer"].decode("utf-8"),
+            files[1]["buffer"].decode("utf-8"),
+        ]
+    )
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        content, use_inner_text=True
+    )
+
+    #  Delete the second file. The second file is on top because it was
+    #  most recently uploaded. The first file should still exist.
+    app.get_by_test_id("fileDeleteBtn").first.click()
+
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        files[0]["buffer"].decode("utf-8"), use_inner_text=True
+    )
+
+    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
+        "True", use_inner_text=True
+    )
+
+
+# NOTE: This test is essentially identical to the one above. The only
+# difference is that we add a short delay to uploading the two files to
+# ensure that two script runs happen separately (sufficiently rapid widget
+# changes will often be batched into a single script run) to test for the
+# failure mode in https://github.com/streamlit/streamlit/issues/3531.
+def test_uploads_multiple_files_one_by_one_slowly(app: Page):
+    """Test that uploads and deletes multiple files slowly works."""
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+
+    file_name2 = "file2.txt"
+    file_content2 = b"file2content"
+
+    files = [
+        {"name": file_name1, "mimeType": "text/plain", "buffer": file_content1},
+        {"name": file_name2, "mimeType": "text/plain", "buffer": file_content2},
+    ]
+
+    uploader_index = 2
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+    # Here we wait for the first file to be uploaded before uploading the second
+    with app.expect_request("**/upload_file/**"):
+        file_chooser.set_files(files=files[0])
+
+    # The widget should show the name of the uploaded file
+    expect(app.locator(".uploadedFileName")).to_have_text(
+        file_name1, use_inner_text=True
+    )
+
+    with app.expect_file_chooser() as fc_info:
+        app.get_by_test_id("stFileUploadDropzone").nth(uploader_index).click()
+
+    file_chooser = fc_info.value
+
+    with app.expect_request("**/upload_file/**"):
+        file_chooser.set_files(files=files[1])
+
+    uploaded_file_names = app.locator(".uploadedFileName")
+
+    # The widget should show the names of the uploaded files in reverse order
+    file_names = [files[1]["name"], files[0]["name"]]
+
+    for i, element in enumerate(uploaded_file_names.all()):
+        expect(element).to_have_text(file_names[i], use_inner_text=True)
+
+    # The script should have printed the contents of the two files into a st.text.
+    # This tests that the upload actually went through.
+    content = "\n".join(
+        [
+            files[0]["buffer"].decode("utf-8"),
+            files[1]["buffer"].decode("utf-8"),
+        ]
+    )
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        content, use_inner_text=True
+    )
+
+    #  Delete the second file. The second file is on top because it was
+    #  most recently uploaded. The first file should still exist.
+    app.get_by_test_id("fileDeleteBtn").first.click()
+
+    wait_for_app_run(app)
+    app.wait_for_timeout(1000)
+
+    expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
+        files[0]["buffer"].decode("utf-8"), use_inner_text=True
+    )
+
+    expect(app.get_by_test_id("stMarkdownContainer").nth(5)).to_have_text(
+        "True", use_inner_text=True
+    )
+
+
 def test_does_not_call_callback_when_not_changed(app: Page):
     """Test that the file uploader does not call a callback when not changed."""
     file_name1 = "example5.txt"
@@ -317,8 +461,3 @@ def test_works_inside_form(app: Page):
     expect(app.get_by_test_id("stText").nth(uploader_index)).to_have_text(
         "No upload", use_inner_text=True
     )
-
-
-# TODO(kajarenc): Migrate missing test from cypress test spec st_file_uploader.spec.js
-#  to playwright:
-#  - uploads and deletes multiple files quickly / slowly

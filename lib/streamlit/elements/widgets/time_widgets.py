@@ -29,7 +29,6 @@ from typing import (
     overload,
 )
 
-from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
@@ -66,6 +65,23 @@ DEFAULT_STEP_MINUTES = 15
 ALLOWED_DATE_FORMATS = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
+
+
+def _adjust_years(input_date: date, years: int) -> date:
+    """Add or subtract years from a date."""
+    try:
+        # Attempt to directly add/subtract years
+        return input_date.replace(year=input_date.year + years)
+    except ValueError as err:
+        # Handle case for leap year date (February 29) that doesn't exist in the target year
+        # by moving the date to February 28
+        if input_date.month == 2 and input_date.day == 29:
+            return input_date.replace(year=input_date.year + years, month=2, day=28)
+
+        raise StreamlitAPIException(
+            f"Date {input_date} does not exist in the target year {input_date.year + years}. "
+            "This should never happen. Please report this bug."
+        ) from err
 
 
 def _parse_date_value(
@@ -112,9 +128,9 @@ def _parse_min_date(
         parsed_min_date = min_value
     elif min_value is None:
         if parsed_dates:
-            parsed_min_date = parsed_dates[0] - relativedelta.relativedelta(years=10)
+            parsed_min_date = _adjust_years(parsed_dates[0], years=-10)
         else:
-            parsed_min_date = date.today() - relativedelta.relativedelta(years=10)
+            parsed_min_date = _adjust_years(date.today(), years=-10)
     else:
         raise StreamlitAPIException(
             "DateInput min should either be a date/datetime or None"
@@ -133,9 +149,9 @@ def _parse_max_date(
         parsed_max_date = max_value
     elif max_value is None:
         if parsed_dates:
-            parsed_max_date = parsed_dates[-1] + relativedelta.relativedelta(years=10)
+            parsed_max_date = _adjust_years(parsed_dates[-1], years=10)
         else:
-            parsed_max_date = date.today() + relativedelta.relativedelta(years=10)
+            parsed_max_date = _adjust_years(date.today(), years=10)
     else:
         raise StreamlitAPIException(
             "DateInput max should either be a date/datetime or None"
@@ -651,9 +667,9 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value: DateValue
-        | Literal["today"]
-        | Literal["default_value_today"] = "default_value_today",
+        value: (
+            DateValue | Literal["today"] | Literal["default_value_today"]
+        ) = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
