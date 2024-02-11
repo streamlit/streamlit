@@ -34,6 +34,12 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
       - name: Run make develop
