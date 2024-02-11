@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import contextlib
 import errno
-import fnmatch
 import io
 import os
 from pathlib import Path
@@ -48,14 +47,17 @@ def get_encoded_file_data(
         parameter is set), return a StringIO. Otherwise, return BytesIO.
 
     """
-
     if encoding == "auto":
-        data_encoding = None if is_binary_string(data) else "utf-8"
-    else:
-        data_encoding = encoding
+        if is_binary_string(data):
+            encoding = None
+        else:
+            # If the file does not look like a pure binary file, assume
+            # it's utf-8. It would be great if we could guess it a little
+            # more smartly here, but it is what it is!
+            encoding = "utf-8"
 
-    if data_encoding:
-        return io.StringIO(data.decode(data_encoding))
+    if encoding:
+        return io.StringIO(data.decode(encoding))
 
     return io.BytesIO(data)
 
@@ -169,6 +171,8 @@ def file_is_in_folder_glob(filepath: str, folderpath_glob: str) -> bool:
             folderpath_glob += "*"
         else:
             folderpath_glob += "/*"
+
+    import fnmatch
 
     file_dir = os.path.dirname(filepath) + "/"
     return fnmatch.fnmatch(file_dir, folderpath_glob)

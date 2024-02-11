@@ -42,7 +42,10 @@ from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 SomeUploadedFiles = Union[
-    UploadedFile, DeletedFile, List[Union[UploadedFile, DeletedFile]], None
+    UploadedFile,
+    DeletedFile,
+    List[Union[UploadedFile, DeletedFile]],
+    None,
 ]
 
 
