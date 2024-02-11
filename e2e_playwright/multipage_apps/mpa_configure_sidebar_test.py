@@ -64,7 +64,7 @@ def test_page_links_in_sidebar(
 
     # Navigate to Page 4
     page_links.nth(3).click()
-    wait_for_app_run(themed_app, wait_delay=500)
+    wait_for_app_run(themed_app)
 
     page_links = themed_app.get_by_test_id("stPageLink-NavLink")
     expect(page_links).to_have_count(5)
