@@ -80,7 +80,9 @@ def test_number_input_shows_instructions_when_dirty(
 
 def test_number_input_updates_value_correctly_on_enter(app: Page):
     """Test that st.number_input updates the value correctly on enter."""
-    first_number_input_field = app.locator(".stNumberInput input").nth(0)
+    first_number_input_field = (
+        app.get_by_test_id("stNumberInput").nth(0).locator("input")
+    )
     first_number_input_field.fill("10")
     first_number_input_field.press("Enter")
 
