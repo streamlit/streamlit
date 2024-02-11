@@ -22,7 +22,6 @@
 from __future__ import annotations
 
 import io
-import mimetypes
 import os
 import re
 from enum import IntEnum
@@ -385,6 +384,8 @@ def image_to_url(
             # When we aren't able to open the image file, we still pass the path to
             # the MediaFileManager - its storage backend may have access to files
             # that Streamlit does not.
+            import mimetypes
+
             mimetype, _ = mimetypes.guess_type(image)
             if mimetype is None:
                 mimetype = "application/octet-stream"
