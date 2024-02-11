@@ -14,7 +14,6 @@
 
 """st.help unit test."""
 import inspect
-import sys
 import unittest
 from unittest.mock import patch
 
