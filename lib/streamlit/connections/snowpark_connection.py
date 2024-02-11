@@ -18,13 +18,13 @@
 # way to configure this at a per-line level :(
 # mypy: no-warn-unused-ignores
 
+from __future__ import annotations
+
 import threading
 from collections import ChainMap
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import TYPE_CHECKING, Iterator, Optional, Union, cast
-
-import pandas as pd
+from typing import TYPE_CHECKING, Iterator, cast
 
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import (
@@ -36,6 +36,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from pandas import DataFrame
     from snowflake.snowpark.session import Session  # type:ignore[import]
 
 
@@ -96,8 +97,8 @@ class SnowparkConnection(BaseConnection["Session"]):
     def query(
         self,
         sql: str,
-        ttl: Optional[Union[float, int, timedelta]] = None,
-    ) -> pd.DataFrame:
+        ttl: float | int | timedelta | None = None,
+    ) -> DataFrame:
         """Run a read-only SQL query.
 
         This method implements both query result caching (with caching behavior
@@ -144,7 +145,7 @@ class SnowparkConnection(BaseConnection["Session"]):
             retry=retry_if_exception_type(SnowparkServerException),
             wait=wait_fixed(1),
         )
-        def _query(sql: str) -> pd.DataFrame:
+        def _query(sql: str) -> DataFrame:
             with self._lock:
                 return self._instance.sql(sql).to_pandas()
 
