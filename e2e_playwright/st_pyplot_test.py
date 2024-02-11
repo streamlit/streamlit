@@ -31,6 +31,10 @@ def test_displays_a_pyplot_figures(
     assert_snapshot(pyplot_elements.nth(3), name="st_pyplot-container_width_false")
     assert_snapshot(pyplot_elements.nth(4), name="st_pyplot-seaborn")
     assert_snapshot(pyplot_elements.nth(5), name="st_pyplot-seaborn_using_kwargs")
+
+    # The global figure needs some special handling to lower flakiness
+    pyplot_elements.nth(6).scroll_into_view_if_needed()
+    expect(pyplot_elements.nth(6).locator("img")).to_be_visible()
     assert_snapshot(pyplot_elements.nth(6), name="st_pyplot-global_figure")
 
 
