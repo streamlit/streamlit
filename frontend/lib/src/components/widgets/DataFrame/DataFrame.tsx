@@ -585,6 +585,8 @@ function DataFrame({
           headerHeight={ROW_HEIGHT}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
           onColumnResize={isTouchDevice ? undefined : onColumnResize}
+          // Configure resize indicator to only show on the header:
+          resizeIndicator={"header"}
           // Freeze all index columns:
           freezeColumns={freezeColumns}
           smoothScrollX={true}

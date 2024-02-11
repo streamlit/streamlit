@@ -55,6 +55,7 @@ function useCustomTheme(): CustomThemeReturn {
       horizontalBorderColor: theme.colors.fadedText05,
       fontFamily: theme.genericFonts.bodyFont,
       bgSearchResult: transparentize(theme.colors.primary, 0.9),
+      resizeIndicatorColor: theme.colors.primary,
       // Header styling:
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
