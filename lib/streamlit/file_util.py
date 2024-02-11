@@ -48,16 +48,15 @@ def get_encoded_file_data(
 
     """
     if encoding == "auto":
-        if is_binary_string(data):
-            encoding = None
-        else:
-            # If the file does not look like a pure binary file, assume
-            # it's utf-8. It would be great if we could guess it a little
-            # more smartly here, but it is what it is!
-            encoding = "utf-8"
+        # If the file does not look like a pure binary file, assume
+        # it's utf-8. It would be great if we could guess it a little
+        # more smartly here, but it is what it is!
+        data_encoding = None if is_binary_string(data) else "utf-8"
+    else:
+        data_encoding = encoding
 
-    if encoding:
-        return io.StringIO(data.decode(encoding))
+    if data_encoding:
+        return io.StringIO(data.decode(data_encoding))
 
     return io.BytesIO(data)
 
