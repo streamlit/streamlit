@@ -37,7 +37,7 @@ lazy_loaded_modules = [
     # Pillow is lazy-loaded, but it gets imported by plotly,
     # which we have to import in case it is installed to correctly
     # configure the Streamlit theme. So, we cannot test this here.
-    "PIL",
+    # "PIL",
 ]
 
 for module in lazy_loaded_modules:
