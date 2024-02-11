@@ -19,7 +19,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Final, List
 
 # TODO(lukasmasuch): Lazy-load this module:
 import click
@@ -41,9 +41,9 @@ from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-NEW_VERSION_TEXT = """
+NEW_VERSION_TEXT: Final = """
   %(new_version)s
 
   See what's new at https://discuss.streamlit.io/c/announcements
