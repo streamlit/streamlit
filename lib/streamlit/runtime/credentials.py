@@ -25,9 +25,6 @@ from datetime import datetime
 from typing import Final, NoReturn
 from uuid import uuid4
 
-# TODO(lukasmasuch): Lazy-load click dependency
-import click
-
 from streamlit import env_util, file_util, util
 from streamlit.logger import get_logger
 
@@ -49,6 +46,8 @@ _Activation = namedtuple(
 
 
 def email_prompt() -> str:
+    import click
+
     # Emoji can cause encoding errors on non-UTF-8 terminals
     # (See https://github.com/streamlit/streamlit/issues/2284.)
     # WT_SESSION is a Windows Terminal specific environment variable. If it exists,
@@ -73,38 +72,9 @@ def email_prompt() -> str:
     }
 
 
-# IMPORTANT: Break the text below at 80 chars.
-_TELEMETRY_TEXT = """
-  You can find our privacy policy at %(link)s
-
-  Summary:
-  - This open source library collects usage statistics.
-  - We cannot see and do not store information contained inside Streamlit apps,
-    such as text, charts, images, etc.
-  - Telemetry data is stored in servers in the United States.
-  - If you'd like to opt out, add the following to %(config)s,
-    creating that file if necessary:
-
-    [browser]
-    gatherUsageStats = false
-""" % {
-    "link": click.style("https://streamlit.io/privacy-policy", underline=True),
-    "config": click.style(_CONFIG_FILE_PATH),
-}
-
 _TELEMETRY_HEADLESS_TEXT = """
 Collecting usage statistics. To deactivate, set browser.gatherUsageStats to False.
 """
-
-# IMPORTANT: Break the text below at 80 chars.
-_INSTRUCTIONS_TEXT = """
-  %(start)s
-  %(prompt)s %(hello)s
-""" % {
-    "start": click.style("Get started by typing:", fg="blue", bold=True),
-    "prompt": click.style("$", fg="blue"),
-    "hello": click.style("streamlit hello", bold=True),
-}
 
 
 def _send_email(email: str) -> None:
@@ -290,6 +260,8 @@ class Credentials(object):
             activated = False
 
             while not activated:
+                import click
+
                 email = click.prompt(
                     text=email_prompt(),
                     prompt_suffix="",
@@ -300,9 +272,42 @@ class Credentials(object):
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
                     self.save()
-                    click.secho(_TELEMETRY_TEXT)
+                    # IMPORTANT: Break the text below at 80 chars.
+                    TELEMETRY_TEXT = """
+  You can find our privacy policy at %(link)s
+
+  Summary:
+  - This open source library collects usage statistics.
+  - We cannot see and do not store information contained inside Streamlit apps,
+    such as text, charts, images, etc.
+  - Telemetry data is stored in servers in the United States.
+  - If you'd like to opt out, add the following to %(config)s,
+    creating that file if necessary:
+
+    [browser]
+    gatherUsageStats = false
+""" % {
+                        "link": click.style(
+                            "https://streamlit.io/privacy-policy", underline=True
+                        ),
+                        "config": click.style(_CONFIG_FILE_PATH),
+                    }
+
+                    click.secho(TELEMETRY_TEXT)
                     if show_instructions:
-                        click.secho(_INSTRUCTIONS_TEXT)
+                        # IMPORTANT: Break the text below at 80 chars.
+                        INSTRUCTIONS_TEXT = """
+  %(start)s
+  %(prompt)s %(hello)s
+""" % {
+                            "start": click.style(
+                                "Get started by typing:", fg="blue", bold=True
+                            ),
+                            "prompt": click.style("$", fg="blue"),
+                            "hello": click.style("streamlit hello", bold=True),
+                        }
+
+                        click.secho(INSTRUCTIONS_TEXT)
                     activated = True
                 else:  # pragma: nocover
                     _LOGGER.error("Please try again.")
@@ -363,6 +368,8 @@ def check_credentials() -> None:
 
     if not _check_credential_file_exists() and config.get_option("server.headless"):
         if not config.is_manually_set("browser.gatherUsageStats"):
+            import click
+
             # If not manually defined, show short message about usage stats gathering.
             click.secho(_TELEMETRY_HEADLESS_TEXT)
         return

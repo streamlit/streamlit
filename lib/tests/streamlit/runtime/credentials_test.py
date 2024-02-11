@@ -31,8 +31,7 @@ from streamlit.runtime.credentials import (
     email_prompt,
 )
 
-PROMPT = "streamlit.runtime.credentials.click.prompt"
-
+PROMPT = "click.prompt"
 MOCK_PATH = "/mock/home/folder/.streamlit/credentials.toml"
 
 mock_get_path = MagicMock(return_value=MOCK_PATH)
