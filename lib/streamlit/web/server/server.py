@@ -18,10 +18,9 @@ import errno
 import logging
 import os
 import socket
-import ssl
 import sys
 from pathlib import Path
-from typing import Any, Awaitable, Final, List
+from typing import TYPE_CHECKING, Any, Awaitable, Final, List
 
 import tornado.concurrent
 import tornado.locks
@@ -55,6 +54,9 @@ from streamlit.web.server.routes import (
 from streamlit.web.server.server_util import make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
+
+if TYPE_CHECKING:
+    import ssl
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -148,6 +150,8 @@ def _get_ssl_options(
         if not Path(key_file).exists():
             _LOGGER.error("Key file '%s' does not exist.", key_file)
             sys.exit(1)
+
+        import ssl
 
         ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         # When the SSL certificate fails to load, an exception is raised as below,

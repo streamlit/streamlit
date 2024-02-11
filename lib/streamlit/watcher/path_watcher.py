@@ -18,10 +18,7 @@ from typing import Callable, Type, Union
 
 import streamlit.watcher
 from streamlit import config, env_util
-from streamlit.logger import get_logger
 from streamlit.watcher.polling_path_watcher import PollingPathWatcher
-
-LOGGER = get_logger(__name__)
 
 
 # local_sources_watcher.py caches the return value of

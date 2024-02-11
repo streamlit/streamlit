@@ -18,7 +18,7 @@ import collections
 import os
 import sys
 import types
-from typing import Callable, Dict, List, Set
+from typing import Callable, Dict, Final, List, Set
 
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
@@ -29,7 +29,7 @@ from streamlit.watcher.path_watcher import (
     get_default_path_watcher_class,
 )
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
