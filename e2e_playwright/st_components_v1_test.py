@@ -28,7 +28,10 @@ def test_components_iframe_rendering(
     expect(elements).to_have_count(3)
 
     assert_snapshot(elements.nth(0), name="st_components-html")
-    assert_snapshot(elements.nth(1), name="st_components-iframe")
+    # The second iframe does not use a valid URL, and therefore will show
+    # an error message in browsers. The test_iframe_correctly_sets_attr test
+    # should be enough here.
+    # assert_snapshot(elements.nth(1), name="st_components-iframe")
 
 
 def test_html_correctly_sets_attr(app: Page):
