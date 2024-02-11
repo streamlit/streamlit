@@ -110,21 +110,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("st.audio", ds.name)
         self.assertEqual("method", ds.type)
 
-        if sys.version_info < (3, 9):
-            # Python < 3.9 represents the signature slightly differently
-            signature = (
-                "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
-                "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
-                "format: str = 'audio/wav', start_time: int = 0, *, "
-                "sample_rate: Union[int, NoneType] = None) -> 'DeltaGenerator'"
-            )
-        else:
-            signature = (
-                "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
-                "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
-                "format: str = 'audio/wav', start_time: int = 0, *, "
-                "sample_rate: Optional[int] = None) -> 'DeltaGenerator'"
-            )
+        signature = "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'int' = 0, *, sample_rate: 'int | None' = None) -> \"'DeltaGenerator'\""
 
         self.assertEqual(
             f"streamlit.delta_generator.MediaMixin.audio{signature}", ds.value

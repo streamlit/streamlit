@@ -56,7 +56,7 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 if TYPE_CHECKING:
-    import ssl
+    from ssl import SSLContext
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -131,9 +131,7 @@ def start_listening(app: tornado.web.Application) -> None:
         start_listening_tcp_socket(http_server)
 
 
-def _get_ssl_options(
-    cert_file: str | None, key_file: str | None
-) -> ssl.SSLContext | None:
+def _get_ssl_options(cert_file: str | None, key_file: str | None) -> SSLContext | None:
     if bool(cert_file) != bool(key_file):
         _LOGGER.error(
             "Options 'server.sslCertFile' and 'server.sslKeyFile' must "

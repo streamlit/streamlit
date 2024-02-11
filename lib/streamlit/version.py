@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from packaging.version import Version
 
 
-_LOGGER = logger.get_logger(__name__)
+_LOGGER: Final = logger.get_logger(__name__)
 
 PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 

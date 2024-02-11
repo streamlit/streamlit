@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, List, TypeVar, cast
+from typing import Any, Callable, Final, List, TypeVar, cast
 
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
