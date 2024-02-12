@@ -96,6 +96,51 @@ class StMapTest(DeltaGeneratorTestCase):
         # Also test that the radius property is set up correctly.
         self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
 
+    @parameterized.expand(
+        [
+            ("string_index", ["a", "b", "c"]),
+            ("indexed_from_1", [1, 2, 3]),
+        ]
+    )
+    def test_alternative_dataframe_index(self, _, index):
+        """Test that the map method does not error with non-standard dataframe indexes"""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
+                "size": [100, 50, 30],
+            },
+            index=index,
+        )
+
+        st.map(df, size="size", color="color")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+
+        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
+        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+
+    def test_named_dataframe_index(self):
+        """Test that the map method does not error with a dataframe with a named index"""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
+                "size": [100, 50, 30],
+            }
+        )
+        df.index.name = "my index"
+
+        st.map(df, color="color", size="size")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+
+        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
+        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+
+        # Also test that the radius property is set up correctly.
+        self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
+
     def test_common_color_formats(self):
         """Test that users can pass colors in different formats."""
         df = pd.DataFrame(

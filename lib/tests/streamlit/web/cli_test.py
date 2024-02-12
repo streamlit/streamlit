@@ -76,7 +76,7 @@ class CliTest(unittest.TestCase):
 
     def test_run_existing_file_argument(self):
         """streamlit run succeeds if an existing file is passed."""
-        with patch("validators.url", return_value=False), patch(
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
             "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
             result = self.runner.invoke(cli, ["run", "file_name.py"])
@@ -85,7 +85,7 @@ class CliTest(unittest.TestCase):
     def test_run_non_existing_file_argument(self):
         """streamlit run should fail if a non existing file is passed."""
 
-        with patch("validators.url", return_value=False), patch(
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
             "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=False):
             result = self.runner.invoke(cli, ["run", "file_name.py"])
@@ -106,7 +106,7 @@ class CliTest(unittest.TestCase):
     def test_run_valid_url(self, temp_dir):
         """streamlit run succeeds if an existing url is passed."""
 
-        with patch("validators.url", return_value=True), patch(
+        with patch("streamlit.url_util.is_url", return_value=True), patch(
             "streamlit.web.cli._main_run"
         ), requests_mock.mock() as m:
             file_content = b"content"
@@ -125,7 +125,7 @@ class CliTest(unittest.TestCase):
         url is passed.
         """
 
-        with patch("validators.url", return_value=True), patch(
+        with patch("streamlit.url_util.is_url", return_value=True), patch(
             "streamlit.web.cli._main_run"
         ), requests_mock.mock() as m:
             m.get("http://url/app.py", exc=requests.exceptions.RequestException)
@@ -138,7 +138,7 @@ class CliTest(unittest.TestCase):
 
     def test_run_arguments(self):
         """The correct command line should be passed downstream."""
-        with patch("validators.url", return_value=False), patch(
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
             "os.path.exists", return_value=True
         ):
             with patch("streamlit.web.cli._main_run") as mock_main_run:
@@ -161,7 +161,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(0, result.exit_code)
 
     def test_run_command_with_flag_config_options(self):
-        with patch("validators.url", return_value=False), patch(
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
             "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
             result = self.runner.invoke(
@@ -175,7 +175,7 @@ class CliTest(unittest.TestCase):
 
     @parameterized.expand(["mapbox.token", "server.cookieSecret"])
     def test_run_command_with_sensitive_options_as_flag(self, sensitive_option):
-        with patch("validators.url", return_value=False), patch(
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
             "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
             result = self.runner.invoke(
@@ -248,7 +248,7 @@ class CliTest(unittest.TestCase):
         """If headless mode and no config is present,
         activation should be None."""
         with testutil.patch_config_options({"server.headless": True}):
-            with patch("validators.url", return_value=False), patch(
+            with patch("streamlit.url_util.is_url", return_value=False), patch(
                 "streamlit.web.bootstrap.run"
             ), patch("os.path.exists", return_value=True), patch(
                 "streamlit.runtime.credentials._check_credential_file_exists",
@@ -268,7 +268,7 @@ class CliTest(unittest.TestCase):
         So we call `_check_activated`.
         """
         with testutil.patch_config_options({"server.headless": headless_mode}):
-            with patch("validators.url", return_value=False), patch(
+            with patch("streamlit.url_util.is_url", return_value=False), patch(
                 "streamlit.web.bootstrap.run"
             ), patch("os.path.exists", return_value=True), mock.patch(
                 "streamlit.runtime.credentials.Credentials._check_activated"
@@ -285,7 +285,7 @@ class CliTest(unittest.TestCase):
         """If headless mode, show a message about usage metrics gathering."""
 
         with testutil.patch_config_options({"server.headless": headless_mode}):
-            with patch("validators.url", return_value=False), patch(
+            with patch("streamlit.url_util.is_url", return_value=False), patch(
                 "os.path.exists", return_value=True
             ), patch("streamlit.config.is_manually_set", return_value=False), patch(
                 "streamlit.runtime.credentials._check_credential_file_exists",
@@ -339,7 +339,7 @@ class CliTest(unittest.TestCase):
             mock_logger.warning.assert_called_once()
 
     def test_hello_command_with_flag_config_options(self):
-        with patch("validators.url", return_value=False), patch(
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
             "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
             result = self.runner.invoke(cli, ["hello", "--server.port=8502"])
@@ -358,7 +358,7 @@ class CliTest(unittest.TestCase):
             mock_config.assert_called()
 
     def test_config_show_command_with_flag_config_options(self):
-        with patch("validators.url", return_value=False), patch(
+        with patch("streamlit.url_util.is_url", return_value=False), patch(
             "streamlit.web.cli._main_run"
         ), patch("os.path.exists", return_value=True):
             result = self.runner.invoke(cli, ["config", "show", "--server.port=8502"])

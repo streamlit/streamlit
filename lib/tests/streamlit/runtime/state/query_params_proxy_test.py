@@ -68,6 +68,9 @@ class TestQueryParamsProxy(unittest.TestCase):
     def test__len__returns_correct_len(self):
         assert len(self.query_params_proxy) == 1
 
+    def test__str__returns_correct_str(self):
+        assert str(self.query_params_proxy) == "{'test': 'value'}"
+
     def test__iter__returns_correct_iter(self):
         keys = list(iter(self.query_params_proxy))
         assert keys == ["test"]

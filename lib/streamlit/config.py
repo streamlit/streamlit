@@ -721,7 +721,10 @@ def _server_address() -> Optional[str]:
 _create_option(
     "server.port",
     description="""
-        The port where the server will listen for browser connections.""",
+        The port where the server will listen for browser connections.
+
+        Don't use port 3000 which is reserved for internal development.
+        """,
     default_val=8501,
     type_=int,
 )
@@ -861,9 +864,13 @@ def _browser_server_port() -> int:
     app.
 
     This is used to:
-    - Set the correct URL for CORS and XSRF protection purposes.
-    - Show the URL on the terminal
-    - Open the browser
+    - Set the correct URL for XSRF protection purposes.
+    - Show the URL on the terminal (part of `streamlit run`).
+    - Open the browser automatically (part of `streamlit run`).
+
+    This option is for advanced use cases. To change the port of your app, use
+    `server.Port` instead. Don't use port 3000 which is reserved for internal
+    development.
 
     Default: whatever value is set in server.port.
     """
@@ -1004,6 +1011,9 @@ _create_option(
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val=True,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="The support for global pyplot instances is planned to be removed soon.",
+    expiration_date="2024-04-15",
     type_=bool,
 )
 

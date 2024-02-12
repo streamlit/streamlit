@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Final, List
 
+# TODO(lukasmasuch): Lazy-load this module:
 import click
 
 from streamlit import (
@@ -38,9 +41,9 @@ from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-NEW_VERSION_TEXT = """
+NEW_VERSION_TEXT: Final = """
   %(new_version)s
 
   See what's new at https://discuss.streamlit.io/c/announcements
@@ -62,7 +65,7 @@ MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 
 
 def _set_up_signal_handler(server: Server) -> None:
-    LOGGER.debug("Setting up signal handler")
+    _LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and exit its loop.
@@ -83,35 +86,6 @@ def _fix_sys_path(main_script_path: str) -> None:
     ourselves we need to do it instead.
     """
     sys.path.insert(0, os.path.dirname(main_script_path))
-
-
-def _fix_matplotlib_crash() -> None:
-    """Set Matplotlib backend to avoid a crash.
-
-    The default Matplotlib backend crashes Python on OSX when run on a thread
-    that's not the main thread, so here we set a safer backend as a fix.
-    Users can always disable this behavior by setting the config
-    runner.fixMatplotlib = false.
-
-    This fix is OS-independent. We didn't see a good reason to make this
-    Mac-only. Consistency within Streamlit seemed more important.
-    """
-    if config.get_option("runner.fixMatplotlib"):
-        try:
-            # TODO: a better option may be to set
-            #  os.environ["MPLBACKEND"] = "Agg". We'd need to do this towards
-            #  the top of __init__.py, before importing anything that imports
-            #  pandas (which imports matplotlib). Alternately, we could set
-            #  this environment variable in a new entrypoint defined in
-            #  setup.py. Both of these introduce additional trickiness: they
-            #  need to run without consulting streamlit.config.get_option,
-            #  because this would import streamlit, and therefore matplotlib.
-            import matplotlib
-
-            matplotlib.use("Agg")
-        except ImportError:
-            # Matplotlib is not installed. No need to do anything.
-            pass
 
 
 def _fix_tornado_crash() -> None:
@@ -168,7 +142,7 @@ def _on_server_start(server: Server) -> None:
     try:
         secrets.load_if_toml_exists()
     except Exception as ex:
-        LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
+        _LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
@@ -402,7 +376,6 @@ def run(
     This starts a blocking asyncio eventloop.
     """
     _fix_sys_path(main_script_path)
-    _fix_matplotlib_crash()
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()
