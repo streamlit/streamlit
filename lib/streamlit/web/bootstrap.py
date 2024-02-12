@@ -273,7 +273,8 @@ def _print_url(is_running_hello: bool) -> None:
     cli_util.print_to_cli("")
 
     for url_name, url in named_urls:
-        cli_util.print_url(url_name, url)
+        cli_util.print_to_cli(f"  {url_name}: ", nl=False, fg="blue")
+        cli_util.print_to_cli(url, bold=True)
 
     cli_util.print_to_cli("")
 

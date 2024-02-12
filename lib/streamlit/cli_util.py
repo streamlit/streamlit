@@ -42,10 +42,3 @@ def style_for_cli(message: str, **kwargs) -> str:
         return click.style(message, **kwargs)
     except ImportError:
         return message
-
-
-def print_url(title: str, url: str) -> None:
-    """Pretty-print a URL on the terminal."""
-
-    print_to_cli(f"  {title}: ", nl=False, fg="blue")
-    print_to_cli(url, bold=True)
