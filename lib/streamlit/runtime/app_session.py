@@ -18,7 +18,7 @@ import asyncio
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Dict, List
+from typing import TYPE_CHECKING, Callable, Dict, Final, List
 
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime, source_util
@@ -50,7 +50,7 @@ from streamlit.watcher import LocalSourcesWatcher
 if TYPE_CHECKING:
     from streamlit.runtime.state import SessionState
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class AppSessionState(Enum):
