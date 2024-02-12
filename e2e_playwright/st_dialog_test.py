@@ -27,6 +27,10 @@ def open_dialog_without_images(app: Page):
     app.get_by_text("Open Dialog without Images").click()
 
 
+def open_sidebar_dialog(app: Page):
+    app.get_by_text("Open Sidebar-Dialog").click()
+
+
 def test_displays_dialog_properly(app: Page):
     """Test that dialog is displayed properly."""
     open_dialog_with_images(app)
@@ -124,3 +128,13 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     dialog = app.get_by_role("dialog")
     expect(dialog.get_by_test_id("stButton")).to_be_visible()
     assert_snapshot(dialog, name="dialog-in-main")
+
+
+def test_sidebardialog_displays_correctly(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    open_dialog_without_images(app)
+    wait_for_app_run(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog.get_by_test_id("stButton")).to_be_visible()
+    assert_snapshot(dialog, name="dialog-in-sidebar")

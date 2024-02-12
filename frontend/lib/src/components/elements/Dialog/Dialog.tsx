@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useState } from "react"
+import React, {
+  ReactElement,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { SIZE } from "baseui/modal"
 
@@ -24,6 +30,8 @@ import Modal, {
 } from "@streamlit/lib/src/components/shared/Modal"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { ThemeProvider, LibContext } from "@streamlit/lib"
+import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 export interface Props {
   element: BlockProto.Dialog
@@ -50,8 +58,7 @@ function parseWidthConfig(width?: string): string {
 
 const Dialog: React.FC<Props> = ({ element, children }): ReactElement => {
   const { title, dismissible, width, isOpen: initialIsOpen } = element
-
-  const [isOpen, setIsOpen] = useState<boolean>(initialIsOpen || false)
+  const [isOpen, setIsOpen] = useState<boolean>(initialIsOpen ?? false)
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
     if (notNullOrUndefined(initialIsOpen)) {
@@ -59,16 +66,38 @@ const Dialog: React.FC<Props> = ({ element, children }): ReactElement => {
     }
   }, [initialIsOpen])
 
+  const { activeTheme } = React.useContext(LibContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
+
+  const ThemedModal = useMemo(() => {
+    return function ThemedModal({ children }: { children: ReactNode }) {
+      if (isInSidebar) {
+        return (
+          <ThemeProvider
+            theme={activeTheme.emotion}
+            baseuiTheme={activeTheme.basewebTheme}
+          >
+            {children}
+          </ThemeProvider>
+        )
+      }
+
+      return <>{children}</>
+    }
+  }, [activeTheme.emotion, activeTheme.basewebTheme, isInSidebar])
+
   return (
-    <Modal
-      isOpen={isOpen}
-      closeable={dismissible}
-      onClose={() => setIsOpen(false)}
-      size={parseWidthConfig(width ?? SIZE.default)}
-    >
-      <ModalHeader>{title}</ModalHeader>
-      <ModalBody>{children}</ModalBody>
-    </Modal>
+    <ThemedModal>
+      <Modal
+        isOpen={isOpen}
+        closeable={dismissible}
+        onClose={() => setIsOpen(false)}
+        size={parseWidthConfig(width ?? SIZE.default)}
+      >
+        <ModalHeader>{title}</ModalHeader>
+        <ModalBody>{children}</ModalBody>
+      </Modal>
+    </ThemedModal>
   )
 }
 
