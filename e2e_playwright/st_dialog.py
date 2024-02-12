@@ -39,8 +39,7 @@ with dialog:
 if st.button("Open Dialog with Images"):
     dialog.open()
 
-# We use this dialog for a screenshot test as loading images via the browser
-#   is non-deterministic
+
 dialog = st.dialog("Simple Dialog")
 with dialog:
     st.write("Hello again!")
@@ -49,6 +48,18 @@ with dialog:
     if st.button("Submit", key="dialog2-btn"):
         dialog.close()
 
-
 if st.button("Open Dialog without Images"):
     dialog.open()
+
+# We use this dialog for a screenshot test as loading images via the browser
+#   is non-deterministic
+with st.sidebar:
+    dialog = st.dialog("Simple Dialog")
+    with dialog:
+        st.write("Hello sidebar dialog!")
+
+        if st.button("Submit", key="dialog3-btn"):
+            dialog.close()
+
+    if st.button("Open Sidebar-Dialog"):
+        dialog.open()
