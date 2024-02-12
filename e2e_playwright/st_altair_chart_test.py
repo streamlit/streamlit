@@ -17,18 +17,27 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_displays_altair_chart(themed_app: Page):
-    expect(
-        themed_app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
-    ).to_have_count(8)
-
-
 def test_altair_chart_displays_correctly(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
+    expect(
+        themed_app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
+    ).to_have_count(10)
     charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
-    expect(charts).to_have_count(8)
-    for index in range(charts.count()):
+    expect(charts).to_have_count(10)
+    snapshot_names = [
+        "st_altair_chart-scatter-chart-default-theme",
+        "st_altair_chart-scatter-chart-streamlit-theme",
+        "st_altair_chart-scatter-chart-overwritten-theme",
+        "st_altair_chart-bar-chart-overwritten-theme",
+        "st_altair_chart-pie-chart-large-legend-items",
+        "st_altair_chart-grouped-bar-chart-default-theme",
+        "st_altair_chart-grouped-bar-chart-streamlit-theme",
+        "st_altair_chart-grouped-use_container_width_default_theme"
+        "st_altair_chart-grouped-layered_line_chart_streamlit_theme",
+    ]
+    for i, name in enumerate(snapshot_names):
         assert_snapshot(
-            charts.nth(index), name=f"st_arrow_altair_chart-displays-correctly-{index}"
+            charts.nth(i),
+            name=name,
         )
