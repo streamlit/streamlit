@@ -181,6 +181,22 @@ def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
     expect(app.get_by_test_id("stHeading")).to_contain_text("Slow page")
 
 
+def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
+    app.get_by_test_id("stButton").nth(1).locator("button").first.click()
+
+    # Wait for the view container and main menu to appear (like in wait_for_app_loaded),
+    # but don't wait for the script to finish running.
+    app.wait_for_selector(
+        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
+    )
+    app.wait_for_selector("[data-testid='stMainMenu']", timeout=20000, state="attached")
+
+    # We expect to see the page transition to the slow page by the time this call times
+    # out in 5s. Otherwise, the page contents aren't being rendered until the script has
+    # fully completed, and we've run into https://github.com/streamlit/streamlit/issues/7954
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Slow page")
+
+
 def test_removes_query_params_when_swapping_pages(page: Page, app_port: int):
     """Test that query params are removed when swapping pages"""
 
