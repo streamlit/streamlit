@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-from typing import Dict
+from __future__ import annotations
 
-import click
-import toml
+import re
+from typing import Dict, List
 
 from streamlit.config_option import ConfigOption
 
@@ -44,6 +43,9 @@ def show_config(
     config_options: Dict[str, ConfigOption],
 ) -> None:
     """Print the given config sections/options to the terminal."""
+    import click
+    import toml
+
     out = []
     out.append(
         _clean(
@@ -89,7 +91,7 @@ def show_config(
 
         for key, option in section_options.items():
             key = option.key.split(".")[1]
-            description_paragraphs = _clean_paragraphs(option.description)
+            description_paragraphs = _clean_paragraphs(option.description or "")
 
             last_paragraph_idx = len(description_paragraphs) - 1
 
@@ -155,7 +157,7 @@ def show_config(
     click.echo("\n".join(out))
 
 
-def _clean(txt):
+def _clean(txt: str) -> str:
     """Replace sequences of multiple spaces with a single space, excluding newlines.
 
     Preserves leading and trailing spaces, and does not modify spaces in between lines.
@@ -163,7 +165,7 @@ def _clean(txt):
     return re.sub(" +", " ", txt)
 
 
-def _clean_paragraphs(txt):
+def _clean_paragraphs(txt: str) -> List[str]:
     """Split the text into paragraphs, preserve newlines within the paragraphs."""
     # Strip both leading and trailing newlines.
     txt = txt.strip("\n")
