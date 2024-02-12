@@ -858,24 +858,19 @@ _create_option(
 )
 
 
-@_create_option(
-    "browser.serverPort",
-    visibility="hidden",
-    deprecated=True,
-    deprecation_text="browser.serverPort has been deprecated. It will be removed in a future version.",
-    expiration_date="2024-04-01",
-    type_=int,
-)
+@_create_option("browser.serverPort", type_=int)
 def _browser_server_port() -> int:
     """Port where users should point their browsers in order to connect to the
     app.
 
     This is used to:
-    - Set the correct URL for CORS and XSRF protection purposes.
-    - Show the URL on the terminal
-    - Open the browser
+    - Set the correct URL for XSRF protection purposes.
+    - Show the URL on the terminal (part of `streamlit run`).
+    - Open the browser automatically (part of `streamlit run`).
 
-    Don't use port 3000 which is reserved for internal development.
+    This option is for advanced use cases. To change the port of your app, use
+    `server.Port` instead. Don't use port 3000 which is reserved for internal
+    development.
 
     Default: whatever value is set in server.port.
     """
