@@ -868,7 +868,9 @@ def _browser_server_port() -> int:
     - Show the URL on the terminal (part of `streamlit run`).
     - Open the browser automatically (part of `streamlit run`).
 
-    Don't use port 3000 which is reserved for internal development.
+    This option is for advanced use cases. To change the port of your app, use
+    `server.Port` instead. Don't use port 3000 which is reserved for internal
+    development.
 
     Default: whatever value is set in server.port.
     """
