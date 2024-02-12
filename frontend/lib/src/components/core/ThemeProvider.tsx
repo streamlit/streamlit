@@ -36,7 +36,7 @@ function ThemeProvider({
   children,
 }: ThemeProviderProps): ReactElement {
   return (
-    // TODO: Check on error handling
+    // Type error coming from BaseUI "property children doesn't exist"
     // @ts-expect-error
     <BaseUIThemeProvider theme={baseuiTheme || baseuiLightTheme}>
       <EmotionThemeProvider theme={theme}>{children}</EmotionThemeProvider>
