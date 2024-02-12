@@ -111,20 +111,25 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     separator = page.get_by_test_id("stSidebarNavSeparator")
     svg = separator.locator("svg")
 
+    expect(svg).to_be_visible()
+
     # Expand the nav
-    svg.click()
+    svg.click(force=True)
+    page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
     # Collapse the nav
-    svg.click()
+    svg.click(force=True)
+    page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
 
     # Expand the nav again
-    svg.click()
+    svg.click(force=True)
+    page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
