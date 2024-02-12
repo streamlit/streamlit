@@ -2,7 +2,6 @@
 # As of September 21, 2022, only the latest version of Bokeh (2.4.3) is supported.
 # NOTE: Python Bokeh and BokehJS versions must always match.
 bokeh==2.4.3
-cffi>=1.14
 graphviz>=0.17
 matplotlib>=3.3.4
 opencv-python>=4.5.3
@@ -36,12 +35,17 @@ mypy-protobuf>=3.2, <3.4
 # we're not going to update its associated tests anymore. Please don't modify
 # these pinned versions!
 
+
 mysqlclient>=2.0.3
 psycopg2-binary>=2.9.1
 pyodbc>=4.0.32
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
+
+python-dateutil>=2.7.3
+tzlocal>=1.1
+cffi>=1.14
 
 # Pydantic 1.* fails to initialize validators, we add it to requirements
 # to test the fix. Pydantic 2 should not have that issue.
@@ -54,6 +58,3 @@ semver<3
 langchain>=0.0.216; python_version < '3.12'
 # 8.0.0 causes test_sqlalchemy_engine_2_oracle to fail.
 cx-Oracle<8.0.0; python_version < '3.12'
-# Required for hashing test
-python-dateutil>=2.7.3
-tzlocal>=1.1
