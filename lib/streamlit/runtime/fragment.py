@@ -14,7 +14,12 @@
 
 from __future__ import annotations
 
+import contextlib
+import hashlib
+import inspect
 from abc import abstractmethod
+from copy import deepcopy
+from functools import wraps
 from typing import Any, Callable, TypeVar, overload
 
 from typing_extensions import Protocol
@@ -107,9 +112,81 @@ def fragment(
 
 
 @gather_metrics("experimental_fragment")
-def fragment(  # type: ignore[empty-body]
+def fragment(
     func: F | None = None,
     *,
     run_every: float | None = None,
 ) -> Callable[[F], F] | F:
-    pass
+    """TODO(vdonato): Write a docstring for this function."""
+
+    if func is None:
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            return fragment(
+                func=f,
+                run_every=run_every,
+            )
+
+        return wrapper
+    else:
+        non_optional_func = func
+
+    @wraps(non_optional_func)
+    def wrap(*args, **kwargs):
+        import streamlit as st
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+
+        # TODO(vdonato): Determine whether we can just always wrap the contents of a
+        # fragment in a new container.
+        if len(dg_stack.get()) > 0:
+            dg_stack_snapshot = deepcopy(dg_stack.get())
+        else:
+            with st.container():
+                dg_stack_snapshot = deepcopy(dg_stack.get())
+
+        # TODO(vdonato): Maybe improve how we construct fragment_id hashes.
+        active_dg = dg_stack_snapshot[-1]
+        h = hashlib.new("md5")
+        h.update(
+            f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(
+                "utf-8"
+            )
+        )
+        fragment_id = h.hexdigest()
+
+        def wrapped_fragment():
+            ctx = get_script_run_ctx(suppress_warning=True)
+            assert ctx is not None
+
+            dg_stack.set(deepcopy(dg_stack_snapshot))
+            ctx.current_fragment_id = fragment_id
+
+            try:
+                result = non_optional_func(*args, **kwargs)
+            finally:
+                ctx.current_fragment_id = None
+
+            return result
+
+        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+
+        if run_every:
+            # TODO(vdonato): Fix me when implementing auto rerun.
+            # msg = ForwardMsg()
+            # msg.auto_rerun.interval = run_every
+            # msg.auto_rerun.fragment_id = fragment_id
+            # ctx.enqueue(msg)
+            pass
+
+        return wrapped_fragment()
+
+    with contextlib.suppress(AttributeError):
+        # Make this a well-behaved decorator by preserving important function
+        # attributes.
+        wrap.__dict__.update(non_optional_func.__dict__)
+        wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
+
+    return wrap

@@ -13,10 +13,12 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from streamlit.runtime.fragment import MemoryFragmentStorage
+from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
+from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 
 
 class MemoryFragmentStorageTest(unittest.TestCase):
@@ -62,4 +64,136 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
 
 class FragmentTest(unittest.TestCase):
-    pass
+    def setUp(self):
+        dg_stack.set(())
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
+    def test_wrapped_fragment_calls_original_function(self):
+        # Sanity check that we don't currently have a wrapping container.
+        assert len(dg_stack.get()) == 0
+
+        called = False
+
+        @fragment
+        def my_fragment():
+            nonlocal called
+            called = True
+
+            # Verify that a container was added automagically.
+            assert len(dg_stack.get()) == 1
+
+        my_fragment()
+        assert called
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
+    def test_fragment_with_run_every(self):
+        # TODO(vdonato): Actually test that run_every works properly once we implement
+        # the parameter. We still add this test for now to verify that we can call
+        # the @fragment decorator with an argument.
+        called = False
+
+        @fragment(run_every=5.0)
+        def my_fragment():
+            nonlocal called
+            called = True
+
+        my_fragment()
+        assert called
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
+    def test_does_not_add_container_if_unnecessary(self):
+        dg_stack.set((MagicMock(), MagicMock()))
+
+        called = False
+
+        @fragment
+        def my_fragment():
+            nonlocal called
+            called = True
+            assert len(dg_stack.get()) == 2
+
+        my_fragment()
+        assert called
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_resets_current_fragment_id_on_success(self, patched_get_script_run_ctx):
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            pass
+
+        ctx.current_fragment_id = "my_fragment_id"
+        my_fragment()
+        assert ctx.current_fragment_id is None
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_resets_current_fragment_id_on_exception(self, patched_get_script_run_ctx):
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_exploding_fragment():
+            raise Exception("oh no")
+
+        ctx.current_fragment_id = "my_fragment_id"
+        with pytest.raises(Exception):
+            my_exploding_fragment()
+        assert ctx.current_fragment_id is None
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_wrapped_fragment_saved_in_FragmentStorage(
+        self, patched_get_script_run_ctx
+    ):
+        ctx = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            pass
+
+        my_fragment()
+
+        ctx.fragment_storage.set.assert_called_once()
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_sets_dg_stack_to_snapshot(self, patched_get_script_run_ctx):
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        dg = MagicMock()
+        dg.my_random_field = 7
+        dg_stack.set((dg,))
+
+        call_count = 0
+
+        @fragment
+        def my_fragment():
+            nonlocal call_count
+
+            curr_dg_stack = dg_stack.get()
+            assert curr_dg_stack[0].my_random_field == 7
+
+            # Attempt to mutate the dg_stack.
+            curr_dg_stack[0].my_random_field += 1
+
+            call_count += 1
+
+        my_fragment()
+
+        # Reach inside our MemoryFragmentStorage internals to pull out our saved
+        # fragment.
+        saved_fragment = list(ctx.fragment_storage._fragments.values())[0]
+
+        # Verify that we can't mutate our dg_stack from within my_fragment. If a
+        # mutation is persisted between fragment runs, the assert on `my_random_field`
+        # will fail.
+        saved_fragment()
+        saved_fragment()
+        saved_fragment()
+
+        # Called once when calling my_fragment and three times calling the saved
+        # fragment.
+        assert call_count == 4
