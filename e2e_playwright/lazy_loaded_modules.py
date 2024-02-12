@@ -18,27 +18,29 @@ import sys
 import streamlit as st
 
 lazy_loaded_modules = [
-    "bokeh",
-    "tenacity",
-    "rich",
-    "pydeck",
     "altair",
+    "bokeh",
     "graphviz",
     "matplotlib",
-    "pandas",
-    "pyarrow",
     "numpy",
+    "pandas",
+    # Pillow is lazy-loaded, but it gets imported by plotly,
+    # which we have to import in case it is installed to correctly
+    # configure the Streamlit theme. So, we cannot test this here.
+    # "PIL",
+    "pyarrow",
+    "pydeck",
+    "rich",
+    "tenacity",
+    # Internal modules:
     "streamlit.emojis",
     "streamlit.external",
     "streamlit.vendor.pympler",
     # Requires `server.fileWatcherType` to be configured with `none` or `poll`:
     "watchdog",
     "streamlit.watcher.event_based_path_watcher",
-    # Pillow is lazy-loaded, but it gets imported by plotly,
-    # which we have to import in case it is installed to correctly
-    # configure the Streamlit theme. So, we cannot test this here.
-    # "PIL",
 ]
+
 
 for module in lazy_loaded_modules:
     if module in sys.modules:
