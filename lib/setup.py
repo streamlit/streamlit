@@ -16,7 +16,7 @@ import os
 import sys
 from pathlib import Path
 
-import setuptools
+from setuptools import find_packages, setup
 from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
@@ -105,7 +105,7 @@ else:
     # being missing isn't problematic.
     long_description = ""
 
-setuptools.setup(
+setup(
     name="streamlit",
     version=VERSION,
     description="A faster way to build and share data apps",
@@ -148,7 +148,7 @@ setuptools.setup(
     python_requires=">=3.8, !=3.9.7",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
-    packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     # Requirements
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRA_REQUIRES,
