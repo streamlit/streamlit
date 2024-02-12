@@ -136,7 +136,7 @@ tomli==2.0.1
 tomlkit==0.12.3
 toolz==0.12.1
 tornado==6.4
-twine==4.0.2
+twine==5.0.0
 types-click==7.1.8
 types-protobuf==4.24.0.20240129
 types-pytz==2024.1.0.20240203
@@ -147,7 +147,7 @@ types-typed-ast==1.5.8.7
 types-urllib3==1.26.25.14
 typing-inspect==0.9.0
 typing_extensions==4.9.0
-tzdata==2023.4
+tzdata==2024.1
 tzlocal==5.2
 urllib3==1.26.18
 virtualenv==20.25.0
