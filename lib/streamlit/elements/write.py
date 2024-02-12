@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-import json as json
+import json
 import types
 from io import StringIO
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Generator,
     Iterable,
     List,
@@ -30,10 +31,6 @@ from typing import (
     Type,
     cast,
 )
-
-import numpy as np
-from PIL import Image, ImageFile
-from typing_extensions import Final
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
@@ -390,6 +387,8 @@ class WriteMixin:
                 flush_buffer()
                 self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):
+                import numpy as np
+
                 flush_buffer()
                 if len(np.shape(arg)) > 2:
                     self.dg.text(arg)
@@ -416,7 +415,7 @@ class WriteMixin:
             elif type_util.is_sympy_expession(arg):
                 flush_buffer()
                 self.dg.latex(arg)
-            elif isinstance(arg, (ImageFile.ImageFile, Image.Image)):
+            elif type_util.is_pillow_image(arg):
                 flush_buffer()
                 self.dg.image(arg)
             elif type_util.is_keras_model(arg):
