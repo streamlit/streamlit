@@ -25,7 +25,7 @@ from datetime import datetime
 from typing import Final, NoReturn
 from uuid import uuid4
 
-from streamlit import env_util, file_util, util
+from streamlit import cli_util, env_util, file_util, util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -46,8 +46,6 @@ _Activation = namedtuple(
 
 
 def email_prompt() -> str:
-    import click
-
     # Emoji can cause encoding errors on non-UTF-8 terminals
     # (See https://github.com/streamlit/streamlit/issues/2284.)
     # WT_SESSION is a Windows Terminal specific environment variable. If it exists,
@@ -67,8 +65,8 @@ def email_prompt() -> str:
       %(email)s""".format(
         "👋 " if show_emoji else ""
     ) % {
-        "welcome": click.style("Welcome to Streamlit!", bold=True),
-        "email": click.style("Email: ", fg="blue"),
+        "welcome": cli_util.style_for_cli("Welcome to Streamlit!", bold=True),
+        "email": cli_util.style_for_cli("Email: ", fg="blue"),
     }
 
 
@@ -287,27 +285,29 @@ class Credentials(object):
     [browser]
     gatherUsageStats = false
 """ % {
-                        "link": click.style(
+                        "link": cli_util.style_for_cli(
                             "https://streamlit.io/privacy-policy", underline=True
                         ),
-                        "config": click.style(_CONFIG_FILE_PATH),
+                        "config": cli_util.style_for_cli(_CONFIG_FILE_PATH),
                     }
 
-                    click.secho(TELEMETRY_TEXT)
+                    cli_util.print_to_cli(TELEMETRY_TEXT)
                     if show_instructions:
                         # IMPORTANT: Break the text below at 80 chars.
                         INSTRUCTIONS_TEXT = """
   %(start)s
   %(prompt)s %(hello)s
 """ % {
-                            "start": click.style(
+                            "start": cli_util.style_for_cli(
                                 "Get started by typing:", fg="blue", bold=True
                             ),
-                            "prompt": click.style("$", fg="blue"),
-                            "hello": click.style("streamlit hello", bold=True),
+                            "prompt": cli_util.style_for_cli("$", fg="blue"),
+                            "hello": cli_util.style_for_cli(
+                                "streamlit hello", bold=True
+                            ),
                         }
 
-                        click.secho(INSTRUCTIONS_TEXT)
+                        cli_util.print_to_cli(INSTRUCTIONS_TEXT)
                     activated = True
                 else:  # pragma: nocover
                     _LOGGER.error("Please try again.")
@@ -368,9 +368,7 @@ def check_credentials() -> None:
 
     if not _check_credential_file_exists() and config.get_option("server.headless"):
         if not config.is_manually_set("browser.gatherUsageStats"):
-            import click
-
             # If not manually defined, show short message about usage stats gathering.
-            click.secho(_TELEMETRY_HEADLESS_TEXT)
+            cli_util.print_to_cli(_TELEMETRY_HEADLESS_TEXT)
         return
     Credentials.get_current()._check_activated()

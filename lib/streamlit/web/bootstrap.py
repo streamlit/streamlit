@@ -22,12 +22,12 @@ from pathlib import Path
 from typing import Any, Dict, Final, List
 
 from streamlit import (
+    cli_util,
     config,
     env_util,
     file_util,
     net_util,
     secrets,
-    url_util,
     util,
     version,
 )
@@ -181,8 +181,6 @@ def _fix_pydantic_duplicate_validators_error():
 
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
-        import click
-
         NEW_VERSION_TEXT: Final = """
   %(new_version)s
 
@@ -191,24 +189,24 @@ def _print_new_version_message() -> None:
   Enter the following command to upgrade:
   %(prompt)s %(command)s
 """ % {
-            "new_version": click.style(
+            "new_version": cli_util.style_for_cli(
                 "A new version of Streamlit is available.", fg="blue", bold=True
             ),
-            "prompt": click.style("$", fg="blue"),
-            "command": click.style("pip install streamlit --upgrade", bold=True),
+            "prompt": cli_util.style_for_cli("$", fg="blue"),
+            "command": cli_util.style_for_cli(
+                "pip install streamlit --upgrade", bold=True
+            ),
         }
-        click.secho(NEW_VERSION_TEXT)
+        cli_util.print_to_cli(NEW_VERSION_TEXT)
 
 
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     """Prints a warning if the static folder is misconfigured."""
 
     if config.get_option("server.enableStaticServing"):
-        import click
-
         static_folder_path = file_util.get_app_static_dir(main_script_path)
         if not os.path.isdir(static_folder_path):
-            click.secho(
+            cli_util.print_to_cli(
                 f"WARNING: Static file serving is enabled, but no static folder found "
                 f"at {static_folder_path}. To disable static file serving, "
                 f"set server.enableStaticServing to false.",
@@ -220,7 +218,7 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
 
             if static_folder_size > MAX_APP_STATIC_FOLDER_SIZE:
                 config.set_option("server.enableStaticServing", False)
-                click.secho(
+                cli_util.print_to_cli(
                     "WARNING: Static folder size is larger than 1GB. "
                     "Static file serving has been disabled.",
                     fg="yellow",
@@ -270,25 +268,23 @@ def _print_url(is_running_hello: bool) -> None:
         if internal_ip:
             named_urls.append(("Network URL", server_util.get_url(internal_ip)))
 
-    import click
-
-    click.secho("")
-    click.secho("  %s" % title_message, fg="blue", bold=True)
-    click.secho("")
+    cli_util.print_to_cli("")
+    cli_util.print_to_cli("  %s" % title_message, fg="blue", bold=True)
+    cli_util.print_to_cli("")
 
     for url_name, url in named_urls:
-        url_util.print_url(url_name, url)
+        cli_util.print_url(url_name, url)
 
-    click.secho("")
+    cli_util.print_to_cli("")
 
     if is_running_hello:
-        click.secho("  Ready to create your own Python apps super quickly?")
-        click.secho("  Head over to ", nl=False)
-        click.secho("https://docs.streamlit.io", bold=True)
-        click.secho("")
-        click.secho("  May you create awesome apps!")
-        click.secho("")
-        click.secho("")
+        cli_util.print_to_cli("  Ready to create your own Python apps super quickly?")
+        cli_util.print_to_cli("  Head over to ", nl=False)
+        cli_util.print_to_cli("https://docs.streamlit.io", bold=True)
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli("  May you create awesome apps!")
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli("")
 
 
 def _maybe_print_old_git_warning(main_script_path: str) -> None:
@@ -301,23 +297,23 @@ def _maybe_print_old_git_warning(main_script_path: str) -> None:
         and repo.git_version is not None
         and repo.git_version < MIN_GIT_VERSION
     ):
-        import click
-
         git_version_string = ".".join(str(val) for val in repo.git_version)
         min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
-        click.secho("")
-        click.secho("  Git integration is disabled.", fg="yellow", bold=True)
-        click.secho("")
-        click.secho(
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli("  Git integration is disabled.", fg="yellow", bold=True)
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli(
             f"  Streamlit requires Git {min_version_string} or later, "
             f"but you have {git_version_string}.",
             fg="yellow",
         )
-        click.secho(
+        cli_util.print_to_cli(
             "  Git is used by Streamlit Cloud (https://streamlit.io/cloud).",
             fg="yellow",
         )
-        click.secho("  To enable this feature, please update Git.", fg="yellow")
+        cli_util.print_to_cli(
+            "  To enable this feature, please update Git.", fg="yellow"
+        )
 
 
 def load_config_options(flag_options: Dict[str, Any]) -> None:
