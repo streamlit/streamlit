@@ -54,7 +54,7 @@ def test_expanded_toast_rendering(
     expect(toasts).to_have_count(2)
     toasts.nth(0).hover()
 
-    themed_app.get_by_text("view more").click()
+    themed_app.get_by_text("view more").first.click()
 
     expect(toasts.nth(0)).to_have_text(
         "🦄 Random toast message that is a really really really really really really really long message, going way past the 3 line limitview lessClose"
