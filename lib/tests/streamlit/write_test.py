@@ -426,15 +426,15 @@ class StreamlitStreamTest(unittest.TestCase):
     def test_with_openai_chunk(self, is_type):
         """Test st.write_stream with openai Chunks."""
 
-        is_type.side_effect = make_is_type_mock(
-            "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
-        )
+        is_type.side_effect = make_is_type_mock(type_util._OPENAI_CHUNK_RE)
 
         # Create a mock for ChatCompletionChunk
         mock_chunk = MagicMock()
-        mock_chunk.choices = [MagicMock()]
 
         def openai_stream():
+            mock_chunk.choices = []
+            yield mock_chunk  # should also support empty chunks
+            mock_chunk.choices = [MagicMock()]
             mock_chunk.choices[0].delta.content = "Hello "
             yield mock_chunk
             mock_chunk.choices[0].delta.content = "World"
