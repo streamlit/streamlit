@@ -15,14 +15,13 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List
 
 from streamlit import cli_util
 from streamlit.config_option import ConfigOption
 
 
 def server_option_changed(
-    old_options: Dict[str, ConfigOption], new_options: Dict[str, ConfigOption]
+    old_options: dict[str, ConfigOption], new_options: dict[str, ConfigOption]
 ) -> bool:
     """Return True if and only if an option in the server section differs
     between old_options and new_options.
@@ -40,8 +39,8 @@ def server_option_changed(
 
 
 def show_config(
-    section_descriptions: Dict[str, str],
-    config_options: Dict[str, ConfigOption],
+    section_descriptions: dict[str, str],
+    config_options: dict[str, ConfigOption],
 ) -> None:
     """Print the given config sections/options to the terminal."""
 
@@ -165,7 +164,7 @@ def _clean(txt: str) -> str:
     return re.sub(" +", " ", txt)
 
 
-def _clean_paragraphs(txt: str) -> List[str]:
+def _clean_paragraphs(txt: str) -> list[str]:
     """Split the text into paragraphs, preserve newlines within the paragraphs."""
     # Strip both leading and trailing newlines.
     txt = txt.strip("\n")

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 # We cannot lazy-load click here because its used via decorators.
 import click
@@ -40,7 +40,7 @@ LOG_LEVELS = ("error", "warning", "info", "debug")
 
 def _convert_config_option_to_click_option(
     config_option: ConfigOption,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Composes given config option options as options for click lib."""
     option = f"--{config_option.key}"
     param = config_option.key.replace(".", "_")
@@ -254,8 +254,8 @@ def _get_command_line_as_string() -> str | None:
 
 def _main_run(
     file,
-    args: List[str] | None = None,
-    flag_options: Dict[str, Any] | None = None,
+    args: list[str] | None = None,
+    flag_options: dict[str, Any] | None = None,
 ) -> None:
     if args is None:
         args = []

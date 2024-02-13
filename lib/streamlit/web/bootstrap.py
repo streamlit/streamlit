@@ -19,7 +19,7 @@ import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Dict, Final, List
+from typing import Any, Final
 
 from streamlit import (
     cli_util,
@@ -103,7 +103,7 @@ def _fix_tornado_crash() -> None:
                 asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 
-def _fix_sys_argv(main_script_path: str, args: List[str]) -> None:
+def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
     """sys.argv needs to exclude streamlit arguments and parameters
     and be set to what a user's script may expect.
     """
@@ -317,7 +317,7 @@ def _maybe_print_old_git_warning(main_script_path: str) -> None:
         )
 
 
-def load_config_options(flag_options: Dict[str, Any]) -> None:
+def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
 
@@ -328,7 +328,7 @@ def load_config_options(flag_options: Dict[str, Any]) -> None:
 
     Parameters
     ----------
-    flag_options : Dict[str, Any]
+    flag_options : dict[str, Any]
         A dict of config options where the keys are the CLI flag version of the
         config option names.
     """
@@ -343,7 +343,7 @@ def load_config_options(flag_options: Dict[str, Any]) -> None:
     config.get_config_options(force_reparse=True, options_from_flags=options_from_flags)
 
 
-def _install_config_watchers(flag_options: Dict[str, Any]) -> None:
+def _install_config_watchers(flag_options: dict[str, Any]) -> None:
     def on_config_changed(_path):
         load_config_options(flag_options)
 
@@ -370,8 +370,8 @@ def _install_pages_watcher(main_script_path_str: str) -> None:
 def run(
     main_script_path: str,
     is_hello: bool,
-    args: List[str],
-    flag_options: Dict[str, Any],
+    args: list[str],
+    flag_options: dict[str, Any],
 ) -> None:
     """Run a script in a separate thread and start a server for the app.
 
