@@ -430,9 +430,11 @@ class StreamlitStreamTest(unittest.TestCase):
 
         # Create a mock for ChatCompletionChunk
         mock_chunk = MagicMock()
-        mock_chunk.choices = [MagicMock()]
 
         def openai_stream():
+            mock_chunk.choices = []
+            yield mock_chunk  # should also support empty chunks
+            mock_chunk.choices = [MagicMock()]
             mock_chunk.choices[0].delta.content = "Hello "
             yield mock_chunk
             mock_chunk.choices[0].delta.content = "World"
