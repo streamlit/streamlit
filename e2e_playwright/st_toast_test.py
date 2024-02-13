@@ -22,6 +22,7 @@ def test_default_toast_rendering(
 ):
     """Test that toasts are correctly rendered."""
     themed_app.keyboard.press("r")
+    themed_app.wait_for_timeout(250)
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
     toasts.nth(1).hover()
@@ -34,7 +35,11 @@ def test_collapsed_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test collapsed long toasts are correctly rendered."""
+    toasts = themed_app.get_by_test_id("stToast")
+    # Wait until prior toasts cleared before rerun to rerender toasts
+    expect(toasts).to_have_count(0)
     themed_app.keyboard.press("r")
+    themed_app.wait_for_timeout(250)
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
     toasts.nth(0).hover()
@@ -49,12 +54,16 @@ def test_expanded_toast_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test expanded long toasts are correctly rendered."""
+    toasts = themed_app.get_by_test_id("stToast")
+    # Wait until prior toasts cleared before rerun to rerender toasts
+    expect(toasts).to_have_count(0)
     themed_app.keyboard.press("r")
+    themed_app.wait_for_timeout(250)
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
     toasts.nth(0).hover()
 
-    themed_app.get_by_text("view more").first.click()
+    themed_app.get_by_text("view more").click()
 
     expect(toasts.nth(0)).to_have_text(
         "🦄 Random toast message that is a really really really really really really really long message, going way past the 3 line limitview lessClose"
@@ -66,7 +75,11 @@ def test_toast_overlay_with_chat(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that toasts overlay with st.chat_input."""
+    toasts = themed_app.get_by_test_id("stToast")
+    # Wait until prior toasts cleared before rerun to rerender toasts
+    expect(toasts).to_have_count(0)
     themed_app.keyboard.press("r")
+    themed_app.wait_for_timeout(250)
     container = themed_app.get_by_test_id("stBottomBlockContainer")
     toasts = themed_app.get_by_test_id("stToast")
     toasts.nth(0).hover()
