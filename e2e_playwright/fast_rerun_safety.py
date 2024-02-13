@@ -26,7 +26,7 @@ if runtime.exists():
     time.sleep(3)
     st.write(st.session_state.counter)
     live = st.empty()
-    for i in range(100):
+    for _ in range(50):
         st.session_state.counter += 1
         live.write(f"live: {st.session_state.counter}")
         time.sleep(0.1)
