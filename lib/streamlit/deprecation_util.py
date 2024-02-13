@@ -188,7 +188,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             return getattr(obj, attr)
 
         @staticmethod
-        def _get_magic_functions(cls) -> List[str]:
+        def _get_magic_functions(cls) -> list[str]:
             # ignore the handful of magic functions we cannot override without
             # breaking the Wrapper.
             ignore = ("__class__", "__dict__", "__getattribute__", "__getattr__")

@@ -14,15 +14,15 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Tuple
+from typing import Any
 
 from streamlit import util
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
 def make_delta_path(
-    root_container: int, parent_path: Tuple[int, ...], index: int
-) -> List[int]:
+    root_container: int, parent_path: tuple[int, ...], index: int
+) -> list[int]:
     delta_path = [root_container]
     delta_path.extend(parent_path)
     delta_path.append(index)
@@ -31,7 +31,7 @@ def make_delta_path(
 
 def get_container_cursor(
     root_container: int | None,
-) -> "RunningCursor" | None:
+) -> RunningCursor | None:
     """Return the top-level RunningCursor for the given container.
     This is the cursor that is used when user code calls something like
     `st.foo` (which uses the main container) or `st.sidebar.foo` (which uses
@@ -71,7 +71,7 @@ class Cursor:
         raise NotImplementedError()
 
     @property
-    def parent_path(self) -> Tuple[int, ...]:
+    def parent_path(self) -> tuple[int, ...]:
         """The cursor's parent's path within its container."""
         raise NotImplementedError()
 
@@ -81,7 +81,7 @@ class Cursor:
         raise NotImplementedError()
 
     @property
-    def delta_path(self) -> List[int]:
+    def delta_path(self) -> list[int]:
         """The complete path of the delta pointed to by this cursor - its
         container, parent path, and index.
         """
@@ -91,7 +91,7 @@ class Cursor:
     def is_locked(self) -> bool:
         raise NotImplementedError()
 
-    def get_locked_cursor(self, **props) -> "LockedCursor":
+    def get_locked_cursor(self, **props) -> LockedCursor:
         raise NotImplementedError()
 
     @property
@@ -105,7 +105,7 @@ class Cursor:
 
 
 class RunningCursor(Cursor):
-    def __init__(self, root_container: int, parent_path: Tuple[int, ...] = ()):
+    def __init__(self, root_container: int, parent_path: tuple[int, ...] = ()):
         """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
@@ -129,7 +129,7 @@ class RunningCursor(Cursor):
         return self._root_container
 
     @property
-    def parent_path(self) -> Tuple[int, ...]:
+    def parent_path(self) -> tuple[int, ...]:
         return self._parent_path
 
     @property
@@ -140,7 +140,7 @@ class RunningCursor(Cursor):
     def is_locked(self) -> bool:
         return False
 
-    def get_locked_cursor(self, **props) -> "LockedCursor":
+    def get_locked_cursor(self, **props) -> LockedCursor:
         locked_cursor = LockedCursor(
             root_container=self._root_container,
             parent_path=self._parent_path,
@@ -157,7 +157,7 @@ class LockedCursor(Cursor):
     def __init__(
         self,
         root_container: int,
-        parent_path: Tuple[int, ...] = (),
+        parent_path: tuple[int, ...] = (),
         index: int = 0,
         **props,
     ):
@@ -190,7 +190,7 @@ class LockedCursor(Cursor):
         return self._root_container
 
     @property
-    def parent_path(self) -> Tuple[int, ...]:
+    def parent_path(self) -> tuple[int, ...]:
         return self._parent_path
 
     @property
@@ -201,7 +201,7 @@ class LockedCursor(Cursor):
     def is_locked(self) -> bool:
         return True
 
-    def get_locked_cursor(self, **props) -> "LockedCursor":
+    def get_locked_cursor(self, **props) -> LockedCursor:
         self._props = props
         return self
 

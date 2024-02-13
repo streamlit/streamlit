@@ -19,7 +19,7 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import Any, Dict, Iterable
+from typing import Any, Iterable
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -68,7 +68,7 @@ def echo(code_location="above"):
 
         # Use ast to parse the Python file and find the code block to display
         root_node = ast.parse("".join(source_lines))
-        line_to_node_map: Dict[int, Any] = {}
+        line_to_node_map: dict[int, Any] = {}
 
         def collect_body_statements(node: ast.AST) -> None:
             if not hasattr(node, "body"):

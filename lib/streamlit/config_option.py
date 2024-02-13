@@ -196,7 +196,7 @@ class ConfigOption:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __call__(self, get_val_func: Callable[[], Any]) -> "ConfigOption":
+    def __call__(self, get_val_func: Callable[[], Any]) -> ConfigOption:
         """Assign a function to compute the value for this option.
 
         This method is called when ConfigOption is used as a decorator.
@@ -314,5 +314,5 @@ class ConfigOption:
 
 
 def _parse_yyyymmdd_str(date_str: str) -> datetime.datetime:
-    year, month, day = [int(token) for token in date_str.split("-", 2)]
+    year, month, day = (int(token) for token in date_str.split("-", 2))
     return datetime.datetime(year, month, day)

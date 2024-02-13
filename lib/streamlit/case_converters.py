@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 
 def to_upper_camel_case(snake_case_str: str) -> str:
@@ -61,8 +61,8 @@ def to_snake_case(camel_case_str: str) -> str:
 
 
 def convert_dict_keys(
-    func: Callable[[str], str], in_dict: Dict[Any, Any]
-) -> Dict[Any, Any]:
+    func: Callable[[str], str], in_dict: dict[Any, Any]
+) -> dict[Any, Any]:
     """Apply a conversion function to all keys in a dict.
 
     Parameters

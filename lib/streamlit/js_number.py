@@ -21,7 +21,7 @@ class JSNumberBoundsException(Exception):
     pass
 
 
-class JSNumber(object):
+class JSNumber:
     """Utility class for exposing JavaScript Number constants."""
 
     # The largest int that can be represented with perfect precision
@@ -65,11 +65,11 @@ class JSNumber(object):
 
         if value < cls.MIN_SAFE_INTEGER:
             raise JSNumberBoundsException(
-                "%s (%s) must be >= -((1 << 53) - 1)" % (value_name, value)
+                "{} ({}) must be >= -((1 << 53) - 1)".format(value_name, value)
             )
         elif value > cls.MAX_SAFE_INTEGER:
             raise JSNumberBoundsException(
-                "%s (%s) must be <= (1 << 53) - 1" % (value_name, value)
+                "{} ({}) must be <= (1 << 53) - 1".format(value_name, value)
             )
 
     @classmethod
@@ -95,13 +95,13 @@ class JSNumber(object):
 
         if not isinstance(value, (numbers.Integral, float)):
             raise JSNumberBoundsException(
-                "%s (%s) is not a float" % (value_name, value)
+                "{} ({}) is not a float".format(value_name, value)
             )
         elif value < cls.MIN_NEGATIVE_VALUE:
             raise JSNumberBoundsException(
-                "%s (%s) must be >= -1.797e+308" % (value_name, value)
+                "{} ({}) must be >= -1.797e+308".format(value_name, value)
             )
         elif value > cls.MAX_VALUE:
             raise JSNumberBoundsException(
-                "%s (%s) must be <= 1.797e+308" % (value_name, value)
+                "{} ({}) must be <= 1.797e+308".format(value_name, value)
             )

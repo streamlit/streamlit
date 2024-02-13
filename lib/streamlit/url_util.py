@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import re
-from typing import Literal, Tuple
+from typing import Final, Literal
 from urllib.parse import urlparse
 
 from typing_extensions import TypeAlias
@@ -24,7 +24,7 @@ UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
 
 # Regular expression for process_gitblob_url
-_GITBLOB_RE = re.compile(
+_GITBLOB_RE: Final = re.compile(
     r"(?P<base>https:\/\/?(gist\.)?github.com\/)"
     r"(?P<account>([\w\.]+\/){1,2})"
     r"(?P<blob_or_raw>(blob|raw))?"
@@ -70,7 +70,7 @@ def get_hostname(url: str) -> str | None:
 
 def is_url(
     url: str,
-    allowed_schemas: Tuple[UrlSchema, ...] = ("http", "https"),
+    allowed_schemas: tuple[UrlSchema, ...] = ("http", "https"),
 ) -> bool:
     """Check if a string looks like an URL.
 

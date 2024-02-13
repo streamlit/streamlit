@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, Dict, Final, Tuple, cast
+from typing import Any, Callable, Final, cast
 
 from blinker import Signal
 
@@ -43,13 +43,13 @@ def open_python_file(filename: str):
         # found, opens as utf-8.
         return tokenize.open(filename)
     else:
-        return open(filename, "r", encoding="utf-8")
+        return open(filename, encoding="utf-8")
 
 
 PAGE_FILENAME_REGEX = re.compile(r"([0-9]*)[_ -]*(.*)\.py")
 
 
-def page_sort_key(script_path: Path) -> Tuple[float, str]:
+def page_sort_key(script_path: Path) -> tuple[float, str]:
     matches = re.findall(PAGE_FILENAME_REGEX, script_path.name)
 
     # Failing this assert should only be possible if script_path isn't a Python
@@ -65,7 +65,7 @@ def page_sort_key(script_path: Path) -> Tuple[float, str]:
     return (float(number), label)
 
 
-def page_icon_and_name(script_path: Path) -> Tuple[str, str]:
+def page_icon_and_name(script_path: Path) -> tuple[str, str]:
     """Compute the icon and name of a page from its script path.
 
     This is *almost* the page name displayed in the nav UI, but it has
@@ -91,7 +91,7 @@ def page_icon_and_name(script_path: Path) -> Tuple[str, str]:
 
 
 _pages_cache_lock = threading.RLock()
-_cached_pages: Dict[str, Dict[str, str]] | None = None
+_cached_pages: dict[str, dict[str, str]] | None = None
 _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 
 
@@ -105,7 +105,7 @@ def invalidate_pages_cache() -> None:
     _on_pages_changed.send()
 
 
-def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
+def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:
     global _cached_pages
 
     # Avoid taking the lock if the pages cache hasn't been invalidated.

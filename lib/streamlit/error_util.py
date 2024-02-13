@@ -14,12 +14,14 @@
 
 from __future__ import annotations
 
+from typing import Final
+
 import streamlit as st
 from streamlit import config
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 def _print_rich_exception(e: BaseException) -> None:
@@ -33,7 +35,7 @@ def _print_rich_exception(e: BaseException) -> None:
             box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
             **kwargs,
         ):
-            super(ConfigurablePanel, self).__init__(renderable, box, **kwargs)
+            super().__init__(renderable, box, **kwargs)
 
     from rich import traceback as rich_traceback
 

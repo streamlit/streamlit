@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Tuple
+from typing import Any
 
 from streamlit import util
 
@@ -34,7 +34,7 @@ class GitRepo:
     def __init__(self, path):
         # If we have a valid repo, git_version will be a tuple of 3+ ints:
         # (major, minor, patch, possible_additional_patch_number)
-        self.git_version: Tuple[int, ...] | None = None
+        self.git_version: tuple[int, ...] | None = None
 
         try:
             import git

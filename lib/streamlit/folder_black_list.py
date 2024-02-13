@@ -36,7 +36,7 @@ DEFAULT_FOLDER_BLACKLIST = [
 ]
 
 
-class FolderBlackList(object):
+class FolderBlackList:
     """Implement a black list object with globbing.
 
     Note
