@@ -183,6 +183,12 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
+        if int(port) == 3000:
+            LOGGER.warning(
+                "Port 3000 is reserved for internal development. "
+                "It is strongly recommended to select an alternative port."
+            )
+
         try:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
