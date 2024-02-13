@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Any
-from unittest.mock import patch
 
 from streamlit import config
 
@@ -35,6 +34,9 @@ def patch_config_options(config_overrides: dict[str, Any]):
     ... def test_my_thing():
     ...   assert(config.get_option("server.headless") is True)
     """
+    # Lazy-load for performance reasons.
+    from unittest.mock import patch
+
     mock_get_option = build_mock_config_get_option(config_overrides)
     with patch.object(config, "get_option", new=mock_get_option):
         yield

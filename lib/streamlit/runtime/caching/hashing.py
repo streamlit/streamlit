@@ -25,7 +25,6 @@ import inspect
 import io
 import os
 import pickle
-import struct
 import sys
 import tempfile
 import threading
@@ -232,6 +231,9 @@ def _int_to_bytes(i: int) -> bytes:
 
 
 def _float_to_bytes(f: float) -> bytes:
+    # Lazy-load for performance reasons.
+    import struct
+
     # Floats are 64bit in Python, so we need to use the "d" format.
     return struct.pack("<d", f)
 

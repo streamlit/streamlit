@@ -17,11 +17,9 @@
 from __future__ import annotations
 
 import collections
-import dis
 import enum
 import functools
 import hashlib
-import importlib
 import inspect
 import io
 import os
@@ -732,6 +730,7 @@ def get_referenced_objects(code, context: Context) -> list[Any]:
     # code reads `bar` of `foo`. We are going over the bytecode to resolve
     # from which object an attribute is requested.
     # Read more about bytecode at https://docs.python.org/3/library/dis.html
+    import dis
 
     for op in dis.get_instructions(code):
         try:
@@ -750,6 +749,8 @@ def get_referenced_objects(code, context: Context) -> list[Any]:
                 set_tos(context.cells.values[op.argval])
             elif op.opname == "IMPORT_NAME":
                 try:
+                    import importlib
+
                     set_tos(importlib.import_module(op.argval))
                 except ImportError:
                     set_tos(op.argval)
