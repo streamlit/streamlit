@@ -17,37 +17,26 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_alert_displays_an_error_message(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that alerts render correctly using snapshot testing."""
     alert_elements = themed_app.get_by_test_id("stAlert")
+    expect(alert_elements).to_have_count(14)
+
+    # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
-
-    assert_snapshot(alert_elements.nth(0), name="st_alert_error")
-
-
-def test_alert_displays_a_warning_message(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements.nth(1)).to_have_text("This is a warning")
-
-    assert_snapshot(alert_elements.nth(1), name="st_alert_warning")
-
-
-def test_alert_displays_an_info_message(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements.nth(2)).to_have_text("This is an info message")
-
-    assert_snapshot(alert_elements.nth(2), name="st_alert_info")
-
-
-def test_alert_displays_a_success_message(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements.nth(3)).to_have_text("This is a success message")
 
-    assert_snapshot(alert_elements.nth(3), name="st_alert_success")
+    assert_snapshot(alert_elements.nth(4), name="st_alert-error_icon")
+    assert_snapshot(alert_elements.nth(5), name="st_alert-warning_icon")
+    assert_snapshot(alert_elements.nth(6), name="st_alert-info_icon")
+    assert_snapshot(alert_elements.nth(7), name="st_alert-success_icon")
+
+    assert_snapshot(alert_elements.nth(8), name="st_alert-error_line_wrapping_1")
+    assert_snapshot(alert_elements.nth(9), name="st_alert-error_line_wrapping_2")
+
+    assert_snapshot(alert_elements.nth(10), name="st_alert-error_markdown")
+    assert_snapshot(alert_elements.nth(11), name="st_alert-warning_markdown")
+    assert_snapshot(alert_elements.nth(12), name="st_alert-info_markdown")
+    assert_snapshot(alert_elements.nth(13), name="st_alert-success_markdown")

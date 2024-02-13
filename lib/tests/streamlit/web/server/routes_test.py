@@ -62,6 +62,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/_stcore/health")
         self.assertEqual(503, response.code)
 
+    def test_health_head(self):
+        response = self.fetch("/_stcore/health", method="HEAD")
+        self.assertEqual(200, response.code)
+
+        self._is_healthy = False
+        response = self.fetch("/_stcore/health", method="HEAD")
+        self.assertEqual(503, response.code)
+
     @patch_config_options({"server.enableXsrfProtection": False})
     def test_health_without_csrf(self):
         response = self.fetch("/_stcore/health")

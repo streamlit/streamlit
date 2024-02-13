@@ -715,7 +715,7 @@ def cache(
             return return_value
 
         if show_spinner:
-            with spinner(message, cache=True):
+            with spinner(message, _cache=True):
                 return get_or_create_cached_value()
         else:
             return get_or_create_cached_value()
