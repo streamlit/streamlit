@@ -40,10 +40,10 @@ def test_plotly_has_consistent_visuals(
         "st_plotly_chart-template-customization",
         "st_plotly_chart-histogram-chart",
     ]
-    expect(themed_app.locator(".element-container")).to_have_count(16)
+    expect(themed_app.locator(".stPlotlyChart")).to_have_count(16)
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
-            themed_app.locator(".element-container .stPlotlyChart").nth(i),
+            themed_app.locator(".stPlotlyChart").nth(i),
             name=name,
         )
 
@@ -58,6 +58,6 @@ def test_plotly_has_correct_visuals(
     ]
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
-            themed_app.locator(".element-container .stPlotlyChart").nth(i),
+            themed_app.locator(".stPlotlyChart").nth(i),
             name=name,
         )

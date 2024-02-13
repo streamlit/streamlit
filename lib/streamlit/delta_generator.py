@@ -33,7 +33,16 @@ from typing import (
     overload,
 )
 
-from streamlit import config, cursor, env_util, logger, runtime, type_util, util
+from streamlit import (
+    cli_util,
+    config,
+    cursor,
+    env_util,
+    logger,
+    runtime,
+    type_util,
+    util,
+)
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.altair_utils import AddRowsMetadata
@@ -129,7 +138,7 @@ def _maybe_print_use_warning() -> None:
 
         _use_warning_has_been_displayed = True
 
-        warning = click.style("Warning:", bold=True, fg="yellow")
+        warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 
         if env_util.is_repl():
             logger.get_logger("root").warning(
@@ -272,7 +281,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for _name, func in mixin.__dict__.items():
+            for _, func in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
 

@@ -160,14 +160,14 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     const fileToUpload = createFile()
 
     await user.upload(fileDropZoneInput, fileToUpload)
 
-    const fileName = screen.getByTestId("stUploadedFile")
+    const fileName = screen.getByTestId("stFileUploaderFile")
     expect(fileName.textContent).toContain("filename.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(fileToUpload)
 
@@ -191,7 +191,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZone = screen.getByTestId(
-      "stFileUploadDropzone"
+      "stFileUploaderDropzone"
     ) as HTMLElement
 
     const filesToUpload = [
@@ -220,13 +220,13 @@ describe("FileUploader widget tests", () => {
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
     )
 
-    const fileElements = screen.getAllByTestId("stUploadedFile")
+    const fileElements = screen.getAllByTestId("stFileUploaderFile")
     // We should have 3 files. One will be uploading, the other two will
     // be in the error state.
     expect(fileElements.length).toBe(3)
     expect(fileElements[0].textContent).toContain("filename1.txt")
 
-    const errors = screen.getAllByTestId("stUploadedFileErrorMessage")
+    const errors = screen.getAllByTestId("stFileUploaderFileErrorMessage")
 
     expect(errors.length).toBe(2)
     expect(errors[0].textContent).toContain("Only one file is allowed.")
@@ -253,14 +253,14 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     const firstFile = createFile()
 
     await user.upload(fileDropZoneInput, firstFile)
 
-    const fileName = screen.getByTestId("stUploadedFile")
+    const fileName = screen.getByTestId("stFileUploaderFile")
     expect(fileName.textContent).toContain("filename.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(firstFile)
 
@@ -274,7 +274,7 @@ describe("FileUploader widget tests", () => {
     // Upload a replacement file
     await user.upload(fileDropZoneInput, secondFile)
 
-    const currentFiles = screen.getAllByTestId("stUploadedFile")
+    const currentFiles = screen.getAllByTestId("stFileUploaderFile")
     expect(currentFiles.length).toBe(1)
     expect(currentFiles[0].textContent).toContain("filename2.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(secondFile)
@@ -287,7 +287,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZone = screen.getByTestId(
-      "stFileUploadDropzone"
+      "stFileUploaderDropzone"
     ) as HTMLElement
 
     const filesToUpload = [
@@ -321,10 +321,12 @@ describe("FileUploader widget tests", () => {
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
     )
 
-    const fileNames = screen.getAllByTestId("stUploadedFile")
+    const fileNames = screen.getAllByTestId("stFileUploaderFile")
     expect(fileNames.length).toBe(3)
 
-    const errorFileNames = screen.getAllByTestId("stUploadedFileErrorMessage")
+    const errorFileNames = screen.getAllByTestId(
+      "stFileUploaderFileErrorMessage"
+    )
     expect(errorFileNames.length).toBe(1)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
@@ -354,14 +356,14 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     // Upload two files
     await user.upload(fileDropZoneInput, createFile("filename1.txt"))
     await user.upload(fileDropZoneInput, createFile("filename2.txt"))
 
-    const fileNames = screen.getAllByTestId("stUploadedFile")
+    const fileNames = screen.getAllByTestId("stFileUploaderFile")
     expect(fileNames.length).toBe(2)
     expect(fileNames[0].textContent).toContain("filename2.txt")
     expect(fileNames[1].textContent).toContain("filename1.txt")
@@ -388,12 +390,12 @@ describe("FileUploader widget tests", () => {
       }
     )
 
-    const firstDeleteBtn = screen.getAllByTestId("fileDeleteBtn")[0]
+    const firstDeleteBtn = screen.getAllByTestId("stFileUploaderDeleteBtn")[0]
 
     await user.click(within(firstDeleteBtn).getByRole("button"))
 
     // We should only have a single file - the second file from the original upload list (filename1.txt).
-    const fileNamesAfterDelete = screen.getAllByTestId("stUploadedFile")
+    const fileNamesAfterDelete = screen.getAllByTestId("stFileUploaderFile")
     expect(fileNamesAfterDelete.length).toBe(1)
     expect(fileNamesAfterDelete[0].textContent).toContain("filename1.txt")
 
@@ -429,7 +431,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     await user.upload(fileDropZoneInput, createFile())
@@ -438,11 +440,11 @@ describe("FileUploader widget tests", () => {
     expect(progressBar).toBeInTheDocument()
 
     // and then immediately delete it before upload "completes"
-    const deleteBtn = screen.getByTestId("fileDeleteBtn")
+    const deleteBtn = screen.getByTestId("stFileUploaderDeleteBtn")
 
     await user.click(within(deleteBtn).getByRole("button"))
 
-    const fileNames = screen.queryAllByTestId("stUploadedFile")
+    const fileNames = screen.queryAllByTestId("stFileUploaderFile")
     expect(fileNames.length).toBe(0)
 
     // WidgetStateManager will still have been called once, during component mounting
@@ -462,7 +464,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZone = screen.getByTestId(
-      "stFileUploadDropzone"
+      "stFileUploaderDropzone"
     ) as HTMLElement
 
     const filesToUpload = [
@@ -486,19 +488,21 @@ describe("FileUploader widget tests", () => {
     })
 
     await waitFor(() =>
-      expect(screen.getAllByTestId("stUploadedFile").length).toBe(1)
+      expect(screen.getAllByTestId("stFileUploaderFile").length).toBe(1)
     )
 
-    const errorFileNames = screen.getAllByTestId("stUploadedFileErrorMessage")
+    const errorFileNames = screen.getAllByTestId(
+      "stFileUploaderFileErrorMessage"
+    )
     expect(errorFileNames.length).toBe(1)
 
     // Delete the file
-    const firstDeleteBtn = screen.getAllByTestId("fileDeleteBtn")[0]
+    const firstDeleteBtn = screen.getAllByTestId("stFileUploaderDeleteBtn")[0]
 
     await user.click(within(firstDeleteBtn).getByRole("button"))
 
     // File should be gone
-    const fileNamesAfterDelete = screen.queryAllByTestId("stUploadedFile")
+    const fileNamesAfterDelete = screen.queryAllByTestId("stFileUploaderFile")
     expect(fileNamesAfterDelete.length).toBe(0)
   })
 
@@ -509,7 +513,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     // Upload a file that will be rejected by the server
@@ -520,7 +524,7 @@ describe("FileUploader widget tests", () => {
     await user.upload(fileDropZoneInput, createFile())
 
     // Our file should have an error status
-    const errorFileNames = screen.getByTestId("stUploadedFileErrorMessage")
+    const errorFileNames = screen.getByTestId("stFileUploaderFileErrorMessage")
     expect(errorFileNames.textContent).toContain("random upload error!")
   })
 
@@ -529,7 +533,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZone = screen.getByTestId(
-      "stFileUploadDropzone"
+      "stFileUploaderDropzone"
     ) as HTMLElement
 
     const filesToUpload = [
@@ -553,10 +557,10 @@ describe("FileUploader widget tests", () => {
     })
 
     await waitFor(() =>
-      expect(screen.getAllByTestId("stUploadedFile").length).toBe(1)
+      expect(screen.getAllByTestId("stFileUploaderFile").length).toBe(1)
     )
 
-    const errorFileNames = screen.getByTestId("stUploadedFileErrorMessage")
+    const errorFileNames = screen.getByTestId("stFileUploaderFileErrorMessage")
     expect(errorFileNames.textContent).toContain(
       "text/plain files are not allowed."
     )
@@ -568,12 +572,12 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     await user.upload(fileDropZoneInput, createFile())
 
-    const errorFileNames = screen.getByTestId("stUploadedFileErrorMessage")
+    const errorFileNames = screen.getByTestId("stFileUploaderFileErrorMessage")
     expect(errorFileNames.textContent).toContain(
       "File must be 0.0B or smaller."
     )
@@ -592,13 +596,13 @@ describe("FileUploader widget tests", () => {
     const { rerender } = render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     // Upload a single file
     await user.upload(fileDropZoneInput, createFile())
 
-    const fileName = screen.getByTestId("stUploadedFile")
+    const fileName = screen.getByTestId("stFileUploaderFile")
     expect(fileName.textContent).toContain("filename.txt")
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
@@ -620,7 +624,7 @@ describe("FileUploader widget tests", () => {
     rerender(<FileUploader {...props} />)
 
     // Our widget should be reset, and the widgetMgr should be updated
-    const fileNames = screen.queryAllByTestId("stUploadedFile")
+    const fileNames = screen.queryAllByTestId("stFileUploaderFile")
     expect(fileNames.length).toBe(0)
 
     // WidgetStateManager will still have been called once, during component mounting

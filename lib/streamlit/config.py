@@ -21,7 +21,7 @@ import os
 import secrets
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Dict, cast
+from typing import Any, Callable
 
 from blinker import Signal
 
@@ -34,7 +34,7 @@ from streamlit.errors import StreamlitAPIException
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: Dict[str, str] = OrderedDict(
+_section_descriptions: dict[str, str] = OrderedDict(
     _test="Special test section just used for unit tests."
 )
 
@@ -47,10 +47,10 @@ _config_lock = threading.RLock()
 # to `streamlit run`, etc. Note that this and _config_options below are
 # OrderedDicts to ensure stable ordering when printed using
 # `streamlit config show`.
-_config_options_template: Dict[str, ConfigOption] = OrderedDict()
+_config_options_template: dict[str, ConfigOption] = OrderedDict()
 
 # Stores the current state of config options.
-_config_options: Dict[str, ConfigOption] | None = None
+_config_options: dict[str, ConfigOption] | None = None
 
 
 # Indicates that a config option was defined by the user.
@@ -148,7 +148,7 @@ def get_option(key: str) -> Any:
         return config_options[key].value
 
 
-def get_options_for_section(section: str) -> Dict[str, Any]:
+def get_options_for_section(section: str) -> dict[str, Any]:
     """Get all of the config options for the given section.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -160,7 +160,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
     """
@@ -261,7 +261,10 @@ def _delete_option(key: str) -> None:
     """
     try:
         del _config_options_template[key]
-        del cast(Dict[str, ConfigOption], _config_options)[key]
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
+        del _config_options[key]
     except Exception:
         # We don't care if the option already doesn't exist.
         pass
@@ -859,24 +862,19 @@ _create_option(
 )
 
 
-@_create_option(
-    "browser.serverPort",
-    visibility="hidden",
-    deprecated=True,
-    deprecation_text="browser.serverPort has been deprecated. It will be removed in a future version.",
-    expiration_date="2024-04-01",
-    type_=int,
-)
+@_create_option("browser.serverPort", type_=int)
 def _browser_server_port() -> int:
     """Port where users should point their browsers in order to connect to the
     app.
 
     This is used to:
-    - Set the correct URL for CORS and XSRF protection purposes.
-    - Show the URL on the terminal
-    - Open the browser
+    - Set the correct URL for XSRF protection purposes.
+    - Show the URL on the terminal (part of `streamlit run`).
+    - Open the browser automatically (part of `streamlit run`).
 
-    Don't use port 3000 which is reserved for internal development.
+    This option is for advanced use cases. To change the port of your app, use
+    `server.Port` instead. Don't use port 3000 which is reserved for internal
+    development.
 
     Default: whatever value is set in server.port.
     """
@@ -1122,9 +1120,10 @@ def is_manually_set(option_name: str) -> bool:
 def show_config() -> None:
     """Print all config options to the terminal."""
     with _config_lock:
-        config_util.show_config(
-            _section_descriptions, cast(Dict[str, ConfigOption], _config_options)
-        )
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
+        config_util.show_config(_section_descriptions, _config_options)
 
 
 # Load Config Files #
@@ -1163,7 +1162,7 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         _config_options[key].set_value(value, where_defined)
 
 
-def _update_config_with_sensitive_env_var(config_options: Dict[str, ConfigOption]):
+def _update_config_with_sensitive_env_var(config_options: dict[str, ConfigOption]):
     """Update the config system by parsing the environment variable.
 
     This should only be called from get_config_options.
@@ -1260,8 +1259,8 @@ CONFIG_FILENAMES = [
 
 
 def get_config_options(
-    force_reparse=False, options_from_flags: Dict[str, Any] | None = None
-) -> Dict[str, ConfigOption]:
+    force_reparse=False, options_from_flags: dict[str, Any] | None = None
+) -> dict[str, ConfigOption]:
     """Create and return a dict mapping config option names to their values,
     returning a cached dict if possible.
 
@@ -1278,12 +1277,12 @@ def get_config_options(
     force_reparse : bool
         Force config files to be parsed so that we pick up any changes to them.
 
-    options_from_flags : Dict[str, any] or None
+    options_from_flags : dict[str, any] or None
         Config options that we received via CLI flag.
 
     Returns
     -------
-    Dict[str, ConfigOption]
+    dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
     global _config_options
