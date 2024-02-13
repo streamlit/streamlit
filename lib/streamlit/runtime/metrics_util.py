@@ -23,14 +23,14 @@ import time
 import uuid
 from collections.abc import Sized
 from functools import wraps
-from typing import Any, Callable, Final, List, Set, TypeVar, cast, overload
+from typing import Any, Callable, Final, TypeVar, cast, overload
 
 from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
 # since Segment allows only a maximum of 32kb per event.
@@ -160,11 +160,11 @@ def _get_machine_id_v3() -> str:
 
     machine_id = str(uuid.getnode())
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
-        with open(_ETC_MACHINE_ID_PATH, "r") as f:
+        with open(_ETC_MACHINE_ID_PATH) as f:
             machine_id = f.read()
 
     elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
-        with open(_DBUS_MACHINE_ID_PATH, "r") as f:
+        with open(_DBUS_MACHINE_ID_PATH) as f:
             machine_id = f.read()
 
     return machine_id
@@ -172,10 +172,10 @@ def _get_machine_id_v3() -> str:
 
 class Installation:
     _instance_lock = threading.Lock()
-    _instance: "Installation" | None = None
+    _instance: Installation | None = None
 
     @classmethod
-    def instance(cls) -> "Installation":
+    def instance(cls) -> Installation:
         """Returns the singleton Installation"""
         # We use a double-checked locking optimization to avoid the overhead
         # of acquiring the lock in the common case:
@@ -245,7 +245,7 @@ def _get_command_telemetry(
     """Get telemetry information for the given callable and its arguments."""
     arg_keywords = inspect.getfullargspec(_command_func).args
     self_arg: Any | None = None
-    arguments: List[Argument] = []
+    arguments: list[Argument] = []
     is_method = inspect.ismethod(_command_func)
     name = _command_name
 
@@ -421,7 +421,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
 
 def create_page_profile_message(
-    commands: List[Command],
+    commands: list[Command],
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,
@@ -435,7 +435,7 @@ def create_page_profile_message(
     msg.page_profile.headless = config.get_option("server.headless")
 
     # Collect all config options that have been manually set
-    config_options: Set[str] = set()
+    config_options: set[str] = set()
     if config._config_options:
         for option_name in config._config_options.keys():
             if not config.is_manually_set(option_name):
@@ -450,7 +450,7 @@ def create_page_profile_message(
     msg.page_profile.config.extend(config_options)
 
     # Check the predefined set of modules for attribution
-    attributions: Set[str] = {
+    attributions: set[str] = {
         attribution
         for attribution in _ATTRIBUTIONS_TO_CHECK
         if attribution in sys.modules

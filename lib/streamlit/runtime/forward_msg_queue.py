@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from streamlit.proto.Delta_pb2 import Delta
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -32,15 +32,15 @@ class ForwardMsgQueue:
     """
 
     def __init__(self):
-        self._queue: List[ForwardMsg] = []
+        self._queue: list[ForwardMsg] = []
         # A mapping of (delta_path -> _queue.indexof(msg)) for each
         # Delta message in the queue. We use this for coalescing
         # redundant outgoing Deltas (where a newer Delta supersedes
         # an older Delta, with the same delta_path, that's still in the
         # queue).
-        self._delta_index_map: Dict[Tuple[int, ...], int] = dict()
+        self._delta_index_map: dict[tuple[int, ...], int] = dict()
 
-    def get_debug(self) -> Dict[str, Any]:
+    def get_debug(self) -> dict[str, Any]:
         from google.protobuf.json_format import MessageToDict
 
         return {
@@ -84,7 +84,7 @@ class ForwardMsgQueue:
         self._queue = []
         self._delta_index_map = dict()
 
-    def flush(self) -> List[ForwardMsg]:
+    def flush(self) -> list[ForwardMsg]:
         """Clear the queue and return a list of the messages it contained
         before being cleared.
         """

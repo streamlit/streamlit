@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import itertools
 from abc import abstractmethod
-from typing import TYPE_CHECKING, List, NamedTuple, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, NamedTuple, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
@@ -44,11 +44,7 @@ class CacheStat(NamedTuple):
     byte_length: int
 
     def to_metric_str(self) -> str:
-        return 'cache_memory_bytes{cache_type="%s",cache="%s"} %s' % (
-            self.category_name,
-            self.cache_name,
-            self.byte_length,
-        )
+        return f'cache_memory_bytes{{cache_type="{self.category_name}",cache="{self.cache_name}"}} {self.byte_length}'
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""
@@ -64,13 +60,13 @@ class CacheStat(NamedTuple):
         metric_point.gauge_value.int_value = self.byte_length
 
 
-def group_stats(stats: List[CacheStat]) -> List[CacheStat]:
+def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
     """Group a list of CacheStats by category_name and cache_name and sum byte_length"""
 
     def key_function(individual_stat):
         return individual_stat.category_name, individual_stat.cache_name
 
-    result: List[CacheStat] = []
+    result: list[CacheStat] = []
 
     sorted_stats = sorted(stats, key=key_function)
     grouped_stats = itertools.groupby(sorted_stats, key=key_function)
@@ -89,13 +85,13 @@ def group_stats(stats: List[CacheStat]) -> List[CacheStat]:
 @runtime_checkable
 class CacheStatsProvider(Protocol):
     @abstractmethod
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         raise NotImplementedError
 
 
 class StatsManager:
     def __init__(self):
-        self._cache_stats_providers: List[CacheStatsProvider] = []
+        self._cache_stats_providers: list[CacheStatsProvider] = []
 
     def register_provider(self, provider: CacheStatsProvider) -> None:
         """Register a CacheStatsProvider with the manager.
@@ -104,9 +100,9 @@ class StatsManager:
         """
         self._cache_stats_providers.append(provider)
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         """Return a list containing all stats from each registered provider."""
-        all_stats: List[CacheStat] = []
+        all_stats: list[CacheStat] = []
         for provider in self._cache_stats_providers:
             all_stats.extend(provider.get_stats())
 

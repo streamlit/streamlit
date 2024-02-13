@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import collections
 import threading
-from typing import Dict, Final, Set
+from typing import Final
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorage
@@ -82,11 +82,11 @@ class MediaFileManager:
         self._storage = storage
 
         # Dict of [file_id -> MediaFileMetadata]
-        self._file_metadata: Dict[str, MediaFileMetadata] = dict()
+        self._file_metadata: dict[str, MediaFileMetadata] = dict()
 
         # Dict[session ID][coordinates] -> file_id.
-        self._files_by_session_and_coord: Dict[
-            str, Dict[str, str]
+        self._files_by_session_and_coord: dict[
+            str, dict[str, str]
         ] = collections.defaultdict(dict)
 
         # MediaFileManager is used from multiple threads, so all operations
@@ -94,7 +94,7 @@ class MediaFileManager:
         # means taking it multiple times from the same thread will deadlock.)
         self._lock = threading.Lock()
 
-    def _get_inactive_file_ids(self) -> Set[str]:
+    def _get_inactive_file_ids(self) -> set[str]:
         """Compute the set of files that are stored in the manager, but are
         not referenced by any active session. These are files that can be
         safely deleted.

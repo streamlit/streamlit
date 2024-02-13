@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Dict, Final, List, cast
+from typing import Callable, Final, List, cast
 
 from streamlit.logger import get_logger
 from streamlit.runtime.app_session import AppSession
@@ -56,13 +56,13 @@ class WebsocketSessionManager(SessionManager):
         self._message_enqueued_callback = message_enqueued_callback
 
         # Mapping of AppSession.id -> ActiveSessionInfo.
-        self._active_session_info_by_id: Dict[str, ActiveSessionInfo] = {}
+        self._active_session_info_by_id: dict[str, ActiveSessionInfo] = {}
 
     def connect_session(
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: Dict[str, str | None],
+        user_info: dict[str, str | None],
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -139,7 +139,7 @@ class WebsocketSessionManager(SessionManager):
     def is_active_session(self, session_id: str) -> bool:
         return session_id in self._active_session_info_by_id
 
-    def list_active_sessions(self) -> List[ActiveSessionInfo]:
+    def list_active_sessions(self) -> list[ActiveSessionInfo]:
         return list(self._active_session_info_by_id.values())
 
     def close_session(self, session_id: str) -> None:
@@ -160,7 +160,7 @@ class WebsocketSessionManager(SessionManager):
             return cast(SessionInfo, session_info)
         return self._session_storage.get(session_id)
 
-    def list_sessions(self) -> List[SessionInfo]:
+    def list_sessions(self) -> list[SessionInfo]:
         return (
             cast(List[SessionInfo], self.list_active_sessions())
             + self._session_storage.list()

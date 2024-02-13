@@ -19,7 +19,15 @@ import hashlib
 import threading
 import types
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterator, Protocol, Union, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Iterator,
+    Protocol,
+    Union,
+    runtime_checkable,
+)
 
 from google.protobuf.message import Message
 
@@ -44,7 +52,7 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 @runtime_checkable
@@ -368,7 +376,7 @@ class CachedMessageReplayContext(threading.local):
 
     def maybe_show_cached_st_function_warning(
         self,
-        dg: "DeltaGenerator",
+        dg: DeltaGenerator,
         st_func_name: str,
     ) -> None:
         """If appropriate, warn about calling st.foo inside @memo.
@@ -400,7 +408,7 @@ class CachedMessageReplayContext(threading.local):
 
     def _show_cached_st_function_warning(
         self,
-        dg: "DeltaGenerator",
+        dg: DeltaGenerator,
         st_func_name: str,
         cached_func: types.FunctionType,
     ) -> None:

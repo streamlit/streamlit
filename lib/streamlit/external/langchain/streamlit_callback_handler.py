@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import time
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from langchain.callbacks.base import (  # type: ignore[import-not-found, unused-ignore]
     BaseCallbackHandler,
@@ -158,7 +158,7 @@ class LLMThought:
         self._labeler = labeler
 
     @property
-    def container(self) -> "StatusContainer":
+    def container(self) -> StatusContainer:
         """The container we're writing into."""
         return self._container
 
@@ -174,7 +174,7 @@ class LLMThought:
         self._llm_token_stream = ""
         self._llm_token_stream_placeholder = None
 
-    def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str]) -> None:
+    def on_llm_start(self, serialized: dict[str, Any], prompts: list[str]) -> None:
         self._reset_llm_token_stream()
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
@@ -196,7 +196,7 @@ class LLMThought:
         self._state = LLMThoughtState.ERROR
 
     def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+        self, serialized: dict[str, Any], input_str: str, **kwargs: Any
     ) -> None:
         # Called with the name of the tool we're about to run (in `serialized[name]`),
         # and its input. We change our container's label to be the tool name.
@@ -308,7 +308,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._parent_container = parent_container
         self._history_parent = parent_container.container()
         self._current_thought: LLMThought | None = None
-        self._completed_thoughts: List[LLMThought] = []
+        self._completed_thoughts: list[LLMThought] = []
         self._max_thought_containers = max(max_thought_containers, 1)
         self._expand_new_thoughts = expand_new_thoughts
         self._collapse_completed_thoughts = collapse_completed_thoughts
@@ -338,7 +338,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._current_thought = None
 
     def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
+        self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any
     ) -> None:
         if self._current_thought is None:
             self._current_thought = LLMThought(
@@ -363,7 +363,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._require_current_thought().on_llm_error(error, **kwargs)
 
     def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+        self, serialized: dict[str, Any], input_str: str, **kwargs: Any
     ) -> None:
         self._require_current_thought().on_tool_start(serialized, input_str, **kwargs)
 

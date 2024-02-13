@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Protocol, cast
+from typing import Callable, Protocol, cast
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
@@ -152,7 +152,7 @@ class SessionStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def list(self) -> List[SessionInfo]:
+    def list(self) -> list[SessionInfo]:
         """List all sessions tracked by this SessionStorage.
 
         Returns
@@ -235,7 +235,7 @@ class SessionManager(Protocol):
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: Dict[str, str | None],
+        user_info: dict[str, str | None],
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -306,7 +306,7 @@ class SessionManager(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def list_sessions(self) -> List[SessionInfo]:
+    def list_sessions(self) -> list[SessionInfo]:
         """Return the SessionInfo for all sessions managed by this SessionManager.
 
         Returns
@@ -371,7 +371,7 @@ class SessionManager(Protocol):
         """
         return self.get_active_session_info(session_id) is not None
 
-    def list_active_sessions(self) -> List[ActiveSessionInfo]:
+    def list_active_sessions(self) -> list[ActiveSessionInfo]:
         """Return the session info for all active sessions tracked by this SessionManager.
 
         Returns

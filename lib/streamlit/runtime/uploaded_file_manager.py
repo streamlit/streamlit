@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import io
 from abc import abstractmethod
-from typing import List, NamedTuple, Protocol, Sequence
+from typing import NamedTuple, Protocol, Sequence
 
 from streamlit import util
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
@@ -99,7 +99,7 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
     @abstractmethod
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
-    ) -> List[UploadedFileRec]:
+    ) -> list[UploadedFileRec]:
         """Return a  list of UploadedFileRec for a given sequence of file_ids.
 
         Parameters
@@ -124,7 +124,7 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
-    ) -> List[UploadFileUrlInfo]:
+    ) -> list[UploadFileUrlInfo]:
         """Return a list of UploadFileUrlInfo for a given sequence of file_names.
         Optional to implement, issuing of URLs could be done by other service.
 

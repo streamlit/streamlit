@@ -18,7 +18,7 @@ import asyncio
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Dict, Final, List
+from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime, source_util
@@ -83,7 +83,7 @@ class AppSession:
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
         local_sources_watcher: LocalSourcesWatcher,
-        user_info: Dict[str, str | None],
+        user_info: dict[str, str | None],
         session_id_override: str | None = None,
     ) -> None:
         """Initialize the AppSession.
@@ -212,7 +212,7 @@ class AppSession:
         self._stop_config_listener = None
         self._stop_pages_listener = None
 
-    def flush_browser_queue(self) -> List[ForwardMsg]:
+    def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
 
         The Server calls this periodically to deliver new messages
@@ -405,7 +405,7 @@ class AppSession:
         self._scriptrunner.start()
 
     @property
-    def session_state(self) -> "SessionState":
+    def session_state(self) -> SessionState:
         return self._session_state
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
@@ -665,7 +665,7 @@ class AppSession:
         return msg
 
     def _create_script_finished_message(
-        self, status: "ForwardMsg.ScriptFinishedStatus.ValueType"
+        self, status: ForwardMsg.ScriptFinishedStatus.ValueType
     ) -> ForwardMsg:
         """Create and return a script_finished ForwardMsg."""
         msg = ForwardMsg()
@@ -796,10 +796,10 @@ class AppSession:
 # This field will be available at runtime as of protobuf 3.20.1, but
 # we are using an older version.
 # For details, see: https://github.com/protocolbuffers/protobuf/issues/8175
-def _get_toolbar_mode() -> "Config.ToolbarMode.ValueType":
+def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
     config_key = "client.toolbarMode"
     config_value = config.get_option(config_key)
-    enum_value: "Config.ToolbarMode.ValueType" | None = getattr(
+    enum_value: Config.ToolbarMode.ValueType | None = getattr(
         Config.ToolbarMode, config_value.upper()
     )
     if enum_value is None:

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import List, MutableMapping
+from typing import MutableMapping
 
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
 from streamlit.util import TimedCleanupCache
@@ -69,5 +69,5 @@ class MemorySessionStorage(SessionStorage):
     def delete(self, session_id: str) -> None:
         del self._cache[session_id]
 
-    def list(self) -> List[SessionInfo]:
+    def list(self) -> list[SessionInfo]:
         return list(self._cache.values())

@@ -20,7 +20,7 @@ import contextlib
 import hashlib
 import mimetypes
 import os.path
-from typing import Dict, Final, List, NamedTuple
+from typing import Final, NamedTuple
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
@@ -98,7 +98,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
             The name of the local endpoint that media is served from.
             This endpoint should start with a forward-slash (e.g. "/media").
         """
-        self._files_by_id: Dict[str, MemoryFile] = {}
+        self._files_by_id: dict[str, MemoryFile] = {}
         self._media_endpoint = media_endpoint
 
     def load_and_get_id(
@@ -165,12 +165,12 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         except Exception as ex:
             raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.
         files_by_id = self._files_by_id.copy()
 
-        stats: List[CacheStat] = []
+        stats: list[CacheStat] = []
         for file_id, file in files_by_id.items():
             stats.append(
                 CacheStat(
