@@ -21,7 +21,7 @@ import os
 import secrets
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, cast
+from typing import Any, Callable, Dict, cast
 
 from blinker import Signal
 
@@ -261,7 +261,7 @@ def _delete_option(key: str) -> None:
     """
     try:
         del _config_options_template[key]
-        del cast(dict[str, ConfigOption], _config_options)[key]
+        del _config_options[key]
     except Exception:
         # We don't care if the option already doesn't exist.
         pass
