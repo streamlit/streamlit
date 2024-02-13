@@ -388,6 +388,15 @@ def is_keras_model(obj: object) -> bool:
     )
 
 
+# We use a regex here to allow potential changes in the module path in the future.
+_OPENAI_CHUNK_RE: Final = re.compile(r"^openai\..+\.ChatCompletionChunk$")
+
+
+def is_openai_chunk(obj: object) -> bool:
+    """True if input looks like an OpenAI chat completion chunk."""
+    return is_type(obj, _OPENAI_CHUNK_RE)
+
+
 def is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
     from pandas.api.types import infer_dtype
