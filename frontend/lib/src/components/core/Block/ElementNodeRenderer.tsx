@@ -614,7 +614,7 @@ const RawElementNodeRenderer = (
 
     case "skeleton": {
       const skeletonProto = node.element.skeleton as SkeletonProto
-      return <AppSkeleton element={skeletonProto} />
+      return <Skeleton element={skeletonProto} />
     }
 
     case "slider": {

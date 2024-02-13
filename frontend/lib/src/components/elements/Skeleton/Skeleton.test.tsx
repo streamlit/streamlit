@@ -21,6 +21,8 @@ import "@testing-library/jest-dom"
 
 import { Skeleton } from "./Skeleton"
 
+import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
+
 describe("Skeleton element", () => {
   it("renders without delay", () => {
     render(<Skeleton />)
@@ -29,5 +31,29 @@ describe("Skeleton element", () => {
     // (This is normal React behavior, but different from AppSkeleton, so I'm
     // writing a very trivial test for it.)
     expect(screen.getByTestId("stSkeleton")).toBeVisible()
+  })
+})
+
+describe("Skeleton element", () => {
+  it("converts properties appropriately", () => {
+    let props = SkeletonProto.create({ height: 5, width: 0.568 })
+
+    render(<Skeleton element={props} />)
+
+    let test_skeleton = screen.getByTestId("stSkeleton")
+    expect(test_skeleton).toHaveAttribute("height", "5pt")
+    expect(test_skeleton).toHaveAttribute("width", "56.8%")
+  })
+})
+
+describe("Skeleton element", () => {
+  it("accepts undefined properties", () => {
+    let props = SkeletonProto.create({ height: 5, width: undefined })
+
+    render(<Skeleton element={props} />)
+
+    let test_skeleton = screen.getByTestId("stSkeleton")
+    expect(test_skeleton).toHaveAttribute("height")
+    expect(test_skeleton).not.toHaveAttribute("width")
   })
 })

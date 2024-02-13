@@ -20,10 +20,12 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-# Works just like an `empty` except animated by default.
+
 class SkeletonMixin:
     @gather_metrics("skeleton")
-    def skeleton(self, height: int = 107) -> "DeltaGenerator":
+    def skeleton(
+        self, height: int | None = None, *, width: float | None = None
+    ) -> "DeltaGenerator":
         """Insert a single-element container which displays a "skeleton" animation.
 
         Inserts a container into your app that can be used to hold a single element.
@@ -34,14 +36,16 @@ class SkeletonMixin:
         use "with" notation or just call methods directly on the returned object.
         See some of the examples below.
 
-        By default skeletons have a display height of 230pt, comprised of a 123pt header
-        and a 107pt adjustable-height block.
-
         Parameters
         ----------
-        height: int
+        height (optional): int
             An integer representing the height in CSS points of the adjustable-height block.
 
+        Keyword-only Parameters
+        ----------
+        width (optional): float
+            An value between 0 and 1 representing the width of the block as a fraction of it's
+            parent element / page.
 
         Examples
         --------
@@ -54,6 +58,7 @@ class SkeletonMixin:
         >>> # Draw UI
         >>> st.write("Census Data")
         >>> census_data_placeholder = st.empty()  # The empty is a collapsed element
+        >>> # ^ The empty is a 0-size placeholder
         >>> year = st.selectbox("Select Year", options=[2022, 2023, 2024])
         >>>
         >>> # Get data from source
@@ -67,7 +72,8 @@ class SkeletonMixin:
 
         >>> # Draw UI
         >>> st.write("Census Data")
-        >>> census_data_placeholder = st.skeleton(height=200)  # The skeleton holds space for the future data
+        >>> census_data_placeholder = st.skeleton(200)
+        >>> # ^ The skeleton holds "200pt" of space for future content
         >>> year = st.selectbox("Select Year", options=[2022, 2023, 2024])
         >>>
         >>> # Get data from source, assume this takes a long time
@@ -122,7 +128,17 @@ class SkeletonMixin:
         """
 
         skeleton_proto = SkeletonProto()
-        skeleton_proto.height = height
+
+        # Validate Inputs
+        if height is not None:
+            if height <= 0:
+                raise ValueError("Skeleton height must be a positive integer.")
+            skeleton_proto.height = height
+        if width is not None:
+            if width <= 0.0 or width > 1.0:
+                raise ValueError("Skeleton width must be a value 0 < width <= 1.")
+            skeleton_proto.width = width
+
         return self.dg._enqueue("skeleton", skeleton_proto)
 
     @property

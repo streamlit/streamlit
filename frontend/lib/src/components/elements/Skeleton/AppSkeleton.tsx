@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useEffect, memo } from "react"
-
-import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
+import React, { FC, useState, useEffect, memo } from "react"
 
 import {
   StyledSkeleton,
@@ -28,11 +26,7 @@ import {
 
 const SHOW_DELAY_MS = 500
 
-function RawAppSkeleton({
-  element,
-}: {
-  element: SkeletonProto
-}): ReactElement {
+const RawAppSkeleton: FC = () => {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -56,7 +50,7 @@ function RawAppSkeleton({
         <TextLineSkeleton width="96%" />
         <TextLineSkeleton width="65%" />
       </ParagraphSkeleton>
-      <SquareSkeleton width="75%" height={element.height + "pt"} />
+      <SquareSkeleton width="75%" height="9rem" />
     </StyledSkeleton>
   )
 }

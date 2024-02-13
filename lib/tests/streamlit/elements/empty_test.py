@@ -14,10 +14,11 @@
 
 import streamlit as st
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class StEmmptyAPITest(DeltaGeneratorTestCase):
+class StEmptyAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
     def test_st_empty(self):
@@ -26,3 +27,41 @@ class StEmmptyAPITest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.empty, EmptyProto())
+
+
+class StSkeletonAPITest(DeltaGeneratorTestCase):
+    """Test Public Streamlit Public APIs."""
+
+    def test_st_skeleton_noargs(self):
+        """Test st.skeleton."""
+        st.skeleton()
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.skeleton, SkeletonProto())
+
+    def test_st_skeleton_args(self):
+        """Test st.skeleton with arguments."""
+        st.skeleton(height=5, width=0.2)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.skeleton, SkeletonProto(height=5, width=0.2))
+
+    def test_st_skeleton_exceptions(self):
+        """Test st.skeleton validation exceptions."""
+
+        expected_msg = "Skeleton height must be a positive integer."
+        for test_height in (0, -1):
+            with self.assertRaises(ValueError, msg=expected_msg):
+                st.skeleton(height=test_height)
+
+        expected_msg = "Skeleton width must be a value 0 < width <= 1."
+        for test_width in (0, -1, 1.5):
+            with self.assertRaises(ValueError, msg=expected_msg):
+                st.skeleton(width=test_width)
+
+        expected_msg = (
+            "Cannot set Skeleton.height to 1.5: 1.5 has type <class 'float'>, "
+            "but expected one of: (<class 'int'>,)",
+        )
+        with self.assertRaises(TypeError, msg=expected_msg):
+            st.skeleton(height=1.5)
