@@ -26,15 +26,15 @@ def test_altair_chart_displays_correctly(
     charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
     expect(charts).to_have_count(10)
     snapshot_names = [
-        "st_altair_chart-scatter-chart-default-theme",
-        "st_altair_chart-scatter-chart-streamlit-theme",
-        "st_altair_chart-scatter-chart-overwritten-theme",
-        "st_altair_chart-bar-chart-overwritten-theme",
-        "st_altair_chart-pie-chart-large-legend-items",
-        "st_altair_chart-grouped-bar-chart-default-theme",
-        "st_altair_chart-grouped-bar-chart-streamlit-theme",
-        "st_altair_chart-grouped-use_container_width_default_theme"
-        "st_altair_chart-grouped-layered_line_chart_streamlit_theme",
+        "st_altair_chart-scatter_chart_default_theme",
+        "st_altair_chart-scatter_chart_streamlit_theme",
+        "st_altair_chart-scatter_chart_overwritten_theme",
+        "st_altair_chart-bar_chart_overwritten_theme",
+        "st_altair_chart-pie_chart_large_legend_items",
+        "st_altair_chart-grouped_bar_chart_default_theme",
+        "st_altair_chart-grouped_bar_chart_streamlit_theme",
+        "st_altair_chart-grouped_use_container_width_default_theme"
+        "st_altair_chart-grouped_layered_line_chart_streamlit_theme",
     ]
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
