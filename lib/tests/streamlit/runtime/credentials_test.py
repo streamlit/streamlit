@@ -31,8 +31,7 @@ from streamlit.runtime.credentials import (
     email_prompt,
 )
 
-PROMPT = "streamlit.runtime.credentials.click.prompt"
-
+PROMPT = "click.prompt"
 MOCK_PATH = "/mock/home/folder/.streamlit/credentials.toml"
 
 mock_get_path = MagicMock(return_value=MOCK_PATH)
@@ -125,7 +124,7 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.load() called twice."""
         c = Credentials.get_current()
         c.activation = _Activation("some_email", True)
-        with patch("streamlit.runtime.credentials.LOGGER") as p:
+        with patch("streamlit.runtime.credentials._LOGGER") as p:
             c.load()
             p.error.assert_called_once_with(
                 "Credentials already loaded. Not rereading file."
@@ -235,7 +234,7 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.activate() already activated."""
         c = Credentials.get_current()
         c.activation = _Activation("some_email", True)
-        with patch("streamlit.runtime.credentials.LOGGER") as p:
+        with patch("streamlit.runtime.credentials._LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
             self.assertEqual(p.error.call_count, 2)
@@ -248,7 +247,7 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.activate() already activated but not valid."""
         c = Credentials.get_current()
         c.activation = _Activation("some_email", False)
-        with patch("streamlit.runtime.credentials.LOGGER") as p:
+        with patch("streamlit.runtime.credentials._LOGGER") as p:
             with pytest.raises(SystemExit):
                 c.activate()
             self.assertEqual(p.error.call_count, 2)
@@ -294,7 +293,7 @@ class CredentialsClassTest(unittest.TestCase):
         """Test Credentials.reset() with error."""
         with patch(
             "streamlit.runtime.credentials.os.remove", side_effect=OSError("some error")
-        ), patch("streamlit.runtime.credentials.LOGGER") as p:
+        ), patch("streamlit.runtime.credentials._LOGGER") as p:
             Credentials.reset()
             p.error.assert_called_once_with(
                 "Error removing credentials file: some error"

@@ -32,6 +32,9 @@ lazy_loaded_modules = [
     "pydeck",
     "rich",
     "tenacity",
+    # toml is automatically loaded if there is a secret.toml, config.toml or
+    # a local credentials.toml file.
+    "toml",
     # Internal modules:
     "streamlit.emojis",
     "streamlit.external",

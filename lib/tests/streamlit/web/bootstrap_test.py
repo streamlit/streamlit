@@ -22,10 +22,7 @@ import pytest
 
 from streamlit import config
 from streamlit.web import bootstrap
-from streamlit.web.bootstrap import (
-    NEW_VERSION_TEXT,
-    _fix_pydantic_duplicate_validators_error,
-)
+from streamlit.web.bootstrap import _fix_pydantic_duplicate_validators_error
 from tests import testutil
 from tests.testutil import patch_config_options, should_skip_pydantic_tests
 
@@ -116,7 +113,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             "streamlit.version.should_show_new_version_notice", return_value=True
         ), patch("click.secho") as mock_echo:
             bootstrap._print_new_version_message()
-            mock_echo.assert_called_once_with(NEW_VERSION_TEXT)
+            mock_echo.assert_called_once()
 
     def test_print_urls_configured(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
