@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, Union, cast
 
+from typing_extensions import TypeAlias
+
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
@@ -43,7 +45,7 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-SomeUploadedSnapshotFile = Union[UploadedFile, DeletedFile, None]
+SomeUploadedSnapshotFile: TypeAlias = Union[UploadedFile, DeletedFile, None]
 
 
 @dataclass
@@ -240,6 +242,6 @@ class CameraInputMixin:
         return camera_input_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

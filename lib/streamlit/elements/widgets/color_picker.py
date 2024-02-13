@@ -245,6 +245,6 @@ class ColorPickerMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> streamlit.delta_generator.DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)

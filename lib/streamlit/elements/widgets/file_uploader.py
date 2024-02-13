@@ -16,9 +16,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import List, Literal, Sequence, Union, cast, overload
+from typing import TYPE_CHECKING, List, Literal, Sequence, Union, cast, overload
 
-import streamlit
+from typing_extensions import TypeAlias
+
 from streamlit import config
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -41,7 +42,10 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = Union[
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+SomeUploadedFiles: TypeAlias = Union[
     UploadedFile,
     DeletedFile,
     List[Union[UploadedFile, DeletedFile]],
@@ -60,7 +64,7 @@ TYPE_PAIRS = [
 
 def _get_upload_files(
     widget_value: FileUploaderStateProto | None,
-) -> List[UploadedFile | DeletedFile]:
+) -> list[UploadedFile | DeletedFile]:
     if widget_value is None:
         return []
 
@@ -79,7 +83,7 @@ def _get_upload_files(
 
     file_recs = {f.file_id: f for f in file_recs_list}
 
-    collected_files: List[UploadedFile | DeletedFile] = []
+    collected_files: list[UploadedFile | DeletedFile] = []
 
     for f in uploaded_file_info:
         maybe_file_rec = file_recs.get(f.file_id)
@@ -156,7 +160,7 @@ class FileUploaderMixin:
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> List[UploadedFile] | None:
+    ) -> list[UploadedFile] | None:
         ...
 
     # 1. type is given as not a keyword-only argument
@@ -199,7 +203,7 @@ class FileUploaderMixin:
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> List[UploadedFile] | None:
+    ) -> list[UploadedFile] | None:
         ...
 
     # 1. type is skipped or a keyword argument
@@ -235,7 +239,7 @@ class FileUploaderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> UploadedFile | List[UploadedFile] | None:
+    ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
@@ -392,7 +396,7 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
-    ) -> UploadedFile | List[UploadedFile] | None:
+    ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -473,6 +477,6 @@ class FileUploaderMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

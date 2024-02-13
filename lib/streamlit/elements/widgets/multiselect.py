@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, Callable, Generic, List, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -56,20 +56,20 @@ if TYPE_CHECKING:
 @overload
 def _check_and_convert_to_indices(  # type: ignore[misc]
     opt: Sequence[Any], default_values: None
-) -> List[int] | None:
+) -> list[int] | None:
     ...
 
 
 @overload
 def _check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any
-) -> List[int]:
+) -> list[int]:
     ...
 
 
 def _check_and_convert_to_indices(
     opt: Sequence[Any], default_values: Sequence[Any] | Any | None
-) -> List[int] | None:
+) -> list[int] | None:
     """Perform validation checks and return indices based on the default values."""
     if default_values is None and None not in opt:
         return None
@@ -119,17 +119,17 @@ Please select at most {max_selections} {max_selections_noun}.
 @dataclass
 class MultiSelectSerde(Generic[T]):
     options: Sequence[T]
-    default_value: List[int]
+    default_value: list[int]
 
-    def serialize(self, value: List[T]) -> List[int]:
+    def serialize(self, value: list[T]) -> list[int]:
         return _check_and_convert_to_indices(self.options, value)
 
     def deserialize(
         self,
-        ui_value: List[int] | None,
+        ui_value: list[int] | None,
         widget_id: str = "",
-    ) -> List[T]:
-        current_value: List[int] = (
+    ) -> list[T]:
+        current_value: list[int] = (
             ui_value if ui_value is not None else self.default_value
         )
         return [self.options[i] for i in current_value]
@@ -153,7 +153,7 @@ class MultiSelectMixin:
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> List[T]:
+    ) -> list[T]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -280,7 +280,7 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
-    ) -> List[T]:
+    ) -> list[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
@@ -305,7 +305,7 @@ class MultiSelectMixin:
             page=ctx.page_script_hash if ctx else None,
         )
 
-        default_value: List[int] = [] if indices is None else indices
+        default_value: list[int] = [] if indices is None else indices
 
         multiselect_proto = MultiSelectProto()
         multiselect_proto.id = id
@@ -351,6 +351,6 @@ class MultiSelectMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

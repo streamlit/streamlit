@@ -18,17 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from numbers import Integral, Real
 from textwrap import dedent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Final,
-    List,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Final, Sequence, Tuple, TypeVar, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -131,12 +121,12 @@ def _micros_to_datetime(micros: int, orig_tz: tzinfo | None) -> datetime:
 
 @dataclass
 class SliderSerde:
-    value: List[float]
+    value: list[float]
     data_type: int
     single_value: bool
     orig_tz: tzinfo | None
 
-    def deserialize(self, ui_value: List[float] | None, widget_id: str = ""):
+    def deserialize(self, ui_value: list[float] | None, widget_id: str = ""):
         if ui_value is not None:
             val: Any = ui_value
         else:
@@ -159,7 +149,7 @@ class SliderSerde:
             ]
         return val[0] if self.single_value else tuple(val)
 
-    def serialize(self, v: Any) -> List[Any]:
+    def serialize(self, v: Any) -> list[Any]:
         range_value = isinstance(v, (list, tuple))
         value = list(v) if range_value else [v]
         if self.data_type == SliderProto.DATE:
@@ -675,6 +665,6 @@ class SliderMixin:
         return cast(SliderReturn, widget_state.value)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -16,17 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    List,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, Tuple, cast
 
 from typing_extensions import TypeGuard
 
@@ -65,30 +55,30 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-def _is_range_value(value: Union[T, Sequence[T]]) -> TypeGuard[Sequence[T]]:
+def _is_range_value(value: T | Sequence[T]) -> TypeGuard[Sequence[T]]:
     return isinstance(value, (list, tuple))
 
 
 @dataclass
 class SelectSliderSerde(Generic[T]):
     options: Sequence[T]
-    value: List[int]
+    value: list[int]
     is_range_value: bool
 
-    def serialize(self, v: object) -> List[int]:
+    def serialize(self, v: object) -> list[int]:
         return self._as_index_list(v)
 
     def deserialize(
         self,
-        ui_value: List[int] | None,
+        ui_value: list[int] | None,
         widget_id: str = "",
-    ) -> Union[T, Tuple[T, T]]:
+    ) -> T | tuple[T, T]:
         if not ui_value:
             # Widget has not been used; fallback to the original value,
             ui_value = self.value
 
         # The widget always returns floats, so convert to ints before indexing
-        return_value: Tuple[T, T] = cast(
+        return_value: tuple[T, T] = cast(
             Tuple[T, T],
             tuple(map(lambda x: self.options[int(x)], ui_value)),
         )
@@ -96,7 +86,7 @@ class SelectSliderSerde(Generic[T]):
         # If the original value was a list/tuple, so will be the output (and vice versa)
         return return_value if self.is_range_value else return_value[0]
 
-    def _as_index_list(self, v: object) -> List[int]:
+    def _as_index_list(self, v: object) -> list[int]:
         if _is_range_value(v):
             slider_value = [index_(self.options, val) for val in v]
             start, end = slider_value
@@ -123,7 +113,7 @@ class SelectSliderMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Union[T, Tuple[T, T]]:
+    ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
 
@@ -260,7 +250,7 @@ class SelectSliderMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         ctx: ScriptRunContext | None = None,
-    ) -> Union[T, Tuple[T, T]]:
+    ) -> T | tuple[T, T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
@@ -271,7 +261,7 @@ class SelectSliderMixin:
         if len(opt) == 0:
             raise StreamlitAPIException("The `options` argument needs to be non-empty")
 
-        def as_index_list(v: object) -> List[int]:
+        def as_index_list(v: object) -> list[int]:
             if _is_range_value(v):
                 slider_value = [index_(opt, val) for val in v]
                 start, end = slider_value
@@ -350,6 +340,6 @@ class SelectSliderMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

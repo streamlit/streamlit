@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, Tuple, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
@@ -52,7 +52,7 @@ class PresetNames(str, Enum):
 
 def _process_avatar_input(
     avatar: str | AtomicImage | None, delta_path: str
-) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
+) -> tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
     """Detects the avatar type and prepares the avatar data for the frontend.
 
     Parameters
@@ -119,7 +119,7 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Insert a chat message container.
 
         To add elements to the returned container, you can use ``with`` notation
@@ -365,6 +365,6 @@ class ChatMixin:
         return widget_state.value if not widget_state.value_changed else None
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

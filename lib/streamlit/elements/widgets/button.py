@@ -354,7 +354,7 @@ class ButtonMixin:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Display a link button element.
 
         When clicked, a new tab will be opened to the specified URL. This will
@@ -437,7 +437,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a link to another page in a multipage app or to an external page.
 
         If another page in a multipage app is specified, clicking ``st.page_link``
@@ -611,7 +611,7 @@ class ButtonMixin:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         link_button_proto = LinkButtonProto()
         link_button_proto.label = label
         link_button_proto.url = url
@@ -633,7 +633,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
         page_link_proto.disabled = disabled
 
@@ -767,7 +767,7 @@ class ButtonMixin:
         return button_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
