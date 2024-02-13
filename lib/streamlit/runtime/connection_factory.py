@@ -14,10 +14,13 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 import re
 from datetime import timedelta
-from typing import Any, Final, Literal, TypeVar, overload
+from typing import Any, Dict, Type, TypeVar, overload
+
+from typing_extensions import Final, Literal
 
 from streamlit.connections import (
     BaseConnection,
@@ -42,7 +45,7 @@ FIRST_PARTY_CONNECTIONS = {
     "sql": SQLConnection,
 }
 MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
-MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
+MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
     "MySQLdb": "mysqlclient",
     "psycopg2": "psycopg2-binary",
     "sqlalchemy": "sqlalchemy",
@@ -60,7 +63,7 @@ ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
 @gather_metrics("connection")
 def _create_connection(
     name: str,
-    connection_class: type[ConnectionClass],
+    connection_class: Type[ConnectionClass],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
@@ -74,7 +77,7 @@ def _create_connection(
     """
 
     def __create_connection(
-        name: str, connection_class: type[ConnectionClass], **kwargs
+        name: str, connection_class: Type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
         return connection_class(connection_name=name, **kwargs)
 
@@ -181,7 +184,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: str,
-    type: type[ConnectionClass],
+    type: Type[ConnectionClass],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
@@ -307,9 +310,6 @@ def connection_factory(
         # literal shorthand for one of our first party connections. In the former case,
         # connection_class will always contain a "." in its name.
         if "." in connection_class:
-            # Lazy-load for performance reasons.
-            import importlib
-
             parts = connection_class.split(".")
             classname = parts.pop()
             connection_module = importlib.import_module(".".join(parts))

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import shutil
 import tempfile
 
 from streamlit import util
@@ -50,7 +51,4 @@ class TemporaryDirectory(object):
         return self._path
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        # Lazy-load for performance reasons.
-        import shutil
-
         shutil.rmtree(self._path)

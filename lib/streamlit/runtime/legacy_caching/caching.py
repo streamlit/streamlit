@@ -14,8 +14,6 @@
 
 """A library of caching utilities."""
 
-from __future__ import annotations
-
 import contextlib
 import functools
 import hashlib
@@ -23,11 +21,24 @@ import inspect
 import math
 import os
 import pickle
+import shutil
 import threading
 import time
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Callable, Final, Iterator, TypeVar, cast, overload
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Final,
+    Iterator,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 from cachetools import TTLCache
 
@@ -61,7 +72,7 @@ _DiskCacheEntry = namedtuple("_DiskCacheEntry", ["value"])
 
 # When we show the "st.cache is deprecated" warning, we make a recommendation about which new
 # cache decorator to switch to for the following data types:
-NEW_CACHE_FUNC_RECOMMENDATIONS: dict[str, CacheType] = {
+NEW_CACHE_FUNC_RECOMMENDATIONS: Dict[str, CacheType] = {
     # cache_data recommendations:
     "str": CacheType.DATA,
     "float": CacheType.DATA,
@@ -154,7 +165,7 @@ class _MemCaches(CacheStatsProvider):
     def __init__(self):
         # Contains a cache object for each st.cache'd function
         self._lock = threading.RLock()
-        self._function_caches: dict[str, MemCache] = {}
+        self._function_caches: Dict[str, MemCache] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -162,8 +173,8 @@ class _MemCaches(CacheStatsProvider):
     def get_cache(
         self,
         key: str,
-        max_entries: float | None,
-        ttl: float | None,
+        max_entries: Optional[float],
+        ttl: Optional[float],
         display_name: str = "",
     ) -> MemCache:
         """Return the mem cache for the given key.
@@ -209,7 +220,7 @@ class _MemCaches(CacheStatsProvider):
         with self._lock:
             self._function_caches = {}
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(self) -> List[CacheStat]:
         with self._lock:
             # Shallow-clone our caches. We don't want to hold the global
             # lock during stats-gathering.
@@ -234,7 +245,7 @@ _mem_caches = _MemCaches()
 # and decremented when we exit.
 class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
-        self.cached_func_stack: list[Callable[..., Any]] = []
+        self.cached_func_stack: List[Callable[..., Any]] = []
         self.suppress_st_function_warning = 0
 
     def __repr__(self) -> str:
@@ -264,7 +275,7 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 def _show_cached_st_function_warning(
-    dg: st.delta_generator.DeltaGenerator,
+    dg: "st.delta_generator.DeltaGenerator",
     st_func_name: str,
     cached_func: Callable[..., Any],
 ) -> None:
@@ -276,7 +287,7 @@ def _show_cached_st_function_warning(
 
 
 def maybe_show_cached_st_function_warning(
-    dg: st.delta_generator.DeltaGenerator, st_func_name: str
+    dg: "st.delta_generator.DeltaGenerator", st_func_name: str
 ) -> None:
     """If appropriate, warn about calling st.foo inside @cache.
 
@@ -306,7 +317,7 @@ def _read_from_mem_cache(
     key: str,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs: HashFuncsDict | None,
+    hash_funcs: Optional[HashFuncsDict],
 ) -> Any:
     cache = mem_cache.cache
     if key in cache:
@@ -336,7 +347,7 @@ def _write_to_mem_cache(
     value: Any,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs: HashFuncsDict | None,
+    hash_funcs: Optional[HashFuncsDict],
 ) -> None:
     if allow_output_mutation:
         hash = None
@@ -348,7 +359,7 @@ def _write_to_mem_cache(
 
 
 def _get_output_hash(
-    value: Any, func_or_code: Callable[..., Any], hash_funcs: HashFuncsDict | None
+    value: Any, func_or_code: Callable[..., Any], hash_funcs: Optional[HashFuncsDict]
 ) -> bytes:
     hasher = hashlib.new("md5", **HASHLIB_KWARGS)
     update_hash(
@@ -389,7 +400,7 @@ def _write_to_disk_cache(key: str, value: Any) -> None:
         # Clean up file so we don't leave zero byte files.
         try:
             os.remove(path)
-        except (FileNotFoundError, OSError):
+        except (FileNotFoundError, IOError, OSError):
             # If we can't remove the file, it's not a big deal.
             pass
         raise CacheError("Unable to write to cache: %s" % e)
@@ -401,7 +412,7 @@ def _read_from_cache(
     persist: bool,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs: HashFuncsDict | None = None,
+    hash_funcs: Optional[HashFuncsDict] = None,
 ) -> Any:
     """Read a value from the cache.
 
@@ -436,7 +447,7 @@ def _write_to_cache(
     persist: bool,
     allow_output_mutation: bool,
     func_or_code: Callable[..., Any],
-    hash_funcs: HashFuncsDict | None = None,
+    hash_funcs: Optional[HashFuncsDict] = None,
 ):
     _write_to_mem_cache(
         mem_cache, key, value, allow_output_mutation, func_or_code, hash_funcs
@@ -455,9 +466,9 @@ def cache(
     allow_output_mutation: bool = False,
     show_spinner: bool = True,
     suppress_st_warning: bool = False,
-    hash_funcs: HashFuncsDict | None = None,
-    max_entries: int | None = None,
-    ttl: float | None = None,
+    hash_funcs: Optional[HashFuncsDict] = None,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
 ) -> F:
     ...
 
@@ -469,23 +480,23 @@ def cache(
     allow_output_mutation: bool = False,
     show_spinner: bool = True,
     suppress_st_warning: bool = False,
-    hash_funcs: HashFuncsDict | None = None,
-    max_entries: int | None = None,
-    ttl: float | None = None,
+    hash_funcs: Optional[HashFuncsDict] = None,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
 ) -> Callable[[F], F]:
     ...
 
 
 def cache(
-    func: F | None = None,
+    func: Optional[F] = None,
     persist: bool = False,
     allow_output_mutation: bool = False,
     show_spinner: bool = True,
     suppress_st_warning: bool = False,
-    hash_funcs: HashFuncsDict | None = None,
-    max_entries: int | None = None,
-    ttl: float | None = None,
-) -> Callable[[F], F] | F:
+    hash_funcs: Optional[HashFuncsDict] = None,
+    max_entries: Optional[int] = None,
+    ttl: Optional[float] = None,
+) -> Union[Callable[[F], F], F]:
     """Function decorator to memoize function executions.
 
     Parameters
@@ -663,7 +674,7 @@ def cache(
 
             # Avoid recomputing the body's hash by just appending the
             # previously-computed hash to the arg hash.
-            value_key = "{}-{}".format(value_key, cache_key)
+            value_key = "%s-%s" % (value_key, cache_key)
 
             _LOGGER.debug("Cache key: %s", value_key)
 
@@ -720,7 +731,7 @@ def cache(
     return cast(F, wrapped_func)
 
 
-def _hash_func(func: Callable[..., Any], hash_funcs: HashFuncsDict | None) -> str:
+def _hash_func(func: Callable[..., Any], hash_funcs: Optional[HashFuncsDict]) -> str:
     # Create the unique key for a function's cache. The cache will be retrieved
     # from inside the wrapped function.
     #
@@ -793,9 +804,6 @@ def _clear_disk_cache() -> bool:
     # script.
     cache_path = get_cache_path()
     if os.path.isdir(cache_path):
-        # Lazy-load import for better performance
-        import shutil
-
         shutil.rmtree(cache_path)
         return True
     return False
@@ -831,7 +839,7 @@ class CachedObjectMutationError(ValueError):
 class CachedStFunctionWarning(StreamlitAPIWarning):
     def __init__(self, st_func_name, cached_func):
         msg = self._get_message(st_func_name, cached_func)
-        super().__init__(msg)
+        super(CachedStFunctionWarning, self).__init__(msg)
 
     def _get_message(self, st_func_name, cached_func):
         args = {
@@ -857,7 +865,7 @@ to suppress the warning.
 class CachedObjectMutationWarning(StreamlitAPIWarning):
     def __init__(self, orig_exc):
         msg = self._get_message(orig_exc)
-        super().__init__(msg)
+        super(CachedObjectMutationWarning, self).__init__(msg)
 
     def _get_message(self, orig_exc):
         return (
