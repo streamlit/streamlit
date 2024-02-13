@@ -21,7 +21,7 @@ import os
 import secrets
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Dict, cast
+from typing import Any, Callable
 
 from blinker import Signal
 
