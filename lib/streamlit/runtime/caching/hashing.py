@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """Hashing for st.cache_data and st.cache_resource."""
+
+from __future__ import annotations
+
 import collections
 import dataclasses
 import datetime
@@ -22,15 +25,15 @@ import inspect
 import io
 import os
 import pickle
-import struct
 import sys
 import tempfile
 import threading
-import unittest.mock
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
+from typing import Any, Callable, Dict, Final, Pattern, Type, Union
+
+from typing_extensions import TypeAlias
 
 from streamlit import type_util, util
 from streamlit.errors import StreamlitAPIException
@@ -40,18 +43,20 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit.util import HASHLIB_KWARGS
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
-_PANDAS_ROWS_LARGE = 100000
-_PANDAS_SAMPLE_SIZE = 10000
+_PANDAS_ROWS_LARGE: Final = 100000
+_PANDAS_SAMPLE_SIZE: Final = 10000
 
 # Similar to dataframes, we also sample large numpy arrays.
-_NP_SIZE_LARGE = 1000000
-_NP_SAMPLE_SIZE = 100000
+_NP_SIZE_LARGE: Final = 1000000
+_NP_SAMPLE_SIZE: Final = 100000
 
-HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
+HashFuncsDict: TypeAlias = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
-_CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+_CYCLE_PLACEHOLDER: Final = (
+    b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+)
 
 
 class UserHashError(StreamlitAPIException):
@@ -60,7 +65,7 @@ class UserHashError(StreamlitAPIException):
         orig_exc,
         object_to_hash,
         hash_func,
-        cache_type: Optional[CacheType] = None,
+        cache_type: CacheType | None = None,
     ):
         self.alternate_name = type(orig_exc).__name__
         self.hash_func = hash_func
@@ -101,7 +106,7 @@ If you think this is actually a Streamlit bug, please
         self,
         orig_exc: BaseException,
         failed_obj: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         hash_source = hash_stacks.current.hash_source
 
         failed_obj_type_str = type_util.get_fqn_type(failed_obj)
@@ -139,8 +144,8 @@ def update_hash(
     val: Any,
     hasher,
     cache_type: CacheType,
-    hash_source: Optional[Callable[..., Any]] = None,
-    hash_funcs: Optional[HashFuncsDict] = None,
+    hash_source: Callable[..., Any] | None = None,
+    hash_funcs: HashFuncsDict | None = None,
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
 
@@ -166,10 +171,10 @@ class _HashStack:
     """
 
     def __init__(self):
-        self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
+        self._stack: collections.OrderedDict[int, list[Any]] = collections.OrderedDict()
         # A function that we decorate with streamlit cache
         # primitive (st.cache_data or st.cache_resource).
-        self.hash_source: Optional[Callable[..., Any]] = None
+        self.hash_source: Callable[..., Any] | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -226,11 +231,14 @@ def _int_to_bytes(i: int) -> bytes:
 
 
 def _float_to_bytes(f: float) -> bytes:
+    # Lazy-load for performance reasons.
+    import struct
+
     # Floats are 64bit in Python, so we need to use the "d" format.
     return struct.pack("<d", f)
 
 
-def _key(obj: Optional[Any]) -> Any:
+def _key(obj: Any | None) -> Any:
     """Return key for memoization."""
 
     if obj is None:
@@ -268,9 +276,7 @@ def _key(obj: Optional[Any]) -> Any:
 class _CacheFuncHasher:
     """A hasher that can hash objects with cycles."""
 
-    def __init__(
-        self, cache_type: CacheType, hash_funcs: Optional[HashFuncsDict] = None
-    ):
+    def __init__(self, cache_type: CacheType, hash_funcs: HashFuncsDict | None = None):
         # Can't use types as the keys in the internal _hash_funcs because
         # we always remove user-written modules from memory when rerunning a
         # script in order to reload it and grab the latest code changes.
@@ -286,7 +292,7 @@ class _CacheFuncHasher:
             }
         else:
             self._hash_funcs = {}
-        self._hashes: Dict[Any, bytes] = {}
+        self._hashes: dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
         self.size = 0
@@ -344,7 +350,9 @@ class _CacheFuncHasher:
 
         h = hashlib.new("md5", **HASHLIB_KWARGS)
 
-        if isinstance(obj, unittest.mock.Mock):
+        if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
+            obj, "unittest.mock.MagicMock"
+        ):
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))

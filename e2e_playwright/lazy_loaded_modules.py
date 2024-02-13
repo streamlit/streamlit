@@ -23,6 +23,10 @@ lazy_loaded_modules = [
     "graphviz",
     "matplotlib",
     "numpy",
+    # There is currently a 10% probability that we check for new
+    # versions on streamlit start-up. This is using the packaging module.
+    # So, we cannot check this without it being flaky.
+    # "packaging",
     "pandas",
     # Pillow is lazy-loaded, but it gets imported by plotly,
     # which we have to import in case it is installed to correctly
@@ -35,9 +39,11 @@ lazy_loaded_modules = [
     # toml is automatically loaded if there is a secret.toml, config.toml or
     # a local credentials.toml file.
     "toml",
+    "unittest",
     # Internal modules:
     "streamlit.emojis",
     "streamlit.external",
+    "streamlit.proto.openmetrics_data_model_pb2",
     "streamlit.vendor.pympler",
     # Requires `server.fileWatcherType` to be configured with `none` or `poll`:
     "watchdog",
