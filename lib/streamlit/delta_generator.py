@@ -134,8 +134,6 @@ def _maybe_print_use_warning() -> None:
     global _use_warning_has_been_displayed
 
     if not _use_warning_has_been_displayed:
-        import click
-
         _use_warning_has_been_displayed = True
 
         warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
