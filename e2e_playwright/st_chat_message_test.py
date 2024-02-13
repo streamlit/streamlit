@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, rerun_app
 
 
 def test_renders_chat_messages_correctly_1(
@@ -22,15 +22,16 @@ def test_renders_chat_messages_correctly_1(
 ):
     """Test if the chat messages render correctly"""
     # Wait a bit more to allow all images to load:
-    chat_message_elements = themed_app.locator(".stChatMessage")
+    chat_message_elements = themed_app.get_by_test_id("stChatMessage")
     expect(chat_message_elements).to_have_count(12)
 
     # rerun to populate session state chat message
-    themed_app.keyboard.press("r")
-    wait_for_app_run(themed_app, wait_delay=1000)
+    rerun_app(themed_app)
+
     expect(chat_message_elements).to_have_count(14)
     for i, element in enumerate(chat_message_elements.all()):
         element.scroll_into_view_if_needed()
+        expect(element).to_be_in_viewport()
         # Wait a bit more to allow the avatar images to load:
         themed_app.wait_for_timeout(100)
-        assert_snapshot(element, name=f"chat_message-{i}")
+        assert_snapshot(element, name=f"st_chat_message-{i}")

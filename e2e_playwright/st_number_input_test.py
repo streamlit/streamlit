@@ -80,7 +80,9 @@ def test_number_input_shows_instructions_when_dirty(
 
 def test_number_input_updates_value_correctly_on_enter(app: Page):
     """Test that st.number_input updates the value correctly on enter."""
-    first_number_input_field = app.locator(".stNumberInput input").nth(0)
+    first_number_input_field = (
+        app.get_by_test_id("stNumberInput").nth(0).locator("input")
+    )
     first_number_input_field.fill("10")
     first_number_input_field.press("Enter")
 
@@ -91,7 +93,9 @@ def test_number_input_updates_value_correctly_on_enter(app: Page):
 
 def test_number_input_has_correct_value_on_increment_click(app: Page):
     """Test that st.number_input has the correct value on increment click."""
-    number_input_up_buttons = app.locator(".stNumberInput button.step-up")
+    number_input_up_buttons = app.get_by_test_id("stNumberInput").locator(
+        "button.step-up"
+    )
     expect(number_input_up_buttons).to_have_count(11)
     for i, button in enumerate(number_input_up_buttons.all()):
         if i not in [5, 9]:
@@ -122,7 +126,9 @@ def test_number_input_has_correct_value_on_increment_click(app: Page):
 
 def test_number_input_has_correct_value_on_arrow_up(app: Page):
     """Test that st.number_input has the correct value on arrow up."""
-    first_number_input_field = app.locator(".stNumberInput input").nth(0)
+    first_number_input_field = (
+        app.get_by_test_id("stNumberInput").nth(0).locator("input")
+    )
     first_number_input_field.press("ArrowUp")
 
     expect(app.get_by_test_id("stMarkdown").nth(0)).to_have_text(
@@ -133,7 +139,9 @@ def test_number_input_has_correct_value_on_arrow_up(app: Page):
 def test_number_input_has_correct_value_on_blur(app: Page):
     """Test that st.number_input has the correct value on blur."""
 
-    first_number_input_field = app.locator(".stNumberInput input").nth(0)
+    first_number_input_field = (
+        app.get_by_test_id("stNumberInput").nth(0).locator("input")
+    )
     first_number_input_field.focus()
     first_number_input_field.fill("10")
     first_number_input_field.blur()

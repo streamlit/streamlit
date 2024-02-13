@@ -327,7 +327,7 @@ def test_expander_labels_handle_markdown(
         )
 
 
-def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunction):
+def test_tabs_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     cases = [
         ["invalid", "blockquote-and-hr"],
         ["valid", "markdown"],
@@ -335,7 +335,7 @@ def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunc
         ["valid", "link"],
     ]
 
-    tabs = app.get_by_test_id("stTab")
+    tabs = app.get_by_test_id("stTabs")
     expect(tabs).to_have_count(4)
 
     for index, case in enumerate(cases):

@@ -65,7 +65,7 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
     multiselect_elements = themed_app.get_by_test_id("stMultiSelect")
     expect(multiselect_elements).to_have_count(12)
     for idx, el in enumerate(multiselect_elements.all()):
-        assert_snapshot(el, name="multiselect-" + str(idx))
+        assert_snapshot(el, name="st_multiselect-" + str(idx))
 
 
 def test_multiselect_initial_value(app: Page):
@@ -108,8 +108,8 @@ def test_multiselect_show_values_in_dropdown(
     wait_for_app_run(app)
     dropdown_elements = app.locator("li")
     expect(dropdown_elements).to_have_count(2)
-    assert_snapshot(dropdown_elements.nth(0), name="multiselect-dropdown-0")
-    assert_snapshot(dropdown_elements.nth(1), name="multiselect-dropdown-1")
+    assert_snapshot(dropdown_elements.nth(0), name="st_multiselect-dropdown_0")
+    assert_snapshot(dropdown_elements.nth(1), name="st_multiselect-dropdown_1")
 
 
 def test_multiselect_long_values_in_dropdown(
@@ -121,7 +121,7 @@ def test_multiselect_long_values_in_dropdown(
     wait_for_app_run(app)
     dropdown_elems = app.locator("li").all()
     for idx, el in enumerate(dropdown_elems):
-        assert_snapshot(el, name="multiselect-dropdown-long-label-" + str(idx))
+        assert_snapshot(el, name="st_multiselect-dropdown_long_label_" + str(idx))
 
 
 def test_multiselect_register_callback(app: Page):
@@ -183,7 +183,7 @@ def test_multiselect_single_selection(app: Page, assert_snapshot: ImageCompareFu
         "Female", use_inner_text=True
     )
     assert_snapshot(
-        app.get_by_test_id("stMultiSelect").nth(1), name="multiselect-selection"
+        app.get_by_test_id("stMultiSelect").nth(1), name="st_multiselect-selection"
     )
     expect(app.get_by_test_id("stText").nth(1)).to_have_text(
         "value 2: ['female']", use_inner_text=True

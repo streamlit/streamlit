@@ -1,1 +1,0 @@
-../../e2e/scripts/st_graphviz_chart.py

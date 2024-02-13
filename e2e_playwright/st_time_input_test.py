@@ -155,11 +155,11 @@ def test_keeps_value_on_selection_close(app: Page):
     """Test that the selection is kept when the dropdown is closed."""
     app.get_by_test_id("stTimeInput").first.locator("input").click()
 
-    # Take a snapshot of the selection dropdown:
+    # Check if popover is visible:
     expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
 
     # Click outside to close the dropdown:
-    app.get_by_test_id("stMarkdown").first.click()
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
 
     # Check if value is still initial value:
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(
