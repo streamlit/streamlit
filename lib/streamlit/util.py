@@ -21,7 +21,6 @@ import dataclasses
 import functools
 import hashlib
 import os
-import subprocess
 import sys
 from typing import (
     Any,
@@ -116,6 +115,9 @@ def _open_browser_with_webbrowser(url):
 def _open_browser_with_command(command, url):
     cmd_line = [command, url]
     with open(os.devnull, "w") as devnull:
+        # Lazy-load for performance reasons.
+        import subprocess
+
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
 
 

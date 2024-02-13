@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import socket
 from typing import Optional
 
 from typing_extensions import Final
@@ -80,6 +79,8 @@ def get_internal_ip() -> Optional[str]:
     if _internal_ip is not None:
         return _internal_ip
 
+    import socket
+
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         try:
             # Doesn't even have to be reachable
@@ -106,6 +107,8 @@ def _make_blocking_http_get(url: str, timeout: float = 5) -> Optional[str]:
 def _looks_like_an_ip_adress(address: Optional[str]) -> bool:
     if address is None:
         return False
+
+    import socket
 
     try:
         socket.inet_pton(socket.AF_INET, address)

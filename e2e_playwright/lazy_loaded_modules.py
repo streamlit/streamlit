@@ -19,10 +19,18 @@ import streamlit as st
 
 lazy_loaded_modules = [
     "altair",
+    "base64",
+    "binascii",
     "bokeh",
+    "configparser",
+    "decimal",
+    "dis",
+    "fnmatch",
     "graphviz",
+    "itertools",
     "matplotlib",
     "numpy",
+    "packaging",
     "pandas",
     # Pillow is lazy-loaded, but it gets imported by plotly,
     # which we have to import in case it is installed to correctly
@@ -31,13 +39,20 @@ lazy_loaded_modules = [
     "pyarrow",
     "pydeck",
     "rich",
+    "socket",
+    "ssl",
+    "shutil",
+    "struct",
+    "subprocess",
     "tenacity",
     # toml is automatically loaded if there is a secret.toml, config.toml or
     # a local credentials.toml file.
     "toml",
+    "unittest",
     # Internal modules:
     "streamlit.emojis",
     "streamlit.external",
+    "streamlit.proto.openmetrics_data_model_pb2",
     "streamlit.vendor.pympler",
     # Requires `server.fileWatcherType` to be configured with `none` or `poll`:
     "watchdog",
