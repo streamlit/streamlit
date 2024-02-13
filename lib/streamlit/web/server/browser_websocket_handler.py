@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
-import contextlib
+import base64
+import binascii
+import json
 from typing import Any, Awaitable, Final
 
 import tornado.concurrent
@@ -89,24 +91,18 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
     def open(self, *args, **kwargs) -> Awaitable[None] | None:
         # Extract user info from the X-Streamlit-User header
         is_public_cloud_app = False
-        email = "test@example.com"
 
-        header_content = self.request.headers.get("X-Streamlit-User")
-
-        if header_content:
-            import base64
-            import binascii
-            import json
-
-            with contextlib.suppress(
-                KeyError, binascii.Error, json.decoder.JSONDecodeError
-            ):
-                payload = base64.b64decode(header_content)
-                user_obj = json.loads(payload)
-                email = user_obj["email"]
-                is_public_cloud_app = user_obj["isPublicCloudApp"]
+        try:
+            header_content = self.request.headers["X-Streamlit-User"]
+            payload = base64.b64decode(header_content)
+            user_obj = json.loads(payload)
+            email = user_obj["email"]
+            is_public_cloud_app = user_obj["isPublicCloudApp"]
+        except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
+            email = "test@example.com"
 
         user_info: dict[str, str | None] = dict()
+
         if is_public_cloud_app:
             user_info["email"] = None
         else:

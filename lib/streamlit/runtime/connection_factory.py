@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import importlib
 import os
 import re
 from datetime import timedelta
@@ -310,6 +309,9 @@ def connection_factory(
         if "." in connection_class:
             parts = connection_class.split(".")
             classname = parts.pop()
+
+            import importlib
+
             connection_module = importlib.import_module(".".join(parts))
             connection_class = getattr(connection_module, classname)
         else:
