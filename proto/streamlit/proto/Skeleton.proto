@@ -19,13 +19,17 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "SkeletonProto";
 
+enum SkeletonStyle {
+    PLAIN = 0;
+    APP = 1; // internal-only, for now
+}
+
 // An empty-like element that displays an app skeleton.
 message Skeleton {
     // Height in CSS points
     optional int32 height = 1;
     // Width as a fraction 0 - 1
     optional double width = 2;
-    // Skeleton visual style (currently unused)
-    reserved 3;
-    reserved "style";
+    // Skeleton visual style
+    optional SkeletonStyle style = 3;
 }

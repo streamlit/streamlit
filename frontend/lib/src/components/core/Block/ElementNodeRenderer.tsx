@@ -56,6 +56,7 @@ import {
   Toast as ToastProto,
   Video as VideoProto,
   Heading as HeadingProto,
+  SkeletonStyle,
 } from "@streamlit/lib/src/proto"
 
 import React, { ReactElement, Suspense } from "react"
@@ -614,7 +615,11 @@ const RawElementNodeRenderer = (
 
     case "skeleton": {
       const skeletonProto = node.element.skeleton as SkeletonProto
-      return <Skeleton element={skeletonProto} />
+      if (skeletonProto.style == SkeletonStyle.APP) {
+        return <AppSkeleton /> // internal-only, does not use any of the width/height properties
+      } else {
+        return <Skeleton element={skeletonProto} />
+      }
     }
 
     case "slider": {

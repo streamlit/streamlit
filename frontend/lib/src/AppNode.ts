@@ -37,7 +37,7 @@ import {
   LoadingScreenType,
   makeElementWithErrorText,
   makeElementWithInfoText,
-  makeSkeletonElement,
+  makeAppSkeletonElement,
   notUndefined,
 } from "./util/utils"
 
@@ -431,7 +431,7 @@ export class AppRoot {
         break
 
       default:
-        waitElement = makeSkeletonElement()
+        waitElement = makeAppSkeletonElement()
     }
 
     if (waitElement) {

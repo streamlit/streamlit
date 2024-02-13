@@ -20,11 +20,10 @@ import { screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { AppSkeleton } from "./AppSkeleton"
-import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 describe("AppSkeleton element", () => {
   it("renders after a delay", async () => {
-    render(<AppSkeleton element={SkeletonProto.create({ height: 107 })} />)
+    render(<AppSkeleton />)
 
     // At first, the skeleton should not appear on screen.
     expect(screen.queryAllByTestId("stAppSkeleton")).toEqual([])

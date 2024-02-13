@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class SkeletonMixin:
     @gather_metrics("skeleton")
     def skeleton(
-        self, height: int | None = None, *, width: float | None = None
+        self, height: Optional[int] = None, *, width: Optional[float] = None
     ) -> "DeltaGenerator":
         """Insert a single-element container which displays a "skeleton" animation.
 
@@ -61,8 +61,7 @@ class SkeletonMixin:
         >>> # ^ The empty is a 0-size placeholder
         >>> year = st.selectbox("Select Year", options=[2022, 2023, 2024])
         >>>
-        >>> # Get data from source
-        >>> # assume function call takes a long time
+        >>> # Get data from source, assume this takes a long time
         >>> census_dataframe = get_census_data_from_database(year)
         >>>
         >>> # Draw the data, causing it to "pop" in above the year selectbox.
