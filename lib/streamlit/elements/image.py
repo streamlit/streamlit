@@ -243,7 +243,7 @@ def _BytesIO_to_bytes(data: io.BytesIO) -> bytes:
     return data.getvalue()
 
 
-def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str="JPEG") -> bytes:
+def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str = "JPEG") -> bytes:
     import numpy as np
     from PIL import Image
 

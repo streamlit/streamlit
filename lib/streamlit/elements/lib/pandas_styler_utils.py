@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Mapping, TypeVar
+from typing import TYPE_CHECKING, Any, Mapping, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException

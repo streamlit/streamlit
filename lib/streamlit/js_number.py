@@ -94,9 +94,7 @@ class JSNumber:
             value_name = "value"
 
         if not isinstance(value, (numbers.Integral, float)):
-            raise JSNumberBoundsException(
-                f"{value_name} ({value}) is not a float"
-            )
+            raise JSNumberBoundsException(f"{value_name} ({value}) is not a float")
         elif value < cls.MIN_NEGATIVE_VALUE:
             raise JSNumberBoundsException(
                 f"{value_name} ({value}) must be >= -1.797e+308"
