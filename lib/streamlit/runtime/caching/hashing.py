@@ -32,7 +32,9 @@ import threading
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Callable, Dict, List, Pattern, Type, Union
+from typing import Any, Callable, Dict, Final, Pattern, Type, Union
+
+from typing_extensions import TypeAlias
 
 from streamlit import type_util, util
 from streamlit.errors import StreamlitAPIException
@@ -42,18 +44,20 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit.util import HASHLIB_KWARGS
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
-_PANDAS_ROWS_LARGE = 100000
-_PANDAS_SAMPLE_SIZE = 10000
+_PANDAS_ROWS_LARGE: Final = 100000
+_PANDAS_SAMPLE_SIZE: Final = 10000
 
 # Similar to dataframes, we also sample large numpy arrays.
-_NP_SIZE_LARGE = 1000000
-_NP_SAMPLE_SIZE = 100000
+_NP_SIZE_LARGE: Final = 1000000
+_NP_SAMPLE_SIZE: Final = 100000
 
-HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
+HashFuncsDict: TypeAlias = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
-_CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+_CYCLE_PLACEHOLDER: Final = (
+    b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+)
 
 
 class UserHashError(StreamlitAPIException):
@@ -103,7 +107,7 @@ If you think this is actually a Streamlit bug, please
         self,
         orig_exc: BaseException,
         failed_obj: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         hash_source = hash_stacks.current.hash_source
 
         failed_obj_type_str = type_util.get_fqn_type(failed_obj)
@@ -168,7 +172,7 @@ class _HashStack:
     """
 
     def __init__(self):
-        self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
+        self._stack: collections.OrderedDict[int, list[Any]] = collections.OrderedDict()
         # A function that we decorate with streamlit cache
         # primitive (st.cache_data or st.cache_resource).
         self.hash_source: Callable[..., Any] | None = None
@@ -286,7 +290,7 @@ class _CacheFuncHasher:
             }
         else:
             self._hash_funcs = {}
-        self._hashes: Dict[Any, bytes] = {}
+        self._hashes: dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
         self.size = 0

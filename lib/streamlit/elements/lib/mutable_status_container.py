@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import time
 from types import TracebackType
-from typing import List, Literal, Type, cast
+from typing import Literal, cast
 
 from typing_extensions import TypeAlias
 

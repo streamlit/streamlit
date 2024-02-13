@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Final, List, TypeVar, cast
+from typing import Any, Callable, Final, TypeVar, cast
 
 import streamlit
 from streamlit import config

@@ -21,7 +21,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import Callable, Dict
+from typing import Callable, Final
 
 from blinker import Signal
 
@@ -49,7 +49,7 @@ from streamlit.runtime.state import (
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class ScriptRunnerEvent(Enum):
@@ -105,7 +105,7 @@ class ScriptRunner:
         uploaded_file_mgr: UploadedFileManager,
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
-        user_info: Dict[str, str | None],
+        user_info: dict[str, str | None],
     ):
         """Initialize the ScriptRunner.
 

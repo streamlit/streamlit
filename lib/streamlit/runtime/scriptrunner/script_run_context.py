@@ -18,7 +18,7 @@ import collections
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, Final, List, Set, Tuple, Union
+from typing import Callable, Counter, Dict, Final, Union
 from urllib import parse
 
 from typing_extensions import TypeAlias
@@ -41,7 +41,7 @@ UserInfo: TypeAlias = Dict[str, Union[str, None]]
 # a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
 # so that different threads or async tasks can have their own stacks.
 dg_stack: contextvars.ContextVar[
-    Tuple["streamlit.delta_generator.DeltaGenerator", ...]
+    tuple["streamlit.delta_generator.DeltaGenerator", ...]
 ] = contextvars.ContextVar("dg_stack", default=tuple())
 
 
@@ -71,14 +71,14 @@ class ScriptRunContext:
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
-    tracked_commands: List[Command] = field(default_factory=list)
+    tracked_commands: list[Command] = field(default_factory=list)
     tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
-    widget_ids_this_run: Set[str] = field(default_factory=set)
-    widget_user_keys_this_run: Set[str] = field(default_factory=set)
-    form_ids_this_run: Set[str] = field(default_factory=set)
-    cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
+    widget_ids_this_run: set[str] = field(default_factory=set)
+    widget_user_keys_this_run: set[str] = field(default_factory=set)
+    form_ids_this_run: set[str] = field(default_factory=set)
+    cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
