@@ -135,6 +135,14 @@ class HealthHandler(_SpecialRequestHandler):
         self._callback = callback
 
     async def get(self):
+        await self.handle_request()
+
+    # Some monitoring services only support the HTTP HEAD method for requests to
+    # healthcheck endpoints, so we support HEAD as well to play nicely with them.
+    async def head(self):
+        await self.handle_request()
+
+    async def handle_request(self):
         if self.request.uri and "_stcore/" not in self.request.uri:
             new_path = (
                 "/_stcore/script-health-check"
