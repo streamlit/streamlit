@@ -261,6 +261,9 @@ def _delete_option(key: str) -> None:
     """
     try:
         del _config_options_template[key]
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
         del _config_options[key]
     except Exception:
         # We don't care if the option already doesn't exist.
@@ -1122,9 +1125,10 @@ def is_manually_set(option_name: str) -> bool:
 def show_config() -> None:
     """Print all config options to the terminal."""
     with _config_lock:
-        config_util.show_config(
-            _section_descriptions, cast(dict[str, ConfigOption], _config_options)
-        )
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
+        config_util.show_config(_section_descriptions, _config_options)
 
 
 # Load Config Files #
