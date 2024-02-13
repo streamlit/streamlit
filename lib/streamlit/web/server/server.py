@@ -51,7 +51,7 @@ from streamlit.web.server.routes import (
     MessageCacheHandler,
     StaticFileHandler,
 )
-from streamlit.web.server.server_util import make_url_path_regex
+from streamlit.web.server.server_util import DEVELOPMENT_PORT, make_url_path_regex
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
@@ -183,6 +183,14 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         address = config.get_option("server.address")
         port = config.get_option("server.port")
 
+        if int(port) == DEVELOPMENT_PORT:
+            LOGGER.warning(
+                "Port %s is reserved for internal development. "
+                "It is strongly recommended to select an alternative port "
+                "for `server.port`.",
+                DEVELOPMENT_PORT,
+            )
+
         try:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
@@ -197,9 +205,8 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
                         "Port %s already in use, trying to use the next one.", port
                     )
                     port += 1
-                    # Save port 3000 because it is used for the development
-                    # server in the front end.
-                    if port == 3000:
+                    # Don't use the development port here:
+                    if port == DEVELOPMENT_PORT:
                         port += 1
 
                     config.set_option(
