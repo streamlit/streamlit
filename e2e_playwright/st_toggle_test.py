@@ -56,9 +56,9 @@ def test_toggle_values_on_click(app: Page):
     for toggle_element in toggle_elements.all():
         # Not sure if this is needed, but somehow it is slightly
         # flaky with the last toggle without it.
-        # It seems that it sometimes failed, and in these cases the
-        # toggle was not scrolled into view. So, maybe thats
-        # the reason why it also fails to click it.
+        # It seems that it sometimes fails to click,
+        # and in these cases the toggle was not scrolled into view.
+        # So, maybe thats the reason why it fails to click it.
         # But this is just a guess.
         toggle_element.scroll_into_view_if_needed()
         toggle_element.click(delay=50)
