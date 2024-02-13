@@ -21,7 +21,6 @@ import sys
 from pathlib import Path
 from typing import Any, Awaitable, List, Optional, Union
 
-import click
 import tornado.concurrent
 import tornado.locks
 import tornado.netutil
@@ -30,7 +29,7 @@ import tornado.websocket
 from tornado.httpserver import HTTPServer
 from typing_extensions import Final
 
-from streamlit import config, file_util, source_util, util
+from streamlit import cli_util, config, file_util, source_util, util
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
@@ -395,7 +394,7 @@ class Server:
         return self._main_script_path == Hello.__file__
 
     def stop(self) -> None:
-        click.secho("  Stopping...", fg="blue")
+        cli_util.print_to_cli("  Stopping...", fg="blue")
         self._runtime.stop()
 
 

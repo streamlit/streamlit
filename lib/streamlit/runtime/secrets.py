@@ -12,25 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 import threading
 from copy import deepcopy
 from typing import (
     Any,
     Dict,
+    Final,
     ItemsView,
     Iterator,
     KeysView,
     List,
     Mapping,
     NoReturn,
-    Optional,
     ValuesView,
 )
 
-import toml
 from blinker import Signal
-from typing_extensions import Final
 
 import streamlit as st
 import streamlit.watcher.path_watcher
@@ -120,7 +120,7 @@ class Secrets(Mapping[str, Any]):
 
     def __init__(self, file_paths: List[str]):
         # Our secrets dict.
-        self._secrets: Optional[Mapping[str, Any]] = None
+        self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
         self._file_watchers_installed = False
         self._file_paths = file_paths
@@ -201,6 +201,8 @@ class Secrets(Mapping[str, Any]):
                     continue
 
                 try:
+                    import toml
+
                     secrets.update(toml.loads(secrets_file_str))
                 except:
                     if print_exceptions:
