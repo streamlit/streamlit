@@ -190,7 +190,7 @@ def set_page_config(
     if page_icon is not None:
         msg.page_config_changed.favicon = _get_favicon_string(page_icon)
 
-    pb_layout: "PageConfigProto.Layout.ValueType"
+    pb_layout: PageConfigProto.Layout.ValueType
     if layout == "centered":
         pb_layout = PageConfigProto.CENTERED
     elif layout == "wide":
@@ -201,7 +201,7 @@ def set_page_config(
         )
     msg.page_config_changed.layout = pb_layout
 
-    pb_sidebar_state: "PageConfigProto.SidebarState.ValueType"
+    pb_sidebar_state: PageConfigProto.SidebarState.ValueType
     if initial_sidebar_state == "auto":
         pb_sidebar_state = PageConfigProto.AUTO
     elif initial_sidebar_state == "expanded":
@@ -267,5 +267,5 @@ def validate_menu_items(menu_items: MenuItems) -> None:
             raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
 
 
-def valid_menu_item_key(key: str) -> "TypeGuard[MenuKey]":
+def valid_menu_item_key(key: str) -> TypeGuard[MenuKey]:
     return key in {GET_HELP_KEY, REPORT_A_BUG_KEY, ABOUT_KEY}

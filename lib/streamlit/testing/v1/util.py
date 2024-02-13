@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from contextlib import contextmanager
 from typing import Any, Dict
 from unittest.mock import patch

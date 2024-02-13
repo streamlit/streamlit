@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import TYPE_CHECKING, Final, List, cast
+from typing import TYPE_CHECKING, Final, cast
 
 import streamlit
 from streamlit.errors import (
@@ -48,7 +48,7 @@ _STREAMLIT_DIR: Final = os.path.join(
 
 class ExceptionMixin:
     @gather_metrics("exception")
-    def exception(self, exception: BaseException) -> "DeltaGenerator":
+    def exception(self, exception: BaseException) -> DeltaGenerator:
         """Display an exception.
 
         Parameters
@@ -69,7 +69,7 @@ class ExceptionMixin:
         return self.dg._enqueue("exception", exception_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -193,7 +193,7 @@ def _format_syntax_error_message(exception: SyntaxError) -> str:
 
 def _get_stack_trace_str_list(
     exception: BaseException, strip_streamlit_stack_entries: bool = False
-) -> List[str]:
+) -> list[str]:
     """Get the stack trace for the given exception.
 
     Parameters
@@ -253,7 +253,7 @@ def _is_in_streamlit_package(file: str) -> bool:
 
 def _get_nonstreamlit_traceback(
     extracted_tb: traceback.StackSummary,
-) -> List[traceback.FrameSummary]:
+) -> list[traceback.FrameSummary]:
     return [
         entry for entry in extracted_tb if not _is_in_streamlit_package(entry.filename)
     ]

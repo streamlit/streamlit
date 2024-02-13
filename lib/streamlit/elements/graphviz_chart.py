@@ -41,7 +41,7 @@ class GraphvizMixin:
         self,
         figure_or_dot: FigureOrDot,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -112,7 +112,7 @@ class GraphvizMixin:
         return self.dg._enqueue("graphviz_chart", graphviz_chart_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

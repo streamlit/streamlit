@@ -21,14 +21,14 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Collection, Dict, cast
+from typing import Any, Collection, cast
 
 SNOWSQL_CONNECTION_FILE = "~/.snowsql/config"
 
 
 def extract_from_dict(
-    keys: Collection[str], source_dict: Dict[str, Any]
-) -> Dict[str, Any]:
+    keys: Collection[str], source_dict: dict[str, Any]
+) -> dict[str, Any]:
     """Extract the specified keys from source_dict and return them in a new dict.
 
     Parameters
@@ -52,7 +52,7 @@ def extract_from_dict(
     return d
 
 
-def load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
+def load_from_snowsql_config_file(connection_name: str) -> dict[str, Any]:
     """Loads the dictionary from snowsql config file."""
     snowsql_config_file = os.path.expanduser(SNOWSQL_CONNECTION_FILE)
     if not os.path.exists(snowsql_config_file):

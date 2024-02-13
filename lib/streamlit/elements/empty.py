@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class EmptyMixin:
-    def empty(self) -> "DeltaGenerator":
+    def empty(self) -> DeltaGenerator:
         """Insert a single-element container.
 
         Inserts a container into your app that can be used to hold a single element.
@@ -72,6 +72,6 @@ class EmptyMixin:
         return self.dg._enqueue("empty", empty_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

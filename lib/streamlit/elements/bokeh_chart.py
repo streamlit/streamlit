@@ -37,9 +37,9 @@ class BokehMixin:
     @gather_metrics("bokeh_chart")
     def bokeh_chart(
         self,
-        figure: "Figure",
+        figure: Figure,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an interactive Bokeh chart.
 
         Bokeh is a charting library for Python. The arguments to this function
@@ -99,14 +99,14 @@ class BokehMixin:
         return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
 def marshall(
     proto: BokehChartProto,
-    figure: "Figure",
+    figure: Figure,
     use_container_width: bool,
     element_id: str,
 ) -> None:

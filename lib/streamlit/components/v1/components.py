@@ -18,7 +18,7 @@ import inspect
 import json
 import os
 import threading
-from typing import TYPE_CHECKING, Any, Dict, Final, Type
+from typing import TYPE_CHECKING, Any, Final
 
 import streamlit
 from streamlit import type_util, util
@@ -162,7 +162,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         def marshall_component(
             dg: DeltaGenerator, element: Element
-        ) -> Any | Type[NoValue]:
+        ) -> Any | type[NoValue]:
             element.component_instance.component_name = self.name
             element.component_instance.form_id = current_form_id(dg)
             if self.url is not None:
@@ -331,10 +331,10 @@ def declare_component(
 
 class ComponentRegistry:
     _instance_lock: threading.Lock = threading.Lock()
-    _instance: "ComponentRegistry" | None = None
+    _instance: ComponentRegistry | None = None
 
     @classmethod
-    def instance(cls) -> "ComponentRegistry":
+    def instance(cls) -> ComponentRegistry:
         """Returns the singleton ComponentRegistry"""
         # We use a double-checked locking optimization to avoid the overhead
         # of acquiring the lock in the common case:
@@ -346,7 +346,7 @@ class ComponentRegistry:
         return cls._instance
 
     def __init__(self):
-        self._components: Dict[str, CustomComponent] = {}
+        self._components: dict[str, CustomComponent] = {}
         self._lock = threading.Lock()
 
     def __repr__(self) -> str:

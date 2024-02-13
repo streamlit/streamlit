@@ -48,7 +48,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display text in header formatting.
 
         Parameters
@@ -118,7 +118,7 @@ class HeadingMixin:
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
         Parameters
@@ -187,7 +187,7 @@ class HeadingMixin:
         anchor: Anchor = None,
         *,  # keyword-only arguments:
         help: str | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -241,7 +241,7 @@ class HeadingMixin:
         )
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

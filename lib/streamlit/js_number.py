@@ -65,11 +65,11 @@ class JSNumber:
 
         if value < cls.MIN_SAFE_INTEGER:
             raise JSNumberBoundsException(
-                "{} ({}) must be >= -((1 << 53) - 1)".format(value_name, value)
+                f"{value_name} ({value}) must be >= -((1 << 53) - 1)"
             )
         elif value > cls.MAX_SAFE_INTEGER:
             raise JSNumberBoundsException(
-                "{} ({}) must be <= (1 << 53) - 1".format(value_name, value)
+                f"{value_name} ({value}) must be <= (1 << 53) - 1"
             )
 
     @classmethod
@@ -95,13 +95,13 @@ class JSNumber:
 
         if not isinstance(value, (numbers.Integral, float)):
             raise JSNumberBoundsException(
-                "{} ({}) is not a float".format(value_name, value)
+                f"{value_name} ({value}) is not a float"
             )
         elif value < cls.MIN_NEGATIVE_VALUE:
             raise JSNumberBoundsException(
-                "{} ({}) must be >= -1.797e+308".format(value_name, value)
+                f"{value_name} ({value}) must be >= -1.797e+308"
             )
         elif value > cls.MAX_VALUE:
             raise JSNumberBoundsException(
-                "{} ({}) must be <= 1.797e+308".format(value_name, value)
+                f"{value_name} ({value}) must be <= 1.797e+308"
             )

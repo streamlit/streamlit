@@ -32,7 +32,7 @@ class CodeMixin:
         body: SupportsStr,
         language: str | None = "python",
         line_numbers: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.
 
         Parameters
@@ -68,6 +68,6 @@ class CodeMixin:
         return self.dg._enqueue("code", code_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

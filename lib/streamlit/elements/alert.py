@@ -29,10 +29,10 @@ class AlertMixin:
     @gather_metrics("error")
     def error(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display error message.
 
         Parameters
@@ -61,10 +61,10 @@ class AlertMixin:
     @gather_metrics("warning")
     def warning(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display warning message.
 
         Parameters
@@ -93,10 +93,10 @@ class AlertMixin:
     @gather_metrics("info")
     def info(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an informational message.
 
         Parameters
@@ -126,10 +126,10 @@ class AlertMixin:
     @gather_metrics("success")
     def success(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a success message.
 
         Parameters
@@ -156,6 +156,6 @@ class AlertMixin:
         return self.dg._enqueue("alert", alert_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -16,10 +16,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Set
+from typing import Any, Mapping
 
 
-def _unflatten_single_dict(flat_dict: Dict[Any, Any]) -> Dict[Any, Any]:
+def _unflatten_single_dict(flat_dict: dict[Any, Any]) -> dict[Any, Any]:
     """Convert a flat dict of key-value pairs to dict tree.
 
     Example
@@ -56,11 +56,11 @@ def _unflatten_single_dict(flat_dict: Dict[Any, Any]) -> Dict[Any, Any]:
         A tree made of dicts inside of dicts.
 
     """
-    out: Dict[str, Any] = dict()
+    out: dict[str, Any] = dict()
     for pathstr, v in flat_dict.items():
         path = pathstr.split("_")
 
-        prev_dict: Dict[str, Any] | None = None
+        prev_dict: dict[str, Any] | None = None
         curr_dict = out
 
         for k in path:
@@ -76,8 +76,8 @@ def _unflatten_single_dict(flat_dict: Dict[Any, Any]) -> Dict[Any, Any]:
 
 
 def unflatten(
-    flat_dict: Dict[Any, Any], encodings: Set[str] | None = None
-) -> Dict[Any, Any]:
+    flat_dict: dict[Any, Any], encodings: set[str] | None = None
+) -> dict[Any, Any]:
     """Converts a flat dict of key-value pairs to a spec tree.
 
     Example
@@ -140,7 +140,7 @@ def unflatten(
     return out_dict
 
 
-def remove_none_values(input_dict: Mapping[Any, Any]) -> Dict[Any, Any]:
+def remove_none_values(input_dict: Mapping[Any, Any]) -> dict[Any, Any]:
     """Remove all keys with None values from a dict."""
     new_dict = {}
     for key, val in input_dict.items():

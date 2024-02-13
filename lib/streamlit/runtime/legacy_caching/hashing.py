@@ -14,6 +14,8 @@
 
 """A hashing utility for code."""
 
+from __future__ import annotations
+
 import collections
 import dis
 import enum

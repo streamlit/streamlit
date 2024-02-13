@@ -35,11 +35,11 @@ class PyplotMixin:
     @gather_metrics("pyplot")
     def pyplot(
         self,
-        fig: "Figure" | None = None,
+        fig: Figure | None = None,
         clear_figure: bool | None = None,
         use_container_width: bool = True,
         **kwargs: Any,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -114,7 +114,7 @@ class PyplotMixin:
         return self.dg._enqueue("imgs", image_list_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -122,7 +122,7 @@ class PyplotMixin:
 def marshall(
     coordinates: str,
     image_list_proto: ImageListProto,
-    fig: "Figure" | None = None,
+    fig: Figure | None = None,
     clear_figure: bool | None = True,
     use_container_width: bool = True,
     **kwargs: Any,
@@ -180,7 +180,7 @@ def marshall(
 
 class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
     def __init__(self) -> None:
-        super(PyplotGlobalUseWarning, self).__init__(
+        super().__init__(
             msg=self._get_message(), config_option="deprecation.showPyplotGlobalUse"
         )
 

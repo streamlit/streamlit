@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import io
 import re
-from typing import TYPE_CHECKING, Final, Tuple, Union, cast
+from typing import TYPE_CHECKING, Final, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -49,7 +49,7 @@ class MediaMixin:
         start_time: int = 0,
         *,
         sample_rate: int | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an audio player.
 
         Parameters
@@ -120,7 +120,7 @@ class MediaMixin:
         data: MediaData,
         format: str = "video/mp4",
         start_time: int = 0,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a video player.
 
         Parameters
@@ -163,7 +163,7 @@ class MediaMixin:
         return self.dg._enqueue("video", video_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -301,7 +301,7 @@ def marshall_video(
         _marshall_av_media(coordinates, proto, data, mimetype)
 
 
-def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
+def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     """Validates and normalizes numpy array data.
     We validate numpy array shape (should be 1d or 2d)
     We normalize input data to int16 [-32768, 32767] range.
@@ -323,7 +323,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data: "npt.NDArray[Any]" = np.array(data, dtype=float)
+    data: npt.NDArray[Any] = np.array(data, dtype=float)
 
     if len(data.shape) == 1:
         nchan = 1
@@ -350,7 +350,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     return scaled_data.tobytes(), nchan
 
 
-def _make_wav(data: "npt.NDArray[Any]", sample_rate: int) -> bytes:
+def _make_wav(data: npt.NDArray[Any], sample_rate: int) -> bytes:
     """
     Transform a numpy array to a PCM bytestring
     We use code from IPython display module to convert numpy array to wave bytes

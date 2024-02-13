@@ -42,7 +42,7 @@ class ToastMixin:
         body: SupportsStr,
         *,  # keyword-only args:
         icon: str | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a short message, known as a notification "toast".
         The toast appears in the app's bottom-right corner and disappears after four seconds.
 
@@ -88,6 +88,6 @@ class ToastMixin:
         return self.dg._enqueue("toast", toast_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

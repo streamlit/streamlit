@@ -31,7 +31,7 @@ class IframeMixin:
         width: int | None = None,
         height: int | None = None,
         scrolling: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Load a remote URL in an iframe.
 
         Parameters
@@ -65,7 +65,7 @@ class IframeMixin:
         width: int | None = None,
         height: int | None = None,
         scrolling: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an HTML string in an iframe.
 
         Parameters
@@ -93,7 +93,7 @@ class IframeMixin:
         return self.dg._enqueue("iframe", iframe_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

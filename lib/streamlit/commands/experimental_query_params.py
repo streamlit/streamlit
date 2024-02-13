@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import urllib.parse as parse
-from typing import Any, Dict, List
+from typing import Any
 
 from streamlit import util
 from streamlit.constants import (
@@ -30,7 +30,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
 @gather_metrics("experimental_get_query_params")
-def get_query_params() -> Dict[str, List[str]]:
+def get_query_params() -> dict[str, list[str]]:
     """Return the query parameters that is currently showing in the browser's URL bar.
 
     Returns
@@ -108,7 +108,7 @@ def set_query_params(**query_params: Any) -> None:
 
 
 def _ensure_no_embed_params(
-    query_params: Dict[str, List[str] | str], query_string: str
+    query_params: dict[str, list[str] | str], query_string: str
 ) -> str:
     """Ensures there are no embed params set (raises StreamlitAPIException) if there is a try,
     also makes sure old param values in query_string are preserved. Returns query_string : str.

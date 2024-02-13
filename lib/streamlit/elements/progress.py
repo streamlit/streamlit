@@ -92,7 +92,7 @@ def _get_text(text: str | None) -> str | None:
 
 
 class ProgressMixin:
-    def progress(self, value: FloatOrInt, text: str | None = None) -> "DeltaGenerator":
+    def progress(self, value: FloatOrInt, text: str | None = None) -> DeltaGenerator:
         r"""Display a progress bar.
 
         Parameters
@@ -157,6 +157,6 @@ class ProgressMixin:
         return self.dg._enqueue("progress", progress_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

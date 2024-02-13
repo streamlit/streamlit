@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class BalloonsMixin:
     @gather_metrics("balloons")
-    def balloons(self) -> "DeltaGenerator":
+    def balloons(self) -> DeltaGenerator:
         """Draw celebratory balloons.
 
         Example
@@ -42,6 +42,6 @@ class BalloonsMixin:
         return self.dg._enqueue("balloons", balloons_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

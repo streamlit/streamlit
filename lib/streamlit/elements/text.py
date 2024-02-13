@@ -29,10 +29,10 @@ class TextMixin:
     @gather_metrics("text")
     def text(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only arguments:
         help: str | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Write fixed-width and preformatted text.
 
         Parameters
@@ -57,6 +57,6 @@ class TextMixin:
         return self.dg._enqueue("text", text_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

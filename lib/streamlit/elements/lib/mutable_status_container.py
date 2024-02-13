@@ -56,7 +56,7 @@ class StatusContainer(DeltaGenerator):
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
-        delta_path: List[int] = (
+        delta_path: list[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
         )
 
@@ -90,7 +90,7 @@ class StatusContainer(DeltaGenerator):
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._current_state: States | None = None
-        self._delta_path: List[int] | None = None
+        self._delta_path: list[int] | None = None
 
     def update(
         self,
@@ -158,7 +158,7 @@ class StatusContainer(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None,
+        exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> Literal[False]:
