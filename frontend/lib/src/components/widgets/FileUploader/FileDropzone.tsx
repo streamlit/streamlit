@@ -54,11 +54,14 @@ const FileDropzone = ({
     {({ getRootProps, getInputProps }) => (
       <StyledFileDropzoneSection
         {...getRootProps()}
-        data-testid="stFileUploadDropzone"
+        data-testid="stFileUploaderDropzone"
         isDisabled={disabled}
         aria-label={label}
       >
-        <input data-testid="stDropzoneInput" {...getInputProps()} />
+        <input
+          data-testid="stFileUploaderDropzoneInput"
+          {...getInputProps()}
+        />
         <FileDropzoneInstructions
           multiple={multiple}
           acceptedExtensions={acceptedExtensions}

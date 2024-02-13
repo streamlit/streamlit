@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ from dataclasses import dataclass, field, replace
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Iterator,
     KeysView,
     List,
@@ -28,7 +30,7 @@ from typing import (
     cast,
 )
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import config, util
@@ -45,7 +47,6 @@ from streamlit.runtime.state.common import (
 from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
-from streamlit.vendor.pympler.asizeof import asizeof
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -637,6 +638,9 @@ class SessionState:
             return True
 
     def get_stats(self) -> list[CacheStat]:
+        # Lazy-load vendored package to prevent import of numpy
+        from streamlit.vendor.pympler.asizeof import asizeof
+
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
 

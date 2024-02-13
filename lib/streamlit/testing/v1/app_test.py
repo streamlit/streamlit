@@ -82,11 +82,8 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.util import HASHLIB_KWARGS
-from streamlit.web.bootstrap import _fix_matplotlib_crash
 
 TMP_DIR = tempfile.TemporaryDirectory()
-
-_fix_matplotlib_crash()
 
 
 class AppTest:
