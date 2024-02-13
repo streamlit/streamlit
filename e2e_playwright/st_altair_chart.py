@@ -87,3 +87,21 @@ st.altair_chart(barley_chart, theme=None)
 
 st.write("Grouped Bar Chart with streamlit theme:")
 st.altair_chart(barley_chart, theme="streamlit")
+
+st.write("Chart with use_container_width used")
+st.altair_chart(barley_chart, theme=None, use_container_width=True)
+
+st.write("Layered chart")
+# Taken from vega_datasets
+stocks = alt.UrlData(
+    "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/stocks.csv"
+)
+
+base = (
+    alt.Chart(stocks)
+    .encode(x="date:T", y="price:Q", color="symbol:N")
+    .transform_filter(alt.datum.symbol == "GOOG")
+)
+
+new_base_chart = base.mark_line() + base.mark_point()
+st.altair_chart(new_base_chart)
