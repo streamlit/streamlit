@@ -22,7 +22,7 @@ def test_alerts_rendering(themed_app: Page, assert_snapshot: ImageCompareFunctio
     alert_elements = themed_app.get_by_test_id("stAlert")
     expect(alert_elements).to_have_count(14)
 
-    # The first 4 alerts are super basic, no need ot screenshot test those
+    # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
     expect(alert_elements.nth(1)).to_have_text("This is a warning")
     expect(alert_elements.nth(2)).to_have_text("This is an info message")

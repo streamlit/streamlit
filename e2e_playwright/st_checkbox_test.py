@@ -57,7 +57,11 @@ def test_checkbox_values_on_click(app: Page):
 
     for checkbox_element in checkbox_elements.all():
         # Not sure if this is needed, but somehow it is slightly
-        # flaky with the last toggle without it.
+        # flaky with the last checkbox without it.
+        # It seems that it sometimes failed, and in these cases the
+        # checkbox was not scrolled into view. So, maybe thats
+        # the reason why it also fails to click it.
+        # But this is just a guess.
         checkbox_element.scroll_into_view_if_needed()
         checkbox_element.click(delay=50)
         wait_for_app_run(app)
