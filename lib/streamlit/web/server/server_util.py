@@ -14,12 +14,15 @@
 
 """Server related utility functions"""
 
-from typing import Optional
+from typing import Final, Optional
 from urllib.parse import urljoin
 
 import tornado.web
 
 from streamlit import config, net_util, url_util
+
+# The port reserved for internal development.
+DEVELOPMENT_PORT: Final = 3000
 
 
 def is_url_from_allowed_origins(url: str) -> bool:
@@ -111,7 +114,7 @@ def _get_browser_address_bar_port() -> int:
 
     """
     if config.get_option("global.developmentMode"):
-        return 3000
+        return DEVELOPMENT_PORT
     return int(config.get_option("browser.serverPort"))
 
 
