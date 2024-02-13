@@ -20,7 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "VideoProto";
 
 message SubtitleTrack {
-   // TODO[kajarenc] Chcek that SubtitleTrack should live here
     string label = 1;  // Label for the subtitle
     string url = 2;
 }

@@ -106,7 +106,8 @@ export default function Video({
     )
   }
 
-  // TODO[kajarenc] write explanatory comment here
+  // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
+  // when streamlit frontend and backend are running in different ports
   const crossOriginProp = {
     crossOrigin: IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined,
   }

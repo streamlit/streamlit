@@ -113,7 +113,6 @@ def process_subtitle_data(
             file_extension = path.suffix.lower()
 
             if file_extension not in allowed_formats:
-                # TODO [kajarenc]: maybe raise a StreamlitAPIException instead
                 raise ValueError(
                     f"Incorrect subtitle format {file_extension}. Subtitles must be in "
                     f"one of the following formats: {', '.join(allowed_formats)}"
