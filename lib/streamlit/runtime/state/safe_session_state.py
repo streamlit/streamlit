@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import threading
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, Iterator, List, Set
+from typing import Any, Callable, Iterator
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -64,7 +64,7 @@ class SafeSessionState:
             #  to a Lock.)
             self._state.on_script_will_rerun(latest_widget_states)
 
-    def on_script_finished(self, widget_ids_this_run: Set[str]) -> None:
+    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
         with self._lock:
             self._state.on_script_finished(widget_ids_this_run)
 
@@ -72,7 +72,7 @@ class SafeSessionState:
         with self._lock:
             self._state.maybe_check_serializable()
 
-    def get_widget_states(self) -> List[WidgetStateProto]:
+    def get_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         with self._lock:
             return self._state.get_widget_states()
@@ -82,7 +82,7 @@ class SafeSessionState:
             return self._state.is_new_state_value(user_key)
 
     @property
-    def filtered_state(self) -> Dict[str, Any]:
+    def filtered_state(self) -> dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
         with self._lock:
             return self._state.filtered_state

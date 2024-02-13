@@ -22,7 +22,7 @@ from streamlit import config
 
 
 @contextmanager
-def patch_config_options(config_overrides: Dict[str, Any]):
+def patch_config_options(config_overrides: dict[str, Any]):
     """A context manager that overrides config options. It can
     also be used as a function decorator.
 

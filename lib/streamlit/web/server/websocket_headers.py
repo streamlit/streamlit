@@ -14,8 +14,6 @@
 
 from __future__ import annotations
 
-from typing import Dict
-
 from streamlit import runtime
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -23,7 +21,7 @@ from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandl
 
 
 @gather_metrics("_get_websocket_headers")
-def _get_websocket_headers() -> Dict[str, str] | None:
+def _get_websocket_headers() -> dict[str, str] | None:
     """Return a copy of the HTTP request headers for the current session's
     WebSocket connection. If there's no active session, return None instead.
 

@@ -17,10 +17,9 @@ from __future__ import annotations
 import errno
 import logging
 import os
-import socket
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Awaitable, Final, List
+from typing import TYPE_CHECKING, Any, Awaitable, Final
 
 import tornado.concurrent
 import tornado.locks
@@ -77,11 +76,11 @@ TORNADO_SETTINGS = {
 
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
-MAX_PORT_SEARCH_RETRIES = 100
+MAX_PORT_SEARCH_RETRIES: Final = 100
 
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
-UNIX_SOCKET_PREFIX = "unix://"
+UNIX_SOCKET_PREFIX: Final = "unix://"
 
 MEDIA_ENDPOINT: Final = "/media"
 UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
@@ -190,7 +189,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
-        except (OSError, socket.error) as e:
+        except OSError as e:
             if e.errno == errno.EADDRINUSE:
                 if server_port_is_manually_set():
                     _LOGGER.error("Port %s is already in use", port)
@@ -277,7 +276,7 @@ class Server:
         """Create our tornado web app."""
         base = config.get_option("server.baseUrlPath")
 
-        routes: List[Any] = [
+        routes: list[Any] = [
             (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,
@@ -363,14 +362,12 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_pages": lambda: set(
-                                [
-                                    page_info["page_name"]
-                                    for page_info in source_util.get_pages(
-                                        self.main_script_path
-                                    ).values()
-                                ]
-                            ),
+                            "get_pages": lambda: {
+                                page_info["page_name"]
+                                for page_info in source_util.get_pages(
+                                    self.main_script_path
+                                ).values()
+                            },
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),

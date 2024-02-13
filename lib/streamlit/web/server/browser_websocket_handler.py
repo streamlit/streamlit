@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Awaitable, Dict, Final, List
+from typing import Any, Awaitable, Final
 
 import tornado.concurrent
 import tornado.locks
@@ -60,7 +60,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except tornado.websocket.WebSocketClosedError as e:
             raise SessionClientDisconnectedError from e
 
-    def select_subprotocol(self, subprotocols: List[str]) -> str | None:
+    def select_subprotocol(self, subprotocols: list[str]) -> str | None:
         """Return the first subprotocol in the given list.
 
         This method is used by Tornado to select a protocol when the
@@ -106,7 +106,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
                 email = user_obj["email"]
                 is_public_cloud_app = user_obj["isPublicCloudApp"]
 
-        user_info: Dict[str, str | None] = dict()
+        user_info: dict[str, str | None] = dict()
         if is_public_cloud_app:
             user_info["email"] = None
         else:
@@ -141,7 +141,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         self._runtime.disconnect_session(self._session_id)
         self._session_id = None
 
-    def get_compression_options(self) -> Dict[Any, Any] | None:
+    def get_compression_options(self) -> dict[Any, Any] | None:
         """Enable WebSocket compression.
 
         Returning an empty dict enables websocket compression. Returning

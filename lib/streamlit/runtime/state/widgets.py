@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import textwrap
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Dict, Final, Mapping
+from typing import TYPE_CHECKING, Final, Mapping
 
 from typing_extensions import TypeAlias
 
@@ -88,7 +88,7 @@ def register_widget(
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
-    ctx: "ScriptRunContext" | None,
+    ctx: ScriptRunContext | None,
     user_key: str | None = None,
     widget_func_name: str | None = None,
     on_change_handler: WidgetCallback | None = None,
@@ -165,7 +165,7 @@ def register_widget(
 
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
-    ctx: "ScriptRunContext" | None,
+    ctx: ScriptRunContext | None,
     widget_func_name: str | None,
     element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
@@ -228,7 +228,7 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
-    states_by_id: Dict[str, WidgetState] = {
+    states_by_id: dict[str, WidgetState] = {
         wstate.id: wstate for wstate in new_states.widgets
     }
 

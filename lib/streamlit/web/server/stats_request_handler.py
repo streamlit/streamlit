@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 import tornado.web
 
@@ -59,7 +59,7 @@ class StatsRequestHandler(tornado.web.RequestHandler):
             self.set_status(200)
 
     @staticmethod
-    def _stats_to_text(stats: List[CacheStat]) -> str:
+    def _stats_to_text(stats: list[CacheStat]) -> str:
         metric_type = "# TYPE cache_memory_bytes gauge"
         metric_unit = "# UNIT cache_memory_bytes bytes"
         metric_help = "# HELP Total memory consumed by a cache."
@@ -73,7 +73,7 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         return "\n".join(result)
 
     @staticmethod
-    def _stats_to_proto(stats: List[CacheStat]) -> MetricSetProto:
+    def _stats_to_proto(stats: list[CacheStat]) -> MetricSetProto:
         # Lazy load the import of this proto message for better performance:
         from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
         from streamlit.proto.openmetrics_data_model_pb2 import (

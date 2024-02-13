@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import tornado.httputil
 import tornado.web
@@ -83,8 +83,8 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
     def put(self, **kwargs):
         """Receive an uploaded file and add it to our UploadedFileManager."""
 
-        args: Dict[str, List[bytes]] = {}
-        files: Dict[str, List[Any]] = {}
+        args: dict[str, list[bytes]] = {}
+        files: dict[str, list[Any]] = {}
 
         session_id = self.path_kwargs["session_id"]
         file_id = self.path_kwargs["file_id"]
@@ -103,7 +103,7 @@ class UploadFileRequestHandler(tornado.web.RequestHandler):
             self.send_error(400, reason=str(e))
             return
 
-        uploaded_files: List[UploadedFileRec] = []
+        uploaded_files: list[UploadedFileRec] = []
 
         for _, flist in files.items():
             for file in flist:

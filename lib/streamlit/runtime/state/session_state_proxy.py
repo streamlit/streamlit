@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Final, Iterator, MutableMapping
+from typing import Any, Final, Iterator, MutableMapping
 
 from streamlit import logger as _logger
 from streamlit import runtime
@@ -130,7 +130,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a dict containing all session_state and keyed widget values."""
         return get_session_state().filtered_state
 
