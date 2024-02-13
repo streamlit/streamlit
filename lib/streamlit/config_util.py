@@ -113,6 +113,7 @@ def show_config(
                 # # Add a line break after a paragraph only if it's not the last paragraph
                 if i != last_paragraph_idx:
                     out.append("")
+
             import toml
 
             toml_default = toml.dumps({"default": option.default_val})
