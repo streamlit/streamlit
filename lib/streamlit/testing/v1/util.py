@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 from streamlit import config
