@@ -46,8 +46,6 @@ _Activation = namedtuple(
 
 
 def email_prompt() -> str:
-    import click
-
     # Emoji can cause encoding errors on non-UTF-8 terminals
     # (See https://github.com/streamlit/streamlit/issues/2284.)
     # WT_SESSION is a Windows Terminal specific environment variable. If it exists,
@@ -370,8 +368,6 @@ def check_credentials() -> None:
 
     if not _check_credential_file_exists() and config.get_option("server.headless"):
         if not config.is_manually_set("browser.gatherUsageStats"):
-            import click
-
             # If not manually defined, show short message about usage stats gathering.
             cli_util.print_to_cli(_TELEMETRY_HEADLESS_TEXT)
         return
