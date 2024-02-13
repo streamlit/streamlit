@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
-
 from parameterized import parameterized
 
 from streamlit.elements.lib.subtitle_utils import (
@@ -21,6 +19,7 @@ from streamlit.elements.lib.subtitle_utils import (
     process_subtitle_data,
     srt_to_vtt,
 )
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 SRT_DATA_EN = """
 1
@@ -80,7 +79,7 @@ VTT_DATA_FR = (
 SRT_DATA_INVALID = """HELLO WORLD!"""
 
 
-class SubtitleUtilsTest(unittest.TestCase):
+class SubtitleUtilsTest(DeltaGeneratorTestCase):
     def test_is_srt(self):
         """Test is_srt function."""
 
@@ -102,3 +101,12 @@ class SubtitleUtilsTest(unittest.TestCase):
             expected,
             f"Expected {srt_string} to be transformed into {str(expected)}.",
         )
+
+    def test_process_subtitle_data(self):
+        """Test process_subtitle_data function."""
+        url = process_subtitle_data("[0, 0]", SRT_DATA_EN, "English")
+        file_id = url.split("/")[-1].split(".")[0]
+        media_file = self.media_file_storage.get_file(file_id)
+        self.assertIsNotNone(media_file)
+        self.assertEqual(media_file.content, srt_to_vtt(SRT_DATA_EN.strip()))
+        self.assertEqual(media_file.mimetype, "text/vtt")

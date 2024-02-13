@@ -96,9 +96,7 @@ class VideoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.start_time, 10)
         self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(
-            _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
-        )
+        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
 
     def test_st_video_subtitles(self):
         """Test st.video with subtitles."""
@@ -108,13 +106,11 @@ class VideoTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(
-            _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
-        )
+        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
 
         expected_subtitle_url = _calculate_file_id(
             fake_subtitle_data,
             "text/vtt",
             filename=f'{hashlib.md5(b"default").hexdigest()}.vtt',
         )
-        self.assertTrue(expected_subtitle_url in el.video.subtitles[0].url)
+        self.assertIn(expected_subtitle_url, el.video.subtitles[0].url)
