@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import itertools
 from abc import abstractmethod
 from typing import TYPE_CHECKING, NamedTuple, Protocol, runtime_checkable
 
@@ -61,8 +62,6 @@ class CacheStat(NamedTuple):
 
 def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
     """Group a list of CacheStats by category_name and cache_name and sum byte_length"""
-    # Lazy-load for performance reasons.
-    import itertools
 
     def key_function(individual_stat):
         return individual_stat.category_name, individual_stat.cache_name
