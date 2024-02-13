@@ -18,16 +18,14 @@ import sys
 import streamlit as st
 
 lazy_loaded_modules = [
+    "socket",
+    "ssl",
+    "shutil",
+    "struct",
+    "subprocess",
     "altair",
-    "base64",
-    "binascii",
     "bokeh",
-    "configparser",
-    "decimal",
-    "dis",
-    "fnmatch",
     "graphviz",
-    "itertools",
     "matplotlib",
     "numpy",
     "packaging",
@@ -39,11 +37,6 @@ lazy_loaded_modules = [
     "pyarrow",
     "pydeck",
     "rich",
-    "socket",
-    "ssl",
-    "shutil",
-    "struct",
-    "subprocess",
     "tenacity",
     # toml is automatically loaded if there is a secret.toml, config.toml or
     # a local credentials.toml file.
