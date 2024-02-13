@@ -137,6 +137,8 @@ class HealthHandler(_SpecialRequestHandler):
     async def get(self):
         await self.handle_request()
 
+    # Some monitoring services only support the HTTP HEAD method for requests to
+    # healthcheck endpoints, so we support HEAD as well to play nicely with them.
     async def head(self):
         await self.handle_request()
 
