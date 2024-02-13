@@ -23,7 +23,10 @@ lazy_loaded_modules = [
     "graphviz",
     "matplotlib",
     "numpy",
-    "packaging",
+    # There is currently a 10% probability that we check for new
+    # versions on streamlit start-up. This is using the packaging module.
+    # So, we cannot check this without it being flaky.
+    # "packaging",
     "pandas",
     # Pillow is lazy-loaded, but it gets imported by plotly,
     # which we have to import in case it is installed to correctly
