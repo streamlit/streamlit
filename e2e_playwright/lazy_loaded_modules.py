@@ -18,11 +18,6 @@ import sys
 import streamlit as st
 
 lazy_loaded_modules = [
-    "socket",
-    "ssl",
-    "shutil",
-    "struct",
-    "subprocess",
     "altair",
     "bokeh",
     "graphviz",
