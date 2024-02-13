@@ -99,14 +99,14 @@ class WriteMixin:
         >>> import streamlit as st
         >>>
         >>> _LOREM_IPSUM = \"\"\"
-        >>> Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+        >>> Lorem ipsum dolor sit amet, **consectetur adipiscing** elit, sed do eiusmod tempor
         >>> incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
         >>> nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
         >>> \"\"\"
         >>>
         >>>
         >>> def stream_data():
-        >>>     for word in _LOREM_IPSUM.split():
+        >>>     for word in _LOREM_IPSUM.split(" "):
         >>>         yield word + " "
         >>>         time.sleep(0.02)
         >>>
@@ -115,7 +115,7 @@ class WriteMixin:
         >>>         columns=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
         >>>     )
         >>>
-        >>>     for word in _LOREM_IPSUM.split():
+        >>>     for word in _LOREM_IPSUM.split(" "):
         >>>         yield word + " "
         >>>         time.sleep(0.02)
         >>>
@@ -133,7 +133,7 @@ class WriteMixin:
         # not be passed in here.
         if isinstance(stream, str) or type_util.is_dataframe_like(stream):
             raise StreamlitAPIException(
-                "`st.stream_write` expects a generator or stream-like object as input "
+                "`st.write_stream` expects a generator or stream-like object as input "
                 f"not {type(stream)}. Please use `st.write` instead for "
                 "this data type."
             )
@@ -149,7 +149,7 @@ class WriteMixin:
 
             if streamed_response and stream_container:
                 # Replace the stream_container element the full response
-                stream_container.write(streamed_response)
+                stream_container.markdown(streamed_response)
                 written_content.append(streamed_response)
                 stream_container = None
                 streamed_response = ""
@@ -168,12 +168,15 @@ class WriteMixin:
         # Iterate through the generator and write each chunk to the app
         # with a type writer effect.
         for chunk in stream:  # type: ignore
-            if type_util.is_type(
-                chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
-            ):
+            if type_util.is_openai_chunk(chunk):
                 # Try to convert OpenAI chat completion chunk to a string:
                 try:
-                    chunk = chunk.choices[0].delta.content or ""
+                    if len(chunk.choices) == 0:
+                        # The choices list can be empty. E.g. when using the
+                        # AzureOpenAI client, the first chunk will always be empty.
+                        chunk = ""
+                    else:
+                        chunk = chunk.choices[0].delta.content or ""
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the OpenAI ChatCompletionChunk. "
@@ -203,7 +206,7 @@ class WriteMixin:
                     first_text = True
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
-                stream_container.write(
+                stream_container.markdown(
                     streamed_response + ("" if first_text else _TEXT_CURSOR),
                 )
             elif callable(chunk):
