@@ -66,14 +66,6 @@ def get_hostname(url: str) -> Optional[str]:
     return parsed.hostname
 
 
-def print_url(title, url):
-    """Pretty-print a URL on the terminal."""
-    import click
-
-    click.secho(f"  {title}: ", nl=False, fg="blue")
-    click.secho(url, bold=True)
-
-
 def is_url(
     url: str,
     allowed_schemas: Tuple[UrlSchema, ...] = ("http", "https"),
