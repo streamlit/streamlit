@@ -204,8 +204,6 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     """Prints a warning if the static folder is misconfigured."""
 
     if config.get_option("server.enableStaticServing"):
-        import click
-
         static_folder_path = file_util.get_app_static_dir(main_script_path)
         if not os.path.isdir(static_folder_path):
             cli_util.print_to_cli(
@@ -300,8 +298,6 @@ def _maybe_print_old_git_warning(main_script_path: str) -> None:
         and repo.git_version is not None
         and repo.git_version < MIN_GIT_VERSION
     ):
-        import click
-
         git_version_string = ".".join(str(val) for val in repo.git_version)
         min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
         cli_util.print_to_cli("")
