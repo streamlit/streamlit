@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import os
 import re
@@ -101,6 +102,7 @@ def srt_to_vtt(srt_data: str | bytes) -> bytes:
 def process_subtitle_data(
     coordinates: str,
     data: str | bytes | io.BytesIO,
+    label: str,
 ) -> str:
     allowed_formats = {".srt", ".vtt"}
 
@@ -147,12 +149,13 @@ def process_subtitle_data(
         raise RuntimeError(f"Invalid binary data format for subtitle: {type(data)}.")
 
     if runtime.exists():
+        filename = hashlib.md5(label.encode()).hexdigest()
         # Save the processed data and return the file URL
         file_url = runtime.get_instance().media_file_mgr.add(
             path_or_data=subtitle_data,
             mimetype="text/vtt",
             coordinates=coordinates,
-            file_name=f"{coordinates}.vtt",
+            file_name=f"{filename}.vtt",
         )
         caching.save_media_data(subtitle_data, "text/vtt", coordinates)
 

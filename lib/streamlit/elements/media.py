@@ -354,7 +354,7 @@ def marshall_video(
             sub.label = label
             # TODO [kajarenc]: check line below correctness for coordinates with team
             subtitle_coordinates = f"{coordinates}/subtitle/{label}"
-            sub.url = process_subtitle_data(subtitle_coordinates, subtitle_data)
+            sub.url = process_subtitle_data(subtitle_coordinates, subtitle_data, label)
 
 
 def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:

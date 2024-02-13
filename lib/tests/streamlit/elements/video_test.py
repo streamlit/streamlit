@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """st.video unit tests"""
-
+import hashlib
 from io import BytesIO
 
 import numpy as np
@@ -99,3 +99,22 @@ class VideoTest(DeltaGeneratorTestCase):
         self.assertTrue(
             _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
         )
+
+    def test_st_video_subtitles(self):
+        """Test st.video with subtitles."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_subtitle_data = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+        st.video(fake_video_data, subtitles=fake_subtitle_data)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
+        self.assertTrue(
+            _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
+        )
+
+        expected_subtitle_url = _calculate_file_id(
+            fake_subtitle_data,
+            "text/vtt",
+            filename=f'{hashlib.md5(b"default").hexdigest()}.vtt',
+        )
+        self.assertTrue(expected_subtitle_url in el.video.subtitles[0].url)

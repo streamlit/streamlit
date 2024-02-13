@@ -16,7 +16,11 @@ import unittest
 
 from parameterized import parameterized
 
-from streamlit.elements.lib.subtitle_utils import _is_srt, srt_to_vtt
+from streamlit.elements.lib.subtitle_utils import (
+    _is_srt,
+    process_subtitle_data,
+    srt_to_vtt,
+)
 
 SRT_DATA_EN = """
 1
