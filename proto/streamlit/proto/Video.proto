@@ -20,7 +20,7 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "VideoProto";
 
 message SubtitleTrack {
-    string label = 1;  // Label for the subtitle
+    string label = 1;  // Label for the subtitle e.g. "English" or "Spanish".
     string url = 2;
 }
 
