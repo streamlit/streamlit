@@ -42,8 +42,6 @@ Or try running our "Hello World":
 For more detailed info, see https://docs.streamlit.io.
 """
 
-from __future__ import annotations
-
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
 
 
