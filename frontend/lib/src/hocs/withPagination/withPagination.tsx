@@ -29,8 +29,8 @@ const calculateNumPages = (items: any[], pageSize: number): number =>
   Math.ceil(items.length / pageSize)
 
 const withPagination = (
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> => {
+  WrappedComponent: ComponentType<React.PropsWithChildren<any>>
+): ComponentType<React.PropsWithChildren<any>> => {
   const WithPagination = ({
     pageSize,
     items,

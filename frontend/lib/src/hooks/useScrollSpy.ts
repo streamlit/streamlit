@@ -109,7 +109,7 @@ export default function useScrollSpy(
   )
 
   const handleEvent = useCallback(
-    event => {
+    (event: any) => {
       event.timeStampLow = Date.now()
 
       debouncer(event)

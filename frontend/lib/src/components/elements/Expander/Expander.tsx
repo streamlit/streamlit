@@ -105,7 +105,7 @@ export interface ExpanderProps {
   empty: boolean
 }
 
-const Expander: React.FC<ExpanderProps> = ({
+const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
   empty,

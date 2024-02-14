@@ -26,7 +26,6 @@ const getProps = (
   return {
     onClick: jest.fn(),
     disabled: false,
-    children: jest.fn(),
     progress: 0,
     ...props,
   }

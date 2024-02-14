@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 
@@ -119,7 +119,7 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    screen.getByRole("combobox").click()
+    fireEvent.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length + 1)
   })
 
@@ -131,7 +131,7 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    screen.getByRole("combobox").click()
+    fireEvent.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
   })
 

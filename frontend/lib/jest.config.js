@@ -25,7 +25,6 @@ module.exports = {
   ],
   // needed for vegalite tests as vega uses canvas
   setupFiles: ["jest-canvas-mock", "<rootDir>/src/setupTestEnv.js"],
-  setupFilesAfterEnv: ["<rootDir>/src/setupTests.js"],
   testMatch: ["<rootDir>/src/**/*.{test,}.{js,jsx,ts,tsx}"],
   // for things such as global window and more. https://github.com/jsdom/jsdom
   testEnvironment: "jsdom",
@@ -72,6 +71,4 @@ module.exports = {
   ],
   resetMocks: false,
   coverageReporters: ["text", "html"],
-  // enzyme snapshot testing
-  snapshotSerializers: ["enzyme-to-json/serializer"],
 }

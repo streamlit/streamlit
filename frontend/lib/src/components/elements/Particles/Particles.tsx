@@ -27,10 +27,10 @@ export interface Props {
   scriptRunId: string
   numParticles: number
   numParticleTypes: number
-  ParticleComponent: FC<ParticleProps>
+  ParticleComponent: FC<React.PropsWithChildren<ParticleProps>>
 }
 
-const Particles: FC<Props> = ({
+const Particles: FC<React.PropsWithChildren<Props>> = ({
   className,
   scriptRunId,
   numParticles,

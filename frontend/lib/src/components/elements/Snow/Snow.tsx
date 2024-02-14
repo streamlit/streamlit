@@ -39,11 +39,13 @@ export interface Props {
   scriptRunId: string
 }
 
-const Flake: FC<ParticleProps> = ({ particleType }) => (
-  <StyledFlake src={FLAKE_IMAGES[particleType]} />
-)
+const Flake: FC<React.PropsWithChildren<ParticleProps>> = ({
+  particleType,
+}) => <StyledFlake src={FLAKE_IMAGES[particleType]} />
 
-const Snow: FC<Props> = function Snow({ scriptRunId }) {
+const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
+  scriptRunId,
+}) {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (

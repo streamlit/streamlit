@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { ReactNode } from "react"
 
-export interface Props {
+export interface MaybeProps {
   enable: boolean
+  children?: ReactNode
 }
 
 export interface State {}
 
-class Maybe extends React.Component<Props, State> {
+class Maybe extends React.Component<MaybeProps, State> {
   // eslint-disable-next-line class-methods-use-this
-  public shouldComponentUpdate(nextProps: Readonly<Props>): boolean {
+  public shouldComponentUpdate(nextProps: Readonly<MaybeProps>): boolean {
     // We have our component update if either props.enable or nextProps.enable
     // is true to ensure that we rerender in the case that an Element is
     // removed by replacing it with an empty one (so goes from enabled->disabled).

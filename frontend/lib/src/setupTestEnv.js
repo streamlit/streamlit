@@ -17,3 +17,15 @@
 if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = jest.fn()
 }
+
+// TODO: Hides console error for running FE tests
+// react-18-upgrade
+const originalConsoleError = console.error
+console.error = (...args) => {
+  if (/ReactDOM.render is no longer supported in React 18/.test(args[0])) {
+    // If the warning message matches, don't call the original console.warn
+    return
+  }
+  // For all other warnings, call the original console.warn
+  originalConsoleError(...args)
+}

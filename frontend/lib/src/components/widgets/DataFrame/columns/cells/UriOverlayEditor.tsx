@@ -28,7 +28,9 @@ interface Props {
 
 // this is essentially just copying the UriOverlayEditor from glide's implementation: https://github.com/glideapps/glide-data-grid/blob/0ea52f371a5e2aaa8595aceefa40722d35410b1a/packages/core/src/data-grid-overlay-editor/private/uri-overlay-editor-style.tsx
 // we use it in LinkCell.tsx which is our custom version of the UriCell.
-const UriOverlayEditor: React.FunctionComponent<Props> = p => {
+const UriOverlayEditor: React.FunctionComponent<
+  React.PropsWithChildren<Props>
+> = p => {
   const { uri, onChange, readonly, validatedSelection, preview } = p
 
   if (!readonly) {
