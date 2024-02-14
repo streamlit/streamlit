@@ -108,9 +108,6 @@ export default function Video({
 
   // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
   // when streamlit frontend and backend are running in different ports
-  const crossOriginProp = {
-    crossOrigin: IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined,
-  }
   return (
     <video
       data-testid="stVideo"
@@ -119,7 +116,9 @@ export default function Video({
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
-      {...crossOriginProp}
+      crossOrigin={
+        IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined
+      }
     >
       {subtitles &&
         subtitles.map((subtitle: Subtitle, idx: number) => (
