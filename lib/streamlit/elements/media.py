@@ -121,6 +121,7 @@ class MediaMixin:
         data: MediaData,
         format: str = "video/mp4",
         start_time: int = 0,
+        *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
     ) -> "DeltaGenerator":
         """Display a video player.
