@@ -118,15 +118,28 @@ class VideoTest(DeltaGeneratorTestCase):
     def test_st_video_empty_subtitles(self):
         """Test st.video with subtitles, empty subtitle label, content allowed."""
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
-        st.video(fake_video_data, subtitles={"": ""})
+        fake_subtitle_data = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+        st.video(
+            fake_video_data,
+            subtitles={
+                "": "",
+                "English": fake_subtitle_data,
+            },
+        )
 
         el = self.get_delta_from_queue().new_element
         self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
         self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
 
-        expected_subtitle_url = _calculate_file_id(
+        expected_empty_subtitle_url = _calculate_file_id(
             b"",
             "text/vtt",
             filename=f'{hashlib.md5(b"").hexdigest()}.vtt',
         )
-        self.assertIn(expected_subtitle_url, el.video.subtitles[0].url)
+        expected_english_subtitle_url = _calculate_file_id(
+            fake_subtitle_data,
+            "text/vtt",
+            filename=f'{hashlib.md5(b"English").hexdigest()}.vtt',
+        )
+        self.assertIn(expected_empty_subtitle_url, el.video.subtitles[0].url)
+        self.assertIn(expected_english_subtitle_url, el.video.subtitles[1].url)
