@@ -351,7 +351,7 @@ def marshall_video(
 
         for label, subtitle_data in subtitle_items:
             sub = proto.subtitles.add()
-            sub.label = label
+            sub.label = label if label else ""
             # Coordinates used in media_file_manager to identify the place of element,
             # in case of subtitle, we use same video coordinates with suffix.
             # It is not aligned with common coordinates format, but in
