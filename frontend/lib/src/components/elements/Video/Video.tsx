@@ -107,7 +107,7 @@ export default function Video({
   }
 
   // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
-  // when streamlit frontend and backend are running in different ports
+  // when streamlit frontend and backend are running on different ports
   return (
     <video
       data-testid="stVideo"
