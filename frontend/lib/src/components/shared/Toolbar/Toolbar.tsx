@@ -97,7 +97,7 @@ export interface ToolbarProps {
   disableFullscreenMode?: boolean
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({
+const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   onExpand,
   onCollapse,
   isFullScreen,
