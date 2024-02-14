@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -27,10 +29,10 @@ class AlertMixin:
     @gather_metrics("error")
     def error(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
-        icon: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         """Display error message.
 
         Parameters
@@ -59,10 +61,10 @@ class AlertMixin:
     @gather_metrics("warning")
     def warning(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
-        icon: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         """Display warning message.
 
         Parameters
@@ -91,10 +93,10 @@ class AlertMixin:
     @gather_metrics("info")
     def info(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
-        icon: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         """Display an informational message.
 
         Parameters
@@ -124,10 +126,10 @@ class AlertMixin:
     @gather_metrics("success")
     def success(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only args:
-        icon: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         """Display a success message.
 
         Parameters
@@ -154,6 +156,6 @@ class AlertMixin:
         return self.dg._enqueue("alert", alert_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

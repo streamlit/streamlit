@@ -130,9 +130,9 @@ class EditingState(TypedDict, total=False):
         A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
-    edited_rows: Dict[int, Dict[str, str | int | float | bool | None]]
-    added_rows: List[Dict[str, str | int | float | bool | None]]
-    deleted_rows: List[int]
+    edited_rows: dict[int, dict[str, str | int | float | bool | None]]
+    added_rows: list[dict[str, str | int | float | bool | None]]
+    deleted_rows: list[int]
 
 
 @dataclass
@@ -281,7 +281,7 @@ def _apply_cell_edits(
 
 def _apply_row_additions(
     df: pd.DataFrame,
-    added_rows: List[Dict[str, Any]],
+    added_rows: list[dict[str, Any]],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply row additions to the provided dataframe (inplace).
@@ -315,7 +315,7 @@ def _apply_row_additions(
 
     for added_row in added_rows:
         index_value = None
-        new_row: List[Any] = [None for _ in range(df.shape[1])]
+        new_row: list[Any] = [None for _ in range(df.shape[1])]
         for col_name in added_row.keys():
             value = added_row[col_name]
             if col_name == INDEX_IDENTIFIER:
@@ -339,7 +339,7 @@ def _apply_row_additions(
             df.loc[index_value, :] = new_row
 
 
-def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
+def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
     """Apply row deletions to the provided dataframe (inplace).
 
     Parameters
@@ -930,7 +930,7 @@ class DataEditorMixin:
         return type_util.convert_df_to_data_format(data_df, data_format)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

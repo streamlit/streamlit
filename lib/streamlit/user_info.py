@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterator, Mapping, NoReturn, Optional
+from __future__ import annotations
+
+from typing import Iterator, Mapping, NoReturn, Union
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.scriptrunner import get_script_run_ctx as _get_script_run_ctx
@@ -29,7 +31,7 @@ def _get_user_info() -> UserInfo:
 
 # Class attributes are listed as "Parameters" in the docstring as a workaround
 # for the docstring parser for docs.strreamlit.io
-class UserInfoProxy(Mapping[str, Optional[str]]):
+class UserInfoProxy(Mapping[str, Union[str, None]]):
     """
     A read-only, dict-like object for accessing information about current user.
 
@@ -58,19 +60,19 @@ class UserInfoProxy(Mapping[str, Optional[str]]):
 
     """
 
-    def __getitem__(self, key: str) -> Optional[str]:
+    def __getitem__(self, key: str) -> str | None:
         return _get_user_info()[key]
 
-    def __getattr__(self, key: str) -> Optional[str]:
+    def __getattr__(self, key: str) -> str | None:
         try:
             return _get_user_info()[key]
         except KeyError:
             raise AttributeError
 
-    def __setattr__(self, name: str, value: Optional[str]) -> NoReturn:
+    def __setattr__(self, name: str, value: str | None) -> NoReturn:
         raise StreamlitAPIException("st.experimental_user cannot be modified")
 
-    def __setitem__(self, name: str, value: Optional[str]) -> NoReturn:
+    def __setitem__(self, name: str, value: str | None) -> NoReturn:
         raise StreamlitAPIException("st.experimental_user cannot be modified")
 
     def __iter__(self) -> Iterator[str]:

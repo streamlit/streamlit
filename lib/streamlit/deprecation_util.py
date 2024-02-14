@@ -11,16 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, List, TypeVar, cast
+from typing import Any, Callable, Final, TypeVar, cast
 
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
@@ -187,7 +188,7 @@ def _create_deprecated_obj_wrapper(obj: TObj, show_warning: Callable[[], Any]) -
             return getattr(obj, attr)
 
         @staticmethod
-        def _get_magic_functions(cls) -> List[str]:
+        def _get_magic_functions(cls) -> list[str]:
             # ignore the handful of magic functions we cannot override without
             # breaking the Wrapper.
             ignore = ("__class__", "__dict__", "__getattribute__", "__getattr__")

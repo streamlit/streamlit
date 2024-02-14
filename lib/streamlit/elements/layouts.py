@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Literal, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
+
+from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -24,14 +26,14 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
-SpecType = Union[int, Sequence[Union[int, float]]]
+SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
     @gather_metrics("container")
     def container(
         self, *, height: int | None = None, border: bool | None = None
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
@@ -142,8 +144,8 @@ class LayoutsMixin:
     # TODO: Enforce that columns are not nested or in Sidebar
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: Optional[str] = "small"
-    ) -> List["DeltaGenerator"]:
+        self, spec: SpecType, *, gap: str | None = "small"
+    ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -268,7 +270,7 @@ class LayoutsMixin:
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
     @gather_metrics("tabs")
-    def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
+    def tabs(self, tabs: Sequence[str]) -> Sequence[DeltaGenerator]:
         r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
@@ -380,7 +382,7 @@ class LayoutsMixin:
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
-    def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
+    def expander(self, label: str, expanded: bool = False) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
@@ -481,8 +483,8 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-    ) -> "StatusContainer":
-        """Insert a status container to display output from long-running tasks.
+    ) -> StatusContainer:
+        r"""Insert a status container to display output from long-running tasks.
 
         Inserts a container into your app that is typically used to show the status and
         details of a process or task. The container can hold multiple elements and can
@@ -597,6 +599,6 @@ class LayoutsMixin:
         )
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

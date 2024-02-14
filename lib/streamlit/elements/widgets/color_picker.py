@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import Optional, cast
+from typing import cast
 
 import streamlit
 from streamlit.elements.form import current_form_id
@@ -45,7 +47,7 @@ class ColorPickerSerde:
     def serialize(self, v: str) -> str:
         return str(v)
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> str:
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> str:
         return str(ui_value if ui_value is not None else self.value)
 
 
@@ -54,12 +56,12 @@ class ColorPickerMixin:
     def color_picker(
         self,
         label: str,
-        value: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
@@ -155,16 +157,16 @@ class ColorPickerMixin:
     def _color_picker(
         self,
         label: str,
-        value: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -243,6 +245,6 @@ class ColorPickerMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> streamlit.delta_generator.DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("streamlit.delta_generator.DeltaGenerator", self)

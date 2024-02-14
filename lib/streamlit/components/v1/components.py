@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import inspect
 import json
 import os
 import threading
-from typing import Any, Dict, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Final
 
 import streamlit
 from streamlit import type_util, util
@@ -32,7 +34,10 @@ from streamlit.runtime.state import NoValue, register_widget
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import to_bytes
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -47,8 +52,8 @@ class CustomComponent:
     def __init__(
         self,
         name: str,
-        path: Optional[str] = None,
-        url: Optional[str] = None,
+        path: str | None = None,
+        url: str | None = None,
     ):
         if (path is None and url is None) or (path is not None and url is not None):
             raise StreamlitAPIException(
@@ -63,7 +68,7 @@ class CustomComponent:
         return util.repr_(self)
 
     @property
-    def abspath(self) -> Optional[str]:
+    def abspath(self) -> str | None:
         """The absolute path that the component is served from."""
         if self.path is None:
             return None
@@ -73,7 +78,7 @@ class CustomComponent:
         self,
         *args,
         default: Any = None,
-        key: Optional[str] = None,
+        key: str | None = None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
@@ -84,7 +89,7 @@ class CustomComponent:
         self,
         *args,
         default: Any = None,
-        key: Optional[str] = None,
+        key: str | None = None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
@@ -155,7 +160,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 "Could not convert component args to JSON", ex
             )
 
-        def marshall_component(dg, element: Element) -> Union[Any, Type[NoValue]]:
+        def marshall_component(
+            dg: DeltaGenerator, element: Element
+        ) -> Any | type[NoValue]:
             element.component_instance.component_name = self.name
             element.component_instance.form_id = current_form_id(dg)
             if self.url is not None:
@@ -264,8 +271,8 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
 def declare_component(
     name: str,
-    path: Optional[str] = None,
-    url: Optional[str] = None,
+    path: str | None = None,
+    url: str | None = None,
 ) -> CustomComponent:
     """Create and register a custom component.
 
@@ -324,10 +331,10 @@ def declare_component(
 
 class ComponentRegistry:
     _instance_lock: threading.Lock = threading.Lock()
-    _instance: Optional["ComponentRegistry"] = None
+    _instance: ComponentRegistry | None = None
 
     @classmethod
-    def instance(cls) -> "ComponentRegistry":
+    def instance(cls) -> ComponentRegistry:
         """Returns the singleton ComponentRegistry"""
         # We use a double-checked locking optimization to avoid the overhead
         # of acquiring the lock in the common case:
@@ -339,7 +346,7 @@ class ComponentRegistry:
         return cls._instance
 
     def __init__(self):
-        self._components: Dict[str, CustomComponent] = {}
+        self._components: dict[str, CustomComponent] = {}
         self._lock = threading.Lock()
 
     def __repr__(self) -> str:
@@ -364,15 +371,15 @@ class ComponentRegistry:
             self._components[component.name] = component
 
         if existing is not None and component != existing:
-            LOGGER.warning(
+            _LOGGER.warning(
                 "%s overriding previously-registered %s",
                 component,
                 existing,
             )
 
-        LOGGER.debug("Registered component %s", component)
+        _LOGGER.debug("Registered component %s", component)
 
-    def get_component_path(self, name: str) -> Optional[str]:
+    def get_component_path(self, name: str) -> str | None:
         """Return the filesystem path for the component with the given name.
 
         If no such component is registered, or if the component exists but is

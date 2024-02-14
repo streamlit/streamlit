@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 import re
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from streamlit import util
 
@@ -32,7 +34,7 @@ class GitRepo:
     def __init__(self, path):
         # If we have a valid repo, git_version will be a tuple of 3+ ints:
         # (major, minor, patch, possible_additional_patch_number)
-        self.git_version: Optional[Tuple[int, ...]] = None
+        self.git_version: tuple[int, ...] | None = None
 
         try:
             import git
@@ -124,7 +126,7 @@ class GitRepo:
 
         return self.repo.remote(remote_name), branch_name
 
-    def is_github_repo(self):
+    def is_github_repo(self) -> bool:
         if not self.is_valid():
             return False
 

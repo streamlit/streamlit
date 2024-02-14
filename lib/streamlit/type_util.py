@@ -25,17 +25,13 @@ from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
     Iterable,
-    List,
     Literal,
     NamedTuple,
     Protocol,
     Sequence,
-    Set,
     Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -172,11 +168,11 @@ def is_type(
 
 
 @overload
-def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     ...
 
 
-def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     """Check type without importing expensive modules.
 
     Parameters
@@ -406,7 +402,7 @@ def is_list_of_scalars(data: Iterable[Any]) -> bool:
     return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
 
 
-def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
+def is_plotly_chart(obj: object) -> TypeGuard[Figure | list[Any] | dict[str, Any]]:
     """True if input looks like a Plotly chart."""
     return (
         is_type(obj, "plotly.graph_objs._figure.Figure")
@@ -417,7 +413,7 @@ def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str,
 
 def is_graphviz_chart(
     obj: object,
-) -> TypeGuard[Union[graphviz.Graph, graphviz.Digraph]]:
+) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
     """True if input looks like a GraphViz chart."""
     return (
         # GraphViz < 0.18
@@ -478,7 +474,7 @@ def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     return all(type(n).__name__ == "str" for n in f)
 
 
-def is_pandas_styler(obj: object) -> TypeGuard["Styler"]:
+def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
@@ -523,7 +519,7 @@ def convert_anything_to_df(
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
     allow_styler: bool = False,
-) -> Union[DataFrame, "Styler"]:
+) -> DataFrame | Styler:
     ...
 
 
@@ -532,7 +528,7 @@ def convert_anything_to_df(
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
     allow_styler: bool = False,
-) -> Union[DataFrame, "Styler"]:
+) -> DataFrame | Styler:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
@@ -634,7 +630,7 @@ def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[OptionSequence[V_co], Iterable[V_co]]) -> Iterable[Any]:
+def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -850,7 +846,7 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
@@ -896,7 +892,7 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
 
 
 def fix_arrow_incompatible_column_types(
-    df: DataFrame, selected_columns: List[str] | None = None
+    df: DataFrame, selected_columns: list[str] | None = None
 ) -> DataFrame:
     """Fix column types that are not supported by Arrow table.
 
@@ -1075,16 +1071,16 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
 
 def convert_df_to_data_format(
     df: DataFrame, data_format: DataFormat
-) -> Union[
-    DataFrame,
-    Series[Any],
-    pa.Table,
-    np.ndarray[Any, np.dtype[Any]],
-    Tuple[Any],
-    List[Any],
-    Set[Any],
-    Dict[str, Any],
-]:
+) -> (
+    DataFrame
+    | Series[Any]
+    | pa.Table
+    | np.ndarray[Any, np.dtype[Any]]
+    | tuple[Any]
+    | list[Any]
+    | set[Any]
+    | dict[str, Any]
+):
     """Convert a dataframe to the specified data format.
 
     Parameters
@@ -1279,7 +1275,7 @@ E2 = TypeVar("E2", bound=Enum)
 ALLOWED_ENUM_COERCION_CONFIG_SETTINGS = ("off", "nameOnly", "nameAndValue")
 
 
-def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
+def coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
     """Attempt to coerce an Enum value to another EnumMeta.
 
     An Enum value of EnumMeta E1 is considered coercable to EnumType E2

@@ -18,11 +18,12 @@ These are functions that only make sense within the watcher. In particular,
 functions that use streamlit.config can go here to avoid a dependency cycle.
 """
 
+from __future__ import annotations
+
 import hashlib
 import os
 import time
 from pathlib import Path
-from typing import Optional
 
 from streamlit.util import HASHLIB_KWARGS
 
@@ -36,7 +37,7 @@ _RETRY_WAIT_SECS = 0.1
 def calc_md5_with_blocking_retries(
     path: str,
     *,  # keyword-only arguments:
-    glob_pattern: Optional[str] = None,
+    glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> str:
     """Calculate the MD5 checksum of a given path.

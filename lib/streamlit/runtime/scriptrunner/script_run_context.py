@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import collections
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, List, Optional, Set, Tuple
+from typing import Callable, Counter, Dict, Final, Union
 from urllib import parse
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
@@ -30,16 +32,16 @@ from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-UserInfo: TypeAlias = Dict[str, Optional[str]]
+UserInfo: TypeAlias = Dict[str, Union[str, None]]
 
 
 # The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
 # a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
 # so that different threads or async tasks can have their own stacks.
 dg_stack: contextvars.ContextVar[
-    Tuple["streamlit.delta_generator.DeltaGenerator", ...]
+    tuple["streamlit.delta_generator.DeltaGenerator", ...]
 ] = contextvars.ContextVar("dg_stack", default=tuple())
 
 
@@ -69,15 +71,15 @@ class ScriptRunContext:
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
-    tracked_commands: List[Command] = field(default_factory=list)
+    tracked_commands: list[Command] = field(default_factory=list)
     tracked_commands_counter: Counter[str] = field(default_factory=collections.Counter)
     _set_page_config_allowed: bool = True
     _has_script_started: bool = False
-    widget_ids_this_run: Set[str] = field(default_factory=set)
-    widget_user_keys_this_run: Set[str] = field(default_factory=set)
-    form_ids_this_run: Set[str] = field(default_factory=set)
-    cursors: Dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
-    script_requests: Optional[ScriptRequests] = None
+    widget_ids_this_run: set[str] = field(default_factory=set)
+    widget_user_keys_this_run: set[str] = field(default_factory=set)
+    form_ids_this_run: set[str] = field(default_factory=set)
+    cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
+    script_requests: ScriptRequests | None = None
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
@@ -153,7 +155,7 @@ SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
 
 
 def add_script_run_ctx(
-    thread: Optional[threading.Thread] = None, ctx: Optional[ScriptRunContext] = None
+    thread: threading.Thread | None = None, ctx: ScriptRunContext | None = None
 ):
     """Adds the current ScriptRunContext to a newly-created thread.
 
@@ -183,7 +185,7 @@ def add_script_run_ctx(
     return thread
 
 
-def get_script_run_ctx(suppress_warning: bool = False) -> Optional[ScriptRunContext]:
+def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | None:
     """
     Parameters
     ----------
@@ -196,15 +198,13 @@ def get_script_run_ctx(suppress_warning: bool = False) -> Optional[ScriptRunCont
 
     """
     thread = threading.current_thread()
-    ctx: Optional[ScriptRunContext] = getattr(
-        thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None
-    )
+    ctx: ScriptRunContext | None = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
     if ctx is None and runtime.exists() and not suppress_warning:
         # Only warn about a missing ScriptRunContext if suppress_warning is False, and
         # we were started via `streamlit run`. Otherwise, the user is likely running a
         # script "bare", and doesn't need to be warned about streamlit
         # bits that are irrelevant when not connected to a session.
-        LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
+        _LOGGER.warning("Thread '%s': missing ScriptRunContext", thread.name)
 
     return ctx
 

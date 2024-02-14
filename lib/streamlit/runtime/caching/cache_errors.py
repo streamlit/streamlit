@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import types
-from typing import Any, Optional
+from typing import Any
 
 from streamlit import type_util
 from streamlit.errors import (
@@ -50,7 +52,7 @@ class UnhashableParamError(StreamlitAPIException):
         self,
         cache_type: CacheType,
         func: types.FunctionType,
-        arg_name: Optional[str],
+        arg_name: str | None,
         arg_value: Any,
         orig_exc: BaseException,
     ):
@@ -62,7 +64,7 @@ class UnhashableParamError(StreamlitAPIException):
     def _create_message(
         cache_type: CacheType,
         func: types.FunctionType,
-        arg_name: Optional[str],
+        arg_name: str | None,
         arg_value: Any,
     ) -> str:
         arg_name_str = arg_name if arg_name is not None else "(unnamed)"

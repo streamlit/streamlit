@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Snow_pb2 import Snow as SnowProto
@@ -23,7 +25,7 @@ if TYPE_CHECKING:
 
 class SnowMixin:
     @gather_metrics("snow")
-    def snow(self) -> "DeltaGenerator":
+    def snow(self) -> DeltaGenerator:
         """Draw celebratory snowfall.
 
         Example
@@ -40,6 +42,6 @@ class SnowMixin:
         return self.dg._enqueue("snow", snow_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

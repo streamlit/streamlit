@@ -64,7 +64,7 @@ class ArrowMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a dataframe as an interactive table.
 
         This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
@@ -239,7 +239,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
-    def table(self, data: Data = None) -> "DeltaGenerator":
+    def table(self, data: Data = None) -> DeltaGenerator:
         """Display a static table.
 
         This differs from ``st.dataframe`` in that the table in this case is
@@ -284,7 +284,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_table", proto)
 
     @gather_metrics("add_rows")
-    def add_rows(self, data: "Data" = None, **kwargs) -> "DeltaGenerator" | None:
+    def add_rows(self, data: Data = None, **kwargs) -> DeltaGenerator | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -338,7 +338,7 @@ class ArrowMixin:
         return self.dg._arrow_add_rows(data, **kwargs)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

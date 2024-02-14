@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import random
 from textwrap import dedent
-from typing import TYPE_CHECKING, Mapping, Optional, Union, cast
+from typing import TYPE_CHECKING, Final, Literal, Mapping, Union, cast
 
-from typing_extensions import Final, Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.elements import image
 from streamlit.errors import StreamlitAPIException
@@ -42,7 +44,7 @@ _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
 MenuKey: TypeAlias = Literal[_GetHelp, _ReportABug, _About]
-MenuItems: TypeAlias = Mapping[MenuKey, Optional[str]]
+MenuItems: TypeAlias = Mapping[MenuKey, Union[str, None]]
 
 # Emojis recommended by https://share.streamlit.io/rensdimmendaal/emoji-recommender/main/app/streamlit.py
 # for the term "streamlit". Watch out for zero-width joiners,
@@ -113,11 +115,11 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
 
 @gather_metrics("set_page_config")
 def set_page_config(
-    page_title: Optional[str] = None,
-    page_icon: Optional[PageIcon] = None,
+    page_title: str | None = None,
+    page_icon: PageIcon | None = None,
     layout: Layout = "centered",
     initial_sidebar_state: InitialSideBarState = "auto",
-    menu_items: Optional[MenuItems] = None,
+    menu_items: MenuItems | None = None,
 ) -> None:
     """
     Configures the default settings of the page.
@@ -188,7 +190,7 @@ def set_page_config(
     if page_icon is not None:
         msg.page_config_changed.favicon = _get_favicon_string(page_icon)
 
-    pb_layout: "PageConfigProto.Layout.ValueType"
+    pb_layout: PageConfigProto.Layout.ValueType
     if layout == "centered":
         pb_layout = PageConfigProto.CENTERED
     elif layout == "wide":
@@ -199,7 +201,7 @@ def set_page_config(
         )
     msg.page_config_changed.layout = pb_layout
 
-    pb_sidebar_state: "PageConfigProto.SidebarState.ValueType"
+    pb_sidebar_state: PageConfigProto.SidebarState.ValueType
     if initial_sidebar_state == "auto":
         pb_sidebar_state = PageConfigProto.AUTO
     elif initial_sidebar_state == "expanded":
@@ -265,5 +267,5 @@ def validate_menu_items(menu_items: MenuItems) -> None:
             raise StreamlitAPIException(f'"{v}" is a not a valid URL!')
 
 
-def valid_menu_item_key(key: str) -> "TypeGuard[MenuKey]":
+def valid_menu_item_key(key: str) -> TypeGuard[MenuKey]:
     return key in {GET_HELP_KEY, REPORT_A_BUG_KEY, ABOUT_KEY}

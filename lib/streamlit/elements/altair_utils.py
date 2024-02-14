@@ -17,22 +17,24 @@
 These classes are used to pass some important info to add_rows.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Hashable, List, Optional, TypedDict
+from typing import Hashable, TypedDict
 
 
 class PrepDataColumns(TypedDict):
     """Columns used for the prep_data step in Altair Arrow charts."""
 
-    x_column: Optional[str]
-    y_column_list: List[str]
-    color_column: Optional[str]
-    size_column: Optional[str]
+    x_column: str | None
+    y_column_list: list[str]
+    color_column: str | None
+    size_column: str | None
 
 
 @dataclass
 class AddRowsMetadata:
     """Metadata needed by add_rows on native charts."""
 
-    last_index: Optional[Hashable]
+    last_index: Hashable | None
     columns: PrepDataColumns

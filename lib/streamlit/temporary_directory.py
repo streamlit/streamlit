@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import shutil
 import tempfile
 
@@ -21,7 +23,7 @@ from streamlit import util
 # tempfile.mkdtemp
 
 
-class TemporaryDirectory(object):
+class TemporaryDirectory:
     """Temporary directory context manager.
 
     Creates a temporary directory that exists within the context manager scope.

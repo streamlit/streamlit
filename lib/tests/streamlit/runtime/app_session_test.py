@@ -821,7 +821,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         session.handle_backmsg(msg)
         self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     async def test_handles_app_heartbeat_backmsg(self, patched_logger):
         session = _create_test_session(asyncio.get_running_loop())
         with patch.object(
@@ -896,7 +896,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         self.assertEqual(new_session_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_session_msg.custom_theme.background_color, "white")
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_base_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (
@@ -912,7 +912,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
         )
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_font_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (

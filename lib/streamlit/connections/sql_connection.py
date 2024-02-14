@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections import ChainMap
 from copy import deepcopy
 from datetime import timedelta
-from typing import TYPE_CHECKING, List, cast
+from typing import TYPE_CHECKING, cast
 
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import extract_from_dict
@@ -76,7 +76,7 @@ class SQLConnection(BaseConnection["Engine"]):
     >>> st.dataframe(df)
     """
 
-    def _connect(self, autocommit: bool = False, **kwargs) -> "Engine":
+    def _connect(self, autocommit: bool = False, **kwargs) -> Engine:
         import sqlalchemy
 
         kwargs = deepcopy(kwargs)
@@ -125,7 +125,7 @@ class SQLConnection(BaseConnection["Engine"]):
         *,  # keyword-only arguments:
         show_spinner: bool | str = "Running `sql.query(...)`.",
         ttl: float | int | timedelta | None = None,
-        index_col: str | List[str] | None = None,
+        index_col: str | list[str] | None = None,
         chunksize: int | None = None,
         params=None,
         **kwargs,
@@ -245,7 +245,7 @@ class SQLConnection(BaseConnection["Engine"]):
             **kwargs,
         )
 
-    def connect(self) -> "SQLAlchemyConnection":
+    def connect(self) -> SQLAlchemyConnection:
         """Call ``.connect()`` on the underlying SQLAlchemy Engine, returning a new\
         ``sqlalchemy.engine.Connection`` object.
 
@@ -257,7 +257,7 @@ class SQLConnection(BaseConnection["Engine"]):
         return self._instance.connect()
 
     @property
-    def engine(self) -> "Engine":
+    def engine(self) -> Engine:
         """The underlying SQLAlchemy Engine.
 
         This is equivalent to accessing ``self._instance``.
@@ -273,7 +273,7 @@ class SQLConnection(BaseConnection["Engine"]):
         return self._instance.driver
 
     @property
-    def session(self) -> "Session":
+    def session(self) -> Session:
         """Return a SQLAlchemy Session.
 
         Users of this connection should use the contextmanager pattern for writes,

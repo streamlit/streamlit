@@ -57,8 +57,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-
-from typing_extensions import Literal, Protocol
+from typing import Literal, Protocol
 
 
 class CacheStorageError(Exception):

@@ -14,10 +14,13 @@
 
 """A bunch of useful code utilities."""
 
+from __future__ import annotations
+
 import re
+from typing import Any
 
 
-def extract_args(line):
+def extract_args(line: str) -> list[str]:
     """Parse argument strings from all outer parentheses in a line of code.
 
     Parameters
@@ -53,7 +56,7 @@ def extract_args(line):
     return results
 
 
-def get_method_args_from_code(args, line):
+def get_method_args_from_code(args: list[Any], line: str) -> list[str]:
     """Parse arguments from a stringified arguments list inside parentheses
 
     Parameters

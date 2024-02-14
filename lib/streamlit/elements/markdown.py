@@ -12,19 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
 from streamlit.type_util import SupportsStr, is_sympy_expession
 
-MARKDOWN_HORIZONTAL_RULE_EXPRESSION = "---"
-
 if TYPE_CHECKING:
     import sympy
 
     from streamlit.delta_generator import DeltaGenerator
+
+MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
 
 
 class MarkdownMixin:
@@ -34,8 +36,8 @@ class MarkdownMixin:
         body: SupportsStr,
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        help: str | None = None,
+    ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
         Parameters
@@ -109,8 +111,8 @@ class MarkdownMixin:
     def code(
         self,
         body: SupportsStr,
-        language: Optional[str] = "python",
-    ) -> "DeltaGenerator":
+        language: str | None = "python",
+    ) -> DeltaGenerator:
         """Display a code block with optional syntax highlighting.
 
         (This is a convenience wrapper around `st.markdown()`)
@@ -149,8 +151,8 @@ class MarkdownMixin:
         body: SupportsStr,
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        help: str | None = None,
+    ) -> DeltaGenerator:
         """Display text in small font.
 
         This should be used for captions, asides, footnotes, sidenotes, and
@@ -210,10 +212,10 @@ class MarkdownMixin:
     @gather_metrics("latex")
     def latex(
         self,
-        body: Union[SupportsStr, "sympy.Expr"],
+        body: SupportsStr | sympy.Expr,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        help: str | None = None,
+    ) -> DeltaGenerator:
         # This docstring needs to be "raw" because of the backslashes in the
         # example below.
         r"""Display mathematical expressions formatted as LaTeX.
@@ -256,7 +258,7 @@ class MarkdownMixin:
         return self.dg._enqueue("markdown", latex_proto)
 
     @gather_metrics("divider")
-    def divider(self) -> "DeltaGenerator":
+    def divider(self) -> DeltaGenerator:
         """Display a horizontal rule.
 
         .. note::
@@ -276,6 +278,6 @@ class MarkdownMixin:
         return self.dg._enqueue("markdown", divider_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

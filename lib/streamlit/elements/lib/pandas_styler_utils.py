@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Mapping, TypeVar
+from typing import TYPE_CHECKING, Any, Mapping, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from pandas.io.formats.style import Styler
 
 
-def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
+def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
     """Marshall pandas.Styler into an Arrow proto.
 
     Parameters
@@ -66,7 +66,7 @@ def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> N
     _marshall_display_values(proto, styler_data_df, pandas_styles)
 
 
-def _marshall_uuid(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
+def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
     """Marshall pandas.Styler uuid into an Arrow proto.
 
     Parameters
@@ -87,7 +87,7 @@ def _marshall_uuid(proto: ArrowProto, styler: "Styler", default_uuid: str) -> No
     proto.styler.uuid = str(styler.uuid)
 
 
-def _marshall_caption(proto: ArrowProto, styler: "Styler") -> None:
+def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
     """Marshall pandas.Styler caption into an Arrow proto.
 
     Parameters
@@ -104,7 +104,7 @@ def _marshall_caption(proto: ArrowProto, styler: "Styler") -> None:
 
 
 def _marshall_styles(
-    proto: ArrowProto, styler: "Styler", styles: Mapping[str, Any]
+    proto: ArrowProto, styler: Styler, styles: Mapping[str, Any]
 ) -> None:
     """Marshall pandas.Styler styles into an Arrow proto.
 
@@ -147,7 +147,7 @@ def _marshall_styles(
 M = TypeVar("M", bound=Mapping[str, Any])
 
 
-def _trim_pandas_styles(styles: List[M]) -> List[M]:
+def _trim_pandas_styles(styles: list[M]) -> list[M]:
     """Filter out empty styles.
 
     Every cell will have a class, but the list of props

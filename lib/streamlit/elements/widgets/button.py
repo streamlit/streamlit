@@ -18,9 +18,9 @@ import io
 import os
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, BinaryIO, Optional, TextIO, Union, cast
+from typing import TYPE_CHECKING, BinaryIO, Final, Literal, TextIO, Union, cast
 
-from typing_extensions import Final, Literal
+from typing_extensions import TypeAlias
 
 from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
@@ -52,7 +52,7 @@ For more information, refer to the
 [documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form).
 """
 
-DownloadButtonDataType = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
+DownloadButtonDataType: TypeAlias = Union[str, bytes, TextIO, BinaryIO, io.RawIOBase]
 
 
 @dataclass
@@ -60,7 +60,7 @@ class ButtonSerde:
     def serialize(self, v: bool) -> bool:
         return bool(v)
 
-    def deserialize(self, ui_value: Optional[bool], widget_id: str = "") -> bool:
+    def deserialize(self, ui_value: bool | None, widget_id: str = "") -> bool:
         return ui_value or False
 
 
@@ -69,11 +69,11 @@ class ButtonMixin:
     def button(
         self,
         label: str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_click: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_click: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
@@ -179,13 +179,13 @@ class ButtonMixin:
         self,
         label: str,
         data: DownloadButtonDataType,
-        file_name: Optional[str] = None,
-        mime: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_click: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        file_name: str | None = None,
+        mime: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_click: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
@@ -350,11 +350,11 @@ class ButtonMixin:
         label: str,
         url: str,
         *,
-        help: Optional[str] = None,
+        help: str | None = None,
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Display a link button element.
 
         When clicked, a new tab will be opened to the specified URL. This will
@@ -437,7 +437,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a link to another page in a multipage app or to an external page.
 
         If another page in a multipage app is specified, clicking ``st.page_link``
@@ -537,18 +537,18 @@ class ButtonMixin:
         self,
         label: str,
         data: DownloadButtonDataType,
-        file_name: Optional[str] = None,
-        mime: Optional[str] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_click: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        file_name: str | None = None,
+        mime: str | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_click: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> bool:
         key = to_key(key)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -606,12 +606,12 @@ class ButtonMixin:
         self,
         label: str,
         url: str,
-        help: Optional[str],
+        help: str | None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         link_button_proto = LinkButtonProto()
         link_button_proto.label = label
         link_button_proto.url = url
@@ -633,7 +633,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
         page_link_proto.disabled = disabled
 
@@ -692,17 +692,17 @@ class ButtonMixin:
     def _button(
         self,
         label: str,
-        key: Optional[str],
-        help: Optional[str],
+        key: str | None,
+        help: str | None,
         is_form_submitter: bool,
-        on_click: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        on_click: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary"] = "secondary",
         disabled: bool = False,
         use_container_width: bool = False,
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> bool:
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
@@ -767,7 +767,7 @@ class ButtonMixin:
         return button_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -776,8 +776,8 @@ def marshall_file(
     coordinates: str,
     data: DownloadButtonDataType,
     proto_download_button: DownloadButtonProto,
-    mimetype: Optional[str],
-    file_name: Optional[str] = None,
+    mimetype: str | None,
+    file_name: str | None = None,
 ) -> None:
     data_as_bytes: bytes
     if isinstance(data, str):

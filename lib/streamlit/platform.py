@@ -14,6 +14,8 @@
 
 """Platform module."""
 
+from __future__ import annotations
+
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 

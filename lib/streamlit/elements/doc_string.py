@@ -14,17 +14,16 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+from __future__ import annotations
+
 import ast
 import contextlib
 import inspect
 import re
 import types
-from typing import TYPE_CHECKING, Any, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
-from streamlit.logger import get_logger
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -38,15 +37,12 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-LOGGER: Final = get_logger(__name__)
-
-
 CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
     @gather_metrics("help")
-    def help(self, obj: Any = streamlit) -> "DeltaGenerator":
+    def help(self, obj: Any = streamlit) -> DeltaGenerator:
         """Display help and other information for a given object.
 
         Depending on the type of object that is passed in, this displays the
@@ -123,7 +119,7 @@ class HelpMixin:
         return self.dg._enqueue("doc_string", doc_string_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

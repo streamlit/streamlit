@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Balloons_pb2 import Balloons as BalloonsProto
@@ -23,7 +25,7 @@ if TYPE_CHECKING:
 
 class BalloonsMixin:
     @gather_metrics("balloons")
-    def balloons(self) -> "DeltaGenerator":
+    def balloons(self) -> DeltaGenerator:
         """Draw celebratory balloons.
 
         Example
@@ -40,6 +42,6 @@ class BalloonsMixin:
         return self.dg._enqueue("balloons", balloons_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

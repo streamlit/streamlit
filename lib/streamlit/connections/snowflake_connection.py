@@ -49,7 +49,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     initialized directly.
     """
 
-    def _connect(self, **kwargs) -> "InternalSnowflakeConnection":
+    def _connect(self, **kwargs) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
 
@@ -260,7 +260,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         return (success, nchunks, nrows)
 
-    def cursor(self) -> "SnowflakeCursor":
+    def cursor(self) -> SnowflakeCursor:
         """Return a PEP 249-compliant cursor object.
 
         For more information, see the `Snowflake Python Connector documentation
@@ -269,7 +269,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         return self._instance.cursor()
 
     @property
-    def raw_connection(self) -> "InternalSnowflakeConnection":
+    def raw_connection(self) -> InternalSnowflakeConnection:
         """Access the underlying Snowflake Python connector object.
 
         Information on how to use the Snowflake Python Connector can be found in the
@@ -277,7 +277,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """
         return self._instance
 
-    def session(self) -> "Session":
+    def session(self) -> Session:
         """Create a new Snowpark Session from this connection.
 
         Information on how to use Snowpark sessions can be found in the `Snowpark documentation

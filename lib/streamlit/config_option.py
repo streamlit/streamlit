@@ -14,14 +14,15 @@
 
 """Class to store a key-value pair for the config system."""
 
+from __future__ import annotations
+
 import datetime
 import re
 import textwrap
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from streamlit import util
 from streamlit.case_converters import to_snake_case
-from streamlit.errors import DeprecationError
 
 
 class ConfigOption:
@@ -97,14 +98,14 @@ class ConfigOption:
     def __init__(
         self,
         key: str,
-        description: Optional[str] = None,
-        default_val: Optional[Any] = None,
+        description: str | None = None,
+        default_val: Any | None = None,
         visibility: str = "visible",
         scriptable: bool = False,
         deprecated: bool = False,
-        deprecation_text: Optional[str] = None,
-        expiration_date: Optional[str] = None,
-        replaced_by: Optional[str] = None,
+        deprecation_text: str | None = None,
+        expiration_date: str | None = None,
+        replaced_by: str | None = None,
         type_: type = str,
         sensitive: bool = False,
     ):
@@ -174,7 +175,7 @@ class ConfigOption:
         self.deprecated = deprecated
         self.replaced_by = replaced_by
         self.is_default = True
-        self._get_val_func: Optional[Callable[[], Any]] = None
+        self._get_val_func: Callable[[], Any] | None = None
         self.where_defined = ConfigOption.DEFAULT_DEFINITION
         self.type = type_
         self.sensitive = sensitive
@@ -195,7 +196,7 @@ class ConfigOption:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __call__(self, get_val_func: Callable[[], Any]) -> "ConfigOption":
+    def __call__(self, get_val_func: Callable[[], Any]) -> ConfigOption:
         """Assign a function to compute the value for this option.
 
         This method is called when ConfigOption is used as a decorator.
@@ -226,7 +227,7 @@ class ConfigOption:
             return None
         return self._get_val_func()
 
-    def set_value(self, value: Any, where_defined: Optional[str] = None) -> None:
+    def set_value(self, value: Any, where_defined: str | None = None) -> None:
         """Set the value of this option.
 
         Parameters
@@ -313,5 +314,5 @@ class ConfigOption:
 
 
 def _parse_yyyymmdd_str(date_str: str) -> datetime.datetime:
-    year, month, day = [int(token) for token in date_str.split("-", 2)]
+    year, month, day = (int(token) for token in date_str.split("-", 2))
     return datetime.datetime(year, month, day)

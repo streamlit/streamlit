@@ -158,7 +158,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         fob.assert_called_once()
 
-    @patch("streamlit.watcher.local_sources_watcher.LOGGER")
+    @patch("streamlit.watcher.local_sources_watcher._LOGGER")
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_misbehaved_module(self, fob, patched_logger):
         lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)

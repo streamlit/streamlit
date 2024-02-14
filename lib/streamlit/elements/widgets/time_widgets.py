@@ -20,7 +20,7 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    List,
+    Final,
     Literal,
     Sequence,
     Tuple,
@@ -61,8 +61,8 @@ DateWidgetReturn: TypeAlias = Union[
     date, Tuple[()], Tuple[date], Tuple[date, date], None
 ]
 
-DEFAULT_STEP_MINUTES = 15
-ALLOWED_DATE_FORMATS = re.compile(
+DEFAULT_STEP_MINUTES: Final = 15
+ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
 
@@ -86,8 +86,8 @@ def _adjust_years(input_date: date, years: int) -> date:
 
 def _parse_date_value(
     value: DateValue | Literal["today"] | Literal["default_value_today"],
-) -> Tuple[List[date] | None, bool]:
-    parsed_dates: List[date]
+) -> tuple[list[date] | None, bool]:
+    parsed_dates: list[date]
     range_value: bool = False
     if value is None:
         return None, range_value
@@ -172,7 +172,7 @@ class _DateInputValues:
         value: DateValue | Literal["today"] | Literal["default_value_today"],
         min_value: SingleDateValue,
         max_value: SingleDateValue,
-    ) -> "_DateInputValues":
+    ) -> _DateInputValues:
         parsed_value, is_range = _parse_date_value(value=value)
         return cls(
             value=parsed_value,
@@ -249,7 +249,7 @@ class DateInputSerde:
             return return_value[0]
         return cast(DateWidgetReturn, tuple(return_value))
 
-    def serialize(self, v: DateWidgetReturn) -> List[str]:
+    def serialize(self, v: DateWidgetReturn) -> list[str]:
         if v is None:
             return []
 
@@ -271,7 +271,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time:
         pass
 
@@ -288,7 +288,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time | None:
         pass
 
@@ -305,7 +305,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time | None:
         r"""Display a time input widget.
 
@@ -425,7 +425,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
@@ -703,7 +703,7 @@ class TimeWidgetsMixin:
         parsed_min_date = parse_date_deterministic(min_value)
         parsed_max_date = parse_date_deterministic(max_value)
 
-        parsed: str | None | List[str | None]
+        parsed: str | None | list[str | None]
         if value == "today" or value == "default_value_today" or value is None:
             parsed = None
         elif isinstance(value, (datetime, date)):
@@ -804,6 +804,6 @@ class TimeWidgetsMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

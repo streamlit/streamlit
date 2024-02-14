@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
+from typing import Any, Callable
 
 
-def to_upper_camel_case(snake_case_str):
+def to_upper_camel_case(snake_case_str: str) -> str:
     """Converts snake_case to UpperCamelCase.
 
     Example
@@ -26,7 +29,7 @@ def to_upper_camel_case(snake_case_str):
     return "".join(map(str.title, snake_case_str.split("_")))
 
 
-def to_lower_camel_case(snake_case_str):
+def to_lower_camel_case(snake_case_str: str) -> str:
     """Converts snake_case to lowerCamelCase.
 
     Example
@@ -44,7 +47,7 @@ def to_lower_camel_case(snake_case_str):
         return snake_case_str
 
 
-def to_snake_case(camel_case_str):
+def to_snake_case(camel_case_str: str) -> str:
     """Converts UpperCamelCase and lowerCamelCase to snake_case.
 
     Examples
@@ -57,7 +60,9 @@ def to_snake_case(camel_case_str):
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
-def convert_dict_keys(func, in_dict):
+def convert_dict_keys(
+    func: Callable[[str], str], in_dict: dict[Any, Any]
+) -> dict[Any, Any]:
     """Apply a conversion function to all keys in a dict.
 
     Parameters

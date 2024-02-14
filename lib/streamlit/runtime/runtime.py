@@ -19,9 +19,7 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Awaitable, Dict, NamedTuple, Optional, Tuple, Type
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
 from streamlit import config
 from streamlit.logger import get_logger
@@ -69,7 +67,7 @@ if TYPE_CHECKING:
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class RuntimeStoppedError(Exception):
@@ -85,7 +83,7 @@ class RuntimeConfig:
 
     # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
     # longer use this anywhere.
-    command_line: Optional[str]
+    command_line: str | None
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
@@ -99,7 +97,7 @@ class RuntimeConfig:
     )
 
     # The SessionManager class to be used.
-    session_manager_class: Type[SessionManager] = WebsocketSessionManager
+    session_manager_class: type[SessionManager] = WebsocketSessionManager
 
     # The SessionStorage instance for the SessionManager to use.
     session_storage: SessionStorage = field(default_factory=MemorySessionStorage)
@@ -141,7 +139,7 @@ class AsyncObjects(NamedTuple):
 
 
 class Runtime:
-    _instance: Optional[Runtime] = None
+    _instance: Runtime | None = None
 
     @classmethod
     def instance(cls) -> Runtime:
@@ -179,11 +177,11 @@ class Runtime:
         Runtime._instance = self
 
         # Will be created when we start.
-        self._async_objs: Optional[AsyncObjects] = None
+        self._async_objs: AsyncObjects | None = None
 
         # The task that runs our main loop. We need to save a reference
         # to it so that it doesn't get garbage collected while running.
-        self._loop_coroutine_task: Optional[asyncio.Task[None]] = None
+        self._loop_coroutine_task: asyncio.Task[None] | None = None
 
         self._main_script_path = config.script_path
         self._is_hello = config.is_hello
@@ -247,7 +245,7 @@ class Runtime:
     # happen to be threadsafe. This may change with future SessionManager implementations,
     # at which point we'll need to formalize our thread safety rules for each
     # SessionManager method.
-    def get_client(self, session_id: str) -> Optional[SessionClient]:
+    def get_client(self, session_id: str) -> SessionClient | None:
         """Get the SessionClient for the given session_id, or None
         if no such session exists.
 
@@ -304,7 +302,7 @@ class Runtime:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
-            LOGGER.debug("Runtime stopping...")
+            _LOGGER.debug("Runtime stopping...")
             self._set_state(RuntimeState.STOPPING)
             async_objs.must_stop.set()
 
@@ -322,9 +320,9 @@ class Runtime:
     def connect_session(
         self,
         client: SessionClient,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
-        session_id_override: Optional[str] = None,
+        user_info: dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 
@@ -383,9 +381,9 @@ class Runtime:
     def create_session(
         self,
         client: SessionClient,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
-        session_id_override: Optional[str] = None,
+        user_info: dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 
@@ -394,7 +392,7 @@ class Runtime:
         This method is simply an alias for connect_session added for backwards
         compatibility.
         """
-        LOGGER.warning("create_session is deprecated! Use connect_session instead.")
+        _LOGGER.warning("create_session is deprecated! Use connect_session instead.")
         return self.connect_session(
             client=client,
             user_info=user_info,
@@ -478,7 +476,7 @@ class Runtime:
 
         session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info is None:
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Discarding BackMsg for disconnected session (id=%s)", session_id
             )
             return
@@ -508,7 +506,7 @@ class Runtime:
 
         session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info is None:
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Discarding BackMsg Exception for disconnected session (id=%s)",
                 session_id,
             )
@@ -517,7 +515,7 @@ class Runtime:
         session_info.session.handle_backmsg_exception(exc)
 
     @property
-    async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
+    async def is_ready_for_browser_connection(self) -> tuple[bool, str]:
         if self._state not in (
             RuntimeState.INITIAL,
             RuntimeState.STOPPING,
@@ -527,7 +525,7 @@ class Runtime:
 
         return False, "unavailable"
 
-    async def does_script_run_without_error(self) -> Tuple[bool, str]:
+    async def does_script_run_without_error(self) -> tuple[bool, str]:
         """Load and execute the app's script to verify it runs without an error.
 
         Returns
@@ -572,7 +570,7 @@ class Runtime:
             session.shutdown()
 
     def _set_state(self, new_state: RuntimeState) -> None:
-        LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
+        _LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
         self._state = new_state
 
     async def _loop_coroutine(self) -> None:
@@ -655,7 +653,7 @@ class Runtime:
         except Exception as e:
             async_objs.stopped.set_exception(e)
             traceback.print_exc()
-            LOGGER.info(
+            _LOGGER.info(
                 """
 Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
@@ -689,13 +687,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             ):
                 # This session has probably cached this message. Send
                 # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
+                _LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
                 msg_to_send = create_reference_msg(msg)
 
             # Cache the message so it can be referenced in the future.
             # If the message is already cached, this will reset its
             # age.
-            LOGGER.debug("Caching message (hash=%s)", msg.hash)
+            _LOGGER.debug("Caching message (hash=%s)", msg.hash)
             self._message_cache.add_message(
                 msg, session_info.session, session_info.script_run_count
             )
@@ -706,7 +704,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             msg.WhichOneof("type") == "script_finished"
             and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Script run finished successfully; "
                 "removing expired entries from MessageCache "
                 "(max_age=%s)",

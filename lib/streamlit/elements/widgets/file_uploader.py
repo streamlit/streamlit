@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import List, Optional, Sequence, Union, cast, overload
+from typing import TYPE_CHECKING, List, Literal, Sequence, Union, cast, overload
 
-from typing_extensions import Literal
+from typing_extensions import TypeAlias
 
-import streamlit
 from streamlit import config
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -40,12 +42,16 @@ from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
-SomeUploadedFiles = Union[
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
+
+SomeUploadedFiles: TypeAlias = Union[
     UploadedFile,
     DeletedFile,
     List[Union[UploadedFile, DeletedFile]],
     None,
 ]
+
 
 TYPE_PAIRS = [
     (".jpg", ".jpeg"),
@@ -57,8 +63,8 @@ TYPE_PAIRS = [
 
 
 def _get_upload_files(
-    widget_value: Optional[FileUploaderStateProto],
-) -> List[Union[UploadedFile, DeletedFile]]:
+    widget_value: FileUploaderStateProto | None,
+) -> list[UploadedFile | DeletedFile]:
     if widget_value is None:
         return []
 
@@ -77,7 +83,7 @@ def _get_upload_files(
 
     file_recs = {f.file_id: f for f in file_recs_list}
 
-    collected_files: List[Union[UploadedFile, DeletedFile]] = []
+    collected_files: list[UploadedFile | DeletedFile] = []
 
     for f in uploaded_file_info:
         maybe_file_rec = file_recs.get(f.file_id)
@@ -95,7 +101,7 @@ class FileUploaderSerde:
     accept_multiple_files: bool
 
     def deserialize(
-        self, ui_value: Optional[FileUploaderStateProto], widget_id: str
+        self, ui_value: FileUploaderStateProto | None, widget_id: str
     ) -> SomeUploadedFiles:
         upload_files = _get_upload_files(ui_value)
 
@@ -144,17 +150,17 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Union[str, Sequence[str], None],
+        type: str | Sequence[str] | None,
         accept_multiple_files: Literal[True],
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[List[UploadedFile]]:
+    ) -> list[UploadedFile] | None:
         ...
 
     # 1. type is given as not a keyword-only argument
@@ -163,17 +169,17 @@ class FileUploaderMixin:
     def file_uploader(
         self,
         label: str,
-        type: Union[str, Sequence[str], None],
+        type: str | Sequence[str] | None,
         accept_multiple_files: Literal[False] = False,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[UploadedFile]:
+    ) -> UploadedFile | None:
         ...
 
     # The following 2 overloads represent the cases where
@@ -189,15 +195,15 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[True],
-        type: Union[str, Sequence[str], None] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        type: str | Sequence[str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[List[UploadedFile]]:
+    ) -> list[UploadedFile] | None:
         ...
 
     # 1. type is skipped or a keyword argument
@@ -208,32 +214,32 @@ class FileUploaderMixin:
         label: str,
         *,
         accept_multiple_files: Literal[False] = False,
-        type: Union[str, Sequence[str], None] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        type: str | Sequence[str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Optional[UploadedFile]:
+    ) -> UploadedFile | None:
         ...
 
     @gather_metrics("file_uploader")
     def file_uploader(
         self,
         label: str,
-        type: Union[str, Sequence[str], None] = None,
+        type: str | Sequence[str] | None = None,
         accept_multiple_files: bool = False,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> Union[UploadedFile, List[UploadedFile], None]:
+    ) -> UploadedFile | list[UploadedFile] | None:
         r"""Display a file uploader widget.
         By default, uploaded files are limited to 200MB. You can configure
         this using the `server.maxUploadSize` config option. For more info
@@ -379,18 +385,18 @@ class FileUploaderMixin:
     def _file_uploader(
         self,
         label: str,
-        type: Union[str, Sequence[str], None] = None,
+        type: str | Sequence[str] | None = None,
         accept_multiple_files: bool = False,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         label_visibility: LabelVisibility = "visible",
         disabled: bool = False,
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> Union[UploadedFile, List[UploadedFile], None]:
+        ctx: ScriptRunContext | None = None,
+    ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -463,8 +469,6 @@ class FileUploaderMixin:
 
         self.dg._enqueue("file_uploader", file_uploader_proto)
 
-        filtered_value: Union[UploadedFile, List[UploadedFile], None]
-
         if isinstance(widget_state.value, DeletedFile):
             return None
         elif isinstance(widget_state.value, list):
@@ -473,6 +477,6 @@ class FileUploaderMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

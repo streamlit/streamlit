@@ -27,7 +27,6 @@ from typing import (
     Iterable,
     Literal,
     NoReturn,
-    Type,
     TypeVar,
     cast,
     overload,
@@ -340,19 +339,17 @@ class DeltaGenerator(
             if name in streamlit_methods:
                 if self._root_container == RootContainer.SIDEBAR:
                     message = (
-                        "Method `%(name)s()` does not exist for "
-                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                        f"Method `{name}()` does not exist for "
+                        f"`st.sidebar`. Did you mean `st.{name}()`?"
                     )
                 else:
                     message = (
-                        "Method `%(name)s()` does not exist for "
+                        f"Method `{name}()` does not exist for "
                         "`DeltaGenerator` objects. Did you mean "
-                        "`st.%(name)s()`?" % {"name": name}
+                        "`st.{name}()`?"
                     )
             else:
-                message = "`%(name)s()` is not a valid Streamlit command." % {
-                    "name": name
-                }
+                message = f"`{name}()` is not a valid Streamlit command."
 
             raise StreamlitAPIException(message)
 
@@ -432,7 +429,7 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue],
+        return_value: type[NoValue],
         add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
@@ -468,7 +465,7 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue] | Value | None = None,
+        return_value: type[NoValue] | Value | None = None,
         add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
@@ -479,7 +476,7 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue] | Value | None = None,
+        return_value: type[NoValue] | Value | None = None,
         add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
@@ -837,7 +834,7 @@ def _value_or_dg(value: None, dg: DG) -> DG:
 
 
 @overload
-def _value_or_dg(value: Type[NoValue], dg: DG) -> None:  # type: ignore[misc]
+def _value_or_dg(value: type[NoValue], dg: DG) -> None:  # type: ignore[misc]
     ...
 
 
@@ -855,7 +852,7 @@ def _value_or_dg(value: Value, dg: DG) -> Value:
 
 
 def _value_or_dg(
-    value: Type[NoValue] | Value | None,
+    value: type[NoValue] | Value | None,
     dg: DG,
 ) -> DG | Value | None:
     """Return either value, or None, or dg.

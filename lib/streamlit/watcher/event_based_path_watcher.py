@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Callable, Dict, Final, cast
+from typing import Callable, Final, cast
 
 from blinker import ANY, Signal
 from watchdog import events
@@ -109,13 +109,13 @@ class EventBasedPathWatcher:
         path_watcher.stop_watching_path(self._path, self._on_changed)
 
 
-class _MultiPathWatcher(object):
+class _MultiPathWatcher:
     """Watches multiple paths."""
 
-    _singleton: "_MultiPathWatcher" | None = None
+    _singleton: _MultiPathWatcher | None = None
 
     @classmethod
-    def get_singleton(cls) -> "_MultiPathWatcher":
+    def get_singleton(cls) -> _MultiPathWatcher:
         """Return the singleton _MultiPathWatcher object.
 
         Instantiates one if necessary.
@@ -127,18 +127,18 @@ class _MultiPathWatcher(object):
         return cast("_MultiPathWatcher", _MultiPathWatcher._singleton)
 
     # Don't allow constructor to be called more than once.
-    def __new__(cls) -> "_MultiPathWatcher":
+    def __new__(cls) -> _MultiPathWatcher:
         """Constructor."""
         if _MultiPathWatcher._singleton is not None:
             raise RuntimeError("Use .get_singleton() instead")
-        return super(_MultiPathWatcher, cls).__new__(cls)
+        return super().__new__(cls)
 
     def __init__(self) -> None:
         """Constructor."""
         _MultiPathWatcher._singleton = self
 
         # Map of folder_to_watch -> _FolderEventHandler.
-        self._folder_handlers: Dict[str, _FolderEventHandler] = {}
+        self._folder_handlers: dict[str, _FolderEventHandler] = {}
 
         # Used for mutation of _folder_handlers dict
         self._lock = threading.Lock()
@@ -218,7 +218,7 @@ class _MultiPathWatcher(object):
             self._observer.join(timeout=5)
 
 
-class WatchedPath(object):
+class WatchedPath:
     """Emits notifications when a single path is modified."""
 
     def __init__(
@@ -254,8 +254,8 @@ class _FolderEventHandler(events.FileSystemEventHandler):
     """
 
     def __init__(self) -> None:
-        super(_FolderEventHandler, self).__init__()
-        self._watched_paths: Dict[str, WatchedPath] = {}
+        super().__init__()
+        self._watched_paths: dict[str, WatchedPath] = {}
         self._lock = threading.Lock()  # for watched_paths mutations
         self.watch: ObservedWatch | None = None
 

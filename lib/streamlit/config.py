@@ -115,9 +115,7 @@ def set_user_option(key: str, value: Any) -> None:
     try:
         opt = _config_options_template[key]
     except KeyError as ke:
-        raise StreamlitAPIException(
-            "Unrecognized config option: {key}".format(key=key)
-        ) from ke
+        raise StreamlitAPIException(f"Unrecognized config option: {key}") from ke
     if opt.scriptable:
         set_option(key, value)
         return
@@ -245,7 +243,7 @@ def _create_option(
     )
     assert (
         option.section in _section_descriptions
-    ), 'Section "%s" must be one of %s.' % (
+    ), 'Section "{}" must be one of {}.'.format(
         option.section,
         ", ".join(_section_descriptions.keys()),
     )
@@ -1310,7 +1308,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, "r", encoding="utf-8") as input:
+            with open(filename, encoding="utf-8") as input:
                 file_contents = input.read()
 
             _update_config_with_toml(file_contents, filename)

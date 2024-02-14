@@ -61,6 +61,7 @@ from __future__ import annotations
 import math
 import os
 import shutil
+from typing import Final
 
 from streamlit import util
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
@@ -76,16 +77,16 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
 )
 
+_LOGGER: Final = get_logger(__name__)
+
 # Streamlit directory where persisted @st.cache_data objects live.
 # (This is the same directory that @st.cache persisted objects live.
 # But @st.cache_data uses a different extension, so they don't overlap.)
-_CACHE_DIR_NAME = "cache"
+_CACHE_DIR_NAME: Final = "cache"
 
 # The extension for our persisted @st.cache_data objects.
 # (`@st.cache_data` was originally called `@st.memo`)
-_CACHED_FILE_EXTENSION = "memo"
-
-_LOGGER = get_logger(__name__)
+_CACHED_FILE_EXTENSION: Final = "memo"
 
 
 class LocalDiskCacheStorageManager(CacheStorageManager):
@@ -168,7 +169,7 @@ class LocalDiskCacheStorage(CacheStorage):
                 # Clean up file so we don't leave zero byte files.
                 try:
                     os.remove(path)
-                except (FileNotFoundError, IOError, OSError):
+                except (FileNotFoundError, OSError):
                     # If we can't remove the file, it's not a big deal.
                     pass
                 raise CacheStorageError("Unable to write to cache") from e

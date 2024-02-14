@@ -19,18 +19,7 @@ import inspect
 import json
 import types
 from io import StringIO
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Final,
-    Generator,
-    Iterable,
-    List,
-    Tuple,
-    Type,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
@@ -45,7 +34,7 @@ if TYPE_CHECKING:
 
 
 # Special methods:
-HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
+HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.BuiltinFunctionType,
     types.BuiltinMethodType,
     types.FunctionType,
@@ -53,9 +42,9 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.ModuleType,
 )
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-_TEXT_CURSOR = "▕"
+_TEXT_CURSOR: Final = "▕"
 
 
 class StreamingOutput(List[Any]):
@@ -66,7 +55,7 @@ class WriteMixin:
     @gather_metrics("write_stream")
     def write_stream(
         self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
-    ) -> List[Any] | str:
+    ) -> list[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
         ``st.write_stream`` iterates through the given sequences and writes all
@@ -140,7 +129,7 @@ class WriteMixin:
 
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
-        written_content: List[Any] = StreamingOutput()
+        written_content: list[Any] = StreamingOutput()
 
         def flush_stream_response():
             """Write the full response to the app."""
@@ -349,7 +338,7 @@ class WriteMixin:
                 kwargs,
             )
 
-        string_buffer: List[str] = []
+        string_buffer: list[str] = []
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
@@ -479,6 +468,6 @@ class WriteMixin:
         flush_buffer()
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

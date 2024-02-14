@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import hashlib
-from typing import TYPE_CHECKING, Dict, List, MutableMapping, Optional
+from typing import TYPE_CHECKING, Final, MutableMapping
 from weakref import WeakKeyDictionary
 
 from streamlit import config, util
@@ -25,7 +27,7 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from streamlit.runtime.app_session import AppSession
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 def populate_hash_if_needed(msg: ForwardMsg) -> str:
@@ -107,16 +109,16 @@ class ForwardMsgCache(CacheStatsProvider):
 
         """
 
-        def __init__(self, msg: Optional[ForwardMsg]):
+        def __init__(self, msg: ForwardMsg | None):
             self.msg = msg
             self._session_script_run_counts: MutableMapping[
-                "AppSession", int
+                AppSession, int
             ] = WeakKeyDictionary()
 
         def __repr__(self) -> str:
             return util.repr_(self)
 
-        def add_session_ref(self, session: "AppSession", script_run_count: int) -> None:
+        def add_session_ref(self, session: AppSession, script_run_count: int) -> None:
             """Adds a reference to a AppSession that has referenced
             this Entry's message.
 
@@ -129,18 +131,18 @@ class ForwardMsgCache(CacheStatsProvider):
             """
             prev_run_count = self._session_script_run_counts.get(session, 0)
             if script_run_count < prev_run_count:
-                LOGGER.error(
+                _LOGGER.error(
                     "New script_run_count (%s) is < prev_run_count (%s). "
                     "This should never happen!" % (script_run_count, prev_run_count)
                 )
                 script_run_count = prev_run_count
             self._session_script_run_counts[session] = script_run_count
 
-        def has_session_ref(self, session: "AppSession") -> bool:
+        def has_session_ref(self, session: AppSession) -> bool:
             return session in self._session_script_run_counts
 
         def get_session_ref_age(
-            self, session: "AppSession", script_run_count: int
+            self, session: AppSession, script_run_count: int
         ) -> int:
             """The age of the given session's reference to the Entry,
             given a new script_run_count.
@@ -148,7 +150,7 @@ class ForwardMsgCache(CacheStatsProvider):
             """
             return script_run_count - self._session_script_run_counts[session]
 
-        def remove_session_ref(self, session: "AppSession") -> None:
+        def remove_session_ref(self, session: AppSession) -> None:
             del self._session_script_run_counts[session]
 
         def has_refs(self) -> bool:
@@ -159,13 +161,13 @@ class ForwardMsgCache(CacheStatsProvider):
             return len(self._session_script_run_counts) > 0
 
     def __init__(self):
-        self._entries: Dict[str, "ForwardMsgCache.Entry"] = {}
+        self._entries: dict[str, ForwardMsgCache.Entry] = {}
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def add_message(
-        self, msg: ForwardMsg, session: "AppSession", script_run_count: int
+        self, msg: ForwardMsg, session: AppSession, script_run_count: int
     ) -> None:
         """Add a ForwardMsg to the cache.
 
@@ -191,7 +193,7 @@ class ForwardMsgCache(CacheStatsProvider):
             self._entries[msg.hash] = entry
         entry.add_session_ref(session, script_run_count)
 
-    def get_message(self, hash: str) -> Optional[ForwardMsg]:
+    def get_message(self, hash: str) -> ForwardMsg | None:
         """Return the message with the given ID if it exists in the cache.
 
         Parameters
@@ -208,7 +210,7 @@ class ForwardMsgCache(CacheStatsProvider):
         return entry.msg if entry else None
 
     def has_message_reference(
-        self, msg: ForwardMsg, session: "AppSession", script_run_count: int
+        self, msg: ForwardMsg, session: AppSession, script_run_count: int
     ) -> bool:
         """Return True if a session has a reference to a message."""
         populate_hash_if_needed(msg)
@@ -221,7 +223,7 @@ class ForwardMsgCache(CacheStatsProvider):
         age = entry.get_session_ref_age(session, script_run_count)
         return age <= int(config.get_option("global.maxCachedMessageAge"))
 
-    def remove_refs_for_session(self, session: "AppSession") -> None:
+    def remove_refs_for_session(self, session: AppSession) -> None:
         """Remove refs for all entries for the given session.
 
         This should be called when an AppSession is disconnected or closed.
@@ -243,7 +245,7 @@ class ForwardMsgCache(CacheStatsProvider):
                 del self._entries[msg_hash]
 
     def remove_expired_entries_for_session(
-        self, session: "AppSession", script_run_count: int
+        self, session: AppSession, script_run_count: int
     ) -> None:
         """Remove any cached messages that have expired from the given session.
 
@@ -266,7 +268,7 @@ class ForwardMsgCache(CacheStatsProvider):
 
             age = entry.get_session_ref_age(session, script_run_count)
             if age > max_age:
-                LOGGER.debug(
+                _LOGGER.debug(
                     "Removing expired entry [session=%s, hash=%s, age=%s]",
                     id(session),
                     msg_hash,
@@ -282,8 +284,8 @@ class ForwardMsgCache(CacheStatsProvider):
         """Remove all entries from the cache"""
         self._entries.clear()
 
-    def get_stats(self) -> List[CacheStat]:
-        stats: List[CacheStat] = []
+    def get_stats(self) -> list[CacheStat]:
+        stats: list[CacheStat] = []
         for entry_hash, entry in self._entries.items():
             stats.append(
                 CacheStat(

@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from typing import TYPE_CHECKING, Optional, Union, cast
+from __future__ import annotations
 
-from typing_extensions import Literal
+from enum import Enum
+from typing import TYPE_CHECKING, Literal, Union, cast
+
+from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
@@ -33,8 +35,8 @@ class HeadingProtoTag(Enum):
     SUBHEADER_TAG = "h3"
 
 
-Anchor = Optional[Union[str, Literal[False]]]
-Divider = Optional[Union[bool, str]]
+Anchor: TypeAlias = Union[str, Literal[False], None]
+Divider: TypeAlias = Union[bool, str, None]
 
 
 class HeadingMixin:
@@ -44,9 +46,9 @@ class HeadingMixin:
         body: SupportsStr,
         anchor: Anchor = None,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
         divider: Divider = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display text in header formatting.
 
         Parameters
@@ -114,9 +116,9 @@ class HeadingMixin:
         body: SupportsStr,
         anchor: Anchor = None,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
+        help: str | None = None,
         divider: Divider = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display text in subheader formatting.
 
         Parameters
@@ -184,8 +186,8 @@ class HeadingMixin:
         body: SupportsStr,
         anchor: Anchor = None,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        help: str | None = None,
+    ) -> DeltaGenerator:
         """Display text in title formatting.
 
         Each document should have a single `st.title()`, although this is not
@@ -239,12 +241,12 @@ class HeadingMixin:
         )
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
     @staticmethod
-    def _handle_divider_color(divider):
+    def _handle_divider_color(divider: Divider) -> str:
         if divider is True:
             return "auto"
         valid_colors = [
@@ -258,7 +260,7 @@ class HeadingMixin:
             "rainbow",
         ]
         if divider in valid_colors:
-            return divider
+            return cast(str, divider)
         else:
             raise StreamlitAPIException(
                 f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
@@ -269,7 +271,7 @@ class HeadingMixin:
         tag: HeadingProtoTag,
         body: SupportsStr,
         anchor: Anchor = None,
-        help: Optional[str] = None,
+        help: str | None = None,
         divider: Divider = False,
     ) -> HeadingProto:
         proto = HeadingProto()

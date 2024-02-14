@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Functions and data structures shared by session_state.py and widgets.py"""
+
 from __future__ import annotations
 
 import hashlib
@@ -23,8 +24,8 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Final,
     Generic,
-    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -32,7 +33,7 @@ from typing import (
 )
 
 from google.protobuf.message import Message
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
@@ -151,7 +152,7 @@ class RegisterWidgetResult(Generic[T_co]):
     @classmethod
     def failure(
         cls, deserializer: WidgetDeserializer[T_co]
-    ) -> "RegisterWidgetResult[T_co]":
+    ) -> RegisterWidgetResult[T_co]:
         """The canonical way to construct a RegisterWidgetResult in cases
         where the true widget value could not be determined.
         """
@@ -200,7 +201,7 @@ def compute_widget_id(
     return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
-def user_key_from_widget_id(widget_id: str) -> Optional[str]:
+def user_key_from_widget_id(widget_id: str) -> str | None:
     """Return the user key portion of a widget id, or None if the id does not
     have a user key.
 

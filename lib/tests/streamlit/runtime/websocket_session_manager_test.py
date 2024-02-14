@@ -97,7 +97,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert session_info.session.id == session_id
         assert session_info.session.id != "not a valid session"
 
-    @patch("streamlit.runtime.websocket_session_manager.LOGGER.warning")
+    @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
     def test_connect_session_connects_new_session_if_already_connected(
         self, patched_warning
     ):

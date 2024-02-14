@@ -19,18 +19,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Collection,
-    Dict,
-    Final,
-    Iterable,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Collection, Dict, Final, Iterable, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -58,7 +47,7 @@ Data: TypeAlias = Union[
 ]
 
 # Map used as the basis for st.map.
-_DEFAULT_MAP: Final[Dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
+_DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
@@ -99,11 +88,11 @@ class MapMixin:
         *,
         latitude: str | None = None,
         longitude: str | None = None,
-        color: Union[None, str, Color] = None,
-        size: Union[None, str, float] = None,
+        color: None | str | Color = None,
+        size: None | str | float = None,
         zoom: int | None = None,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
         This is a wrapper around ``st.pydeck_chart`` to quickly create
@@ -247,7 +236,7 @@ class MapMixin:
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -327,7 +316,7 @@ def _get_lat_or_lon_col_name(
     data: DataFrame,
     human_readable_name: str,
     col_name_from_user: str | None,
-    default_col_names: Set[str],
+    default_col_names: set[str],
 ) -> str:
     """Returns the column name to be used for latitude or longitude."""
 
@@ -373,7 +362,7 @@ def _get_value_and_col_name(
     data: DataFrame,
     value_or_name: Any,
     default_value: Any,
-) -> Tuple[Any, str | None]:
+) -> tuple[Any, str | None]:
     """Take a value_or_name passed in by the Streamlit developer and return a PyDeck
     argument and column name for that property.
 
@@ -385,7 +374,7 @@ def _get_value_and_col_name(
     - If the user passes size="my_col_123", this returns "@@=my_col_123" and "my_col_123".
     """
 
-    pydeck_arg: Union[str, float]
+    pydeck_arg: str | float
 
     if isinstance(value_or_name, str) and value_or_name in data.columns:
         col_name = value_or_name
@@ -416,7 +405,7 @@ def _convert_color_arg_or_column(
     NOTE: This function mutates the data argument.
     """
 
-    color_arg_out: Union[None, str, IntColorTuple] = None
+    color_arg_out: None | str | IntColorTuple = None
 
     if color_col_name is not None:
         # Convert color column to the right format.
@@ -444,7 +433,7 @@ def _convert_color_arg_or_column(
 
 def _get_viewport_details(
     data: DataFrame, lat_col_name: str, lon_col_name: str, zoom: int | None
-) -> Tuple[int, float, float]:
+) -> tuple[int, float, float]:
     """Auto-set viewport when not fully specified by user."""
     min_lat = data[lat_col_name].min()
     max_lat = data[lat_col_name].max()

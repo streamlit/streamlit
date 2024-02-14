@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ast
+from __future__ import annotations
 
-from typing_extensions import Final
+import ast
+from typing import Any, Final
 
 from streamlit import config
 
@@ -24,7 +25,7 @@ from streamlit import config
 MAGIC_MODULE_NAME: Final = "__streamlitmagic__"
 
 
-def add_magic(code, script_path):
+def add_magic(code: str, script_path: str) -> Any:
     """Modifies the code to support magic Streamlit commands.
 
     Parameters
@@ -51,7 +52,10 @@ def add_magic(code, script_path):
 
 
 def _modify_ast_subtree(
-    tree, body_attr="body", is_root=False, file_ends_in_semicolon=False
+    tree: Any,
+    body_attr: str = "body",
+    is_root: bool = False,
+    file_ends_in_semicolon: bool = False,
 ):
     """Parses magic commands and modifies the given AST (sub)tree."""
 
@@ -118,7 +122,7 @@ def _modify_ast_subtree(
     return tree
 
 
-def _insert_import_statement(tree):
+def _insert_import_statement(tree: Any) -> None:
     """Insert Streamlit import statement at the top(ish) of the tree."""
 
     st_import = _build_st_import_statement()
@@ -226,11 +230,11 @@ def _get_st_write_from_expr(
     return st_write
 
 
-def _is_string_constant_node(node):
+def _is_string_constant_node(node) -> bool:
     return type(node) is ast.Constant and type(node.value) is str
 
 
-def _is_docstring_node(node, node_index, parent_type):
+def _is_docstring_node(node, node_index, parent_type) -> bool:
     return (
         node_index == 0
         and _is_string_constant_node(node)
@@ -238,7 +242,7 @@ def _is_docstring_node(node, node_index, parent_type):
     )
 
 
-def _does_file_end_in_semicolon(tree, code):
+def _does_file_end_in_semicolon(tree, code: str) -> bool:
     file_ends_in_semicolon = False
 
     # Avoid spending time with this operation if magic.displayLastExprIfNoSemicolon is
@@ -247,13 +251,15 @@ def _does_file_end_in_semicolon(tree, code):
         last_line_num = getattr(tree.body[-1], "end_lineno", None)
 
         if last_line_num is not None:
-            last_line_str = code.split("\n")[last_line_num - 1]
+            last_line_str: str = code.split("\n")[last_line_num - 1]
             file_ends_in_semicolon = last_line_str.strip(" ").endswith(";")
 
     return file_ends_in_semicolon
 
 
-def _is_displayable_last_expr(is_root, is_last_expr, file_ends_in_semicolon):
+def _is_displayable_last_expr(
+    is_root: bool, is_last_expr: bool, file_ends_in_semicolon: bool
+) -> bool:
     return (
         # This is a "displayable last expression" if...
         # ...it's actually the last expression...
@@ -267,5 +273,5 @@ def _is_displayable_last_expr(is_root, is_last_expr, file_ends_in_semicolon):
     )
 
 
-def _should_display_docstring_like_node_anyway(is_root):
+def _should_display_docstring_like_node_anyway(is_root: bool) -> bool:
     return config.get_option("magic.displayRootDocString") and is_root
