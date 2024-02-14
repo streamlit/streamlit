@@ -114,3 +114,19 @@ class VideoTest(DeltaGeneratorTestCase):
             filename=f'{hashlib.md5(b"default").hexdigest()}.vtt',
         )
         self.assertIn(expected_subtitle_url, el.video.subtitles[0].url)
+
+    def test_st_video_empty_subtitles(self):
+        """Test st.video with subtitles, empty subtitle label, content allowed."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        st.video(fake_video_data, subtitles={"": ""})
+
+        el = self.get_delta_from_queue().new_element
+        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
+        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+
+        expected_subtitle_url = _calculate_file_id(
+            b"",
+            "text/vtt",
+            filename=f'{hashlib.md5(b"").hexdigest()}.vtt',
+        )
+        self.assertIn(expected_subtitle_url, el.video.subtitles[0].url)
