@@ -23,6 +23,7 @@ def test_default_toast_rendering(
     """Test that toasts are correctly rendered."""
     themed_app.keyboard.press("r")
     wait_for_app_loaded(themed_app)
+    themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
@@ -38,6 +39,7 @@ def test_collapsed_toast_rendering(
     """Test collapsed long toasts are correctly rendered."""
     themed_app.keyboard.press("r")
     wait_for_app_loaded(themed_app)
+    themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
@@ -55,12 +57,15 @@ def test_expanded_toast_rendering(
     """Test expanded long toasts are correctly rendered."""
     themed_app.keyboard.press("r")
     wait_for_app_loaded(themed_app)
+    themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(2)
     toasts.nth(0).hover()
 
-    themed_app.get_by_text("view more").click()
+    expand = themed_app.get_by_text("view more")
+    expect(expand).to_have_count(1)
+    expand.click()
 
     expect(toasts.nth(0)).to_have_text(
         "🦄 Random toast message that is a really really really really really really really long message, going way past the 3 line limitview lessClose"
@@ -74,6 +79,7 @@ def test_toast_overlay_with_chat(
     """Test that toasts overlay with st.chat_input."""
     themed_app.keyboard.press("r")
     wait_for_app_loaded(themed_app)
+    themed_app.wait_for_timeout(250)
 
     container = themed_app.get_by_test_id("stBottomBlockContainer")
     toasts = themed_app.get_by_test_id("stToast")
