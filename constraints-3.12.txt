@@ -90,7 +90,7 @@ requests-mock==1.11.0
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.0
-rpds-py==0.17.1
+rpds-py==0.18.0
 scipy==1.12.0
 seaborn==0.13.2
 SecretStorage==3.3.3
