@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import urllib.parse
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Set, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -43,7 +43,7 @@ configure_streamlit_plotly_theme()
 
 SharingMode: TypeAlias = Literal["streamlit", "private", "public", "secret"]
 
-SHARING_MODES: Set[SharingMode] = {
+SHARING_MODES: set[SharingMode] = {
     # This means the plot will be sent to the Streamlit app rather than to
     # Plotly.
     "streamlit",
@@ -79,7 +79,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         **kwargs: Any,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -164,7 +164,7 @@ class PlotlyMixin:
         return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -220,7 +220,7 @@ def marshall(
 
 
 @caching.cache
-def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> "go.Figure":
+def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> go.Figure:
     """Call plotly.plot wrapped in st.cache.
 
     This is so we don't unnecessarily upload data to Plotly's SASS if nothing

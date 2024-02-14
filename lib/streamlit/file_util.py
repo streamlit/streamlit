@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import errno
-import fnmatch
 import io
 import os
 from pathlib import Path
@@ -29,7 +30,9 @@ CONFIG_FOLDER_NAME = ".streamlit"
 APP_STATIC_FOLDER_NAME = "static"
 
 
-def get_encoded_file_data(data, encoding="auto"):
+def get_encoded_file_data(
+    data: bytes, encoding: str = "auto"
+) -> io.StringIO | io.BytesIO:
     """Coerce bytes to a BytesIO or a StringIO.
 
     Parameters
@@ -45,16 +48,15 @@ def get_encoded_file_data(data, encoding="auto"):
 
     """
     if encoding == "auto":
-        if is_binary_string(data):
-            encoding = None
-        else:
-            # If the file does not look like a pure binary file, assume
-            # it's utf-8. It would be great if we could guess it a little
-            # more smartly here, but it is what it is!
-            encoding = "utf-8"
+        # If the file does not look like a pure binary file, assume
+        # it's utf-8. It would be great if we could guess it a little
+        # more smartly here, but it is what it is!
+        data_encoding = None if is_binary_string(data) else "utf-8"
+    else:
+        data_encoding = encoding
 
-    if encoding:
-        return io.StringIO(data.decode(encoding))
+    if data_encoding:
+        return io.StringIO(data.decode(data_encoding))
 
     return io.BytesIO(data)
 
@@ -116,7 +118,7 @@ def streamlit_write(path, binary=False):
         raise util.Error("\n".join(msg))
 
 
-def get_static_dir():
+def get_static_dir() -> str:
     """Get the folder where static HTML/JS/CSS files live."""
     dirname = os.path.dirname(os.path.normpath(__file__))
     return os.path.normpath(os.path.join(dirname, "static"))
@@ -150,7 +152,7 @@ def get_project_streamlit_file_path(*filepath):
     return os.path.join(os.getcwd(), CONFIG_FOLDER_NAME, *filepath)
 
 
-def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
+def file_is_in_folder_glob(filepath: str, folderpath_glob: str) -> bool:
     """Test whether a file is in some folder with globbing support.
 
     Parameters
@@ -169,6 +171,8 @@ def file_is_in_folder_glob(filepath, folderpath_glob) -> bool:
         else:
             folderpath_glob += "/*"
 
+    import fnmatch
+
     file_dir = os.path.dirname(filepath) + "/"
     return fnmatch.fnmatch(file_dir, folderpath_glob)
 
@@ -183,7 +187,7 @@ def get_directory_size(directory: str) -> int:
     return total_size
 
 
-def file_in_pythonpath(filepath) -> bool:
+def file_in_pythonpath(filepath: str) -> bool:
     """Test whether a filepath is in the same folder of a path specified in the PYTHONPATH env variable.
 
 

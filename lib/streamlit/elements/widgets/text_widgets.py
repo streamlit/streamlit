@@ -16,11 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
-from typing_extensions import Literal
-
-import streamlit
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
@@ -46,6 +43,9 @@ from streamlit.type_util import (
     maybe_raise_label_warnings,
     to_key,
 )
+
+if TYPE_CHECKING:
+    from streamlit.delta_generator import DeltaGenerator
 
 
 @dataclass
@@ -581,6 +581,6 @@ class TextWidgetsMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "streamlit.delta_generator.DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("streamlit.delta_generator.DeltaGenerator", self)
+        return cast("DeltaGenerator", self)

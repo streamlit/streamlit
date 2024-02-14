@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Final, cast
 
 from blinker import Signal
 
@@ -23,10 +25,10 @@ from streamlit.logger import get_logger
 from streamlit.string_util import extract_leading_emoji
 from streamlit.util import calc_md5
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
-def open_python_file(filename):
+def open_python_file(filename: str):
     """Open a read-only Python file taking proper care of its encoding.
 
     In Python 3, we would like all files to be opened with utf-8 encoding.
@@ -41,13 +43,13 @@ def open_python_file(filename):
         # found, opens as utf-8.
         return tokenize.open(filename)
     else:
-        return open(filename, "r", encoding="utf-8")
+        return open(filename, encoding="utf-8")
 
 
 PAGE_FILENAME_REGEX = re.compile(r"([0-9]*)[_ -]*(.*)\.py")
 
 
-def page_sort_key(script_path: Path) -> Tuple[float, str]:
+def page_sort_key(script_path: Path) -> tuple[float, str]:
     matches = re.findall(PAGE_FILENAME_REGEX, script_path.name)
 
     # Failing this assert should only be possible if script_path isn't a Python
@@ -63,7 +65,7 @@ def page_sort_key(script_path: Path) -> Tuple[float, str]:
     return (float(number), label)
 
 
-def page_icon_and_name(script_path: Path) -> Tuple[str, str]:
+def page_icon_and_name(script_path: Path) -> tuple[str, str]:
     """Compute the icon and name of a page from its script path.
 
     This is *almost* the page name displayed in the nav UI, but it has
@@ -89,21 +91,21 @@ def page_icon_and_name(script_path: Path) -> Tuple[str, str]:
 
 
 _pages_cache_lock = threading.RLock()
-_cached_pages: Optional[Dict[str, Dict[str, str]]] = None
+_cached_pages: dict[str, dict[str, str]] | None = None
 _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
 
 
-def invalidate_pages_cache():
+def invalidate_pages_cache() -> None:
     global _cached_pages
 
-    LOGGER.debug("Pages directory changed")
+    _LOGGER.debug("Pages directory changed")
     with _pages_cache_lock:
         _cached_pages = None
 
     _on_pages_changed.send()
 
 
-def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
+def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:
     global _cached_pages
 
     # Avoid taking the lock if the pages cache hasn't been invalidated.
@@ -162,7 +164,7 @@ def get_pages(main_script_path_str: str) -> Dict[str, Dict[str, str]]:
 
 def register_pages_changed_callback(
     callback: Callable[[str], None],
-):
+) -> Callable[[], None]:
     def disconnect():
         _on_pages_changed.disconnect(callback)
 

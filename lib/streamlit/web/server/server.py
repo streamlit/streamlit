@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import errno
 import logging
 import os
-import socket
-import ssl
 import sys
 from pathlib import Path
-from typing import Any, Awaitable, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Final
 
 import tornado.concurrent
 import tornado.locks
@@ -27,7 +27,6 @@ import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.httpserver import HTTPServer
-from typing_extensions import Final
 
 from streamlit import cli_util, config, file_util, source_util, util
 from streamlit.components.v1.components import ComponentRegistry
@@ -55,7 +54,10 @@ from streamlit.web.server.server_util import DEVELOPMENT_PORT, make_url_path_reg
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
-LOGGER = get_logger(__name__)
+if TYPE_CHECKING:
+    from ssl import SSLContext
+
+_LOGGER: Final = get_logger(__name__)
 
 TORNADO_SETTINGS = {
     # Gzip HTTP responses.
@@ -74,11 +76,11 @@ TORNADO_SETTINGS = {
 
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
-MAX_PORT_SEARCH_RETRIES = 100
+MAX_PORT_SEARCH_RETRIES: Final = 100
 
 # When server.address starts with this prefix, the server will bind
 # to an unix socket.
-UNIX_SOCKET_PREFIX = "unix://"
+UNIX_SOCKET_PREFIX: Final = "unix://"
 
 MEDIA_ENDPOINT: Final = "/media"
 UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
@@ -128,11 +130,9 @@ def start_listening(app: tornado.web.Application) -> None:
         start_listening_tcp_socket(http_server)
 
 
-def _get_ssl_options(
-    cert_file: Optional[str], key_file: Optional[str]
-) -> Union[ssl.SSLContext, None]:
+def _get_ssl_options(cert_file: str | None, key_file: str | None) -> SSLContext | None:
     if bool(cert_file) != bool(key_file):
-        LOGGER.error(
+        _LOGGER.error(
             "Options 'server.sslCertFile' and 'server.sslKeyFile' must "
             "be set together. Set missing options or delete existing options."
         )
@@ -142,11 +142,13 @@ def _get_ssl_options(
         # sufficiently user-friendly
         # FileNotFoundError: [Errno 2] No such file or directory
         if not Path(cert_file).exists():
-            LOGGER.error("Cert file '%s' does not exist.", cert_file)
+            _LOGGER.error("Cert file '%s' does not exist.", cert_file)
             sys.exit(1)
         if not Path(key_file).exists():
-            LOGGER.error("Key file '%s' does not exist.", key_file)
+            _LOGGER.error("Key file '%s' does not exist.", key_file)
             sys.exit(1)
+
+        import ssl
 
         ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         # When the SSL certificate fails to load, an exception is raised as below,
@@ -155,7 +157,7 @@ def _get_ssl_options(
         try:
             ssl_ctx.load_cert_chain(cert_file, key_file)
         except ssl.SSLError:
-            LOGGER.error(
+            _LOGGER.error(
                 "Failed to load SSL certificate. Make sure "
                 "cert file '%s' and key file '%s' are correct.",
                 cert_file,
@@ -184,7 +186,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         port = config.get_option("server.port")
 
         if int(port) == DEVELOPMENT_PORT:
-            LOGGER.warning(
+            _LOGGER.warning(
                 "Port %s is reserved for internal development. "
                 "It is strongly recommended to select an alternative port "
                 "for `server.port`.",
@@ -195,13 +197,13 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
             http_server.listen(port, address)
             break  # It worked! So let's break out of the loop.
 
-        except (OSError, socket.error) as e:
+        except OSError as e:
             if e.errno == errno.EADDRINUSE:
                 if server_port_is_manually_set():
-                    LOGGER.error("Port %s is already in use", port)
+                    _LOGGER.error("Port %s is already in use", port)
                     sys.exit(1)
                 else:
-                    LOGGER.debug(
+                    _LOGGER.debug(
                         "Port %s already in use, trying to use the next one.", port
                     )
                     port += 1
@@ -262,13 +264,13 @@ class Server:
         When this returns, Streamlit is ready to accept new sessions.
         """
 
-        LOGGER.debug("Starting server...")
+        _LOGGER.debug("Starting server...")
 
         app = self._create_app()
         start_listening(app)
 
         port = config.get_option("server.port")
-        LOGGER.debug("Server started on port %s", port)
+        _LOGGER.debug("Server started on port %s", port)
 
         await self._runtime.start()
 
@@ -281,7 +283,7 @@ class Server:
         """Create our tornado web app."""
         base = config.get_option("server.baseUrlPath")
 
-        routes: List[Any] = [
+        routes: list[Any] = [
             (
                 make_url_path_regex(base, STREAM_ENDPOINT),
                 BrowserWebSocketHandler,
@@ -354,10 +356,10 @@ class Server:
             )
 
         if config.get_option("global.developmentMode"):
-            LOGGER.debug("Serving static content from the Node dev server")
+            _LOGGER.debug("Serving static content from the Node dev server")
         else:
             static_path = file_util.get_static_dir()
-            LOGGER.debug("Serving static content from %s", static_path)
+            _LOGGER.debug("Serving static content from %s", static_path)
 
             routes.extend(
                 [
@@ -367,14 +369,12 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_pages": lambda: set(
-                                [
-                                    page_info["page_name"]
-                                    for page_info in source_util.get_pages(
-                                        self.main_script_path
-                                    ).values()
-                                ]
-                            ),
+                            "get_pages": lambda: {
+                                page_info["page_name"]
+                                for page_info in source_util.get_pages(
+                                    self.main_script_path
+                                ).values()
+                            },
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),

@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import base64
 import binascii
 import json
-from typing import Any, Awaitable, Dict, List, Optional, Union
+from typing import Any, Awaitable, Final
 
 import tornado.concurrent
 import tornado.locks
@@ -23,7 +25,6 @@ import tornado.netutil
 import tornado.web
 import tornado.websocket
 from tornado.websocket import WebSocketHandler
-from typing_extensions import Final
 
 from streamlit import config
 from streamlit.logger import get_logger
@@ -41,7 +42,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
     def initialize(self, runtime: Runtime) -> None:
         self._runtime = runtime
-        self._session_id: Optional[str] = None
+        self._session_id: str | None = None
         # The XSRF cookie is normally set when xsrf_form_html is used, but in a
         # pure-Javascript application that does not use any regular forms we just
         # need to read the self.xsrf_token manually to set the cookie as a side
@@ -61,7 +62,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except tornado.websocket.WebSocketClosedError as e:
             raise SessionClientDisconnectedError from e
 
-    def select_subprotocol(self, subprotocols: List[str]) -> Optional[str]:
+    def select_subprotocol(self, subprotocols: list[str]) -> str | None:
         """Return the first subprotocol in the given list.
 
         This method is used by Tornado to select a protocol when the
@@ -87,7 +88,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         return None
 
-    def open(self, *args, **kwargs) -> Optional[Awaitable[None]]:
+    def open(self, *args, **kwargs) -> Awaitable[None] | None:
         # Extract user info from the X-Streamlit-User header
         is_public_cloud_app = False
 
@@ -100,7 +101,8 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@example.com"
 
-        user_info: Dict[str, Optional[str]] = dict()
+        user_info: dict[str, str | None] = dict()
+
         if is_public_cloud_app:
             user_info["email"] = None
         else:
@@ -135,7 +137,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         self._runtime.disconnect_session(self._session_id)
         self._session_id = None
 
-    def get_compression_options(self) -> Optional[Dict[Any, Any]]:
+    def get_compression_options(self) -> dict[Any, Any] | None:
         """Enable WebSocket compression.
 
         Returning an empty dict enables websocket compression. Returning
@@ -147,7 +149,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
             return {}
         return None
 
-    def on_message(self, payload: Union[str, bytes]) -> None:
+    def on_message(self, payload: str | bytes) -> None:
         if not self._session_id:
             return
 

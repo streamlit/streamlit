@@ -87,13 +87,13 @@ class ImageMixin:
         image: ImageOrImageList,
         # TODO: Narrow type of caption, dependent on type of image,
         #  by way of overload
-        caption: str | List[str] | None = None,
+        caption: str | list[str] | None = None,
         width: int | None = None,
         use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an image or list of images.
 
         Parameters
@@ -171,7 +171,7 @@ class ImageMixin:
         return self.dg._enqueue("imgs", image_list_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -243,7 +243,7 @@ def _BytesIO_to_bytes(data: io.BytesIO) -> bytes:
     return data.getvalue()
 
 
-def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes:
+def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str = "JPEG") -> bytes:
     import numpy as np
     from PIL import Image
 
@@ -253,11 +253,11 @@ def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes
     return _PIL_to_bytes(img, format)
 
 
-def _4d_to_list_3d(array: "npt.NDArray[Any]") -> List["npt.NDArray[Any]"]:
+def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:
     return [array[i, :, :, :] for i in range(0, array.shape[0])]
 
 
-def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
+def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
     if len(array.shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
     if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
@@ -307,7 +307,7 @@ def _ensure_image_size_and_format(
     return image_data
 
 
-def _clip_image(image: "npt.NDArray[Any]", clamp: bool) -> "npt.NDArray[Any]":
+def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
     import numpy as np
 
     data = image
@@ -451,7 +451,7 @@ def image_to_url(
 def marshall_images(
     coordinates: str,
     image: ImageOrImageList,
-    caption: str | "npt.NDArray[Any]" | List[str] | None,
+    caption: str | npt.NDArray[Any] | list[str] | None,
     width: int | WidthBehaviour,
     proto_imgs: ImageListProto,
     clamp: bool,
