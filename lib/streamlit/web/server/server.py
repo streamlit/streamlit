@@ -186,7 +186,7 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         port = config.get_option("server.port")
 
         if int(port) == DEVELOPMENT_PORT:
-            LOGGER.warning(
+            _LOGGER.warning(
                 "Port %s is reserved for internal development. "
                 "It is strongly recommended to select an alternative port "
                 "for `server.port`.",
