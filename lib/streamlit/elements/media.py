@@ -356,7 +356,7 @@ def marshall_video(
             sub = proto.subtitles.add()
             sub.label = label or ""
 
-            if url_util.is_url(subtitle_data):
+            if isinstance(subtitle_data, str) and url_util.is_url(subtitle_data):
                 sub.url = subtitle_data
             else:
                 # Coordinates used in media_file_manager to identify the place of
