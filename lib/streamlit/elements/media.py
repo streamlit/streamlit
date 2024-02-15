@@ -42,7 +42,7 @@ MediaData: TypeAlias = Union[
 ]
 
 SubtitleData: TypeAlias = Union[
-    str, Path, io.BytesIO, Dict[str, Union[str, Path, io.BytesIO]], None
+    str, Path, bytes, io.BytesIO, Dict[str, Union[str, Path, bytes, io.BytesIO]], None
 ]
 
 
@@ -341,7 +341,7 @@ def marshall_video(
         _marshall_av_media(coordinates, proto, data, mimetype)
 
     if subtitles:
-        subtitle_items = []
+        subtitle_items: list[tuple[str, str | Path | bytes | io.BytesIO]] = []
 
         # Single subtitle
         if isinstance(subtitles, (str, bytes, io.BytesIO, Path)):

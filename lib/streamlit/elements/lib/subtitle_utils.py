@@ -101,7 +101,7 @@ def srt_to_vtt(srt_data: str | bytes) -> bytes:
 
 def process_subtitle_data(
     coordinates: str,
-    data: str | bytes | io.BytesIO,
+    data: str | bytes | Path | io.BytesIO,
     label: str,
 ) -> str:
     allowed_formats = {".srt", ".vtt"}
