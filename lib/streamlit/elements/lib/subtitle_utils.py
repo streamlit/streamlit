@@ -106,10 +106,10 @@ def process_subtitle_data(
 ) -> str:
     allowed_formats = {".srt", ".vtt"}
 
-    def handle_string_data(data_str: str) -> bytes:
+    def handle_string_or_path_data(data_or_path: str | Path) -> bytes:
         """Handles string data, either as a file path or raw content."""
-        if os.path.isfile(data_str):
-            path = Path(data_str)
+        if os.path.isfile(data_or_path):
+            path = Path(data_or_path)
             file_extension = path.suffix.lower()
 
             if file_extension not in allowed_formats:
@@ -117,11 +117,13 @@ def process_subtitle_data(
                     f"Incorrect subtitle format {file_extension}. Subtitles must be in "
                     f"one of the following formats: {', '.join(allowed_formats)}"
                 )
-            with open(data_str, "rb") as file:
+            with open(data_or_path, "rb") as file:
                 content = file.read()
             return srt_to_vtt(content) if file_extension == ".srt" else content
+        elif isinstance(data_or_path, Path):
+            raise ValueError(f"File {data_or_path} does not exist.")
 
-        content_string = data_str.strip()
+        content_string = data_or_path.strip()
 
         if content_string.startswith("WEBVTT") or content_string == "":
             return content_string.encode("utf-8")
@@ -138,8 +140,8 @@ def process_subtitle_data(
         return srt_to_vtt(stream_data) if _is_srt(stream) else stream_data
 
     # Determine the type of data and process accordingly
-    if isinstance(data, str):
-        subtitle_data = handle_string_data(data)
+    if isinstance(data, (str, Path)):
+        subtitle_data = handle_string_or_path_data(data)
     elif isinstance(data, bytes):
         subtitle_data = data  # Assume bytes are already in the correct format.
     elif isinstance(data, io.BytesIO):

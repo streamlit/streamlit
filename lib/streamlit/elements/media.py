@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import io
 import re
-from typing import TYPE_CHECKING, Dict, Final, Optional, Union, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -40,7 +41,9 @@ MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
 ]
 
-SubtitleData: TypeAlias = Optional[Union[str, Dict[str, str], io.BytesIO]]
+SubtitleData: TypeAlias = Union[
+    str, Path, io.BytesIO, Dict[str, Union[str, Path, io.BytesIO]], None
+]
 
 
 class MediaMixin:
@@ -356,18 +359,14 @@ def marshall_video(
             sub = proto.subtitles.add()
             sub.label = label or ""
 
-            if isinstance(subtitle_data, str) and url_util.is_url(subtitle_data):
-                sub.url = subtitle_data
-            else:
-                # Coordinates used in media_file_manager to identify the place of
-                # element, in case of subtitle, we use same video coordinates
-                # with suffix.
-                # It is not aligned with common coordinates format, but in
-                # media_file_manager we use it just as unique identifier, so it is fine.
-                subtitle_coordinates = f"{coordinates}[subtitle{label}]"
-                sub.url = process_subtitle_data(
-                    subtitle_coordinates, subtitle_data, label
-                )
+            # Coordinates used in media_file_manager to identify the place of
+            # element, in case of subtitle, we use same video coordinates
+            # with suffix.
+            # It is not aligned with common coordinates format, but in
+            # media_file_manager we use it just as unique identifier, so it is fine.
+            subtitle_coordinates = f"{coordinates}[subtitle{label}]"
+
+            sub.url = process_subtitle_data(subtitle_coordinates, subtitle_data, label)
 
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
