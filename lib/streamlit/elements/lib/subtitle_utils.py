@@ -30,6 +30,8 @@ SRT_VALIDATION_REGEX = r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}"
 
 SRT_CONVERSION_REGEX = r"(\d{2}:\d{2}:\d{2}),(\d{3})"
 
+SUBTITLE_ALLOWED_FORMATS = (".srt", ".vtt")
+
 
 def _is_srt(stream: str | io.BytesIO) -> bool:
     # Convert str to io.BytesIO if 'stream' is a string
@@ -62,7 +64,7 @@ def _is_srt(stream: str | io.BytesIO) -> bool:
     return False
 
 
-def srt_to_vtt(srt_data: str | bytes) -> bytes:
+def _srt_to_vtt(srt_data: str | bytes) -> bytes:
     """
     Convert subtitles from SubRip (.srt) format to WebVTT (.vtt) format.
     This function accepts the content of the .srt file either as a string
@@ -101,53 +103,52 @@ def srt_to_vtt(srt_data: str | bytes) -> bytes:
     return vtt_content
 
 
+def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
+    """Handles string data, either as a file path or raw content."""
+    if os.path.isfile(data_or_path):
+        path = Path(data_or_path)
+        file_extension = path.suffix.lower()
+
+        if file_extension not in SUBTITLE_ALLOWED_FORMATS:
+            raise ValueError(
+                f"Incorrect subtitle format {file_extension}. Subtitles must be in "
+                f"one of the following formats: {', '.join(SUBTITLE_ALLOWED_FORMATS)}"
+            )
+        with open(data_or_path, "rb") as file:
+            content = file.read()
+        return _srt_to_vtt(content) if file_extension == ".srt" else content
+    elif isinstance(data_or_path, Path):
+        raise ValueError(f"File {data_or_path} does not exist.")
+
+    content_string = data_or_path.strip()
+
+    if content_string.startswith("WEBVTT") or content_string == "":
+        return content_string.encode("utf-8")
+    elif _is_srt(content_string):
+        return _srt_to_vtt(content_string)
+    raise ValueError("The provided string neither matches valid VTT nor SRT format.")
+
+
+def _handle_stream_data(stream: io.BytesIO) -> bytes:
+    """Handles io.BytesIO data, assuming it's SRT content."""
+    stream.seek(0)
+    stream_data = stream.getvalue()
+    return _srt_to_vtt(stream_data) if _is_srt(stream) else stream_data
+
+
 def process_subtitle_data(
     coordinates: str,
     data: str | bytes | Path | io.BytesIO,
     label: str,
 ) -> str:
-    allowed_formats = {".srt", ".vtt"}
-
-    def handle_string_or_path_data(data_or_path: str | Path) -> bytes:
-        """Handles string data, either as a file path or raw content."""
-        if os.path.isfile(data_or_path):
-            path = Path(data_or_path)
-            file_extension = path.suffix.lower()
-
-            if file_extension not in allowed_formats:
-                raise ValueError(
-                    f"Incorrect subtitle format {file_extension}. Subtitles must be in "
-                    f"one of the following formats: {', '.join(allowed_formats)}"
-                )
-            with open(data_or_path, "rb") as file:
-                content = file.read()
-            return srt_to_vtt(content) if file_extension == ".srt" else content
-        elif isinstance(data_or_path, Path):
-            raise ValueError(f"File {data_or_path} does not exist.")
-
-        content_string = data_or_path.strip()
-
-        if content_string.startswith("WEBVTT") or content_string == "":
-            return content_string.encode("utf-8")
-        elif _is_srt(content_string):
-            return srt_to_vtt(content_string)
-        raise ValueError(
-            "The provided string neither matches valid VTT nor SRT format."
-        )
-
-    def handle_stream_data(stream: io.BytesIO) -> bytes:
-        """Handles io.BytesIO data, assuming it's SRT content."""
-        stream.seek(0)
-        stream_data = stream.getvalue()
-        return srt_to_vtt(stream_data) if _is_srt(stream) else stream_data
 
     # Determine the type of data and process accordingly
     if isinstance(data, (str, Path)):
-        subtitle_data = handle_string_or_path_data(data)
+        subtitle_data = _handle_string_or_path_data(data)
     elif isinstance(data, bytes):
         subtitle_data = data  # Assume bytes are already in the correct format.
     elif isinstance(data, io.BytesIO):
-        subtitle_data = handle_stream_data(data)
+        subtitle_data = _handle_stream_data(data)
     else:
         raise TypeError(f"Invalid binary data format for subtitle: {type(data)}.")
 
@@ -161,7 +162,6 @@ def process_subtitle_data(
             file_name=f"{filename}.vtt",
         )
         caching.save_media_data(subtitle_data, "text/vtt", coordinates)
-
         return file_url
     else:
         # When running in "raw mode", we can't access the MediaFileManager.

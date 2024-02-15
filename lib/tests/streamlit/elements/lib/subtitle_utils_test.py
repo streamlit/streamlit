@@ -16,8 +16,8 @@ from parameterized import parameterized
 
 from streamlit.elements.lib.subtitle_utils import (
     _is_srt,
+    _srt_to_vtt,
     process_subtitle_data,
-    srt_to_vtt,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -97,7 +97,7 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
         """Test srt to vtt format transition."""
 
         self.assertEqual(
-            srt_to_vtt(srt_string),
+            _srt_to_vtt(srt_string),
             expected,
             f"Expected {srt_string} to be transformed into {str(expected)}.",
         )
@@ -108,5 +108,5 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
         file_id = url.split("/")[-1].split(".")[0]
         media_file = self.media_file_storage.get_file(file_id)
         self.assertIsNotNone(media_file)
-        self.assertEqual(media_file.content, srt_to_vtt(SRT_DATA_EN.strip()))
+        self.assertEqual(media_file.content, _srt_to_vtt(SRT_DATA_EN.strip()))
         self.assertEqual(media_file.mimetype, "text/vtt")
