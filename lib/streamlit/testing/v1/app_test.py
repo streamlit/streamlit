@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import ast
 import hashlib
 import inspect
 import pathlib
@@ -142,19 +141,23 @@ class AppTest:
         dict-like syntax to set ``query_params`` values for the simulated app.
     """
 
-    def __init__(self, script_path: str, *, default_timeout: float):
+    def __init__(self, script_path: str, *args, default_timeout: float, **kwargs):
         self._script_path = script_path
         self.default_timeout = default_timeout
         self.session_state = SafeSessionState(SessionState(), lambda: None)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
+        self.args = args
+        self.kwargs = kwargs
 
         tree = ElementTree()
         tree._runner = self
         self._tree = tree
 
     @classmethod
-    def from_string(cls, script: str, *, default_timeout: float = 3) -> AppTest:
+    def from_string(
+        cls, script: str, *args, default_timeout: float = 3, **kwargs
+    ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
         within a string.
@@ -186,11 +189,11 @@ class AppTest:
         path = pathlib.Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
-        return AppTest(str(path), default_timeout=default_timeout)
+        return AppTest(str(path), *args, default_timeout=default_timeout, **kwargs)
 
     @classmethod
     def from_function(
-        cls, script: Callable[[], None], *, default_timeout: float = 3
+        cls, script: Callable[[], None], *args, default_timeout: float = 3, **kwargs
     ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
@@ -220,11 +223,8 @@ class AppTest:
         # TODO: Simplify this using `ast.unparse()` once we drop 3.8 support
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
-        module = ast.parse(source)
-        fn_def = module.body[0]
-        body_lines = source_lines[fn_def.lineno :]
-        body = textwrap.dedent("".join(body_lines))
-        return cls.from_string(body, default_timeout=default_timeout)
+        module = source + f"\n{script.__name__}(*__args, **__kwargs)"
+        return cls.from_string(module, *args, default_timeout=default_timeout, **kwargs)
 
     @classmethod
     def from_file(cls, script_path: str, *, default_timeout: float = 3) -> AppTest:
@@ -299,7 +299,9 @@ class AppTest:
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
 
-        script_runner = LocalScriptRunner(self._script_path, self.session_state)
+        script_runner = LocalScriptRunner(
+            self._script_path, self.session_state, *self.args, **self.kwargs
+        )
         self._tree = script_runner.run(widget_state, self.query_params, timeout)
         self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
