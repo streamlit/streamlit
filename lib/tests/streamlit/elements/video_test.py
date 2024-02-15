@@ -21,6 +21,7 @@ from tempfile import NamedTemporaryFile
 import numpy as np
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.web.server.server import MEDIA_ENDPOINT
@@ -165,3 +166,33 @@ class VideoTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertIn(expected_english_subtitle_url, el.video.subtitles[0].url)
+
+    def test_singe_subtitle_exception(self):
+        """Test that an error is raised if invalid subtitles is provided."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.video(fake_video_data, subtitles="invalid_subtitles")
+        self.assertEqual(
+            str(e.exception),
+            "Failed to process the provided subtitle: default",
+        )
+
+    def test_dict_subtitle_video_exception(self):
+        """Test that an error is raised if invalid subtitles in dict is provided."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.video(
+                fake_video_data,
+                subtitles={
+                    "English": fake_sub_content,
+                    "": "",  # empty subtitle label and value are also valid
+                    "Martian": "invalid_subtitles",
+                },
+            )
+        self.assertEqual(
+            str(e.exception),
+            "Failed to process the provided subtitle: Martian",
+        )
