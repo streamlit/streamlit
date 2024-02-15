@@ -344,7 +344,7 @@ def marshall_video(
         subtitle_items = []
 
         # Single subtitle
-        if isinstance(subtitles, (str, bytes, io.BytesIO)):
+        if isinstance(subtitles, (str, bytes, io.BytesIO, Path)):
             subtitle_items.append(("default", subtitles))
         # Multiple subtitles
         elif isinstance(subtitles, dict):

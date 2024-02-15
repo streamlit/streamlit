@@ -15,6 +15,8 @@
 """st.video unit tests"""
 import hashlib
 from io import BytesIO
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 
@@ -143,3 +145,23 @@ class VideoTest(DeltaGeneratorTestCase):
         )
         self.assertIn(expected_empty_subtitle_url, el.video.subtitles[0].url)
         self.assertIn(expected_english_subtitle_url, el.video.subtitles[1].url)
+
+    def test_st_video_subtitles_path(self):
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+
+        with NamedTemporaryFile(suffix=".vtt", mode="wb") as tmp_file:
+            p = Path(tmp_file.name)
+            tmp_file.write(fake_sub_content)
+            tmp_file.flush()
+
+            st.video(fake_video_data, subtitles=p)
+
+        expected_english_subtitle_url = _calculate_file_id(
+            fake_sub_content,
+            "text/vtt",
+            filename=f'{hashlib.md5(b"default").hexdigest()}.vtt',
+        )
+
+        el = self.get_delta_from_queue().new_element
+        self.assertIn(expected_english_subtitle_url, el.video.subtitles[0].url)
