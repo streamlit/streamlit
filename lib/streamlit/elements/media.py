@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 import re
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Dict, Final, Optional, Union, cast
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import runtime, type_util, url_util
@@ -49,8 +51,8 @@ class MediaMixin:
         format: str = "audio/wav",
         start_time: int = 0,
         *,
-        sample_rate: Optional[int] = None,
-    ) -> "DeltaGenerator":
+        sample_rate: int | None = None,
+    ) -> DeltaGenerator:
         """Display an audio player.
 
         Parameters
@@ -123,7 +125,7 @@ class MediaMixin:
         start_time: int = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a video player.
 
         Parameters
@@ -182,7 +184,7 @@ class MediaMixin:
         return self.dg._enqueue("video", video_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -199,7 +201,7 @@ YOUTUBE_RE: Final = re.compile(
 )
 
 
-def _reshape_youtube_url(url: str) -> Optional[str]:
+def _reshape_youtube_url(url: str) -> str | None:
     """Return whether URL is any kind of YouTube embed or watch link.  If so,
     reshape URL into an embed link suitable for use in an iframe.
 
@@ -224,7 +226,7 @@ def _reshape_youtube_url(url: str) -> Optional[str]:
 
 def _marshall_av_media(
     coordinates: str,
-    proto: Union[AudioProto, VideoProto],
+    proto: AudioProto | VideoProto,
     data: MediaData,
     mimetype: str,
 ) -> None:
@@ -245,7 +247,7 @@ def _marshall_av_media(
         # Allow empty values so media players can be shown without media.
         return
 
-    data_or_filename: Union[bytes, str]
+    data_or_filename: bytes | str
     if isinstance(data, (str, bytes)):
         # Pass strings and bytes through unchanged
         data_or_filename = data
@@ -361,7 +363,7 @@ def marshall_video(
             sub.url = process_subtitle_data(subtitle_coordinates, subtitle_data, label)
 
 
-def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
+def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     """Validates and normalizes numpy array data.
     We validate numpy array shape (should be 1d or 2d)
     We normalize input data to int16 [-32768, 32767] range.
@@ -383,7 +385,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data: "npt.NDArray[Any]" = np.array(data, dtype=float)
+    data: npt.NDArray[Any] = np.array(data, dtype=float)
 
     if len(data.shape) == 1:
         nchan = 1
@@ -410,7 +412,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     return scaled_data.tobytes(), nchan
 
 
-def _make_wav(data: "npt.NDArray[Any]", sample_rate: int) -> bytes:
+def _make_wav(data: npt.NDArray[Any], sample_rate: int) -> bytes:
     """
     Transform a numpy array to a PCM bytestring
     We use code from IPython display module to convert numpy array to wave bytes
@@ -431,9 +433,7 @@ def _make_wav(data: "npt.NDArray[Any]", sample_rate: int) -> bytes:
         return fp.getvalue()
 
 
-def _maybe_convert_to_wav_bytes(
-    data: MediaData, sample_rate: Optional[int]
-) -> MediaData:
+def _maybe_convert_to_wav_bytes(data: MediaData, sample_rate: int | None) -> MediaData:
     """Convert data to wav bytes if the data type is numpy array."""
     if type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
         data = _make_wav(cast("npt.NDArray[Any]", data), sample_rate)
@@ -446,7 +446,7 @@ def marshall_audio(
     data: MediaData,
     mimetype: str = "audio/wav",
     start_time: int = 0,
-    sample_rate: Optional[int] = None,
+    sample_rate: int | None = None,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 

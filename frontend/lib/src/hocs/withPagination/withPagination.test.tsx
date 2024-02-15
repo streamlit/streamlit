@@ -21,7 +21,9 @@ import { render } from "@streamlit/lib/src/test_util"
 
 import withPagination, { Props as HocProps } from "./withPagination"
 
-const TestComponent: React.ComponentType = () => <div>test</div>
+const TestComponent: React.ComponentType<
+  React.PropsWithChildren<unknown>
+> = () => <div>test</div>
 
 const getProps = (props: Partial<HocProps> = {}): HocProps => ({
   items: [{}, {}, {}, {}],

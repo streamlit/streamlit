@@ -1383,8 +1383,7 @@ class Block:
     def __iter__(self):
         yield self
         for child_idx in self.children:
-            for c in self.children[child_idx]:
-                yield c
+            yield from self.children[child_idx]
 
     def __getitem__(self, k: int) -> Node:
         return self.children[k]

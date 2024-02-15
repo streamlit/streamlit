@@ -107,8 +107,8 @@
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^17.0.0 || ^18.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0"
   },
   "browserslist": [
     ">0.2%",
@@ -122,18 +122,17 @@
     "@emotion/babel-plugin": "^11.7.2",
     "@testing-library/dom": "^8.19.0",
     "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^12.1.4",
+    "@testing-library/react": "^14.1.2",
     "@testing-library/react-hooks": "^8.0.1",
     "@testing-library/user-event": "^14.4.3",
     "@types/d3": "^7.4.0",
     "@types/d3-graphviz": "^2.6.7",
-    "@types/enzyme": "^3.10.12",
     "@types/jest": "^27.4.3",
     "@types/node-emoji": "^1.8.2",
     "@types/plotly.js": "^2.12.13",
-    "@types/react": "^17.0.7",
+    "@types/react": "^18.2.0",
     "@types/react-color": "^3.0.6",
-    "@types/react-dom": "^17.0.5",
+    "@types/react-dom": "^18.2.0",
     "@types/react-plotly.js": "^2.6.0",
     "@types/react-syntax-highlighter": "^15.5.5",
     "@types/sprintf-js": "^1.1.2",

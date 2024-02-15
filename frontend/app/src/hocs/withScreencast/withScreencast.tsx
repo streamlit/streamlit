@@ -56,8 +56,8 @@ interface InjectedProps {
 type WrappedProps<P extends InjectedProps> = Omit<P, "screenCast">
 
 function withScreencast<P extends InjectedProps>(
-  WrappedComponent: ComponentType<P>
-): ComponentType<WrappedProps<P>> {
+  WrappedComponent: ComponentType<React.PropsWithChildren<P>>
+): ComponentType<React.PropsWithChildren<WrappedProps<P>>> {
   class ComponentWithScreencast extends PureComponent<
     WrappedProps<P>,
     WithScreenCastState

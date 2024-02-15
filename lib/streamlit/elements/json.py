@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import json
-from typing import TYPE_CHECKING, Any, List, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-def _ensure_serialization(o: object) -> Union[str, List[Any]]:
+def _ensure_serialization(o: object) -> str | list[Any]:
     """A repr function for json.dumps default arg, which tries to serialize sets as lists"""
     if isinstance(o, set):
         return list(o)
@@ -38,7 +40,7 @@ class JsonMixin:
         body: object,
         *,  # keyword-only arguments:
         expanded: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display object or string as a pretty-printed JSON string.
 
         Parameters
@@ -94,6 +96,6 @@ class JsonMixin:
         return self.dg._enqueue("json", json_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

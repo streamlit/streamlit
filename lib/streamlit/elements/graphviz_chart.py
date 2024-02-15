@@ -14,14 +14,15 @@
 
 """Streamlit support for GraphViz charts."""
 
+from __future__ import annotations
+
 import hashlib
 from typing import TYPE_CHECKING, Union, cast
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.util import HASHLIB_KWARGS
@@ -30,8 +31,6 @@ if TYPE_CHECKING:
     import graphviz
 
     from streamlit.delta_generator import DeltaGenerator
-
-LOGGER: Final = get_logger(__name__)
 
 FigureOrDot: TypeAlias = Union["graphviz.Graph", "graphviz.Digraph", str]
 
@@ -42,7 +41,7 @@ class GraphvizMixin:
         self,
         figure_or_dot: FigureOrDot,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a graph using the dagre-d3 library.
 
         Parameters
@@ -113,7 +112,7 @@ class GraphvizMixin:
         return self.dg._enqueue("graphviz_chart", graphviz_chart_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

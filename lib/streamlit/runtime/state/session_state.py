@@ -152,8 +152,7 @@ class WStates(MutableMapping[str, Any]):
         # For this and many other methods, we can't simply delegate to the
         # states field, because we need to invoke `__getitem__` for any
         # values, to handle deserialization and unwrapping of values.
-        for key in self.states:
-            yield key
+        yield from self.states
 
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
@@ -164,7 +163,7 @@ class WStates(MutableMapping[str, Any]):
     def values(self) -> set[Any]:  # type: ignore[override]
         return {self[wid] for wid in self}
 
-    def update(self, other: "WStates") -> None:  # type: ignore[override]
+    def update(self, other: WStates) -> None:  # type: ignore[override]
         """Copy all widget values and metadata from 'other' into this mapping,
         overwriting any data in this mapping that's also present in 'other'.
         """
@@ -674,7 +673,7 @@ def _is_internal_key(key: str) -> bool:
 
 @dataclass
 class SessionStateStatProvider(CacheStatsProvider):
-    _session_mgr: "SessionManager"
+    _session_mgr: SessionManager
 
     def get_stats(self) -> list[CacheStat]:
         stats: list[CacheStat] = []

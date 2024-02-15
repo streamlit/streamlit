@@ -16,9 +16,9 @@ from __future__ import annotations
 
 import time
 from types import TracebackType
-from typing import List, Optional, Type, cast
+from typing import Literal, cast
 
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.cursor import Cursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
@@ -56,7 +56,7 @@ class StatusContainer(DeltaGenerator):
         block_proto.allow_empty = True
         block_proto.expandable.CopyFrom(expandable_proto)
 
-        delta_path: List[int] = (
+        delta_path: list[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
         )
 
@@ -90,7 +90,7 @@ class StatusContainer(DeltaGenerator):
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._current_state: States | None = None
-        self._delta_path: List[int] | None = None
+        self._delta_path: list[int] | None = None
 
     def update(
         self,
@@ -158,9 +158,9 @@ class StatusContainer(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> Literal[False]:
         # Only update if the current state is running
         if self._current_state == "running":

@@ -14,6 +14,8 @@
 
 """ Utilities related to the CLI."""
 
+from __future__ import annotations
+
 
 def print_to_cli(message: str, **kwargs) -> None:
     """Print a message to the terminal using click if available, else print
