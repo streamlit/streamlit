@@ -23,6 +23,13 @@ from pathlib import Path
 from streamlit import runtime
 from streamlit.runtime import caching
 
+# Regular expression to match the SRT timestamp format
+# It matches the
+# "hours:minutes:seconds,milliseconds --> hours:minutes:seconds,milliseconds" format
+SRT_VALIDATION_REGEX = r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}"
+
+SRT_CONVERSION_REGEX = r"(\d{2}:\d{2}:\d{2}),(\d{3})"
+
 
 def _is_srt(stream: str | io.BytesIO) -> bool:
     # Convert str to io.BytesIO if 'stream' is a string
@@ -43,17 +50,12 @@ def _is_srt(stream: str | io.BytesIO) -> bool:
         # If it's not valid utf-8, it's probably not a valid SRT file
         return False
 
-    # Regular expression to match the SRT timestamp format
-    # It matches the
-    # "hours:minutes:seconds,milliseconds --> hours:minutes:seconds,milliseconds" format
-    timestamp_regex = re.compile(r"\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}")
-
     # Split the header into lines and process them
     lines = header_str.split("\n")
 
     # Check for the pattern of an SRT file: digit(s), newline, timestamp
     if len(lines) >= 2 and lines[0].isdigit():
-        match = timestamp_regex.search(lines[1])
+        match = re.search(SRT_VALIDATION_REGEX, lines[1])
         if match:
             return True
 
@@ -89,7 +91,7 @@ def srt_to_vtt(srt_data: str | bytes) -> bytes:
         )
 
     # Replace SubRip timing with WebVTT timing
-    vtt_data = re.sub(r"(\d{2}:\d{2}:\d{2}),(\d{3})", r"\1.\2", srt_data)
+    vtt_data = re.sub(SRT_CONVERSION_REGEX, r"\1.\2", srt_data)
 
     # Add WebVTT file header
     vtt_content = "WEBVTT\n\n" + vtt_data
