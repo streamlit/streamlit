@@ -133,7 +133,11 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
           />
         </StyledToastMessage>
         {shortened && (
-          <StyledViewButton className="toastViewButton" onClick={handleClick}>
+          <StyledViewButton
+            data-testid="toastViewButton"
+            className="toastViewButton"
+            onClick={handleClick}
+          >
             {expanded ? "view less" : "view more"}
           </StyledViewButton>
         )}
