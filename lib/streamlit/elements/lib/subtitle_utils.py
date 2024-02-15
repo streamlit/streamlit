@@ -149,7 +149,7 @@ def process_subtitle_data(
     elif isinstance(data, io.BytesIO):
         subtitle_data = handle_stream_data(data)
     else:
-        raise RuntimeError(f"Invalid binary data format for subtitle: {type(data)}.")
+        raise TypeError(f"Invalid binary data format for subtitle: {type(data)}.")
 
     if runtime.exists():
         filename = hashlib.md5(label.encode()).hexdigest()

@@ -365,8 +365,14 @@ def marshall_video(
             # It is not aligned with common coordinates format, but in
             # media_file_manager we use it just as unique identifier, so it is fine.
             subtitle_coordinates = f"{coordinates}[subtitle{label}]"
-
-            sub.url = process_subtitle_data(subtitle_coordinates, subtitle_data, label)
+            try:
+                sub.url = process_subtitle_data(
+                    subtitle_coordinates, subtitle_data, label
+                )
+            except (TypeError, ValueError) as original_err:
+                raise StreamlitAPIException(
+                    f"Failed to process the provided subtitle: {label}"
+                ) from original_err
 
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
