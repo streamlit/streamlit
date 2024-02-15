@@ -215,6 +215,6 @@ def test_from_function_kwargs():
         st.text(baz)
         return foo
 
-    at = AppTest.from_function(script, "bar", baz="baz")
+    at = AppTest.from_function(script, args=("bar",), kwargs={"baz": "baz"})
     at.run()
     assert at.text.values == ["bar", "baz"]

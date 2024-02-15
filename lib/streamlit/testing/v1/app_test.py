@@ -141,7 +141,14 @@ class AppTest:
         dict-like syntax to set ``query_params`` values for the simulated app.
     """
 
-    def __init__(self, script_path: str, *args, default_timeout: float, **kwargs):
+    def __init__(
+        self,
+        script_path: str,
+        *,
+        default_timeout: float,
+        args=None,
+        kwargs=None,
+    ):
         self._script_path = script_path
         self.default_timeout = default_timeout
         self.session_state = SafeSessionState(SessionState(), lambda: None)
@@ -156,7 +163,7 @@ class AppTest:
 
     @classmethod
     def from_string(
-        cls, script: str, *args, default_timeout: float = 3, **kwargs
+        cls, script: str, *, default_timeout: float = 3, args=None, kwargs=None
     ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
@@ -189,11 +196,18 @@ class AppTest:
         path = pathlib.Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
-        return AppTest(str(path), *args, default_timeout=default_timeout, **kwargs)
+        return AppTest(
+            str(path), default_timeout=default_timeout, args=args, kwargs=kwargs
+        )
 
     @classmethod
     def from_function(
-        cls, script: Callable[[], None], *args, default_timeout: float = 3, **kwargs
+        cls,
+        script: Callable[..., Any],
+        *,
+        default_timeout: float = 3,
+        args=None,
+        kwargs=None,
     ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
@@ -220,11 +234,12 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        # TODO: Simplify this using `ast.unparse()` once we drop 3.8 support
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
         module = source + f"\n{script.__name__}(*__args, **__kwargs)"
-        return cls.from_string(module, *args, default_timeout=default_timeout, **kwargs)
+        return cls.from_string(
+            module, default_timeout=default_timeout, args=args, kwargs=kwargs
+        )
 
     @classmethod
     def from_file(cls, script_path: str, *, default_timeout: float = 3) -> AppTest:
@@ -300,7 +315,7 @@ class AppTest:
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(
-            self._script_path, self.session_state, *self.args, **self.kwargs
+            self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
         )
         self._tree = script_runner.run(widget_state, self.query_params, timeout)
         self._tree._runner = self

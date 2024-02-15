@@ -38,8 +38,8 @@ class LocalScriptRunner(ScriptRunner):
         self,
         script_path: str,
         session_state: SafeSessionState,
-        *args,
-        **kwargs,
+        args=None,
+        kwargs=None,
     ):
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -48,8 +48,8 @@ class LocalScriptRunner(ScriptRunner):
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
         self.session_state = session_state
-        self.args = args
-        self.kwargs = kwargs
+        self.args = args if args is not None else tuple()
+        self.kwargs = kwargs if kwargs is not None else dict()
 
         super().__init__(
             session_id="test session id",
