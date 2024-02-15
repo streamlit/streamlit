@@ -355,12 +355,19 @@ def marshall_video(
         for label, subtitle_data in subtitle_items:
             sub = proto.subtitles.add()
             sub.label = label or ""
-            # Coordinates used in media_file_manager to identify the place of element,
-            # in case of subtitle, we use same video coordinates with suffix.
-            # It is not aligned with common coordinates format, but in
-            # media_file_manager we use it just as unique identifier, so it is fine.
-            subtitle_coordinates = f"{coordinates}[subtitle{label}]"
-            sub.url = process_subtitle_data(subtitle_coordinates, subtitle_data, label)
+
+            if url_util.is_url(subtitle_data):
+                sub.url = subtitle_data
+            else:
+                # Coordinates used in media_file_manager to identify the place of
+                # element, in case of subtitle, we use same video coordinates
+                # with suffix.
+                # It is not aligned with common coordinates format, but in
+                # media_file_manager we use it just as unique identifier, so it is fine.
+                subtitle_coordinates = f"{coordinates}[subtitle{label}]"
+                sub.url = process_subtitle_data(
+                    subtitle_coordinates, subtitle_data, label
+                )
 
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
