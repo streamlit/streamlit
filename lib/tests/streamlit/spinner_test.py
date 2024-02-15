@@ -54,7 +54,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
 
     def test_spinner_for_caching(self):
         """Test st.spinner in cache functions."""
-        with spinner("some text", cache=True):
+        with spinner("some text", _cache=True):
             # Without the timeout, the spinner is sometimes not available
             time.sleep(0.7)
             el = self.get_delta_from_queue().new_element

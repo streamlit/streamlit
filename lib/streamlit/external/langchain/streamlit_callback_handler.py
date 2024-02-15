@@ -27,13 +27,15 @@ compatible API continues to exist.
 
 Any major change to the StreamlitCallbackHandler should be tested by importing
 the API *from LangChain itself*.
+
+This module is lazy-loaded.
 """
 
 from __future__ import annotations
 
 import time
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from langchain.callbacks.base import (  # type: ignore[import-not-found, unused-ignore]
     BaseCallbackHandler,
@@ -150,18 +152,18 @@ class LLMThought:
 
         self._state = LLMThoughtState.THINKING
         self._llm_token_stream = ""
-        self._llm_token_stream_placeholder: Optional[DeltaGenerator] = None
-        self._last_tool: Optional[ToolRecord] = None
+        self._llm_token_stream_placeholder: DeltaGenerator | None = None
+        self._last_tool: ToolRecord | None = None
         self._collapse_on_complete = collapse_on_complete
         self._labeler = labeler
 
     @property
-    def container(self) -> "StatusContainer":
+    def container(self) -> StatusContainer:
         """The container we're writing into."""
         return self._container
 
     @property
-    def last_tool(self) -> Optional[ToolRecord]:
+    def last_tool(self) -> ToolRecord | None:
         """The last tool executed by this thought"""
         return self._last_tool
 
@@ -172,7 +174,7 @@ class LLMThought:
         self._llm_token_stream = ""
         self._llm_token_stream_placeholder = None
 
-    def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str]) -> None:
+    def on_llm_start(self, serialized: dict[str, Any], prompts: list[str]) -> None:
         self._reset_llm_token_stream()
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
@@ -194,7 +196,7 @@ class LLMThought:
         self._state = LLMThoughtState.ERROR
 
     def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+        self, serialized: dict[str, Any], input_str: str, **kwargs: Any
     ) -> None:
         # Called with the name of the tool we're about to run (in `serialized[name]`),
         # and its input. We change our container's label to be the tool name.
@@ -212,9 +214,9 @@ class LLMThought:
     def on_tool_end(
         self,
         output: str,
-        color: Optional[str] = None,
-        observation_prefix: Optional[str] = None,
-        llm_prefix: Optional[str] = None,
+        color: str | None = None,
+        observation_prefix: str | None = None,
+        llm_prefix: str | None = None,
         **kwargs: Any,
     ) -> None:
         self._container.markdown(output)
@@ -225,7 +227,7 @@ class LLMThought:
         self._container.update(state="error")
 
     def on_agent_action(
-        self, action: AgentAction, color: Optional[str] = None, **kwargs: Any
+        self, action: AgentAction, color: str | None = None, **kwargs: Any
     ) -> Any:
         # Called when we're about to kick off a new tool. The `action` data
         # tells us the tool we're about to use, and the input we'll give it.
@@ -233,7 +235,7 @@ class LLMThought:
         # when `on_tool_start` is called immediately after.
         pass
 
-    def complete(self, final_label: Optional[str] = None) -> None:
+    def complete(self, final_label: str | None = None) -> None:
         """Finish the thought."""
         if final_label is None and self._state == LLMThoughtState.RUNNING_TOOL:
             assert (
@@ -268,7 +270,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         max_thought_containers: int = 4,
         expand_new_thoughts: bool = False,
         collapse_completed_thoughts: bool = False,
-        thought_labeler: Optional[LLMThoughtLabeler] = None,
+        thought_labeler: LLMThoughtLabeler | None = None,
     ):
         """Construct a new StreamlitCallbackHandler. This CallbackHandler is geared
         towards use with a LangChain Agent; it displays the Agent's LLM and tool-usage
@@ -305,8 +307,8 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         """
         self._parent_container = parent_container
         self._history_parent = parent_container.container()
-        self._current_thought: Optional[LLMThought] = None
-        self._completed_thoughts: List[LLMThought] = []
+        self._current_thought: LLMThought | None = None
+        self._completed_thoughts: list[LLMThought] = []
         self._max_thought_containers = max(max_thought_containers, 1)
         self._expand_new_thoughts = expand_new_thoughts
         self._collapse_completed_thoughts = collapse_completed_thoughts
@@ -320,13 +322,13 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
             raise RuntimeError("Current LLMThought is unexpectedly None!")
         return self._current_thought
 
-    def _get_last_completed_thought(self) -> Optional[LLMThought]:
+    def _get_last_completed_thought(self) -> LLMThought | None:
         """Return our most recent completed LLMThought, or None if we don't have one."""
         if len(self._completed_thoughts) > 0:
             return self._completed_thoughts[len(self._completed_thoughts) - 1]
         return None
 
-    def _complete_current_thought(self, final_label: Optional[str] = None) -> None:
+    def _complete_current_thought(self, final_label: str | None = None) -> None:
         """Complete the current thought, optionally assigning it a new label.
         Add it to our _completed_thoughts list.
         """
@@ -336,7 +338,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._current_thought = None
 
     def on_llm_start(
-        self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
+        self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any
     ) -> None:
         if self._current_thought is None:
             self._current_thought = LLMThought(
@@ -361,16 +363,16 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._require_current_thought().on_llm_error(error, **kwargs)
 
     def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+        self, serialized: dict[str, Any], input_str: str, **kwargs: Any
     ) -> None:
         self._require_current_thought().on_tool_start(serialized, input_str, **kwargs)
 
     def on_tool_end(
         self,
         output: str,
-        color: Optional[str] = None,
-        observation_prefix: Optional[str] = None,
-        llm_prefix: Optional[str] = None,
+        color: str | None = None,
+        observation_prefix: str | None = None,
+        llm_prefix: str | None = None,
         **kwargs: Any,
     ) -> None:
         self._require_current_thought().on_tool_end(
@@ -382,12 +384,12 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         self._require_current_thought().on_tool_error(error, **kwargs)
 
     def on_agent_action(
-        self, action: AgentAction, color: Optional[str] = None, **kwargs: Any
+        self, action: AgentAction, color: str | None = None, **kwargs: Any
     ) -> Any:
         self._require_current_thought().on_agent_action(action, color, **kwargs)
 
     def on_agent_finish(
-        self, finish: AgentFinish, color: Optional[str] = None, **kwargs: Any
+        self, finish: AgentFinish, color: str | None = None, **kwargs: Any
     ) -> None:
         if self._current_thought is not None:
             self._current_thought.complete(

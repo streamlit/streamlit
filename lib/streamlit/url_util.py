@@ -12,12 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
-import urllib
-from typing import Optional
+from typing import Final, Literal
+from urllib.parse import urlparse
+
+from typing_extensions import TypeAlias
+
+UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
+
 
 # Regular expression for process_gitblob_url
-_GITBLOB_RE = re.compile(
+_GITBLOB_RE: Final = re.compile(
     r"(?P<base>https:\/\/?(gist\.)?github.com\/)"
     r"(?P<account>([\w\.]+\/){1,2})"
     r"(?P<blob_or_raw>(blob|raw))?"
@@ -50,20 +57,43 @@ def process_gitblob_url(url: str) -> str:
     return url
 
 
-def get_hostname(url: str) -> Optional[str]:
+def get_hostname(url: str) -> str | None:
     """Return the hostname of a URL (with or without protocol)."""
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)
     if "://" not in url:
-        url = "http://%s" % url
+        url = f"http://{url}"
 
-    parsed = urllib.parse.urlparse(url)
+    parsed = urlparse(url)
     return parsed.hostname
 
 
-def print_url(title, url):
-    """Pretty-print a URL on the terminal."""
-    import click
+def is_url(
+    url: str,
+    allowed_schemas: tuple[UrlSchema, ...] = ("http", "https"),
+) -> bool:
+    """Check if a string looks like an URL.
 
-    click.secho("  %s: " % title, nl=False, fg="blue")
-    click.secho(url, bold=True)
+    This doesn't check if the URL is actually valid or reachable.
+
+    Parameters
+    ----------
+    url : str
+        The URL to check.
+
+    allowed_schemas : Tuple[str]
+        The allowed URL schemas. Default is ("http", "https").
+    """
+    try:
+        result = urlparse(str(url))
+        if result.scheme not in allowed_schemas:
+            return False
+
+        if result.scheme in ["http", "https"]:
+            return bool(result.netloc)
+        elif result.scheme in ["mailto", "data"]:
+            return bool(result.path)
+
+    except ValueError:
+        return False
+    return False

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 import platform
 import re
@@ -23,7 +25,7 @@ IS_DARWIN = _system == "Darwin"
 IS_LINUX_OR_BSD = (_system == "Linux") or ("BSD" in _system)
 
 
-def is_pex():
+def is_pex() -> bool:
     """Return if streamlit running in pex.
 
     Pex modifies sys.path so the pex file is the first path and that's
@@ -34,7 +36,7 @@ def is_pex():
     return False
 
 
-def is_repl():
+def is_repl() -> bool:
     """Return True if running in the Python REPL."""
     import inspect
 
@@ -52,7 +54,7 @@ def is_repl():
     return False
 
 
-def is_executable_in_path(name):
+def is_executable_in_path(name: str) -> bool:
     """Check if executable is in OS path."""
     from shutil import which
 

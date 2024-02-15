@@ -29,7 +29,6 @@ from typing import (
     overload,
 )
 
-from pandas import DataFrame
 from typing_extensions import TypeAlias
 
 from streamlit import type_util, util
@@ -78,6 +77,8 @@ from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 
 if TYPE_CHECKING:
+    from pandas import DataFrame as PandasDataframe
+
     from streamlit.testing.v1.app_test import AppTest
 
 T = TypeVar("T")
@@ -507,7 +508,7 @@ class Dataframe(Element):
         self.type = "arrow_data_frame"
 
     @property
-    def value(self) -> DataFrame:
+    def value(self) -> PandasDataframe:
         return type_util.bytes_to_data_frame(self.proto.data)
 
 
@@ -1097,7 +1098,7 @@ class Table(Element):
         self.type = "arrow_table"
 
     @property
-    def value(self) -> DataFrame:
+    def value(self) -> PandasDataframe:
         return type_util.bytes_to_data_frame(self.proto.data)
 
 
@@ -1382,8 +1383,7 @@ class Block:
     def __iter__(self):
         yield self
         for child_idx in self.children:
-            for c in self.children[child_idx]:
-                yield c
+            yield from self.children[child_idx]
 
     def __getitem__(self, k: int) -> Node:
         return self.children[k]

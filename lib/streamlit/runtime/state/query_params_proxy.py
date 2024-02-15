@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, Iterator, List, MutableMapping, Union
+from __future__ import annotations
+
+from typing import Iterable, Iterator, MutableMapping
 
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.query_params import missing_key_error_message
@@ -47,7 +49,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
             del qp[key]
 
     @gather_metrics("query_params.set_item")
-    def __setitem__(self, key: str, value: Union[str, Iterable[str]]) -> None:
+    def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
@@ -67,12 +69,12 @@ class QueryParamsProxy(MutableMapping[str, str]):
                 raise AttributeError(missing_key_error_message(key))
 
     @gather_metrics("query_params.set_attr")
-    def __setattr__(self, key: str, value: Union[str, Iterable[str]]) -> None:
+    def __setattr__(self, key: str, value: str | Iterable[str]) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
     @gather_metrics("query_params.get_all")
-    def get_all(self, key: str) -> List[str]:
+    def get_all(self, key: str) -> list[str]:
         """
         Get a list of all query parameter values associated to a given key.
 
@@ -107,7 +109,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
             qp.clear()
 
     @gather_metrics("query_params.to_dict")
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         """
         Get all query parameters as a dictionary.
 

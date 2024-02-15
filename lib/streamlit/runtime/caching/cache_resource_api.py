@@ -20,9 +20,8 @@ import math
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, TypeVar, cast, overload
+from typing import Any, Callable, Final, TypeVar, cast, overload
 
-from cachetools import TTLCache
 from typing_extensions import TypeAlias
 
 import streamlit as st
@@ -48,9 +47,9 @@ from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
-from streamlit.vendor.pympler.asizeof import asizeof
+from streamlit.util import TimedCleanupCache
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 CACHE_RESOURCE_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.RESOURCE)
@@ -473,7 +472,7 @@ class ResourceCache(Cache):
         super().__init__()
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
+        self._mem_cache: TimedCleanupCache[str, MultiCacheResults] = TimedCleanupCache(
             maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
@@ -560,6 +559,9 @@ class ResourceCache(Cache):
         # the lock.
         with self._mem_cache_lock:
             cache_entries = list(self._mem_cache.values())
+
+        # Lazy-load vendored package to prevent import of numpy
+        from streamlit.vendor.pympler.asizeof import asizeof
 
         return [
             CacheStat(

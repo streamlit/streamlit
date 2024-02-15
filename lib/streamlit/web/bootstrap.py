@@ -12,22 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import os
 import signal
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
-
-import click
+from typing import Any, Final
 
 from streamlit import (
+    cli_util,
     config,
     env_util,
     file_util,
     net_util,
     secrets,
-    url_util,
     util,
     version,
 )
@@ -38,22 +38,8 @@ from streamlit.source_util import invalidate_pages_cache
 from streamlit.watcher import report_watchdog_availability, watch_dir, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-NEW_VERSION_TEXT = """
-  %(new_version)s
-
-  See what's new at https://discuss.streamlit.io/c/announcements
-
-  Enter the following command to upgrade:
-  %(prompt)s %(command)s
-""" % {
-    "new_version": click.style(
-        "A new version of Streamlit is available.", fg="blue", bold=True
-    ),
-    "prompt": click.style("$", fg="blue"),
-    "command": click.style("pip install streamlit --upgrade", bold=True),
-}
 
 # The maximum possible total size of a static directory.
 # We agreed on these limitations for the initial release of static file sharing,
@@ -62,7 +48,7 @@ MAX_APP_STATIC_FOLDER_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 
 
 def _set_up_signal_handler(server: Server) -> None:
-    LOGGER.debug("Setting up signal handler")
+    _LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number, stack_frame):
         # The server will shut down its threads and exit its loop.
@@ -83,35 +69,6 @@ def _fix_sys_path(main_script_path: str) -> None:
     ourselves we need to do it instead.
     """
     sys.path.insert(0, os.path.dirname(main_script_path))
-
-
-def _fix_matplotlib_crash() -> None:
-    """Set Matplotlib backend to avoid a crash.
-
-    The default Matplotlib backend crashes Python on OSX when run on a thread
-    that's not the main thread, so here we set a safer backend as a fix.
-    Users can always disable this behavior by setting the config
-    runner.fixMatplotlib = false.
-
-    This fix is OS-independent. We didn't see a good reason to make this
-    Mac-only. Consistency within Streamlit seemed more important.
-    """
-    if config.get_option("runner.fixMatplotlib"):
-        try:
-            # TODO: a better option may be to set
-            #  os.environ["MPLBACKEND"] = "Agg". We'd need to do this towards
-            #  the top of __init__.py, before importing anything that imports
-            #  pandas (which imports matplotlib). Alternately, we could set
-            #  this environment variable in a new entrypoint defined in
-            #  setup.py. Both of these introduce additional trickiness: they
-            #  need to run without consulting streamlit.config.get_option,
-            #  because this would import streamlit, and therefore matplotlib.
-            import matplotlib
-
-            matplotlib.use("Agg")
-        except ImportError:
-            # Matplotlib is not installed. No need to do anything.
-            pass
 
 
 def _fix_tornado_crash() -> None:
@@ -146,7 +103,7 @@ def _fix_tornado_crash() -> None:
                 asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 
-def _fix_sys_argv(main_script_path: str, args: List[str]) -> None:
+def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
     """sys.argv needs to exclude streamlit arguments and parameters
     and be set to what a user's script may expect.
     """
@@ -168,7 +125,7 @@ def _on_server_start(server: Server) -> None:
     try:
         secrets.load_if_toml_exists()
     except Exception as ex:
-        LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
+        _LOGGER.error(f"Failed to load secrets.toml file", exc_info=ex)
 
     def maybe_open_browser():
         if config.get_option("server.headless"):
@@ -224,7 +181,23 @@ def _fix_pydantic_duplicate_validators_error():
 
 def _print_new_version_message() -> None:
     if version.should_show_new_version_notice():
-        click.secho(NEW_VERSION_TEXT)
+        NEW_VERSION_TEXT: Final = """
+  %(new_version)s
+
+  See what's new at https://discuss.streamlit.io/c/announcements
+
+  Enter the following command to upgrade:
+  %(prompt)s %(command)s
+""" % {
+            "new_version": cli_util.style_for_cli(
+                "A new version of Streamlit is available.", fg="blue", bold=True
+            ),
+            "prompt": cli_util.style_for_cli("$", fg="blue"),
+            "command": cli_util.style_for_cli(
+                "pip install streamlit --upgrade", bold=True
+            ),
+        }
+        cli_util.print_to_cli(NEW_VERSION_TEXT)
 
 
 def _maybe_print_static_folder_warning(main_script_path: str) -> None:
@@ -233,7 +206,7 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
     if config.get_option("server.enableStaticServing"):
         static_folder_path = file_util.get_app_static_dir(main_script_path)
         if not os.path.isdir(static_folder_path):
-            click.secho(
+            cli_util.print_to_cli(
                 f"WARNING: Static file serving is enabled, but no static folder found "
                 f"at {static_folder_path}. To disable static file serving, "
                 f"set server.enableStaticServing to false.",
@@ -245,7 +218,7 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
 
             if static_folder_size > MAX_APP_STATIC_FOLDER_SIZE:
                 config.set_option("server.enableStaticServing", False)
-                click.secho(
+                cli_util.print_to_cli(
                     "WARNING: Static folder size is larger than 1GB. "
                     "Static file serving has been disabled.",
                     fg="yellow",
@@ -295,23 +268,24 @@ def _print_url(is_running_hello: bool) -> None:
         if internal_ip:
             named_urls.append(("Network URL", server_util.get_url(internal_ip)))
 
-    click.secho("")
-    click.secho("  %s" % title_message, fg="blue", bold=True)
-    click.secho("")
+    cli_util.print_to_cli("")
+    cli_util.print_to_cli("  %s" % title_message, fg="blue", bold=True)
+    cli_util.print_to_cli("")
 
     for url_name, url in named_urls:
-        url_util.print_url(url_name, url)
+        cli_util.print_to_cli(f"  {url_name}: ", nl=False, fg="blue")
+        cli_util.print_to_cli(url, bold=True)
 
-    click.secho("")
+    cli_util.print_to_cli("")
 
     if is_running_hello:
-        click.secho("  Ready to create your own Python apps super quickly?")
-        click.secho("  Head over to ", nl=False)
-        click.secho("https://docs.streamlit.io", bold=True)
-        click.secho("")
-        click.secho("  May you create awesome apps!")
-        click.secho("")
-        click.secho("")
+        cli_util.print_to_cli("  Ready to create your own Python apps super quickly?")
+        cli_util.print_to_cli("  Head over to ", nl=False)
+        cli_util.print_to_cli("https://docs.streamlit.io", bold=True)
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli("  May you create awesome apps!")
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli("")
 
 
 def _maybe_print_old_git_warning(main_script_path: str) -> None:
@@ -326,22 +300,24 @@ def _maybe_print_old_git_warning(main_script_path: str) -> None:
     ):
         git_version_string = ".".join(str(val) for val in repo.git_version)
         min_version_string = ".".join(str(val) for val in MIN_GIT_VERSION)
-        click.secho("")
-        click.secho("  Git integration is disabled.", fg="yellow", bold=True)
-        click.secho("")
-        click.secho(
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli("  Git integration is disabled.", fg="yellow", bold=True)
+        cli_util.print_to_cli("")
+        cli_util.print_to_cli(
             f"  Streamlit requires Git {min_version_string} or later, "
             f"but you have {git_version_string}.",
             fg="yellow",
         )
-        click.secho(
+        cli_util.print_to_cli(
             "  Git is used by Streamlit Cloud (https://streamlit.io/cloud).",
             fg="yellow",
         )
-        click.secho("  To enable this feature, please update Git.", fg="yellow")
+        cli_util.print_to_cli(
+            "  To enable this feature, please update Git.", fg="yellow"
+        )
 
 
-def load_config_options(flag_options: Dict[str, Any]) -> None:
+def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
 
@@ -352,7 +328,7 @@ def load_config_options(flag_options: Dict[str, Any]) -> None:
 
     Parameters
     ----------
-    flag_options : Dict[str, Any]
+    flag_options : dict[str, Any]
         A dict of config options where the keys are the CLI flag version of the
         config option names.
     """
@@ -367,7 +343,7 @@ def load_config_options(flag_options: Dict[str, Any]) -> None:
     config.get_config_options(force_reparse=True, options_from_flags=options_from_flags)
 
 
-def _install_config_watchers(flag_options: Dict[str, Any]) -> None:
+def _install_config_watchers(flag_options: dict[str, Any]) -> None:
     def on_config_changed(_path):
         load_config_options(flag_options)
 
@@ -394,15 +370,14 @@ def _install_pages_watcher(main_script_path_str: str) -> None:
 def run(
     main_script_path: str,
     is_hello: bool,
-    args: List[str],
-    flag_options: Dict[str, Any],
+    args: list[str],
+    flag_options: dict[str, Any],
 ) -> None:
     """Run a script in a separate thread and start a server for the app.
 
     This starts a blocking asyncio eventloop.
     """
     _fix_sys_path(main_script_path)
-    _fix_matplotlib_crash()
     _fix_tornado_crash()
     _fix_sys_argv(main_script_path, args)
     _fix_pydeck_mapbox_api_warning()

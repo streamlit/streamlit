@@ -12,28 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional, Type, Union
+from __future__ import annotations
 
-import click
+from typing import Callable, Type, Union
 
 import streamlit.watcher
-from streamlit import config, env_util
-from streamlit.logger import get_logger
+from streamlit import cli_util, config, env_util
 from streamlit.watcher.polling_path_watcher import PollingPathWatcher
-
-LOGGER = get_logger(__name__)
-
-try:
-    # Check if the watchdog module is installed.
-    from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
-
-    watchdog_available = True
-except ImportError:
-    watchdog_available = False
-    # Stub the EventBasedPathWatcher so it can be mocked by tests
-
-    class EventBasedPathWatcher:  # type: ignore
-        pass
 
 
 # local_sources_watcher.py caches the return value of
@@ -50,7 +35,7 @@ class NoOpPathWatcher:
         _path_str: str,
         _on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ):
         pass
@@ -66,32 +51,43 @@ PathWatcherType = Union[
 ]
 
 
-def report_watchdog_availability():
-    if not watchdog_available:
-        if not config.get_option("global.disableWatchdogWarning") and config.get_option(
-            "server.fileWatcherType"
-        ) not in ["poll", "none"]:
-            msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
+def _is_watchdog_available() -> bool:
+    """Check if the watchdog module is installed."""
+    try:
+        import watchdog  # noqa: F401
 
-            click.secho(
-                "  %s" % "For better performance, install the Watchdog module:",
-                fg="blue",
-                bold=True,
-            )
-            click.secho(
-                """%s
+        return True
+    except ImportError:
+        return False
+
+
+def report_watchdog_availability():
+    if (
+        not config.get_option("global.disableWatchdogWarning")
+        and config.get_option("server.fileWatcherType") not in ["poll", "none"]
+        and not _is_watchdog_available()
+    ):
+        msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
+
+        cli_util.print_to_cli(
+            "  %s" % "For better performance, install the Watchdog module:",
+            fg="blue",
+            bold=True,
+        )
+        cli_util.print_to_cli(
+            """%s
   $ pip install watchdog
             """
-                % msg
-            )
+            % msg
+        )
 
 
 def _watch_path(
     path: str,
     on_path_changed: Callable[[str], None],
-    watcher_type: Optional[str] = None,
+    watcher_type: str | None = None,
     *,  # keyword-only arguments:
-    glob_pattern: Optional[str] = None,
+    glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> bool:
     """Create a PathWatcher for the given path if we have a viable
@@ -139,7 +135,7 @@ def _watch_path(
 def watch_file(
     path: str,
     on_file_changed: Callable[[str], None],
-    watcher_type: Optional[str] = None,
+    watcher_type: str | None = None,
 ) -> bool:
     return _watch_path(path, on_file_changed, watcher_type)
 
@@ -147,9 +143,9 @@ def watch_file(
 def watch_dir(
     path: str,
     on_dir_changed: Callable[[str], None],
-    watcher_type: Optional[str] = None,
+    watcher_type: str | None = None,
     *,  # keyword-only arguments:
-    glob_pattern: Optional[str] = None,
+    glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> bool:
     return _watch_path(
@@ -172,13 +168,13 @@ def get_path_watcher_class(watcher_type: str) -> PathWatcherType:
     """Return the PathWatcher class that corresponds to the given watcher_type
     string. Acceptable values are 'auto', 'watchdog', 'poll' and 'none'.
     """
-    if watcher_type == "auto":
-        if watchdog_available:
-            return EventBasedPathWatcher
-        else:
-            return PollingPathWatcher
-    elif watcher_type == "watchdog" and watchdog_available:
+    if watcher_type in {"watchdog", "auto"} and _is_watchdog_available():
+        # Lazy-import this module to prevent unnecessary imports of the watchdog package.
+        from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher
+
         return EventBasedPathWatcher
+    elif watcher_type == "auto":
+        return PollingPathWatcher
     elif watcher_type == "poll":
         return PollingPathWatcher
     else:

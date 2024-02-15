@@ -12,20 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import uuid
 from collections import defaultdict
-from typing import Dict, List, Sequence
+from typing import Sequence
 
 from streamlit import util
-from streamlit.logger import get_logger
 from streamlit.runtime.stats import CacheStat, group_stats
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
     UploadFileUrlInfo,
 )
-
-LOGGER = get_logger(__name__)
 
 
 class MemoryUploadedFileManager(UploadedFileManager):
@@ -34,12 +33,12 @@ class MemoryUploadedFileManager(UploadedFileManager):
     """
 
     def __init__(self, upload_endpoint: str):
-        self.file_storage: Dict[str, Dict[str, UploadedFileRec]] = defaultdict(dict)
+        self.file_storage: dict[str, dict[str, UploadedFileRec]] = defaultdict(dict)
         self.endpoint = upload_endpoint
 
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
-    ) -> List[UploadedFileRec]:
+    ) -> list[UploadedFileRec]:
         """Return a  list of UploadedFileRec for a given sequence of file_ids.
 
         Parameters
@@ -97,7 +96,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
-    ) -> List[UploadFileUrlInfo]:
+    ) -> list[UploadFileUrlInfo]:
         """Return a list of UploadFileUrlInfo for a given sequence of file_names."""
         result = []
         for _ in file_names:
@@ -111,13 +110,13 @@ class MemoryUploadedFileManager(UploadedFileManager):
             )
         return result
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         """Return the manager's CacheStats.
 
         Safe to call from any thread.
         """
         # Flatten all files into a single list
-        all_files: List[UploadedFileRec] = []
+        all_files: list[UploadedFileRec] = []
         # Make copy of self.file_storage for thread safety, to be sure
         # that main storage won't be changed form other thread
         file_storage_copy = self.file_storage.copy()
@@ -125,7 +124,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
         for session_storage in file_storage_copy.values():
             all_files.extend(session_storage.values())
 
-        stats: List[CacheStat] = [
+        stats: list[CacheStat] = [
             CacheStat(
                 category_name="UploadedFileManager",
                 cache_name="",

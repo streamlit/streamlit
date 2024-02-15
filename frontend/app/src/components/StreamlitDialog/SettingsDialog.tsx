@@ -64,6 +64,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
 
   static contextType = LibContext
 
+  context!: React.ContextType<typeof LibContext>
+
   constructor(props: Props) {
     super(props)
     // Holds the settings that will be saved when the "save" button is clicked.

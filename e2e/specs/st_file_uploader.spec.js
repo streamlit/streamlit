@@ -60,7 +60,7 @@ describe("st.file_uploader", () => {
     const uploaderIndex = 0;
 
     cy.fixture(fileName).then((fileContent) => {
-      cy.get("[data-testid='stFileUploadDropzone']")
+      cy.get("[data-testid='stFileUploaderDropzone']")
         .eq(uploaderIndex)
         .attachFile(
           { fileContent, fileName, mimeType: "application/json" },
@@ -77,7 +77,7 @@ describe("st.file_uploader", () => {
         );
 
       cy.getIndexed(
-        "[data-testid='stUploadedFileErrorMessage']",
+        "[data-testid='stFileUploaderFileErrorMessage']",
         uploaderIndex
       ).should("have.text", "application/json files are not allowed.");
 
@@ -107,7 +107,7 @@ describe("st.file_uploader", () => {
         ];
 
         cy.getIndexed(
-          "[data-testid='stFileUploadDropzone']",
+          "[data-testid='stFileUploaderDropzone']",
           uploaderIndex
         ).attachFile(files[0], {
           force: true,
@@ -118,7 +118,7 @@ describe("st.file_uploader", () => {
         // The script should have printed the contents of the first files
         // into an st.text. (This tests that the upload actually went
         // through.)
-        cy.get(".uploadedFileName").should("have.text", fileName1);
+        cy.get(".stFileUploaderFileName").should("have.text", fileName1);
         cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file1
@@ -136,7 +136,7 @@ describe("st.file_uploader", () => {
 
         // Upload a second file. This one will replace the first.
         cy.getIndexed(
-          "[data-testid='stFileUploadDropzone']",
+          "[data-testid='stFileUploaderDropzone']",
           uploaderIndex
         ).attachFile(files[1], {
           force: true,
@@ -144,7 +144,7 @@ describe("st.file_uploader", () => {
           events: ["dragenter", "drop"],
         });
 
-        cy.get(".uploadedFileName")
+        cy.get(".stFileUploaderFileName")
           .should("have.text", fileName2)
           .should("not.have.text", fileName1);
         cy.getIndexed("[data-testid='stText']", uploaderIndex)
@@ -166,7 +166,7 @@ describe("st.file_uploader", () => {
 
         // Can delete
         cy.getIndexed(
-          "[data-testid='fileDeleteBtn'] button",
+          "[data-testid='stFileUploaderDeleteBtn'] button",
           uploaderIndex
         ).click();
         cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
@@ -177,83 +177,97 @@ describe("st.file_uploader", () => {
     });
   });
 
-  it("uploads and deletes multiple files quickly", { retries: { runMode: 1 } }, () => {
-    const fileName1 = "file1.txt";
-    const fileName2 = "file2.txt";
-    const uploaderIndex = 2;
+  it(
+    "uploads and deletes multiple files quickly",
+    { retries: { runMode: 1 } },
+    () => {
+      const fileName1 = "file1.txt";
+      const fileName2 = "file2.txt";
+      const uploaderIndex = 2;
 
-    // Yes, this is the recommended way to load multiple fixtures
-    // in Cypress (!!) using Cypress.Promise.all is buggy. See:
-    // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
-    // Why can’t I use async / await?
-    // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
-    cy.fixture(fileName1).then((file1) => {
-      cy.fixture(fileName2).then((file2) => {
-        const files = [
-          { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
-          { fileContent: file2, fileName: fileName2, mimeType: "text/plain" },
-        ];
+      // Yes, this is the recommended way to load multiple fixtures
+      // in Cypress (!!) using Cypress.Promise.all is buggy. See:
+      // https://github.com/cypress-io/cypress-example-recipes/blob/master/examples/fundamentals__fixtures/cypress/integration/multiple-fixtures-spec.js
+      // Why can’t I use async / await?
+      // https://docs.cypress.io/guides/core-concepts/introduction-to-cypress.html#Commands-Are-Asynchronous
+      cy.fixture(fileName1).then((file1) => {
+        cy.fixture(fileName2).then((file2) => {
+          const files = [
+            {
+              fileContent: file1,
+              fileName: fileName1,
+              mimeType: "text/plain",
+            },
+            {
+              fileContent: file2,
+              fileName: fileName2,
+              mimeType: "text/plain",
+            },
+          ];
 
-        cy.getIndexed(
-          "[data-testid='stFileUploadDropzone']",
-          uploaderIndex
-        ).attachFile(files[0], {
-          force: true,
-          subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"],
+          cy.getIndexed(
+            "[data-testid='stFileUploaderDropzone']",
+            uploaderIndex
+          ).attachFile(files[0], {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"],
+          });
+
+          cy.get(".stFileUploaderFileName").each((uploadedFileName) => {
+            cy.get(uploadedFileName).should("have.text", fileName1);
+          });
+
+          cy.getIndexed(
+            "[data-testid='stFileUploaderDropzone']",
+            uploaderIndex
+          ).attachFile(files[1], {
+            force: true,
+            subjectType: "drag-n-drop",
+            events: ["dragenter", "drop"],
+          });
+
+          // Wait for the HTTP request to complete
+          cy.wait("@uploadFile");
+
+          // The widget should show the names of the uploaded files in reverse
+          // order
+          const filenames = [fileName2, fileName1];
+          cy.get(".stFileUploaderFileName").each((uploadedFileName, index) => {
+            cy.get(uploadedFileName).should("have.text", filenames[index]);
+          });
+
+          // The script should have printed the contents of the two files
+          // into an st.text. (This tests that the upload actually went
+          // through.)
+          const content = [file1, file2].join("\n");
+          cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
+            "have.text",
+            content
+          );
+
+          cy.getIndexed(
+            "[data-testid='stFileUploader']",
+            uploaderIndex
+          ).matchThemedSnapshots("multi_file_uploader-uploaded");
+
+          // Delete the second file. The second file is on top because it was
+          // most recently uploaded. The first file should still exist.
+          cy.get("[data-testid='stFileUploaderDeleteBtn'] button")
+            .first()
+            .click();
+          cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
+            "contain.text",
+            file1
+          );
+          cy.getIndexed("[data-testid='stMarkdownContainer']", 5).should(
+            "contain.text",
+            "True"
+          );
         });
-
-        cy.get(".uploadedFileName").each((uploadedFileName) => {
-          cy.get(uploadedFileName).should("have.text", fileName1);
-        });
-
-        cy.getIndexed(
-          "[data-testid='stFileUploadDropzone']",
-          uploaderIndex
-        ).attachFile(files[1], {
-          force: true,
-          subjectType: "drag-n-drop",
-          events: ["dragenter", "drop"],
-        });
-
-        // Wait for the HTTP request to complete
-        cy.wait("@uploadFile");
-
-        // The widget should show the names of the uploaded files in reverse
-        // order
-        const filenames = [fileName2, fileName1];
-        cy.get(".uploadedFileName").each((uploadedFileName, index) => {
-          cy.get(uploadedFileName).should("have.text", filenames[index]);
-        });
-
-        // The script should have printed the contents of the two files
-        // into an st.text. (This tests that the upload actually went
-        // through.)
-        const content = [file1, file2].join("\n");
-        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
-          "have.text",
-          content
-        );
-
-        cy.getIndexed(
-          "[data-testid='stFileUploader']",
-          uploaderIndex
-        ).matchThemedSnapshots("multi_file_uploader-uploaded");
-
-        // Delete the second file. The second file is on top because it was
-        // most recently uploaded. The first file should still exist.
-        cy.get("[data-testid='fileDeleteBtn'] button").first().click();
-        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
-          "contain.text",
-          file1
-        );
-        cy.getIndexed("[data-testid='stMarkdownContainer']", 5).should(
-          "contain.text",
-          "True"
-        );
       });
-    });
-  });
+    }
+  );
 
   // NOTE: This test is essentially identical to the one above. The only
   // difference is that we add a short delay to uploading the two files to
@@ -278,7 +292,7 @@ describe("st.file_uploader", () => {
         ];
 
         cy.getIndexed(
-          "[data-testid='stFileUploadDropzone']",
+          "[data-testid='stFileUploaderDropzone']",
           uploaderIndex
         ).attachFile(files[0], {
           force: true,
@@ -286,7 +300,7 @@ describe("st.file_uploader", () => {
           events: ["dragenter", "drop"],
         });
 
-        cy.get(".uploadedFileName").each((uploadedFileName) => {
+        cy.get(".stFileUploaderFileName").each((uploadedFileName) => {
           cy.get(uploadedFileName).should("have.text", fileName1);
         });
 
@@ -294,7 +308,7 @@ describe("st.file_uploader", () => {
         cy.wait("@uploadFile");
 
         cy.getIndexed(
-          "[data-testid='stFileUploadDropzone']",
+          "[data-testid='stFileUploaderDropzone']",
           uploaderIndex
         ).attachFile(files[1], {
           force: true,
@@ -308,7 +322,7 @@ describe("st.file_uploader", () => {
         // The widget should show the names of the uploaded files in reverse
         // order
         const filenames = [fileName2, fileName1];
-        cy.get(".uploadedFileName").each((uploadedFileName, index) => {
+        cy.get(".stFileUploaderFileName").each((uploadedFileName, index) => {
           cy.get(uploadedFileName).should("have.text", filenames[index]);
         });
 
@@ -323,7 +337,9 @@ describe("st.file_uploader", () => {
 
         // Delete the second file. The second file is on top because it was
         // most recently uploaded. The first file should still exist.
-        cy.get("[data-testid='fileDeleteBtn'] button").first().click();
+        cy.get("[data-testid='stFileUploaderDeleteBtn'] button")
+          .first()
+          .click();
         cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
           "contain.text",
           file1
@@ -346,7 +362,7 @@ describe("st.file_uploader", () => {
       ];
 
       cy.getIndexed(
-        "[data-testid='stFileUploadDropzone']",
+        "[data-testid='stFileUploaderDropzone']",
         uploaderIndex
       ).attachFile(files[0], {
         force: true,
@@ -358,7 +374,7 @@ describe("st.file_uploader", () => {
       cy.wait("@uploadFile");
 
       // We should be showing the uploaded file name
-      cy.get(".uploadedFileName").should("have.text", fileName1);
+      cy.get(".stFileUploaderFileName").should("have.text", fileName1);
 
       // But our uploaded text should contain nothing yet, as we haven't
       // submitted.
@@ -378,7 +394,7 @@ describe("st.file_uploader", () => {
 
       // Press the delete button. Again, nothing should happen - we
       // should still see the file's contents.
-      cy.get("[data-testid='fileDeleteBtn'] button").first().click();
+      cy.get("[data-testid='stFileUploaderDeleteBtn'] button").first().click();
 
       cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
@@ -396,49 +412,53 @@ describe("st.file_uploader", () => {
   });
 
   // regression test for https://github.com/streamlit/streamlit/issues/4256 bug
-  it("does not call a callback when not changed", { retries: { runMode: 1 } }, () => {
-    const fileName1 = "file1.txt";
-    const uploaderIndex = 6;
+  it(
+    "does not call a callback when not changed",
+    { retries: { runMode: 1 } },
+    () => {
+      const fileName1 = "file1.txt";
+      const uploaderIndex = 6;
 
-    cy.fixture(fileName1).then((file1) => {
-      const files = [
-        { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
-      ];
+      cy.fixture(fileName1).then((file1) => {
+        const files = [
+          { fileContent: file1, fileName: fileName1, mimeType: "text/plain" },
+        ];
 
-      // Script contains counter variable stored in session_state with
-      // default value 0. We increment counter inside file_uploader callback
-      // Since callback did not called at this moment, counter value should
-      // be equal 0
-      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
-        "contain.text",
-        "0"
-      );
+        // Script contains counter variable stored in session_state with
+        // default value 0. We increment counter inside file_uploader callback
+        // Since callback did not called at this moment, counter value should
+        // be equal 0
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
+          "contain.text",
+          "0"
+        );
 
-      // Uploading file, should invoke on_change call and counter increment
-      cy.getIndexed(
-        "[data-testid='stFileUploadDropzone']",
-        uploaderIndex
-      ).attachFile(files[0], {
-        force: true,
-        subjectType: "drag-n-drop",
-        events: ["dragenter", "drop"],
+        // Uploading file, should invoke on_change call and counter increment
+        cy.getIndexed(
+          "[data-testid='stFileUploaderDropzone']",
+          uploaderIndex
+        ).attachFile(files[0], {
+          force: true,
+          subjectType: "drag-n-drop",
+          events: ["dragenter", "drop"],
+        });
+
+        // Make sure callback called
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
+          "contain.text",
+          "1"
+        );
+
+        // On rerun, make sure callback is not called, since file not changed
+        cy.get("body").type("r");
+        cy.wait(1000);
+
+        // Counter should be still equal 1
+        cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
+          "contain.text",
+          "1"
+        );
       });
-
-      // Make sure callback called
-      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
-        "contain.text",
-        "1"
-      );
-
-      // On rerun, make sure callback is not called, since file not changed
-      cy.get("body").type("r");
-      cy.wait(1000);
-
-      // Counter should be still equal 1
-      cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
-        "contain.text",
-        "1"
-      );
-    });
-  });
+    }
+  );
 });

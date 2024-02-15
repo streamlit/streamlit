@@ -22,20 +22,26 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Hashable,
     Iterable,
+    Literal,
     NoReturn,
-    Optional,
-    Type,
     TypeVar,
     cast,
     overload,
 )
 
-import click
-from typing_extensions import Final, Literal
-
-from streamlit import config, cursor, env_util, logger, runtime, type_util, util
+from streamlit import (
+    cli_util,
+    config,
+    cursor,
+    env_util,
+    logger,
+    runtime,
+    type_util,
+    util,
+)
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.altair_utils import AddRowsMetadata
@@ -84,7 +90,6 @@ from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.errors import NoSessionContext, StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching, legacy_caching
@@ -99,8 +104,6 @@ if TYPE_CHECKING:
 
     from streamlit.elements.arrow import Data
 
-
-LOGGER: Final = get_logger(__name__)
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
@@ -133,7 +136,7 @@ def _maybe_print_use_warning() -> None:
     if not _use_warning_has_been_displayed:
         _use_warning_has_been_displayed = True
 
-        warning = click.style("Warning:", bold=True, fg="yellow")
+        warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 
         if env_util.is_repl():
             logger.get_logger("root").warning(
@@ -277,7 +280,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for name, func in mixin.__dict__.items():
+            for _, func in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
 
@@ -338,19 +341,17 @@ class DeltaGenerator(
             if name in streamlit_methods:
                 if self._root_container == RootContainer.SIDEBAR:
                     message = (
-                        "Method `%(name)s()` does not exist for "
-                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                        f"Method `{name}()` does not exist for "
+                        f"`st.sidebar`. Did you mean `st.{name}()`?"
                     )
                 else:
                     message = (
-                        "Method `%(name)s()` does not exist for "
+                        f"Method `{name}()` does not exist for "
                         "`DeltaGenerator` objects. Did you mean "
-                        "`st.%(name)s()`?" % {"name": name}
+                        "`st.{name}()`?"
                     )
             else:
-                message = "`%(name)s()` is not a valid Streamlit command." % {
-                    "name": name
-                }
+                message = f"`{name}()` is not a valid Streamlit command."
 
             raise StreamlitAPIException(message)
 
@@ -419,7 +420,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -430,8 +431,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue],
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        return_value: type[NoValue],
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> None:
@@ -443,7 +444,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Value,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> Value:
@@ -455,7 +456,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -466,8 +467,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue] | Value | None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        return_value: type[NoValue] | Value | None = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -477,8 +478,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue] | Value | None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        return_value: type[NoValue] | Value | None = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -835,7 +836,7 @@ def _value_or_dg(value: None, dg: DG) -> DG:
 
 
 @overload
-def _value_or_dg(value: Type[NoValue], dg: DG) -> None:  # type: ignore[misc]
+def _value_or_dg(value: type[NoValue], dg: DG) -> None:  # type: ignore[misc]
     ...
 
 
@@ -853,7 +854,7 @@ def _value_or_dg(value: Value, dg: DG) -> Value:
 
 
 def _value_or_dg(
-    value: Type[NoValue] | Value | None,
+    value: type[NoValue] | Value | None,
     dg: DG,
 ) -> DG | Value | None:
     """Return either value, or None, or dg.

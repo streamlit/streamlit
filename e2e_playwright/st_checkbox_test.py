@@ -22,16 +22,16 @@ def test_checkbox_widget_display(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.checkbox renders correctly."""
-    checkbox_elements = themed_app.locator(".stCheckbox")
+    checkbox_elements = themed_app.get_by_test_id("stCheckbox")
     expect(checkbox_elements).to_have_count(8)
 
     for i, element in enumerate(checkbox_elements.all()):
-        assert_snapshot(element, name=f"checkbox-{i}")
+        assert_snapshot(element, name=f"st_checkbox-{i}")
 
 
 def test_checkbox_initial_values(app: Page):
     """Test that st.checkbox has the correct initial values."""
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
     expect(markdown_elements).to_have_count(9)
 
     expected = [
@@ -52,14 +52,21 @@ def test_checkbox_initial_values(app: Page):
 
 def test_checkbox_values_on_click(app: Page):
     """Test that st.checkbox updates values correctly when user clicks."""
-    checkbox_elements = app.locator(".stCheckbox")
+    checkbox_elements = app.get_by_test_id("stCheckbox")
     expect(checkbox_elements).to_have_count(8)
 
     for checkbox_element in checkbox_elements.all():
+        # Not sure if this is needed, but somehow it is slightly
+        # flaky with the last checkbox without it.
+        # It seems that it sometimes fails to click,
+        # and in these cases the checkbox was not scrolled into view.
+        # So, maybe thats the reason why it fails to click it.
+        # But this is just a guess.
+        checkbox_element.scroll_into_view_if_needed()
         checkbox_element.click(delay=50)
         wait_for_app_run(app)
 
-    markdown_elements = app.locator(".stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
     expected = [
         "checkbox 1 - value: False",
         "checkbox 2 - value: True",

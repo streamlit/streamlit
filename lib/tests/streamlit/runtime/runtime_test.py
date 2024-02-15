@@ -199,7 +199,7 @@ class RuntimeTest(RuntimeTestCase):
                 session_id_override=session_id_override,
             )
 
-    @patch("streamlit.runtime.runtime.LOGGER")
+    @patch("streamlit.runtime.runtime._LOGGER")
     async def test_create_session_alias(self, patched_logger):
         """Test that create_session defers to connect_session and logs a warning."""
         await self.runtime.start()
