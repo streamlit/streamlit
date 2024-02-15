@@ -19,6 +19,9 @@ jobs:
           days-before-pr-stale: 14
           days-before-pr-close: 7
           stale-pr-label: "stale"
-          stale-pr-message: "This pull request has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs. Thank you for your contributions."
+          stale-pr-message: >
+            This pull request has been automatically marked as stale because
+            it has not had recent activity. It will be closed if no further
+            activity occurs. Thank you for your contributions.
           exempt-pr-labels: "do-not-merge,QA-Needed"
           remove-pr-stale-when-updated: true
