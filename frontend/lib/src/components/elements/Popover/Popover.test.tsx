@@ -31,9 +31,12 @@ const getProps = (
   element: BlockProto.Popover.create({
     label: "label",
     useContainerWidth: false,
+    disabled: false,
+    help: "",
     ...elementProps,
   }),
   empty: false,
+  width: 100,
   ...props,
 })
 
