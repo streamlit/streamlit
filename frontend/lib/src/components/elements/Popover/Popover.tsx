@@ -40,7 +40,7 @@ export interface PopoverProps {
   width: number
 }
 
-const Popover: React.FC<PopoverProps> = ({
+const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   element,
   empty,
   width,
@@ -48,8 +48,8 @@ const Popover: React.FC<PopoverProps> = ({
 }): ReactElement => {
   const [open, setOpen] = React.useState(false)
   const isInSidebar = React.useContext(IsSidebarContext)
-  const theme = useTheme()
 
+  const theme = useTheme()
   const lightBackground = hasLightBackgroundColor(theme)
 
   // When useContainerWidth true & has help tooltip,
@@ -64,6 +64,10 @@ const Popover: React.FC<PopoverProps> = ({
         content={() => children}
         isOpen={open}
         onClickOutside={() => setOpen(false)}
+        // We need to handle the click here as well to allow closing the
+        // popover when the user clicks next to the button in the available
+        // width in the surrounding container.
+        onClick={() => (open ? setOpen(false) : undefined)}
         onEsc={() => setOpen(false)}
         ignoreBoundary={isInSidebar}
         overrides={{
