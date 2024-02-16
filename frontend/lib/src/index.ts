@@ -71,7 +71,7 @@ export {
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
-export { mount, shallow, mockWindowLocation, render } from "./test_util"
+export { mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
 export { getPossibleBaseUris, buildHttpUri, buildWsUri } from "./util/UriUtil"
 export type { BaseUriParts } from "./util/UriUtil"

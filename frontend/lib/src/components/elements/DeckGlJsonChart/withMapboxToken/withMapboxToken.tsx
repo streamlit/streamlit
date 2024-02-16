@@ -66,7 +66,9 @@ const MAPBOX = "mapbox"
 
 const withMapboxToken =
   (deltaType: string) =>
-  <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+  <P extends InjectedProps>(
+    WrappedComponent: ComponentType<React.PropsWithChildren<P>>
+  ) => {
     // Return a wrapper that accepts the wrapped component's props, minus
     // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
     // the wrapped component automatically.
@@ -76,6 +78,8 @@ const withMapboxToken =
       })`
 
       static contextType = LibContext
+
+      context!: React.ContextType<typeof LibContext>
 
       public constructor(props: WrappedMapboxProps<P>) {
         super(props)

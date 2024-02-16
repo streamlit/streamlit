@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
+from typing import Final
 
 import tornado.web
 
@@ -21,10 +24,10 @@ from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
-def allow_cross_origin_requests():
+def allow_cross_origin_requests() -> bool:
     """True if cross-origin requests are allowed.
 
     We only allow cross-origin requests when CORS protection has been disabled
@@ -43,7 +46,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
         super().initialize(path=path, default_filename=default_filename)
 
-    def set_extra_headers(self, path):
+    def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
@@ -135,6 +138,14 @@ class HealthHandler(_SpecialRequestHandler):
         self._callback = callback
 
     async def get(self):
+        await self.handle_request()
+
+    # Some monitoring services only support the HTTP HEAD method for requests to
+    # healthcheck endpoints, so we support HEAD as well to play nicely with them.
+    async def head(self):
+        await self.handle_request()
+
+    async def handle_request(self):
         if self.request.uri and "_stcore/" not in self.request.uri:
             new_path = (
                 "/_stcore/script-health-check"

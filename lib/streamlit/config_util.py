@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
-from typing import Dict
 
-import click
-import toml
-
+from streamlit import cli_util
 from streamlit.config_option import ConfigOption
 
 
 def server_option_changed(
-    old_options: Dict[str, ConfigOption], new_options: Dict[str, ConfigOption]
+    old_options: dict[str, ConfigOption], new_options: dict[str, ConfigOption]
 ) -> bool:
     """Return True if and only if an option in the server section differs
     between old_options and new_options.
@@ -40,10 +39,11 @@ def server_option_changed(
 
 
 def show_config(
-    section_descriptions: Dict[str, str],
-    config_options: Dict[str, ConfigOption],
+    section_descriptions: dict[str, str],
+    config_options: dict[str, ConfigOption],
 ) -> None:
     """Print the given config sections/options to the terminal."""
+
     out = []
     out.append(
         _clean(
@@ -55,16 +55,16 @@ def show_config(
     )
 
     def append_desc(text):
-        out.append("# " + click.style(text, bold=True))
+        out.append("# " + cli_util.style_for_cli(text, bold=True))
 
     def append_comment(text):
-        out.append("# " + click.style(text))
+        out.append("# " + cli_util.style_for_cli(text))
 
     def append_section(text):
-        out.append(click.style(text, bold=True, fg="green"))
+        out.append(cli_util.style_for_cli(text, bold=True, fg="green"))
 
     def append_setting(text):
-        out.append(click.style(text, fg="green"))
+        out.append(cli_util.style_for_cli(text, fg="green"))
 
     for section, _ in section_descriptions.items():
         # We inject a fake config section used for unit tests that we exclude here as
@@ -89,7 +89,7 @@ def show_config(
 
         for key, option in section_options.items():
             key = option.key.split(".")[1]
-            description_paragraphs = _clean_paragraphs(option.description)
+            description_paragraphs = _clean_paragraphs(option.description or "")
 
             last_paragraph_idx = len(description_paragraphs) - 1
 
@@ -114,6 +114,8 @@ def show_config(
                 if i != last_paragraph_idx:
                     out.append("")
 
+            import toml
+
             toml_default = toml.dumps({"default": option.default_val})
             toml_default = toml_default[10:].strip()
 
@@ -128,7 +130,7 @@ def show_config(
                 pass
 
             if option.deprecated:
-                append_comment(click.style("DEPRECATED.", fg="yellow"))
+                append_comment(cli_util.style_for_cli("DEPRECATED.", fg="yellow"))
                 for line in _clean_paragraphs(option.deprecation_text):
                     append_comment(line)
                 append_comment(
@@ -152,10 +154,10 @@ def show_config(
 
             append_setting(toml_setting)
 
-    click.echo("\n".join(out))
+    cli_util.print_to_cli("\n".join(out))
 
 
-def _clean(txt):
+def _clean(txt: str) -> str:
     """Replace sequences of multiple spaces with a single space, excluding newlines.
 
     Preserves leading and trailing spaces, and does not modify spaces in between lines.
@@ -163,7 +165,7 @@ def _clean(txt):
     return re.sub(" +", " ", txt)
 
 
-def _clean_paragraphs(txt):
+def _clean_paragraphs(txt: str) -> list[str]:
     """Split the text into paragraphs, preserve newlines within the paragraphs."""
     # Strip both leading and trailing newlines.
     txt = txt.strip("\n")

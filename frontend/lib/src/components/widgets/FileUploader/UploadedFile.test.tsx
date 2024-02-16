@@ -45,7 +45,7 @@ describe("FileStatus widget", () => {
       errorMessage: "Everything is terrible",
     })
     render(<UploadedFileStatus {...props} />)
-    const errorMessage = screen.getByTestId("stUploadedFileErrorMessage")
+    const errorMessage = screen.getByTestId("stFileUploaderFileErrorMessage")
     expect(errorMessage).toHaveTextContent("Everything is terrible")
   })
 
@@ -68,7 +68,7 @@ describe("UploadedFile widget", () => {
       fileUrls: {},
     })
     render(<UploadedFile {...props} />)
-    expect(screen.getByTestId("stUploadedFile")).toBeInTheDocument()
+    expect(screen.getByTestId("stFileUploaderFile")).toBeInTheDocument()
     const deleteBtn = screen.getByRole("button")
     fireEvent.click(deleteBtn)
     expect(props.onDelete).toHaveBeenCalledWith(1)
