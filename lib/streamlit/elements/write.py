@@ -16,23 +16,10 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-import json as json
+import json
 import types
 from io import StringIO
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generator,
-    Iterable,
-    List,
-    Tuple,
-    Type,
-    cast,
-)
-
-import numpy as np
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
@@ -47,7 +34,7 @@ if TYPE_CHECKING:
 
 
 # Special methods:
-HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
+HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.BuiltinFunctionType,
     types.BuiltinMethodType,
     types.FunctionType,
@@ -55,9 +42,9 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.ModuleType,
 )
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-_TEXT_CURSOR = "▕"
+_TEXT_CURSOR: Final = "▕"
 
 
 class StreamingOutput(List[Any]):
@@ -68,30 +55,32 @@ class WriteMixin:
     @gather_metrics("write_stream")
     def write_stream(
         self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
-    ) -> List[Any] | str:
+    ) -> list[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
-        This is done by iterating through the sequences and writing all
+        ``st.write_stream`` iterates through the given sequences and writes all
         chunks to the app. String chunks will be written using a typewriter effect.
         Other data types will be written using ``st.write``.
 
         Parameters
         ----------
-        arg : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
+        stream : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
             The generator or iterable to stream.
 
         Returns
         -------
-        str or list.
-            The full response as a string if the streamed output only contains text or
-            a list of all the streamed objects otherwise. The return value is fully compatible
-            as input for ``st.write``.
+        str or list
+            The full response. If the streamed output only contains text, this
+            is a string. Otherwise, this is a list of all the streamed objects.
+            The return value is fully compatible as input for ``st.write``.
 
 
         Example
         -------
-
-        You can pass a generator function as input:
+        You can pass an OpenAI stream as shown in our tutorial, `Build a \
+        basic LLM chat app <https://docs.streamlit.io/knowledge-base/tutorials\
+        /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
+        you can pass a generic generator function as input:
 
         >>> import time
         >>> import numpy as np
@@ -99,14 +88,14 @@ class WriteMixin:
         >>> import streamlit as st
         >>>
         >>> _LOREM_IPSUM = \"\"\"
-        >>> Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-        >>> labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
-        >>> laboris nisi ut aliquip ex ea commodo consequat.
+        >>> Lorem ipsum dolor sit amet, **consectetur adipiscing** elit, sed do eiusmod tempor
+        >>> incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+        >>> nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
         >>> \"\"\"
         >>>
         >>>
         >>> def stream_data():
-        >>>     for word in _LOREM_IPSUM.split():
+        >>>     for word in _LOREM_IPSUM.split(" "):
         >>>         yield word + " "
         >>>         time.sleep(0.02)
         >>>
@@ -115,7 +104,7 @@ class WriteMixin:
         >>>         columns=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
         >>>     )
         >>>
-        >>>     for word in _LOREM_IPSUM.split():
+        >>>     for word in _LOREM_IPSUM.split(" "):
         >>>         yield word + " "
         >>>         time.sleep(0.02)
         >>>
@@ -125,38 +114,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write-stream-data.streamlit.app/
-            height: 350px
-
-        Or an OpenAI stream:
-
-        >>> from openai import OpenAI
-        >>> import streamlit as st
-        >>>
-        >>> client = OpenAI(api_key=st.secrets["openai_api_key"])
-        >>>
-        >>> if "messages" not in st.session_state:
-        >>>     st.session_state.messages = []
-        >>>
-        >>> for message in st.session_state.messages:
-        >>>     st.chat_message(message["role"]).write(message["content"])
-        >>>
-        >>> if prompt := st.chat_input("What is up?"):
-        >>>     st.chat_message("user").write(prompt)
-        >>>     st.session_state.messages.append({"role": "user", "content": prompt})
-        >>>
-        >>>     with st.chat_message("assistant"):
-        >>>         response = st.write_stream(
-        >>>             client.chat.completions.create(
-        >>>                 model="gpt-3.5-turbo",
-        >>>                 messages=st.session_state.messages,
-        >>>                 stream=True,
-        >>>             )
-        >>>         )
-        >>>        st.session_state.messages.append({"role": "assistant", "content": response})
-
-        ..  output::
-            https://doc-write-stream-openai.streamlit.app/
-            height: 400px
+            height: 550px
 
         """
 
@@ -164,14 +122,14 @@ class WriteMixin:
         # not be passed in here.
         if isinstance(stream, str) or type_util.is_dataframe_like(stream):
             raise StreamlitAPIException(
-                "`st.stream_write` expects a generator or stream-like object as input "
+                "`st.write_stream` expects a generator or stream-like object as input "
                 f"not {type(stream)}. Please use `st.write` instead for "
                 "this data type."
             )
 
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
-        written_content: List[Any] = StreamingOutput()
+        written_content: list[Any] = StreamingOutput()
 
         def flush_stream_response():
             """Write the full response to the app."""
@@ -180,7 +138,7 @@ class WriteMixin:
 
             if streamed_response and stream_container:
                 # Replace the stream_container element the full response
-                stream_container.write(streamed_response)
+                stream_container.markdown(streamed_response)
                 written_content.append(streamed_response)
                 stream_container = None
                 streamed_response = ""
@@ -199,12 +157,15 @@ class WriteMixin:
         # Iterate through the generator and write each chunk to the app
         # with a type writer effect.
         for chunk in stream:  # type: ignore
-            if type_util.is_type(
-                chunk, "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
-            ):
+            if type_util.is_openai_chunk(chunk):
                 # Try to convert OpenAI chat completion chunk to a string:
                 try:
-                    chunk = chunk.choices[0].delta.content or ""
+                    if len(chunk.choices) == 0:
+                        # The choices list can be empty. E.g. when using the
+                        # AzureOpenAI client, the first chunk will always be empty.
+                        chunk = ""
+                    else:
+                        chunk = chunk.choices[0].delta.content or ""
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the OpenAI ChatCompletionChunk. "
@@ -234,7 +195,7 @@ class WriteMixin:
                     first_text = True
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
-                stream_container.write(
+                stream_container.markdown(
                     streamed_response + ("" if first_text else _TEXT_CURSOR),
                 )
             elif callable(chunk):
@@ -285,6 +246,7 @@ class WriteMixin:
             - write(generator)      : Streams the output of a generator.
             - write(openai.Stream)  : Streams the output of an OpenAI stream.
             - write(altair)         : Displays an Altair chart.
+            - write(PIL.Image)      : Displays an image.
             - write(keras)          : Displays a Keras model.
             - write(graphviz)       : Displays a Graphviz graph.
             - write(plotly_fig)     : Displays a Plotly figure.
@@ -376,7 +338,7 @@ class WriteMixin:
                 kwargs,
             )
 
-        string_buffer: List[str] = []
+        string_buffer: list[str] = []
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
@@ -417,6 +379,8 @@ class WriteMixin:
                 flush_buffer()
                 self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):
+                import numpy as np
+
                 flush_buffer()
                 if len(np.shape(arg)) > 2:
                     self.dg.text(arg)
@@ -443,6 +407,9 @@ class WriteMixin:
             elif type_util.is_sympy_expession(arg):
                 flush_buffer()
                 self.dg.latex(arg)
+            elif type_util.is_pillow_image(arg):
+                flush_buffer()
+                self.dg.image(arg)
             elif type_util.is_keras_model(arg):
                 from tensorflow.python.keras.utils import vis_utils
 
@@ -501,6 +468,6 @@ class WriteMixin:
         flush_buffer()
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

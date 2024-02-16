@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Tuple, cast
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
@@ -53,7 +52,7 @@ class PresetNames(str, Enum):
 
 def _process_avatar_input(
     avatar: str | AtomicImage | None, delta_path: str
-) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
+) -> tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
     """Detects the avatar type and prepares the avatar data for the frontend.
 
     Parameters
@@ -102,7 +101,7 @@ def _process_avatar_input(
 @dataclass
 class ChatInputSerde:
     def deserialize(
-        self, ui_value: Optional[StringTriggerValueProto], widget_id: str = ""
+        self, ui_value: StringTriggerValueProto | None, widget_id: str = ""
     ) -> str | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
@@ -120,7 +119,7 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Insert a chat message container.
 
         To add elements to the returned container, you can use ``with`` notation
@@ -222,11 +221,6 @@ class ChatMixin:
     ) -> str | None:
         """Display a chat input widget.
 
-        .. warning::
-            Chat input can only be used once per app page and inside the main area of the app.
-            It cannot be used in the sidebar, columns, expanders, forms or tabs.
-            We plan to support this in the future.
-
         Parameters
         ----------
         placeholder : str
@@ -240,11 +234,11 @@ class ChatMixin:
             its content. Multiple widgets of the same type may not share the same key.
 
         max_chars : int or None
-            The maximum number of characters that can be entered. If None
+            The maximum number of characters that can be entered. If ``None``
             (default), there will be no maximum.
 
         disabled : bool
-            Whether the chat input should be disabled. Defaults to False.
+            Whether the chat input should be disabled. Defaults to ``False``.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
@@ -259,10 +253,13 @@ class ChatMixin:
         -------
         str or None
             The current (non-empty) value of the text input widget on the last
-            run of the app, None otherwise.
+            run of the app. Otherwise, ``None``.
 
         Examples
         --------
+        When ``st.chat_input`` is used in the main body of an app, it will be
+        pinned to the bottom of the page.
+
         >>> import streamlit as st
         >>>
         >>> prompt = st.chat_input("Say something")
@@ -273,16 +270,17 @@ class ChatMixin:
             https://doc-chat-input.streamlit.app/
             height: 350px
 
-        The chat input can also be used inline instead of pinned to the
-        bottom by nesting it inside any other layout container
-        (container, columns, tabs, sidebar, etc).:
+        The chat input can also be used inline by nesting it inside any layout
+        container (container, columns, tabs, sidebar, etc). Create chat
+        interfaces embedded next to other content or have multiple chat bots!
 
         >>> import streamlit as st
         >>>
-        >>> with st.container():
-        >>>     prompt = st.chat_input("Say something")
-        >>> if prompt:
-        ...     st.write(f"User has sent the following prompt: {prompt}")
+        >>> with st.sidebar:
+        >>>     messages = st.container(height=300)
+        >>>     if prompt := st.chat_input("Say something"):
+        >>>         messages.chat_message("user").write(prompt)
+        >>>         messages.chat_message("assistant").write(f"Echo: {prompt}")
 
         .. output ::
             https://doc-chat-input-inline.streamlit.app/
@@ -367,6 +365,6 @@ class ChatMixin:
         return widget_state.value if not widget_state.value_changed else None
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

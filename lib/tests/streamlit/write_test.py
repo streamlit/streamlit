@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
@@ -164,6 +165,13 @@ class StreamlitWriteTest(unittest.TestCase):
         """Test st.write with dict."""
         with patch("streamlit.delta_generator.DeltaGenerator.json") as p:
             st.write({"a": 1, "b": 2})
+
+            p.assert_called_once()
+
+    def test_pil_image(self):
+        """Test st.write with PIL image objects."""
+        with patch("streamlit.delta_generator.DeltaGenerator.image") as p:
+            st.write(Image.new("L", (10, 10), "black"))
 
             p.assert_called_once()
 
@@ -418,15 +426,15 @@ class StreamlitStreamTest(unittest.TestCase):
     def test_with_openai_chunk(self, is_type):
         """Test st.write_stream with openai Chunks."""
 
-        is_type.side_effect = make_is_type_mock(
-            "openai.types.chat.chat_completion_chunk.ChatCompletionChunk"
-        )
+        is_type.side_effect = make_is_type_mock(type_util._OPENAI_CHUNK_RE)
 
         # Create a mock for ChatCompletionChunk
         mock_chunk = MagicMock()
-        mock_chunk.choices = [MagicMock()]
 
         def openai_stream():
+            mock_chunk.choices = []
+            yield mock_chunk  # should also support empty chunks
+            mock_chunk.choices = [MagicMock()]
             mock_chunk.choices[0].delta.content = "Hello "
             yield mock_chunk
             mock_chunk.choices[0].delta.content = "World"

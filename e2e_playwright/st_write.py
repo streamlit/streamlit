@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import pydeck as pdk
+from PIL import Image
 
 import streamlit as st
 
@@ -157,3 +158,7 @@ st.write(
         ),
     )
 )
+
+st.subheader("st.write(Image)")
+
+st.write(Image.new("L", (10, 10), "black"))

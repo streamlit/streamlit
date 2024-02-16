@@ -12,25 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import socket
-from typing import Optional
+from __future__ import annotations
 
-from typing_extensions import Final
+from typing import Final
 
 from streamlit import util
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # URLs for checking the current machine's external IP address.
 _AWS_CHECK_IP: Final = "http://checkip.amazonaws.com"
 _AWS_CHECK_IP_HTTPS: Final = "https://checkip.amazonaws.com"
 
-_external_ip: Optional[str] = None
-_internal_ip: Optional[str] = None
+_external_ip: str | None = None
+_internal_ip: str | None = None
 
 
-def get_external_ip() -> Optional[str]:
+def get_external_ip() -> str | None:
     """Get the *external* IP address of the current machine.
 
     Returns
@@ -52,7 +51,7 @@ def get_external_ip() -> Optional[str]:
     if _looks_like_an_ip_adress(response):
         _external_ip = response
     else:
-        LOGGER.warning(
+        _LOGGER.warning(
             # fmt: off
             "Did not auto detect external IP.\n"
             "Please go to %s for debugging hints.",
@@ -64,7 +63,7 @@ def get_external_ip() -> Optional[str]:
     return _external_ip
 
 
-def get_internal_ip() -> Optional[str]:
+def get_internal_ip() -> str | None:
     """Get the *local* IP address of the current machine.
 
     From: https://stackoverflow.com/a/28950776
@@ -80,6 +79,8 @@ def get_internal_ip() -> Optional[str]:
     if _internal_ip is not None:
         return _internal_ip
 
+    import socket
+
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         try:
             # Doesn't even have to be reachable
@@ -91,7 +92,7 @@ def get_internal_ip() -> Optional[str]:
     return _internal_ip
 
 
-def _make_blocking_http_get(url: str, timeout: float = 5) -> Optional[str]:
+def _make_blocking_http_get(url: str, timeout: float = 5) -> str | None:
     import requests
 
     try:
@@ -103,9 +104,11 @@ def _make_blocking_http_get(url: str, timeout: float = 5) -> Optional[str]:
         return None
 
 
-def _looks_like_an_ip_adress(address: Optional[str]) -> bool:
+def _looks_like_an_ip_adress(address: str | None) -> bool:
     if address is None:
         return False
+
+    import socket
 
     try:
         socket.inet_pton(socket.AF_INET, address)

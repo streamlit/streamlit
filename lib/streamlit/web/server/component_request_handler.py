@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import mimetypes
 import os
+from typing import Final
 
 import tornado.web
 
@@ -21,7 +24,7 @@ import streamlit.web.server.routes
 from streamlit.components.v1.components import ComponentRegistry
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
@@ -63,7 +66,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
         self.set_extra_headers(path)
 
-    def set_extra_headers(self, path) -> None:
+    def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
@@ -86,7 +89,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     @staticmethod
-    def get_content_type(abspath) -> str:
+    def get_content_type(abspath: str) -> str:
         """Returns the ``Content-Type`` header to be used for this request.
         From tornado.web.StaticFileHandler.
         """
@@ -108,4 +111,4 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
     @staticmethod
     def get_url(file_id: str) -> str:
         """Return the URL for a component file with the given ID."""
-        return "components/{}".format(file_id)
+        return f"components/{file_id}"

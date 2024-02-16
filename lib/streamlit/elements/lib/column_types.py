@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import datetime
-from typing import Iterable, List, Union
+from typing import Iterable, Literal, TypedDict
 
-from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
+from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -63,7 +63,7 @@ class CheckboxColumnConfig(TypedDict):
 
 class SelectboxColumnConfig(TypedDict):
     type: Literal["selectbox"]
-    options: NotRequired[List[str | int | float] | None]
+    options: NotRequired[list[str | int | float] | None]
 
 
 class LinkColumnConfig(TypedDict):
@@ -167,22 +167,22 @@ class ColumnConfig(TypedDict, total=False):
     required: bool | None
     default: str | bool | int | float | None
     alignment: Literal["left", "center", "right"] | None
-    type_config: Union[
-        NumberColumnConfig,
-        TextColumnConfig,
-        CheckboxColumnConfig,
-        SelectboxColumnConfig,
-        LinkColumnConfig,
-        ListColumnConfig,
-        DatetimeColumnConfig,
-        DateColumnConfig,
-        TimeColumnConfig,
-        ProgressColumnConfig,
-        LineChartColumnConfig,
-        BarChartColumnConfig,
-        ImageColumnConfig,
-        None,
-    ]
+    type_config: (
+        NumberColumnConfig
+        | TextColumnConfig
+        | CheckboxColumnConfig
+        | SelectboxColumnConfig
+        | LinkColumnConfig
+        | ListColumnConfig
+        | DatetimeColumnConfig
+        | DateColumnConfig
+        | TimeColumnConfig
+        | ProgressColumnConfig
+        | LineChartColumnConfig
+        | BarChartColumnConfig
+        | ImageColumnConfig
+        | None
+    )
 
 
 @gather_metrics("column_config.Column")
@@ -382,7 +382,7 @@ def TextColumn(
     max_chars: int | None = None,
     validate: str | None = None,
 ) -> ColumnConfig:
-    """Configure a text column in ``st.dataframe`` or ``st.data_editor``.
+    r"""Configure a text column in ``st.dataframe`` or ``st.data_editor``.
 
     This is the default column type for string values. This command needs to be used in the
     ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``. When used with
@@ -525,7 +525,7 @@ def LinkColumn(
 
         * A regular expression (JS flavor, detected by usage of parentheses)
           to extract a part of the URL via a capture group, e.g. ``"https://(.*?)\.streamlit\.app"``
-          to extract the display text "foo" from the URL "\https://foo.streamlit.app".
+          to extract the display text "foo" from the URL "https://foo.streamlit.app".
 
         For more complex cases, you may use `Pandas Styler's format \
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
@@ -562,9 +562,9 @@ def LinkColumn(
     >>>         "apps": st.column_config.LinkColumn(
     >>>             "Trending apps",
     >>>             help="The top trending Streamlit apps",
-    >>>             validate="^https://[a-z]+\.streamlit\.app$",
+    >>>             validate="^https://[a-z]+\\.streamlit\\.app$",
     >>>             max_chars=100,
-    >>>             display_text="https://(.*?)\.streamlit\.app"
+    >>>             display_text="https://(.*?)\\.streamlit\\.app"
     >>>         ),
     >>>         "creator": st.column_config.LinkColumn(
     >>>             "App Creator", display_text="Open profile"

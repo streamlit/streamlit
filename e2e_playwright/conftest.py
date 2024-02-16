@@ -153,18 +153,6 @@ def find_available_port(
     raise RuntimeError("Unable to find an available port.")
 
 
-# TODO(lukasmasuch): This was the previous method to rely on the OS to find a free port.
-# but when running the tests in parallel, it can happen that the OS assigns the same port
-# to multiple tests. This is why we now use the find_available_port method above.
-
-# def find_available_port(host: str = "localhost") -> int:
-#     """Find an available port on the given host."""
-#     with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-#         s.bind((host, 0))  # 0 means that the OS chooses a random port
-#         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-#         return int(s.getsockname()[1])  # [1] contains the randomly selected port number
-
-
 def is_app_server_running(port: int, host: str = "localhost") -> bool:
     """Check if the app server is running."""
     try:
@@ -201,42 +189,6 @@ def wait_for_app_server_to_start(port: int, timeout: int = 5) -> bool:
     return True
 
 
-def wait_for_app_run(page: Page, wait_delay: int = 100):
-    """Wait for the given page to finish running."""
-    page.wait_for_selector(
-        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
-    )
-
-    if wait_delay > 0:
-        # Give the app a little more time to render everything
-        page.wait_for_timeout(wait_delay)
-
-
-def wait_for_app_loaded(page: Page, embedded: bool = False):
-    """Wait for the app to fully load."""
-    # Wait for the app view container to appear:
-    page.wait_for_selector(
-        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
-    )
-
-    # Wait for the main menu to appear:
-    if not embedded:
-        page.wait_for_selector(
-            "[data-testid='stMainMenu']", timeout=20000, state="attached"
-        )
-
-    wait_for_app_run(page)
-
-
-def rerun_app(page: Page):
-    """Triggers an app rerun and waits for the run to be finished."""
-    # Click somewhere to clear the focus from elements:
-    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
-    # Press "r" to rerun the app:
-    page.keyboard.press("r")
-    wait_for_app_run(page)
-
-
 @pytest.fixture(scope="module")
 def app_port(worker_id: str) -> int:
     """Fixture that returns an available port on localhost."""
@@ -267,6 +219,8 @@ def app_server(
             str(app_port),
             "--browser.gatherUsageStats",
             "false",
+            "--server.fileWatcherType",
+            "none",
         ],
         cwd=".",
     )
@@ -402,7 +356,6 @@ def assert_snapshot(
     """Fixture that compares a screenshot with screenshot from a past run."""
     root_path = Path(os.getcwd()).resolve()
     platform = str(sys.platform)
-    # TODO(lukasmasuch): Is there a better way to get the module name?
     module_name = request.module.__name__.split(".")[-1]
     test_function_name = request.node.originalname
 
@@ -542,3 +495,95 @@ def assert_snapshot(
 
     if test_failure_messages:
         pytest.fail("Missing snapshots: \n" + "\n".join(test_failure_messages))
+
+
+# Public utility methods:
+
+
+def wait_for_app_run(page: Page, wait_delay: int = 100):
+    """Wait for the given page to finish running."""
+    page.wait_for_selector(
+        "[data-testid='stStatusWidget']", timeout=20000, state="detached"
+    )
+
+    if wait_delay > 0:
+        # Give the app a little more time to render everything
+        page.wait_for_timeout(wait_delay)
+
+
+def wait_for_app_loaded(page: Page, embedded: bool = False):
+    """Wait for the app to fully load."""
+    # Wait for the app view container to appear:
+    page.wait_for_selector(
+        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
+    )
+
+    # Wait for the main menu to appear:
+    if not embedded:
+        page.wait_for_selector(
+            "[data-testid='stMainMenu']", timeout=20000, state="attached"
+        )
+
+    wait_for_app_run(page)
+
+
+def rerun_app(page: Page):
+    """Triggers an app rerun and waits for the run to be finished."""
+    # Click somewhere to clear the focus from elements:
+    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    # Press "r" to rerun the app:
+    page.keyboard.press("r")
+    wait_for_app_run(page)
+
+
+def wait_until(page: Page, fn: callable, timeout: int = 5000, interval: int = 100):
+    """Run a test function in a loop until it evaluates to True
+    or times out.
+
+    For example:
+    >>> wait_until(lambda: x.values() == ['x'], page)
+
+    Parameters
+    ----------
+    page : playwright.sync_api.Page
+        Playwright page
+    fn : callable
+        Callback
+    timeout : int, optional
+        Total timeout in milliseconds, by default 5000
+    interval : int, optional
+        Waiting interval, by default 100
+
+    Adapted from panel.
+    """
+    # Hide this function traceback from the pytest output if the test fails
+    __tracebackhide__ = True
+
+    start = time.time()
+
+    def timed_out():
+        elapsed = time.time() - start
+        elapsed_ms = elapsed * 1000
+        return elapsed_ms > timeout
+
+    timeout_msg = f"wait_until timed out in {timeout} milliseconds"
+
+    while True:
+        try:
+            result = fn()
+        except AssertionError as e:
+            if timed_out():
+                raise TimeoutError(timeout_msg) from e
+        else:
+            if result not in (None, True, False):
+                raise ValueError(
+                    "`wait_until` callback must return None, True or "
+                    f"False, returned {result!r}"
+                )
+            # Stop is result is True or None
+            # None is returned when the function has an assert
+            if result is None or result:
+                return
+            if timed_out():
+                raise TimeoutError(timeout_msg)
+        page.wait_for_timeout(interval)
