@@ -603,7 +603,7 @@ class DataEditorMixin:
             The ``edited_cells`` dictionary is now called ``edited_rows`` and uses a
             different format (``{0: {"column name": "edited value"}}`` instead of
             ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
-            ``st.experimental_data_editor`` in combination with ``st.session_state``."
+            ``st.experimental_data_editor`` in combination with ``st.session_state``.
 
         Parameters
         ----------
