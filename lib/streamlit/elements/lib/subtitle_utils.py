@@ -33,7 +33,11 @@ SRT_CONVERSION_REGEX = r"(\d{2}:\d{2}:\d{2}),(\d{3})"
 SUBTITLE_ALLOWED_FORMATS = (".srt", ".vtt")
 
 
-def _is_srt(stream: str | io.BytesIO) -> bool:
+def _is_srt(stream: str | io.BytesIO | bytes) -> bool:
+    # Handle raw bytes
+    if isinstance(stream, bytes):
+        stream = io.BytesIO(stream)
+
     # Convert str to io.BytesIO if 'stream' is a string
     if isinstance(stream, str):
         stream = io.BytesIO(stream.encode("utf-8"))
@@ -130,10 +134,15 @@ def _handle_string_or_path_data(data_or_path: str | Path) -> bytes:
 
 
 def _handle_stream_data(stream: io.BytesIO) -> bytes:
-    """Handles io.BytesIO data, assuming it's SRT content."""
+    """Handles io.BytesIO data, converting SRT to VTT content if needed."""
     stream.seek(0)
     stream_data = stream.getvalue()
     return _srt_to_vtt(stream_data) if _is_srt(stream) else stream_data
+
+
+def _handle_bytes_data(data: bytes) -> bytes:
+    """Handles io.BytesIO data, converting SRT to VTT content if needed."""
+    return _srt_to_vtt(data) if _is_srt(data) else data
 
 
 def process_subtitle_data(
@@ -145,10 +154,10 @@ def process_subtitle_data(
     # Determine the type of data and process accordingly
     if isinstance(data, (str, Path)):
         subtitle_data = _handle_string_or_path_data(data)
-    elif isinstance(data, bytes):
-        subtitle_data = data  # Assume bytes are already in the correct format.
     elif isinstance(data, io.BytesIO):
         subtitle_data = _handle_stream_data(data)
+    elif isinstance(data, bytes):
+        subtitle_data = _handle_bytes_data(data)
     else:
         raise TypeError(f"Invalid binary data format for subtitle: {type(data)}.")
 

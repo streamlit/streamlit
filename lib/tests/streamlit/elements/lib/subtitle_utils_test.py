@@ -102,6 +102,14 @@ class SubtitleUtilsTest(DeltaGeneratorTestCase):
             f"Expected {srt_string} to be transformed into {str(expected)}.",
         )
 
+    def test_srt_vtt_bytes(self):
+        """Test srt to vtt format transition with bytes."""
+        self.assertEqual(
+            _srt_to_vtt(SRT_DATA_EN.encode("utf-8")),
+            VTT_DATA_EN,
+            f"Expected {SRT_DATA_EN} to be transformed into {str(VTT_DATA_EN)}.",
+        )
+
     def test_process_subtitle_data(self):
         """Test process_subtitle_data function."""
         url = process_subtitle_data("[0, 0]", SRT_DATA_EN, "English")
