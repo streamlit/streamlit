@@ -155,6 +155,7 @@ interface State {
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
+  currentFragmentId: string
   // host communication info
   isOwner: boolean
   hostMenuItems: IMenuItem[]
@@ -269,6 +270,7 @@ export class App extends PureComponent<Props, State> {
       hideSidebarNav: true,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
+      currentFragmentId: "",
       // Information sent from the host
       isOwner: false,
       hostMenuItems: [],
@@ -896,6 +898,7 @@ export class App extends PureComponent<Props, State> {
         appPages: newSessionProto.appPages,
         currentPageScriptHash: newPageScriptHash,
         latestRunTime: performance.now(),
+        currentFragmentId: newSessionProto.fragmentId ?? "",
       },
       () => {
         this.hostCommunicationMgr.sendMessageToHost({
@@ -1053,7 +1056,9 @@ export class App extends PureComponent<Props, State> {
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-      status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN ||
+      status ===
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
       const successful =
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
@@ -1288,7 +1293,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    this.sendRerunBackMsg(undefined, pageScriptHash)
+    this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
   }
 
   isAppInReadyState = (prevState: Readonly<State>): boolean => {
@@ -1302,6 +1307,7 @@ export class App extends PureComponent<Props, State> {
 
   sendRerunBackMsg = (
     widgetStates?: WidgetStates,
+    fragmentId?: string,
     pageScriptHash?: string
   ): void => {
     const baseUriParts = this.getBaseUriParts()
@@ -1350,7 +1356,13 @@ export class App extends PureComponent<Props, State> {
 
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
+        rerunScript: {
+          queryString,
+          widgetStates,
+          pageScriptHash,
+          pageName,
+          fragmentId,
+        },
       })
     )
 
@@ -1717,6 +1729,7 @@ export class App extends PureComponent<Props, State> {
             onPageChange: this.onPageChange,
             currentPageScriptHash,
             libConfig,
+            currentFragmentId: this.state.currentFragmentId ?? "",
           }}
         >
           <HotKeys

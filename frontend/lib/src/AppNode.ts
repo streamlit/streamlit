@@ -91,6 +91,12 @@ export interface AppNode {
   readonly scriptRunId: string
 
   /**
+   * The ID of the fragment that sent the Delta creating this AppNode. If this
+   * AppNode was not created by a fragment, this field is falsy.
+   */
+  readonly fragmentId?: string
+
+  /**
    * Return the AppNode for the given index path, or undefined if the path
    * is invalid.
    */
@@ -126,6 +132,8 @@ export class ElementNode implements AppNode {
 
   public readonly scriptRunId: string
 
+  public readonly fragmentId?: string
+
   private lazyQuiverElement?: Quiver
 
   private lazyVegaLiteChartElement?: VegaLiteChartElement
@@ -134,11 +142,13 @@ export class ElementNode implements AppNode {
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
-    scriptRunId: string
+    scriptRunId: string,
+    fragmentId?: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
+    this.fragmentId = fragmentId
   }
 
   public get quiverElement(): Quiver {
@@ -308,14 +318,18 @@ export class BlockNode implements AppNode {
 
   public readonly scriptRunId: string
 
+  public readonly fragmentId?: string
+
   public constructor(
     children?: AppNode[],
     deltaBlock?: BlockProto,
-    scriptRunId?: string
+    scriptRunId?: string,
+    fragmentId?: string
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
+    this.fragmentId = fragmentId
   }
 
   /** True if this Block has no children. */
@@ -517,14 +531,21 @@ export class AppRoot {
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
-        return this.addElement(deltaPath, scriptRunId, element, metadata)
+        return this.addElement(
+          deltaPath,
+          scriptRunId,
+          element,
+          metadata,
+          delta.fragmentId
+        )
       }
 
       case "addBlock": {
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
-          scriptRunId
+          scriptRunId,
+          delta.fragmentId
         )
       }
 
@@ -587,16 +608,23 @@ export class AppRoot {
     deltaPath: number[],
     scriptRunId: string,
     element: Element,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    fragmentId?: string
   ): AppRoot {
-    const elementNode = new ElementNode(element, metadata, scriptRunId)
+    const elementNode = new ElementNode(
+      element,
+      metadata,
+      scriptRunId,
+      fragmentId
+    )
     return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private addBlock(
     deltaPath: number[],
     block: BlockProto,
-    scriptRunId: string
+    scriptRunId: string,
+    fragmentId?: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -606,7 +634,7 @@ export class AppRoot {
     const children: AppNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const blockNode = new BlockNode(children, block, scriptRunId)
+    const blockNode = new BlockNode(children, block, scriptRunId, fragmentId)
     return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
   }
 

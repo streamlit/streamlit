@@ -894,6 +894,7 @@ describe("AppRoot.applyDelta", () => {
 
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.fragmentId).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
@@ -914,11 +915,42 @@ describe("AppRoot.applyDelta", () => {
 
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.fragmentId).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+  })
+
+  it("can set fragmentId in 'newElement' deltas", () => {
+    const delta = makeProto(DeltaProto, {
+      newElement: { text: { body: "newElement!" } },
+      fragmentId: "myFragmentId",
+    })
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as ElementNode
+    expect(newNode.fragmentId).toBe("myFragmentId")
+  })
+
+  it("can set fragmentId in 'addBlock' deltas", () => {
+    const delta = makeProto(DeltaProto, {
+      addBlock: {},
+      fragmentId: "myFragmentId",
+    })
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode.fragmentId).toBe("myFragmentId")
   })
 })
 
