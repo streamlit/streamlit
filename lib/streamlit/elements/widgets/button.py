@@ -498,8 +498,8 @@ class ButtonMixin:
 
         >>> your-repository/
         >>> ├── pages/
-        >>> │   ├── page_1.py.py
-        >>> │   └── page_2.py.py
+        >>> │   ├── page_1.py
+        >>> │   └── page_2.py
         >>> └── your_app.py
 
         >>> import streamlit as st
