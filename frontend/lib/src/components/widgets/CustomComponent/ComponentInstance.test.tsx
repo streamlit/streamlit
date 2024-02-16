@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+import React from "react"
+import "@testing-library/jest-dom"
+import { act, screen, fireEvent } from "@testing-library/react"
+
 import {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
 } from "@streamlit/lib/src/proto"
-import "@testing-library/jest-dom"
-import { screen, fireEvent } from "@testing-library/react"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -27,19 +29,18 @@ import {
 import { logWarning } from "@streamlit/lib/src/util/log"
 import { buildHttpUri } from "@streamlit/lib/src/util/UriUtil"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import React from "react"
 import { bgColorToBaseString, toExportedTheme } from "@streamlit/lib/src/theme"
 import { fonts } from "@streamlit/lib/src/theme/primitives/typography"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
-import {
+import { render } from "@streamlit/lib/src/test_util"
+
+import ComponentInstance, {
   COMPONENT_READY_WARNING_TIME_MS,
-  ComponentInstance,
-  CUSTOM_COMPONENT_API_VERSION,
 } from "./ComponentInstance"
+import { CUSTOM_COMPONENT_API_VERSION } from "./componentUtils"
 import { ComponentRegistry } from "./ComponentRegistry"
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
-import { render } from "@streamlit/lib/src/test_util"
 
 // Mock log functions.
 jest.mock("@streamlit/lib/src/util/log")
@@ -324,7 +325,7 @@ describe("ComponentInstance", () => {
 
     it("warns if COMPONENT_READY hasn't been received after a timeout", () => {
       const componentRegistry = getComponentRegistry()
-      const { rerender } = render(
+      render(
         <ComponentInstance
           element={createElementProp()}
           registry={componentRegistry}
@@ -340,23 +341,8 @@ describe("ComponentInstance", () => {
         />
       )
       // Advance past our warning timeout, and force a re-render.
-      jest.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS)
+      act(() => jest.advanceTimersByTime(COMPONENT_READY_WARNING_TIME_MS))
 
-      rerender(
-        <ComponentInstance
-          element={createElementProp()}
-          registry={componentRegistry}
-          width={100}
-          disabled={false}
-          theme={mockTheme.emotion}
-          widgetMgr={
-            new WidgetStateManager({
-              sendRerunBackMsg: jest.fn(),
-              formsDataChanged: jest.fn(),
-            })
-          }
-        />
-      )
       expect(
         screen.getByText(/The app is attempting to load the component from/)
       ).toBeVisible()
@@ -539,7 +525,7 @@ describe("ComponentInstance", () => {
         const jsonValue = {}
         const componentRegistry = getComponentRegistry()
         const element = createElementProp(jsonValue)
-        const { rerender } = render(
+        render(
           <ComponentInstance
             element={element}
             registry={componentRegistry}
@@ -583,21 +569,6 @@ describe("ComponentInstance", () => {
           })
         )
 
-        rerender(
-          <ComponentInstance
-            element={element}
-            registry={componentRegistry}
-            width={100}
-            disabled={false}
-            theme={mockTheme.emotion}
-            widgetMgr={
-              new WidgetStateManager({
-                sendRerunBackMsg: jest.fn(),
-                formsDataChanged: jest.fn(),
-              })
-            }
-          />
-        )
         // Updating the frameheight intentionally does *not* cause a re-render
         // (instead, it directly updates the iframeRef) - so we can't check
         // that `child.prop("height") == 100`
