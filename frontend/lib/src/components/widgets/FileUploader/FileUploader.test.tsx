@@ -53,7 +53,10 @@ const buildFileUploaderStateProto = (
     ),
   })
 
-const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
+const getProps = (
+  elementProps: Partial<FileUploaderProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => {
   return {
     element: FileUploaderProto.create({
       id: "id",
@@ -85,6 +88,7 @@ const getProps = (elementProps: Partial<FileUploaderProto> = {}): Props => {
       }),
       deleteFile: jest.fn(),
     },
+    ...widgetProps,
   }
 }
 
@@ -182,9 +186,40 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
+
+  it("can pass fragmentId to setFileUploaderStateValue", async () => {
+    const user = userEvent.setup()
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId(
+      "stDropzoneInput"
+    ) as HTMLInputElement
+
+    const fileToUpload = createFile()
+    await user.upload(fileDropZoneInput, fileToUpload)
+
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
+      props.element,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        fromUi: true,
+      },
+      "myFragmentId"
+    )
+  })
+
   it("uploads a single file even if too many files are selected", async () => {
     const props = getProps({ multipleFiles: false })
     jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
@@ -243,7 +278,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
   it("replaces file on single file uploader", async () => {
@@ -343,7 +379,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -385,7 +422,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
 
     const firstDeleteBtn = screen.getAllByTestId("fileDeleteBtn")[0]
@@ -412,7 +450,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -452,7 +491,8 @@ describe("FileUploader widget tests", () => {
       buildFileUploaderStateProto([]),
       {
         fromUi: false,
-      }
+      },
+      undefined
     )
   })
 
@@ -612,7 +652,8 @@ describe("FileUploader widget tests", () => {
       ]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
 
     // "Submit" the form
@@ -629,7 +670,8 @@ describe("FileUploader widget tests", () => {
       buildFileUploaderStateProto([]),
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })
