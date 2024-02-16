@@ -186,6 +186,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         popover_block = self.get_delta_from_queue()
         self.assertEqual(popover_block.add_block.popover.label, "label")
         self.assertEqual(popover_block.add_block.popover.use_container_width, False)
+        self.assertEqual(popover_block.add_block.popover.disabled, False)
+        self.assertEqual(popover_block.add_block.popover.help, "")
         self.assertEqual(popover_block.add_block.allow_empty, True)
 
     def test_use_container_width(self):
@@ -197,7 +199,26 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         popover_block = self.get_delta_from_queue()
         self.assertEqual(popover_block.add_block.popover.label, "label")
         self.assertEqual(popover_block.add_block.popover.use_container_width, True)
-        self.assertEqual(popover_block.add_block.allow_empty, True)
+
+    def test_disabled(self):
+        """Test that it correctly applies disabled param."""
+        popover = st.popover("label", disabled=True)
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.disabled, True)
+
+    def test_help(self):
+        """Test that it correctly applies help param."""
+        popover = st.popover("label", help="help text")
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.help, "help text")
 
 
 class StatusContainerTest(DeltaGeneratorTestCase):

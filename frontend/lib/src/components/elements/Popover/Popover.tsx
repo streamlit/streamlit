@@ -119,7 +119,7 @@ const Popover: React.FC<PopoverProps> = ({
             <BaseButton
               kind={BaseButtonKind.SECONDARY}
               size={BaseButtonSize.SMALL}
-              disabled={empty}
+              disabled={empty || element.disabled}
               fluidWidth={element.useContainerWidth ? fluidWidth : false}
               data-testid="stPopoverButton"
               onClick={() => setOpen(!open)}

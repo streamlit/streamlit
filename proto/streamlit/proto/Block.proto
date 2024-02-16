@@ -72,6 +72,7 @@ message Block {
     string label = 1;
     bool use_container_width = 2;
     string help = 3;
+    bool disabled = 4;
   }
 
 

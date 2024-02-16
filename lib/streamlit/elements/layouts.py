@@ -481,6 +481,7 @@ class LayoutsMixin:
         label: str,
         *,
         help: str | None = None,
+        disabled: bool = False,
         use_container_width: bool = False,
     ) -> "DeltaGenerator":
         r"""Insert a popover container.
@@ -524,6 +525,10 @@ class LayoutsMixin:
             An optional tooltip that gets displayed when the popover button is
             hovered over.
 
+        disabled : bool
+            An optional boolean, which disables the popover button if set to
+            True. The default is False.
+
         use_container_width : bool
             An optional boolean, which makes the popover button stretch its width
             to match the parent container. This only affects the button and not
@@ -565,6 +570,7 @@ class LayoutsMixin:
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.use_container_width = use_container_width
+        popover_proto.disabled = disabled
         if help:
             popover_proto.help = str(help)
 
