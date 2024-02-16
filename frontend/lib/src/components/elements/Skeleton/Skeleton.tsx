@@ -20,19 +20,19 @@ import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 import { SquareSkeleton } from "./styled-components"
 
-const RawSkeleton: FC<React.PropsWithChildren<{ element?: SkeletonProto }>> = ({ element }) => {
-  let css_height, width_pct
+const RawSkeleton: FC<
+  React.PropsWithChildren<{ element?: SkeletonProto }>
+> = ({ element }) => {
+  let css_height, css_width
   if (element != undefined) {
-    css_height =
-      element.height != undefined ? element.height + "pt" : undefined
-    width_pct =
-      element.width != undefined ? element.width * 100 + "%" : undefined
+    css_height = element.height != null ? element.height + "px" : undefined
+    css_width = element.width != null ? element.width + "px" : undefined
   }
   return (
     <SquareSkeleton
       data-testid="stSkeleton"
       height={css_height}
-      width={width_pct}
+      width={css_width}
     />
   )
 }

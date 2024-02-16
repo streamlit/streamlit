@@ -36,19 +36,19 @@ describe("Skeleton element", () => {
 
 describe("Skeleton element", () => {
   it("converts properties appropriately", () => {
-    let props = SkeletonProto.create({ height: 5, width: 0.568 })
+    let props = SkeletonProto.create({ height: 5, width: 10 })
 
     render(<Skeleton element={props} />)
 
     let test_skeleton = screen.getByTestId("stSkeleton")
-    expect(test_skeleton).toHaveAttribute("height", "5pt")
-    expect(test_skeleton).toHaveAttribute("width", "56.8%")
+    expect(test_skeleton).toHaveAttribute("height", "5px")
+    expect(test_skeleton).toHaveAttribute("width", "10px")
   })
 })
 
 describe("Skeleton element", () => {
-  it("accepts undefined properties", () => {
-    let props = SkeletonProto.create({ height: 5, width: undefined })
+  it("accepts null/undefined properties", () => {
+    let props = SkeletonProto.create({ height: 5 })
 
     render(<Skeleton element={props} />)
 

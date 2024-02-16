@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, cast
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
+from streamlit.proto.Skeleton_pb2 import SkeletonStyle
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -23,9 +25,7 @@ if TYPE_CHECKING:
 
 class SkeletonMixin:
     @gather_metrics("skeleton")
-    def skeleton(
-        self, height: Optional[int] = None, *, width: Optional[float] = None
-    ) -> "DeltaGenerator":
+    def skeleton(self, *, height: int = 0, width: int = 0) -> "DeltaGenerator":
         """Insert a single-element container which displays a "skeleton" animation.
 
         Inserts a container into your app that can be used to hold a single element.
@@ -38,14 +38,13 @@ class SkeletonMixin:
 
         Parameters
         ----------
-        height (optional): int
-            An integer representing the height in CSS points of the adjustable-height block.
+        height: int
+            Desired height of the skeleton expressed in pixels. If 0, the skeleton will
+            be the height of a single-row text element, such as st.text_input.
 
-        Keyword-only Parameters
-        ----------
-        width (optional): float
-            An value between 0 and 1 representing the width of the block as a fraction of it's
-            parent element / page.
+        width: float
+            Desired height of the skeleton expressed in pixels. If 0, the width will
+            be automatically determined.
 
         Examples
         --------
@@ -55,6 +54,8 @@ class SkeletonMixin:
 
         This means you can replace
 
+        >>> import streamlit as st
+        >>>
         >>> # Draw UI
         >>> st.write("Census Data")
         >>> census_data_placeholder = st.empty()  # The empty is a collapsed element
@@ -69,6 +70,8 @@ class SkeletonMixin:
 
         with
 
+        >>> import streamlit as st
+        >>>
         >>> # Draw UI
         >>> st.write("Census Data")
         >>> census_data_placeholder = st.skeleton(200)
@@ -127,15 +130,22 @@ class SkeletonMixin:
         """
 
         skeleton_proto = SkeletonProto()
+        # TODO: in the future we might also allow the developer to create
+        # a SkeletonStyle.APP block.
+        skeleton_proto.style = SkeletonStyle.PLAIN
 
         # Validate Inputs
-        if height is not None:
+        if height != 0:
             if height <= 0:
-                raise ValueError("Skeleton height must be a positive integer.")
+                raise StreamlitAPIException(
+                    "Skeleton height must be a positive integer."
+                )
             skeleton_proto.height = height
-        if width is not None:
-            if width <= 0.0 or width > 1.0:
-                raise ValueError("Skeleton width must be a value 0 < width <= 1.")
+        if width != 0:
+            if width <= 0:
+                raise StreamlitAPIException(
+                    "Skeleton width must be a positive integer."
+                )
             skeleton_proto.width = width
 
         return self.dg._enqueue("skeleton", skeleton_proto)
