@@ -480,6 +480,7 @@ class LayoutsMixin:
         self,
         label: str,
         *,
+        help: str | None = None,
         use_container_width: bool = False,
     ) -> "DeltaGenerator":
         r"""Insert a popover container.
@@ -518,6 +519,10 @@ class LayoutsMixin:
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
             backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
+        help : str
+            An optional tooltip that gets displayed when the popover button is
+            hovered over.
 
         use_container_width : bool
             An optional boolean, which makes the popover button stretch its width
@@ -560,6 +565,8 @@ class LayoutsMixin:
         popover_proto = BlockProto.Popover()
         popover_proto.label = label
         popover_proto.use_container_width = use_container_width
+        if help:
+            popover_proto.help = str(help)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True

@@ -23,6 +23,7 @@ import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
 import { StyledIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import BaseButton, {
+  BaseButtonTooltip,
   BaseButtonKind,
   BaseButtonSize,
 } from "@streamlit/lib/src/components/shared/BaseButton"
@@ -36,11 +37,13 @@ import { StyledPopoverButtonIcon } from "./styled-components"
 export interface PopoverProps {
   element: BlockProto.Popover
   empty: boolean
+  width: number
 }
 
 const Popover: React.FC<PopoverProps> = ({
   element,
   empty,
+  width,
   children,
 }): ReactElement => {
   const [open, setOpen] = React.useState(false)
@@ -48,6 +51,10 @@ const Popover: React.FC<PopoverProps> = ({
   const theme = useTheme()
 
   const lightBackground = hasLightBackgroundColor(theme)
+
+  // When useContainerWidth true & has help tooltip,
+  // we need to pass the container width down to the button
+  const fluidWidth = element.help ? width : true
 
   return (
     <div data-testid="stPopover">
@@ -108,32 +115,34 @@ const Popover: React.FC<PopoverProps> = ({
         {/* This needs to be wrapped into a div, otherwise
         the BaseWeb popover implementation will not work correctly. */}
         <div>
-          <BaseButton
-            kind={BaseButtonKind.SECONDARY}
-            size={BaseButtonSize.SMALL}
-            disabled={empty}
-            fluidWidth={element.useContainerWidth}
-            data-testid="stPopoverButton"
-            onClick={() => setOpen(!open)}
-          >
-            <StreamlitMarkdown
-              source={element.label}
-              allowHTML={false}
-              isLabel
-              largerLabel
-              disableLinks
-            />
-            <StyledPopoverButtonIcon>
-              <StyledIcon
-                as={open ? ExpandLess : ExpandMore}
-                color="inherit"
-                aria-hidden="true"
-                size="lg"
-                margin=""
-                padding=""
+          <BaseButtonTooltip help={element.help}>
+            <BaseButton
+              kind={BaseButtonKind.SECONDARY}
+              size={BaseButtonSize.SMALL}
+              disabled={empty}
+              fluidWidth={element.useContainerWidth ? fluidWidth : false}
+              data-testid="stPopoverButton"
+              onClick={() => setOpen(!open)}
+            >
+              <StreamlitMarkdown
+                source={element.label}
+                allowHTML={false}
+                isLabel
+                largerLabel
+                disableLinks
               />
-            </StyledPopoverButtonIcon>
-          </BaseButton>
+              <StyledPopoverButtonIcon>
+                <StyledIcon
+                  as={open ? ExpandLess : ExpandMore}
+                  color="inherit"
+                  aria-hidden="true"
+                  size="lg"
+                  margin=""
+                  padding=""
+                />
+              </StyledPopoverButtonIcon>
+            </BaseButton>
+          </BaseButtonTooltip>
         </div>
       </UIPopover>
     </div>

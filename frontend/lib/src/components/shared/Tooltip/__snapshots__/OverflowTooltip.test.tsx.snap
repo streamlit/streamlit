@@ -5,7 +5,7 @@ exports[`Tooltip component should render and match snapshots when ellipsized 1`]
   <div>
     <div
       aria-describedby="2"
-      data-testid="tooltipHoverTarget"
+      data-testid="stTooltipHoverTarget"
       id="2__anchor"
       style="display: flex; flex-direction: row;"
     >
@@ -50,7 +50,7 @@ exports[`Tooltip component should render and match snapshots when it fits onscre
 <body>
   <div>
     <div
-      data-testid="tooltipHoverTarget"
+      data-testid="stTooltipHoverTarget"
       id="1__anchor"
       style="display: flex; flex-direction: row;"
     >

@@ -108,6 +108,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       <Popover
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
+        width={props.width}
       >
         {child}
       </Popover>
