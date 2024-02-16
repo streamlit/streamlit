@@ -429,7 +429,7 @@ class ColumnTypesTest(unittest.TestCase):
 
         self.assertEqual(
             remove_none_values(LinkColumn()),
-            {"type_config": {"type": "link"}},
+            {"type_config": {"type": "link", "target": "_blank"}},
             "Should only have the type defined and nothing else.",
         )
 
@@ -445,6 +445,7 @@ class ColumnTypesTest(unittest.TestCase):
                     max_chars=100,
                     validate="^[a-zA-Z]+$",
                     display_text="streamlit",
+                    target="_self",
                 )
             ),
             {
@@ -459,6 +460,7 @@ class ColumnTypesTest(unittest.TestCase):
                     "max_chars": 100,
                     "validate": "^[a-zA-Z]+$",
                     "display_text": "streamlit",
+                    "target": "_self",
                 },
             },
             "Should have all the properties defined.",

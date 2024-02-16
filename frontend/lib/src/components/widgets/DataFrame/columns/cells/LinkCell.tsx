@@ -29,6 +29,7 @@ const UNDERLINE_OFFSET = 5
 
 export interface LinkCellProps {
   readonly kind: "link-cell"
+  readonly target: string
   readonly href?: string | null
   readonly displayText?: string | null
 }
@@ -120,9 +121,9 @@ export const linkCellRenderer: CustomRenderer<LinkCell> = {
   needsHoverPosition: true,
   onSelect: e => {
     const redirectLink = onClickSelect(e)
-
+    const cellData = e.cell.data as LinkCellProps
     if (!isNullOrUndefined(redirectLink)) {
-      window.open(redirectLink, "_blank", "noopener,noreferrer")
+      window.open(redirectLink, cellData.target, "noopener,noreferrer")
     }
   },
   onDelete: c => ({

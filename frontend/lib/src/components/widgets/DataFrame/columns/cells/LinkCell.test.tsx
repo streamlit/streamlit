@@ -27,6 +27,7 @@ describe("LinkCell", () => {
   function getMockLinkCell(
     href = "",
     display_text = "",
+    target = "",
     props: Partial<LinkCell> = {}
   ): LinkCell {
     return {
@@ -39,6 +40,7 @@ describe("LinkCell", () => {
         kind: "link-cell",
         href: href,
         displayText: display_text,
+        target: target,
       },
     }
   }
@@ -52,7 +54,7 @@ describe("LinkCell", () => {
   })
 
   it("renders into the dom with correct value", async () => {
-    const cell = getMockLinkCell("https://streamlit.io", "", {
+    const cell = getMockLinkCell("https://streamlit.io", "", "_blank", {
       readonly: true,
     })
     const Editor = linkCellRenderer.provideEditor?.(cell)
@@ -68,14 +70,22 @@ describe("LinkCell", () => {
     // check if url value is correct
     expect(linkCell).toHaveAttribute("href", "https://streamlit.io")
 
+    // check if target value is correct
+    expect(linkCell).toHaveAttribute("target", "_blank")
+
     // check that the displayed text is correct
     expect(linkCell).toHaveTextContent("https://streamlit.io")
   })
 
   it("should render the displayText", async () => {
-    const cell = getMockLinkCell("https://streamlit.io", "Click here", {
-      readonly: true,
-    })
+    const cell = getMockLinkCell(
+      "https://streamlit.io",
+      "Click here",
+      "_blank",
+      {
+        readonly: true,
+      }
+    )
     const Editor = linkCellRenderer.provideEditor?.(cell)
 
     render(
@@ -97,5 +107,16 @@ describe("LinkCell", () => {
     ) as LinkCellProps
 
     expect(value.href).toStrictEqual("https://pasted-link.com")
+  })
+
+  it("should allow pasting in a target value", async () => {
+    const cell = getMockLinkCell("https://streamlit.io", "", "_self")
+    // @ts-expect-error
+    const value = linkCellRenderer.onPaste(
+      "https://pasted-link.com",
+      cell.data
+    ) as LinkCellProps
+
+    expect(value.target).toStrictEqual("_self")
   })
 })
