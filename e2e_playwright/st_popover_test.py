@@ -110,7 +110,7 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     # Get the fullscreen elements popover container:
     popover_element = app.get_by_test_id("stPopover").nth(4)
     # Click the button to open it:
-    popover_element.locator("button").click()
+    popover_element.get_by_test_id("baseButton-secondary").first.click()
 
     popover_container = app.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
@@ -130,9 +130,13 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
 
 def test_show_tooltip_on_hover(app: Page):
     """Test that the tooltip is shown when hovering over a popover button."""
-    popover_button = app.get_by_test_id("stPopover").nth(4).locator("button")
+    popover_button = (
+        app.get_by_test_id("stPopover")
+        .nth(4)
+        .get_by_test_id("baseButton-secondary")
+        .first
+    )
     # Click the button to open it:
-    popover_button.click()
     popover_button.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("help text")
