@@ -28,7 +28,8 @@ def test_popover_button_rendering(
     assert_snapshot(popover_elements.nth(1), name="st_popover-empty")
     assert_snapshot(popover_elements.nth(2), name="st_popover-use_container_width")
     assert_snapshot(popover_elements.nth(3), name="st_popover-normal")
-    assert_snapshot(popover_elements.nth(4), name="st_popover-disabled")
+    # Popover button 4 is almost the same as 3, so we don't need to test it
+    assert_snapshot(popover_elements.nth(5), name="st_popover-disabled")
 
 
 def test_popover_container_rendering(
@@ -129,7 +130,7 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
 
 def test_show_tooltip_on_hover(app: Page):
     """Test that the tooltip is shown when hovering over a popover button."""
-    popover_button = app.get_by_test_id("stPopover").nth(3).locator("button")
+    popover_button = app.get_by_test_id("stPopover").nth(4).locator("button")
     # Click the button to open it:
     popover_button.click()
     popover_button.hover()
