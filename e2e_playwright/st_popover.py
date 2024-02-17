@@ -48,4 +48,7 @@ with st.sidebar.popover("popover 5 (in sidebar)"):
     st.markdown("Popover in sidebar with dataframe")
     st.dataframe(df, use_container_width=True)
 
+with st.popover("popover 6 (disabled)", disabled=True):
+    st.markdown("Hello World 👋")
+
 st.markdown(text)
