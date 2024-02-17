@@ -24,6 +24,7 @@ from typing import Any, Callable, TypeVar, overload
 
 from typing_extensions import Protocol
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner.script_run_context import dg_stack
@@ -174,12 +175,10 @@ def fragment(
         ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
         if run_every:
-            # TODO(vdonato): Fix me when implementing auto rerun.
-            # msg = ForwardMsg()
-            # msg.auto_rerun.interval = run_every
-            # msg.auto_rerun.fragment_id = fragment_id
-            # ctx.enqueue(msg)
-            pass
+            msg = ForwardMsg()
+            msg.auto_rerun.interval = run_every
+            msg.auto_rerun.fragment_id = fragment_id
+            ctx.enqueue(msg)
 
         return wrapped_fragment()
 
