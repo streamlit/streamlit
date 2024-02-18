@@ -1533,6 +1533,44 @@ describe("App", () => {
     })
   })
 
+  describe("App.handleAutoRerun and autoRerun interval handling", () => {
+    beforeEach(() => {
+      jest.useFakeTimers()
+      jest.spyOn(global, "setInterval")
+      jest.spyOn(global, "clearInterval")
+    })
+
+    it("sets interval to call sendUpdateWidgetsMessage", () => {
+      renderApp(getProps())
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+
+      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000)
+    })
+
+    it("clears intervals on handleNewSession message", () => {
+      renderApp(getProps())
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+      sendForwardMessage("autoRerun", {
+        interval: 2.0,
+        fragmentId: "myFragmentId",
+      })
+
+      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000)
+      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 2000)
+
+      sendForwardMessage("newSession", { ...NEW_SESSION_JSON })
+
+      expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
+      expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
+    })
+  })
+
   describe("App.requestFileURLs", () => {
     it("properly constructs fileUrlsRequest BackMsg", () => {
       renderApp(getProps())

@@ -73,6 +73,7 @@ import {
   ensureError,
   LibContext,
   AppPage,
+  AutoRerun,
   BackMsg,
   Config,
   CustomThemeConfig,
@@ -167,6 +168,7 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
+  autoReruns: NodeJS.Timer[]
   inputsDisabled: boolean
 }
 
@@ -282,6 +284,7 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
+      autoReruns: [],
       inputsDisabled: false,
     }
 
@@ -631,6 +634,7 @@ export class App extends PureComponent<Props, State> {
           this.handleScriptFinished(status),
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
+        autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
         fileUrlsResponse: (fileURLsResponse: FileURLsResponse) =>
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
@@ -738,6 +742,18 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
+  handleAutoRerun = (autoRerun: AutoRerun): void => {
+    const intervalId = setInterval(() => {
+      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId)
+    }, autoRerun.interval * 1000)
+
+    this.setState((prevState: State) => {
+      return {
+        autoReruns: [...prevState.autoReruns, intervalId],
+      }
+    })
+  }
+
   /**
    * Handler for ForwardMsg.sessionStatusChanged messages
    * @param statusChangeProto a SessionStatus protobuf
@@ -841,6 +857,14 @@ export class App extends PureComponent<Props, State> {
     if (!this.sessionInfo.isSet) {
       // We're not initialized. Perform one-time initialization.
       this.handleOneTimeInitialization(newSessionProto)
+    }
+
+    if (!newSessionProto.fragmentId) {
+      // This is a normal rerun, remove all the auto reruns intervals
+      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+        clearInterval(value)
+      })
+      this.setState({ autoReruns: [] })
     }
 
     const config = newSessionProto.config as Config
