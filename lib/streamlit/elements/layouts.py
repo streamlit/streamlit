@@ -493,7 +493,7 @@ class LayoutsMixin:
         or just call methods directly on the returned object. See examples below.
 
         .. warning::
-            You may not a popover inside another popover.
+            You may not put a popover inside another popover.
 
         Parameters
         ----------
