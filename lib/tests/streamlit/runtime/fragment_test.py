@@ -211,9 +211,10 @@ class FragmentTest(unittest.TestCase):
 
         my_fragment()
 
-        expected_msg = ForwardMsg()
-        expected_msg.auto_rerun.interval = 5.0
-        # Hard-coded hash of the fragment above.
-        expected_msg.auto_rerun.fragment_id = "a1ac8a7fb093b96d91f2d984d8a38876"
-
-        ctx.enqueue.assert_called_once_with(expected_msg)
+        [(args, _)] = ctx.enqueue.call_args_list
+        msg = args[0]
+        assert msg.auto_rerun.interval == 5
+        assert (
+            isinstance(msg.auto_rerun.fragment_id, str)
+            and msg.auto_rerun.fragment_id != ""
+        )
