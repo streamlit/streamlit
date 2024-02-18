@@ -54,7 +54,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   // When useContainerWidth true & has help tooltip,
   // we need to pass the container width down to the button
-  const fluidWidth = element.help ? width : true
+  const fluidButtonWidth = element.help ? width : true
 
   return (
     <div data-testid="stPopover">
@@ -70,6 +70,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         onClick={() => (open ? setOpen(false) : undefined)}
         onEsc={() => setOpen(false)}
         ignoreBoundary={isInSidebar}
+        // TODO(lukasmasuch): We currently use renderAll to have a consistent
+        // width during the first and subsequent opens of the popover. Once we ,
+        // support setting an explicit width we should reconsider turning this to
+        // false for a better performance.
+        renderAll={true}
         overrides={{
           Body: {
             props: {
@@ -81,9 +86,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
               maxHeight: "70vh",
               overflow: "auto",
-              maxWidth: "80vw",
+              maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2rem)`,
               minWidth: "20rem",
-
+              [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                //  maxWidth: "80vw",
+                maxWidth: `calc(100% - 2rem)`,
+              },
               borderLeftRadius: theme.radii.lg,
               borderRightRadius: theme.radii.lg,
               borderTopRadius: theme.radii.lg,
@@ -124,7 +132,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               kind={BaseButtonKind.SECONDARY}
               size={BaseButtonSize.SMALL}
               disabled={empty || element.disabled}
-              fluidWidth={element.useContainerWidth ? fluidWidth : false}
+              fluidWidth={element.useContainerWidth ? fluidButtonWidth : false}
               data-testid="stPopoverButton"
               onClick={() => setOpen(!open)}
             >
