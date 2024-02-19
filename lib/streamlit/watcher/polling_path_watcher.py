@@ -66,7 +66,7 @@ class PollingPathWatcher:
         self._glob_pattern = glob_pattern
         self._allow_nonexistent = allow_nonexistent
 
-        self.policy = config.get_option("server.fileWatcherType")
+        self.policy = config.get_option("server.fileWatcherPollPolicy")
 
         self._active = True
 
