@@ -20,6 +20,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Final
 
+from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -65,6 +66,8 @@ class PollingPathWatcher:
         self._glob_pattern = glob_pattern
         self._allow_nonexistent = allow_nonexistent
 
+        self.policy = config.get_option("server.fileWatcherType")
+
         self._active = True
 
         self._modification_time = util.path_modification_time(
@@ -97,7 +100,10 @@ class PollingPathWatcher:
         )
         # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
         # modification_time is always 0.0 because of file system limitations.
-        if modification_time != 0.0 and modification_time <= self._modification_time:
+        if (
+            self.policy == "last-modified"
+            and modification_time <= self._modification_time
+        ):
             self._schedule()
             return
 

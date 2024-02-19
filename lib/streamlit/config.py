@@ -658,6 +658,22 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.fileWatcherPollPolicy",
+    description="""
+       Policy for PollWatcher, should it rely on last modified time, or always
+       check all files for changes.
+
+        Allowed values:
+        * "last-modified" : Streamlit will use the last modified time to determine
+            if a file has changed.
+        * "always" : Streamlit will always check for changed files.
+    """,
+    default_val="last-modified",
+    type_=str,
+    visibility="hidden",
+)
+
 
 @_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize
