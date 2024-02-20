@@ -40,7 +40,7 @@ class LayoutsMixin:
         multiple elements. This allows you to, for example, insert multiple
         elements into your app out of order.
 
-        To add elements to the returned container, you can use "with" notation
+        To add elements to the returned container, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -150,7 +150,7 @@ class LayoutsMixin:
         Inserts a number of multi-element containers laid out side-by-side and
         returns a list of container objects.
 
-        To add elements to the returned containers, you can use "with" notation
+        To add elements to the returned containers, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -182,7 +182,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into a column:
+        You can use the `with` notation to insert any element into a column:
 
         >>> import streamlit as st
         >>>
@@ -276,7 +276,7 @@ class LayoutsMixin:
         Tabs are a navigational element that allows users to easily
         move between groups of related content.
 
-        To add elements to the returned containers, you can use "with" notation
+        To add elements to the returned containers, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -317,7 +317,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into a tab:
+        You can use test `with` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
@@ -388,7 +388,7 @@ class LayoutsMixin:
         and can be expanded or collapsed by the user. When collapsed, all that is
         visible is the provided label.
 
-        To add elements to the returned container, you can use "with" notation
+        To add elements to the returned container, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -425,7 +425,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into an expander
+        You can use the `with` notation to insert any element into an expander
 
         >>> import streamlit as st
         >>>
@@ -489,8 +489,9 @@ class LayoutsMixin:
         Inserts a multi-element container as a popover. It consists of a button-like
         element and a container that opens when the button is clicked.
 
-        To add elements to the returned container, you can use "with" notation (preferred)
-        or just call methods directly on the returned object. See examples below.
+        To add elements to the returned container, you can use the "with"
+        notation (preferred) or just call methods directly on the returned object.
+        See examples below.
 
         .. warning::
             You may not put a popover inside another popover.
@@ -536,7 +537,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into a popover
+        You can use the `with` notation to insert any element into a popover
 
         >>> import streamlit as st
         >>>
@@ -654,7 +655,7 @@ class LayoutsMixin:
         Examples
         --------
 
-        You can use `with` notation to insert any element into an status container:
+        You can use the `with` notation to insert any element into an status container:
 
         >>> import time
         >>> import streamlit as st
