@@ -162,9 +162,7 @@ class AppTest:
         self._tree = tree
 
     @classmethod
-    def from_string(
-        cls, script: str, *, default_timeout: float = 3, args=None, kwargs=None
-    ) -> AppTest:
+    def from_string(cls, script: str, *, default_timeout: float = 3) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
         within a string.
@@ -190,6 +188,18 @@ class AppTest:
             executed via ``.run()``.
 
         """
+        hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
+        script_name = hasher.hexdigest()
+
+        path = pathlib.Path(TMP_DIR.name, script_name)
+        aligned_script = textwrap.dedent(script)
+        path.write_text(aligned_script)
+        return AppTest(str(path), default_timeout=default_timeout)
+
+    @classmethod
+    def _from_string(
+        cls, script: str, *, default_timeout: float = 3, args=None, kwargs=None
+    ) -> AppTest:
         hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
@@ -237,7 +247,7 @@ class AppTest:
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
         module = source + f"\n{script.__name__}(*__args, **__kwargs)"
-        return cls.from_string(
+        return cls._from_string(
             module, default_timeout=default_timeout, args=args, kwargs=kwargs
         )
 
