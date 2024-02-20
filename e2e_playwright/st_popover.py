@@ -51,4 +51,5 @@ with st.sidebar.popover("popover 5 (in sidebar)"):
 with st.popover("popover 6 (disabled)", disabled=True):
     st.markdown("Hello World 👋")
 
-st.markdown(text)
+with st.expander("Output"):
+    st.markdown(text)

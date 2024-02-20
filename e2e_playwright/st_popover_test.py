@@ -102,7 +102,9 @@ def test_applying_changes_from_popover_container(app: Page):
     expect(popover_container).not_to_be_visible()
 
     # The main app should render this text:
-    expect(app.get_by_test_id("stMarkdown")).to_have_text("Input text in popover")
+    expect(app.get_by_test_id("stExpander").get_by_test_id("stMarkdown")).to_have_text(
+        "Input text in popover"
+    )
 
 
 def test_fullscreen_mode_is_disabled_in_popover(app: Page):
