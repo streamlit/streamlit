@@ -188,13 +188,7 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
-        script_name = hasher.hexdigest()
-
-        path = pathlib.Path(TMP_DIR.name, script_name)
-        aligned_script = textwrap.dedent(script)
-        path.write_text(aligned_script)
-        return AppTest(str(path), default_timeout=default_timeout)
+        return cls._from_string(script, default_timeout=default_timeout)
 
     @classmethod
     def _from_string(
