@@ -231,6 +231,12 @@ class AppTest:
             Default time in seconds before a script run is timed out. Can be
             overridden for individual ``.run()`` calls.
 
+        args: tuple
+            An optional tuple of args to pass to the script function.
+
+        kwargs: dict
+            An optional dict of kwargs to pass to the script function.
+
         Returns
         -------
         AppTest
