@@ -13,7 +13,7 @@ jobs:
 
     steps:
       # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@cc7a79fadbba6ed1d6f0efd70707e7b8bf7e6910
+      - uses: mheap/github-action-required-labels@80a96a4863886addcbc9f681b5b295ba7f5424e1
         with:
           mode: exactly
           count: 1
@@ -26,7 +26,7 @@ jobs:
 
     steps:
       # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@cc7a79fadbba6ed1d6f0efd70707e7b8bf7e6910
+      - uses: mheap/github-action-required-labels@80a96a4863886addcbc9f681b5b295ba7f5424e1
         with:
           mode: exactly
           count: 0
@@ -39,7 +39,7 @@ jobs:
 
     steps:
       # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@cc7a79fadbba6ed1d6f0efd70707e7b8bf7e6910
+      - uses: mheap/github-action-required-labels@80a96a4863886addcbc9f681b5b295ba7f5424e1
         with:
           mode: exactly
           count: 1
@@ -52,7 +52,7 @@ jobs:
 
     steps:
       # v2=7b0461786d3bd0c6a8487e9b57814ba3e2c00227
-      - uses: mheap/github-action-required-labels@cc7a79fadbba6ed1d6f0efd70707e7b8bf7e6910
+      - uses: mheap/github-action-required-labels@80a96a4863886addcbc9f681b5b295ba7f5424e1
         with:
           mode: exactly
           count: 1

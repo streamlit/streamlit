@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
-from typing import Any, Iterator, Union
+from typing import Any, Iterator
 
 from google.protobuf.message import Message
 
@@ -77,9 +79,7 @@ def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
 
 
-def save_media_data(
-    image_data: Union[bytes, str], mimetype: str, image_id: str
-) -> None:
+def save_media_data(image_data: bytes | str, mimetype: str, image_id: str) -> None:
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
 

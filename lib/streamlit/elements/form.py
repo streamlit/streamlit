@@ -14,9 +14,7 @@
 from __future__ import annotations
 
 import textwrap
-from typing import TYPE_CHECKING, NamedTuple, cast
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple, cast
 
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
