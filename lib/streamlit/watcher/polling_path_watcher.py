@@ -66,7 +66,7 @@ class PollingPathWatcher:
         self._glob_pattern = glob_pattern
         self._allow_nonexistent = allow_nonexistent
 
-        self.policy = config.get_option("server.fileWatcherPollPolicy")
+        self.policy = config.get_option("server.fileWatcherPolicy")
 
         self._active = True
 
@@ -98,8 +98,9 @@ class PollingPathWatcher:
         modification_time = util.path_modification_time(
             self._path, self._allow_nonexistent
         )
-        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-        # modification_time is always 0.0 because of file system limitations.
+        # We add self.policy == "last-modified" check since on some file systems
+        # (s3fs/fuse) modification_time is always 0.0 or could be cached (nfs)
+        # because of file system limitations.
         if (
             self.policy == "last-modified"
             and modification_time <= self._modification_time

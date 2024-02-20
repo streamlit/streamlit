@@ -46,6 +46,7 @@ from watchdog import events
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 
+from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
@@ -256,6 +257,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
     def __init__(self) -> None:
         super().__init__()
         self._watched_paths: dict[str, WatchedPath] = {}
+        self.policy = config.get_option("server.fileWatcherPolicy")
         self._lock = threading.Lock()  # for watched_paths mutations
         self.watch: ObservedWatch | None = None
 
@@ -351,10 +353,11 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             changed_path, changed_path_info.allow_nonexistent
         )
 
-        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
-        # modification_time is always 0.0 because of file system limitations.
+        # We add self.policy == "last-modified" check since on some file systems
+        # (s3fs/fuse) modification_time is always 0.0 or could be cached (nfs)
+        # because of file system limitations.
         if (
-            modification_time != 0.0
+            self.policy == "last-modified"
             and modification_time == changed_path_info.modification_time
         ):
             _LOGGER.debug("File/dir timestamp did not change: %s", changed_path)

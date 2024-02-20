@@ -659,7 +659,7 @@ _create_option(
 )
 
 _create_option(
-    "server.fileWatcherPollPolicy",
+    "server.fileWatcherPolicy",
     description="""
        Policy for PollWatcher, should it rely on last modified time, or always
        check all files for changes.
