@@ -381,6 +381,7 @@ class ConfigTest(unittest.TestCase):
                 "server.scriptHealthCheckEnabled",
                 "server.enableWebsocketCompression",
                 "server.enableXsrfProtection",
+                "server.fileWatcherPolicy",
                 "server.fileWatcherType",
                 "server.folderWatchBlacklist",
                 "server.headless",
