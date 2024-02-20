@@ -32,6 +32,7 @@ WIDGETS = [
     "text_area",
     "time_input",
     "date_input",
+    "plotly_chart",
 ]
 NONWIDGET_ELEMENTS = [
     "alert",
@@ -60,7 +61,6 @@ NONWIDGET_ELEMENTS = [
     "markdown",
     "metric",
     "page_link",
-    "plotly_chart",
     "progress",
     "pyplot",
     "snow",
