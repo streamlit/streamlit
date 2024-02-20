@@ -139,6 +139,7 @@ class RunWarningTest(unittest.TestCase):
                 "number_input",
                 "page_link",
                 "plotly_chart",
+                "popover",
                 "progress",
                 "pydeck_chart",
                 "pyplot",

@@ -57,7 +57,7 @@ describe("StatusWidget element", () => {
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
     expect(screen.getByText("Connecting")).toBeInTheDocument()
-    expect(screen.getByTestId("tooltipHoverTarget")).toBeInTheDocument()
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeInTheDocument()
   })
 
   it("renders its tooltip when disconnected", () => {
@@ -71,18 +71,20 @@ describe("StatusWidget element", () => {
 
     expect(screen.getByTestId("stStatusWidget")).toBeInTheDocument()
     expect(screen.getByText("Error")).toBeInTheDocument()
-    expect(screen.getByTestId("tooltipHoverTarget")).toBeInTheDocument()
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeInTheDocument()
   })
 
   it("renders its tooltip when running and minimized", () => {
     render(<StatusWidget {...getProps()} />)
-    expect(screen.queryByTestId("tooltipHoverTarget")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipHoverTarget")
+    ).not.toBeInTheDocument()
 
     // Set scrollY so shouldMinimize returns true
     global.scrollY = 50
 
     render(<StatusWidget {...getProps()} />)
-    expect(screen.getByTestId("tooltipHoverTarget")).toBeInTheDocument()
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeInTheDocument()
 
     // Reset scrollY for following tests not impacted
     global.scrollY = 0
@@ -95,7 +97,9 @@ describe("StatusWidget element", () => {
       />
     )
 
-    expect(screen.queryByTestId("tooltipHoverTarget")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipHoverTarget")
+    ).not.toBeInTheDocument()
   })
 
   it("sets and unsets the sessionEventConnection", () => {
