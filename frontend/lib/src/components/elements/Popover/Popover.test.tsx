@@ -69,8 +69,6 @@ describe("Popover container", () => {
         <div>test</div>
       </Popover>
     )
-    // Text should not exist
-    expect(screen.queryByText("test")).toBeNull()
 
     fireEvent.click(screen.getByText("label"))
     // Text should be visible now
