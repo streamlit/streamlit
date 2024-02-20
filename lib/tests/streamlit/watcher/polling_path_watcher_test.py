@@ -15,6 +15,7 @@
 import unittest
 from unittest import mock
 
+from streamlit.testing.v1.util import patch_config_options
 from streamlit.watcher import polling_path_watcher
 
 
@@ -105,8 +106,10 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         watcher.close()
 
-    def test_callback_called_if_modification_time_0(self):
-        """Test that callback are executed anyway even if modification time is 0.0"""
+    @patch_config_options({"server.fileWatcherPolicy": "always"})
+    def test_callback_called_if_modification_time_same_policy_always(self):
+        """Test that callback are executed anyway even if modification time is the same
+        and fileWatcherPolicy is set to always."""
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 0.0
@@ -125,6 +128,31 @@ class PollingPathWatcherTest(unittest.TestCase):
         # This is the test:
         self._run_executor_tasks()
         callback.assert_called()
+
+        watcher.close()
+
+    @patch_config_options({"server.fileWatcherPolicy": "last-modified"})
+    def test_callback_not_called_if_modification_time_same(self):
+        """Test that callback are not executed if modification time is the same and
+        fileWatcherPolicy is set to always."""
+        callback = mock.Mock()
+
+        self.util_mock.path_modification_time = lambda *args: 0.0
+        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "11"
+
+        watcher = polling_path_watcher.PollingPathWatcher(
+            "/this/is/my/folder/", callback
+        )
+
+        self._run_executor_tasks()
+        callback.assert_not_called()
+
+        # Same mtime!
+        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "22"
+
+        # This is the test:
+        self._run_executor_tasks()
+        callback.assert_not_called()
 
         watcher.close()
 

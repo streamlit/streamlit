@@ -17,6 +17,7 @@ from unittest import mock
 
 from watchdog import events
 
+from streamlit.testing.v1.util import patch_config_options
 from streamlit.watcher import event_based_path_watcher
 
 
@@ -103,9 +104,10 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
-    def test_changed_modification_time_0_0(self):
-        """Test that when a directory is modified, but modification time is 0.0,
-        the callback is called anyway."""
+    @patch_config_options({"server.fileWatcherPolicy": "always"})
+    def test_changed_ignore_modification_time_policy_always(self):
+        """Test that when a directory is modified, but "server.fileWatcherPolicy"
+        is "always" the callback is called anyway."""
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 0.0
@@ -128,6 +130,35 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         folder_handler.on_modified(ev)
 
         cb.assert_called_once()
+
+        ro.close()
+
+    @patch_config_options({"server.fileWatcherPolicy": "last-modified"})
+    def test_changed_ignore_modification_time_policy_always(self):
+        """Test that when a directory is modified, and "server.fileWatcherPolicy"
+        is "last-modified" the callback is not called."""
+        cb = mock.Mock()
+
+        self.mock_util.path_modification_time = lambda *args: 0.0
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "42"
+
+        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        fo._observer.schedule.assert_called_once()
+
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "64"
+
+        ev = events.FileSystemEvent("/this/is/my/dir")
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        ev.is_directory = True
+        folder_handler.on_modified(ev)
+
+        cb.assert_not_called()
 
         ro.close()
 
