@@ -18,8 +18,12 @@ import React, { FC, memo } from "react"
 
 import { SquareSkeleton } from "./styled-components"
 
-const RawSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
-  return <SquareSkeleton data-testid="stSkeleton" />
+interface Props {
+  height?: string
+}
+
+const RawSkeleton: FC<React.PropsWithChildren<Props>> = props => {
+  return <SquareSkeleton data-testid="stSkeleton" {...props} />
 }
 
 export const Skeleton = memo(RawSkeleton)
