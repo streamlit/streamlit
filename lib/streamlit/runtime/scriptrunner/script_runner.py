@@ -468,6 +468,7 @@ class ScriptRunner:
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
+                fragment_id=rerun_data.fragment_id,
             )
 
             # Compile the script. Any errors thrown here will be surfaced

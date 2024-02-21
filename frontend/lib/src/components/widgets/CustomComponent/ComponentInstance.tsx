@@ -318,6 +318,7 @@ function ComponentInstance(props: Props): ReactElement {
     widgetMgr,
     clearTimeoutWarningElement,
     clearTimeoutLog,
+    fragmentId,
   ])
 
   useEffect(() => {
