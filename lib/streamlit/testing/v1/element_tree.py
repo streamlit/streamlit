@@ -1447,6 +1447,10 @@ class Block:
         return ElementList(self.get("exception"))  # type: ignore
 
     @property
+    def expander(self) -> Sequence[Expander]:
+        return self.get("expander")  # type: ignore
+
+    @property
     def header(self) -> ElementList[Header]:
         return ElementList(self.get("header"))  # type: ignore
 
@@ -1493,6 +1497,10 @@ class Block:
     @property
     def slider(self) -> WidgetList[Slider[Any]]:
         return WidgetList(self.get("slider"))  # type: ignore
+
+    @property
+    def status(self) -> Sequence[Status]:
+        return self.get("status")  # type: ignore
 
     @property
     def subheader(self) -> ElementList[Subheader]:
@@ -1670,6 +1678,51 @@ class Column(Block):
         self.type = "column"
         self.weight = proto.weight
         self.gap = proto.gap
+
+
+@dataclass(repr=False)
+class Expander(Block):
+    type: str = field(repr=False)
+    proto: BlockProto.Expandable = field(repr=False)
+    icon: str
+    label: str
+
+    def __init__(self, proto: BlockProto.Expandable, root: ElementTree):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        # The internal name is "expandable" but the public API uses "expander"
+        # so the naming of the class and type follows the public name.
+        self.type = "expander"
+        self.icon = proto.icon
+        self.label = proto.label
+
+
+@dataclass(repr=False)
+class Status(Block):
+    type: str = field(repr=False)
+    proto: BlockProto.Expandable = field(repr=False)
+    icon: str
+    label: str
+
+    def __init__(self, proto: BlockProto.Expandable, root: ElementTree):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "status"
+        self.icon = proto.icon
+        self.label = proto.label
+
+    @property
+    def state(self):
+        if self.icon == "spinner":
+            return "running"
+        elif self.icon == "check":
+            return "complete"
+        elif self.icon == "error":
+            return "error"
+        else:
+            raise ValueError("Unknown Status state")
 
 
 @dataclass(repr=False)
@@ -1897,6 +1950,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = ChatMessage(block.chat_message, root=root)
             elif bty == "column":
                 new_node = Column(block.column, root=root)
+            elif bty == "expandable":
+                if block.expandable.icon:
+                    new_node = Status(block.expandable, root=root)
+                else:
+                    new_node = Expander(block.expandable, root=root)
             elif bty == "tab":
                 new_node = Tab(block.tab, root=root)
             else:

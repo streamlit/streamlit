@@ -52,6 +52,7 @@ from streamlit.testing.v1.element_tree import (
     ElementTree,
     Error,
     Exception,
+    Expander,
     Header,
     Info,
     Json,
@@ -65,6 +66,7 @@ from streamlit.testing.v1.element_tree import (
     Selectbox,
     SelectSlider,
     Slider,
+    Status,
     Subheader,
     Success,
     Tab,
@@ -552,6 +554,20 @@ class AppTest:
         return self._tree.exception
 
     @property
+    def expander(self) -> Sequence[Expander]:
+        """Sequence of all ``st.expander`` elements.
+
+        Returns
+        -------
+        List of Expandable
+            Sequence of all ``st.expander`` elements. Individual elements can be
+            accessed from a list by index (order on the page). For
+            example, ``at.expander[0]`` for the first element. Expandable is an
+            extension of the Element class.
+        """
+        return self._tree.expander
+
+    @property
     def header(self) -> ElementList[Header]:
         """Sequence of all ``st.header`` elements.
 
@@ -746,6 +762,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.success
+
+    @property
+    def status(self) -> Sequence[Status]:
+        """Sequence of all ``st.status`` elements.
+
+        Returns
+        -------
+        List of Status
+            Sequence of all ``st.status`` elements. Individual elements can be
+            accessed from a list by index (order on the page). For
+            example, ``at.status[0]`` for the first element. Status is an
+            extension of the Element class.
+        """
+        return self._tree.status
 
     @property
     def table(self) -> ElementList[Table]:
