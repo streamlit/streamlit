@@ -61,6 +61,7 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from builtins import ellipsis
 
+    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
     from streamlit.runtime.state.widgets import NoValue
 
 
@@ -230,3 +231,13 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_WIDGET_ID_PREFIX} are reserved."
         )
+
+
+def save_internal(ctx: ScriptRunContext, k: str, v: Any):
+    if "ST_INTERNAL" in ctx.session_state:
+        internal = ctx.session_state["ST_INTERNAL"]
+    else:
+        internal = dict()
+
+    internal[k] = v
+    ctx.session_state["ST_INTERNAL"] = internal

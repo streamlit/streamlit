@@ -34,7 +34,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, save_internal
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -298,13 +298,7 @@ class SelectboxMixin:
             selectbox_proto.set_value = True
 
         if ctx:
-            if "ST_INTERNAL" in ctx.session_state:
-                internal = ctx.session_state["ST_INTERNAL"]
-            else:
-                internal = dict()
-
-            internal[id] = format_func
-            ctx.session_state["ST_INTERNAL"] = internal
+            save_internal(ctx, id, format_func)
         self.dg._enqueue("selectbox", selectbox_proto)
         return widget_state.value
 
