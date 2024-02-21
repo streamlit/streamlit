@@ -36,16 +36,22 @@ export function shouldComponentBeEnabled(
 export function isElementStale(
   node: AppNode,
   scriptRunState: ScriptRunState,
-  scriptRunId: string
+  scriptRunId: string,
+  currentFragmentId?: string
 ): boolean {
   if (scriptRunState === ScriptRunState.RERUN_REQUESTED) {
     // If a rerun was just requested, all of our current elements
     // are about to become stale.
     return true
   }
+
   if (scriptRunState === ScriptRunState.RUNNING) {
+    if (currentFragmentId) {
+      return node.fragmentId === currentFragmentId
+    }
     return node.scriptRunId !== scriptRunId
   }
+
   return false
 }
 
@@ -53,9 +59,13 @@ export function isComponentStale(
   enable: boolean,
   node: AppNode,
   scriptRunState: ScriptRunState,
-  scriptRunId: string
+  scriptRunId: string,
+  currentFragmentId?: string
 ): boolean {
-  return !enable || isElementStale(node, scriptRunState, scriptRunId)
+  return (
+    !enable ||
+    isElementStale(node, scriptRunState, scriptRunId, currentFragmentId)
+  )
 }
 
 export function assignDividerColor(

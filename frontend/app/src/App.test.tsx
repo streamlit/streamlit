@@ -1283,6 +1283,27 @@ describe("App", () => {
       ).toBe("some_other_page_hash")
     })
 
+    it("sets fragmentId in BackMsg", () => {
+      renderApp(getProps())
+
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
+      expect(connectionManager.sendMessage).toBeCalledTimes(2)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.fragmentId
+      ).toBe(undefined)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[1][0].rerunScript.fragmentId
+      ).toBe("myFragmentId")
+    })
+
     it("extracts the pageName as an empty string if we can't get a pageScriptHash (main page)", () => {
       renderApp(getProps())
       const widgetStateManager =
