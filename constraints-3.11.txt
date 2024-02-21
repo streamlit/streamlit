@@ -13,8 +13,8 @@ cfgv==3.4.0
 charset-normalizer==3.3.2
 click==8.1.7
 contourpy==1.2.0
-coverage==7.4.1
-cryptography==42.0.3
+coverage==7.4.2
+cryptography==42.0.4
 cx_Oracle==7.3.0
 cycler==0.12.1
 dataclasses-json==0.6.4
@@ -44,8 +44,8 @@ keyring==24.3.0
 kiwisolver==1.4.5
 langchain==0.1.8
 langchain-community==0.0.21
-langchain-core==0.1.24
-langsmith==0.1.3
+langchain-core==0.1.25
+langsmith==0.1.5
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.20.2
