@@ -20,6 +20,8 @@ import { useCallback, useEffect, useRef } from "react"
  * Call setTimeout with the passed callback and timeout in milliseconds.
  * The timeout can be cleared by calling the returned clear-function.
  *
+ * A new timeout will be set when the passed timeoutMs changes.
+ *
  * @param callback to be called when the timeout delay is over
  * @param timeoutMs the delay in milliseconds after which the timeout callback is called
  * @returns a memoized clear (stable reference across re-runs) function to stop the timeout

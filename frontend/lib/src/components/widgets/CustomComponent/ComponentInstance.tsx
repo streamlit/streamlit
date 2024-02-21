@@ -165,6 +165,7 @@ function ComponentInstance(props: Props): ReactElement {
 
   const { disabled, element, registry, theme, widgetMgr, width } = props
   const { componentName, jsonArgs, specialArgs, url } = element
+
   const [isReady, setIsReady] = useState<boolean>(false)
   const [parsedNewArgs, parsedDataframeArgs] = tryParseArgs(
     jsonArgs,
@@ -192,6 +193,19 @@ function ComponentInstance(props: Props): ReactElement {
     () => setIsReadyTimeout(true),
     COMPONENT_READY_WARNING_TIME_MS
   )
+
+  useEffect(() => {
+    if (!isReady) {
+      return
+    }
+    sendRenderMessage(
+      parsedNewArgs,
+      parsedDataframeArgs,
+      disabled,
+      theme,
+      iframeRef.current ?? undefined
+    )
+  }, [disabled, isReady, parsedDataframeArgs, parsedNewArgs, theme])
 
   useEffect(() => {
     const handleSetFrameHeight = (height: number | undefined): void => {
@@ -226,7 +240,7 @@ function ComponentInstance(props: Props): ReactElement {
         parsedDataframeArgs,
         disabled,
         theme,
-        iframeRef.current || undefined
+        iframeRef.current ?? undefined
       )
       clearTimeoutLog()
       clearTimeoutWarningElement()
@@ -245,10 +259,10 @@ function ComponentInstance(props: Props): ReactElement {
     }
   }, [
     componentName,
-    element,
-    parsedDataframeArgs,
     disabled,
+    element,
     isReady,
+    parsedDataframeArgs,
     parsedNewArgs,
     theme,
     widgetMgr,
