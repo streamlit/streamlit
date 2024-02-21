@@ -155,13 +155,25 @@ function tryParseArgs(
   return [{}, []]
 }
 
-function compareDataframeArgs(a: DataframeArg[], b: DataframeArg[]): boolean {
+/**
+ * Compare the two DataframeArg arrays
+ *
+ * @param previousDataframeArgs
+ * @param newDataframeArgs
+ * @returns true if the two DataframeArg arrays are equal or if all their key-value pairs (first level only) are equal
+ */
+function compareDataframeArgs(
+  previousDataframeArgs: DataframeArg[],
+  newDataframeArgs: DataframeArg[]
+): boolean {
   return (
-    a === b ||
-    (a.length === b.length &&
-      a.every((dataframeArg, i) => {
+    previousDataframeArgs === newDataframeArgs ||
+    (previousDataframeArgs.length === newDataframeArgs.length &&
+      previousDataframeArgs.every((previousDataframeArg, i) => {
+        const newDataframeArg = newDataframeArgs[i]
         return (
-          dataframeArg.key === b[i].key && dataframeArg.value === b[i].value
+          previousDataframeArg.key === newDataframeArg.key &&
+          previousDataframeArg.value === newDataframeArg.value
         )
       }))
   )
@@ -185,7 +197,7 @@ function ComponentInstance(props: Props): ReactElement {
     componentError
   )
 
-  // use a ref for the args so that we can use them inside the useEffect calls without the linter complaining
+  // Use a ref for the args so that we can use them inside the useEffect calls without the linter complaining
   // as in the useEffect dependencies array, we don't use the parsed arg objects, but their string representation
   // and a comparing function result for the jsonArgs and dataframeArgs, respectively, for deep-equal checks and to
   // prevent calling useEffect too often
@@ -201,20 +213,20 @@ function ComponentInstance(props: Props): ReactElement {
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
-  // by passing the args.height here, we can derive the initial height for
+  // By passing the args.height here, we can derive the initial height for
   // custom components that define a height property, e.g. in Python
   // my_custom_component(height=100)
   const [frameHeight, setFrameHeight] = useState<number | undefined>(
     isNaN(parsedNewArgs.height) ? undefined : parsedNewArgs.height
   )
 
-  // use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
-  // and when the componentReady callback is called
+  // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
+  // and when the componentReady callback is called (for the first time)
   const isReadyRef = useRef<boolean>(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const onBackMsgRef = useRef<IframeMessageHandlerProps>()
 
-  // show a log in the console as a soft-warning to the developer before showing the more disrupting warning element
+  // Show a log in the console as a soft-warning to the developer before showing the more disrupting warning element
   const clearTimeoutLog = useTimeout(
     () => logWarning(getWarnMessage(componentName, url)),
     COMPONENT_READY_WARNING_TIME_MS / 4
@@ -224,6 +236,8 @@ function ComponentInstance(props: Props): ReactElement {
     COMPONENT_READY_WARNING_TIME_MS
   )
 
+  // Send a render message to the custom component everytime relevant props change, such as the
+  // input args or the theme / width
   useEffect(() => {
     if (!isReadyRef.current) {
       return
@@ -265,10 +279,7 @@ function ComponentInstance(props: Props): ReactElement {
     }
 
     const componentReadyCallback = (): void => {
-      // there is an extra useEffect-trigger that sends a render message to the component whenever the
-      // input changes or the component is ready. However, there is an existing test that ensures that the render
-      // message is sent every time the component_ready message is received. Thus, this call to sendRenderMessage
-      // is here to honor the existing test that was created for the class-component version.
+      // Send a render message whenever the custom component sends a ready message
       sendRenderMessage(
         parsedArgsRef.current.args,
         parsedArgsRef.current.dataframeArgs,
@@ -282,7 +293,7 @@ function ComponentInstance(props: Props): ReactElement {
       setIsReadyTimeout(false)
     }
 
-    // update the reference fields for the callback that we
+    // Update the reference fields for the callback that we
     // passed to the componentRegistry
     onBackMsgRef.current = {
       isReady: isReadyRef.current,
@@ -312,7 +323,7 @@ function ComponentInstance(props: Props): ReactElement {
     if (!contentWindow) {
       return
     }
-    // by creating the callback using the reference variable, we
+    // By creating the callback using the reference variable, we
     // can access up-to-date information from the component when the callback
     // is called without the need to re-register the callback
     registry.registerListener(
@@ -320,7 +331,7 @@ function ComponentInstance(props: Props): ReactElement {
       createIframeMessageHandler(onBackMsgRef)
     )
 
-    // de-register component when unmounting and when effect is re-running
+    // De-register component when unmounting and when effect is re-running
     return () => {
       if (!contentWindow) {
         return
@@ -339,7 +350,7 @@ function ComponentInstance(props: Props): ReactElement {
   }
 
   // Show the loading Skeleton while we have not received the ready message from the custom component
-  //   but while we also have not waited until the ready timeout
+  // but while we also have not waited until the ready timeout
   const loadingSkeleton = !isReadyRef.current && !isReadyTimeout && (
     <Skeleton height={parseToStringWithUnitSuffix(frameHeight)} />
   )
