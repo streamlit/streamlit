@@ -261,6 +261,115 @@ describe("ComponentInstance", () => {
       expect(postMessage).toHaveBeenCalledTimes(2)
     })
 
+    it("send render message whenever the args change and the component is ready", () => {
+      let jsonArgs = { foo: "string", bar: 5 }
+      const componentRegistry = getComponentRegistry()
+      const { rerender } = render(
+        <ComponentInstance
+          element={createElementProp(jsonArgs)}
+          registry={componentRegistry}
+          width={100}
+          disabled={false}
+          theme={mockTheme.emotion}
+          widgetMgr={
+            new WidgetStateManager({
+              sendRerunBackMsg: jest.fn(),
+              formsDataChanged: jest.fn(),
+            })
+          }
+        />
+      )
+      const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+      // @ts-expect-error
+      const postMessage = jest.spyOn(iframe.contentWindow, "postMessage")
+      // SET COMPONENT_READY
+      fireEvent(
+        window,
+        new MessageEvent("message", {
+          data: {
+            isStreamlitMessage: true,
+            apiVersion: 1,
+            type: ComponentMessageType.COMPONENT_READY,
+          },
+          // @ts-expect-error
+          source: iframe.contentWindow,
+        })
+      )
+      jsonArgs = { foo: "string", bar: 10 }
+      rerender(
+        <ComponentInstance
+          element={createElementProp(jsonArgs)}
+          registry={componentRegistry}
+          width={100}
+          disabled={false}
+          theme={mockTheme.emotion}
+          widgetMgr={
+            new WidgetStateManager({
+              sendRerunBackMsg: jest.fn(),
+              formsDataChanged: jest.fn(),
+            })
+          }
+        />
+      )
+
+      expect(postMessage).toHaveBeenCalledTimes(2)
+    })
+
+    it("send render message when viewport changes", () => {
+      const jsonArgs = { foo: "string", bar: 5 }
+      let width = 100
+      const componentRegistry = getComponentRegistry()
+      const { rerender } = render(
+        <ComponentInstance
+          element={createElementProp(jsonArgs)}
+          registry={componentRegistry}
+          width={width}
+          disabled={false}
+          theme={mockTheme.emotion}
+          widgetMgr={
+            new WidgetStateManager({
+              sendRerunBackMsg: jest.fn(),
+              formsDataChanged: jest.fn(),
+            })
+          }
+        />
+      )
+      const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+      // @ts-expect-error
+      const postMessage = jest.spyOn(iframe.contentWindow, "postMessage")
+      // SET COMPONENT_READY
+      fireEvent(
+        window,
+        new MessageEvent("message", {
+          data: {
+            isStreamlitMessage: true,
+            apiVersion: 1,
+            type: ComponentMessageType.COMPONENT_READY,
+          },
+          // @ts-expect-error
+          source: iframe.contentWindow,
+        })
+      )
+      width = width + 1
+      rerender(
+        <ComponentInstance
+          element={createElementProp(jsonArgs)}
+          registry={componentRegistry}
+          width={width}
+          disabled={false}
+          theme={mockTheme.emotion}
+          widgetMgr={
+            new WidgetStateManager({
+              sendRerunBackMsg: jest.fn(),
+              formsDataChanged: jest.fn(),
+            })
+          }
+        />
+      )
+
+      expect(postMessage).toHaveBeenCalledTimes(2)
+    })
+
     it("errors on unrecognized API version", () => {
       const badAPIVersion = CUSTOM_COMPONENT_API_VERSION + 1
       const jsonArgs = { foo: "string", bar: 5 }
