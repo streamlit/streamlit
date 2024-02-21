@@ -32,11 +32,14 @@ How these classes work together
   listens to folder events, sees if registered paths changed, and fires
   callbacks if so.
 
+This module is lazy-loaded and used only if watchdog is installed.
 """
+
+from __future__ import annotations
 
 import os
 import threading
-from typing import Callable, Dict, Optional, cast
+from typing import Callable, Final, cast
 
 from blinker import ANY, Signal
 from watchdog import events
@@ -47,7 +50,7 @@ from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class EventBasedPathWatcher:
@@ -58,14 +61,14 @@ class EventBasedPathWatcher:
         """Close the _MultiPathWatcher singleton."""
         path_watcher = _MultiPathWatcher.get_singleton()
         path_watcher.close()
-        LOGGER.debug("Watcher closed")
+        _LOGGER.debug("Watcher closed")
 
     def __init__(
         self,
         path: str,
         on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Constructor for EventBasedPathWatchers.
@@ -76,7 +79,7 @@ class EventBasedPathWatcher:
             The path to watch.
         on_changed : Callable[[str], None]
             Callback to call when the path changes.
-        glob_pattern : Optional[str]
+        glob_pattern : str or None
             A glob pattern to filter the files in a directory that should be
             watched. Only relevant when creating an EventBasedPathWatcher on a
             directory.
@@ -95,7 +98,7 @@ class EventBasedPathWatcher:
             glob_pattern=glob_pattern,
             allow_nonexistent=allow_nonexistent,
         )
-        LOGGER.debug("Watcher created for %s", self._path)
+        _LOGGER.debug("Watcher created for %s", self._path)
 
     def __repr__(self) -> str:
         return repr_(self)
@@ -106,36 +109,36 @@ class EventBasedPathWatcher:
         path_watcher.stop_watching_path(self._path, self._on_changed)
 
 
-class _MultiPathWatcher(object):
+class _MultiPathWatcher:
     """Watches multiple paths."""
 
-    _singleton: Optional["_MultiPathWatcher"] = None
+    _singleton: _MultiPathWatcher | None = None
 
     @classmethod
-    def get_singleton(cls) -> "_MultiPathWatcher":
+    def get_singleton(cls) -> _MultiPathWatcher:
         """Return the singleton _MultiPathWatcher object.
 
         Instantiates one if necessary.
         """
         if cls._singleton is None:
-            LOGGER.debug("No singleton. Registering one.")
+            _LOGGER.debug("No singleton. Registering one.")
             _MultiPathWatcher()
 
         return cast("_MultiPathWatcher", _MultiPathWatcher._singleton)
 
     # Don't allow constructor to be called more than once.
-    def __new__(cls) -> "_MultiPathWatcher":
+    def __new__(cls) -> _MultiPathWatcher:
         """Constructor."""
         if _MultiPathWatcher._singleton is not None:
             raise RuntimeError("Use .get_singleton() instead")
-        return super(_MultiPathWatcher, cls).__new__(cls)
+        return super().__new__(cls)
 
     def __init__(self) -> None:
         """Constructor."""
         _MultiPathWatcher._singleton = self
 
         # Map of folder_to_watch -> _FolderEventHandler.
-        self._folder_handlers: Dict[str, _FolderEventHandler] = {}
+        self._folder_handlers: dict[str, _FolderEventHandler] = {}
 
         # Used for mutation of _folder_handlers dict
         self._lock = threading.Lock()
@@ -154,7 +157,7 @@ class _MultiPathWatcher(object):
         path: str,
         callback: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Start watching a path."""
@@ -186,7 +189,7 @@ class _MultiPathWatcher(object):
             folder_handler = self._folder_handlers.get(folder_path)
 
             if folder_handler is None:
-                LOGGER.debug(
+                _LOGGER.debug(
                     "Cannot stop watching path, because it is already not being "
                     "watched. %s",
                     folder_path,
@@ -204,18 +207,18 @@ class _MultiPathWatcher(object):
             """Close this _MultiPathWatcher object forever."""
             if len(self._folder_handlers) != 0:
                 self._folder_handlers = {}
-                LOGGER.debug(
+                _LOGGER.debug(
                     "Stopping observer thread even though there is a non-zero "
                     "number of event observers!"
                 )
             else:
-                LOGGER.debug("Stopping observer thread")
+                _LOGGER.debug("Stopping observer thread")
 
             self._observer.stop()
             self._observer.join(timeout=5)
 
 
-class WatchedPath(object):
+class WatchedPath:
     """Emits notifications when a single path is modified."""
 
     def __init__(
@@ -223,7 +226,7 @@ class WatchedPath(object):
         md5: str,
         modification_time: float,
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ):
         self.md5 = md5
@@ -251,10 +254,10 @@ class _FolderEventHandler(events.FileSystemEventHandler):
     """
 
     def __init__(self) -> None:
-        super(_FolderEventHandler, self).__init__()
-        self._watched_paths: Dict[str, WatchedPath] = {}
+        super().__init__()
+        self._watched_paths: dict[str, WatchedPath] = {}
         self._lock = threading.Lock()  # for watched_paths mutations
-        self.watch: Optional[ObservedWatch] = None
+        self.watch: ObservedWatch | None = None
 
     def __repr__(self) -> str:
         return repr_(self)
@@ -264,7 +267,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         path: str,
         callback: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Add a path to this object's event filter."""
@@ -320,7 +323,9 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             # the desired subtype from the event_type check
             event = cast(events.FileSystemMovedEvent, event)
 
-            LOGGER.debug("Move event: src %s; dest %s", event.src_path, event.dest_path)
+            _LOGGER.debug(
+                "Move event: src %s; dest %s", event.src_path, event.dest_path
+            )
             changed_path = event.dest_path
         # On OSX with VI, on save, the file is deleted, the swap file is
         # modified and then the original file is created hence why we
@@ -328,14 +333,14 @@ class _FolderEventHandler(events.FileSystemEventHandler):
         elif event.event_type == events.EVENT_TYPE_CREATED:
             changed_path = event.src_path
         else:
-            LOGGER.debug("Don't care about event type %s", event.event_type)
+            _LOGGER.debug("Don't care about event type %s", event.event_type)
             return
 
         changed_path = os.path.abspath(changed_path)
 
         changed_path_info = self._watched_paths.get(changed_path, None)
         if changed_path_info is None:
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Ignoring changed path %s.\nWatched_paths: %s",
                 changed_path,
                 self._watched_paths,
@@ -352,7 +357,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             modification_time != 0.0
             and modification_time == changed_path_info.modification_time
         ):
-            LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
+            _LOGGER.debug("File/dir timestamp did not change: %s", changed_path)
             return
 
         changed_path_info.modification_time = modification_time
@@ -363,10 +368,10 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             allow_nonexistent=changed_path_info.allow_nonexistent,
         )
         if new_md5 == changed_path_info.md5:
-            LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
+            _LOGGER.debug("File/dir MD5 did not change: %s", changed_path)
             return
 
-        LOGGER.debug("File/dir MD5 changed: %s", changed_path)
+        _LOGGER.debug("File/dir MD5 changed: %s", changed_path)
         changed_path_info.md5 = new_md5
         changed_path_info.on_changed.send(changed_path)
 

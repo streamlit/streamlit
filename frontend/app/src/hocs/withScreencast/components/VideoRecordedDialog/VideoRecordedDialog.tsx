@@ -39,11 +39,9 @@ export interface Props {
 
   fileName: string
 }
-const VideoRecordedDialog: FunctionComponent<Props> = ({
-  onClose,
-  videoBlob,
-  fileName,
-}) => {
+const VideoRecordedDialog: FunctionComponent<
+  React.PropsWithChildren<Props>
+> = ({ onClose, videoBlob, fileName }) => {
   const videoSource = URL.createObjectURL(videoBlob)
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it

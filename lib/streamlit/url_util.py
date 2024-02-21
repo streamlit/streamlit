@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import re
-from typing import Literal, Optional, Tuple
+from typing import Final, Literal
 from urllib.parse import urlparse
 
 from typing_extensions import TypeAlias
@@ -22,7 +24,7 @@ UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
 
 # Regular expression for process_gitblob_url
-_GITBLOB_RE = re.compile(
+_GITBLOB_RE: Final = re.compile(
     r"(?P<base>https:\/\/?(gist\.)?github.com\/)"
     r"(?P<account>([\w\.]+\/){1,2})"
     r"(?P<blob_or_raw>(blob|raw))?"
@@ -55,7 +57,7 @@ def process_gitblob_url(url: str) -> str:
     return url
 
 
-def get_hostname(url: str) -> Optional[str]:
+def get_hostname(url: str) -> str | None:
     """Return the hostname of a URL (with or without protocol)."""
     # Just so urllib can parse the URL, make sure there's a protocol.
     # (The actual protocol doesn't matter to us)
@@ -66,17 +68,9 @@ def get_hostname(url: str) -> Optional[str]:
     return parsed.hostname
 
 
-def print_url(title, url):
-    """Pretty-print a URL on the terminal."""
-    import click
-
-    click.secho(f"  {title}: ", nl=False, fg="blue")
-    click.secho(url, bold=True)
-
-
 def is_url(
     url: str,
-    allowed_schemas: Tuple[UrlSchema, ...] = ("http", "https"),
+    allowed_schemas: tuple[UrlSchema, ...] = ("http", "https"),
 ) -> bool:
     """Check if a string looks like an URL.
 

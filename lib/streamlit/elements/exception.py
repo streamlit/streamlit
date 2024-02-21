@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 import traceback
-from typing import TYPE_CHECKING, List, Optional, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Final, cast
 
 import streamlit
 from streamlit.errors import (
@@ -33,7 +33,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # When client.showErrorDetails is False, we show a generic warning in the
 # frontend when we encounter an uncaught app exception.
@@ -48,7 +48,7 @@ _STREAMLIT_DIR: Final = os.path.join(
 
 class ExceptionMixin:
     @gather_metrics("exception")
-    def exception(self, exception: BaseException) -> "DeltaGenerator":
+    def exception(self, exception: BaseException) -> DeltaGenerator:
         """Display an exception.
 
         Parameters
@@ -69,7 +69,7 @@ class ExceptionMixin:
         return self.dg._enqueue("exception", exception_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -124,7 +124,7 @@ def marshall(exception_proto: ExceptionProto, exception: BaseException) -> None:
         # Sometimes the exception's __str__/__unicode__ method itself
         # raises an error.
         exception_proto.message = ""
-        LOGGER.warning(
+        _LOGGER.warning(
             """
 
 Streamlit was unable to parse the data from an exception in the user's script.
@@ -193,7 +193,7 @@ def _format_syntax_error_message(exception: SyntaxError) -> str:
 
 def _get_stack_trace_str_list(
     exception: BaseException, strip_streamlit_stack_entries: bool = False
-) -> List[str]:
+) -> list[str]:
     """Get the stack trace for the given exception.
 
     Parameters
@@ -213,7 +213,7 @@ def _get_stack_trace_str_list(
         The exception traceback as a list of strings
 
     """
-    extracted_traceback: Optional[traceback.StackSummary] = None
+    extracted_traceback: traceback.StackSummary | None = None
     if isinstance(exception, StreamlitAPIWarning):
         extracted_traceback = exception.tacked_on_stack
     elif hasattr(exception, "__traceback__"):
@@ -253,7 +253,7 @@ def _is_in_streamlit_package(file: str) -> bool:
 
 def _get_nonstreamlit_traceback(
     extracted_tb: traceback.StackSummary,
-) -> List[traceback.FrameSummary]:
+) -> list[traceback.FrameSummary]:
     return [
         entry for entry in extracted_tb if not _is_in_streamlit_package(entry.filename)
     ]

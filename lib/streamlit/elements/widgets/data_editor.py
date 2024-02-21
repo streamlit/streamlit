@@ -21,21 +21,21 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Final,
     Iterable,
     List,
+    Literal,
     Mapping,
-    Optional,
     Set,
     Tuple,
+    TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
-import pandas as pd
-import pyarrow as pa
-from typing_extensions import Literal, TypeAlias, TypedDict
+from typing_extensions import TypeAlias
 
 from streamlit import logger as _logger
 from streamlit import type_util
@@ -72,11 +72,13 @@ from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
-_LOGGER = _logger.get_logger("root")
+_LOGGER: Final = _logger.get_logger(__name__)
 
 # All formats that support direct editing, meaning that these
 # formats will be returned with the same type when used with data_editor.
@@ -99,11 +101,11 @@ EditableData = TypeVar(
 
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
-    pd.DataFrame,
-    pd.Series,
-    pd.Index,
+    "pd.DataFrame",
+    "pd.Series",
+    "pd.Index",
     "Styler",
-    pa.Table,
+    "pa.Table",
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
     List[Any],
@@ -128,16 +130,16 @@ class EditingState(TypedDict, total=False):
         A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
-    edited_rows: Dict[int, Dict[str, str | int | float | bool | None]]
-    added_rows: List[Dict[str, str | int | float | bool | None]]
-    deleted_rows: List[int]
+    edited_rows: dict[int, dict[str, str | int | float | bool | None]]
+    added_rows: list[dict[str, str | int | float | bool | None]]
+    deleted_rows: list[int]
 
 
 @dataclass
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> EditingState:
         data_editor_state: EditingState = (
             {
                 "edited_rows": {},
@@ -190,6 +192,8 @@ def _parse_value(
     """
     if value is None:
         return None
+
+    import pandas as pd
 
     try:
         if column_data_kind == ColumnDataKind.STRING:
@@ -277,7 +281,7 @@ def _apply_cell_edits(
 
 def _apply_row_additions(
     df: pd.DataFrame,
-    added_rows: List[Dict[str, Any]],
+    added_rows: list[dict[str, Any]],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply row additions to the provided dataframe (inplace).
@@ -294,8 +298,11 @@ def _apply_row_additions(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
+
     if not added_rows:
         return
+
+    import pandas as pd
 
     # This is only used if the dataframe has a range index:
     # There seems to be a bug in older pandas versions with RangeIndex in
@@ -308,7 +315,7 @@ def _apply_row_additions(
 
     for added_row in added_rows:
         index_value = None
-        new_row: List[Any] = [None for _ in range(df.shape[1])]
+        new_row: list[Any] = [None for _ in range(df.shape[1])]
         for col_name in added_row.keys():
             value = added_row[col_name]
             if col_name == INDEX_IDENTIFIER:
@@ -332,7 +339,7 @@ def _apply_row_additions(
             df.loc[index_value, :] = new_row
 
 
-def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
+def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
     """Apply row deletions to the provided dataframe (inplace).
 
     Parameters
@@ -392,6 +399,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     bool
         True if the index is supported, False otherwise.
     """
+    import pandas as pd
 
     return (
         type(df_index)
@@ -418,6 +426,7 @@ def _is_supported_index(df_index: pd.Index) -> bool:
 def _fix_column_headers(data_df: pd.DataFrame) -> None:
     """Fix the column headers of the provided dataframe inplace to work
     correctly for data editing."""
+    import pandas as pd
 
     if isinstance(data_df.columns, pd.MultiIndex):
         # Flatten hierarchical column headers to a single level:
@@ -594,7 +603,7 @@ class DataEditorMixin:
             The ``edited_cells`` dictionary is now called ``edited_rows`` and uses a
             different format (``{0: {"column name": "edited value"}}`` instead of
             ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
-            ``st.experimental_data_editor`` in combination with ``st.session_state``."
+            ``st.experimental_data_editor`` in combination with ``st.session_state``.
 
         Parameters
         ----------
@@ -765,6 +774,8 @@ class DataEditorMixin:
            height: 350px
 
         """
+        import pandas as pd
+        import pyarrow as pa
 
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -919,7 +930,7 @@ class DataEditorMixin:
         return type_util.convert_df_to_data_format(data_df, data_format)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

@@ -21,11 +21,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Collection, Dict, List, Sequence, Tuple, cast
-
-import pandas as pd
-from pandas.api.types import infer_dtype, is_integer_dtype
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Any, Collection, Literal, Sequence, cast
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
@@ -47,6 +43,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     import altair as alt
+    import pandas as pd
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -101,7 +98,7 @@ class ArrowAltairMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
-        color: str | Color | List[Color] | None = None,
+        color: str | Color | list[Color] | None = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -259,7 +256,7 @@ class ArrowAltairMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
-        color: str | Color | List[Color] | None = None,
+        color: str | Color | list[Color] | None = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -418,7 +415,7 @@ class ArrowAltairMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
-        color: str | Color | List[Color] | None = None,
+        color: str | Color | list[Color] | None = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
@@ -579,12 +576,12 @@ class ArrowAltairMixin:
         *,
         x: str | None = None,
         y: str | Sequence[str] | None = None,
-        color: str | Color | List[Color] | None = None,
+        color: str | Color | list[Color] | None = None,
         size: str | float | int | None = None,
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a scatterplot chart.
 
         This is syntax-sugar around ``st.altair_chart``. The main difference
@@ -842,12 +839,14 @@ def _is_date_column(df: pd.DataFrame, name: str | None) -> bool:
 
 def _melt_data(
     df: pd.DataFrame,
-    columns_to_leave_alone: List[str],
-    columns_to_melt: List[str] | None,
+    columns_to_leave_alone: list[str],
+    columns_to_melt: list[str] | None,
     new_y_column_name: str,
     new_color_column_name: str,
 ) -> pd.DataFrame:
     """Converts a wide-format dataframe to a long-format dataframe."""
+    import pandas as pd
+    from pandas.api.types import infer_dtype
 
     melted_df = pd.melt(
         df,
@@ -884,10 +883,10 @@ def _melt_data(
 def prep_data(
     df: pd.DataFrame,
     x_column: str | None,
-    y_column_list: List[str],
+    y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
-) -> Tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
+) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
     """Prepares the data for charting. This is also used in add_rows.
 
     Returns the prepared dataframe and the new names of the x column (taking the index reset into
@@ -930,11 +929,11 @@ def _generate_chart(
     data: Data | None,
     x_from_user: str | None = None,
     y_from_user: str | Sequence[str] | None = None,
-    color_from_user: str | Color | List[Color] | None = None,
+    color_from_user: str | Color | list[Color] | None = None,
     size_from_user: str | float | None = None,
     width: int = 0,
     height: int = 0,
-) -> Tuple[alt.Chart, AddRowsMetadata]:
+) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
 
@@ -1019,7 +1018,7 @@ def _generate_chart(
 
 
 def _maybe_reset_index_in_place(
-    df: pd.DataFrame, x_column: str | None, y_column_list: List[str]
+    df: pd.DataFrame, x_column: str | None, y_column_list: list[str]
 ) -> str | None:
     if x_column is None and len(y_column_list) > 0:
         if df.index.name is None:
@@ -1061,7 +1060,7 @@ def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: str | N
     if color_column is None or len(df[color_column]) == 0:
         return
 
-    first_color_datum = df[color_column][0]
+    first_color_datum = df[color_column].iat[0]
 
     if is_hex_color_like(first_color_datum):
         # Hex is already CSS-valid.
@@ -1078,11 +1077,13 @@ def _maybe_convert_color_column_in_place(df: pd.DataFrame, color_column: str | N
 def _convert_col_names_to_str_in_place(
     df: pd.DataFrame,
     x_column: str | None,
-    y_column_list: List[str],
+    y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
-) -> Tuple[str | None, List[str], str | None, str | None]:
+) -> tuple[str | None, list[str], str | None, str | None]:
     """Converts column names to strings, since Vega-Lite does not accept ints, etc."""
+    import pandas as pd
+
     column_names = list(df.columns)  # list() converts RangeIndex, etc, to regular list.
     str_column_names = [str(c) for c in column_names]
     df.columns = pd.Index(str_column_names)
@@ -1097,7 +1098,7 @@ def _convert_col_names_to_str_in_place(
 
 def _parse_generic_column(
     df: pd.DataFrame, column_or_value: Any
-) -> Tuple[str | None, Any]:
+) -> tuple[str | None, Any]:
     if isinstance(column_or_value, str) and column_or_value in df.columns:
         column_name = column_or_value
         value = None
@@ -1130,8 +1131,8 @@ def _parse_y_columns(
     df: pd.DataFrame,
     y_from_user: str | Sequence[str] | None,
     x_column: str | None,
-) -> List[str]:
-    y_column_list: List[str] = []
+) -> list[str]:
+    y_column_list: list[str] = []
 
     if y_from_user is None:
         y_column_list = list(df.columns)
@@ -1186,6 +1187,7 @@ def _get_scale(df: pd.DataFrame, column_name: str | None) -> alt.Scale:
 
 def _get_axis_config(df: pd.DataFrame, column_name: str | None, grid: bool) -> alt.Axis:
     import altair as alt
+    from pandas.api.types import is_integer_dtype
 
     if column_name is not None and is_integer_dtype(df[column_name]):
         # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
@@ -1198,10 +1200,10 @@ def _get_axis_config(df: pd.DataFrame, column_name: str | None, grid: bool) -> a
 def _maybe_melt(
     df: pd.DataFrame,
     x_column: str | None,
-    y_column_list: List[str],
+    y_column_list: list[str],
     color_column: str | None,
     size_column: str | None,
-) -> Tuple[pd.DataFrame, str | None, str | None]:
+) -> tuple[pd.DataFrame, str | None, str | None]:
     """If multiple columns are set for y, melt the dataframe into long format."""
     y_column: str | None
 
@@ -1312,8 +1314,8 @@ def _get_color_encoding(
     df: pd.DataFrame,
     color_value: Color | None,
     color_column: str | None,
-    y_column_list: List[str],
-    color_from_user: str | Color | List[Color] | None,
+    y_column_list: list[str],
+    color_from_user: str | Color | list[Color] | None,
 ) -> alt.Color | alt.ColorValue | None:
     import altair as alt
 
@@ -1350,7 +1352,7 @@ def _get_color_encoding(
         raise StreamlitInvalidColorError(df, color_from_user)
 
     elif color_column is not None:
-        column_type: str | Tuple[str, List[Any]]
+        column_type: str | tuple[str, list[Any]]
 
         if color_column == MELTED_COLOR_COLUMN_NAME:
             column_type = "nominal"
@@ -1369,7 +1371,7 @@ def _get_color_encoding(
 
         # If the 0th element in the color column looks like a color, we'll use the color column's
         # values as the colors in our chart.
-        elif len(df[color_column]) and is_color_like(df[color_column][0]):
+        elif len(df[color_column]) and is_color_like(df[color_column].iat[0]):
             color_range = [to_css_color(c) for c in df[color_column].unique()]
             color_enc["scale"] = alt.Scale(range=color_range)
             # Don't show the color legend, because it will just show text with the color values,
@@ -1513,7 +1515,7 @@ def marshall(
 
     datasets = {}
 
-    def id_transform(data) -> Dict[str, str]:
+    def id_transform(data) -> dict[str, str]:
         """Altair data transformer that returns a fake named dataset with the
         object id.
         """

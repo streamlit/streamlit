@@ -14,14 +14,15 @@
 
 """Loads the configuration data."""
 
+from __future__ import annotations
+
 import copy
 import os
 import secrets
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Dict, Optional, cast
+from typing import Any, Callable
 
-import toml
 from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
@@ -33,7 +34,7 @@ from streamlit.errors import StreamlitAPIException
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: Dict[str, str] = OrderedDict(
+_section_descriptions: dict[str, str] = OrderedDict(
     _test="Special test section just used for unit tests."
 )
 
@@ -46,10 +47,10 @@ _config_lock = threading.RLock()
 # to `streamlit run`, etc. Note that this and _config_options below are
 # OrderedDicts to ensure stable ordering when printed using
 # `streamlit config show`.
-_config_options_template: Dict[str, ConfigOption] = OrderedDict()
+_config_options_template: dict[str, ConfigOption] = OrderedDict()
 
 # Stores the current state of config options.
-_config_options: Optional[Dict[str, ConfigOption]] = None
+_config_options: dict[str, ConfigOption] | None = None
 
 
 # Indicates that a config option was defined by the user.
@@ -114,9 +115,7 @@ def set_user_option(key: str, value: Any) -> None:
     try:
         opt = _config_options_template[key]
     except KeyError as ke:
-        raise StreamlitAPIException(
-            "Unrecognized config option: {key}".format(key=key)
-        ) from ke
+        raise StreamlitAPIException(f"Unrecognized config option: {key}") from ke
     if opt.scriptable:
         set_option(key, value)
         return
@@ -147,7 +146,7 @@ def get_option(key: str) -> Any:
         return config_options[key].value
 
 
-def get_options_for_section(section: str) -> Dict[str, Any]:
+def get_options_for_section(section: str) -> dict[str, Any]:
     """Get all of the config options for the given section.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -159,7 +158,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
     """
@@ -183,14 +182,14 @@ def _create_section(section: str, description: str) -> None:
 
 def _create_option(
     key: str,
-    description: Optional[str] = None,
-    default_val: Optional[Any] = None,
+    description: str | None = None,
+    default_val: Any | None = None,
     scriptable: bool = False,
     visibility: str = "visible",
     deprecated: bool = False,
-    deprecation_text: Optional[str] = None,
-    expiration_date: Optional[str] = None,
-    replaced_by: Optional[str] = None,
+    deprecation_text: str | None = None,
+    expiration_date: str | None = None,
+    replaced_by: str | None = None,
     type_: type = str,
     sensitive: bool = False,
 ) -> ConfigOption:
@@ -244,7 +243,7 @@ def _create_option(
     )
     assert (
         option.section in _section_descriptions
-    ), 'Section "%s" must be one of %s.' % (
+    ), 'Section "{}" must be one of {}.'.format(
         option.section,
         ", ".join(_section_descriptions.keys()),
     )
@@ -260,7 +259,10 @@ def _delete_option(key: str) -> None:
     """
     try:
         del _config_options_template[key]
-        del cast(Dict[str, ConfigOption], _config_options)[key]
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
+        del _config_options[key]
     except Exception:
         # We don't care if the option already doesn't exist.
         pass
@@ -707,7 +709,7 @@ _create_option(
 
 
 @_create_option("server.address")
-def _server_address() -> Optional[str]:
+def _server_address() -> str | None:
     """The address where the server will listen for client and browser
     connections. Use this if you want to bind the server to a specific address.
     If set, the server will only be accessible from this address, and not from
@@ -721,7 +723,10 @@ def _server_address() -> Optional[str]:
 _create_option(
     "server.port",
     description="""
-        The port where the server will listen for browser connections.""",
+        The port where the server will listen for browser connections.
+
+        Don't use port 3000 which is reserved for internal development.
+        """,
     default_val=8501,
     type_=int,
 )
@@ -861,9 +866,13 @@ def _browser_server_port() -> int:
     app.
 
     This is used to:
-    - Set the correct URL for CORS and XSRF protection purposes.
-    - Show the URL on the terminal
-    - Open the browser
+    - Set the correct URL for XSRF protection purposes.
+    - Show the URL on the terminal (part of `streamlit run`).
+    - Open the browser automatically (part of `streamlit run`).
+
+    This option is for advanced use cases. To change the port of your app, use
+    `server.Port` instead. Don't use port 3000 which is reserved for internal
+    development.
 
     Default: whatever value is set in server.port.
     """
@@ -1004,6 +1013,9 @@ _create_option(
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val=True,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="The support for global pyplot instances is planned to be removed soon.",
+    expiration_date="2024-04-15",
     type_=bool,
 )
 
@@ -1106,9 +1118,10 @@ def is_manually_set(option_name: str) -> bool:
 def show_config() -> None:
     """Print all config options to the terminal."""
     with _config_lock:
-        config_util.show_config(
-            _section_descriptions, cast(Dict[str, ConfigOption], _config_options)
-        )
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
+        config_util.show_config(_section_descriptions, _config_options)
 
 
 # Load Config Files #
@@ -1147,7 +1160,7 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         _config_options[key].set_value(value, where_defined)
 
 
-def _update_config_with_sensitive_env_var(config_options: Dict[str, ConfigOption]):
+def _update_config_with_sensitive_env_var(config_options: dict[str, ConfigOption]):
     """Update the config system by parsing the environment variable.
 
     This should only be called from get_config_options.
@@ -1174,6 +1187,8 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
         Tells the config system where this was set.
 
     """
+    import toml
+
     parsed_config_file = toml.loads(raw_toml)
 
     for section, options in parsed_config_file.items():
@@ -1242,8 +1257,8 @@ CONFIG_FILENAMES = [
 
 
 def get_config_options(
-    force_reparse=False, options_from_flags: Optional[Dict[str, Any]] = None
-) -> Dict[str, ConfigOption]:
+    force_reparse=False, options_from_flags: dict[str, Any] | None = None
+) -> dict[str, ConfigOption]:
     """Create and return a dict mapping config option names to their values,
     returning a cached dict if possible.
 
@@ -1260,12 +1275,12 @@ def get_config_options(
     force_reparse : bool
         Force config files to be parsed so that we pick up any changes to them.
 
-    options_from_flags : Optional[Dict[str, any]
+    options_from_flags : dict[str, any] or None
         Config options that we received via CLI flag.
 
     Returns
     -------
-    Dict[str, ConfigOption]
+    dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
     global _config_options
@@ -1293,7 +1308,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, "r", encoding="utf-8") as input:
+            with open(filename, encoding="utf-8") as input:
                 file_contents = input.read()
 
             _update_config_with_toml(file_contents, filename)
