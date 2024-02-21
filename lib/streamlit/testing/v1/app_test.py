@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import ast
 import hashlib
 import inspect
 import pathlib
@@ -142,12 +141,21 @@ class AppTest:
         dict-like syntax to set ``query_params`` values for the simulated app.
     """
 
-    def __init__(self, script_path: str, *, default_timeout: float):
+    def __init__(
+        self,
+        script_path: str,
+        *,
+        default_timeout: float,
+        args=None,
+        kwargs=None,
+    ):
         self._script_path = script_path
         self.default_timeout = default_timeout
         self.session_state = SafeSessionState(SessionState(), lambda: None)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
+        self.args = args
+        self.kwargs = kwargs
 
         tree = ElementTree()
         tree._runner = self
@@ -180,17 +188,30 @@ class AppTest:
             executed via ``.run()``.
 
         """
+        return cls._from_string(script, default_timeout=default_timeout)
+
+    @classmethod
+    def _from_string(
+        cls, script: str, *, default_timeout: float = 3, args=None, kwargs=None
+    ) -> AppTest:
         hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
         path = pathlib.Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
-        return AppTest(str(path), default_timeout=default_timeout)
+        return AppTest(
+            str(path), default_timeout=default_timeout, args=args, kwargs=kwargs
+        )
 
     @classmethod
     def from_function(
-        cls, script: Callable[[], None], *, default_timeout: float = 3
+        cls,
+        script: Callable[..., Any],
+        *,
+        default_timeout: float = 3,
+        args=None,
+        kwargs=None,
     ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
@@ -210,6 +231,12 @@ class AppTest:
             Default time in seconds before a script run is timed out. Can be
             overridden for individual ``.run()`` calls.
 
+        args: tuple
+            An optional tuple of args to pass to the script function.
+
+        kwargs: dict
+            An optional dict of kwargs to pass to the script function.
+
         Returns
         -------
         AppTest
@@ -217,14 +244,12 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        # TODO: Simplify this using `ast.unparse()` once we drop 3.8 support
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
-        module = ast.parse(source)
-        fn_def = module.body[0]
-        body_lines = source_lines[fn_def.lineno :]
-        body = textwrap.dedent("".join(body_lines))
-        return cls.from_string(body, default_timeout=default_timeout)
+        module = source + f"\n{script.__name__}(*__args, **__kwargs)"
+        return cls._from_string(
+            module, default_timeout=default_timeout, args=args, kwargs=kwargs
+        )
 
     @classmethod
     def from_file(cls, script_path: str, *, default_timeout: float = 3) -> AppTest:
@@ -299,7 +324,9 @@ class AppTest:
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
 
-        script_runner = LocalScriptRunner(self._script_path, self.session_state)
+        script_runner = LocalScriptRunner(
+            self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
+        )
         self._tree = script_runner.run(widget_state, self.query_params, timeout)
         self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
