@@ -144,7 +144,6 @@ class LocalScriptRunner(ScriptRunner):
         module = types.ModuleType(name)
         module.__dict__["__args"] = self.args
         module.__dict__["__kwargs"] = self.kwargs
-        print(f"{module=}, {module.__dict__}")
         return module
 
 
