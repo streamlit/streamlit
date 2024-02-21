@@ -198,7 +198,7 @@ describe("FileUploader widget tests", () => {
     render(<FileUploader {...props} />)
 
     const fileDropZoneInput = screen.getByTestId(
-      "stDropzoneInput"
+      "stFileUploaderDropzoneInput"
     ) as HTMLInputElement
 
     const fileToUpload = createFile()

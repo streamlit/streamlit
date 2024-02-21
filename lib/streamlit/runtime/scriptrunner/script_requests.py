@@ -46,7 +46,7 @@ class RerunData:
     widget_states: WidgetStates | None = None
     page_script_hash: str = ""
     page_name: str = ""
-    fragment_id: Optional[str] = None
+    fragment_id: str | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
