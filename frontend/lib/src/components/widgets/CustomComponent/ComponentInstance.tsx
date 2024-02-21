@@ -67,6 +67,7 @@ export interface Props {
   element: ComponentInstanceProto
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 export interface State {
@@ -243,14 +244,14 @@ export class ComponentInstance extends React.PureComponent<Props, State> {
       return
     }
 
-    const { element } = this.props
+    const { element, fragmentId } = this.props
     const { dataType } = data
     if (dataType === "dataframe") {
-      this.props.widgetMgr.setArrowValue(element, value, source)
+      this.props.widgetMgr.setArrowValue(element, value, source, fragmentId)
     } else if (dataType === "bytes") {
-      this.props.widgetMgr.setBytesValue(element, value, source)
+      this.props.widgetMgr.setBytesValue(element, value, source, fragmentId)
     } else {
-      this.props.widgetMgr.setJsonValue(element, value, source)
+      this.props.widgetMgr.setJsonValue(element, value, source, fragmentId)
     }
   }
 

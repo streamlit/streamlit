@@ -57,6 +57,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 export interface State {
@@ -191,7 +192,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     const { value } = this.state
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
     const data = this.props.element
 
     const min = this.getMin()
@@ -206,9 +207,9 @@ export class NumberInput extends React.PureComponent<Props, State> {
       const valueToBeSaved = value ?? data.default ?? null
 
       if (this.isIntData()) {
-        widgetMgr.setIntValue(element, valueToBeSaved, source)
+        widgetMgr.setIntValue(element, valueToBeSaved, source, fragmentId)
       } else {
-        widgetMgr.setDoubleValue(element, valueToBeSaved, source)
+        widgetMgr.setDoubleValue(element, valueToBeSaved, source, fragmentId)
       }
 
       this.setState({

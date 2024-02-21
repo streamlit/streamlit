@@ -190,7 +190,8 @@ describe("NumberInput widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -223,7 +224,8 @@ describe("NumberInput widget", () => {
         props.element.default,
         {
           fromUi: false,
-        }
+        },
+        undefined
       )
     })
 
@@ -268,7 +270,8 @@ describe("NumberInput widget", () => {
         props.element.default,
         {
           fromUi: false,
-        }
+        },
+        undefined
       )
     })
 
@@ -300,6 +303,27 @@ describe("NumberInput widget", () => {
       })
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalled()
+    })
+
+    it("can pass fragmentId to setIntValue", () => {
+      const props = {
+        ...getIntProps({ default: 10 }),
+        fragmentId: "myFragmentId",
+      }
+      jest.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+
+      fireEvent.keyPress(screen.getByTestId("stNumberInput-Input"), {
+        key: "Enter",
+      })
+
+      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+        expect.anything(),
+        10,
+        { fromUi: false },
+        "myFragmentId"
+      )
     })
 
     it("sets initialValue from widgetMgr", () => {

@@ -419,9 +419,14 @@ describe("ComponentInstance", () => {
         })
       )
       const widgetMgr = (WidgetStateManager as any).mock.instances[0]
-      expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(element, jsonValue, {
-        fromUi: true,
-      })
+      expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
+        element,
+        jsonValue,
+        {
+          fromUi: true,
+        },
+        undefined
+      )
     })
 
     it("handles bytes values", () => {
@@ -442,6 +447,8 @@ describe("ComponentInstance", () => {
               formsDataChanged: jest.fn(),
             })
           }
+          // Also verify that we can pass a fragmentID down to setBytesValue.
+          fragmentId="myFragmentId"
         />
       )
 
@@ -480,7 +487,8 @@ describe("ComponentInstance", () => {
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
         element,
         bytesValue,
-        { fromUi: true }
+        { fromUi: true },
+        "myFragmentId"
       )
     })
 
