@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 
@@ -197,3 +198,23 @@ class FragmentTest(unittest.TestCase):
         # Called once when calling my_fragment and three times calling the saved
         # fragment.
         assert call_count == 4
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_sends_message_if_run_every_arg_is_set(self, patched_get_script_run_ctx):
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment(run_every=5.0)
+        def my_fragment():
+            pass
+
+        my_fragment()
+
+        [(args, _)] = ctx.enqueue.call_args_list
+        msg = args[0]
+        assert msg.auto_rerun.interval == 5
+        assert (
+            isinstance(msg.auto_rerun.fragment_id, str)
+            and msg.auto_rerun.fragment_id != ""
+        )
