@@ -297,6 +297,14 @@ class SelectboxMixin:
                 selectbox_proto.value = serialized_value
             selectbox_proto.set_value = True
 
+        if ctx:
+            if "ST_INTERNAL" in ctx.session_state:
+                internal = ctx.session_state["ST_INTERNAL"]
+            else:
+                internal = dict()
+
+            internal[id] = format_func
+            ctx.session_state["ST_INTERNAL"] = internal
         self.dg._enqueue("selectbox", selectbox_proto)
         return widget_state.value
 

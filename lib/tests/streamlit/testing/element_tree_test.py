@@ -589,6 +589,24 @@ def test_selectbox():
     repr(sr.selectbox[0])
 
 
+def test_selectbox_format_func():
+    # Regression test for #8019
+    def script():
+        import streamlit as st
+
+        key_to_value = {"key1": "value1", "key2": "value2"}
+        st.selectbox(
+            "Select Value",
+            key_to_value.keys(),
+            format_func=lambda key: key_to_value[key],
+            key="test",
+        )
+
+    at = AppTest.from_function(script).run()
+    at.selectbox("test").select("key1").run()
+    assert not at.exception
+
+
 def test_select_slider():
     script = AppTest.from_string(
         """

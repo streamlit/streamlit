@@ -20,6 +20,7 @@ from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Generic,
     List,
     Sequence,
@@ -929,7 +930,7 @@ class Selectbox(Widget, Generic[T]):
 
         if len(self.options) == 0:
             return 0
-        return self.options.index(str(self.value))
+        return self.options.index(self.format_func(self.value))
 
     @property
     def value(self) -> T | None:
@@ -940,6 +941,14 @@ class Selectbox(Widget, Generic[T]):
             state = self.root.session_state
             assert state
             return cast(T, state[self.id])
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        try:
+            return ss["ST_INTERNAL"][self.id]
+        except KeyError:
+            return str
 
     def set_value(self, v: T | None) -> Selectbox[T]:
         """Set the selection by value."""
