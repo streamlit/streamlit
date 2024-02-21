@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import time
+import types
 from typing import Any
 from urllib import parse
 
@@ -38,6 +39,8 @@ class LocalScriptRunner(ScriptRunner):
         self,
         script_path: str,
         session_state: SafeSessionState,
+        args=None,
+        kwargs=None,
     ):
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -46,6 +49,8 @@ class LocalScriptRunner(ScriptRunner):
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
         self.session_state = session_state
+        self.args = args if args is not None else tuple()
+        self.kwargs = kwargs if kwargs is not None else dict()
 
         super().__init__(
             session_id="test session id",
@@ -136,6 +141,12 @@ class LocalScriptRunner(ScriptRunner):
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
         runtime.get_instance().media_file_mgr.remove_orphaned_files()
+
+    def _new_module(self, name: str) -> types.ModuleType:
+        module = types.ModuleType(name)
+        module.__dict__["__args"] = self.args
+        module.__dict__["__kwargs"] = self.kwargs
+        return module
 
 
 def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> None:

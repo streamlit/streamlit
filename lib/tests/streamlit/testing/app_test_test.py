@@ -205,3 +205,15 @@ def test_out_of_order_blocks() -> None:
     assert at.markdown.len == 2
     assert at.info[0].value == "Hi!"
     assert at.markdown.values == ["FooBar", "BarFoo"]
+
+
+def test_from_function_kwargs():
+    def script(foo, baz):
+        import streamlit as st
+
+        st.text(foo)
+        st.text(baz)
+        return foo
+
+    at = AppTest.from_function(script, args=("bar",), kwargs={"baz": "baz"}).run()
+    assert at.text.values == ["bar", "baz"]
