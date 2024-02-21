@@ -63,6 +63,7 @@ NONWIDGET_ELEMENTS = [
     "plotly_chart",
     "progress",
     "pyplot",
+    "skeleton",
     "snow",
     "text",
     "video",

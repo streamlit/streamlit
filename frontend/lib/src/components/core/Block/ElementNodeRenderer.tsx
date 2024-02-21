@@ -51,6 +51,8 @@ import {
   PageLink as PageLinkProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
+  Skeleton as SkeletonProto,
+  SkeletonType as SkeletonType,
   Text as TextProto,
   Toast as ToastProto,
   Video as VideoProto,
@@ -612,7 +614,14 @@ const RawElementNodeRenderer = (
     }
 
     case "skeleton": {
-      return <AppSkeleton />
+      const skeletonProto = node.element.skeleton as SkeletonProto
+      // Since the backend sets type to CUSTOM for st.skeleton, this case will be triggered
+      if (skeletonProto.type === SkeletonType.CUSTOM) {
+        return <Skeleton height={skeletonProto.height} />
+      } else {
+        // Fallback or other types can be handled here
+        return <AppSkeleton />
+      }
     }
 
     case "slider": {

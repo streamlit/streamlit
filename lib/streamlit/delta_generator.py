@@ -69,6 +69,7 @@ from streamlit.elements.metric import MetricMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
+from streamlit.elements.skeleton import SkeletonMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
@@ -185,6 +186,7 @@ class DeltaGenerator(
     RadioMixin,
     SelectboxMixin,
     SelectSliderMixin,
+    SkeletonMixin,
     SliderMixin,
     SnowMixin,
     JsonMixin,

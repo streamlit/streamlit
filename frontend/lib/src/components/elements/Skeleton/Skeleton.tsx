@@ -15,11 +15,19 @@
  */
 
 import React, { FC, memo } from "react"
-
 import { SquareSkeleton } from "./styled-components"
 
-const RawSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
-  return <SquareSkeleton data-testid="stSkeleton" />
+export interface SkeletonProps {
+  height?: number | undefined
 }
 
-export const Skeleton = memo(RawSkeleton)
+const RawSkeleton: FC<SkeletonProps> = ({ height }) => {
+  // Convert height to a string with 'px' or use undefined to let the styled component handle defaults
+  const heightStyle = height ? `${height}px` : undefined
+
+  return (
+    <SquareSkeleton data-testid="stSkeleton" style={{ height: heightStyle }} />
+  )
+}
+
+export const Skeleton = React.memo(RawSkeleton)

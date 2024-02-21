@@ -19,6 +19,18 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "SkeletonProto";
 
+// Enum for the different types of skeletons.
+enum SkeletonType {
+    DEFAULT = 0; // For backward compatibility, this represents the AppSkeleton
+    CUSTOM = 1; // Represents the new custom Skeleton
+    // Future skeleton types can be added here.
+}
+
 // An internal-only element that displays an app skeleton.
 message Skeleton {
+    // Desired height in pixels, if specified.
+    int32 height = 1;
+
+    // Add a field for the skeleton type. The default is implicitly DEFAULT (0) in proto3.
+    SkeletonType type = 2;
 }
