@@ -542,7 +542,6 @@ export class WidgetStateManager {
    *
    * Called by every "setValue" function.
    */
-  //
   private onWidgetValueChanged(
     formId: string | undefined,
     source: Source,
