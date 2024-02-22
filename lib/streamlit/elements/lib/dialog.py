@@ -78,10 +78,10 @@ class Dialog(DeltaGenerator):
 
         self._current_proto = msg.delta.add_block
 
-        _enqueue_message(msg)
         # We add a sleep here to give the web app time to react to the update. Otherwise,
         #  we might run into issues where the dialog cannot be opened again after closing
         time.sleep(0.05)
+        _enqueue_message(msg)
 
     def open(self) -> None:
         self._update(True)

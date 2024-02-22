@@ -31,6 +31,11 @@ def open_sidebar_dialog(app: Page):
     app.get_by_text("Open Sidebar-Dialog").click()
 
 
+def click_to_dismiss(app: Page):
+    # Click somewhere outside the close popover container:
+    app.get_by_test_id("stModal").click(position={"x": 0, "y": 0})
+
+
 def test_displays_dialog_properly(app: Page):
     """Test that dialog is displayed properly."""
     open_dialog_with_images(app)
@@ -59,7 +64,10 @@ def test_dialog_dismisses_properly(app: Page):
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(1)
-    app.get_by_label("Close", exact=True).click()
+
+    click_to_dismiss(app)
+    expect(main_dialog).not_to_be_visible()
+
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(0)
@@ -68,12 +76,19 @@ def test_dialog_dismisses_properly(app: Page):
 def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
     # open and close the dialog multiple times
-    for _ in range(0, 10):
+    for i in range(0, 10):
+        print(f"Test run: {i}")
+        # don't click indefinitely fast to give the dialog time to set the state
+        app.wait_for_timeout(5)
+
         open_dialog_with_images(app)
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
-        app.get_by_label("Close", exact=True).click()
+
+        click_to_dismiss(app)
+        expect(main_dialog).not_to_be_visible()
+
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)

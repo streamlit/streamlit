@@ -54,7 +54,7 @@ if st.button("Open Dialog without Images"):
 # We use this dialog for a screenshot test as loading images via the browser
 #   is non-deterministic
 with st.sidebar:
-    dialog = st.dialog("Simple Dialog")
+    dialog = st.dialog("Simple Dialog in Sidebar")
     with dialog:
         st.write("Hello sidebar dialog!")
 
