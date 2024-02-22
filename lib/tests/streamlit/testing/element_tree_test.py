@@ -589,7 +589,7 @@ def test_selectbox():
     repr(sr.selectbox[0])
 
 
-def test_selectbox_format_func():
+def test_format_func():
     # Regression test for #8019
     def script():
         import streamlit as st
@@ -601,9 +601,23 @@ def test_selectbox_format_func():
             format_func=lambda key: key_to_value[key],
             key="test",
         )
+        st.radio(
+            "radio",
+            options=["FOO", "BAR", "BAZ"],
+            format_func=lambda x: x.lower(),
+            key="r",
+        )
+
+        st.multiselect(
+            "multi", options=[1, 2, 3], format_func=lambda x: f"Num: {x}", key="m"
+        )
+        # st.select_slider("slider", options=...)
 
     at = AppTest.from_function(script).run()
     at.selectbox("test").select("key1").run()
+    at.radio("r").set_value("FOO").run()
+    at.multiselect("m").select(1).select(2).run()
+
     assert not at.exception
 
 
