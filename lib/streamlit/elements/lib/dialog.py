@@ -12,13 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import time
 from types import TracebackType
-from typing import List, Literal, Optional, Type, cast
+from typing import Literal, cast
 
+from typing_extensions import TypeAlias
+
+from streamlit.cursor import Cursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
-from streamlit.proto import Block_pb2
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+DialogWidth: TypeAlias = Literal["small", "medium", "large", "xlarge"]
 
 
 class Dialog(DeltaGenerator):
@@ -28,15 +35,14 @@ class Dialog(DeltaGenerator):
         title: str,
         *,
         dismissible: bool = True,
-        width: "DialogWidth" = None,
-    ) -> "Dialog":
-        block_proto = Block_pb2.Block()
+        width: DialogWidth = "medium",
+    ) -> Dialog:
+        block_proto = BlockProto()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
-        if width is not None:
-            block_proto.dialog.width = str(width)
+        block_proto.dialog.width = str(width)
 
-        delta_path: List[int] = (
+        delta_path: list[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
         )
         dialog = cast(Dialog, parent._block(block_proto=block_proto, dg_type=Dialog))
@@ -47,6 +53,19 @@ class Dialog(DeltaGenerator):
         #  we might run into issues where the dialog cannot be opened again after closing
         time.sleep(0.05)
         return dialog
+
+    def __init__(
+        self,
+        root_container: int | None,
+        cursor: Cursor | None,
+        parent: DeltaGenerator | None,
+        block_type: str | None,
+    ):
+        super().__init__(root_container, cursor, parent, block_type)
+
+        # Initialized in `_create()`:
+        self._current_proto: BlockProto | None = None
+        self._delta_path: list[int] | None = None
 
     def _update(self, is_open: bool):
         assert self._current_proto is not None, "Status not correctly initialized!"
@@ -70,7 +89,7 @@ class Dialog(DeltaGenerator):
     def close(self) -> None:
         self._update(False)
 
-    def __enter__(self) -> "Dialog":  # type: ignore[override]
+    def __enter__(self) -> Dialog:  # type: ignore[override]
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
@@ -80,8 +99,8 @@ class Dialog(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> Literal[False]:
         return super().__exit__(exc_type, exc_val, exc_tb)
