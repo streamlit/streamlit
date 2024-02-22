@@ -20,14 +20,27 @@ import asyncio
 import dataclasses
 import functools
 import hashlib
+import math
 import os
 import subprocess
 import sys
-from typing import Any, Callable, Final, Generic, Iterable, Mapping, TypeVar
+from datetime import timedelta
+from typing import (
+    Any,
+    Callable,
+    Final,
+    Generic,
+    Iterable,
+    Literal,
+    Mapping,
+    TypeVar,
+    overload,
+)
 
 from cachetools import TTLCache
 
 from streamlit import env_util
+from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 
 # URL of Streamlit's help page.
 HELP_DOC: Final = "https://docs.streamlit.io/"
@@ -202,6 +215,56 @@ def extract_key_query_params(
         ]
         for item in sublist
     }
+
+
+class BadTimeStringError(StreamlitAPIException):
+    """Raised when a bad time string argument is passed."""
+
+    def __init__(self, t: str):
+        MarkdownFormattedException.__init__(
+            self,
+            "Time string doesn't look right. It should be formatted as"
+            f"`'1d2h34m'` or `2 days`, for example. Got: {t}",
+        )
+
+
+@overload
+def time_to_seconds(
+    t: float | timedelta | str | None, *, coerce_none_to_inf: Literal[False]
+) -> float | None:
+    ...
+
+
+@overload
+def time_to_seconds(t: float | timedelta | str | None) -> float:
+    ...
+
+
+def time_to_seconds(
+    t: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
+) -> float | None:
+    """
+    Convert a time string value to a float representing "number of seconds".
+    """
+    if coerce_none_to_inf and t is None:
+        return math.inf
+    if isinstance(t, timedelta):
+        return t.total_seconds()
+    if isinstance(t, str):
+        import numpy as np
+        import pandas as pd
+
+        try:
+            seconds: float = pd.Timedelta(t).total_seconds()
+
+            if np.isnan(seconds):
+                raise BadTimeStringError(t)
+
+            return seconds
+        except ValueError as ex:
+            raise BadTimeStringError(t) from ex
+
+    return t
 
 
 K = TypeVar("K")
