@@ -745,10 +745,7 @@ class Multiselect(Widget, Generic[T]):
     @property
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
-        try:
-            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
-        except KeyError:
-            return str
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
         """Set the value of the multiselect widget. (list)"""
@@ -892,10 +889,7 @@ class Radio(Widget, Generic[T]):
     @property
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
-        try:
-            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
-        except KeyError:
-            return str
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: T | None) -> Radio[T]:
         """Set the selection by value."""
@@ -956,10 +950,7 @@ class Selectbox(Widget, Generic[T]):
     @property
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
-        try:
-            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
-        except KeyError:
-            return str
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: T | None) -> Selectbox[T]:
         """Set the selection by value."""
@@ -1042,10 +1033,7 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
-        try:
-            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
-        except KeyError:
-            return str
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
         """Set the ranged selection by values."""
