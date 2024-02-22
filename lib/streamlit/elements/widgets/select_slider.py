@@ -41,7 +41,7 @@ from streamlit.runtime.state import (
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     compute_widget_id,
-    save_internal,
+    save_for_app_testing,
 )
 from streamlit.type_util import (
     Key,
@@ -341,7 +341,7 @@ class SelectSliderMixin:
             slider_proto.set_value = True
 
         if ctx:
-            save_internal(ctx, id, format_func)
+            save_for_app_testing(ctx, id, format_func)
 
         self.dg._enqueue("slider", slider_proto)
         return widget_state.value

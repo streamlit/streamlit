@@ -234,7 +234,7 @@ def require_valid_user_key(key: str) -> None:
         )
 
 
-def save_internal(ctx: ScriptRunContext, k: str, v: Any):
+def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
     try:
         ctx.session_state[TESTING_KEY][k] = v
     except KeyError:
