@@ -97,6 +97,6 @@ message Block {
     string avatar = 2;
     AvatarType avatar_type = 3;
   }
- 
-  // Next ID: 12 
+
+  // Next ID: 12
 }
