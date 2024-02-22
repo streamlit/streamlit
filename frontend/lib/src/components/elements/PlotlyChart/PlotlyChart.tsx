@@ -56,6 +56,11 @@ export interface SelectionRange {
   y: number[]
 }
 
+export interface Selection extends SelectionRange {
+  xref: string
+  yref: string
+}
+
 // TODO(willhuang1997): This should likely be removed. I was just using this to remove .data and .fullData
 function extractNonObjects(obj: any): any {
   const result: any = {}
@@ -76,20 +81,17 @@ function isFullScreen(height: number | undefined): boolean {
 }
 
 function parseLassoPath(pathData: string): SelectionRange {
-  // Remove the 'M' and 'Z' from the string and then split by 'L'
   const points = pathData.replace("M", "").replace("Z", "").split("L")
 
   const x: number[] = []
   const y: number[] = []
 
-  // Iterate through the points and split them into x and y
   points.forEach(point => {
     const [xVal, yVal] = point.split(",").map(Number)
     x.push(xVal)
     y.push(yVal)
   })
 
-  // Return the object with x and y arrays
   return { x, y }
 }
 
@@ -148,16 +150,47 @@ function PlotlyFigure({
   height,
   widgetMgr,
 }: PlotlyChartProps): ReactElement {
-  console.log("Rerendering")
   const figure = element.figure as FigureProto
 
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
-  const [spec, setSpec] = useState(
-    JSON.parse(replaceTemporaryColors(figure.spec, theme, element.theme))
-  )
-  console.log(spec)
+  const getInitialValue = () => {
+    const spec = JSON.parse(
+      replaceTemporaryColors(figure.spec, theme, element.theme)
+    )
+    const storedValue = widgetMgr.getJsonValue(element)
+    const selections: any[] = []
+
+    if (storedValue !== undefined) {
+      const parsedStoreValue = JSON.parse(storedValue.toString())
+      // check if there is a selection
+      if (parsedStoreValue.select) {
+        spec.data = parsedStoreValue.select._data
+        spec.layout.selections = parsedStoreValue.select._selections
+      }
+
+      // make all other points opaque if they're not selected
+      spec.data.forEach((trace: any) => {
+        if (!trace.selectedpoints) {
+          trace.selectedpoints = []
+        }
+      })
+
+      return {
+        data: [...spec.data],
+        layout: {
+          ...spec.layout,
+          selections: selections.length ? selections : undefined,
+        },
+        frames: spec.frames ? { ...spec.frames } : [],
+      }
+    }
+
+    return spec
+  }
+
+  const [spec, setSpec] = useState(getInitialValue())
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
@@ -169,6 +202,13 @@ function PlotlyFigure({
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
+    if (element.onSelect) {
+      spec.layout.clickmode = "event+select"
+      spec.layout.hovermode = "closest"
+    }
+  }, [])
+
+  useLayoutEffect(() => {
     if (isFullScreen(height)) {
       spec.layout.width = width
       spec.layout.height = height
@@ -181,10 +221,7 @@ function PlotlyFigure({
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
-    if (element.onSelect) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
+    setSpec(spec)
   }, [
     height,
     width,
@@ -199,11 +236,12 @@ function PlotlyFigure({
 
   const handleSelect = (event: PlotSelectionEvent): void => {
     const returnValue: any = { select: {} }
+    const { data } = spec
     const pointIndices: number[] = []
     const xs: number[] = []
     const ys: number[] = []
-    const selectedBoxes: SelectionRange[] = []
-    const selectedLassos: SelectionRange[] = []
+    const selectedBoxes: Selection[] = []
+    const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
 
     event.points.forEach(function (point: any) {
@@ -216,6 +254,16 @@ function PlotlyFigure({
       xs.push(point.x)
       ys.push(point.y)
       pointIndices.push(point.pointIndex)
+
+      // build graph representation to retain state
+      if (
+        data[point.curveNumber] &&
+        !data[point.curveNumber].selectedpoints.includes(point.pointIndex)
+      ) {
+        data[point.curveNumber].selectedpoints.push(point.pointIndex)
+      } else {
+        data[point.curveNumber].selectedpoints = [point.pointIndex]
+      }
     })
 
     returnValue.select.points = selectedPoints
@@ -223,9 +271,45 @@ function PlotlyFigure({
     // point_indices to replicate pythonic return value
     returnValue.select.point_indices = pointIndices
 
+    // event.selections doesn't show up in the PlotSelectionEvent
+    // @ts-expect-error
+    if (event.selections) {
+      // @ts-expect-error
+      event.selections.forEach((selection: any) => {
+        // box selection
+        if (selection.type === "rect") {
+          const xAndy = parseBoxSelection(selection)
+          const returnSelection: Selection = {
+            xref: selection.xref,
+            yref: selection.yref,
+            x: xAndy.x,
+            y: xAndy.y,
+          }
+          selectedBoxes.push(returnSelection)
+        }
+        // lasso selection
+        if (selection.type === "path") {
+          const xAndy = parseLassoPath(selection.path)
+          const returnSelection: Selection = {
+            xref: selection.xref,
+            yref: selection.yref,
+            x: xAndy.x,
+            y: xAndy.y,
+          }
+          selectedLassos.push(returnSelection)
+        }
+      })
+
+      returnValue.select._data = data
+
+      // @ts-expect-error
+      returnValue.select._selections = event.selections
+    }
+
     // select_box to replicate pythonic return value
     returnValue.select.select_box =
       selectedBoxes.length > 0 ? selectedBoxes : undefined
+
     // lasso_points to replicate pythonic return value
     returnValue.select.select_lasso =
       selectedLassos.length > 0 ? selectedLassos : undefined
@@ -249,19 +333,48 @@ function PlotlyFigure({
       config={config}
       frames={frames}
       onSelected={element.onSelect ? handleSelect : () => {}}
-      onDeselect={
+      onDoubleClick={
         element.onSelect
           ? () => {
+              const spec = JSON.parse(
+                replaceTemporaryColors(figure.spec, theme, element.theme)
+              )
+              if (element.theme === "streamlit") {
+                applyStreamlitTheme(spec, theme)
+              } else {
+                // Apply minor theming improvements to work better with Streamlit
+                spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+              }
+              if (element.onSelect) {
+                spec.layout.clickmode = "event+select"
+                spec.layout.hovermode = "closest"
+              }
+              setSpec(spec)
               widgetMgr.setJsonValue(element, {}, { fromUi: true })
             }
           : () => {}
       }
-      onInitialized={figure => {
-        setSpec(figure)
-      }}
-      onUpdate={figure => {
-        setSpec(figure)
-      }}
+      onDeselect={
+        element.onSelect
+          ? () => {
+              const spec = JSON.parse(
+                replaceTemporaryColors(figure.spec, theme, element.theme)
+              )
+              if (element.theme === "streamlit") {
+                applyStreamlitTheme(spec, theme)
+              } else {
+                // Apply minor theming improvements to work better with Streamlit
+                spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+              }
+              if (element.onSelect) {
+                spec.layout.clickmode = "event+select"
+                spec.layout.hovermode = "closest"
+              }
+              setSpec(spec)
+              widgetMgr.setJsonValue(element, {}, { fromUi: true })
+            }
+          : () => {}
+      }
     />
   )
 }
