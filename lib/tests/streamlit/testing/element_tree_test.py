@@ -616,15 +616,24 @@ def test_format_func():
         st.select_slider(
             "slider",
             options=[1, 2, 3, 5, 8],
+            value=[1, 2],
             format_func=lambda x: str(float(x)),
             key="s",
         )
 
     at = AppTest.from_function(script).run()
+
     at.selectbox("sb").select("key1").run()
+    assert at.selectbox("sb").value == "key1"
+
     at.radio("r").set_value("FOO").run()
+    assert at.radio("r").value == "FOO"
+
     at.multiselect("m").select(1).select(2).run()
+    assert at.multiselect("m").value == [1, 2]
+
     at.select_slider("s").set_range(2, 5).run()
+    assert at.select_slider("s").value == (2, 5)
 
     assert not at.exception
 
