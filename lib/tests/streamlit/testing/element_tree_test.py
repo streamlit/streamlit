@@ -596,10 +596,10 @@ def test_format_func():
 
         key_to_value = {"key1": "value1", "key2": "value2"}
         st.selectbox(
-            "Select Value",
+            "selectbox",
             key_to_value.keys(),
             format_func=lambda key: key_to_value[key],
-            key="test",
+            key="sb",
         )
         st.radio(
             "radio",
@@ -607,16 +607,24 @@ def test_format_func():
             format_func=lambda x: x.lower(),
             key="r",
         )
-
         st.multiselect(
-            "multi", options=[1, 2, 3], format_func=lambda x: f"Num: {x}", key="m"
+            "multi",
+            options=[1, 2, 3],
+            format_func=lambda x: f"Num: {x}",
+            key="m",
         )
-        # st.select_slider("slider", options=...)
+        st.select_slider(
+            "slider",
+            options=[1, 2, 3, 5, 8],
+            format_func=lambda x: str(float(x)),
+            key="s",
+        )
 
     at = AppTest.from_function(script).run()
-    at.selectbox("test").select("key1").run()
+    at.selectbox("sb").select("key1").run()
     at.radio("r").set_value("FOO").run()
     at.multiselect("m").select(1).select(2).run()
+    at.select_slider("s").set_range(2, 5).run()
 
     assert not at.exception
 
