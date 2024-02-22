@@ -74,7 +74,7 @@ from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.state.common import user_key_from_widget_id
+from streamlit.runtime.state.common import TESTING_KEY, user_key_from_widget_id
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 
 if TYPE_CHECKING:
@@ -746,7 +746,7 @@ class Multiselect(Widget, Generic[T]):
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
         try:
-            return ss["ST_INTERNAL"][self.id]
+            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
         except KeyError:
             return str
 
@@ -893,7 +893,7 @@ class Radio(Widget, Generic[T]):
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
         try:
-            return ss["ST_INTERNAL"][self.id]
+            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
         except KeyError:
             return str
 
@@ -957,7 +957,7 @@ class Selectbox(Widget, Generic[T]):
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
         try:
-            return ss["ST_INTERNAL"][self.id]
+            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
         except KeyError:
             return str
 
@@ -1043,7 +1043,7 @@ class SelectSlider(Widget, Generic[T]):
     def format_func(self) -> Callable[[Any], Any]:
         ss = self.root.session_state
         try:
-            return ss["ST_INTERNAL"][self.id]
+            return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
         except KeyError:
             return str
 

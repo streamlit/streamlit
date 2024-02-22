@@ -88,6 +88,7 @@ WidgetProto: TypeAlias = Union[
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
+TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
 
 
 T = TypeVar("T")
@@ -234,10 +235,7 @@ def require_valid_user_key(key: str) -> None:
 
 
 def save_internal(ctx: ScriptRunContext, k: str, v: Any):
-    if "ST_INTERNAL" in ctx.session_state:
-        internal = ctx.session_state["ST_INTERNAL"]
-    else:
-        internal = dict()
-
-    internal[k] = v
-    ctx.session_state["ST_INTERNAL"] = internal
+    try:
+        ctx.session_state[TESTING_KEY][k] = v
+    except KeyError:
+        return
