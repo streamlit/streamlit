@@ -30,7 +30,8 @@ import Modal, {
 } from "@streamlit/lib/src/components/shared/Modal"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { ThemeProvider, LibContext } from "@streamlit/lib"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
+import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 export interface Props {
@@ -56,7 +57,10 @@ function parseWidthConfig(width?: string): string {
   return DIALOG_WIDTH[width as keyof typeof DIALOG_WIDTH] ?? SIZE.default
 }
 
-const Dialog: React.FC<Props> = ({ element, children }): ReactElement => {
+const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
+  element,
+  children,
+}): ReactElement => {
   const { title, dismissible, width, isOpen: initialIsOpen } = element
   const [isOpen, setIsOpen] = useState<boolean>(initialIsOpen ?? false)
   useEffect(() => {
