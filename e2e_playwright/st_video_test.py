@@ -19,19 +19,51 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
+# Chromium miss codecs required to play that mp3 videos
+# https://www.howtogeek.com/202825/what%E2%80%99s-the-difference-between-chromium-and-chrome/
 @pytest.mark.skip_browser("chromium")
 def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly via screenshots matching."""
     video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(3)
+    expect(video_elements).to_have_count(5)
+
+    # Wait for the video to load
+    app.wait_for_timeout(2000)
 
     expect(video_elements.nth(0)).to_be_visible()
     expect(video_elements.nth(1)).to_be_visible()
     expect(video_elements.nth(2)).to_be_visible()
+    expect(video_elements.nth(3)).to_be_visible()
 
     assert_snapshot(video_elements.nth(0), name="video_element_first")
     assert_snapshot(video_elements.nth(1), name="video_element_second")
-    assert_snapshot(video_elements.nth(2), name="video_element_third")
+    assert_snapshot(
+        video_elements.nth(2),
+        name="video_element_third",
+        image_threshold=0.09,
+    )
+    assert_snapshot(
+        video_elements.nth(3),
+        name="video_element_with_subtitles",
+        image_threshold=0.09,
+    )
+
+
+@pytest.mark.skip_browser("webkit")
+def test_video_rendering_webp(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that `st.video` renders correctly webm video via screenshots matching."""
+    video_elements = app.get_by_test_id("stVideo")
+    expect(video_elements).to_have_count(5)
+
+    # Wait for the video to load
+    app.wait_for_timeout(2000)
+
+    expect(video_elements.nth(4)).to_be_visible()
+    assert_snapshot(
+        video_elements.nth(4),
+        name="video_element_webm_with_subtitles",
+        image_threshold=0.09,
+    )
 
 
 def test_displays_a_video_player(app: Page):
@@ -52,13 +84,14 @@ def test_video_handles_start_time(app: Page):
 
 @pytest.mark.skip_browser("chromium")
 def test_handles_changes_in_start_time(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ):
-    themed_app.wait_for_timeout(2000)
-    # Change the start time of second video from 6 to 5
-    themed_app.get_by_test_id("stNumberInput").locator("button.step-down").click()
-    # Wait for the video start time to update
-    themed_app.wait_for_timeout(2000)
+    app.wait_for_timeout(2000)
 
-    video_elements = themed_app.get_by_test_id("stVideo")
+    # Change the start time of second video from 6 to 5
+    app.get_by_test_id("stNumberInput").locator("button.step-down").click()
+    # Wait for the video start time to update
+    app.wait_for_timeout(2000)
+
+    video_elements = app.get_by_test_id("stVideo")
     assert_snapshot(video_elements.nth(1), name="video-updated-start")

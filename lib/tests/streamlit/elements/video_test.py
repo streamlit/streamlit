@@ -13,12 +13,15 @@
 # limitations under the License.
 
 """st.video unit tests"""
-
+import hashlib
 from io import BytesIO
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.web.server.server import MEDIA_ENDPOINT
@@ -96,6 +99,100 @@ class VideoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.start_time, 10)
         self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
-        self.assertTrue(
-            _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
+        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+
+    def test_st_video_subtitles(self):
+        """Test st.video with subtitles."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_subtitle_data = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+        st.video(fake_video_data, subtitles=fake_subtitle_data)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
+        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+
+        expected_subtitle_url = _calculate_file_id(
+            fake_subtitle_data,
+            "text/vtt",
+            filename=f'{hashlib.md5(b"default").hexdigest()}.vtt',
+        )
+        self.assertIn(expected_subtitle_url, el.video.subtitles[0].url)
+
+    def test_st_video_empty_subtitles(self):
+        """Test st.video with subtitles, empty subtitle label, content allowed."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_subtitle_data = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+        st.video(
+            fake_video_data,
+            subtitles={
+                "": "",
+                "English": fake_subtitle_data,
+            },
+        )
+
+        el = self.get_delta_from_queue().new_element
+        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
+        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+
+        expected_empty_subtitle_url = _calculate_file_id(
+            b"",
+            "text/vtt",
+            filename=f'{hashlib.md5(b"").hexdigest()}.vtt',
+        )
+        expected_english_subtitle_url = _calculate_file_id(
+            fake_subtitle_data,
+            "text/vtt",
+            filename=f'{hashlib.md5(b"English").hexdigest()}.vtt',
+        )
+        self.assertIn(expected_empty_subtitle_url, el.video.subtitles[0].url)
+        self.assertIn(expected_english_subtitle_url, el.video.subtitles[1].url)
+
+    def test_st_video_subtitles_path(self):
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+
+        with NamedTemporaryFile(suffix=".vtt", mode="wb") as tmp_file:
+            p = Path(tmp_file.name)
+            tmp_file.write(fake_sub_content)
+            tmp_file.flush()
+
+            st.video(fake_video_data, subtitles=p)
+
+        expected_english_subtitle_url = _calculate_file_id(
+            fake_sub_content,
+            "text/vtt",
+            filename=f'{hashlib.md5(b"default").hexdigest()}.vtt',
+        )
+
+        el = self.get_delta_from_queue().new_element
+        self.assertIn(expected_english_subtitle_url, el.video.subtitles[0].url)
+
+    def test_singe_subtitle_exception(self):
+        """Test that an error is raised if invalid subtitles is provided."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.video(fake_video_data, subtitles="invalid_subtitles")
+        self.assertEqual(
+            str(e.exception),
+            "Failed to process the provided subtitle: default",
+        )
+
+    def test_dict_subtitle_video_exception(self):
+        """Test that an error is raised if invalid subtitles in dict is provided."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        fake_sub_content = b"WEBVTT\n\n\n1\n00:01:47.250 --> 00:01:50.500\n`hello."
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            st.video(
+                fake_video_data,
+                subtitles={
+                    "English": fake_sub_content,
+                    "": "",  # empty subtitle label and value are also valid
+                    "Martian": "invalid_subtitles",
+                },
+            )
+        self.assertEqual(
+            str(e.exception),
+            "Failed to process the provided subtitle: Martian",
         )
