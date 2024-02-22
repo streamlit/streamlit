@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 
 from playwright.sync_api import Page, expect
 
@@ -19,5 +20,4 @@ def test_audio_has_correct_properties(app: Page):
     audio = app.get_by_test_id("stAudio")
     expect(audio).to_be_visible()
     expect(audio).to_have_attribute("controls", "")
-    # the src attribute will change based off of machine so do a non None check
-    assert audio.get_attribute("src") != None
+    expect(audio).to_have_attribute("src", re.compile(r".*media.*wav"))

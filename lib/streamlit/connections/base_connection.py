@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
@@ -68,7 +70,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         self._config_section_hash = calc_md5(json.dumps(self._secrets.to_dict()))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
 
-        self._raw_instance: Optional[RawConnectionT] = self._connect(**kwargs)
+        self._raw_instance: RawConnectionT | None = self._connect(**kwargs)
 
     def __del__(self) -> None:
         secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)

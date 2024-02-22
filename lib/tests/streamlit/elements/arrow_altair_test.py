@@ -638,6 +638,23 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
+    def test_line_chart_with_non_contiguous_index(self):
+        """Test st.line_chart with a non-zero-based, non-contiguous, non-sorted index."""
+        df = pd.DataFrame(
+            {
+                "a": [11, 2, 55],
+                "b": [100, 101, 102],
+                "c": [200, 201, 202],
+                "d": [300, 301, 302],
+            }
+        )
+        df.set_index("a", inplace=True)
+
+        # There used to be a bug where this line would throw an exception.
+        # (Because some color-handling code was dependent on the DF index starting at 0)
+        # So if there's no exception, then the test passes.
+        st.line_chart(df, x="b", y="c", color="d")
+
     @parameterized.expand(ST_CHART_ARGS)
     def test_unused_columns_are_dropped(
         self, chart_command: Callable, altair_type: str

@@ -415,6 +415,7 @@ function DataFrame({
     <StyledResizableContainer
       data-testid="stDataFrame"
       className="stDataFrame"
+      hasCustomizedScrollbars={hasCustomizedScrollbars}
       ref={resizableContainerRef}
       onMouseDown={e => {
         if (resizableContainerRef.current && hasCustomizedScrollbars) {

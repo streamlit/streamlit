@@ -14,20 +14,24 @@
 
 """Streamlit support for Plotly charts."""
 
+from __future__ import annotations
+
 import json
 import urllib.parse
-from typing import TYPE_CHECKING, Any, Dict, List, Set, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
 
 import plotly.graph_objs as go
-from typing_extensions import Final, Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.streamlit_plotly_theme import (
+    configure_streamlit_plotly_theme,
+)
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
@@ -43,23 +47,12 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-
-try:
-    import plotly.io as pio
-
-    import streamlit.elements.lib.streamlit_plotly_theme
-
-    pio.templates.default = "streamlit"
-except ModuleNotFoundError:
-    # We have imports here because it takes too loo long to load the template default for the first graph to load
-    # We do nothing if Plotly is not installed. This is expected since Plotly is an optional dependency.
-    pass
-
-LOGGER: Final = get_logger(__name__)
+# We need to configure the Plotly theme before any Plotly figures are created:
+configure_streamlit_plotly_theme()
 
 SharingMode: TypeAlias = Literal["streamlit", "private", "public", "secret"]
 
-SHARING_MODES: Set[SharingMode] = {
+SHARING_MODES: set[SharingMode] = {
     # This means the plot will be sent to the Streamlit app rather than to
     # Plotly.
     "streamlit",
@@ -93,13 +86,13 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         # TODO(willhuang1997): This needs to be changed to False
         on_select: bool | str | WidgetCallback = None,
         **kwargs: Any,
         # What we return will be an json dictionary and will need to fix this type after
-    ) -> Union["DeltaGenerator", Dict]:
+    ) -> Union[DeltaGenerator, Dict]:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -234,7 +227,7 @@ class PlotlyMixin:
             return self.dg
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -244,7 +237,7 @@ def marshall(
     figure_or_data: FigureOrData,
     use_container_width: bool,
     sharing: SharingMode,
-    theme: Union[None, Literal["streamlit"]],
+    theme: Literal["streamlit"] | None,
     key: Key | None,
     on_select: bool | str | WidgetCallback | None,
     **kwargs: Any,
@@ -300,7 +293,7 @@ def marshall(
 
 
 @caching.cache
-def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> "go.Figure":
+def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> go.Figure:
     """Call plotly.plot wrapped in st.cache.
 
     This is so we don't unnecessarily upload data to Plotly's SASS if nothing

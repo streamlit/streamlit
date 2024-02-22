@@ -13,13 +13,12 @@
 # limitations under the License.
 
 """A Python wrapper around Vega-Lite."""
+
 from __future__ import annotations
 
 import inspect
 import json
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union, cast
-
-from typing_extensions import Final, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
@@ -27,7 +26,6 @@ from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
@@ -90,12 +88,12 @@ class ArrowVegaLiteMixin:
     def vega_lite_chart(
         self,
         data: Data = None,
-        spec: Dict[str, Any] | None = None,
+        spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
         on_selection: Union[str, Callable[..., None], None] = None,
         **kwargs: Any,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -168,7 +166,7 @@ class ArrowVegaLiteMixin:
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -176,9 +174,9 @@ class ArrowVegaLiteMixin:
 def marshall(
     proto: ArrowVegaLiteChartProto,
     data: Data = None,
-    spec: Optional[Dict[str, Any]] = None,
+    spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
-    theme: Union[None, Literal["streamlit"]] = "streamlit",
+    theme: None | Literal["streamlit"] = "streamlit",
     **kwargs,
 ):
     """Construct a Vega-Lite chart object.
@@ -255,8 +253,8 @@ _CHANNELS = {
     "x2",
     "y2",
     "xError",
-    "yError2",
-    "xError",
+    "xError2",
+    "yError",
     "yError2",
     "longitude",
     "latitude",

@@ -175,6 +175,7 @@ export const createThemeOverrides = (
       calendarDayForegroundSelectedHighlighted: colors.white,
       calendarDayForegroundPseudoSelectedHighlighted: colors.bodyText,
       menuFontHighlighted: colors.bodyText,
+      menuFontSelected: colors.bodyText,
 
       modalCloseColor: colors.bodyText,
 

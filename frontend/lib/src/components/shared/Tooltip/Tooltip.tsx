@@ -123,7 +123,8 @@ function Tooltip({
           justifyContent: inline ? "flex-end" : "",
           ...style,
         }}
-        data-testid="tooltipHoverTarget"
+        data-testid="stTooltipHoverTarget"
+        className="stTooltipHoverTarget"
       >
         {children}
       </div>

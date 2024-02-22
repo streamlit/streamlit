@@ -14,10 +14,13 @@
 
 """A script which is run when the Streamlit package is executed."""
 
+from __future__ import annotations
+
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+# We cannot lazy-load click here because its used via decorators.
 import click
 
 import streamlit.runtime.caching as caching
@@ -37,7 +40,7 @@ LOG_LEVELS = ("error", "warning", "info", "debug")
 
 def _convert_config_option_to_click_option(
     config_option: ConfigOption,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Composes given config option options as options for click lib."""
     option = f"--{config_option.key}"
     param = config_option.key.replace(".", "_")
@@ -196,7 +199,7 @@ def main_run(target: str, args=None, **kwargs):
     will download the script to a temporary file and runs this file.
 
     """
-    from validators import url
+    from streamlit import url_util
 
     bootstrap.load_config_options(flag_options=kwargs)
 
@@ -211,13 +214,11 @@ def main_run(target: str, args=None, **kwargs):
                 f"Streamlit requires raw Python (.py) files, not {extension}.\nFor more information, please see https://docs.streamlit.io"
             )
 
-    if url(target):
+    if url_util.is_url(target):
         from streamlit.temporary_directory import TemporaryDirectory
 
         with TemporaryDirectory() as temp_dir:
             from urllib.parse import urlparse
-
-            from streamlit import url_util
 
             path = urlparse(target).path
             main_script_path = os.path.join(
@@ -233,7 +234,7 @@ def main_run(target: str, args=None, **kwargs):
         _main_run(target, args, flag_options=kwargs)
 
 
-def _get_command_line_as_string() -> Optional[str]:
+def _get_command_line_as_string() -> str | None:
     import subprocess
 
     parent = click.get_current_context().parent
@@ -253,8 +254,8 @@ def _get_command_line_as_string() -> Optional[str]:
 
 def _main_run(
     file,
-    args: Optional[List[str]] = None,
-    flag_options: Optional[Dict[str, Any]] = None,
+    args: list[str] | None = None,
+    flag_options: dict[str, Any] | None = None,
 ) -> None:
     if args is None:
         args = []

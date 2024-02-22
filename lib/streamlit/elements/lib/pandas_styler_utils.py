@@ -12,19 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Any, List, Mapping, TypeVar
+from __future__ import annotations
 
-import pandas as pd
+from typing import TYPE_CHECKING, Any, Mapping, TypeVar
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 
 if TYPE_CHECKING:
+    from pandas import DataFrame
     from pandas.io.formats.style import Styler
 
 
-def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
+def marshall_styler(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
     """Marshall pandas.Styler into an Arrow proto.
 
     Parameters
@@ -39,6 +40,8 @@ def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> N
         If pandas.Styler uuid is not provided, this value will be used.
 
     """
+    import pandas as pd
+
     styler_data_df: pd.DataFrame = styler.data
     if styler_data_df.size > int(pd.options.styler.render.max_elements):
         raise StreamlitAPIException(
@@ -63,7 +66,7 @@ def marshall_styler(proto: ArrowProto, styler: "Styler", default_uuid: str) -> N
     _marshall_display_values(proto, styler_data_df, pandas_styles)
 
 
-def _marshall_uuid(proto: ArrowProto, styler: "Styler", default_uuid: str) -> None:
+def _marshall_uuid(proto: ArrowProto, styler: Styler, default_uuid: str) -> None:
     """Marshall pandas.Styler uuid into an Arrow proto.
 
     Parameters
@@ -84,7 +87,7 @@ def _marshall_uuid(proto: ArrowProto, styler: "Styler", default_uuid: str) -> No
     proto.styler.uuid = str(styler.uuid)
 
 
-def _marshall_caption(proto: ArrowProto, styler: "Styler") -> None:
+def _marshall_caption(proto: ArrowProto, styler: Styler) -> None:
     """Marshall pandas.Styler caption into an Arrow proto.
 
     Parameters
@@ -101,7 +104,7 @@ def _marshall_caption(proto: ArrowProto, styler: "Styler") -> None:
 
 
 def _marshall_styles(
-    proto: ArrowProto, styler: "Styler", styles: Mapping[str, Any]
+    proto: ArrowProto, styler: Styler, styles: Mapping[str, Any]
 ) -> None:
     """Marshall pandas.Styler styles into an Arrow proto.
 
@@ -144,7 +147,7 @@ def _marshall_styles(
 M = TypeVar("M", bound=Mapping[str, Any])
 
 
-def _trim_pandas_styles(styles: List[M]) -> List[M]:
+def _trim_pandas_styles(styles: list[M]) -> list[M]:
     """Filter out empty styles.
 
     Every cell will have a class, but the list of props
@@ -215,7 +218,7 @@ def _pandas_style_to_css(
 
 
 def _marshall_display_values(
-    proto: ArrowProto, df: pd.DataFrame, styles: Mapping[str, Any]
+    proto: ArrowProto, df: DataFrame, styles: Mapping[str, Any]
 ) -> None:
     """Marshall pandas.Styler display values into an Arrow proto.
 
@@ -235,7 +238,7 @@ def _marshall_display_values(
     proto.styler.display_values = type_util.data_frame_to_bytes(new_df)
 
 
-def _use_display_values(df: pd.DataFrame, styles: Mapping[str, Any]) -> pd.DataFrame:
+def _use_display_values(df: DataFrame, styles: Mapping[str, Any]) -> DataFrame:
     """Create a new pandas.DataFrame where display values are used instead of original ones.
 
     Parameters

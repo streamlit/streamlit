@@ -350,6 +350,25 @@ class AppSessionTest(unittest.TestCase):
 
             self.assertIsNone(session._debug_last_backmsg_id)
 
+    @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
+    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
+    def test_sets_state_to_not_running_on_rerun_event(self):
+        session = _create_test_session()
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._state = AppSessionState.APP_IS_RUNNING
+
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                forward_msg=ForwardMsg(),
+            )
+
+            self.assertEqual(session._state, AppSessionState.APP_NOT_RUNNING)
+
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
         session._run_on_save = True
@@ -802,7 +821,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         session.handle_backmsg(msg)
         self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     async def test_handles_app_heartbeat_backmsg(self, patched_logger):
         session = _create_test_session(asyncio.get_running_loop())
         with patch.object(
@@ -877,7 +896,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         self.assertEqual(new_session_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_session_msg.custom_theme.background_color, "white")
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_base_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (
@@ -893,7 +912,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
         )
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_font_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (

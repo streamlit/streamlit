@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from abc import abstractmethod
 from enum import Enum
-from typing import Optional, Union
-
-from typing_extensions import Protocol
+from typing import Protocol
 
 
 class MediaFileKind(Enum):
@@ -43,17 +43,17 @@ class MediaFileStorage(Protocol):
     @abstractmethod
     def load_and_get_id(
         self,
-        path_or_data: Union[str, bytes],
+        path_or_data: str | bytes,
         mimetype: str,
         kind: MediaFileKind,
-        filename: Optional[str] = None,
+        filename: str | None = None,
     ) -> str:
         """Load the given file path or bytes into the manager and return
         an ID that uniquely identifies it.
 
-        It’s an error to pass a URL to this function. (Media stored at
+        It's an error to pass a URL to this function. (Media stored at
         external URLs can be served directly to the Streamlit frontend;
-        there’s no need to store this data in MediaFileStorage.)
+        there's no need to store this data in MediaFileStorage.)
 
         Parameters
         ----------
@@ -61,7 +61,7 @@ class MediaFileStorage(Protocol):
             A path to a file, or the file's raw data as bytes.
 
         mimetype
-            The media’s mimetype. Used to set the Content-Type header when
+            The media's mimetype. Used to set the Content-Type header when
             serving the media over HTTP.
 
         kind

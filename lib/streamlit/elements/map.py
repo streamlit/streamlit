@@ -14,24 +14,14 @@
 
 """A wrapper for simple PyDeck scatter charts."""
 
+from __future__ import annotations
+
 import copy
 import hashlib
 import json
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Collection,
-    Dict,
-    Iterable,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Collection, Dict, Final, Iterable, Union, cast
 
-import pandas as pd
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit.elements.deck_gl_json_chart as deck_gl_json_chart
 from streamlit import config, type_util
@@ -42,13 +32,14 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
+    from pandas import DataFrame
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
 
 Data: TypeAlias = Union[
-    pd.DataFrame,
+    "DataFrame",
     "Styler",
     Iterable[Any],
     Dict[Any, Any],
@@ -56,7 +47,7 @@ Data: TypeAlias = Union[
 ]
 
 # Map used as the basis for st.map.
-_DEFAULT_MAP: Final[Dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
+_DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
@@ -95,27 +86,29 @@ class MapMixin:
         self,
         data: Data = None,
         *,
-        latitude: Optional[str] = None,
-        longitude: Optional[str] = None,
-        color: Union[None, str, Color] = None,
-        size: Union[None, str, float] = None,
-        zoom: Optional[int] = None,
+        latitude: str | None = None,
+        longitude: str | None = None,
+        color: None | str | Color = None,
+        size: None | str | float = None,
+        zoom: int | None = None,
         use_container_width: bool = True,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
         This is a wrapper around ``st.pydeck_chart`` to quickly create
         scatterplot charts on top of a map, with auto-centering and auto-zoom.
 
         When using this command, Mapbox provides the map tiles to render map
-        content. Note that Mapbox is a third-party product, the use of which is
-        governed by Mapbox's Terms of Use.
+        content. Note that Mapbox is a third-party product and Streamlit accepts
+        no responsibility or liability of any kind for Mapbox or for any content
+        or information made available by Mapbox.
 
         Mapbox requires users to register and provide a token before users can
         request map tiles. Currently, Streamlit provides this token for you, but
         this could change at any time. We strongly recommend all users create and
         use their own personal Mapbox token to avoid any disruptions to their
-        experience. You can do this with the ``mapbox.token`` config option.
+        experience. You can do this with the ``mapbox.token`` config option. The
+        use of Mapbox is governed by Mapbox's Terms of Use.
 
         To get a token for yourself, create an account at https://mapbox.com.
         For more info on how to set config options, see
@@ -243,19 +236,19 @@ class MapMixin:
         return self.dg._enqueue("deck_gl_json_chart", map_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
 def to_deckgl_json(
     data: Data,
-    lat: Optional[str],
-    lon: Optional[str],
-    size: Union[None, str, float],
-    color: Union[None, str, Collection[float]],
-    map_style: Optional[str],
-    zoom: Optional[int],
+    lat: str | None,
+    lon: str | None,
+    size: None | str | float,
+    color: None | str | Collection[float],
+    map_style: str | None,
+    zoom: int | None,
 ) -> str:
     if data is None:
         return json.dumps(_DEFAULT_MAP)
@@ -320,10 +313,10 @@ def to_deckgl_json(
 
 
 def _get_lat_or_lon_col_name(
-    data: pd.DataFrame,
+    data: DataFrame,
     human_readable_name: str,
-    col_name_from_user: Optional[str],
-    default_col_names: Set[str],
+    col_name_from_user: str | None,
+    default_col_names: set[str],
 ) -> str:
     """Returns the column name to be used for latitude or longitude."""
 
@@ -366,10 +359,10 @@ def _get_lat_or_lon_col_name(
 
 
 def _get_value_and_col_name(
-    data: pd.DataFrame,
+    data: DataFrame,
     value_or_name: Any,
     default_value: Any,
-) -> Tuple[Any, Optional[str]]:
+) -> tuple[Any, str | None]:
     """Take a value_or_name passed in by the Streamlit developer and return a PyDeck
     argument and column name for that property.
 
@@ -381,7 +374,7 @@ def _get_value_and_col_name(
     - If the user passes size="my_col_123", this returns "@@=my_col_123" and "my_col_123".
     """
 
-    pydeck_arg: Union[str, float]
+    pydeck_arg: str | float
 
     if isinstance(value_or_name, str) and value_or_name in data.columns:
         col_name = value_or_name
@@ -398,10 +391,10 @@ def _get_value_and_col_name(
 
 
 def _convert_color_arg_or_column(
-    data: pd.DataFrame,
-    color_arg: Union[str, Color],
-    color_col_name: Optional[str],
-) -> Union[None, str, IntColorTuple]:
+    data: DataFrame,
+    color_arg: str | Color,
+    color_col_name: str | None,
+) -> None | str | IntColorTuple:
     """Converts color to a format accepted by PyDeck.
 
     For example:
@@ -412,11 +405,11 @@ def _convert_color_arg_or_column(
     NOTE: This function mutates the data argument.
     """
 
-    color_arg_out: Union[None, str, IntColorTuple] = None
+    color_arg_out: None | str | IntColorTuple = None
 
     if color_col_name is not None:
         # Convert color column to the right format.
-        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name][0]):
+        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):
             # Use .loc[] to avoid a SettingWithCopyWarning in some cases.
             data.loc[:, color_col_name] = data.loc[:, color_col_name].map(
                 to_int_color_tuple
@@ -436,7 +429,9 @@ def _convert_color_arg_or_column(
     return color_arg_out
 
 
-def _get_viewport_details(data, lat_col_name, lon_col_name, zoom):
+def _get_viewport_details(
+    data: DataFrame, lat_col_name: str, lon_col_name: str, zoom: int | None
+) -> tuple[int, float, float]:
     """Auto-set viewport when not fully specified by user."""
     min_lat = data[lat_col_name].min()
     max_lat = data[lat_col_name].max()

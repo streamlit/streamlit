@@ -342,7 +342,7 @@ e2etest:
 playwright:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" -r aR -v
+	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 
 .PHONY: loc
 # Count the number of lines of code in the project.
@@ -393,36 +393,6 @@ headers:
 gen-min-dep-constraints:
 	make develop >/dev/null
 	python scripts/get_min_versions.py >lib/min-constraints-gen.txt
-
-.PHONY: build-test-env
-# Build docker image that mirrors circleci
-build-test-env:
-	if ! command -v node &> /dev/null ; then \
-		echo "node not installed."; \
-		exit 1; \
-	fi
-	if [[ ! -f lib/streamlit/proto/Common_pb2.py ]]; then \
-		echo "Proto files not generated."; \
-		exit 1; \
-	fi
-	docker build \
-		--build-arg UID=$$(id -u) \
-		--build-arg GID=$$(id -g) \
-		--build-arg OSTYPE=$$(uname) \
-		--build-arg NODE_VERSION=$$(node --version) \
-		-t streamlit_e2e_tests \
-		-f e2e/Dockerfile \
-		.
-
-.PHONY: run-test-env
-# Run test env image with volume mounts
-run-test-env:
-	./e2e/run_compose.py
-
-.PHONY: connect-test-env
-# Connect to an already-running test env container
-connect-test-env:
-	docker exec -it streamlit_e2e_tests /bin/bash
 
 .PHONY: pre-commit-install
 pre-commit-install:
