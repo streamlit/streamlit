@@ -83,7 +83,9 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const childProps = { ...props, ...{ node } }
 
   const disableFullscreenMode =
-    props.disableFullscreenMode || notNullOrUndefined(node.deltaBlock.popover)
+    props.disableFullscreenMode ||
+    notNullOrUndefined(node.deltaBlock.dialog) ||
+    notNullOrUndefined(node.deltaBlock.popover)
 
   const child: ReactElement = (
     <LayoutBlock
