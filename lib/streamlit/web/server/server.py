@@ -29,7 +29,8 @@ import tornado.websocket
 from tornado.httpserver import HTTPServer
 
 from streamlit import cli_util, config, file_util, source_util, util
-from streamlit.components.v1.components import ComponentRegistry
+from streamlit.components.v1.component_registry import ComponentRegistry
+from streamlit.components.v1.default_component_registry import DefaultComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -231,6 +232,9 @@ class Server:
         _set_tornado_log_levels()
 
         self._main_script_path = main_script_path
+
+        # Initialize the ComponentRegistry
+        ComponentRegistry.initialize(registry=DefaultComponentRegistry())
 
         # Initialize MediaFileStorage and its associated endpoint
         media_file_storage = MemoryMediaFileStorage(MEDIA_ENDPOINT)

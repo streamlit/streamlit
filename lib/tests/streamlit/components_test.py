@@ -25,8 +25,14 @@ import pytest
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.components.v1 import component_arrow
-from streamlit.components.v1.components import ComponentRegistry, CustomComponent
-from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
+from streamlit.components.v1.component_registry import ComponentRegistry
+from streamlit.components.v1.custom_component import CustomComponent
+from streamlit.components.v1.default_component_registry import DefaultComponentRegistry
+from streamlit.errors import (
+    CustomComponentError,
+    DuplicateWidgetID,
+    StreamlitAPIException,
+)
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -51,6 +57,9 @@ def _serialize_bytes_arg(key: str, value: Any) -> SpecialArg:
 
 class DeclareComponentTest(unittest.TestCase):
     """Test component declaration."""
+
+    def setUp(self) -> None:
+        ComponentRegistry.initialize(DefaultComponentRegistry())
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
@@ -96,7 +105,8 @@ class DeclareComponentTest(unittest.TestCase):
             return path == PATH or path == os.path.abspath(PATH)
 
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+            "streamlit.components.v1.component_registry.os.path.isdir",
+            side_effect=isdir,
         ):
             component = components.declare_component("test", path=PATH)
 
@@ -137,9 +147,21 @@ class DeclareComponentTest(unittest.TestCase):
             str(exception_message.value),
         )
 
+    def test_error_when_registry_not_explicitly_initialized(self):
+        ComponentRegistry._instance = None
+        with pytest.raises(CustomComponentError):
+            components.declare_component("test", path=PATH)
+
+    def test_error_when_registry_initialized_more_than_once(self):
+        with pytest.raises(CustomComponentError):
+            ComponentRegistry.initialize(DefaultComponentRegistry())
+
 
 class ComponentRegistryTest(unittest.TestCase):
     """Test component registration."""
+
+    def setUp(self) -> None:
+        ComponentRegistry.initialize(DefaultComponentRegistry())
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
@@ -153,7 +175,8 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+            "streamlit.components.v1.component_registry.os.path.isdir",
+            side_effect=isdir,
         ):
             registry.register_component(
                 CustomComponent("test_component", path=test_path)
@@ -197,7 +220,8 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir", side_effect=isdir
+            "streamlit.components.v1.component_registry.os.path.isdir",
+            side_effect=isdir,
         ):
             registry.register_component(CustomComponent("test_component", test_path_1))
             registry.register_component(CustomComponent("test_component", test_path_1))
@@ -212,7 +236,12 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
     def setUp(self):
         super().setUp()
+        ComponentRegistry.initialize(DefaultComponentRegistry())
         self.test_component = components.declare_component("test", url=URL)
+
+    def tearDown(self):
+        super().tearDown()
+        ComponentRegistry._instance = None
 
     def test_only_json_args(self):
         """Test that component with only json args is marshalled correctly."""
