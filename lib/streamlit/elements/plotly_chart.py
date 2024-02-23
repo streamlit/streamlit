@@ -125,6 +125,13 @@ class PlotlyMixin:
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
 
+        on_select: bool or str or callable
+            Controls the behavior in response to selection events in the chart. Can be one of:
+
+            - “ignore” (default): Streamlit will not react to any selection events in the chart.
+            - “rerun”: Streamlit will rerun the app when the user selects data points in the chart (by clicking on them or using the box/lasso tool). In this case, st.plotly_chart will return the selection data (i.e. the selected points plus metadata for the box/lasso tool) as a dictionary.
+            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a callback function before the rest of the app. The selection data can be retrieved through session state by setting the key parameter.
+
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
 
