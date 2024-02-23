@@ -50,6 +50,7 @@ function getNotificationKind(
 
 export interface AlertContainerProps {
   width?: number
+  icon?: string
   kind: Kind
   children: ReactNode
 }
@@ -67,6 +68,7 @@ export interface AlertContainerProps {
 export default function AlertContainer({
   kind,
   width,
+  icon,
   children,
 }: AlertContainerProps): ReactElement {
   const testid = kind.charAt(0).toUpperCase() + kind.slice(1)
@@ -99,7 +101,10 @@ export default function AlertContainer({
         },
       }}
     >
-      <StyledAlertContent data-testid={`stNotificationContent${testid}`}>
+      <StyledAlertContent
+        data-testid={`stNotificationContent${testid}`}
+        icon={icon}
+      >
         {children}
       </StyledAlertContent>
     </Notification>

@@ -15,14 +15,14 @@
  */
 
 import styled from "@emotion/styled"
-import { StyledEmojiIcon } from "@streamlit/lib/src/components/shared/Icon/styled-components"
 
-export const StyledIconAlertContent = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing.sm,
+export interface StyledAlertContentProps {
+  icon?: string
+}
 
-  [StyledEmojiIcon as any]: {
-    position: "relative",
-    top: "2px",
-  },
-}))
+export const StyledAlertContent = styled.div<StyledAlertContentProps>(
+  ({ theme, icon }) => ({
+    // If there's an icon, need to account for that space
+    width: icon ? `calc(100% - 1.25rem - ${theme.spacing.xs})` : "100%",
+  })
+)
