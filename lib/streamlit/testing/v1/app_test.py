@@ -563,7 +563,7 @@ class AppTest:
             Sequence of all ``st.expander`` elements. Individual elements can be
             accessed from a list by index (order on the page). For
             example, ``at.expander[0]`` for the first element. Expandable is an
-            extension of the Element class.
+            extension of the Block class.
         """
         return self._tree.expander
 
@@ -773,7 +773,7 @@ class AppTest:
             Sequence of all ``st.status`` elements. Individual elements can be
             accessed from a list by index (order on the page). For
             example, ``at.status[0]`` for the first element. Status is an
-            extension of the Element class.
+            extension of the Block class.
         """
         return self._tree.status
 
