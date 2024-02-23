@@ -229,6 +229,17 @@ def test_exception():
     repr(sr.exception[0])
 
 
+def test_expander():
+    def script():
+        import streamlit as st
+
+        with st.expander("expander"):
+            st.write("some text")
+
+    at = AppTest.from_function(script).run()
+    assert at.markdown[0].value == "some text"
+
+
 def test_markdown_exception():
     script = AppTest.from_string(
         """
@@ -681,6 +692,27 @@ def test_slider():
 
     # Verify that creating the reprs does not throw
     repr(sr.slider[0])
+
+
+def test_status():
+    def script():
+        import streamlit as st
+
+        # Not using `with` because exiting that changes status to "complete"
+        running = st.status("running status", state="running")
+        running.text("waiting")
+
+        with st.status("complete status", state="complete"):
+            st.text("yay")
+
+        with st.status("error status", state="error"):
+            st.text("oh no")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.status) == 3
+    assert at.status[0].state == "running"
+    assert at.status[1].state == "complete"
+    assert at.status[2].state == "error"
 
 
 def test_table():
