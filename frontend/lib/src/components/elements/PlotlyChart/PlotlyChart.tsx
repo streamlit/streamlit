@@ -307,12 +307,10 @@ function PlotlyFigure({
     }
 
     // select_box to replicate pythonic return value
-    returnValue.select.box =
-      selectedBoxes.length > 0 ? selectedBoxes : undefined
+    returnValue.select.box = selectedBoxes
 
     // lasso_points to replicate pythonic return value
-    returnValue.select.lasso =
-      selectedLassos.length > 0 ? selectedLassos : undefined
+    returnValue.select.lasso = selectedLassos
 
     returnValue.select.points = returnValue.select.points.map((point: any) =>
       keysToSnakeCase(point)
