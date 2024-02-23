@@ -36,6 +36,10 @@ message PlotlyChart {
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
 
+  string id = 7;
+
+  bool on_select = 8;
+
   reserved 3, 4;
 
   // widget id

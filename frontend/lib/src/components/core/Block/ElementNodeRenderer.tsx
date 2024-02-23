@@ -57,7 +57,7 @@ import {
   Heading as HeadingProto,
 } from "@streamlit/lib/src/proto"
 
-import React, { ReactElement, Suspense } from "react"
+import React, { ReactElement, Suspense, useState } from "react"
 import debounceRender from "react-debounce-render"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
@@ -389,6 +389,7 @@ const RawElementNodeRenderer = (
           element={node.element.plotlyChart as PlotlyChartProto}
           widgetMgr={widgetProps.widgetMgr}
           height={undefined}
+          widgetMgr={widgetProps.widgetMgr}
           {...elementProps}
         />
       )

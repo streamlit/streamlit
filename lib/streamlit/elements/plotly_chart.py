@@ -20,6 +20,7 @@ import json
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
 
+# TODO(willhuang1997): Check if this can be lazy loaded
 import plotly.graph_objs as go
 from typing_extensions import TypeAlias
 
@@ -37,6 +38,7 @@ from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.session_state_proxy import SessionStateProxy
 from streamlit.type_util import Key, to_key
 
@@ -92,7 +94,7 @@ class PlotlyMixin:
         on_select: bool | str | WidgetCallback = None,
         **kwargs: Any,
         # What we return will be an json dictionary and will need to fix this type after
-    ) -> Union[DeltaGenerator, Dict]:
+    ) -> Union["DeltaGenerator", Dict]:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -170,8 +172,12 @@ class PlotlyMixin:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
-
-        plotly_chart_proto.form_id = current_form_id(self.dg)
+        key = to_key(key)
+        check_callback_rules(self.dg, on_select)
+        check_session_state_rules(default_value={}, key=key, writes_allowed=False)
+        if current_form_id(self.dg):
+            # TODO(willhuang1997): double check the message of this
+            raise StreamlitAPIException("st.plotly_chart cannot be used inside forms!")
         marshall(
             plotly_chart_proto,
             figure_or_data,
@@ -202,10 +208,14 @@ class PlotlyMixin:
             widget_callback = None
         else:
             widget_callback = on_select
-        if on_select != False and on_select != ON_SELECTION_IGNORE:
+        if (
+            on_select != None
+            and on_select != False
+            and on_select != ON_SELECTION_IGNORE
+        ):
+            print("Registering widget!")
             widget_state = register_widget(
-                # TODO(willhuang1997): This should likely be changed to just "plotly_chart"
-                "plotly_chart_widget",
+                "plotly_chart",
                 plotly_chart_proto,
                 user_key=key,
                 on_change_handler=widget_callback,
@@ -282,14 +292,22 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
-    # TODO(willhuang1997): changing between onSelect doesn't change whether or not selection can be picked
     if on_select == False or on_select == None or on_select == ON_SELECTION_IGNORE:
         proto.on_select = False
     else:
         proto.on_select = True
-    if key is None:
-        key = ""
-    proto.id = key
+    ctx = get_script_run_ctx()
+    id = compute_widget_id(
+        "plotly_chart",
+        user_key=key,
+        figure_or_data=figure_or_data,
+        use_container_width=use_container_width,
+        sharing=sharing,
+        key=key,
+        theme=theme,
+        page=ctx.page_script_hash if ctx else None,
+    )
+    proto.id = id
 
 
 @caching.cache
