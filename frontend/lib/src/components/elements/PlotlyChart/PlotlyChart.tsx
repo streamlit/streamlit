@@ -307,11 +307,11 @@ function PlotlyFigure({
     }
 
     // select_box to replicate pythonic return value
-    returnValue.select.select_box =
+    returnValue.select.box =
       selectedBoxes.length > 0 ? selectedBoxes : undefined
 
     // lasso_points to replicate pythonic return value
-    returnValue.select.select_lasso =
+    returnValue.select.lasso =
       selectedLassos.length > 0 ? selectedLassos : undefined
 
     returnValue.select.points = returnValue.select.points.map((point: any) =>
