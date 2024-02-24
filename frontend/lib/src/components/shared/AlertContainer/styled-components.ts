@@ -16,44 +16,32 @@
 
 import styled from "@emotion/styled"
 
-export interface StyledAlertContentProps {
-  icon?: string
-}
-
-export const StyledAlertContent = styled.div<StyledAlertContentProps>(
-  ({ theme, icon }) => ({
-    ...(icon
-      ? {
-          display: "flex",
-          gap: theme.spacing.xs,
-        }
-      : {}),
-    pre: {
-      backgroundColor: theme.colors.transparent,
-      paddingTop: theme.spacing.lg,
-      paddingBottom: theme.spacing.lg,
-      paddingRight: theme.spacing.lg,
-      paddingLeft: theme.spacing.lg,
-      border: `1px solid ${theme.colors.fadedText10}`,
-
-      "pre, code": {
-        backgroundColor: theme.colors.transparent,
-        color: "inherit",
-      },
-    },
-
-    code: {
-      backgroundColor: theme.colors.transparent,
-      padding: theme.spacing.none,
-    },
+export const StyledAlertContent = styled.div(({ theme }) => ({
+  pre: {
+    backgroundColor: theme.colors.transparent,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    paddingLeft: theme.spacing.lg,
+    border: `1px solid ${theme.colors.fadedText10}`,
 
     "pre, code": {
+      backgroundColor: theme.colors.transparent,
       color: "inherit",
     },
+  },
 
-    a: {
-      color: "inherit",
-      textDecoration: "underline",
-    },
-  })
-)
+  code: {
+    backgroundColor: theme.colors.transparent,
+    padding: theme.spacing.none,
+  },
+
+  "pre, code": {
+    color: "inherit",
+  },
+
+  a: {
+    color: "inherit",
+    textDecoration: "underline",
+  },
+}))

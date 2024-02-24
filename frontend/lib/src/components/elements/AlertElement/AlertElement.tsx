@@ -55,16 +55,25 @@ export default function AlertElement({
   kind,
   width,
 }: AlertElementProps): ReactElement {
+  const markdownWidth = {
+    // Pass down width to fix issue #6394
+    width: icon ? `calc(100% - 1.25rem - 0.5rem)` : "100%",
+  }
+
   return (
     <div className="stAlert" data-testid="stAlert">
-      <AlertContainer width={width} kind={kind} icon={icon}>
-        {icon && (
-          <EmojiIcon testid="stAlertEmojiIcon" size="lg">
-            {icon}
-          </EmojiIcon>
-        )}
-        <StyledAlertContent icon={icon}>
-          <StreamlitMarkdown source={body} allowHTML={false} />
+      <AlertContainer width={width} kind={kind}>
+        <StyledAlertContent>
+          {icon && (
+            <EmojiIcon testid="stAlertEmojiIcon" size="lg">
+              {icon}
+            </EmojiIcon>
+          )}
+          <StreamlitMarkdown
+            source={body}
+            allowHTML={false}
+            style={markdownWidth}
+          />
         </StyledAlertContent>
       </AlertContainer>
     </div>
