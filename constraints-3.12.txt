@@ -10,8 +10,8 @@ cfgv==3.4.0
 charset-normalizer==3.3.2
 click==8.1.7
 contourpy==1.2.0
-coverage==7.4.2
-cryptography==42.0.4
+coverage==7.4.3
+cryptography==42.0.5
 cycler==0.12.1
 distlib==0.3.8
 docutils==0.20.1
@@ -48,7 +48,7 @@ nodeenv==1.8.0
 numpy==1.26.4
 opencv-python==4.9.0.80
 packaging==23.2
-pandas==2.2.0
+pandas==2.2.1
 parameterized==0.9.0
 pathspec==0.12.1
 pillow==10.2.0
@@ -95,7 +95,7 @@ scipy==1.12.0
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
-setuptools==69.1.0
+setuptools==69.1.1
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
