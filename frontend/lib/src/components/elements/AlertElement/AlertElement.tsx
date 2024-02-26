@@ -56,8 +56,8 @@ export default function AlertElement({
   width,
 }: AlertElementProps): ReactElement {
   const markdownWidth = {
-    // Pass down width to fix issue #6394
-    width: icon ? `calc(100% - 1.25rem - 0.5rem)` : "100%",
+    // Fix issue #6394 - Need to account for 1.25rem padding + 0.5rem gap when icon present
+    width: icon ? `calc(100% - 1.75rem)` : "100%",
   }
 
   return (
