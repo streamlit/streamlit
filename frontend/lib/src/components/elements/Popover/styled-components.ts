@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 
 export const StyledPopoverButtonIcon = styled.div(({ theme }) => ({
-  marginLeft: theme.spacing.twoXSPx,
+  marginLeft: theme.spacing.threeXSPx,
   // This is a hacky way to offset the 5px "padding" of the expansion svg
   // icon. Reason is that we want to use the same padding to the right side
   // as the text on the left side. The alternative would be to overwrite the
