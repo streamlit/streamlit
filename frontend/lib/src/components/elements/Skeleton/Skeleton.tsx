@@ -23,16 +23,16 @@ import { SquareSkeleton } from "./styled-components"
 const RawSkeleton: FC<
   React.PropsWithChildren<{ element?: SkeletonProto }>
 > = ({ element }) => {
-  let css_height, css_width
+  let cssHeight, cssWidth
   if (element != undefined) {
-    css_height = element.height != null ? element.height + "px" : undefined
-    css_width = element.width != null ? element.width + "px" : undefined
+    cssHeight = element.height != null ? element.height + "px" : undefined
+    cssWidth = element.width != null ? element.width + "px" : undefined
   }
   return (
     <SquareSkeleton
       data-testid="stSkeleton"
-      height={css_height}
-      width={css_width}
+      height={cssHeight}
+      width={cssWidth}
     />
   )
 }

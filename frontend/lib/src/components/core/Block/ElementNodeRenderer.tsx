@@ -617,9 +617,7 @@ const RawElementNodeRenderer = (
       const skeletonProto = node.element.skeleton as SkeletonProto
       if (skeletonProto.style == SkeletonStyle.APP) {
         return <AppSkeleton /> // internal-only, does not use any of the width/height properties
-      } else {
-        return <Skeleton element={skeletonProto} />
-      }
+      return <Skeleton element={skeletonProto} />
     }
 
     case "slider": {
