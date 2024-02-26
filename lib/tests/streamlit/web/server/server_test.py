@@ -34,6 +34,7 @@ from parameterized import parameterized
 
 import streamlit.web.server.server
 from streamlit import config
+from streamlit.components.v1.component_registry import ComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeState
@@ -507,6 +508,9 @@ class ScriptCheckEndpointExistsTest(tornado.testing.AsyncHTTPTestCase):
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
         Runtime._instance = None
+        # Reset the component registry instance, as it will be re-initialized when
+        # the server is reset
+        ComponentRegistry._instance = None
         super().tearDown()
 
     def get_app(self):
@@ -545,6 +549,9 @@ class ScriptCheckEndpointDoesNotExistTest(tornado.testing.AsyncHTTPTestCase):
     def tearDown(self):
         config._set_option("server.scriptHealthCheckEnabled", self._old_config, "test")
         Runtime._instance = None
+        # Reset the component registry instance, as it will be re-initialized when
+        # the server is reset
+        ComponentRegistry._instance = None
         super().tearDown()
 
     def get_app(self):

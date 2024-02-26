@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import json
 import os
 import unittest
@@ -25,7 +26,10 @@ import pytest
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.components.v1 import component_arrow
-from streamlit.components.v1.component_registry import ComponentRegistry
+from streamlit.components.v1.component_registry import (
+    ComponentRegistry,
+    _get_module_name,
+)
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.components.v1.default_component_registry import DefaultComponentRegistry
 from streamlit.errors import (
@@ -147,6 +151,34 @@ class DeclareComponentTest(unittest.TestCase):
             str(exception_message.value),
         )
 
+    def test_module_name_not_none(self):
+        caller_frame = inspect.currentframe()
+        self.assertIsNotNone(caller_frame)
+        component_name = _get_module_name(caller_frame=caller_frame)
+
+        component = components.declare_component("test", url=URL)
+        self.assertEqual(
+            ComponentRegistry.instance().get_module_name(component.name),
+            component_name,
+        )
+
+    def test_get_registered_components(self):
+        component1 = components.declare_component("test1", url=URL)
+        component2 = components.declare_component("test2", url=URL)
+        component3 = components.declare_component("test3", url=URL)
+
+        registered_components = ComponentRegistry.instance().get_components()
+        self.assertEqual(
+            len(registered_components),
+            3,
+        )
+        registered_component_names = [
+            component.name for component in registered_components
+        ]
+        self.assertIn(component1.name, registered_component_names)
+        self.assertTrue(component2.name, registered_component_names)
+        self.assertTrue(component3.name, registered_component_names)
+
     def test_error_when_registry_not_explicitly_initialized(self):
         ComponentRegistry._instance = None
         with pytest.raises(CustomComponentError):
@@ -175,7 +207,7 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.component_registry.os.path.isdir",
+            "streamlit.components.v1.components.os.path.isdir",
             side_effect=isdir,
         ):
             registry.register_component(
@@ -220,7 +252,7 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.component_registry.os.path.isdir",
+            "streamlit.components.v1.components.os.path.isdir",
             side_effect=isdir,
         ):
             registry.register_component(CustomComponent("test_component", test_path_1))
