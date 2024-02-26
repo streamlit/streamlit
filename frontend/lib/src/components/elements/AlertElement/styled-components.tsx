@@ -26,4 +26,8 @@ export const StyledAlertContent = styled.div(({ theme }) => ({
     position: "relative",
     top: "2px",
   },
+
+  ".stCodeBlock code": {
+    paddingRight: "1rem",
+  },
 }))
