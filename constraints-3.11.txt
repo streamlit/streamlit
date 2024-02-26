@@ -6,7 +6,7 @@ attrs==23.2.0
 black==24.2.0
 blinker==1.7.0
 bokeh==2.4.3
-cachetools==5.3.2
+cachetools==5.3.3
 certifi==2024.2.2
 cffi==1.16.0
 cfgv==3.4.0
@@ -45,10 +45,10 @@ kiwisolver==1.4.5
 langchain==0.1.9
 langchain-community==0.0.24
 langchain-core==0.1.26
-langsmith==0.1.8
+langsmith==0.1.9
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
-marshmallow==3.20.2
+marshmallow==3.21.0
 matplotlib==3.8.3
 mdurl==0.1.2
 more-itertools==10.2.0
@@ -98,7 +98,7 @@ python-dateutil==2.8.2
 python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
-readme-renderer==42.0
+readme_renderer==43.0
 referencing==0.33.0
 requests==2.31.0
 requests-mock==1.11.0
