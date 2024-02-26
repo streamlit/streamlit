@@ -20,6 +20,7 @@ import tornado.web
 import tornado.websocket
 from tornado.websocket import WebSocketClientConnection
 
+from streamlit.components.v1.component_registry import ComponentRegistry
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
 from streamlit.runtime.app_session import AppSession
@@ -45,6 +46,10 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
         # We null it out in tearDown() so that it doesn't interfere with
         # future tests.
         Runtime._instance = None
+
+        # Reset the component registry instance, as it will be re-initialized when
+        # the server is reset
+        ComponentRegistry._instance = None
 
     def get_app(self) -> tornado.web.Application:
         self.server = Server(
