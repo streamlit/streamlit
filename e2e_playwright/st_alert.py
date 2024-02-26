@@ -62,3 +62,17 @@ st.error(text)
 st.warning(text)
 st.info(text)
 st.success(text)
+
+# Check resolution of issue #6394
+text = """
+Here is some code:
+
+```
+import streamlit as st
+st.write("Hello world!")
+# this is a very long comment just to demonstrate the overflowing behavior it goes on and on and on
+```
+"""
+
+st.error(text, icon="🚨")
+st.success(text)

@@ -17,12 +17,17 @@
 import styled from "@emotion/styled"
 import { StyledEmojiIcon } from "@streamlit/lib/src/components/shared/Icon/styled-components"
 
-export const StyledIconAlertContent = styled.div(({ theme }) => ({
+export const StyledAlertContent = styled.div(({ theme }) => ({
   display: "flex",
   gap: theme.spacing.sm,
+  width: "100%",
 
   [StyledEmojiIcon as any]: {
     position: "relative",
     top: "2px",
+  },
+
+  ".stCodeBlock code": {
+    paddingRight: "1rem",
   },
 }))
