@@ -55,7 +55,7 @@ class MediaMixin:
         start_time: int = 0,
         *,
         sample_rate: int | None = None,
-        end_time: int = None,
+        end_time: int | None = None,
         loop: bool = False,
     ) -> DeltaGenerator:
         """Display an audio player.
@@ -474,7 +474,7 @@ def marshall_audio(
     mimetype: str = "audio/wav",
     start_time: int = 0,
     sample_rate: int | None = None,
-    end_time: int = None,
+    end_time: int | None = None,
     loop: bool = False,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
