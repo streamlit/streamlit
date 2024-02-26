@@ -55,6 +55,8 @@ class MediaMixin:
         start_time: int = 0,
         *,
         sample_rate: int | None = None,
+        end_time: int = None,
+        loop: bool = False,
     ) -> DeltaGenerator:
         """Display an audio player.
 
@@ -76,6 +78,10 @@ class MediaMixin:
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
+        end_time: int
+            The time at which this element should stop playing.
+        loop: bool
+            Whether the audio should loop playback.
 
         Example
         -------
@@ -117,7 +123,16 @@ class MediaMixin:
                 "array."
             )
 
-        marshall_audio(coordinates, audio_proto, data, format, start_time, sample_rate)
+        marshall_audio(
+            coordinates,
+            audio_proto,
+            data,
+            format,
+            start_time,
+            sample_rate,
+            end_time,
+            loop,
+        )
         return self.dg._enqueue("audio", audio_proto)
 
     @gather_metrics("video")
@@ -459,6 +474,8 @@ def marshall_audio(
     mimetype: str = "audio/wav",
     start_time: int = 0,
     sample_rate: int | None = None,
+    end_time: int = None,
+    loop: bool = False,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -478,9 +495,16 @@ def marshall_audio(
         The time from which this element should start playing. (default: 0)
     sample_rate: int or None
         Optional param to provide sample_rate in case of numpy array
+    end_time: int
+        The time at which this element should stop playing
+    loop: bool
+        Whether the audio should loop playback.
     """
 
     proto.start_time = start_time
+    if end_time is not None:
+        proto.end_time = end_time
+    proto.loop = loop
 
     if isinstance(data, str) and url_util.is_url(
         data, allowed_schemas=("http", "https", "data")

@@ -31,6 +31,8 @@ export default function Audio({
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
+  const { loop } = element
+
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = element.startTime
@@ -47,6 +49,7 @@ export default function Audio({
       src={uri}
       className="stAudio"
       style={{ width }}
+      loop={loop}
     />
   )
 }
