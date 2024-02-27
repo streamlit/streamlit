@@ -23,5 +23,8 @@ export const StyledPopoverButtonIcon = styled.div(({ theme }) => ({
   // as the text on the left side. The alternative would be to overwrite the
   // right padding of the button, which would also be hacky and involve slightly
   // more logic.
+  // If the padding of the icon changes, this value needs to be adjusted.
+  // Also, if we want to apply the same adjustment for other elements, we should
+  // consider putting this into a theme variable or creating a shared styled component.
   marginRight: "-5px",
 }))
