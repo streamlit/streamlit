@@ -16,6 +16,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
@@ -199,22 +200,38 @@ class FragmentTest(unittest.TestCase):
         # fragment.
         assert call_count == 4
 
+    @parameterized.expand(
+        [
+            (None, None),
+            (3, 3.0),
+            (5.0, 5.0),
+            ("1 minute", 60.0),
+        ]
+    )
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_sends_message_if_run_every_arg_is_set(self, patched_get_script_run_ctx):
+    def test_run_every_arg_handling(
+        self,
+        run_every,
+        expected_interval,
+        patched_get_script_run_ctx,
+    ):
         ctx = MagicMock()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
-        @fragment(run_every=5.0)
+        @fragment(run_every=run_every)
         def my_fragment():
             pass
 
         my_fragment()
 
-        [(args, _)] = ctx.enqueue.call_args_list
-        msg = args[0]
-        assert msg.auto_rerun.interval == 5
-        assert (
-            isinstance(msg.auto_rerun.fragment_id, str)
-            and msg.auto_rerun.fragment_id != ""
-        )
+        if expected_interval is not None:
+            [(args, _)] = ctx.enqueue.call_args_list
+            msg = args[0]
+            assert msg.auto_rerun.interval == expected_interval
+            assert (
+                isinstance(msg.auto_rerun.fragment_id, str)
+                and msg.auto_rerun.fragment_id != ""
+            )
+        else:
+            ctx.enqueue.assert_not_called()

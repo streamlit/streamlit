@@ -34,7 +34,6 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFuncInfo,
     make_cached_func_wrapper,
-    ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
@@ -47,6 +46,7 @@ from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.time_util import time_to_seconds
 from streamlit.util import TimedCleanupCache
 
 _LOGGER: Final = get_logger(__name__)
@@ -89,7 +89,7 @@ class ResourceCaches(CacheStatsProvider):
         if max_entries is None:
             max_entries = math.inf
 
-        ttl_seconds = ttl_to_seconds(ttl)
+        ttl_seconds = time_to_seconds(ttl)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
