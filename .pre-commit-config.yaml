@@ -27,6 +27,7 @@ repos:
           # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
           - --target-version=py37
         files: \.py$|\.pyi$
+        exclude: ^e2e_flaky/.*
   - repo: https://github.com/PyCQA/isort
     rev: 5.11.5
     hooks:
@@ -171,6 +172,7 @@ repos:
           |^vendor/
           |^component-lib/declarations/apache-arrow
           |^lib/tests/isolated_asyncio_test_case\.py$
+          |^e2e_flaky/.*
       - id: insert-license
         name: Add license for all HTML files
         files: \.html$
