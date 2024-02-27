@@ -60,7 +60,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
-from streamlit.util import time_to_seconds
+from streamlit.time_util import time_to_seconds
 
 _LOGGER: Final = get_logger(__name__)
 
