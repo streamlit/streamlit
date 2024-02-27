@@ -1127,7 +1127,7 @@ export class App extends PureComponent<Props, State> {
         elements: AppRoot.empty(false, sidebarElements),
       },
       () => {
-        this.pendingElementsBuffer = elements
+        this.pendingElementsBuffer = this.state.elements
         this.widgetMgr.removeInactive(new Set([]))
       }
     )
