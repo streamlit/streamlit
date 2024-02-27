@@ -806,7 +806,7 @@ describe("App", () => {
       )
     })
 
-    it("clears stale app elements if currentPageScriptHash changes with extra stale elements", async () => {
+    it("does not add stale app elements if currentPageScriptHash changes", async () => {
       await makeAppWithElements()
 
       sendForwardMessage("newSession", {
@@ -815,12 +815,12 @@ describe("App", () => {
         scriptRunId: "different_script_run_id",
       })
 
+      // elements are cleared
       expect(
         screen.queryByText("Here is some more text")
       ).not.toBeInTheDocument()
 
-      // Add an element to the screen
-      // Need to set the script to running
+      // Run the script with one new element
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
         scriptIsRunning: true,
@@ -840,10 +840,12 @@ describe("App", () => {
         { deltaPath: [0, 0] }
       )
 
+      // Wait for the new element to appear on the screen
       await waitFor(() => {
         expect(screen.getByText("Here is some other text")).toBeInTheDocument()
       })
 
+      // Continue to expect the original element removed
       expect(
         screen.queryByText("Here is some more text")
       ).not.toBeInTheDocument()
