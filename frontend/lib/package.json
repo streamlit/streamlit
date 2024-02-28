@@ -72,7 +72,6 @@
     "numbro": "^2.3.6",
     "plotly.js": "^2.26.1",
     "protobufjs": "^7.2.4",
-    "protobufjs-cli": "^1.1.0",
     "query-string": "^8.1.0",
     "re-resizable": "^6.9.9",
     "react-color": "^2.18.1",
@@ -147,6 +146,7 @@
     "jest-environment-jsdom": "^27.4.3",
     "jest-fetch-mock": "^3.0.3",
     "node-fetch": "2.6.7",
+    "protobufjs-cli": "^1.1.0",
     "timezone-mock": "^1.3.6",
     "tsc-alias": "^1.8.5"
   }
