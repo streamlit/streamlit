@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
+import React, { ReactElement, useLayoutEffect, useState } from "react"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -238,8 +231,6 @@ function PlotlyFigure({
     const returnValue: any = { select: {} }
     const { data } = spec
     const pointIndices: number[] = []
-    const xs: number[] = []
-    const ys: number[] = []
     const selectedBoxes: Selection[] = []
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
@@ -251,8 +242,6 @@ function PlotlyFigure({
           ? point.data.legendgroup
           : undefined,
       })
-      xs.push(point.x)
-      ys.push(point.y)
       pointIndices.push(point.pointIndex)
 
       // build graph representation to retain state
@@ -316,7 +305,6 @@ function PlotlyFigure({
       keysToSnakeCase(point)
     )
     widgetMgr.setJsonValue(element, returnValue, { fromUi: true })
-    console.log("Done handling select")
   }
 
   const { data, layout, frames } = spec
