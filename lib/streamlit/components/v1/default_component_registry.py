@@ -18,6 +18,7 @@ import os
 import threading
 from typing import Final
 
+from streamlit import util
 from streamlit.components.v1.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.errors import StreamlitAPIException
@@ -27,9 +28,12 @@ _LOGGER: Final = get_logger(__name__)
 
 
 class DefaultComponentRegistry(BaseComponentRegistry):
-    def __init__(self):
+    def __init__(self) -> None:
         self._components: dict[str, CustomComponent] = {}
         self._lock = threading.Lock()
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
 
     def register_component(self, component: CustomComponent) -> None:
         """Register a CustomComponent.

@@ -14,18 +14,14 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from typing import Protocol
 
-from streamlit import util
 from streamlit.components.v1.custom_component import CustomComponent
 
 
-class BaseComponentRegistry(ABC):
-    def __init__(self):
-        """Init instance"""
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
+class BaseComponentRegistry(Protocol):
+    """Interface for implementing an alternative ComponentRegistry."""
 
     @abstractmethod
     def register_component(self, component: CustomComponent) -> None:
