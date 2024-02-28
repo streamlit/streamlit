@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 
 from streamlit import config, file_util, util
@@ -34,7 +36,7 @@ DEFAULT_FOLDER_BLACKLIST = [
 ]
 
 
-class FolderBlackList(object):
+class FolderBlackList:
     """Implement a black list object with globbing.
 
     Note

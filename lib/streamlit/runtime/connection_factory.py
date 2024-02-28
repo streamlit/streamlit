@@ -14,13 +14,10 @@
 
 from __future__ import annotations
 
-import importlib
 import os
 import re
 from datetime import timedelta
-from typing import Any, Dict, Type, TypeVar, overload
-
-from typing_extensions import Final, Literal
+from typing import Any, Final, Literal, TypeVar, overload
 
 from streamlit.connections import (
     BaseConnection,
@@ -45,7 +42,7 @@ FIRST_PARTY_CONNECTIONS = {
     "sql": SQLConnection,
 }
 MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
-MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
+MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
     "MySQLdb": "mysqlclient",
     "psycopg2": "psycopg2-binary",
     "sqlalchemy": "sqlalchemy",
@@ -63,7 +60,7 @@ ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
 @gather_metrics("connection")
 def _create_connection(
     name: str,
-    connection_class: Type[ConnectionClass],
+    connection_class: type[ConnectionClass],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
@@ -77,7 +74,7 @@ def _create_connection(
     """
 
     def __create_connection(
-        name: str, connection_class: Type[ConnectionClass], **kwargs
+        name: str, connection_class: type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
         return connection_class(connection_name=name, **kwargs)
 
@@ -184,7 +181,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: str,
-    type: Type[ConnectionClass],
+    type: type[ConnectionClass],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
@@ -312,6 +309,9 @@ def connection_factory(
         if "." in connection_class:
             parts = connection_class.split(".")
             classname = parts.pop()
+
+            import importlib
+
             connection_module = importlib.import_module(".".join(parts))
             connection_class = getattr(connection_module, classname)
         else:

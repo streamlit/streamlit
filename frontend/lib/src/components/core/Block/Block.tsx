@@ -26,9 +26,13 @@ import { useTheme } from "@emotion/react"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
-import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
+import {
+  getElementWidgetID,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
+import Popover from "@streamlit/lib/src/components/elements/Popover"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
 import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
@@ -77,13 +81,13 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   const childProps = { ...props, ...{ node } }
 
-  // TODO: overwrite props.disableFullscreenMode for Dialog in a follow-up PR, e.g.:
-  // const disableFullscreenMode = props.disableFullscreenMode || node.deltaBlock.dialog
-  // and pass to LayoutBlock as props
+  const disableFullscreenMode =
+    props.disableFullscreenMode || notNullOrUndefined(node.deltaBlock.popover)
+
   const child: ReactElement = (
     <LayoutBlock
       {...childProps}
-      // disableFullscreenMode={disableFullscreenMode}
+      disableFullscreenMode={disableFullscreenMode}
     />
   )
 
@@ -96,6 +100,18 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       >
         {child}
       </Expander>
+    )
+  }
+
+  if (node.deltaBlock.popover) {
+    return (
+      <Popover
+        empty={node.isEmpty}
+        element={node.deltaBlock.popover as BlockProto.Popover}
+        width={props.width}
+      >
+        {child}
+      </Popover>
     )
   }
 

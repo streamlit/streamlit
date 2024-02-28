@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from streamlit import util
 
 
@@ -89,7 +91,7 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     """
 
     def __init__(self, *args):
-        super(StreamlitAPIWarning, self).__init__(*args)
+        super().__init__(*args)
         import inspect
         import traceback
 

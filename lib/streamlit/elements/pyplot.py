@@ -14,15 +14,14 @@
 
 """Streamlit support for Matplotlib PyPlot charts."""
 
-import io
-from typing import TYPE_CHECKING, Any, Optional, cast
+from __future__ import annotations
 
-from typing_extensions import Final
+import io
+from typing import TYPE_CHECKING, Any, cast
 
 import streamlit.elements.image as image_utils
 from streamlit import config
 from streamlit.errors import StreamlitDeprecationWarning
-from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -31,18 +30,16 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
 
-LOGGER: Final = get_logger(__name__)
-
 
 class PyplotMixin:
     @gather_metrics("pyplot")
     def pyplot(
         self,
-        fig: Optional["Figure"] = None,
-        clear_figure: Optional[bool] = None,
+        fig: Figure | None = None,
+        clear_figure: bool | None = None,
         use_container_width: bool = True,
         **kwargs: Any,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a matplotlib.pyplot figure.
 
         Parameters
@@ -117,7 +114,7 @@ class PyplotMixin:
         return self.dg._enqueue("imgs", image_list_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -125,8 +122,8 @@ class PyplotMixin:
 def marshall(
     coordinates: str,
     image_list_proto: ImageListProto,
-    fig: Optional["Figure"] = None,
-    clear_figure: Optional[bool] = True,
+    fig: Figure | None = None,
+    clear_figure: bool | None = True,
     use_container_width: bool = True,
     **kwargs: Any,
 ) -> None:
@@ -183,7 +180,7 @@ def marshall(
 
 class PyplotGlobalUseWarning(StreamlitDeprecationWarning):
     def __init__(self) -> None:
-        super(PyplotGlobalUseWarning, self).__init__(
+        super().__init__(
             msg=self._get_message(), config_option="deprecation.showPyplotGlobalUse"
         )
 
