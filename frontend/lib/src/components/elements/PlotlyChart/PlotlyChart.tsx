@@ -54,26 +54,19 @@ export interface Selection extends SelectionRange {
   yref: string
 }
 
-// TODO(willhuang1997): This should likely be removed. I was just using this to remove .data and .fullData
-function extractNonObjects(obj: any): any {
-  const result: any = {}
-
-  for (const [key, value] of Object.entries(obj)) {
-    if (typeof value !== "object" || value === null) {
-      result[key] = value
-    }
-  }
-
-  return result
-}
-
 export const DEFAULT_HEIGHT = 450
 
 function isFullScreen(height: number | undefined): boolean {
   return !!height
 }
 
-function parseLassoPath(pathData: string): SelectionRange {
+export function parseLassoPath(pathData: string): SelectionRange {
+  if (pathData === "") {
+    return {
+      x: [],
+      y: [],
+    }
+  }
   const points = pathData.replace("M", "").replace("Z", "").split("L")
 
   const x: number[] = []
@@ -88,7 +81,17 @@ function parseLassoPath(pathData: string): SelectionRange {
   return { x, y }
 }
 
-function parseBoxSelection(selection: any): SelectionRange {
+export function parseBoxSelection(selection: any): SelectionRange {
+  const hasRequiredFields =
+    "x0" in selection &&
+    "x1" in selection &&
+    "y0" in selection &&
+    "y1" in selection
+
+  if (!hasRequiredFields) {
+    return { x: [], y: [] }
+  }
+
   const x: number[] = [selection.x0, selection.x1]
   const y: number[] = [selection.y0, selection.y1]
   return { x, y }
@@ -163,12 +166,18 @@ function PlotlyFigure({
         spec.layout.selections = parsedStoreValue.select._selections
       }
 
-      // make all other points opaque if they're not selected
-      spec.data.forEach((trace: any) => {
-        if (!trace.selectedpoints) {
-          trace.selectedpoints = []
-        }
-      })
+      const hasSelectedPoints: boolean = spec.data.some(
+        (trace: any) =>
+          "selectedpoints" in trace && trace.selectedpoints.length > 0
+      )
+      if (hasSelectedPoints) {
+        // make all other points opaque
+        spec.data.forEach((trace: any) => {
+          if (!trace.selectedpoints) {
+            trace.selectedpoints = []
+          }
+        })
+      }
 
       return {
         data: [...spec.data],
@@ -237,10 +246,12 @@ function PlotlyFigure({
 
     event.points.forEach(function (point: any) {
       selectedPoints.push({
-        ...extractNonObjects(point),
+        ...point,
         legendgroup: point.data.legendgroup
           ? point.data.legendgroup
           : undefined,
+        data: undefined,
+        fullData: undefined,
       })
       pointIndices.push(point.pointIndex)
 
@@ -309,6 +320,24 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
+  const reset = () => {
+    const spec = JSON.parse(
+      replaceTemporaryColors(figure.spec, theme, element.theme)
+    )
+    if (element.theme === "streamlit") {
+      applyStreamlitTheme(spec, theme)
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    }
+    if (element.isSelectEnabled) {
+      spec.layout.clickmode = "event+select"
+      spec.layout.hovermode = "closest"
+    }
+    setSpec(spec)
+    widgetMgr.setJsonValue(element, {}, { fromUi: true })
+  }
+
   return (
     <Plot
       key={isFullScreen(height) ? "fullscreen" : "original"}
@@ -322,42 +351,14 @@ function PlotlyFigure({
       onDoubleClick={
         element.isSelectEnabled
           ? () => {
-              const spec = JSON.parse(
-                replaceTemporaryColors(figure.spec, theme, element.theme)
-              )
-              if (element.theme === "streamlit") {
-                applyStreamlitTheme(spec, theme)
-              } else {
-                // Apply minor theming improvements to work better with Streamlit
-                spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-              }
-              if (element.isSelectEnabled) {
-                spec.layout.clickmode = "event+select"
-                spec.layout.hovermode = "closest"
-              }
-              setSpec(spec)
-              widgetMgr.setJsonValue(element, {}, { fromUi: true })
+              reset()
             }
           : () => {}
       }
       onDeselect={
         element.isSelectEnabled
           ? () => {
-              const spec = JSON.parse(
-                replaceTemporaryColors(figure.spec, theme, element.theme)
-              )
-              if (element.theme === "streamlit") {
-                applyStreamlitTheme(spec, theme)
-              } else {
-                // Apply minor theming improvements to work better with Streamlit
-                spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-              }
-              if (element.isSelectEnabled) {
-                spec.layout.clickmode = "event+select"
-                spec.layout.hovermode = "closest"
-              }
-              setSpec(spec)
-              widgetMgr.setJsonValue(element, {}, { fromUi: true })
+              reset()
             }
           : () => {}
       }
