@@ -202,7 +202,7 @@ function PlotlyFigure({
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
-    if (element.onSelect) {
+    if (element.isSelectEnabled) {
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
@@ -231,7 +231,7 @@ function PlotlyFigure({
     initialHeight,
     element.theme,
     theme,
-    element.onSelect,
+    element.isSelectEnabled,
   ])
 
   const handleSelect = (event: PlotSelectionEvent): void => {
@@ -330,9 +330,9 @@ function PlotlyFigure({
       layout={layout}
       config={config}
       frames={frames}
-      onSelected={element.onSelect ? handleSelect : () => {}}
+      onSelected={element.isSelectEnabled ? handleSelect : () => {}}
       onDoubleClick={
-        element.onSelect
+        element.isSelectEnabled
           ? () => {
               const spec = JSON.parse(
                 replaceTemporaryColors(figure.spec, theme, element.theme)
@@ -343,7 +343,7 @@ function PlotlyFigure({
                 // Apply minor theming improvements to work better with Streamlit
                 spec.layout = layoutWithThemeDefaults(spec.layout, theme)
               }
-              if (element.onSelect) {
+              if (element.isSelectEnabled) {
                 spec.layout.clickmode = "event+select"
                 spec.layout.hovermode = "closest"
               }
@@ -353,7 +353,7 @@ function PlotlyFigure({
           : () => {}
       }
       onDeselect={
-        element.onSelect
+        element.isSelectEnabled
           ? () => {
               const spec = JSON.parse(
                 replaceTemporaryColors(figure.spec, theme, element.theme)
@@ -364,7 +364,7 @@ function PlotlyFigure({
                 // Apply minor theming improvements to work better with Streamlit
                 spec.layout = layoutWithThemeDefaults(spec.layout, theme)
               }
-              if (element.onSelect) {
+              if (element.isSelectEnabled) {
                 spec.layout.clickmode = "event+select"
                 spec.layout.hovermode = "closest"
               }

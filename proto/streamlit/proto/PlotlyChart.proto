@@ -38,7 +38,7 @@ message PlotlyChart {
 
   string id = 7;
 
-  bool on_select = 8;
+  bool is_select_enabled = 8;
 
   reserved 3, 4;
 }

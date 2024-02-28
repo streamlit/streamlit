@@ -26,6 +26,7 @@ from typing_extensions import TypeAlias
 
 from streamlit import type_util
 from streamlit.attribute_dictionary import AttributeDictionary
+from streamlit.chart_util import check_on_select_str
 from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.streamlit_plotly_theme import (
@@ -90,8 +91,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        # TODO(willhuang1997): This needs to be changed to False
-        on_select: bool | str | WidgetCallback = None,
+        on_select: bool | str | WidgetCallback = False,
         **kwargs: Any,
         # What we return will be an json dictionary and will need to fix this type after
     ) -> Union["DeltaGenerator", Dict]:
@@ -178,6 +178,7 @@ class PlotlyMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_select)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
+        check_on_select_str(on_select, "plotly_chart")
         if current_form_id(self.dg):
             # TODO(willhuang1997): double check the message of this
             raise StreamlitAPIException("st.plotly_chart cannot be used inside forms!")
@@ -208,15 +209,17 @@ class PlotlyMixin:
             or on_select == ON_SELECTION_RERUN
             or on_select == ON_SELECTION_IGNORE
         ):
+            # Set specifically to None because register_widget does not accept booleans or strings
             widget_callback = None
         else:
             widget_callback = on_select
-        if (
+
+        is_select_enabled = (
             on_select != None
             and on_select != False
             and on_select != ON_SELECTION_IGNORE
-        ):
-            print("Registering widget!")
+        )
+        if is_select_enabled:
             widget_state = register_widget(
                 "plotly_chart",
                 plotly_chart_proto,
@@ -230,11 +233,7 @@ class PlotlyMixin:
             )
 
         self.dg._enqueue("plotly_chart", plotly_chart_proto)
-        if (
-            on_select != None
-            and on_select != False
-            and on_select != ON_SELECTION_IGNORE
-        ):
+        if is_select_enabled:
             return AttributeDictionary(widget_state.value)
         else:
             return self.dg
@@ -296,9 +295,9 @@ def marshall(
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
     if on_select == False or on_select == None or on_select == ON_SELECTION_IGNORE:
-        proto.on_select = False
+        proto.is_select_enabled = False
     else:
-        proto.on_select = True
+        proto.is_select_enabled = True
     ctx = get_script_run_ctx()
     id = compute_widget_id(
         "plotly_chart",
