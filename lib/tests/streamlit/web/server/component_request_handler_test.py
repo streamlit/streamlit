@@ -21,7 +21,6 @@ from streamlit.components.v1.component_registry import (
     ComponentRegistry,
     declare_component,
 )
-from streamlit.components.v1.default_component_registry import DefaultComponentRegistry
 from streamlit.web.server import ComponentRequestHandler
 
 URL = "http://not.a.real.url:3001"
@@ -38,7 +37,6 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     # get_app is called in the super constructor
     def get_app(self) -> tornado.web.Application:
         ComponentRegistry._instance = None
-        ComponentRegistry.initialize(DefaultComponentRegistry())
         return tornado.web.Application(
             [
                 (

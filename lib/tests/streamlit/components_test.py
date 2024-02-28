@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import inspect
 import json
 import os
@@ -26,6 +28,7 @@ import pytest
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit.components.v1 import component_arrow
+from streamlit.components.v1.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.component_registry import (
     ComponentRegistry,
     _get_module_name,
@@ -61,9 +64,6 @@ def _serialize_bytes_arg(key: str, value: Any) -> SpecialArg:
 
 class DeclareComponentTest(unittest.TestCase):
     """Test component declaration."""
-
-    def setUp(self) -> None:
-        ComponentRegistry.initialize(DefaultComponentRegistry())
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
@@ -179,21 +179,19 @@ class DeclareComponentTest(unittest.TestCase):
         self.assertTrue(component2.name, registered_component_names)
         self.assertTrue(component3.name, registered_component_names)
 
-    def test_error_when_registry_not_explicitly_initialized(self):
+    def test_when_registry_not_explicitly_initialized_return_defaultregistry(self):
         ComponentRegistry._instance = None
-        with pytest.raises(CustomComponentError):
-            components.declare_component("test", path=PATH)
+        components.declare_component("test", url=URL)
+        self.assertIs(type(ComponentRegistry.instance()), DefaultComponentRegistry)
 
     def test_error_when_registry_initialized_more_than_once(self):
+        ComponentRegistry.initialize(DefaultComponentRegistry())
         with pytest.raises(CustomComponentError):
             ComponentRegistry.initialize(DefaultComponentRegistry())
 
 
 class ComponentRegistryTest(unittest.TestCase):
     """Test component registration."""
-
-    def setUp(self) -> None:
-        ComponentRegistry.initialize(DefaultComponentRegistry())
 
     def tearDown(self) -> None:
         ComponentRegistry._instance = None
@@ -268,12 +266,7 @@ class InvokeComponentTest(DeltaGeneratorTestCase):
 
     def setUp(self):
         super().setUp()
-        ComponentRegistry.initialize(DefaultComponentRegistry())
         self.test_component = components.declare_component("test", url=URL)
-
-    def tearDown(self):
-        super().tearDown()
-        ComponentRegistry._instance = None
 
     def test_only_json_args(self):
         """Test that component with only json args is marshalled correctly."""
@@ -529,3 +522,33 @@ class IFrameTest(DeltaGeneratorTestCase):
         self.assertEqual(el.iframe.width, 200)
         self.assertTrue(el.iframe.has_width)
         self.assertTrue(el.iframe.scrolling)
+
+
+class NonDefaultComponentRegistryTest(unittest.TestCase):
+    """Test non-default component registry initialization."""
+
+    class NonDefaultComponentRegistry(BaseComponentRegistry):
+        def __init__(self):
+            """Dummy implementation"""
+            pass
+
+        def register_component(self, component: CustomComponent) -> None:
+            return None
+
+        def get_component_path(self, name: str) -> str | None:
+            return None
+
+        def get_module_name(self, name: str) -> str | None:
+            return None
+
+        def get_components(self) -> list[CustomComponent]:
+            return []
+
+    def setUp(self) -> None:
+        super().setUp()
+        registry = NonDefaultComponentRegistryTest.NonDefaultComponentRegistry()
+        ComponentRegistry.initialize(registry)
+        self.assertEqual(ComponentRegistry.instance(), registry)
+        self.assertIs(
+            type(registry), NonDefaultComponentRegistryTest.NonDefaultComponentRegistry
+        )

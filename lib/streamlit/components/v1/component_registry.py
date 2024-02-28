@@ -21,6 +21,7 @@ from types import FrameType
 
 from streamlit.components.v1.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.custom_component import CustomComponent
+from streamlit.components.v1.default_component_registry import DefaultComponentRegistry
 from streamlit.errors import CustomComponentError
 
 
@@ -96,16 +97,17 @@ class ComponentRegistry:
 
     @classmethod
     def instance(cls) -> BaseComponentRegistry:
-        """Returns the singleton ComponentRegistry
+        """Returns the singleton ComponentRegistry.
 
-        :raises:
-            CustomComponentError: If no ComponentRegistry has been initialized
+        If no instance has been initialized via the `ComponentRegistry.initialize` method before
+        this method here is called, the singleton is initialized with `DefaultComponentRegistry`.
         """
 
         if cls._instance is None:
-            raise CustomComponentError("No ComponentRegistry has been initialized")
+            cls.initialize(DefaultComponentRegistry())
 
-        return cls._instance
+        # The initialize call above initializes the instance
+        return cls._instance  # type: ignore[return-value]
 
     @classmethod
     def initialize(cls, registry: BaseComponentRegistry) -> None:
@@ -119,7 +121,9 @@ class ComponentRegistry:
         # of acquiring the lock in the common case:
         # https://en.wikipedia.org/wiki/Double-checked_locking
         if cls._instance is not None:
-            raise CustomComponentError("ComponentRegistry is already initialized")
+            raise CustomComponentError(
+                "ComponentRegistry is already initialized. If the nature of this cause is not clear, please report it as an issue."
+            )
         with cls._instance_lock:
             if cls._instance is None:
                 cls._instance = registry
