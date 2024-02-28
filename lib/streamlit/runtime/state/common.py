@@ -35,7 +35,7 @@ from typing import (
 from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
-from streamlit import util
+from streamlit import config, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.Button_pb2 import Button
@@ -235,7 +235,8 @@ def require_valid_user_key(key: str) -> None:
 
 
 def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
-    try:
-        ctx.session_state[TESTING_KEY][k] = v
-    except KeyError:
-        return
+    if config.get_option("global.appTest"):
+        try:
+            ctx.session_state[TESTING_KEY][k] = v
+        except KeyError:
+            ctx.session_state[TESTING_KEY] = {k: v}

@@ -82,6 +82,7 @@ from streamlit.testing.v1.element_tree import (
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
+from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import HASHLIB_KWARGS
 
 TMP_DIR = tempfile.TemporaryDirectory()
@@ -303,8 +304,9 @@ class AppTest:
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(self._script_path, self.session_state)
-        self._tree = script_runner.run(widget_state, self.query_params, timeout)
-        self._tree._runner = self
+        with patch_config_options({"global.appTest": True}):
+            self._tree = script_runner.run(widget_state, self.query_params, timeout)
+            self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = parse.parse_qs(query_string)
