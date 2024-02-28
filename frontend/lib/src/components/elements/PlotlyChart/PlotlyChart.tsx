@@ -19,6 +19,7 @@ import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useReducer,
   useRef,
   useState,
 } from "react"
@@ -35,7 +36,7 @@ import {
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
-import { PlotSelectionEvent } from "plotly.js"
+import { PlotMouseEvent, PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 export interface PlotlyChartProps {
   width: number
@@ -194,6 +195,8 @@ function PlotlyFigure({
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
+  const newArray: any[] = []
+  const [selectedPoints, setSelectedPoints] = useState(newArray)
 
   useLayoutEffect(() => {
     if (element.theme === "streamlit") {
@@ -202,10 +205,10 @@ function PlotlyFigure({
       // Apply minor theming improvements to work better with Streamlit
       spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
-    if (element.onSelect) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
+    // if (element.onSelect) {
+    //   spec.layout.clickmode = "event+select"
+    //   spec.layout.hovermode = "closest"
+    // }
   }, [])
 
   useLayoutEffect(() => {
@@ -234,12 +237,72 @@ function PlotlyFigure({
     element.onSelect,
   ])
 
+  const handleClick = (event: PlotMouseEvent): void => {
+    console.log("handling click")
+    console.log(event)
+    let currentPoints: any[] = selectedPoints
+    const returnValue: any = { select: {} }
+    const { data } = spec
+    const pointIndices: number[] = []
+    event.points.forEach(function (point: any) {
+      if (event.event.shiftKey) {
+        currentPoints.push({
+          ...extractNonObjects(point),
+          legendgroup: point.data.legendgroup
+            ? point.data.legendgroup
+            : undefined,
+        })
+      }
+      else {
+        currentPoints = [{
+          ...extractNonObjects(point),
+          legendgroup: point.data.legendgroup
+            ? point.data.legendgroup
+            : undefined,
+        }]
+        // make all other points opaque if they're not selected
+        data.forEach((trace: any) => {
+          if (!trace.selectedpoints) {
+            trace.selectedpoints = []
+          }
+        })
+      }
+      pointIndices.push(point.pointIndex)
+
+      // build graph representation to retain state
+      if (
+        data[point.curveNumber] &&
+        data[point.curveNumber].selectedpoints &&
+        !data[point.curveNumber].selectedpoints.includes(point.pointIndex)
+      ) {
+        data[point.curveNumber].selectedpoints.push(point.pointIndex)
+      } else {
+        data[point.curveNumber].selectedpoints = [point.pointIndex]
+      }
+    })
+    returnValue.select.points = currentPoints
+    returnValue.select._data = data
+    returnValue.select.points = returnValue.select.points.map((point: any) =>
+      keysToSnakeCase(point)
+    )
+    // make all other points opaque if they're not selected
+    data.forEach((trace: any) => {
+      if (!trace.selectedpoints) {
+        trace.selectedpoints = []
+      }
+    })
+    widgetMgr.setJsonValue(element, returnValue, { fromUi: true })
+    setSpec({data, layout: spec.layout, frames: {}})
+    // setSelectedPoints(currentPoints)
+    // const [, forceUpdate] = useReducer(x => x + 1, 0)
+    // forceUpdate()
+    console.log("Done handling click")
+  }
+
   const handleSelect = (event: PlotSelectionEvent): void => {
     const returnValue: any = { select: {} }
     const { data } = spec
     const pointIndices: number[] = []
-    const xs: number[] = []
-    const ys: number[] = []
     const selectedBoxes: Selection[] = []
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
@@ -251,8 +314,6 @@ function PlotlyFigure({
           ? point.data.legendgroup
           : undefined,
       })
-      xs.push(point.x)
-      ys.push(point.y)
       pointIndices.push(point.pointIndex)
 
       // build graph representation to retain state
@@ -331,6 +392,7 @@ function PlotlyFigure({
       config={config}
       frames={frames}
       onSelected={element.onSelect ? handleSelect : () => {}}
+      onClick={element.onSelect ? handleClick : () => {}}
       onDoubleClick={
         element.onSelect
           ? () => {
@@ -343,10 +405,10 @@ function PlotlyFigure({
                 // Apply minor theming improvements to work better with Streamlit
                 spec.layout = layoutWithThemeDefaults(spec.layout, theme)
               }
-              if (element.onSelect) {
-                spec.layout.clickmode = "event+select"
-                spec.layout.hovermode = "closest"
-              }
+              // if (element.onSelect) {
+              //   spec.layout.clickmode = "event+select"
+              //   spec.layout.hovermode = "closest"
+              // }
               setSpec(spec)
               widgetMgr.setJsonValue(element, {}, { fromUi: true })
             }
@@ -364,10 +426,10 @@ function PlotlyFigure({
                 // Apply minor theming improvements to work better with Streamlit
                 spec.layout = layoutWithThemeDefaults(spec.layout, theme)
               }
-              if (element.onSelect) {
-                spec.layout.clickmode = "event+select"
-                spec.layout.hovermode = "closest"
-              }
+              // if (element.onSelect) {
+              //   spec.layout.clickmode = "event+select"
+              //   spec.layout.hovermode = "closest"
+              // }
               setSpec(spec)
               widgetMgr.setJsonValue(element, {}, { fromUi: true })
             }
