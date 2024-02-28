@@ -25,4 +25,24 @@ timestamp = st.number_input("Start Time (in seconds)", min_value=0, value=6)
 st.video(url, start_time=int(timestamp))
 
 # Test local file with video
-st.video("video_test_assets/sintel-short.mp4", start_time=17)
+st.video("test_assets/sintel-short.mp4", start_time=17)
+
+# Test subtitle with video
+st.video(
+    "test_assets/sintel-short.mp4",
+    start_time=31,
+    subtitles={
+        "English": "test_assets/sintel-en.vtt",
+        "Deutsch": "test_assets/sintel-de.vtt",
+    },
+)
+
+# Test subtitle with webm video
+st.video(
+    "test_assets/sintel-short.webm",
+    start_time=25,
+    subtitles={
+        "English": "test_assets/sintel-en.vtt",
+        "Deutsch": "test_assets/sintel-de.vtt",
+    },
+)
