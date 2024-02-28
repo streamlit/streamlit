@@ -40,7 +40,6 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
-from streamlit.runtime.state.session_state_proxy import SessionStateProxy
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -219,6 +218,8 @@ class PlotlyMixin:
             and on_select != False
             and on_select != ON_SELECTION_IGNORE
         )
+
+        widget_state = {}
         if is_select_enabled:
             widget_state = register_widget(
                 "plotly_chart",
@@ -294,7 +295,7 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
-    if on_select == False or on_select == None or on_select == ON_SELECTION_IGNORE:
+    if on_select == False or on_select is None or on_select == ON_SELECTION_IGNORE:
         proto.is_select_enabled = False
     else:
         proto.is_select_enabled = True
