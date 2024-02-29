@@ -31,13 +31,61 @@ export default function Audio({
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { loop } = element
+  const { startTime, endTime, loop } = element
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.currentTime = element.startTime
+      audioRef.current.currentTime = startTime
     }
-  }, [element.startTime])
+  }, [startTime])
+
+  // Stop the audio at 'endTime' and handle loop
+  useEffect(() => {
+    const audioNode = audioRef.current
+    if (!audioNode) return
+
+    const handleTimeUpdate = () => {
+      if (endTime > 0 && audioNode.currentTime >= endTime) {
+        if (loop) {
+          audioNode.currentTime = startTime || 0
+          audioNode.play()
+        } else {
+          audioNode.pause()
+        }
+      }
+    }
+
+    if (endTime > 0) {
+      audioNode.addEventListener("timeupdate", handleTimeUpdate)
+    }
+
+    return () => {
+      if (audioNode && endTime > 0) {
+        audioNode.removeEventListener("timeupdate", handleTimeUpdate)
+      }
+    }
+  }, [endTime, loop, startTime])
+
+  // Handle looping the audio
+  useEffect(() => {
+    const audioNode = audioRef.current
+    if (!audioNode) return
+
+    const handleAudioEnd = () => {
+      if (loop) {
+        audioNode.currentTime = startTime || 0
+        audioNode.play()
+      }
+    }
+
+    audioNode.addEventListener("ended", handleAudioEnd)
+
+    return () => {
+      if (audioNode) {
+        audioNode.removeEventListener("ended", handleAudioEnd)
+      }
+    }
+  }, [loop, startTime])
 
   const uri = endpoints.buildMediaURL(element.url)
   return (
@@ -49,7 +97,6 @@ export default function Audio({
       src={uri}
       className="stAudio"
       style={{ width }}
-      loop={loop}
     />
   )
 }
