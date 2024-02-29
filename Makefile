@@ -269,7 +269,7 @@ protobuf: check-protoc
 		echo ; \
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
-			-t static-module --wrap es6 \
+			--path=proto -t static-module --wrap es6 \
 	) > ./lib/src/proto.js
 
 	@# Typescript type declarations for our generated protobufs
