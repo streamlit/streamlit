@@ -123,10 +123,8 @@ export default function Video({
   }, [loop, startTime])
 
   const getYoutubeSrc = (url: string): string => {
-    console.log("URLLLLLLLLLLLL")
-    console.log(url)
     const { startTime, endTime, loop } = element
-    let youtubeUrl = new URL(url)
+    const youtubeUrl = new URL(url)
 
     if (startTime && !isNaN(startTime)) {
       youtubeUrl.searchParams.append("start", startTime.toString())
@@ -139,13 +137,10 @@ export default function Video({
     if (loop) {
       youtubeUrl.searchParams.append("loop", "1")
       // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
-      const videoId = youtubeUrl.searchParams.get("v")
-      const videoIdMatch = url.match(
-        /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/
-      )
+      const videoId = youtubeUrl.pathname.split("/").pop()
 
-      if (videoIdMatch && videoIdMatch[1]) {
-        youtubeUrl.searchParams.append("playlist", videoIdMatch[1])
+      if (videoId) {
+        youtubeUrl.searchParams.append("playlist", videoId)
       }
     }
     return youtubeUrl.toString()
