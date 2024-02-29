@@ -20,8 +20,6 @@ import json
 import urllib.parse
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
 
-# TODO(willhuang1997): Check if this can be lazy loaded
-import plotly.graph_objs as go
 from typing_extensions import TypeAlias
 
 from streamlit import type_util
@@ -286,6 +284,8 @@ def marshall(
         config.setdefault("showLink", kwargs.get("show_link", False))
         config.setdefault("linkText", kwargs.get("link_text", False))
 
+        # https://github.com/plotly/plotly.py/issues/3567
+        plotly.io.json.config.default_engine = "orjson"
         proto.figure.spec = plotly.io.to_json(figure, validate=False)
         proto.figure.config = json.dumps(config)
 
