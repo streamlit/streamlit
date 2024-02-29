@@ -59,11 +59,15 @@ class VideoTest(DeltaGeneratorTestCase):
             "https://youtu.be/_T8LGqJtuGc",
             "https://www.youtube.com/watch?v=kmfC-i9WgH0",
             "https://www.youtube.com/embed/sSn4e1lLVpA",
+            "https://youtube.com/e/0TSXM-BGqHU",
+            "https://youtube.com/v/OIQskkX_DK0",
         )
         yt_embeds = (
             "https://www.youtube.com/embed/_T8LGqJtuGc",
             "https://www.youtube.com/embed/kmfC-i9WgH0",
             "https://www.youtube.com/embed/sSn4e1lLVpA",
+            "https://www.youtube.com/embed/0TSXM-BGqHU",
+            "https://www.youtube.com/embed/OIQskkX_DK0",
         )
         # url should be transformed into an embed link (or left alone).
         for x in range(0, len(yt_urls)):

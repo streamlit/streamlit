@@ -192,16 +192,10 @@ class MediaMixin:
         return cast("DeltaGenerator", self)
 
 
-# Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
-# URL (incl. shortlinks and embed links) and extracts its code.
-YOUTUBE_RE: Final = re.compile(
-    # Protocol
-    r"http(?:s?):\/\/"
-    # Domain
-    r"(?:www\.)?youtu(?:be\.com|\.be)\/"
-    # Path and query string
-    r"(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
-)
+# Regular expression from
+# https://gist.github.com/rodrigoborgesdeoliveira/987683cfbfcc8d800192da1e73adc486?permalink_comment_id=4645864#gistcomment-4645864
+# Covers any youtube URL (incl. shortlinks and embed links) and extracts its video code.
+YOUTUBE_RE: Final = r"^((https?://(?:www\.)?(?:m\.)?youtube\.com))/((?:oembed\?url=https?%3A//(?:www\.)youtube.com/watch\?(?:v%3D)(?P<video_id_1>[\w\-]{10,20})&format=json)|(?:attribution_link\?a=.*watch(?:%3Fv%3D|%3Fv%3D)(?P<video_id_2>[\w\-]{10,20}))(?:%26feature.*))|(https?:)?(\/\/)?((www\.|m\.)?youtube(-nocookie)?\.com\/((watch)?\?(app=desktop&)?(feature=\w*&)?v=|embed\/|v\/|e\/)|youtu\.be\/)(?P<video_id_3>[\w\-]{10,20})"
 
 
 def _reshape_youtube_url(url: str) -> str | None:
@@ -221,9 +215,14 @@ def _reshape_youtube_url(url: str) -> str | None:
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc
     """
-    match = YOUTUBE_RE.match(url)
+    match = re.match(YOUTUBE_RE, url)
     if match:
-        return "https://www.youtube.com/embed/{code}".format(**match.groupdict())
+        code = (
+            match.group("video_id_1")
+            or match.group("video_id_2")
+            or match.group("video_id_3")
+        )
+        return f"https://www.youtube.com/embed/{code}"
     return None
 
 
