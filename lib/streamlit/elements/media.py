@@ -143,6 +143,8 @@ class MediaMixin:
         start_time: int = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
+        end_time: int | None = None,
+        loop: bool = False,
     ) -> DeltaGenerator:
         """Display a video player.
 
@@ -175,6 +177,11 @@ class MediaMixin:
               by default. For multiple tracks, the first one is displayed by default.
             Not supported for YouTube videos.
 
+        end_time: int or None
+            The time at which this element should stop playing
+        loop: bool
+            Whether the video should loop playback.
+
         Example
         -------
         >>> import streamlit as st
@@ -198,7 +205,16 @@ class MediaMixin:
         """
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
-        marshall_video(coordinates, video_proto, data, format, start_time, subtitles)
+        marshall_video(
+            coordinates,
+            video_proto,
+            data,
+            format,
+            start_time,
+            subtitles,
+            end_time,
+            loop,
+        )
         return self.dg._enqueue("video", video_proto)
 
     @property
@@ -303,6 +319,8 @@ def marshall_video(
     mimetype: str = "video/mp4",
     start_time: int = 0,
     subtitles: SubtitleData = None,
+    end_time: int | None = None,
+    loop: bool = False,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -332,9 +350,20 @@ def marshall_video(
         * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
         When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
         Not supported for YouTube videos.
+    end_time: int
+            The time at which this element should stop playing
+    loop: bool
+        Whether the video should loop playback.
     """
 
+    if start_time < 0 or (end_time is not None and end_time <= start_time):
+        raise StreamlitAPIException("Invalid start_time and end_time combination.")
+
     proto.start_time = start_time
+
+    if end_time is not None:
+        proto.end_time = end_time
+    proto.loop = loop
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
