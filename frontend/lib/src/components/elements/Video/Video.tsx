@@ -76,7 +76,7 @@ export default function Video({
     const videoNode = videoRef.current
     if (!videoNode) return
 
-    const handleTimeUpdate = () => {
+    const handleTimeUpdate = (): void => {
       if (endTime > 0 && videoNode.currentTime >= endTime) {
         if (loop) {
           // If loop is true and we reached 'endTime', reset to 'startTime'
@@ -106,7 +106,7 @@ export default function Video({
     if (!videoNode) return
 
     // Loop the video when it has ended
-    const handleVideoEnd = () => {
+    const handleVideoEnd = (): void => {
       if (loop) {
         videoNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
         videoNode.play()

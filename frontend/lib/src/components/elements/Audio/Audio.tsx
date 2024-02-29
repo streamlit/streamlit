@@ -44,7 +44,7 @@ export default function Audio({
     const audioNode = audioRef.current
     if (!audioNode) return
 
-    const handleTimeUpdate = () => {
+    const handleTimeUpdate = (): void => {
       if (endTime > 0 && audioNode.currentTime >= endTime) {
         if (loop) {
           audioNode.currentTime = startTime || 0
@@ -71,7 +71,7 @@ export default function Audio({
     const audioNode = audioRef.current
     if (!audioNode) return
 
-    const handleAudioEnd = () => {
+    const handleAudioEnd = (): void => {
       if (loop) {
         audioNode.currentTime = startTime || 0
         audioNode.play()
