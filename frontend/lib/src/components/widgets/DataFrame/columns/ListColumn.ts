@@ -21,7 +21,6 @@ import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import {
   BaseColumn,
   BaseColumnProps,
-  ColumnCreator,
   toSafeArray,
   toSafeString,
   isMissingValueCell,
@@ -76,4 +75,4 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
 
 ListColumn.isEditableType = false
 
-export default ListColumn as ColumnCreator
+export default ListColumn

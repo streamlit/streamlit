@@ -137,7 +137,11 @@ describe("DataFrame widget", () => {
     )
     // You have to set a second arg with {} to test work and get the received props
     expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
-      expect.objectContaining({ rangeSelect: "none", fillHandle: false }),
+      expect.objectContaining({
+        rangeSelect: "cell",
+        fillHandle: false,
+        onColumnResize: undefined,
+      }),
       {}
     )
   })

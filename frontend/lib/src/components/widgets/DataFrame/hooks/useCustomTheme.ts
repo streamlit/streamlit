@@ -21,15 +21,18 @@ import { useTheme } from "@emotion/react"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
+type CustomThemeReturn = {
+  theme: Partial<GlideTheme>
+  tableBorderRadius: string
+  headerIcons: SpriteMap
+}
+
 /**
  * Creates a glide-data-grid compatible theme based on our theme configuration.
  *
  * @return a glide-data-grid compatible theme.
  */
-function useCustomTheme(): Partial<GlideTheme> & {
-  tableBorderRadius: string
-  headerIcons: SpriteMap
-} {
+function useCustomTheme(): CustomThemeReturn {
   const theme: EmotionTheme = useTheme()
 
   const headerIcons = React.useMemo<SpriteMap>(() => {
@@ -42,44 +45,54 @@ function useCustomTheme(): Partial<GlideTheme> & {
     }
   }, [])
 
+  const glideTheme = React.useMemo<Partial<GlideTheme>>(() => {
+    return {
+      // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
+      accentColor: theme.colors.primary,
+      accentFg: theme.colors.white,
+      accentLight: transparentize(theme.colors.primary, 0.9),
+      borderColor: theme.colors.fadedText05,
+      horizontalBorderColor: theme.colors.fadedText05,
+      fontFamily: theme.genericFonts.bodyFont,
+      bgSearchResult: transparentize(theme.colors.primary, 0.9),
+      resizeIndicatorColor: theme.colors.primary,
+      // Header styling:
+      bgIconHeader: theme.colors.fadedText60,
+      fgIconHeader: theme.colors.white,
+      bgHeader: theme.colors.bgMix,
+      bgHeaderHasFocus: theme.colors.secondaryBg,
+      bgHeaderHovered: theme.colors.secondaryBg,
+      textHeader: theme.colors.fadedText60,
+      textHeaderSelected: theme.colors.white,
+      textGroupHeader: theme.colors.fadedText60,
+      headerFontStyle: `${theme.fontSizes.sm}`,
+      // Cell styling:
+      baseFontStyle: theme.fontSizes.sm,
+      editorFontSize: theme.fontSizes.sm,
+      textDark: theme.colors.bodyText,
+      textMedium: transparentize(theme.colors.bodyText, 0.2),
+      textLight: theme.colors.fadedText40,
+      textBubble: theme.colors.fadedText60,
+      bgCell: theme.colors.bgColor,
+      bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color
+      cellHorizontalPadding: 8,
+      cellVerticalPadding: 3,
+      // Special cells:
+      bgBubble: theme.colors.secondaryBg,
+      bgBubbleSelected: theme.colors.secondaryBg,
+      linkColor: theme.colors.linkText,
+      drilldownBorder: theme.colors.darkenedBgMix25,
+      // Unused settings:
+      // lineHeight
+      // headerIconSize: number;
+      // markerFontStyle: string;
+      // resizeIndicatorColor?: string;
+      // headerBottomBorderColor?: string;
+    }
+  }, [theme])
+
   return {
-    // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
-    accentColor: theme.colors.primary,
-    accentFg: theme.colors.white,
-    accentLight: transparentize(theme.colors.primary, 0.9),
-    borderColor: theme.colors.fadedText05,
-    horizontalBorderColor: theme.colors.fadedText05,
-    fontFamily: theme.genericFonts.bodyFont,
-    bgSearchResult: transparentize(theme.colors.primary, 0.9),
-    // Header styling:
-    bgIconHeader: theme.colors.fadedText60,
-    fgIconHeader: theme.colors.white,
-    bgHeader: theme.colors.bgMix,
-    bgHeaderHasFocus: theme.colors.secondaryBg,
-    bgHeaderHovered: theme.colors.secondaryBg,
-    textHeader: theme.colors.fadedText60,
-    textHeaderSelected: theme.colors.white,
-    textGroupHeader: theme.colors.fadedText60,
-    headerFontStyle: `${theme.fontSizes.sm}`,
-    // Cell styling:
-    baseFontStyle: theme.fontSizes.sm,
-    editorFontSize: theme.fontSizes.sm,
-    textDark: theme.colors.bodyText,
-    textMedium: transparentize(theme.colors.bodyText, 0.2),
-    textLight: theme.colors.fadedText40,
-    textBubble: theme.colors.fadedText60,
-    bgCell: theme.colors.bgColor,
-    bgCellMedium: theme.colors.bgColor, // uses same as bgCell to always have the same background color
-    cellHorizontalPadding: 8,
-    cellVerticalPadding: 3,
-    // Special cells:
-    bgBubble: theme.colors.secondaryBg,
-    bgBubbleSelected: theme.colors.secondaryBg,
-    linkColor: theme.colors.linkText,
-    drilldownBorder: theme.colors.darkenedBgMix25,
-    // Unused settings:
-    // lineHeight
-    // Custom settings
+    theme: glideTheme,
     tableBorderRadius: theme.radii.lg,
     // Configure custom SVG icons used in the column header:
     headerIcons,

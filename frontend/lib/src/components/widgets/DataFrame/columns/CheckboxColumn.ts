@@ -26,7 +26,6 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  ColumnCreator,
   toSafeString,
   toSafeBoolean,
 } from "./utils"
@@ -76,4 +75,4 @@ function CheckboxColumn(props: BaseColumnProps): BaseColumn {
 
 CheckboxColumn.isEditableType = true
 
-export default CheckboxColumn as ColumnCreator
+export default CheckboxColumn

@@ -17,16 +17,13 @@
 import React from "react"
 
 import { DataEditorProps } from "@glideapps/glide-data-grid"
-// We don't have Typescript defs for these imports, which makes ESLint unhappy
-/* eslint-disable import/no-extraneous-dependencies */
-import { showSaveFilePicker } from "native-file-system-adapter"
-/* eslint-enable */
 
 import {
   BaseColumn,
   toSafeString,
 } from "@streamlit/lib/src/components/widgets/DataFrame/columns"
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { logWarning } from "@streamlit/lib/src/util/log"
 
 // Delimiter between cells
 const CSV_DELIMITER = ","
@@ -38,6 +35,10 @@ const CSV_ESCAPE_CHAR = '"'
 const CSV_ROW_DELIMITER = "\n"
 // Used to indicate Unicode encoding of a text file (for excel compatibility)
 const CSV_UTF8_BOM = "\ufeff"
+// Regex to check if a value contains special characters that need to be escaped
+const CSV_SPECIAL_CHARS_REGEX = new RegExp(
+  `[${[CSV_DELIMITER, CSV_QUOTE_CHAR, CSV_ROW_DELIMITER].join("")}]`
+)
 
 export function toCsvRow(rowValues: any[]): string {
   return (
@@ -58,8 +59,7 @@ function escapeValue(value: any): string {
   const strValue = toSafeString(value)
 
   // Special chars need to be escaped:
-  const specialChars = [CSV_DELIMITER, CSV_QUOTE_CHAR, CSV_ROW_DELIMITER]
-  if (new RegExp(`[${specialChars.join("")}]`).test(strValue)) {
+  if (CSV_SPECIAL_CHARS_REGEX.test(strValue)) {
     // Add quotes around the value:
     return `${CSV_QUOTE_CHAR}${strValue.replace(
       // Escape all quote chars if inside a quoted string:
@@ -91,35 +91,48 @@ function useDataExporter(
   numRows: number
 ): DataExporterReturn {
   const exportToCsv = React.useCallback(async () => {
-    const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
-    const suggestedName = `${timestamp}_export.csv`
+    try {
+      // Lazy import to prevent weird breakage in some niche cases
+      // (e.g. usage within the replay.io browser). The package works well
+      // in all of the common browser, but might cause some trouble in
+      // less common browsers. To not crash the whole app, we just lazy import
+      // this here.
+      const nativeFileSystemAdapter = await import(
+        "native-file-system-adapter"
+      )
 
-    const fileHandle = await showSaveFilePicker({
-      suggestedName,
-      types: [{ accept: { "text/csv": [".csv"] } }],
-      excludeAcceptAllOption: false,
-    })
+      const timestamp = new Date().toISOString().slice(0, 16).replace(":", "-")
+      const suggestedName = `${timestamp}_export.csv`
 
-    const textEncoder = new TextEncoder()
-    const writer = await fileHandle.createWritable()
-
-    // Write UTF-8 BOM for excel compatibility:
-    await writer.write(textEncoder.encode(CSV_UTF8_BOM))
-
-    // Write headers:
-    const headers: string[] = columns.map(column => column.name)
-    await writer.write(textEncoder.encode(toCsvRow(headers)))
-
-    for (let row = 0; row < numRows; row++) {
-      const rowData: any[] = []
-      columns.forEach((column: BaseColumn, col: number, _map) => {
-        rowData.push(column.getCellValue(getCellContent([col, row])))
+      const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
+        suggestedName,
+        types: [{ accept: { "text/csv": [".csv"] } }],
+        excludeAcceptAllOption: false,
       })
-      // Write row to CSV:
-      await writer.write(textEncoder.encode(toCsvRow(rowData)))
-    }
 
-    await writer.close()
+      const textEncoder = new TextEncoder()
+      const writer = await fileHandle.createWritable()
+
+      // Write UTF-8 BOM for excel compatibility:
+      await writer.write(textEncoder.encode(CSV_UTF8_BOM))
+
+      // Write headers:
+      const headers: string[] = columns.map(column => column.name)
+      await writer.write(textEncoder.encode(toCsvRow(headers)))
+
+      for (let row = 0; row < numRows; row++) {
+        const rowData: any[] = []
+        columns.forEach((column: BaseColumn, col: number, _map) => {
+          rowData.push(column.getCellValue(getCellContent([col, row])))
+        })
+        // Write row to CSV:
+        await writer.write(textEncoder.encode(toCsvRow(rowData)))
+      }
+
+      await writer.close()
+    } catch (error) {
+      logWarning("Failed to export data as CSV", error)
+    }
   }, [columns, numRows, getCellContent])
 
   return {
