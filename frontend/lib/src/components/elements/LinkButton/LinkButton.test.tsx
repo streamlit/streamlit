@@ -107,5 +107,19 @@ describe("LinkButton widget", () => {
       const linkButton = screen.getByRole("link")
       expect(linkButton).toHaveStyle("width: 100%")
     })
+
+    it("default target property is set correctly", () => {
+      render(<LinkButton {...getProps()}>Hello</LinkButton>)
+
+      const linkButton = screen.getByRole("link")
+      expect(linkButton).toHaveAttribute("target", "_blank")
+    })
+
+    it("passes target property correctly", () => {
+      render(<LinkButton {...getProps({ target: "_self" })}>Hello</LinkButton>)
+
+      const linkButton = screen.getByRole("link")
+      expect(linkButton).toHaveAttribute("target", "_self")
+    })
   })
 })

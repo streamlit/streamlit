@@ -53,6 +53,7 @@ describe("LinkColumn", () => {
       href: "https://streamlit.io",
       kind: "link-cell",
       displayText: "https://streamlit.io",
+      target: "_blank",
     })
   })
 
@@ -218,5 +219,23 @@ describe("LinkColumn", () => {
     ) as LinkCell
 
     expect(cell.data.displayText).toBe("https://roadmap.streamlit.app")
+  })
+
+  it("asd", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      // eslint-disable-next-line prettier/prettier
+      columnTypeOptions: {
+        display_text: "https://(.*?)\\.google.com",
+        target: "_self",
+      },
+    })
+
+    const cell = mockColumn.getCell(
+      "https://roadmap.streamlit.app",
+      true
+    ) as LinkCell
+
+    expect(cell.data.target).toBe("_self")
   })
 })

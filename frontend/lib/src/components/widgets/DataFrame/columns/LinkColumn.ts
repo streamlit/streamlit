@@ -34,6 +34,7 @@ export interface LinkColumnParams {
   readonly validate?: string
   // a value to display in the link cell. Can be a regex to parse out a specific substring of the url to be displayed
   readonly display_text?: string
+  readonly target?: string
 }
 
 /**
@@ -80,6 +81,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     style: props.isIndex ? "faded" : "normal",
     data: {
       kind: "link-cell",
+      target: "_blank",
       href: "",
       displayText: "",
     },
@@ -117,12 +119,15 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     validateInput,
     getCell(data?: any, validate?: boolean): GridCell {
+      const target: string = parameters.target || "_blank"
+
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
           data: {
             ...cellTemplate.data,
             href: null,
+            target: target,
           },
           isMissingValue: true,
         } as LinkCell
@@ -163,6 +168,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         ...cellTemplate,
         data: {
           kind: "link-cell",
+          target: target,
           href: href,
           displayText: displayText,
         },
