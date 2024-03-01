@@ -76,14 +76,17 @@ export default function Video({
     const videoNode = videoRef.current
     if (!videoNode) return
 
+    // Flag to avoid calling 'videoNode.pause()' multiple times
+    let stoppedByEndTime = false
+
     const handleTimeUpdate = (): void => {
       if (endTime > 0 && videoNode.currentTime >= endTime) {
         if (loop) {
           // If loop is true and we reached 'endTime', reset to 'startTime'
           videoNode.currentTime = startTime || 0
           videoNode.play()
-        } else {
-          // Else, just pause the video
+        } else if (!stoppedByEndTime) {
+          stoppedByEndTime = true
           videoNode.pause()
         }
       }
