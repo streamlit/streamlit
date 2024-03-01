@@ -45,7 +45,7 @@ class ConditionalHello:
             return object.__getattribute__(self, name)
 
     def say_hello(self):
-        print("Hello")
+        pass
 
 
 class StHelpAPITest(DeltaGeneratorTestCase):
@@ -71,7 +71,7 @@ class StHelpAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("ConditionalHello", el.type)
         member_names = [member.name for member in el.members]
-        self.assertTrue("say_hello" in member_names)
+        self.assertIn("say_hello", member_names)
 
     def test_st_help_with_unavailable_conditional_members(self):
         """Test st.help with conditional members not available
@@ -81,7 +81,7 @@ class StHelpAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("ConditionalHello", el.type)
         member_names = [member.name for member in el.members]
-        self.assertTrue("say_hello" not in member_names)
+        self.assertNotIn("say_hello", member_names)
 
     def test_st_help_with_erroneous_members(self):
         """Test st.help with conditional members not available
