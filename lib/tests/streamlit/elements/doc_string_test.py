@@ -33,6 +33,20 @@ def patch_varname_getter():
     )
 
 
+class ConditionalHello:
+    def __init__(self, available):
+        self.available = available
+
+    def __getattribute__(self, name):
+        if name == "say_hello" and not self.available:
+            raise AttributeError(f"{name} is not accessible when x is even")
+        else:
+            return object.__getattribute__(self, name)
+
+    def say_hello(self):
+        print("Hello")
+
+
 class StHelpAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
@@ -48,3 +62,21 @@ class StHelpAPITest(DeltaGeneratorTestCase):
             el.doc_string.startswith("Change the current working directory")
         )
         self.assertEqual(f"posix.chdir(path)", el.value)
+
+    def test_st_help_with_available_conditional_members(self):
+        """Test st.help with conditional members available"""
+
+        st.help(ConditionalHello(True))
+        el = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("ConditionalHello", el.type)
+        member_names = [member.name for member in el.members]
+        self.assertTrue("say_hello" in member_names)
+
+    def test_st_help_with_unavailable_conditional_members(self):
+        """Test st.help with conditional members not available"""
+
+        st.help(ConditionalHello(False))
+        el = self.get_delta_from_queue().new_element.doc_string
+        self.assertEqual("ConditionalHello", el.type)
+        member_names = [member.name for member in el.members]
+        self.assertTrue("say_hello" not in member_names)
