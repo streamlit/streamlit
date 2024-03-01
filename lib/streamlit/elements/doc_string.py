@@ -514,30 +514,35 @@ def _get_members(obj):
         if attr_name.startswith("_"):
             continue
 
-        is_computed_value = _is_computed_property(obj, attr_name)
+        try:
+            is_computed_value = _is_computed_property(obj, attr_name)
+            if is_computed_value:
+                parent_attr = getattr(obj.__class__, attr_name)
 
-        if is_computed_value:
-            parent_attr = getattr(obj.__class__, attr_name)
+                member_type = "property"
 
-            member_type = "property"
-
-            weight = 0
-            member_docs = _get_docstring(parent_attr)
-            member_value = None
-        else:
-            attr_value = getattr(obj, attr_name)
-            weight = _get_weight(attr_value)
-
-            human_readable_value = _get_human_readable_value(attr_value)
-
-            member_type = _get_type_as_str(attr_value)
-
-            if human_readable_value is None:
-                member_docs = _get_docstring(attr_value)
+                weight = 0
+                member_docs = _get_docstring(parent_attr)
                 member_value = None
             else:
-                member_docs = None
-                member_value = human_readable_value
+                attr_value = getattr(obj, attr_name)
+                weight = _get_weight(attr_value)
+
+                human_readable_value = _get_human_readable_value(attr_value)
+
+                member_type = _get_type_as_str(attr_value)
+
+                if human_readable_value is None:
+                    member_docs = _get_docstring(attr_value)
+                    member_value = None
+                else:
+                    member_docs = None
+                    member_value = human_readable_value
+        except AttributeError:
+            # If there's an AttributeError, we can just skip it.
+            # This can happen when members are exposed with `dir()`
+            # but are conditionally unavailable.
+            continue
 
         if member_type == "module":
             # Don't pollute the output with all imported modules.
