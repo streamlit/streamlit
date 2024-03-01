@@ -538,7 +538,7 @@ def _get_members(obj):
                 else:
                     member_docs = None
                     member_value = human_readable_value
-        except:
+        except Exception:
             # If there's any exception, we can just skip it.
             # This can happen when members are exposed with `dir()`
             # but are conditionally unavailable.
