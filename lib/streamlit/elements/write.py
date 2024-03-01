@@ -268,6 +268,15 @@ class WriteMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
+        **kwargs : any
+            Keyword arguments. Not used.
+
+        .. deprecated::
+            ``**kwargs`` is deprecated and will be removed in a later version.
+            Use other, more specific Streamlit commands to pass additional
+            keyword arguments.
+
+
         Example
         -------
 
