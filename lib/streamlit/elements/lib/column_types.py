@@ -525,13 +525,12 @@ def LinkColumn(
 
         * A regular expression (JS flavor, detected by usage of parentheses)
           to extract a part of the URL via a capture group, e.g. ``"https://(.*?)\.streamlit\.app"``
-          to extract the display text "foo" from the URL "https://foo.streamlit.app".
+          to extract the display text "foo" from the URL "\https://foo.streamlit.app".
 
         For more complex cases, you may use `Pandas Styler's format \
         <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
         function on the underlying dataframe. Note that this makes the app slow,
         doesn't work with editable columns, and might be removed in the future.
-
 
     Examples
     --------
