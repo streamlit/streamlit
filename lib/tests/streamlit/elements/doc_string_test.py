@@ -34,12 +34,13 @@ def patch_varname_getter():
 
 
 class ConditionalHello:
-    def __init__(self, available):
+    def __init__(self, available, ExceptionType=AttributeError):
         self.available = available
+        self.ExceptionType = ExceptionType
 
     def __getattribute__(self, name):
         if name == "say_hello" and not self.available:
-            raise AttributeError(f"{name} is not accessible when x is even")
+            raise self.ExceptionType(f"{name} is not accessible when x is even")
         else:
             return object.__getattribute__(self, name)
 
@@ -73,10 +74,18 @@ class StHelpAPITest(DeltaGeneratorTestCase):
         self.assertTrue("say_hello" in member_names)
 
     def test_st_help_with_unavailable_conditional_members(self):
-        """Test st.help with conditional members not available"""
+        """Test st.help with conditional members not available
+        via AttributeError"""
 
         st.help(ConditionalHello(False))
         el = self.get_delta_from_queue().new_element.doc_string
         self.assertEqual("ConditionalHello", el.type)
         member_names = [member.name for member in el.members]
         self.assertTrue("say_hello" not in member_names)
+
+    def test_st_help_with_erroneous_members(self):
+        """Test st.help with conditional members not available
+        via some non-AttributeError exception"""
+
+        with self.assertRaises(ValueError):
+            st.help(ConditionalHello(False, ValueError))
