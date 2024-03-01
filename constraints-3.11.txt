@@ -28,7 +28,7 @@ gitdb==4.0.11
 GitPython==3.1.42
 graphviz==0.20.1
 greenlet==3.0.3
-hypothesis==6.98.13
+hypothesis==6.98.15
 identify==2.5.35
 idna==3.6
 importlib-metadata==7.0.1
@@ -44,7 +44,7 @@ keyring==24.3.1
 kiwisolver==1.4.5
 langchain==0.1.9
 langchain-community==0.0.24
-langchain-core==0.1.27
+langchain-core==0.1.28
 langsmith==0.1.10
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
@@ -94,7 +94,7 @@ pytest-github-actions-annotate-failures==0.2.0
 pytest-playwright==0.4.4
 pytest-rerunfailures==13.0
 pytest-xdist==3.5.0
-python-dateutil==2.8.2
+python-dateutil==2.9.0
 python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
@@ -127,7 +127,7 @@ types-click==7.1.8
 types-protobuf==4.24.0.20240129
 types-pytz==2024.1.0.20240203
 types-requests==2.31.0.20240218
-types-setuptools==69.1.0.20240229
+types-setuptools==69.1.0.20240301
 types-toml==0.10.8.7
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
