@@ -68,11 +68,14 @@ class MediaMixin:
             or a 2D array of shape ``(num_channels, num_samples)`` with waveforms
             for all channels. See the default channel order at
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
+
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
+
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
@@ -138,26 +141,34 @@ class MediaMixin:
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
+
         format : str
             The mime type for the video file. Defaults to 'video/mp4'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
+
         subtitles: str, dict, or io.BytesIO
             Optional subtitle data for the video, supporting several input types:
+
             * None (default): No subtitles.
+
             * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or
               the raw content of subtitles conforming to these formats.
               If providing raw content, the string must adhere to the WebVTT or SRT
               format specifications.
+
             * A dictionary: Pairs of labels and file paths or raw subtitle content in
               '.vtt' or '.srt' formats.
               Enables multiple subtitle tracks. The label will be shown in the video
               player. Example:
               {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+
             * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt'
               formatted subtitle data. When provided, subtitles are displayed
               by default. For multiple tracks, the first one is displayed by default.
+
             Not supported for YouTube videos.
 
         Example
