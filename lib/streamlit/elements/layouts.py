@@ -317,7 +317,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use test `with` notation to insert any element into a tab:
+        You can use the `with` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
