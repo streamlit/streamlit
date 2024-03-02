@@ -214,7 +214,7 @@ class MediaMixin:
            height: 700px
 
         To see examples of all the supported subtitle input types, see
-        https://doc-video-subtitles2.streamlit.app/
+        https://doc-video-subtitle-inputs.streamlit.app/
 
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
