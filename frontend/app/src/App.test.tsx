@@ -75,6 +75,7 @@ jest.mock("@streamlit/app/src/connection/ConnectionManager", () => {
       isConnected: jest.fn(),
       disconnect: jest.fn(),
       sendMessage: jest.fn(),
+      incrementMessageCacheRunCount: jest.fn(),
       getBaseUriParts() {
         return {
           basePath: "",
@@ -423,10 +424,30 @@ describe("App", () => {
         { deltaPath: [0, 0] }
       )
 
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some more text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 1] }
+      )
+
       // Delta Messages handle on a timer, so we make it async
       await waitFor(() => {
-        expect(screen.getByText("Here is some text")).toBeInTheDocument()
+        expect(screen.getByText("Here is some more text")).toBeInTheDocument()
       })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
     }
 
     afterEach(() => {
@@ -773,9 +794,7 @@ describe("App", () => {
     })
 
     it("clears app elements if currentPageScriptHash changes", async () => {
-      await waitFor(() => {
-        makeAppWithElements()
-      })
+      await makeAppWithElements()
 
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
@@ -785,6 +804,51 @@ describe("App", () => {
       await waitFor(() =>
         expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
       )
+    })
+
+    it("does not add stale app elements if currentPageScriptHash changes", async () => {
+      await makeAppWithElements()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "different_hash",
+        scriptRunId: "different_script_run_id",
+      })
+
+      // elements are cleared
+      expect(
+        screen.queryByText("Here is some more text")
+      ).not.toBeInTheDocument()
+
+      // Run the script with one new element
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some other text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      // Wait for the new element to appear on the screen
+      await waitFor(() => {
+        expect(screen.getByText("Here is some other text")).toBeInTheDocument()
+      })
+
+      // Continue to expect the original element removed
+      expect(
+        screen.queryByText("Here is some more text")
+      ).not.toBeInTheDocument()
     })
 
     it("doesn't clear app elements if currentPageScriptHash doesn't change", async () => {
