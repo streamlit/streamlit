@@ -168,7 +168,9 @@ class MediaMixin:
               ``{"English": "path/to/english.vtt", "French": "path/to/french.srt"}``
 
             When provided, subtitles are displayed by default. For multiple
-            tracks, the first one is displayed by default.
+            tracks, the first one is displayed by default. If you don't want any
+            subtitles to be displayed by default when providing multiple tracks,
+            you can pass empty strings as the first entry in the dictionary.
 
             Not supported for YouTube videos.
 
@@ -186,10 +188,10 @@ class MediaMixin:
            height: 700px
 
         When you include subtitles, they will be turned on by default. A viewer
-        can turn off the subtitles (or captions) from the three-dots menu in the
-        lower-right corner of the video.
+        can turn off the subtitles (or captions) from the browser's default video
+        control menu, usually located in the lower-right corner of the video.
 
-        Here is a simpel VTT file (``subtitles.vtt``):
+        Here is a simple VTT file (``subtitles.vtt``):
 
         >>> WEBVTT
         >>>
@@ -200,7 +202,7 @@ class MediaMixin:
         >>> Look at the pretty stars!
 
         If the above VTT file lives in the same directory as your app, you can
-        add subtitles like this:
+        add subtitles like so:
 
         >>> import streamlit as st
         >>>
@@ -210,6 +212,9 @@ class MediaMixin:
         .. output::
            https://doc-video-subtitles.streamlit.app/
            height: 700px
+
+        To see examples of all the supported subtitle input types, see
+        https://doc-video-subtitles2.streamlit.app/
 
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
