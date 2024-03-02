@@ -143,7 +143,7 @@ class MediaMixin:
             headers to match specified file format.
 
         format : str
-            The mime type for the video file. Defaults to 'video/mp4'.
+            The mime type for the video file. Defaults to ``"video/mp4"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
         start_time: int
@@ -152,22 +152,23 @@ class MediaMixin:
         subtitles: str, dict, or io.BytesIO
             Optional subtitle data for the video, supporting several input types:
 
-            * None (default): No subtitles.
+            * ``None`` (default): No subtitles.
 
-            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or
+            * A string: File path to a subtitle file in ``.vtt`` or ``.srt`` formats, or
               the raw content of subtitles conforming to these formats.
               If providing raw content, the string must adhere to the WebVTT or SRT
               format specifications.
 
             * A dictionary: Pairs of labels and file paths or raw subtitle content in
-              '.vtt' or '.srt' formats.
-              Enables multiple subtitle tracks. The label will be shown in the video
-              player. Example:
-              {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+              ``.vtt`` or ``.srt`` formats to enable multiple subtitle tracks.
+              The label will be shown in the video player. Example:
+              ``{"English": "path/to/english.vtt", "French": "path/to/french.srt"}``
 
-            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt'
-              formatted subtitle data. When provided, subtitles are displayed
-              by default. For multiple tracks, the first one is displayed by default.
+            * io.BytesIO: A BytesIO stream that contains valid ``.vtt`` or ``.srt``
+              formatted subtitle data.
+
+            When provided, subtitles are displayed by default. For multiple
+            tracks, the first one is displayed by default.
 
             Not supported for YouTube videos.
 
@@ -182,6 +183,32 @@ class MediaMixin:
 
         .. output::
            https://doc-video.streamlit.app/
+           height: 700px
+
+        When you include subtitles, they will be turned on by default. A viewer
+        can turn off the subtitles (or captions) from the three-dots menu in the
+        lower-right corner of the video.
+
+        Here is a simpel VTT file (``subtitles.vtt``):
+
+        >>> WEBVTT
+        >>>
+        >>> 0:00:01.000 --> 0:00:02.000
+        >>> Look!
+        >>>
+        >>> 0:00:03.000 --> 0:00:05.000
+        >>> Look at the pretty stars!
+
+        If the above VTT file lives in the same directory as your app, you can
+        add subtitles like this:
+
+        >>> import streamlit as st
+        >>>
+        >>> VIDEO_URL = "https://example.com/not-youtube.mp4"
+        >>> st.video(VIDEO_URL, subtitles="subtitles.vtt")
+
+        .. output::
+           https://doc-video-subtitles.streamlit.app/
            height: 700px
 
         .. note::
