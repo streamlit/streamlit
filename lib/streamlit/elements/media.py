@@ -136,7 +136,7 @@ class MediaMixin:
 
         Parameters
         ----------
-        data : str, bytes, BytesIO, numpy.ndarray, or file
+        data : str, bytes, io.BytesIO, numpy.ndarray, or file
             Raw video data, filename, or URL pointing to a video to load.
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
@@ -149,23 +149,23 @@ class MediaMixin:
         start_time: int
             The time from which this element should start playing.
 
-        subtitles: str, dict, or io.BytesIO
+        subtitles: str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
 
             * ``None`` (default): No subtitles.
 
-            * A string: File path to a subtitle file in ``.vtt`` or ``.srt`` formats, or
+            * A string, bytes, or Path: File path to a subtitle file in ``.vtt`` or ``.srt`` formats, or
               the raw content of subtitles conforming to these formats.
               If providing raw content, the string must adhere to the WebVTT or SRT
               format specifications.
+
+            * io.BytesIO: A BytesIO stream that contains valid ``.vtt`` or ``.srt``
+              formatted subtitle data.
 
             * A dictionary: Pairs of labels and file paths or raw subtitle content in
               ``.vtt`` or ``.srt`` formats to enable multiple subtitle tracks.
               The label will be shown in the video player. Example:
               ``{"English": "path/to/english.vtt", "French": "path/to/french.srt"}``
-
-            * io.BytesIO: A BytesIO stream that contains valid ``.vtt`` or ``.srt``
-              formatted subtitle data.
 
             When provided, subtitles are displayed by default. For multiple
             tracks, the first one is displayed by default.
