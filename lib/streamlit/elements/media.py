@@ -169,8 +169,8 @@ class MediaMixin:
 
             When provided, subtitles are displayed by default. For multiple
             tracks, the first one is displayed by default. If you don't want any
-            subtitles displayed by default, pass an empty string in the first
-            entry of a dictionary: ``{"None": "", "English": "path/to/english.vtt"}``
+            subtitles displayed by default, use an empty string for the value
+            in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
 
@@ -213,8 +213,8 @@ class MediaMixin:
            https://doc-video-subtitles.streamlit.app/
            height: 700px
 
-        To see examples of all the supported subtitle input types, see
-        https://doc-video-subtitle-inputs.streamlit.app/
+        See additional examples of supported subtitle input types in our
+        `video subtitles feature demo <https://doc-video-subtitle-inputs.streamlit.app/>`_.
 
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
