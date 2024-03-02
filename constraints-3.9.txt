@@ -45,10 +45,11 @@ jsonschema==4.21.1
 jsonschema-specifications==2023.12.1
 keyring==24.3.1
 kiwisolver==1.4.5
-langchain==0.1.9
-langchain-community==0.0.24
+langchain==0.1.10
+langchain-community==0.0.25
 langchain-core==0.1.28
-langsmith==0.1.10
+langchain-text-splitters==0.0.1
+langsmith==0.1.13
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.0
@@ -97,7 +98,7 @@ pytest-github-actions-annotate-failures==0.2.0
 pytest-playwright==0.4.4
 pytest-rerunfailures==13.0
 pytest-xdist==3.5.0
-python-dateutil==2.9.0
+python-dateutil==2.9.0.post0
 python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
@@ -128,10 +129,10 @@ toolz==0.12.1
 tornado==6.4
 twine==5.0.0
 types-click==7.1.8
-types-protobuf==4.24.0.20240129
+types-protobuf==4.24.0.20240302
 types-pytz==2024.1.0.20240203
 types-requests==2.31.0.20240218
-types-setuptools==69.1.0.20240301
+types-setuptools==69.1.0.20240302
 types-toml==0.10.8.7
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
