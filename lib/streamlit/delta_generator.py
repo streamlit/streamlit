@@ -26,6 +26,7 @@ from typing import (
     Final,
     Hashable,
     Iterable,
+    List,
     Literal,
     NoReturn,
     TypeVar,
@@ -606,34 +607,7 @@ class DeltaGenerator(
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
         ancestor_block_types = list(dg._ancestor_block_types)
-
-        if block_type == "column":
-            num_of_parent_columns = self._count_num_of_parent_columns(
-                ancestor_block_types
-            )
-            if (
-                self._root_container == RootContainer.SIDEBAR
-                and num_of_parent_columns > 0
-            ):
-                raise StreamlitAPIException(
-                    "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
-                )
-            if num_of_parent_columns > 1:
-                raise StreamlitAPIException(
-                    "Columns can only be placed inside other columns up to one level of nesting."
-                )
-        if block_type == "chat_message" and block_type in ancestor_block_types:
-            raise StreamlitAPIException(
-                "Chat messages cannot nested inside other chat messages."
-            )
-        if block_type == "expandable" and block_type in ancestor_block_types:
-            raise StreamlitAPIException(
-                "Expanders may not be nested inside other expanders."
-            )
-        if block_type == "popover" and block_type in ancestor_block_types:
-            raise StreamlitAPIException(
-                "Popovers may not be nested inside other popovers."
-            )
+        _check_nested_element_violation(self, block_type, ancestor_block_types)
 
         if dg._root_container is None or dg._cursor is None:
             return dg
@@ -684,11 +658,9 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
+        **kwargs: (
+            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+        ),
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
@@ -927,3 +899,42 @@ def _writes_directly_to_sidebar(dg: DG) -> bool:
     in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
     has_container = bool(len(list(dg._ancestor_block_types)))
     return in_sidebar and not has_container
+
+
+def _check_nested_element_violation(
+    dg: DeltaGenerator, block_type: str | None, parent_block_types: List[BlockType]
+) -> None:
+    """Check if elements are nested in a forbidden way.
+
+    Raises
+    ------
+      StreamlitAPIException: throw if an invalid element nesting is detected.
+    """
+
+    if block_type == "column":
+        num_of_parent_columns = self._count_num_of_parent_columns(
+            ancestor_block_types
+        )
+        if (
+            self._root_container == RootContainer.SIDEBAR
+            and num_of_parent_columns > 0
+        ):
+            raise StreamlitAPIException(
+                "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
+            )
+        if num_of_parent_columns > 1:
+            raise StreamlitAPIException(
+                "Columns can only be placed inside other columns up to one level of nesting."
+            )
+    if block_type == "chat_message" and block_type in ancestor_block_types:
+        raise StreamlitAPIException(
+            "Chat messages cannot nested inside other chat messages."
+        )
+    if block_type == "expandable" and block_type in ancestor_block_types:
+        raise StreamlitAPIException(
+            "Expanders may not be nested inside other expanders."
+        )
+    if block_type == "popover" and block_type in ancestor_block_types:
+        raise StreamlitAPIException(
+            "Popovers may not be nested inside other popovers."
+        )
