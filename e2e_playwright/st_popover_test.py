@@ -109,10 +109,6 @@ def test_applying_changes_from_popover_container(app: Page):
 
 def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     """Test that the fullscreen mode is disabled within a popover container."""
-    # Add a timeout as a workaround for some flakiness with the dataframe
-    # when the popover gets opened to fast:
-    app.wait_for_timeout(1000)
-
     # Get the fullscreen elements popover container:
     popover_element = app.get_by_test_id("stPopover").nth(4)
     # Click the button to open it:
