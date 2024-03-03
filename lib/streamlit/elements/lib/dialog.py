@@ -25,7 +25,7 @@ from streamlit.delta_generator import DeltaGenerator, _enqueue_message
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
-DialogWidth: TypeAlias = Literal["small", "medium", "large", "xlarge"]
+DialogWidth: TypeAlias = Literal["small", "large"]
 
 
 class Dialog(DeltaGenerator):
@@ -35,7 +35,7 @@ class Dialog(DeltaGenerator):
         title: str,
         *,
         dismissible: bool = True,
-        width: DialogWidth = "medium",
+        width: DialogWidth = "small",
     ) -> Dialog:
         block_proto = BlockProto()
         block_proto.dialog.title = title
