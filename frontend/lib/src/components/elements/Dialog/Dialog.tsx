@@ -39,10 +39,8 @@ export interface Props {
 }
 
 const DIALOG_WIDTH = {
-  small: "20rem",
-  medium: "default",
+  small: "default",
   large: "60vw",
-  xlarge: "80vw",
 }
 
 function parseWidthConfig(width?: string): string {
@@ -97,6 +95,14 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
         closeable={dismissible}
         onClose={() => setIsOpen(false)}
         size={parseWidthConfig(width ?? SIZE.default)}
+        overrides={{
+          Dialog: {
+            style: {
+              // make sure the modal is not too small on mobile
+              minWidth: "20rem",
+            },
+          },
+        }}
       >
         <ModalHeader>{title}</ModalHeader>
         <ModalBody>{children}</ModalBody>

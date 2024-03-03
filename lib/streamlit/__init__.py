@@ -72,6 +72,10 @@ from streamlit.delta_generator import (
     event_dg as _event_dg,
     bottom_dg as _bottom_dg,
 )
+from streamlit.elements.dialog_decorator import (
+    # rename so that it is available as st.dialog
+    dialog_decorator as dialog,
+)
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
@@ -128,7 +132,6 @@ _config.on_config_parsed(_update_logger, True)
 secrets = _secrets_singleton
 
 # DeltaGenerator methods:
-
 _main = _main_dg
 sidebar = _sidebar_dg
 _event = _event_dg
@@ -153,7 +156,6 @@ container = _main.container
 dataframe = _main.dataframe
 data_editor = _main.data_editor
 date_input = _main.date_input
-dialog = _main.dialog
 divider = _main.divider
 download_button = _main.download_button
 expander = _main.expander

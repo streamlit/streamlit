@@ -26,6 +26,7 @@ from typing import (
     Final,
     Hashable,
     Iterable,
+    List,
     Literal,
     NoReturn,
     TypeVar,
@@ -586,34 +587,7 @@ class DeltaGenerator(
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
         parent_block_types = list(dg._parent_block_types)
-
-        if block_type == "column":
-            num_of_parent_columns = self._count_num_of_parent_columns(
-                parent_block_types
-            )
-            if (
-                self._root_container == RootContainer.SIDEBAR
-                and num_of_parent_columns > 0
-            ):
-                raise StreamlitAPIException(
-                    "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
-                )
-            if num_of_parent_columns > 1:
-                raise StreamlitAPIException(
-                    "Columns can only be placed inside other columns up to one level of nesting."
-                )
-        if block_type == "chat_message" and block_type in frozenset(parent_block_types):
-            raise StreamlitAPIException(
-                "Chat messages cannot nested inside other chat messages."
-            )
-        if block_type == "expandable" and block_type in frozenset(parent_block_types):
-            raise StreamlitAPIException(
-                "Expanders may not be nested inside other expanders."
-            )
-        if block_type == "popover" and block_type in frozenset(parent_block_types):
-            raise StreamlitAPIException(
-                "Popovers may not be nested inside other popovers."
-            )
+        _check_nested_element_violation(self, block_type, parent_block_types)
 
         if dg._root_container is None or dg._cursor is None:
             return dg
@@ -664,11 +638,9 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
+        **kwargs: (
+            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+        ),
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
@@ -898,3 +870,37 @@ def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
         raise NoSessionContext()
 
     ctx.enqueue(msg)
+
+
+def _check_nested_element_violation(
+    dg: DeltaGenerator, block_type: str | None, parent_block_types: List[BlockType]
+) -> None:
+    """Check if elements are nested in a forbidden way.
+
+    Raises
+    ------
+      StreamlitAPIException: throw if an invalid element nesting is detected.
+    """
+
+    if block_type == "column":
+        num_of_parent_columns = dg._count_num_of_parent_columns(parent_block_types)
+        if dg._root_container == RootContainer.SIDEBAR and num_of_parent_columns > 0:
+            raise StreamlitAPIException(
+                "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
+            )
+        if num_of_parent_columns > 1:
+            raise StreamlitAPIException(
+                "Columns can only be placed inside other columns up to one level of nesting."
+            )
+    elif block_type == "chat_message" and block_type in frozenset(parent_block_types):
+        raise StreamlitAPIException(
+            "Chat messages cannot be nested inside other chat messages."
+        )
+    elif block_type == "expandable" and block_type in frozenset(parent_block_types):
+        raise StreamlitAPIException(
+            "Expanders may not be nested inside other expanders."
+        )
+    elif block_type == "popover" and block_type in frozenset(parent_block_types):
+        raise StreamlitAPIException("Popovers may not be nested inside other popovers.")
+    elif block_type == "dialog" and block_type in frozenset(parent_block_types):
+        raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
