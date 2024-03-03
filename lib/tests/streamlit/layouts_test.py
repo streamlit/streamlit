@@ -338,26 +338,27 @@ class TabsTest(DeltaGeneratorTestCase):
 
 
 class DialogTest(DeltaGeneratorTestCase):
-    def test_title_required(self):
-        """Test that the title is required"""
-        with self.assertRaises(TypeError):
-            st.dialog()
+    """Run unit tests for the non-public delta-generator dialog and also the dialog decorator."""
 
-    def test_usage_with_context_manager(self):
-        title = "Test Dialog"
-        dialog = st.dialog(title)
+    title = "Test Dialog"
+
+    def test_dialog_deltagenerator_usage_with_context_manager(self):
+        """Test that the delta-generator dialog works as a context manager"""
+
+        dialog = st._main.dialog(DialogTest.title)
 
         with dialog:
+            """No content so that 'get_delta_from_queue' returns the dialog."""
             pass
 
         dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.title, title)
+        self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
         self.assertEqual(dialog_block.add_block.dialog.is_open, False)
         self.assertEqual(dialog_block.add_block.dialog.dismissible, True)
 
-    def test_dialog_opens_and_closes(self):
+    def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
-        dialog = st.dialog("Test Dialog")
+        dialog = st._main.dialog("Test Dialog")
 
         self.assertIsNotNone(dialog)
         dialog_block = self.get_delta_from_queue()
@@ -371,11 +372,36 @@ class DialogTest(DeltaGeneratorTestCase):
         dialog_block = self.get_delta_from_queue()
         self.assertEqual(dialog_block.add_block.dialog.is_open, False)
 
+    def test_dialog_decorator_title_required(self):
+        """Test that the title is required"""
+        with self.assertRaises(TypeError):
+            st.dialog()
+
     def test_dismissible_param(self):
-        title = "Test Dialog"
-        st.dialog(title, dismissible=False)
+        """Test that the 'dismissible' parameters work."""
+        dismissible = False
+
+        @st.dialog(title=DialogTest.title, dismissible=dismissible)
+        def non_dismissible_dialog():
+            """No content so that 'get_delta_from_queue' returns the dialog."""
+            pass
+
+        non_dismissible_dialog()
 
         dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.title, title)
-        self.assertEqual(dialog_block.add_block.dialog.dismissible, False)
-        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
+        self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
+        self.assertEqual(dialog_block.add_block.dialog.dismissible, dismissible)
+
+    def test_nested_dialog_raises_errors(self):
+        """Test that dialogs cannot be called nested."""
+
+        @st.dialog("Level2 dialog")
+        def level2_dialog():
+            st.empty()
+
+        @st.dialog("Level1 dialog")
+        def level1_dialog():
+            level2_dialog()
+
+        with self.assertRaises(StreamlitAPIException):
+            level1_dialog()

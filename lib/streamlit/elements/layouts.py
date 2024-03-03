@@ -717,8 +717,9 @@ class LayoutsMixin:
         title: str,
         *,
         dismissible: bool = True,
-        width: Literal["small", "medium", "large", "xlarge"] = "medium",
+        width: Literal["small", "large"] = "small",
     ) -> "Dialog":
+        # We need to import Dialog here to avoid a circular import
         from streamlit.elements.lib.dialog import Dialog
 
         return Dialog._create(self.dg, title, dismissible=dismissible, width=width)

@@ -17,8 +17,9 @@ import pandas as pd
 
 import streamlit as st
 
-dialog = st.dialog("Test Dialog with Images")
-with dialog:
+
+@st.dialog("Test Dialog with Images")
+def dialog_with_images():
     st.write("Hello!")
     st.slider("Slide me!", 0, 10)
 
@@ -29,37 +30,63 @@ with dialog:
 
     # render multiple images. This will make the Close button to go out of
     # screen and allows scrollability of the dialog
-    for i in range(0, 3):
+    for _ in range(0, 3):
         st.image(np.repeat(0, 1000000).reshape(1000, 1000))
 
     if st.button("Submit", key="dialog-btn"):
-        dialog.close()
+        return True
 
 
 if st.button("Open Dialog with Images"):
-    dialog.open()
+    dialog_with_images()
 
 
-dialog = st.dialog("Simple Dialog")
-with dialog:
+@st.dialog("Simple Dialog")
+def simple_dialog():
     st.write("Hello again!")
     st.text_input("Enter something!")
 
     if st.button("Submit", key="dialog2-btn"):
-        dialog.close()
+        return True
+
 
 if st.button("Open Dialog without Images"):
-    dialog.open()
+    simple_dialog()
+
+
+@st.dialog("Non-dismissible Dialog", dismissible=False)
+def non_dismissible_dialog():
+    st.write("This dialog should not show the X icon.")
+
+    if st.button("Submit", key="dialog3-btn"):
+        return True
+
+
+if st.button("Open non-dismissible Dialog"):
+    non_dismissible_dialog()
+
+
+@st.dialog("Large-width Dialog", width="large")
+def large_width_dialog():
+    st.write("This dialog has a large width.")
+
+    if st.button("Submit", key="dialog4-btn"):
+        return True
+
+
+if st.button("Open large-width Dialog"):
+    large_width_dialog()
 
 # We use this dialog for a screenshot test as loading images via the browser
-#   is non-deterministic
+# is non-deterministic
 with st.sidebar:
-    dialog = st.dialog("Simple Dialog in Sidebar")
-    with dialog:
+
+    @st.dialog("Simple Dialog in Sidebar")
+    def dialog_in_sidebar():
         st.write("Hello sidebar dialog!")
 
-        if st.button("Submit", key="dialog3-btn"):
-            dialog.close()
+        if st.button("Submit", key="dialog5-btn"):
+            return True
 
     if st.button("Open Sidebar-Dialog"):
-        dialog.open()
+        dialog_in_sidebar()
