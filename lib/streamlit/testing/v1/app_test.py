@@ -586,9 +586,9 @@ class AppTest:
 
         Returns
         -------
-        List of Expandable
+        Sequence of Expandable
             Sequence of all ``st.expander`` elements. Individual elements can be
-            accessed from a list by index (order on the page). For
+            accessed from a Sequence by index (order on the page). For
             example, ``at.expander[0]`` for the first element. Expandable is an
             extension of the Block class.
         """
@@ -796,9 +796,9 @@ class AppTest:
 
         Returns
         -------
-        List of Status
+        Sequence of Status
             Sequence of all ``st.status`` elements. Individual elements can be
-            accessed from a list by index (order on the page). For
+            accessed from a Sequence by index (order on the page). For
             example, ``at.status[0]`` for the first element. Status is an
             extension of the Block class.
         """
