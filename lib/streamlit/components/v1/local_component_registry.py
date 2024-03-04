@@ -27,7 +27,7 @@ from streamlit.logger import get_logger
 _LOGGER: Final = get_logger(__name__)
 
 
-class DefaultComponentRegistry(BaseComponentRegistry):
+class LocalComponentRegistry(BaseComponentRegistry):
     def __init__(self) -> None:
         self._components: dict[str, CustomComponent] = {}
         self._lock = threading.Lock()

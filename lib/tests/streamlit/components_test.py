@@ -34,7 +34,7 @@ from streamlit.components.v1.component_registry import (
     _get_module_name,
 )
 from streamlit.components.v1.custom_component import CustomComponent
-from streamlit.components.v1.default_component_registry import DefaultComponentRegistry
+from streamlit.components.v1.local_component_registry import LocalComponentRegistry
 from streamlit.errors import (
     CustomComponentError,
     DuplicateWidgetID,
@@ -154,40 +154,43 @@ class DeclareComponentTest(unittest.TestCase):
     def test_module_name_not_none(self):
         caller_frame = inspect.currentframe()
         self.assertIsNotNone(caller_frame)
-        component_name = _get_module_name(caller_frame=caller_frame)
+        module_name = _get_module_name(caller_frame=caller_frame)
 
         component = components.declare_component("test", url=URL)
         self.assertEqual(
             ComponentRegistry.instance().get_module_name(component.name),
-            component_name,
+            module_name,
         )
 
     def test_get_registered_components(self):
         component1 = components.declare_component("test1", url=URL)
         component2 = components.declare_component("test2", url=URL)
         component3 = components.declare_component("test3", url=URL)
+        expected_registered_component_names = set(
+            [component1.name, component2.name, component3.name]
+        )
 
         registered_components = ComponentRegistry.instance().get_components()
         self.assertEqual(
             len(registered_components),
             3,
         )
-        registered_component_names = [
-            component.name for component in registered_components
-        ]
-        self.assertIn(component1.name, registered_component_names)
-        self.assertTrue(component2.name, registered_component_names)
-        self.assertTrue(component3.name, registered_component_names)
+        registered_component_names = set(
+            [component.name for component in registered_components]
+        )
+        self.assertSetEqual(
+            registered_component_names, expected_registered_component_names
+        )
 
     def test_when_registry_not_explicitly_initialized_return_defaultregistry(self):
         ComponentRegistry._instance = None
         components.declare_component("test", url=URL)
-        self.assertIs(type(ComponentRegistry.instance()), DefaultComponentRegistry)
+        self.assertIsInstance(ComponentRegistry.instance(), LocalComponentRegistry)
 
     def test_error_when_registry_initialized_more_than_once(self):
-        ComponentRegistry.initialize(DefaultComponentRegistry())
+        ComponentRegistry.initialize(LocalComponentRegistry())
         with pytest.raises(CustomComponentError):
-            ComponentRegistry.initialize(DefaultComponentRegistry())
+            ComponentRegistry.initialize(LocalComponentRegistry())
 
 
 class ComponentRegistryTest(unittest.TestCase):
@@ -524,10 +527,10 @@ class IFrameTest(DeltaGeneratorTestCase):
         self.assertTrue(el.iframe.scrolling)
 
 
-class NonDefaultComponentRegistryTest(unittest.TestCase):
-    """Test non-default component registry initialization."""
+class AlternativeComponentRegistryTest(unittest.TestCase):
+    """Test alternative component registry initialization."""
 
-    class NonDefaultComponentRegistry(BaseComponentRegistry):
+    class AlternativeComponentRegistry(BaseComponentRegistry):
         def __init__(self):
             """Dummy implementation"""
             pass
@@ -546,9 +549,9 @@ class NonDefaultComponentRegistryTest(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        registry = NonDefaultComponentRegistryTest.NonDefaultComponentRegistry()
+        registry = AlternativeComponentRegistryTest.AlternativeComponentRegistry()
         ComponentRegistry.initialize(registry)
         self.assertEqual(ComponentRegistry.instance(), registry)
-        self.assertIs(
-            type(registry), NonDefaultComponentRegistryTest.NonDefaultComponentRegistry
+        self.assertIsInstance(
+            registry, AlternativeComponentRegistryTest.AlternativeComponentRegistry
         )
