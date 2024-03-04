@@ -27,20 +27,20 @@ import pytest
 
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit.components.types.base_component_registry import BaseComponentRegistry
+from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.components.v1 import component_arrow
-from streamlit.components.v1.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.component_registry import (
     ComponentRegistry,
     _get_module_name,
 )
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.components.v1.local_component_registry import LocalComponentRegistry
-from streamlit.errors import (
-    CustomComponentError,
-    DuplicateWidgetID,
-    StreamlitAPIException,
-)
+from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import SpecialArg
+from streamlit.runtime import Runtime, RuntimeConfig
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.type_util import to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -65,8 +65,18 @@ def _serialize_bytes_arg(key: str, value: Any) -> SpecialArg:
 class DeclareComponentTest(unittest.TestCase):
     """Test component declaration."""
 
+    def setUp(self) -> None:
+        config = RuntimeConfig(
+            script_path="mock/script/path.py",
+            command_line=None,
+            component_registry=LocalComponentRegistry(),
+            media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
+        )
+        self.runtime = Runtime(config)
+
     def tearDown(self) -> None:
-        ComponentRegistry._instance = None
+        Runtime._instance = None
 
     def test_name(self):
         """Test component name generation"""
@@ -187,17 +197,22 @@ class DeclareComponentTest(unittest.TestCase):
         components.declare_component("test", url=URL)
         self.assertIsInstance(ComponentRegistry.instance(), LocalComponentRegistry)
 
-    def test_error_when_registry_initialized_more_than_once(self):
-        ComponentRegistry.initialize(LocalComponentRegistry())
-        with pytest.raises(CustomComponentError):
-            ComponentRegistry.initialize(LocalComponentRegistry())
-
 
 class ComponentRegistryTest(unittest.TestCase):
     """Test component registration."""
 
+    def setUp(self) -> None:
+        config = RuntimeConfig(
+            script_path="mock/script/path.py",
+            command_line=None,
+            component_registry=LocalComponentRegistry(),
+            media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
+        )
+        self.runtime = Runtime(config)
+
     def tearDown(self) -> None:
-        ComponentRegistry._instance = None
+        Runtime._instance = None
 
     def test_register_component_with_path(self):
         """Registering a component should associate it with its path."""
@@ -208,7 +223,7 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir",
+            "streamlit.components.types.base_custom_component.os.path.isdir",
             side_effect=isdir,
         ):
             registry.register_component(
@@ -253,7 +268,7 @@ class ComponentRegistryTest(unittest.TestCase):
 
         registry = ComponentRegistry.instance()
         with mock.patch(
-            "streamlit.components.v1.components.os.path.isdir",
+            "streamlit.components.types.base_custom_component.os.path.isdir",
             side_effect=isdir,
         ):
             registry.register_component(CustomComponent("test_component", test_path_1))
@@ -535,7 +550,7 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
             """Dummy implementation"""
             pass
 
-        def register_component(self, component: CustomComponent) -> None:
+        def register_component(self, component: BaseCustomComponent) -> None:
             return None
 
         def get_component_path(self, name: str) -> str | None:
@@ -544,13 +559,13 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
         def get_module_name(self, name: str) -> str | None:
             return None
 
-        def get_components(self) -> list[CustomComponent]:
+        def get_components(self) -> list[BaseCustomComponent]:
             return []
 
     def setUp(self) -> None:
         super().setUp()
         registry = AlternativeComponentRegistryTest.AlternativeComponentRegistry()
-        ComponentRegistry.initialize(registry)
+        # ComponentRegistry.initialize(registry)
         self.assertEqual(ComponentRegistry.instance(), registry)
         self.assertIsInstance(
             registry, AlternativeComponentRegistryTest.AlternativeComponentRegistry

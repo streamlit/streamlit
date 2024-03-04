@@ -29,7 +29,7 @@ import tornado.websocket
 from tornado.httpserver import HTTPServer
 
 from streamlit import cli_util, config, file_util, source_util, util
-from streamlit.components.v1.component_registry import ComponentRegistry
+from streamlit.components.v1.local_component_registry import LocalComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -242,6 +242,7 @@ class Server:
             RuntimeConfig(
                 script_path=main_script_path,
                 command_line=None,
+                component_registry=LocalComponentRegistry(),
                 media_file_storage=media_file_storage,
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
@@ -327,7 +328,7 @@ class Server:
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
-                dict(registry=ComponentRegistry.instance()),
+                dict(registry=self._runtime.component_registry),
             ),
         ]
 

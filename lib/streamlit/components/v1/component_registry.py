@@ -16,13 +16,11 @@ from __future__ import annotations
 
 import inspect
 import os
-import threading
 from types import FrameType
 
-from streamlit.components.v1.base_component_registry import BaseComponentRegistry
+from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.custom_component import CustomComponent
-from streamlit.components.v1.local_component_registry import LocalComponentRegistry
-from streamlit.errors import CustomComponentError
+from streamlit.runtime import get_instance
 
 
 def _get_module_name(caller_frame: FrameType) -> str:
@@ -86,44 +84,15 @@ def declare_component(
     component = CustomComponent(
         name=component_name, path=path, url=url, module_name=module_name
     )
-    ComponentRegistry.instance().register_component(component)
+    get_instance().component_registry.register_component(component)
 
     return component
 
 
+# keep for backwards-compatibility
 class ComponentRegistry:
-    _instance_lock: threading.Lock = threading.Lock()
-    _instance: BaseComponentRegistry | None = None
-
     @classmethod
     def instance(cls) -> BaseComponentRegistry:
-        """Returns the singleton ComponentRegistry.
+        """Returns the ComponentRegistry of the runtime instance."""
 
-        If no instance has been initialized via the `ComponentRegistry.initialize` method before
-        this method here is called, the singleton is initialized with `LocalComponentRegistry`.
-        """
-
-        if cls._instance is None:
-            cls.initialize(LocalComponentRegistry())
-
-        # The initialize call above initializes the instance
-        return cls._instance  # type: ignore[return-value]
-
-    @classmethod
-    def initialize(cls, registry: BaseComponentRegistry) -> None:
-        """Register ComponentRegistry as the one used by the runtime
-
-        :raises:
-            CustomComponentError: If a ComponentRegistry is already initialized
-        """
-
-        # We use a double-checked locking optimization to avoid the overhead
-        # of acquiring the lock in the common case:
-        # https://en.wikipedia.org/wiki/Double-checked_locking
-        if cls._instance is not None:
-            raise CustomComponentError(
-                "ComponentRegistry is already initialized. If the nature of this cause is not clear, please report it as an issue."
-            )
-        with cls._instance_lock:
-            if cls._instance is None:
-                cls._instance = registry
+        return get_instance().component_registry

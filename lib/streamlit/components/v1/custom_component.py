@@ -15,10 +15,10 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import TYPE_CHECKING, Any
 
-from streamlit import _main, type_util, util
+from streamlit import _main, type_util
+from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
@@ -40,35 +40,8 @@ class MarshallComponentException(StreamlitAPIException):
     pass
 
 
-class CustomComponent:
+class CustomComponent(BaseCustomComponent):
     """A Custom Component declaration."""
-
-    def __init__(
-        self,
-        name: str,
-        path: str | None = None,
-        url: str | None = None,
-        module_name: str | None = None,
-    ):
-        if (path is None and url is None) or (path is not None and url is not None):
-            raise StreamlitAPIException(
-                "Either 'path' or 'url' must be set, but not both."
-            )
-
-        self.name = name
-        self.path = path
-        self.url = url
-        self.module_name = module_name
-
-    def __repr__(self) -> str:
-        return util.repr_(self)
-
-    @property
-    def abspath(self) -> str | None:
-        """The absolute path that the component is served from."""
-        if self.path is None:
-            return None
-        return os.path.abspath(self.path)
 
     def __call__(
         self,
