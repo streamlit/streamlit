@@ -22,6 +22,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
 from streamlit import config
+from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -84,6 +85,9 @@ class RuntimeConfig:
     # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
     # longer use this anywhere.
     command_line: str | None
+
+    # The ComponentRegistry instance to use.
+    component_registry: BaseComponentRegistry
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
@@ -195,6 +199,7 @@ class Runtime:
         self._state = RuntimeState.INITIAL
 
         # Initialize managers
+        self._component_registry = config.component_registry
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
@@ -219,6 +224,10 @@ class Runtime:
     @property
     def state(self) -> RuntimeState:
         return self._state
+
+    @property
+    def component_registry(self) -> BaseComponentRegistry:
+        return self._component_registry
 
     @property
     def message_cache(self) -> ForwardMsgCache:

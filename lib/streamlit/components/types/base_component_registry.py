@@ -17,14 +17,14 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Protocol
 
-from streamlit.components.v1.custom_component import CustomComponent
+from streamlit.components.types.base_custom_component import BaseCustomComponent
 
 
 class BaseComponentRegistry(Protocol):
-    """Interface for implementing a ComponentRegistry."""
+    """Interface for ComponentRegistries."""
 
     @abstractmethod
-    def register_component(self, component: CustomComponent) -> None:
+    def register_component(self, component: BaseCustomComponent) -> None:
         """Register a CustomComponent.
 
         Parameters
@@ -70,7 +70,7 @@ class BaseComponentRegistry(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def get_components(self) -> list[CustomComponent]:
+    def get_components(self) -> list[BaseCustomComponent]:
         """Returns a list of custom components that are registered in this registry.
 
         Returns

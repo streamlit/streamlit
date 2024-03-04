@@ -21,7 +21,7 @@ from typing import Final
 import tornado.web
 
 import streamlit.web.server.routes
-from streamlit.components.v1.base_component_registry import BaseComponentRegistry
+from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
