@@ -21,7 +21,7 @@ from types import FrameType
 
 from streamlit.components.v1.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.custom_component import CustomComponent
-from streamlit.components.v1.default_component_registry import DefaultComponentRegistry
+from streamlit.components.v1.local_component_registry import LocalComponentRegistry
 from streamlit.errors import CustomComponentError
 
 
@@ -100,11 +100,11 @@ class ComponentRegistry:
         """Returns the singleton ComponentRegistry.
 
         If no instance has been initialized via the `ComponentRegistry.initialize` method before
-        this method here is called, the singleton is initialized with `DefaultComponentRegistry`.
+        this method here is called, the singleton is initialized with `LocalComponentRegistry`.
         """
 
         if cls._instance is None:
-            cls.initialize(DefaultComponentRegistry())
+            cls.initialize(LocalComponentRegistry())
 
         # The initialize call above initializes the instance
         return cls._instance  # type: ignore[return-value]

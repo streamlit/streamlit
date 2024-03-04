@@ -21,7 +21,7 @@ from streamlit.components.v1.custom_component import CustomComponent
 
 
 class BaseComponentRegistry(Protocol):
-    """Interface for implementing an alternative ComponentRegistry."""
+    """Interface for implementing a ComponentRegistry."""
 
     @abstractmethod
     def register_component(self, component: CustomComponent) -> None:
@@ -58,6 +58,10 @@ class BaseComponentRegistry(Protocol):
 
         If no such component us registered, return None instead.
 
+        Parameters
+        ----------
+        name: name of the component
+
         Returns
         -------
         str or None
@@ -67,5 +71,11 @@ class BaseComponentRegistry(Protocol):
 
     @abstractmethod
     def get_components(self) -> list[CustomComponent]:
-        """Returns a list of custom components that are registered."""
+        """Returns a list of custom components that are registered in this registry.
+
+        Returns
+        -------
+        list[CustomComponents]
+            A list of registered custom components.
+        """
         raise NotImplementedError
