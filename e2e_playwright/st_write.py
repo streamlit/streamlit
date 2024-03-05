@@ -47,6 +47,7 @@ class ClassWithReprHtml:
 
 
 st.write(ClassWithReprHtml())
+st.write(ClassWithReprHtml(), unsafe_allow_html=True)
 
 st.write(100)
 

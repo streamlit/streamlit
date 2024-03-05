@@ -85,9 +85,7 @@ class StreamlitWriteTest(unittest.TestCase):
             p.assert_called_once_with("hello **world**", unsafe_allow_html=False)
 
     def test_repr_html_not_callable(self):
-        """Test st.write with an object that defines _repr_html_ but does not have any
-        html tags in the returned string.
-        """
+        """Test st.write with an object that defines _repr_html_ but is not callable"""
 
         class FakeHTMLable(object):
             _repr_html_ = "hello **world**"
