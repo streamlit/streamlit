@@ -47,5 +47,6 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(17), name="st_dataframe-list_column")
     assert_snapshot(dataframe_elements.nth(18), name="st_dataframe-bar_chart_column")
     assert_snapshot(dataframe_elements.nth(19), name="st_dataframe-line_chart_column")
-    assert_snapshot(dataframe_elements.nth(20), name="st_dataframe-image_column")
-    assert_snapshot(dataframe_elements.nth(21), name="st_dataframe-auto_sized_columns")
+    assert_snapshot(dataframe_elements.nth(20), name="st_dataframe-area_chart_column")
+    assert_snapshot(dataframe_elements.nth(21), name="st_dataframe-image_column")
+    assert_snapshot(dataframe_elements.nth(22), name="st_dataframe-auto_sized_columns")
