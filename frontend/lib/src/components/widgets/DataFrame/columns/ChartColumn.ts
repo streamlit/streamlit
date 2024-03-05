@@ -72,7 +72,6 @@ function BaseChartColumn(
       displayValues: [],
       graphKind: chart_type,
       yAxis: [parameters.y_min, parameters.y_max],
-      hideAxis: chart_type === "line",
     },
   } as SparklineCellType
 
@@ -187,9 +186,7 @@ function BaseChartColumn(
  * This column type is currently read-only.
  */
 export function LineChartColumn(props: BaseColumnProps): BaseColumn {
-  // TODO(lukasmasuch): Change this to use `line` chart and introduce
-  // an AreaChartColumn for the `area` chart.
-  return BaseChartColumn("line_chart", props, "area")
+  return BaseChartColumn("line_chart", props, "line")
 }
 
 LineChartColumn.isEditableType = false
@@ -205,3 +202,15 @@ export function BarChartColumn(props: BaseColumnProps): BaseColumn {
 }
 
 BarChartColumn.isEditableType = false
+
+/**
+ * A column type that renders the cell value as an area-chart.
+ * The data is expected to be a numeric array.
+ *
+ * This column type is currently read-only.
+ */
+export function AreaChartColumn(props: BaseColumnProps): BaseColumn {
+  return BaseChartColumn("area_chart", props, "area")
+}
+
+AreaChartColumn.isEditableType = false
