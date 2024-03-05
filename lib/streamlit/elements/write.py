@@ -463,7 +463,7 @@ class WriteMixin:
                 self.dg.help(cast(type, arg))
             elif (
                 hasattr(arg, "_repr_html_")
-                and isinstance(arg._repr_html_, Callable)
+                and callable(arg._repr_html_)
                 and (repr_html := arg._repr_html_())
                 and (unsafe_allow_html or not probably_contains_html_tags(repr_html))
             ):
