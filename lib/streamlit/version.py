@@ -13,15 +13,20 @@
 # limitations under the License.
 
 """Streamlit version utilities."""
-import random
 
-import packaging.version
-from importlib_metadata import version as _version
-from typing_extensions import Final
+from __future__ import annotations
+
+import random
+from importlib.metadata import version as _version
+from typing import TYPE_CHECKING, Final
 
 import streamlit.logger as logger
 
-_LOGGER = logger.get_logger(__name__)
+if TYPE_CHECKING:
+    from packaging.version import Version
+
+
+_LOGGER: Final = logger.get_logger(__name__)
 
 PYPI_STREAMLIT_URL = "https://pypi.org/pypi/streamlit/json"
 
@@ -33,11 +38,13 @@ CHECK_PYPI_PROBABILITY = 0.10
 STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit")
 
 
-def _version_str_to_obj(version_str) -> packaging.version.Version:
-    return packaging.version.Version(version_str)
+def _version_str_to_obj(version_str: str) -> Version:
+    from packaging.version import Version
+
+    return Version(version_str)
 
 
-def _get_installed_streamlit_version() -> packaging.version.Version:
+def _get_installed_streamlit_version() -> Version:
     """Return the streamlit version string from setup.py.
 
     Returns
@@ -49,7 +56,7 @@ def _get_installed_streamlit_version() -> packaging.version.Version:
     return _version_str_to_obj(STREAMLIT_VERSION_STRING)
 
 
-def _get_latest_streamlit_version(timeout=None):
+def _get_latest_streamlit_version(timeout: float | None = None) -> Version:
     """Request the latest streamlit version string from PyPI.
 
     NB: this involves a network call, so it could raise an error
@@ -77,7 +84,7 @@ def _get_latest_streamlit_version(timeout=None):
     return _version_str_to_obj(version_str)
 
 
-def should_show_new_version_notice():
+def should_show_new_version_notice() -> bool:
     """True if streamlit should show a 'new version!' notice to the user.
 
     We need to make a network call to PyPI to determine the latest streamlit

@@ -21,7 +21,9 @@ import "@testing-library/jest-dom"
 
 import Particles, { ParticleProps, Props } from "./Particles"
 
-const DummyParticle: FC<ParticleProps> = () => <span />
+const DummyParticle: FC<React.PropsWithChildren<ParticleProps>> = () => (
+  <span />
+)
 
 const getProps = (): Props => ({
   className: "particles",

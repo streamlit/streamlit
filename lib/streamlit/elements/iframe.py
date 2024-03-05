@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -26,10 +28,10 @@ class IframeMixin:
     def _iframe(
         self,
         src: str,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         scrolling: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Load a remote URL in an iframe.
 
         Parameters
@@ -60,10 +62,10 @@ class IframeMixin:
     def _html(
         self,
         html: str,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         scrolling: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an HTML string in an iframe.
 
         Parameters
@@ -91,17 +93,17 @@ class IframeMixin:
         return self.dg._enqueue("iframe", iframe_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
 def marshall(
     proto: IFrameProto,
-    src: Optional[str] = None,
-    srcdoc: Optional[str] = None,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
+    src: str | None = None,
+    srcdoc: str | None = None,
+    width: int | None = None,
+    height: int | None = None,
     scrolling: bool = False,
 ) -> None:
     """Marshalls data into an IFrame proto.

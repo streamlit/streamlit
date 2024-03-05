@@ -187,6 +187,8 @@ function BaseChartColumn(
  * This column type is currently read-only.
  */
 export function LineChartColumn(props: BaseColumnProps): BaseColumn {
+  // TODO(lukasmasuch): Change this to use `line` chart and introduce
+  // an AreaChartColumn for the `area` chart.
   return BaseChartColumn("line_chart", props, "area")
 }
 

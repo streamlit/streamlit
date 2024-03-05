@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import tornado.web
 
-from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
-from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.stats import CacheStat, StatsManager
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
+
+if TYPE_CHECKING:
+    from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 
 
 class StatsRequestHandler(tornado.web.RequestHandler):
@@ -56,7 +59,7 @@ class StatsRequestHandler(tornado.web.RequestHandler):
             self.set_status(200)
 
     @staticmethod
-    def _stats_to_text(stats: List[CacheStat]) -> str:
+    def _stats_to_text(stats: list[CacheStat]) -> str:
         metric_type = "# TYPE cache_memory_bytes gauge"
         metric_unit = "# UNIT cache_memory_bytes bytes"
         metric_help = "# HELP Total memory consumed by a cache."
@@ -70,7 +73,13 @@ class StatsRequestHandler(tornado.web.RequestHandler):
         return "\n".join(result)
 
     @staticmethod
-    def _stats_to_proto(stats: List[CacheStat]) -> MetricSetProto:
+    def _stats_to_proto(stats: list[CacheStat]) -> MetricSetProto:
+        # Lazy load the import of this proto message for better performance:
+        from streamlit.proto.openmetrics_data_model_pb2 import GAUGE
+        from streamlit.proto.openmetrics_data_model_pb2 import (
+            MetricSet as MetricSetProto,
+        )
+
         metric_set = MetricSetProto()
 
         metric_family = metric_set.metric_families.add()

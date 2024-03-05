@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, cast
-
-from typing_extensions import Protocol
+from typing import Callable, Protocol, cast
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.app_session import AppSession
@@ -64,7 +64,7 @@ class SessionInfo:
     the ForwardMsgCache.
     """
 
-    client: Optional[SessionClient]
+    client: SessionClient | None
     session: AppSession
     script_run_count: int = 0
 
@@ -90,7 +90,7 @@ class SessionStorageError(Exception):
 
 class SessionStorage(Protocol):
     @abstractmethod
-    def get(self, session_id: str) -> Optional[SessionInfo]:
+    def get(self, session_id: str) -> SessionInfo | None:
         """Return the SessionInfo corresponding to session_id, or None if one does not
         exist.
 
@@ -152,7 +152,7 @@ class SessionStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def list(self) -> List[SessionInfo]:
+    def list(self) -> list[SessionInfo]:
         """List all sessions tracked by this SessionStorage.
 
         Returns
@@ -210,7 +210,7 @@ class SessionManager(Protocol):
         session_storage: SessionStorage,
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
-        message_enqueued_callback: Optional[Callable[[], None]],
+        message_enqueued_callback: Callable[[], None] | None,
     ) -> None:
         """Initialize a SessionManager with the given SessionStorage.
 
@@ -235,9 +235,9 @@ class SessionManager(Protocol):
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
-        session_id_override: Optional[str] = None,
+        user_info: dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         """Create a new session or connect to an existing one.
 
@@ -290,7 +290,7 @@ class SessionManager(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def get_session_info(self, session_id: str) -> Optional[SessionInfo]:
+    def get_session_info(self, session_id: str) -> SessionInfo | None:
         """Return the SessionInfo for the given id, or None if no such session
         exists.
 
@@ -306,7 +306,7 @@ class SessionManager(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def list_sessions(self) -> List[SessionInfo]:
+    def list_sessions(self) -> list[SessionInfo]:
         """Return the SessionInfo for all sessions managed by this SessionManager.
 
         Returns
@@ -344,7 +344,7 @@ class SessionManager(Protocol):
         """
         self.close_session(session_id)
 
-    def get_active_session_info(self, session_id: str) -> Optional[ActiveSessionInfo]:
+    def get_active_session_info(self, session_id: str) -> ActiveSessionInfo | None:
         """Return the ActiveSessionInfo for the given id, or None if either no such
         session exists or the session is not active.
 
@@ -371,7 +371,7 @@ class SessionManager(Protocol):
         """
         return self.get_active_session_info(session_id) is not None
 
-    def list_active_sessions(self) -> List[ActiveSessionInfo]:
+    def list_active_sessions(self) -> list[ActiveSessionInfo]:
         """Return the session info for all active sessions tracked by this SessionManager.
 
         Returns

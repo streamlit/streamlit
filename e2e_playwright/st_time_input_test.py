@@ -71,6 +71,22 @@ def test_handles_time_selection(app: Page, assert_snapshot: ImageCompareFunction
     )
 
 
+def test_correct_menu_font_colors(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that it uses the correct colors in the popover menu."""
+    themed_app.get_by_test_id("stTimeInput").nth(0).locator("input").click()
+
+    # Take a snapshot of the time selection dropdown:
+    selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
+
+    # Hover over another option:
+    selection_dropdown.get_by_text("08:30").hover()
+
+    # Take a sceenshot
+    assert_snapshot(selection_dropdown, name="st_time_input-menu_colors")
+
+
 def test_handles_step_correctly(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the step parameter is correctly applied."""
     app.get_by_test_id("stTimeInput").nth(6).locator("input").click()
@@ -139,11 +155,11 @@ def test_keeps_value_on_selection_close(app: Page):
     """Test that the selection is kept when the dropdown is closed."""
     app.get_by_test_id("stTimeInput").first.locator("input").click()
 
-    # Take a snapshot of the selection dropdown:
+    # Check if popover is visible:
     expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
 
     # Click outside to close the dropdown:
-    app.get_by_test_id("stMarkdown").first.click()
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
 
     # Check if value is still initial value:
     expect(app.get_by_test_id("stMarkdown").first).to_have_text(

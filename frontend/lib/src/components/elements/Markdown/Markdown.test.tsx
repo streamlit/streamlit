@@ -49,7 +49,7 @@ describe("Markdown element with help", () => {
   it("renders markdown with help tooltip as expected", async () => {
     const props = getProps({ help: "help text" })
     render(<Markdown {...props} />)
-    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltip).toBeInTheDocument()
     fireEvent.mouseOver(tooltip)
 

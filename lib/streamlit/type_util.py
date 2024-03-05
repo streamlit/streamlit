@@ -25,26 +25,21 @@ from enum import Enum, EnumMeta, auto
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
+    Final,
     Iterable,
-    List,
+    Literal,
     NamedTuple,
-    Optional,
+    Protocol,
     Sequence,
-    Set,
     Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
+    get_args,
     overload,
 )
 
-import numpy as np
-import pyarrow as pa
-from pandas import DataFrame, Index, MultiIndex, Series
-from pandas.api.types import infer_dtype, is_dict_like, is_list_like
-from typing_extensions import Final, Literal, Protocol, TypeAlias, TypeGuard, get_args
+from typing_extensions import TypeAlias, TypeGuard
 
 import streamlit as st
 from streamlit import config, errors
@@ -54,7 +49,10 @@ from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     import graphviz
+    import numpy as np
+    import pyarrow as pa
     import sympy
+    from pandas import DataFrame, Index, Series
     from pandas.core.indexing import _iLocIndexer
     from pandas.io.formats.style import Styler
     from pandas.io.formats.style_renderer import StyleRenderer
@@ -65,7 +63,7 @@ if TYPE_CHECKING:
 # Maximum number of rows to request from an unevaluated (out-of-core) dataframe
 MAX_UNEVALUATED_DF_ROWS = 10000
 
-_LOGGER = _logger.get_logger("root")
+_LOGGER = _logger.get_logger(__name__)
 
 # The array value field names are part of the larger set of possible value
 # field names. See the explanation for said set below. The message types
@@ -170,11 +168,11 @@ def is_type(
 
 
 @overload
-def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     ...
 
 
-def is_type(obj: object, fqn_type_pattern: Union[str, re.Pattern[str]]) -> bool:
+def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
     """Check type without importing expensive modules.
 
     Parameters
@@ -368,6 +366,14 @@ def is_altair_chart(obj: object) -> bool:
     return is_type(obj, _ALTAIR_RE)
 
 
+_PILLOW_RE: Final = re.compile(r"^PIL\..*")
+
+
+def is_pillow_image(obj: object) -> bool:
+    """True if input looks like a pillow image."""
+    return is_type(obj, _PILLOW_RE)
+
+
 def is_keras_model(obj: object) -> bool:
     """True if input looks like a Keras model."""
     return (
@@ -378,14 +384,25 @@ def is_keras_model(obj: object) -> bool:
     )
 
 
+# We use a regex here to allow potential changes in the module path in the future.
+_OPENAI_CHUNK_RE: Final = re.compile(r"^openai\..+\.ChatCompletionChunk$")
+
+
+def is_openai_chunk(obj: object) -> bool:
+    """True if input looks like an OpenAI chat completion chunk."""
+    return is_type(obj, _OPENAI_CHUNK_RE)
+
+
 def is_list_of_scalars(data: Iterable[Any]) -> bool:
     """Check if the list only contains scalar values."""
+    from pandas.api.types import infer_dtype
+
     # Overview on all value that are interpreted as scalar:
     # https://pandas.pydata.org/docs/reference/api/pandas.api.types.is_scalar.html
     return infer_dtype(data, skipna=True) not in ["mixed", "unknown-array"]
 
 
-def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str, Any]]]:
+def is_plotly_chart(obj: object) -> TypeGuard[Figure | list[Any] | dict[str, Any]]:
     """True if input looks like a Plotly chart."""
     return (
         is_type(obj, "plotly.graph_objs._figure.Figure")
@@ -396,7 +413,7 @@ def is_plotly_chart(obj: object) -> TypeGuard[Union[Figure, list[Any], dict[str,
 
 def is_graphviz_chart(
     obj: object,
-) -> TypeGuard[Union[graphviz.Graph, graphviz.Digraph]]:
+) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
     """True if input looks like a GraphViz chart."""
     return (
         # GraphViz < 0.18
@@ -457,7 +474,7 @@ def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     return all(type(n).__name__ == "str" for n in f)
 
 
-def is_pandas_styler(obj: object) -> TypeGuard["Styler"]:
+def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
     return is_type(obj, _PANDAS_STYLER_TYPE_STR)
 
 
@@ -502,7 +519,7 @@ def convert_anything_to_df(
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
     allow_styler: bool = False,
-) -> Union[DataFrame, "Styler"]:
+) -> DataFrame | Styler:
     ...
 
 
@@ -511,7 +528,7 @@ def convert_anything_to_df(
     max_unevaluated_rows: int = MAX_UNEVALUATED_DF_ROWS,
     ensure_copy: bool = False,
     allow_styler: bool = False,
-) -> Union[DataFrame, "Styler"]:
+) -> DataFrame | Styler:
     """Try to convert different formats to a Pandas Dataframe.
 
     Parameters
@@ -535,8 +552,10 @@ def convert_anything_to_df(
     pandas.DataFrame or pandas.Styler
 
     """
+    import pandas as pd
+
     if is_type(data, _PANDAS_DF_TYPE_STR):
-        return data.copy() if ensure_copy else cast(DataFrame, data)
+        return data.copy() if ensure_copy else cast(pd.DataFrame, data)
 
     if is_pandas_styler(data):
         # Every Styler is a StyleRenderer. I'm casting to StyleRenderer here rather than to the more
@@ -556,8 +575,8 @@ def convert_anything_to_df(
 
     if is_type(data, "numpy.ndarray"):
         if len(data.shape) == 0:
-            return DataFrame([])
-        return DataFrame(data)
+            return pd.DataFrame([])
+        return pd.DataFrame(data)
 
     if (
         is_type(data, _SNOWPARK_DF_TYPE_STR)
@@ -567,30 +586,30 @@ def convert_anything_to_df(
         if is_type(data, _PYSPARK_DF_TYPE_STR):
             data = data.limit(max_unevaluated_rows).toPandas()
         else:
-            data = DataFrame(data.take(max_unevaluated_rows))
+            data = pd.DataFrame(data.take(max_unevaluated_rows))
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `collect()` on the dataframe to show more."
             )
-        return cast(DataFrame, data)
+        return cast(pd.DataFrame, data)
 
     # This is inefficient when data is a pyarrow.Table as it will be converted
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
     # DataFrame magic to generate the correct output.
     if hasattr(data, "to_pandas"):
-        return cast(DataFrame, data.to_pandas())
+        return cast(pd.DataFrame, data.to_pandas())
 
     # Try to convert to pandas.DataFrame. This will raise an error is df is not
     # compatible with the pandas.DataFrame constructor.
     try:
-        return DataFrame(data)
+        return pd.DataFrame(data)
 
     except ValueError as ex:
         if isinstance(data, dict):
             with contextlib.suppress(ValueError):
                 # Try to use index orient as back-up to support key-value dicts
-                return DataFrame.from_dict(data, orient="index")
+                return pd.DataFrame.from_dict(data, orient="index")
         raise errors.StreamlitAPIException(
             f"""
 Unable to convert object of type `{type(data)}` to `pandas.DataFrame`.
@@ -611,7 +630,7 @@ def ensure_iterable(obj: OptionSequence[V_co]) -> Iterable[Any]:
     ...
 
 
-def ensure_iterable(obj: Union[OptionSequence[V_co], Iterable[V_co]]) -> Iterable[Any]:
+def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]:
     """Try to convert different formats to something iterable. Most inputs
     are assumed to be iterable, but if we have a DataFrame, we can just
     select the first column to iterate over. If the input is not iterable,
@@ -653,7 +672,12 @@ def ensure_indexable(obj: OptionSequence[V_co]) -> Sequence[V_co]:
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
     if callable(index_fn):
-        return it  # type: ignore[return-value]
+        # We return a shallow copy of the Sequence here because the return value of
+        # this function is saved in a widget serde class instance to be used in later
+        # script runs, and we don't want mutations to the options object passed to a
+        # widget affect the widget.
+        # (See https://github.com/streamlit/streamlit/issues/7534)
+        return copy.copy(cast(Sequence[V_co], it))
     else:
         return list(it)
 
@@ -708,6 +732,7 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     bool
 
     """
+    import pyarrow as pa
     from packaging import version
 
     return version.parse(pa.__version__) < version.parse(v)
@@ -811,6 +836,8 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
             exc_info=err,
         )
 
+    import pyarrow as pa
+
     # Convert table to bytes
     sink = pa.BufferOutputStream()
     writer = pa.RecordBatchStreamWriter(sink, table.schema)
@@ -819,8 +846,10 @@ def pyarrow_table_to_bytes(table: pa.Table) -> bytes:
     return cast(bytes, sink.getvalue().to_pybytes())
 
 
-def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
+def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
     """Return True if the column type is known to cause issues during Arrow conversion."""
+    from pandas.api.types import infer_dtype, is_dict_like, is_list_like
+
     if column.dtype.kind in [
         "c",  # complex64, complex128, complex256
     ]:
@@ -863,7 +892,7 @@ def is_colum_type_arrow_incompatible(column: Union[Series[Any], Index]) -> bool:
 
 
 def fix_arrow_incompatible_column_types(
-    df: DataFrame, selected_columns: Optional[List[str]] = None
+    df: DataFrame, selected_columns: list[str] | None = None
 ) -> DataFrame:
     """Fix column types that are not supported by Arrow table.
 
@@ -878,13 +907,15 @@ def fix_arrow_incompatible_column_types(
     df : pandas.DataFrame
         A dataframe to fix.
 
-    selected_columns: Optional[List[str]]
+    selected_columns: List[str] or None
         A list of columns to fix. If None, all columns are evaluated.
 
     Returns
     -------
     The fixed dataframe.
     """
+    import pandas as pd
+
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy: DataFrame | None = None
     for col in selected_columns or df.columns:
@@ -900,7 +931,7 @@ def fix_arrow_incompatible_column_types(
     if not selected_columns and (
         not isinstance(
             df.index,
-            MultiIndex,
+            pd.MultiIndex,
         )
         and is_colum_type_arrow_incompatible(df.index)
     ):
@@ -919,6 +950,8 @@ def data_frame_to_bytes(df: DataFrame) -> bytes:
         A dataframe to convert.
 
     """
+    import pyarrow as pa
+
     try:
         table = pa.Table.from_pandas(df)
     except (pa.ArrowTypeError, pa.ArrowInvalid, pa.ArrowNotImplementedError) as ex:
@@ -944,8 +977,10 @@ def bytes_to_data_frame(source: bytes) -> DataFrame:
         A bytes object to convert.
 
     """
+    import pyarrow as pa
+
     reader = pa.RecordBatchStreamReader(source)
-    return cast(DataFrame, reader.read_pandas())
+    return reader.read_pandas()
 
 
 def determine_data_format(input_data: Any) -> DataFormat:
@@ -961,9 +996,13 @@ def determine_data_format(input_data: Any) -> DataFormat:
     DataFormat
         The data format of the input data.
     """
+    import numpy as np
+    import pandas as pd
+    import pyarrow as pa
+
     if input_data is None:
         return DataFormat.EMPTY
-    elif isinstance(input_data, DataFrame):
+    elif isinstance(input_data, pd.DataFrame):
         return DataFormat.PANDAS_DATAFRAME
     elif isinstance(input_data, np.ndarray):
         if len(input_data.shape) == 1:
@@ -973,9 +1012,9 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.NUMPY_MATRIX
     elif isinstance(input_data, pa.Table):
         return DataFormat.PYARROW_TABLE
-    elif isinstance(input_data, Series):
+    elif isinstance(input_data, pd.Series):
         return DataFormat.PANDAS_SERIES
-    elif isinstance(input_data, Index):
+    elif isinstance(input_data, pd.Index):
         return DataFormat.PANDAS_INDEX
     elif is_pandas_styler(input_data):
         return DataFormat.PANDAS_STYLER
@@ -1009,7 +1048,7 @@ def determine_data_format(input_data: Any) -> DataFormat:
                 return DataFormat.COLUMN_INDEX_MAPPING
             if isinstance(first_value, (list, tuple)):
                 return DataFormat.COLUMN_VALUE_MAPPING
-            if isinstance(first_value, Series):
+            if isinstance(first_value, pd.Series):
                 return DataFormat.COLUMN_SERIES_MAPPING
             # In the future, we could potentially also support the tight & split formats here
             if is_list_of_scalars(input_data.values()):
@@ -1025,22 +1064,23 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
     NaT, None, and pd.NA. This function replaces all of these values with None,
     which is the only missing value type that is supported by all data
     """
+    import numpy as np
 
     return df.fillna(np.nan).replace([np.nan], [None])
 
 
 def convert_df_to_data_format(
     df: DataFrame, data_format: DataFormat
-) -> Union[
-    DataFrame,
-    Series[Any],
-    pa.Table,
-    np.ndarray[Any, np.dtype[Any]],
-    Tuple[Any],
-    List[Any],
-    Set[Any],
-    Dict[str, Any],
-]:
+) -> (
+    DataFrame
+    | Series[Any]
+    | pa.Table
+    | np.ndarray[Any, np.dtype[Any]]
+    | tuple[Any]
+    | list[Any]
+    | set[Any]
+    | dict[str, Any]
+):
     """Convert a dataframe to the specified data format.
 
     Parameters
@@ -1056,6 +1096,7 @@ def convert_df_to_data_format(
     pd.DataFrame, pd.Series, pyarrow.Table, np.ndarray, list, set, tuple, or dict.
         The converted dataframe.
     """
+
     if data_format in [
         DataFormat.EMPTY,
         DataFormat.PANDAS_DATAFRAME,
@@ -1066,14 +1107,20 @@ def convert_df_to_data_format(
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:
+        import numpy as np
+
         # It's a 1-dimensional array, so we only return
         # the first column as numpy array
         # Calling to_numpy() on the full DataFrame would result in:
         # [[1], [2]] instead of [1, 2]
         return np.ndarray(0) if df.empty else df.iloc[:, 0].to_numpy()
     elif data_format == DataFormat.NUMPY_MATRIX:
+        import numpy as np
+
         return np.ndarray(0) if df.empty else df.to_numpy()
     elif data_format == DataFormat.PYARROW_TABLE:
+        import pyarrow as pa
+
         return pa.Table.from_pandas(df)
     elif data_format == DataFormat.PANDAS_SERIES:
         # Select first column in dataframe and create a new series based on the values
@@ -1131,7 +1178,7 @@ def to_key(key: Key) -> str:
     ...
 
 
-def to_key(key: Optional[Key]) -> Optional[str]:
+def to_key(key: Key | None) -> str | None:
     if key is None:
         return None
     else:
@@ -1143,7 +1190,7 @@ def maybe_tuple_to_list(item: Any) -> Any:
     return list(item) if isinstance(item, tuple) else item
 
 
-def maybe_raise_label_warnings(label: Optional[str], label_visibility: Optional[str]):
+def maybe_raise_label_warnings(label: str | None, label_visibility: str | None):
     if not label:
         _LOGGER.warning(
             "`label` got an empty value. This is discouraged for accessibility "
@@ -1177,6 +1224,8 @@ def infer_vegalite_type(
     ----------
     data: Numpy array or Pandas Series
     """
+    from pandas.api.types import infer_dtype
+
     # STREAMLIT MOD: I'm using infer_dtype directly here, rather than using Altair's wrapper. Their
     # wrapper is only there to support Pandas < 0.20, but Streamlit requires Pandas 1.3.
     typ = infer_dtype(data)
@@ -1226,7 +1275,7 @@ E2 = TypeVar("E2", bound=Enum)
 ALLOWED_ENUM_COERCION_CONFIG_SETTINGS = ("off", "nameOnly", "nameAndValue")
 
 
-def coerce_enum(from_enum_value: E1, to_enum_class: Type[E2]) -> E1 | E2:
+def coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
     """Attempt to coerce an Enum value to another EnumMeta.
 
     An Enum value of EnumMeta E1 is considered coercable to EnumType E2
