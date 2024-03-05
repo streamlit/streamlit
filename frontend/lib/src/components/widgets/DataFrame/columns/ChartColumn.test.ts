@@ -22,6 +22,7 @@ import {
   ChartColumnParams,
   LineChartColumn,
   BarChartColumn,
+  AreaChartColumn,
 } from "./ChartColumn"
 
 const CHART_COLUMN_TEMPLATE = {
@@ -59,6 +60,15 @@ function getBarChartColumn(
   } as BaseColumnProps)
 }
 
+function getAreaChartColumn(
+  params?: ChartColumnParams
+): ReturnType<typeof AreaChartColumn> {
+  return AreaChartColumn({
+    ...CHART_COLUMN_TEMPLATE,
+    columnTypeOptions: params,
+  } as BaseColumnProps)
+}
+
 describe("ChartColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = getLineChartColumn()
@@ -87,7 +97,7 @@ describe("ChartColumn", () => {
     expect(mockColumn.kind).toEqual("line_chart")
     const mockCell = mockColumn.getCell([0.1, 0.2, 0.3])
     // Default chart type is line
-    expect((mockCell as SparklineCellType).data?.graphKind).toEqual("area")
+    expect((mockCell as SparklineCellType).data?.graphKind).toEqual("line")
 
     const mockBarChartColumn = getBarChartColumn()
     expect(mockBarChartColumn.kind).toEqual("bar_chart")
@@ -95,6 +105,14 @@ describe("ChartColumn", () => {
     // Chart type should be bar
     expect((mockBarChartCell as SparklineCellType).data?.graphKind).toEqual(
       "bar"
+    )
+
+    const mockAreaChartColumn = getAreaChartColumn()
+    expect(mockAreaChartColumn.kind).toEqual("area_chart")
+    const mockAreaChartCell = mockBarChartColumn.getCell([0.1, 0.2, 0.3])
+    // Chart type should be bar
+    expect((mockAreaChartCell as SparklineCellType).data?.graphKind).toEqual(
+      "area"
     )
   })
 
