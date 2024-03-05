@@ -109,7 +109,7 @@ describe("ChartColumn", () => {
 
     const mockAreaChartColumn = getAreaChartColumn()
     expect(mockAreaChartColumn.kind).toEqual("area_chart")
-    const mockAreaChartCell = mockBarChartColumn.getCell([0.1, 0.2, 0.3])
+    const mockAreaChartCell = mockAreaChartColumn.getCell([0.1, 0.2, 0.3])
     // Chart type should be bar
     expect((mockAreaChartCell as SparklineCellType).data?.graphKind).toEqual(
       "area"

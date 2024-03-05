@@ -22,7 +22,7 @@ def test_dataframe_supports_various_configurations(
 ):
     """Screenshot test that st.dataframe supports various configuration options."""
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(22)
+    expect(dataframe_elements).to_have_count(23)
 
     # The dataframe component might require a bit more time for rendering the canvas
     themed_app.wait_for_timeout(250)
