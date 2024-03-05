@@ -72,7 +72,7 @@ Pygments==2.17.2
 pyodbc==5.1.0
 pyparsing==3.1.1
 pyspark==3.5.1
-pytest==8.1.0
+pytest==8.0.2
 pytest-base-url==2.1.0
 pytest-cov==4.1.0
 pytest-github-actions-annotate-failures==0.2.0
@@ -99,7 +99,7 @@ setuptools==69.1.1
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
-SQLAlchemy==1.4.51
+SQLAlchemy==1.4.52
 sqlalchemy2-stubs==0.0.2a38
 tenacity==8.2.3
 testfixtures==8.1.0
