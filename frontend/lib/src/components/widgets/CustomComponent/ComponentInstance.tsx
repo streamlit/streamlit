@@ -391,7 +391,7 @@ function ComponentInstance(props: Props): ReactElement {
         width={width}
         height={frameHeight}
         style={{
-          colorScheme: "light dark",
+          colorScheme: "normal",
           display: isReadyRef.current ? "initial" : "none",
         }}
         scrolling="no"
