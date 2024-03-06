@@ -325,7 +325,22 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write(SomeObject())
 
             p.assert_called_once_with(
-                "`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
+                "``1 * 2 - 3 = 4 `ok` !``", unsafe_allow_html=False
+            )
+
+    def test_default_object_multiline(self):
+        """Test st.write with default clause ie some object with multiline string."""
+
+        class SomeObject(object):
+            def __str__(self):
+                return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
+            st.write(SomeObject())
+
+            p.assert_called_once_with(
+                "`````\n1 * 2\n - 3\n ``` = \n````\n4 `ok` !\n`````",
+                unsafe_allow_html=False,
             )
 
     def test_class(self):
