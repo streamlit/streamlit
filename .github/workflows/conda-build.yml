@@ -43,7 +43,7 @@ jobs:
         run: |
           curl -sO "https://repo.anaconda.com/miniconda/${MINICONDA_RELEASE}.sh"
           bash "${MINICONDA_RELEASE}.sh" -b
-          conda install conda-build
+          conda install conda-build=3.28.4
       - name: Build Snowpark Conda Package - Fast
         timeout-minutes: 120
         run: |

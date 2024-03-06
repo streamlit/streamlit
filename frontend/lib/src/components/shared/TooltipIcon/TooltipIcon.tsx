@@ -36,6 +36,7 @@ export interface TooltipIconProps {
   content: string
   children?: ReactNode
   markdownProps?: Partial<StreamlitMarkdownProps>
+  onMouseEnterDelay?: number
 }
 
 function TooltipIcon({
@@ -45,6 +46,7 @@ function TooltipIcon({
   content,
   children,
   markdownProps,
+  onMouseEnterDelay,
 }: TooltipIconProps): ReactElement {
   const theme: EmotionTheme = useTheme()
   return (
@@ -63,6 +65,7 @@ function TooltipIcon({
           />
         }
         placement={placement}
+        onMouseEnterDelay={onMouseEnterDelay}
         inline
       >
         {children || <HelpCircleIcon className="icon" size={iconSize} />}

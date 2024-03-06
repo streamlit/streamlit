@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
-from typing import NoReturn
+from typing import Final, NoReturn
 
 import streamlit as st
 from streamlit import source_util
 from streamlit.deprecation_util import make_deprecated_name_warning
 from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 @gather_metrics("stop")
@@ -96,11 +99,11 @@ def experimental_rerun() -> NoReturn:
 def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
     """Programmatically switch the current page in a multipage app.
 
-    When ``st.switch_page()`` is called, the current page execution stops and
+    When ``st.switch_page`` is called, the current page execution stops and
     the specified page runs as if the user clicked on it in the sidebar
     navigation. The specified page must be recognized by Streamlit's multipage
     architecture (your main Python file or a Python file in a ``pages/``
-    folder). Arbitrary Python scripts cannot be passed to ``st.switch_pages``.
+    folder). Arbitrary Python scripts cannot be passed to ``st.switch_page``.
 
     Parameters
     ----------
@@ -113,8 +116,8 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
 
     >>> your-repository/
     >>> ├── pages/
-    >>> │   ├── page_1.py.py
-    >>> │   └── page_2.py.py
+    >>> │   ├── page_1.py
+    >>> │   └── page_2.py
     >>> └── your_app.py
 
     >>> import streamlit as st
@@ -138,21 +141,15 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
         # This should never be the case
         raise NoSessionContext()
 
-    main_script_path = os.path.join(os.getcwd(), ctx.main_script_path)
-    main_script_directory = os.path.dirname(main_script_path)
-
-    # Convenience for handling ./ notation and ensure leading / doesn't refer to root directory
-    page = os.path.normpath(page.strip("/"))
-
-    # Build full path
-    requested_page = os.path.join(main_script_directory, page)
+    main_script_directory = get_main_script_directory(ctx.main_script_path)
+    requested_page = os.path.realpath(normalize_path_join(main_script_directory, page))
     all_app_pages = source_util.get_pages(ctx.main_script_path).values()
 
     matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
 
     if len(matched_pages) == 0:
         raise StreamlitAPIException(
-            f"Could not find page: '{page}'. Must be the file path relative to the main script, from the directory: {os.path.basename(main_script_directory)}."
+            f"Could not find page: `{page}`. Must be the file path relative to the main script, from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file and files in the `pages/` directory are supported."
         )
 
     ctx.script_requests.request_rerun(

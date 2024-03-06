@@ -16,6 +16,7 @@
 
 import React from "react"
 import {
+  act,
   fireEvent,
   screen,
   waitFor,
@@ -74,6 +75,7 @@ jest.mock("@streamlit/app/src/connection/ConnectionManager", () => {
       isConnected: jest.fn(),
       disconnect: jest.fn(),
       sendMessage: jest.fn(),
+      incrementMessageCacheRunCount: jest.fn(),
       getBaseUriParts() {
         return {
           basePath: "",
@@ -289,14 +291,16 @@ function sendForwardMessage(
   message: any,
   metadata: any = null
 ): void {
-  const fwMessage = new ForwardMsg()
-  // @ts-expect-error
-  fwMessage[type] = cloneDeep(message)
-  if (metadata) {
-    fwMessage.metadata = metadata
-  }
+  act(() => {
+    const fwMessage = new ForwardMsg()
+    // @ts-expect-error
+    fwMessage[type] = cloneDeep(message)
+    if (metadata) {
+      fwMessage.metadata = metadata
+    }
 
-  getMockConnectionManagerProp("onMessage")(fwMessage)
+    getMockConnectionManagerProp("onMessage")(fwMessage)
+  })
 }
 
 function openCacheModal(): void {
@@ -420,10 +424,30 @@ describe("App", () => {
         { deltaPath: [0, 0] }
       )
 
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some more text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 1] }
+      )
+
       // Delta Messages handle on a timer, so we make it async
       await waitFor(() => {
-        expect(screen.getByText("Here is some text")).toBeInTheDocument()
+        expect(screen.getByText("Here is some more text")).toBeInTheDocument()
       })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
     }
 
     afterEach(() => {
@@ -618,10 +642,12 @@ describe("App", () => {
 
       const setCurrentSpy = jest.spyOn(sessionInfo, "setCurrent")
 
-      const fwMessage = new ForwardMsg()
-      fwMessage.newSession = cloneDeep(NEW_SESSION_JSON)
-      expect(sessionInfo.isSet).toBe(false)
-      getMockConnectionManagerProp("onMessage")(fwMessage)
+      act(() => {
+        const fwMessage = new ForwardMsg()
+        fwMessage.newSession = cloneDeep(NEW_SESSION_JSON)
+        expect(sessionInfo.isSet).toBe(false)
+        getMockConnectionManagerProp("onMessage")(fwMessage)
+      })
 
       expect(setCurrentSpy).toHaveBeenCalledTimes(1)
       expect(sessionInfo.isSet).toBe(true)
@@ -668,16 +694,21 @@ describe("App", () => {
       expect(setCurrentSpy).not.toHaveBeenCalled()
       expect(sessionInfo.isSet).toBe(true)
 
-      getMockConnectionManagerProp("connectionStateChanged")(
-        ConnectionState.PINGING_SERVER
-      )
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.PINGING_SERVER
+        )
+      })
+
       expect(sessionInfo.isSet).toBe(false)
       // For clearing the current session info
       expect(setCurrentSpy).toHaveBeenCalledTimes(1)
 
-      getMockConnectionManagerProp("connectionStateChanged")(
-        ConnectionState.CONNECTED
-      )
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
@@ -688,15 +719,17 @@ describe("App", () => {
     it("should set window.prerenderReady to true after app script is run successfully first time", () => {
       renderApp(getProps())
 
-      getMockConnectionManagerProp("connectionStateChanged")(
-        ConnectionState.CONNECTING
-      )
-      // @ts-expect-error
-      expect(window.prerenderReady).toBe(false)
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTING
+        )
+        // @ts-expect-error
+        expect(window.prerenderReady).toBe(false)
 
-      getMockConnectionManagerProp("connectionStateChanged")(
-        ConnectionState.CONNECTED
-      )
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
 
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
@@ -768,15 +801,65 @@ describe("App", () => {
         pageScriptHash: "different_hash",
       })
 
-      expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
+      await waitFor(() =>
+        expect(screen.queryByText("Here is some text")).not.toBeInTheDocument()
+      )
+    })
+
+    it("does not add stale app elements if currentPageScriptHash changes", async () => {
+      await makeAppWithElements()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "different_hash",
+        scriptRunId: "different_script_run_id",
+      })
+
+      // elements are cleared
+      expect(
+        screen.queryByText("Here is some more text")
+      ).not.toBeInTheDocument()
+
+      // Run the script with one new element
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: {
+              body: "Here is some other text",
+              help: "",
+            },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      // Wait for the new element to appear on the screen
+      await waitFor(() => {
+        expect(screen.getByText("Here is some other text")).toBeInTheDocument()
+      })
+
+      // Continue to expect the original element removed
+      expect(
+        screen.queryByText("Here is some more text")
+      ).not.toBeInTheDocument()
     })
 
     it("doesn't clear app elements if currentPageScriptHash doesn't change", async () => {
-      await makeAppWithElements()
+      await waitFor(() => {
+        makeAppWithElements()
+      })
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      expect(screen.getByText("Here is some text")).toBeInTheDocument()
+      const element = await screen.findByText("Here is some text")
+      expect(element).toBeInTheDocument()
     })
 
     describe("page change URL handling", () => {
@@ -1651,13 +1734,15 @@ describe("App", () => {
         HostCommunicationManager
       )
 
-      getMockConnectionManagerProp("onHostConfigResp")({
-        allowedOrigins: ["https://devel.streamlit.test"],
-        useExternalAuthToken: false,
-        disableFullscreenMode: false,
-        enableCustomParentMessages: false,
-        mapboxToken: "",
-        ...options,
+      act(() => {
+        getMockConnectionManagerProp("onHostConfigResp")({
+          allowedOrigins: ["https://devel.streamlit.test"],
+          useExternalAuthToken: false,
+          disableFullscreenMode: false,
+          enableCustomParentMessages: false,
+          mapboxToken: "",
+          ...options,
+        })
       })
 
       return hostCommunicationMgr
@@ -1870,8 +1955,10 @@ describe("App", () => {
       // widgets are initially disabled since the app is not CONNECTED
       expect(screen.getByLabelText("test input")).toHaveAttribute("disabled")
 
-      getMockConnectionManagerProp("connectionStateChanged")(
-        ConnectionState.CONNECTED
+      act(() =>
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
       )
 
       // widgets are enabled once CONNECTED

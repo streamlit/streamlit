@@ -89,7 +89,7 @@ export interface ChatMessageProps {
   element: BlockProto.ChatMessage
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({
+const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
   endpoints,
   element,
   children,

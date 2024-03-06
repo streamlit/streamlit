@@ -16,18 +16,23 @@
 
 import React, {
   ReactElement,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   ReactNode,
 } from "react"
 import { useTheme } from "@emotion/react"
-
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
-import { getElementWidgetID } from "@streamlit/lib/src/util/utils"
+import {
+  getElementWidgetID,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
+import Popover from "@streamlit/lib/src/components/elements/Popover"
 import ChatMessage from "@streamlit/lib/src/components/elements/ChatMessage"
 import Expander from "@streamlit/lib/src/components/elements/Expander"
 import { useScrollToBottom } from "@streamlit/lib/src/hooks/useScrollToBottom"
@@ -75,7 +80,16 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   )
 
   const childProps = { ...props, ...{ node } }
-  const child: ReactElement = <LayoutBlock {...childProps} />
+
+  const disableFullscreenMode =
+    props.disableFullscreenMode || notNullOrUndefined(node.deltaBlock.popover)
+
+  const child: ReactElement = (
+    <LayoutBlock
+      {...childProps}
+      disableFullscreenMode={disableFullscreenMode}
+    />
+  )
 
   if (node.deltaBlock.expandable) {
     return (
@@ -86,6 +100,18 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
       >
         {child}
       </Expander>
+    )
+  }
+
+  if (node.deltaBlock.popover) {
+    return (
+      <Popover
+        empty={node.isEmpty}
+        element={node.deltaBlock.popover as BlockProto.Popover}
+        width={props.width}
+      >
+        {child}
+      </Popover>
     )
   }
 
@@ -149,18 +175,28 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 }
 
 const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
+  const { libConfig } = useContext(LibContext)
+
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useTheme())
+
   return (
     <>
       {props.node.children &&
         props.node.children.map(
           (node: AppNode, index: number): ReactElement => {
+            const disableFullscreenMode =
+              libConfig.disableFullscreenMode || props.disableFullscreenMode
+
             // Base case: render a leaf node.
             if (node instanceof ElementNode) {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = { ...props, node: node as ElementNode }
+              const childProps = {
+                ...props,
+                disableFullscreenMode,
+                node: node as ElementNode,
+              }
 
               const key = getElementWidgetID(node.element) || index
               return <ElementNodeRenderer key={key} {...childProps} />
@@ -171,7 +207,11 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
             if (node instanceof BlockNode) {
               // Put node in childProps instead of passing as a node={node} prop in React to
               // guarantee it doesn't get overwritten by {...childProps}.
-              const childProps = { ...props, node: node as BlockNode }
+              const childProps = {
+                ...props,
+                disableFullscreenMode,
+                node: node as BlockNode,
+              }
 
               return <BlockNodeRenderer key={index} {...childProps} />
             }

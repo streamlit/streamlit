@@ -27,8 +27,9 @@ def test_components_iframe_rendering(
     elements = themed_app.locator("iframe")
     expect(elements).to_have_count(3)
 
+    # Only doing a snapshot of the html component, since the iframe one
+    # does not use a valid URL.
     assert_snapshot(elements.nth(0), name="st_components-html")
-    assert_snapshot(elements.nth(1), name="st_components-iframe")
 
 
 def test_html_correctly_sets_attr(app: Page):
@@ -67,3 +68,9 @@ def test_declare_component_correctly_sets_attr(app: Page):
             r"http://not.a.real.url\?streamlitUrl=http%3A%2F%2Flocalhost%3A\d*%2F$"
         ),
     )
+
+
+# TODO (willhuang1997): Add tests for handling bytes, JSON, DFs, theme
+# TODO (willhuang1997):add tests to ensure the messages actually go to the iframe
+# Relevant code is here from the past: https://github.com/streamlit/streamlit/blob/3d0b0603627037255790fe55a483f55fce5eff67/frontend/lib/src/components/widgets/CustomComponent/ComponentInstance.test.tsx#L257
+# Relevant PR is here: https://github.com/streamlit/streamlit/pull/7971

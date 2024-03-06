@@ -29,7 +29,6 @@ import Button, {
   BaseButtonKind,
 } from "@streamlit/lib/src/components/shared/BaseButton"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { StyledToolbar, StyledToolbarWrapper } from "./styled-components"
@@ -95,18 +94,18 @@ export interface ToolbarProps {
   isFullScreen?: boolean
   locked?: boolean
   target?: StyledComponent<any, any, any>
+  disableFullscreenMode?: boolean
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({
+const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   onExpand,
   onCollapse,
   isFullScreen,
   locked,
   children,
   target,
+  disableFullscreenMode,
 }): ReactElement => {
-  const { libConfig } = React.useContext(LibContext)
-
   return (
     <StyledToolbarWrapper
       className={"stElementToolbar"}
@@ -116,14 +115,14 @@ const Toolbar: React.FC<ToolbarProps> = ({
     >
       <StyledToolbar>
         {children}
-        {onExpand && !libConfig.disableFullscreenMode && !isFullScreen && (
+        {onExpand && !disableFullscreenMode && !isFullScreen && (
           <ToolbarAction
             label={"Fullscreen"}
             icon={Fullscreen}
             onClick={() => onExpand()}
           />
         )}
-        {onCollapse && !libConfig.disableFullscreenMode && isFullScreen && (
+        {onCollapse && !disableFullscreenMode && isFullScreen && (
           <ToolbarAction
             label={"Close fullscreen"}
             icon={FullscreenExit}

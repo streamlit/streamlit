@@ -11,12 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Union, cast
 
-import pyarrow as pa
 from typing_extensions import TypeAlias
 
 from streamlit import type_util
@@ -33,6 +32,7 @@ from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from numpy import ndarray
     from pandas import DataFrame, Index, Series
     from pandas.io.formats.style import Styler
@@ -44,7 +44,7 @@ Data: TypeAlias = Union[
     "Series",
     "Styler",
     "Index",
-    pa.Table,
+    "pa.Table",
     "ndarray",
     Iterable,
     Dict[str, List[Any]],
@@ -64,7 +64,7 @@ class ArrowMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a dataframe as an interactive table.
 
         This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
@@ -184,6 +184,7 @@ class ArrowMixin:
            height: 350px
 
         """
+        import pyarrow as pa
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
@@ -238,7 +239,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
-    def table(self, data: Data = None) -> "DeltaGenerator":
+    def table(self, data: Data = None) -> DeltaGenerator:
         """Display a static table.
 
         This differs from ``st.dataframe`` in that the table in this case is
@@ -283,7 +284,7 @@ class ArrowMixin:
         return self.dg._enqueue("arrow_table", proto)
 
     @gather_metrics("add_rows")
-    def add_rows(self, data: "Data" = None, **kwargs) -> Optional["DeltaGenerator"]:
+    def add_rows(self, data: Data = None, **kwargs) -> DeltaGenerator | None:
         """Concatenate a dataframe to the bottom of the current one.
 
         Parameters
@@ -337,12 +338,12 @@ class ArrowMixin:
         return self.dg._arrow_add_rows(data, **kwargs)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
-def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) -> None:
+def marshall(proto: ArrowProto, data: Data, default_uuid: str | None = None) -> None:
     """Marshall pandas.DataFrame into an Arrow proto.
 
     Parameters
@@ -353,12 +354,14 @@ def marshall(proto: ArrowProto, data: Data, default_uuid: Optional[str] = None) 
     data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
         Something that is or can be converted to a dataframe.
 
-    default_uuid : Optional[str]
+    default_uuid : str | None
         If pandas.Styler UUID is not provided, this value will be used.
         This attribute is optional and only used for pandas.Styler, other elements
         (e.g. charts) can ignore it.
 
     """
+    import pyarrow as pa
+
     if type_util.is_pandas_styler(data):
         # default_uuid is a string only if the data is a `Styler`,
         # and `None` otherwise.
