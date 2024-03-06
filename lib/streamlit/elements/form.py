@@ -21,7 +21,6 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
 
 if TYPE_CHECKING:
@@ -42,6 +41,9 @@ def _current_form(this_dg: DeltaGenerator) -> FormData | None:
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
+    # Avoid circular imports.
+    from streamlit.delta_generator import dg_stack
+
     if not runtime.exists():
         return None
 

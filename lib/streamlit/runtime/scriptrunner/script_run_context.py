@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import collections
-import contextvars
 import threading
 from dataclasses import dataclass, field
 from typing import Callable, Counter, Dict, Final, Union
@@ -35,14 +34,6 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 _LOGGER: Final = get_logger(__name__)
 
 UserInfo: TypeAlias = Dict[str, Union[str, None]]
-
-
-# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
-# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
-# so that different threads or async tasks can have their own stacks.
-dg_stack: contextvars.ContextVar[
-    tuple["streamlit.delta_generator.DeltaGenerator", ...]
-] = contextvars.ContextVar("dg_stack", default=tuple())
 
 
 @dataclass

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import sys
+from contextvars import ContextVar
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
@@ -93,7 +94,6 @@ from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
@@ -313,7 +313,7 @@ class DeltaGenerator(
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
             current_stack = dg_stack.get()
-            if len(current_stack) > 0:
+            if len(current_stack) > 1:
                 return current_stack[-1]
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
@@ -779,6 +779,19 @@ class DeltaGenerator(
         _enqueue_message(msg)
 
         return self
+
+
+main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
+sidebar_dg = DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=main_dg)
+event_dg = DeltaGenerator(root_container=RootContainer.EVENT, parent=main_dg)
+bottom_dg = DeltaGenerator(root_container=RootContainer.BOTTOM, parent=main_dg)
+
+# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
+# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
+# so that different threads or async tasks can have their own stacks.
+dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
+    "dg_stack", default=(main_dg,)
+)
 
 
 def _prep_data_for_add_rows(

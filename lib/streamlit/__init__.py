@@ -66,8 +66,12 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
+from streamlit.delta_generator import (
+    main_dg as _main_dg,
+    sidebar_dg as _sidebar_dg,
+    event_dg as _event_dg,
+    bottom_dg as _bottom_dg,
+)
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
@@ -121,14 +125,14 @@ def _update_logger() -> None:
 _config.on_config_parsed(_update_logger, True)
 
 
-_main = _DeltaGenerator(root_container=_RootContainer.MAIN)
-sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
-_event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
-_bottom = _DeltaGenerator(root_container=_RootContainer.BOTTOM, parent=_main)
-
 secrets = _secrets_singleton
 
 # DeltaGenerator methods:
+
+_main = _main_dg
+sidebar = _sidebar_dg
+_event = _event_dg
+_bottom = _bottom_dg
 
 altair_chart = _main.altair_chart
 area_chart = _main.area_chart
