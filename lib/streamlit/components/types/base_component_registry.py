@@ -56,7 +56,7 @@ class BaseComponentRegistry(Protocol):
     def get_module_name(self, name: str) -> str | None:
         """Return the module name for the component with the given name.
 
-        If no such component us registered, return None instead.
+        If no such component is registered, return None instead.
 
         Parameters
         ----------
@@ -66,6 +66,23 @@ class BaseComponentRegistry(Protocol):
         -------
         str or None
             The module_name of the specified component or None if no component with the given name has been registered.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_component(self, name: str) -> BaseCustomComponent | None:
+        """Return the registered component with the given name.
+
+        If no such component is registered, return None instead.
+
+        Parameters
+        ----------
+        name: name of the component
+
+        Returns
+        -------
+        component or None
+            The component with the provided name or None if component with the given name has been registered.
         """
         raise NotImplementedError
 

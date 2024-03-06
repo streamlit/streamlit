@@ -22,7 +22,7 @@ from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
-from streamlit.components.v1.local_component_registry import LocalComponentRegistry
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import (
     Runtime,
@@ -64,7 +64,6 @@ class RuntimeConfigTests(unittest.TestCase):
         config = RuntimeConfig(
             "/my/script.py",
             None,
-            LocalComponentRegistry(),
             MemoryMediaFileStorage("/mock/media"),
             MemoryUploadedFileManager("/mock/upload"),
         )

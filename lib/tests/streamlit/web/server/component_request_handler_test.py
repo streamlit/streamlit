@@ -17,8 +17,8 @@ from unittest import mock
 import tornado.testing
 import tornado.web
 
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.v1.component_registry import declare_component
-from streamlit.components.v1.local_component_registry import LocalComponentRegistry
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -27,7 +27,7 @@ from streamlit.web.server import ComponentRequestHandler
 URL = "http://not.a.real.url:3001"
 PATH = "/not/a/real/path"
 
-MOCK_IS_DIR_PATH = "streamlit.components.v1.local_component_registry.os.path.isdir"
+MOCK_IS_DIR_PATH = "streamlit.components.lib.local_component_registry.os.path.isdir"
 
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):

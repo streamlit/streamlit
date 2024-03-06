@@ -16,7 +16,7 @@ import asyncio
 from typing import Callable, Dict, List, Optional
 from unittest import IsolatedAsyncioTestCase, mock
 
-from streamlit.components.v1.local_component_registry import LocalComponentRegistry
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.app_session import AppSession

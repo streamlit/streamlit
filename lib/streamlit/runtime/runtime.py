@@ -22,6 +22,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
 from streamlit import config
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -86,9 +87,6 @@ class RuntimeConfig:
     # longer use this anywhere.
     command_line: str | None
 
-    # The ComponentRegistry instance to use.
-    component_registry: BaseComponentRegistry
-
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
 
@@ -98,6 +96,11 @@ class RuntimeConfig:
     # The cache storage backend for Streamlit's st.cache_data.
     cache_storage_manager: CacheStorageManager = field(
         default_factory=LocalDiskCacheStorageManager
+    )
+
+    # The ComponentRegistry instance to use.
+    component_registry: BaseComponentRegistry = field(
+        default_factory=LocalComponentRegistry
     )
 
     # The SessionManager class to be used.

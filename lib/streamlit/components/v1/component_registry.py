@@ -89,7 +89,12 @@ def declare_component(
     return component
 
 
-# keep for backwards-compatibility
+# Keep for backwards-compatibility for now as we don't know whether existing custom
+# components use this method. We made significant refactors to the custom component
+# registry code in https://github.com/streamlit/streamlit/pull/8193 and after
+# that is out in the wild, we can follow-up with more refactorings, e.g. remove
+# the following class and method. When we do that, we should conduct some testing with
+# popular custom components.
 class ComponentRegistry:
     @classmethod
     def instance(cls) -> BaseComponentRegistry:

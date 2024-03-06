@@ -27,6 +27,7 @@ import pytest
 
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.components.v1 import component_arrow
@@ -35,7 +36,6 @@ from streamlit.components.v1.component_registry import (
     _get_module_name,
 )
 from streamlit.components.v1.custom_component import CustomComponent
-from streamlit.components.v1.local_component_registry import LocalComponentRegistry
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.runtime import Runtime, RuntimeConfig
