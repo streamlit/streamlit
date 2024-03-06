@@ -20,6 +20,7 @@ import {
   TextCell,
   NumberCell,
   GridCellKind,
+  UriCell,
 } from "@glideapps/glide-data-grid"
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment from "moment"
@@ -48,7 +49,6 @@ import {
   DateTimeColumn,
   TimeColumn,
   DateColumn,
-  LinkCell,
   removeLineBreaks,
 } from "./columns"
 
@@ -435,6 +435,11 @@ export function getCellFromArrow(
           ...cellTemplate,
           displayData,
         } as NumberCell
+      } else if (cellTemplate.kind === GridCellKind.Uri) {
+        cellTemplate = {
+          ...cellTemplate,
+          displayData,
+        } as UriCell
       } else if (
         cellTemplate.kind === GridCellKind.Custom &&
         (cellTemplate as DatePickerType).data?.kind === "date-picker-cell"
@@ -446,17 +451,6 @@ export function getCellFromArrow(
             displayDate: displayData,
           },
         } as DatePickerType
-      } else if (
-        cellTemplate.kind === GridCellKind.Custom &&
-        (cellTemplate as LinkCell).data?.kind === "link-cell"
-      ) {
-        cellTemplate = {
-          ...cellTemplate,
-          data: {
-            ...(cellTemplate as LinkCell).data,
-            displayText: displayData,
-          },
-        } as LinkCell
       }
     }
 

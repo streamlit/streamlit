@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind, UriCell } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
@@ -25,7 +25,6 @@ import {
   getErrorCell,
   getLinkDisplayValueFromRegex,
 } from "./utils"
-import { LinkCell } from "./cells/LinkCell"
 
 export interface LinkColumnParams {
   // The maximum number of characters the user can enter into the text input.
@@ -73,18 +72,16 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
   }
 
   const cellTemplate = {
-    kind: GridCellKind.Custom,
+    kind: GridCellKind.Uri,
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign: props.contentAlignment,
     style: props.isIndex ? "faded" : "normal",
-    data: {
-      kind: "link-cell",
-      href: "",
-      displayText: "",
-    },
+    hoverEffect: true,
+    data: "",
+    displayData: "",
     copyData: "",
-  } as LinkCell
+  } as UriCell
 
   const validateInput = (href?: string): boolean => {
     if (isNullOrUndefined(href)) {
@@ -120,12 +117,10 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       if (isNullOrUndefined(data)) {
         return {
           ...cellTemplate,
-          data: {
-            ...cellTemplate.data,
-            href: null,
-          },
+          data: null as any,
           isMissingValue: true,
-        } as LinkCell
+          onClickUri: () => {},
+        } as UriCell
       }
 
       const href: string = data
@@ -161,18 +156,18 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
       return {
         ...cellTemplate,
-        data: {
-          kind: "link-cell",
-          href: href,
-          displayText: displayText,
+        data: href,
+        displayData: displayText,
+        isMissingValue: isNullOrUndefined(href),
+        onClickUri: a => {
+          window.open(href, "_blank", "noopener,noreferrer")
+          a.preventDefault()
         },
         copyData: href,
-        cursor: "pointer",
-        isMissingValue: isNullOrUndefined(href),
-      } as LinkCell
+      } as UriCell
     },
-    getCellValue(cell: LinkCell): string | null {
-      return isNullOrUndefined(cell.data?.href) ? null : cell.data.href
+    getCellValue(cell: UriCell): string | null {
+      return isNullOrUndefined(cell.data) ? null : cell.data
     },
   }
 }

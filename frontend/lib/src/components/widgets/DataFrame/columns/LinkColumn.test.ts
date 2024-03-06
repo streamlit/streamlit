@@ -16,11 +16,10 @@
 
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { GridCellKind, UriCell } from "@glideapps/glide-data-grid"
 
 import { isErrorCell } from "./utils"
 import LinkColumn from "./LinkColumn"
-import { LinkCell } from "./cells/LinkCell"
 
 const MOCK_LINK_COLUMN_PROPS = {
   id: "1",
@@ -47,13 +46,10 @@ describe("LinkColumn", () => {
     expect(mockColumn.id).toEqual(MOCK_LINK_COLUMN_PROPS.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    const mockCell = mockColumn.getCell("https://streamlit.io") as LinkCell
-    expect(mockCell.kind).toEqual(GridCellKind.Custom)
-    expect((mockCell as LinkCell).data).toEqual({
-      href: "https://streamlit.io",
-      kind: "link-cell",
-      displayText: "https://streamlit.io",
-    })
+    const mockCell = mockColumn.getCell("https://streamlit.io") as UriCell
+    expect(mockCell.kind).toEqual(GridCellKind.Uri)
+    expect(mockCell.data).toEqual("https://streamlit.io")
+    expect(mockCell.displayData).toEqual("https://streamlit.io")
   })
 
   it.each([
@@ -141,9 +137,9 @@ describe("LinkColumn", () => {
       columnTypeOptions: { validate: "[" }, // Invalid regex
     })
 
-    const cell = mockColumn.getCell("test", true)
+    const cell = mockColumn.getCell("test", true) as UriCell
     expect(isErrorCell(cell)).toEqual(true)
-    expect((cell as LinkCell).data).toContain("Invalid validate regex")
+    expect(cell.data).toContain("Invalid validate regex")
   })
 
   it("ignores empty validate", () => {
@@ -162,11 +158,11 @@ describe("LinkColumn", () => {
       columnTypeOptions: { display_text: "Click me" },
     })
 
-    const cell = mockColumn.getCell("https://streamlit.io", true) as LinkCell
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
 
     const cellValue = mockColumn.getCellValue(cell)
     expect(cellValue).toBe("https://streamlit.io")
-    expect(cell.data.displayText).toBe("Click me")
+    expect(cell.displayData).toBe("Click me")
   })
 
   it("sets displayed value to be the href when displayText is empty", () => {
@@ -175,9 +171,9 @@ describe("LinkColumn", () => {
       columnTypeOptions: { display_text: undefined },
     })
 
-    const cell = mockColumn.getCell("https://streamlit.io", true) as LinkCell
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
 
-    expect(cell.data.displayText).toBe("https://streamlit.io")
+    expect(cell.displayData).toBe("https://streamlit.io")
   })
 
   it("sets displayed value to be displayText when displayText is defined and not a regexp", () => {
@@ -186,9 +182,9 @@ describe("LinkColumn", () => {
       columnTypeOptions: { display_text: "streamlit" },
     })
 
-    const cell = mockColumn.getCell("https://streamlit.io", true) as LinkCell
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
 
-    expect(cell.data.displayText).toBe("streamlit")
+    expect(cell.displayData).toBe("streamlit")
   })
 
   it("sets displayed value as the applied regex to the href when displayText is a regex", () => {
@@ -200,9 +196,9 @@ describe("LinkColumn", () => {
     const cell = mockColumn.getCell(
       "https://roadmap.streamlit.app",
       true
-    ) as LinkCell
+    ) as UriCell
 
-    expect(cell.data.displayText).toBe("roadmap")
+    expect(cell.displayData).toBe("roadmap")
   })
 
   it("sets displayed value as the href, when displayText is a regex but there is no match", () => {
@@ -215,8 +211,8 @@ describe("LinkColumn", () => {
     const cell = mockColumn.getCell(
       "https://roadmap.streamlit.app",
       true
-    ) as LinkCell
+    ) as UriCell
 
-    expect(cell.data.displayText).toBe("https://roadmap.streamlit.app")
+    expect(cell.displayData).toBe("https://roadmap.streamlit.app")
   })
 })
