@@ -171,6 +171,56 @@ class ContainerTest(DeltaGeneratorTestCase):
         self.assertEqual(container_block.add_block.allow_empty, True)
 
 
+class PopoverContainerTest(DeltaGeneratorTestCase):
+    def test_label_required(self):
+        """Test that label is required"""
+        with self.assertRaises(TypeError):
+            st.popover()
+
+    def test_just_label(self):
+        """Test that it correctly applies label param."""
+        popover = st.popover("label")
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.use_container_width, False)
+        self.assertEqual(popover_block.add_block.popover.disabled, False)
+        self.assertEqual(popover_block.add_block.popover.help, "")
+        self.assertEqual(popover_block.add_block.allow_empty, True)
+
+    def test_use_container_width(self):
+        """Test that it correctly applies use_container_width param."""
+        popover = st.popover("label", use_container_width=True)
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.use_container_width, True)
+
+    def test_disabled(self):
+        """Test that it correctly applies disabled param."""
+        popover = st.popover("label", disabled=True)
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.disabled, True)
+
+    def test_help(self):
+        """Test that it correctly applies help param."""
+        popover = st.popover("label", help="help text")
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.help, "help text")
+
+
 class StatusContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):
         """Test that label is required"""

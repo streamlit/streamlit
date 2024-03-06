@@ -512,7 +512,7 @@ class ScriptRunner:
                 #         ...
                 #     ```
                 # in their scripts.
-                module = _new_module("__main__")
+                module = self._new_module("__main__")
 
                 # Install the fake module as the __main__ module. This allows
                 # the pickle module to work inside the user's code, since it now
@@ -626,6 +626,10 @@ class ScriptRunner:
         if config.get_option("runner.postScriptGC"):
             gc.collect(2)
 
+    def _new_module(self, name: str) -> types.ModuleType:
+        """Create a new module with the given name."""
+        return types.ModuleType(name)
+
 
 class ScriptControlException(BaseException):
     """Base exception for ScriptRunner."""
@@ -674,11 +678,6 @@ def _clean_problem_modules() -> None:
         except Exception:
             # We don't want to crash the app if we can't close matplotlib
             pass
-
-
-def _new_module(name: str) -> types.ModuleType:
-    """Create a new module with the given name."""
-    return types.ModuleType(name)
 
 
 # The reason this is not a decorator is because we want to make it clear at the
