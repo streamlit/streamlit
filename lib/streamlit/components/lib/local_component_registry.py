@@ -75,5 +75,8 @@ class LocalComponentRegistry(BaseComponentRegistry):
         component = self._components.get(name, None)
         return component.module_name if component is not None else None
 
+    def get_component(self, name: str) -> BaseCustomComponent | None:
+        return self._components.get(name, None)
+
     def get_components(self) -> list[BaseCustomComponent]:
         return list(self._components.values())

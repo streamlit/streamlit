@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+This directory contains the files and modules for the exposed API.
+"""
+
 import streamlit
 
 # The `custom_component as components` import exists as existing custom components have started
