@@ -18,9 +18,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from parameterized import parameterized
 
+from streamlit.delta_generator import dg_stack
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
-from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 
 
 class MemoryFragmentStorageTest(unittest.TestCase):

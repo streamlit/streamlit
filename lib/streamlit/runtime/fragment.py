@@ -28,7 +28,6 @@ from typing_extensions import Protocol
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.time_util import time_to_seconds
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -137,6 +136,7 @@ def fragment(
     @wraps(non_optional_func)
     def wrap(*args, **kwargs):
         import streamlit as st
+        from streamlit.delta_generator import dg_stack
 
         ctx = get_script_run_ctx()
         if ctx is None:
