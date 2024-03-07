@@ -57,7 +57,7 @@ import {
   Heading as HeadingProto,
 } from "@streamlit/lib/src/proto"
 
-import React, { ReactElement, Suspense, useState } from "react"
+import React, { ReactElement, Suspense } from "react"
 import debounceRender from "react-debounce-render"
 import { ElementNode } from "@streamlit/lib/src/AppNode"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
