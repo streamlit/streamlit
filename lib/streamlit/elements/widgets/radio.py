@@ -35,7 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -330,6 +330,8 @@ class RadioMixin:
                     radio_proto.value = serialized_value
             radio_proto.set_value = True
 
+        if ctx:
+            save_for_app_testing(ctx, id, format_func)
         self.dg._enqueue("radio", radio_proto)
         return widget_state.value
 

@@ -351,6 +351,14 @@ _create_option(
 )
 
 _create_option(
+    "global.appTest",
+    description="Are we in an app test? Set automatically when the AppTest framework is running",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "global.suppressDeprecationWarnings",
     description="Hide deprecation warnings in the streamlit app.",
     visibility="hidden",

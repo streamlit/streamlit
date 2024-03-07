@@ -351,6 +351,7 @@ class ConfigTest(unittest.TestCase):
                 "deprecation.showfileUploaderEncoding",
                 "deprecation.showImageFormat",
                 "deprecation.showPyplotGlobalUse",
+                "global.appTest",
                 "global.developmentMode",
                 "global.disableWatchdogWarning",
                 "global.disableWidgetStateDuplicationWarning",

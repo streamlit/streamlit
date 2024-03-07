@@ -32,6 +32,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
@@ -82,6 +83,7 @@ from streamlit.testing.v1.element_tree import (
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
+from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import HASHLIB_KWARGS
 
 TMP_DIR = tempfile.TemporaryDirectory()
@@ -153,7 +155,9 @@ class AppTest:
     ):
         self._script_path = script_path
         self.default_timeout = default_timeout
-        self.session_state = SafeSessionState(SessionState(), lambda: None)
+        session_state = SessionState()
+        session_state[TESTING_KEY] = {}
+        self.session_state = SafeSessionState(session_state, lambda: None)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
         self.args = args
@@ -329,8 +333,9 @@ class AppTest:
         script_runner = LocalScriptRunner(
             self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
         )
-        self._tree = script_runner.run(widget_state, self.query_params, timeout)
-        self._tree._runner = self
+        with patch_config_options({"global.appTest": True}):
+            self._tree = script_runner.run(widget_state, self.query_params, timeout)
+            self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = parse.parse_qs(query_string)
