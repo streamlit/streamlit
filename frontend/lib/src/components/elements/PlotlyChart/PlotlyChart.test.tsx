@@ -21,10 +21,16 @@ import { render } from "@streamlit/lib/src/test_util"
 import { act } from "react-dom/test-utils"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/lib/src/proto"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import mock from "./mock"
 
-import { PlotlyChart, DEFAULT_HEIGHT, PlotlyChartProps } from "./PlotlyChart"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import {
+  PlotlyChart,
+  DEFAULT_HEIGHT,
+  PlotlyChartProps,
+  parseLassoPath,
+  parseBoxSelection,
+} from "./PlotlyChart"
 
 const DEFAULT_PLOTLY_WIDTH = "700"
 const DEFAULT_PLOTLY_HEIGHT = "450"
@@ -278,6 +284,56 @@ describe("PlotlyChart Element", () => {
       // eslint-disable-next-line testing-library/no-node-access -- There's no other way to get the SVG
       const svg = getPlotlyRoot(label)?.querySelector("svg")
       expect(svg).toHaveStyle("background: orange")
+    })
+  })
+
+  describe("parsePlotlySelections", () => {
+    describe("parseLassoPath", () => {
+      it("parses a simple lasso path string into x and y coordinates", () => {
+        const pathData = "M100,150L200,250L300,350Z"
+        const result = parseLassoPath(pathData)
+        expect(result).toEqual({
+          x: [100, 200, 300],
+          y: [150, 250, 350],
+        })
+      })
+
+      it("does not error with an empty string", () => {
+        const result = parseLassoPath("")
+        expect(result).toEqual({
+          x: [],
+          y: [],
+        })
+      })
+
+      it("handles path with only one point", () => {
+        const pathData = "M100,150Z"
+        const result = parseLassoPath(pathData)
+        expect(result).toEqual({
+          x: [100],
+          y: [150],
+        })
+      })
+    })
+
+    describe("parseBoxSelection", () => {
+      it("parses a box selection into x and y ranges", () => {
+        const selection = { x0: 100, y0: 150, x1: 200, y1: 250 }
+        const result = parseBoxSelection(selection)
+        expect(result).toEqual({
+          x: [100, 200],
+          y: [150, 250],
+        })
+      })
+
+      it("returns an object of empty x and y", () => {
+        const selection = {}
+        const result = parseBoxSelection(selection)
+        expect(result).toEqual({
+          x: [],
+          y: [],
+        })
+      })
     })
   })
 })

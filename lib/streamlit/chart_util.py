@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Hack for now from https://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute
-# This should likely be more finalized or just used a library imo but not sure if we want to add a library as there seems to be opposition
-class AttributeDictionary(dict):
-    __slots__ = ()
+from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
+from streamlit.errors import StreamlitAPIException
 
-    def __getattr__(self, key):
-        try:
-            return self.__getitem__(key)
-        except KeyError:
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{key}'"
-            )
 
-    __setattr__ = dict.__setitem__
+def check_on_select_str(on_select, command):
+    if (
+        isinstance(on_select, str)
+        and on_select != ON_SELECTION_IGNORE
+        and on_select != ON_SELECTION_RERUN
+    ):
+        raise StreamlitAPIException(
+            f"You have passed {on_select}. `st.{command}` only accepts '{ON_SELECTION_IGNORE}' or '{ON_SELECTION_RERUN}'."
+        )

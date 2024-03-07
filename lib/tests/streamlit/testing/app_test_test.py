@@ -178,9 +178,9 @@ def test_query_narrowing():
         st.text("4")
 
     at = AppTest.from_function(script).run()
-    assert len(at.text) == 4
+    assert at.text.len == 4
     # querying elements via a block only returns the elements in that block
-    assert len(at.get("expandable")[0].text) == 2
+    assert at.expander[0].text.len == 2
 
 
 def test_out_of_order_blocks() -> None:
