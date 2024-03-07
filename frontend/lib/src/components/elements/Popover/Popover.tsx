@@ -92,20 +92,20 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                 //  maxWidth: "80vw",
                 maxWidth: `calc(100% - 2rem)`,
               },
-              borderLeftRadius: theme.radii.lg,
-              borderRightRadius: theme.radii.lg,
-              borderTopRadius: theme.radii.lg,
-              borderBottomRadius: theme.radii.lg,
+              borderTopLeftRadius: theme.radii.xl,
+              borderTopRightRadius: theme.radii.xl,
+              borderBottomRightRadius: theme.radii.xl,
+              borderBottomLeftRadius: theme.radii.xl,
 
               borderLeftWidth: "1px",
               borderRightWidth: "1px",
               borderTopWidth: "1px",
               borderBottomWidth: "1px",
 
-              paddingRight: "calc(1em - 1px)", // 1px to account for border.
-              paddingLeft: "calc(1em - 1px)",
-              paddingBottom: "calc(1em - 1px)",
-              paddingTop: "calc(1em - 1px)",
+              paddingRight: "calc(1.5em - 1px)", // 1px to account for border.
+              paddingLeft: "calc(1.5em - 1px)",
+              paddingBottom: "calc(1.5em - 1px)",
+              paddingTop: "calc(1.5em - 1px)",
 
               borderLeftStyle: "solid",
               borderRightStyle: "solid",
