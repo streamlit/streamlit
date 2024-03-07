@@ -31,10 +31,8 @@ import {
 } from "./ChartColumn"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
-export type { LinkCell } from "./cells/LinkCell"
 
 import { ColumnCreator } from "./utils"
-import { linkCellRenderer } from "./cells/LinkCell"
 
 export * from "./utils"
 
@@ -63,7 +61,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
   })
 )
 
-export const CustomCells = [linkCellRenderer]
+export const CustomCells = []
 
 export {
   ObjectColumn,
