@@ -49,7 +49,7 @@ export interface ChartColumnParams {
 function BaseChartColumn(
   kind: string,
   props: BaseColumnProps,
-  chart_type: "line" | "bar"
+  chart_type: "line" | "bar" | "area"
 ): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
@@ -72,6 +72,7 @@ function BaseChartColumn(
       displayValues: [],
       graphKind: chart_type,
       yAxis: [parameters.y_min, parameters.y_max],
+      hideAxis: chart_type === "line",
     },
   } as SparklineCellType
 
@@ -137,13 +138,6 @@ function BaseChartColumn(
         convertedChartData.push(convertedValue)
       }
 
-      if (chart_type === "line" && convertedChartData.length <= 2) {
-        // TODO(lukasmasuch): This is only a temporary workaround to prevent
-        // an error in glide-data-grid that occurs during cell drawing when the
-        // line chart has less than 3 values. This needs to a fix in glide-data-grid.
-        return getEmptyCell()
-      }
-
       if (
         convertedChartData.length > 0 &&
         (maxValue > parameters.y_max || minValue < parameters.y_min)
@@ -193,7 +187,9 @@ function BaseChartColumn(
  * This column type is currently read-only.
  */
 export function LineChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("line_chart", props, "line")
+  // TODO(lukasmasuch): Change this to use `line` chart and introduce
+  // an AreaChartColumn for the `area` chart.
+  return BaseChartColumn("line_chart", props, "area")
 }
 
 LineChartColumn.isEditableType = false

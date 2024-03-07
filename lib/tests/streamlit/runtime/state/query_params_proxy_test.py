@@ -90,6 +90,11 @@ class TestQueryParamsProxy(unittest.TestCase):
         self.query_params_proxy.key = "value"
         assert self.query_params_proxy["key"] == "value"
 
+    def test_update_sets_entries(self):
+        self.query_params_proxy.update({"key1": "value1", "key2": "value2"})
+        assert self.query_params_proxy["key1"] == "value1"
+        assert self.query_params_proxy["key2"] == "value2"
+
     def test__delattr__deletes_entry(self):
         del self.query_params_proxy.test
         assert "test" not in self.query_params_proxy

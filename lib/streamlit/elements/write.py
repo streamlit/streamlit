@@ -67,13 +67,17 @@ class WriteMixin:
         stream : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
             The generator or iterable to stream.
 
+            .. note::
+                To use additional LLM libraries, you can create a wrapper to
+                manually define a generator function and include custom output
+                parsing.
+
         Returns
         -------
         str or list
             The full response. If the streamed output only contains text, this
             is a string. Otherwise, this is a list of all the streamed objects.
             The return value is fully compatible as input for ``st.write``.
-
 
         Example
         -------
@@ -267,6 +271,15 @@ class WriteMixin:
             security. For more information, see:
 
             https://github.com/streamlit/streamlit/issues/152
+
+        **kwargs : any
+            Keyword arguments. Not used.
+
+        .. deprecated::
+            ``**kwargs`` is deprecated and will be removed in a later version.
+            Use other, more specific Streamlit commands to pass additional
+            keyword arguments.
+
 
         Example
         -------
