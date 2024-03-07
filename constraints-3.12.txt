@@ -55,7 +55,7 @@ pillow==10.2.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
 platformdirs==4.2.0
-playwright==1.41.2
+playwright==1.42.0
 plotly==5.19.0
 pluggy==1.4.0
 pre-commit==3.6.2
@@ -70,7 +70,7 @@ pydot==2.0.0
 pyee==11.0.1
 Pygments==2.17.2
 pyodbc==5.1.0
-pyparsing==3.1.1
+pyparsing==3.1.2
 pyspark==3.5.1
 pytest==8.0.2
 pytest-base-url==2.1.0
