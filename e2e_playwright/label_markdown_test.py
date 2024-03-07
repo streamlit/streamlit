@@ -130,7 +130,7 @@ def test_multiselect_labels_handle_markdown(
 
 
 def test_slider_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "unordered-list"],
@@ -202,7 +202,7 @@ def test_number_input_labels_handle_markdown(
 
 
 def test_text_area_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "image"],
@@ -223,7 +223,7 @@ def test_text_area_labels_handle_markdown(
 
 
 def test_date_input_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "table"],
@@ -244,7 +244,7 @@ def test_date_input_labels_handle_markdown(
 
 
 def test_time_input_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "heading1"],
@@ -265,7 +265,7 @@ def test_time_input_labels_handle_markdown(
 
 
 def test_file_uploader_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "heading2"],
@@ -286,7 +286,7 @@ def test_file_uploader_labels_handle_markdown(
 
 
 def test_color_picker_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "ordered-list"],
@@ -307,7 +307,7 @@ def test_color_picker_labels_handle_markdown(
 
 
 def test_metric_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "unordered-list"],
@@ -328,7 +328,7 @@ def test_metric_labels_handle_markdown(
 
 
 def test_expander_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "task-list"],
@@ -348,7 +348,9 @@ def test_expander_labels_handle_markdown(
         )
 
 
-def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunction):
+def test_tab_labels_handle_markdown(
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
+):
     cases = [
         ["invalid", "blockquote-and-hr"],
         ["valid", "markdown"],
