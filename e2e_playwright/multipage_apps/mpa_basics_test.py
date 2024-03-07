@@ -111,20 +111,27 @@ def test_handles_expand_collapse_of_mpa_nav_correctly(
     separator = page.get_by_test_id("stSidebarNavSeparator")
     svg = separator.locator("svg")
 
+    expect(svg).to_be_visible()
+
     # Expand the nav
-    svg.click()
+    svg.click(force=True)
+    # We apply a quick timeout here so that the UI has some time to
+    # adjust for the screenshot after the click
+    page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
 
     # Collapse the nav
-    svg.click()
+    svg.click(force=True)
+    page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_collapsed"
     )
 
     # Expand the nav again
-    svg.click()
+    svg.click(force=True)
+    page.wait_for_timeout(250)
     assert_snapshot(
         page.get_by_test_id("stSidebarNav"), name="mpa-sidebar_nav_expanded"
     )
@@ -163,6 +170,22 @@ def test_switch_page_removes_query_params(page: Page, app_port: int):
     wait_for_app_loaded(page)
     # Check that query params don't persist
     expect(page).to_have_url(f"http://localhost:{app_port}/page2")
+
+
+def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):
+    app.get_by_test_id("stButton").nth(1).locator("button").first.click()
+
+    # Wait for the view container and main menu to appear (like in wait_for_app_loaded),
+    # but don't wait for the script to finish running.
+    app.wait_for_selector(
+        "[data-testid='stAppViewContainer']", timeout=30000, state="attached"
+    )
+    app.wait_for_selector("[data-testid='stMainMenu']", timeout=20000, state="attached")
+
+    # We expect to see the page transition to the slow page by the time this call times
+    # out in 5s. Otherwise, the page contents aren't being rendered until the script has
+    # fully completed, and we've run into https://github.com/streamlit/streamlit/issues/7954
+    expect(app.get_by_test_id("stHeading")).to_contain_text("Slow page")
 
 
 def test_switch_page_switches_immediately_if_second_page_is_slow(app: Page):

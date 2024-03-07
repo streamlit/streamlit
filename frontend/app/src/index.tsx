@@ -23,6 +23,8 @@ import ThemedApp from "./ThemedApp"
 
 const engine = new Styletron({ prefix: "st-" })
 
+// TODO: Deprecated in React 18 - Need to revise to new API
+// react-18-upgrade
 ReactDOM.render(
   <StyletronProvider value={engine}>
     <ThemedApp />

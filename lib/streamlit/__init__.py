@@ -44,6 +44,19 @@ For more detailed info, see https://docs.streamlit.io.
 
 # IMPORTANT: Prefix with an underscore anything that the user shouldn't see.
 
+
+import os as _os
+
+# Set Matplotlib backend to avoid a crash.
+# The default Matplotlib backend crashes Python on OSX when run on a thread
+# that's not the main thread, so here we set a safer backend as a fix.
+# This fix is OS-independent. We didn't see a good reason to make this
+# Mac-only. Consistency within Streamlit seemed more important.
+# IMPORTANT: This needs to run on top of all imports before any other
+# import of matplotlib could happen.
+_os.environ["MPLBACKEND"] = "Agg"
+
+
 # Must be at the top, to avoid circular dependency.
 from streamlit import logger as _logger
 from streamlit import config as _config
@@ -53,8 +66,12 @@ from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STR
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
 
-from streamlit.delta_generator import DeltaGenerator as _DeltaGenerator
-from streamlit.proto.RootContainer_pb2 import RootContainer as _RootContainer
+from streamlit.delta_generator import (
+    main_dg as _main_dg,
+    sidebar_dg as _sidebar_dg,
+    event_dg as _event_dg,
+    bottom_dg as _bottom_dg,
+)
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
@@ -108,14 +125,14 @@ def _update_logger() -> None:
 _config.on_config_parsed(_update_logger, True)
 
 
-_main = _DeltaGenerator(root_container=_RootContainer.MAIN)
-sidebar = _DeltaGenerator(root_container=_RootContainer.SIDEBAR, parent=_main)
-_event = _DeltaGenerator(root_container=_RootContainer.EVENT, parent=_main)
-_bottom = _DeltaGenerator(root_container=_RootContainer.BOTTOM, parent=_main)
-
 secrets = _secrets_singleton
 
 # DeltaGenerator methods:
+
+_main = _main_dg
+sidebar = _sidebar_dg
+_event = _event_dg
+_bottom = _bottom_dg
 
 altair_chart = _main.altair_chart
 area_chart = _main.area_chart
@@ -162,6 +179,7 @@ multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
 plotly_chart = _main.plotly_chart
+popover = _main.popover
 progress = _main.progress
 pyplot = _main.pyplot
 radio = _main.radio

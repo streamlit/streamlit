@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import ast
 import contextlib
 import re
 import textwrap
 import traceback
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Iterable
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -66,7 +68,7 @@ def echo(code_location="above"):
 
         # Use ast to parse the Python file and find the code block to display
         root_node = ast.parse("".join(source_lines))
-        line_to_node_map: Dict[int, Any] = {}
+        line_to_node_map: dict[int, Any] = {}
 
         def collect_body_statements(node: ast.AST) -> None:
             if not hasattr(node, "body"):
@@ -109,7 +111,7 @@ def _get_initial_indent(lines: Iterable[str]) -> int:
     return 0
 
 
-def _get_indent(line: str) -> Optional[int]:
+def _get_indent(line: str) -> int | None:
     """Get the number of whitespaces at the beginning of the given line.
     If the line is empty, or if it contains just whitespace and a newline,
     return None.

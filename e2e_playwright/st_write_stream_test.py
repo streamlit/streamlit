@@ -29,8 +29,11 @@ def test_stream_generator(app: Page, assert_snapshot: ImageCompareFunction):
 
     markdown_elements = app.get_by_test_id("stMarkdown")
     expect(markdown_elements).to_have_count(2)
-    # Wait for he second element to appear
+    # Wait for the second element to appear
     expect(markdown_elements.nth(1)).to_contain_text("This is the end of the stream.")
+
+    # Check that the dataframe is visible:
+    expect(app.get_by_test_id("stDataFrame")).to_be_visible()
 
     main_container = app.get_by_test_id("stVerticalBlock").nth(0)
     assert_snapshot(main_container.nth(0), name="st_write_stream-generator_output")
@@ -42,8 +45,11 @@ def test_stream_generator(app: Page, assert_snapshot: ImageCompareFunction):
 
     markdown_elements = app.get_by_test_id("stMarkdown")
     expect(markdown_elements).to_have_count(2)
-    # Wait for he second element to appear
+    # Wait for the second element to appear
     expect(markdown_elements.nth(1)).to_contain_text("This is the end of the stream.")
+
+    # Check that the dataframe is visible:
+    expect(app.get_by_test_id("stDataFrame")).to_be_visible()
 
     expect(app.get_by_test_id("stVerticalBlock")).to_have_count(1)
 

@@ -30,4 +30,12 @@ describe("Skeleton element", () => {
     // writing a very trivial test for it.)
     expect(screen.getByTestId("stSkeleton")).toBeVisible()
   })
+
+  it("renders with height property", () => {
+    const height = "100px"
+    render(<Skeleton height={height} />)
+
+    const style = getComputedStyle(screen.getByTestId("stSkeleton"))
+    expect(style.height).toBe(height)
+  })
 })
