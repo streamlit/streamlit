@@ -98,7 +98,6 @@ export default function Video({
         src={getYoutubeSrc(url)}
         width={width}
         height={height}
-        style={{ colorScheme: "normal" }}
         frameBorder="0"
         allow="autoplay; encrypted-media"
         allowFullScreen
