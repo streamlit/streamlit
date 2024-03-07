@@ -24,7 +24,11 @@ import LinkColumn from "./LinkColumn"
 import ImageColumn from "./ImageColumn"
 import ProgressColumn from "./ProgressColumn"
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
-import { LineChartColumn, BarChartColumn } from "./ChartColumn"
+import {
+  LineChartColumn,
+  BarChartColumn,
+  AreaChartColumn,
+} from "./ChartColumn"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
 
@@ -51,6 +55,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     time: TimeColumn,
     line_chart: LineChartColumn,
     bar_chart: BarChartColumn,
+    area_chart: AreaChartColumn,
     image: ImageColumn,
     progress: ProgressColumn,
   })
@@ -71,6 +76,7 @@ export {
   TimeColumn,
   LineChartColumn,
   BarChartColumn,
+  AreaChartColumn,
   ImageColumn,
   ProgressColumn,
 }

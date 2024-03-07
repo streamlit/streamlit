@@ -35,6 +35,10 @@ import {
   formatNumber,
 } from "./utils"
 
+export const LINE_CHART_TYPE = "line_chart"
+export const AREA_CHART_TYPE = "area_chart"
+export const BAR_CHART_TYPE = "bar_chart"
+
 export interface ChartColumnParams {
   // The minimum value used for plotting the chart. Defaults to 0.
   readonly y_min?: number
@@ -72,7 +76,6 @@ function BaseChartColumn(
       displayValues: [],
       graphKind: chart_type,
       yAxis: [parameters.y_min, parameters.y_max],
-      hideAxis: chart_type === "line",
     },
   } as SparklineCellType
 
@@ -187,9 +190,7 @@ function BaseChartColumn(
  * This column type is currently read-only.
  */
 export function LineChartColumn(props: BaseColumnProps): BaseColumn {
-  // TODO(lukasmasuch): Change this to use `line` chart and introduce
-  // an AreaChartColumn for the `area` chart.
-  return BaseChartColumn("line_chart", props, "area")
+  return BaseChartColumn(LINE_CHART_TYPE, props, "line")
 }
 
 LineChartColumn.isEditableType = false
@@ -201,7 +202,19 @@ LineChartColumn.isEditableType = false
  * This column type is currently read-only.
  */
 export function BarChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("bar_chart", props, "bar")
+  return BaseChartColumn(BAR_CHART_TYPE, props, "bar")
 }
 
 BarChartColumn.isEditableType = false
+
+/**
+ * A column type that renders the cell value as an area-chart.
+ * The data is expected to be a numeric array.
+ *
+ * This column type is currently read-only.
+ */
+export function AreaChartColumn(props: BaseColumnProps): BaseColumn {
+  return BaseChartColumn(AREA_CHART_TYPE, props, "area")
+}
+
+AreaChartColumn.isEditableType = false
