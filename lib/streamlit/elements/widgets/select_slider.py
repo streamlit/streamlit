@@ -38,7 +38,11 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
+from streamlit.runtime.state.common import (
+    RegisterWidgetResult,
+    compute_widget_id,
+    save_for_app_testing,
+)
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -335,6 +339,9 @@ class SelectSliderMixin:
         if widget_state.value_changed:
             slider_proto.value[:] = serde.serialize(widget_state.value)
             slider_proto.set_value = True
+
+        if ctx:
+            save_for_app_testing(ctx, id, format_func)
 
         self.dg._enqueue("slider", slider_proto)
         return widget_state.value
