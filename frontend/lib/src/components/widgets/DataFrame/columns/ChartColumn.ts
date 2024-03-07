@@ -35,6 +35,10 @@ import {
   formatNumber,
 } from "./utils"
 
+export const LINE_CHART_TYPE = "line_chart"
+export const AREA_CHART_TYPE = "area_chart"
+export const BAR_CHART_TYPE = "bar_chart"
+
 export interface ChartColumnParams {
   // The minimum value used for plotting the chart. Defaults to 0.
   readonly y_min?: number
@@ -186,7 +190,7 @@ function BaseChartColumn(
  * This column type is currently read-only.
  */
 export function LineChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("line_chart", props, "line")
+  return BaseChartColumn(LINE_CHART_TYPE, props, "line")
 }
 
 LineChartColumn.isEditableType = false
@@ -198,7 +202,7 @@ LineChartColumn.isEditableType = false
  * This column type is currently read-only.
  */
 export function BarChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("bar_chart", props, "bar")
+  return BaseChartColumn(BAR_CHART_TYPE, props, "bar")
 }
 
 BarChartColumn.isEditableType = false
@@ -210,7 +214,7 @@ BarChartColumn.isEditableType = false
  * This column type is currently read-only.
  */
 export function AreaChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("area_chart", props, "area")
+  return BaseChartColumn(AREA_CHART_TYPE, props, "area")
 }
 
 AreaChartColumn.isEditableType = false
