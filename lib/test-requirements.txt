@@ -21,8 +21,7 @@ pytest
 pytest-cov
 requests-mock
 testfixtures
-# Playwright 1.40 installs a broken webkit version.
-playwright>=1.41
+playwright==1.42.*
 pytest-playwright>=0.3.3
 pixelmatch>=0.3.0
 pytest-xdist
