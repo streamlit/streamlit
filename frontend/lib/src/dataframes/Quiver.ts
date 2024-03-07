@@ -39,6 +39,7 @@ import numbro from "numbro"
 
 import { IArrow, Styler as StylerProto } from "@streamlit/lib/src/proto"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { logWarning } from "@streamlit/lib/src/util/log"
 
 /** Data types used by ArrowJS. */
 export type DataType =
@@ -986,13 +987,13 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     return `${sign}${wholePart}` + (decimalPart ? `.${decimalPart}` : "")
   }
 
-  private static formatPeriodType(
+  public static formatPeriodType(
     duration: bigint,
     typeName: PeriodType
   ): string {
     const match = typeName.match(/period\[(.*)]/)
     if (match === null) {
-      console.error(`Invalid period type: ${typeName}`)
+      logWarning(`Invalid period type: ${typeName}`)
       return String(duration)
     }
     const [, freq] = match
@@ -1007,12 +1008,12 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
     const momentConverter =
       PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
     if (!momentConverter) {
-      console.error(`Unsupported period frequency: ${freq}`)
+      logWarning(`Unsupported period frequency: ${freq}`)
       return String(duration)
     }
     const durationNumber = Number(duration)
     if (!Number.isSafeInteger(durationNumber)) {
-      console.error(
+      logWarning(
         `Unsupported value: ${duration}. Supported values: [${Number.MIN_SAFE_INTEGER}-${Number.MAX_SAFE_INTEGER}]`
       )
       return String(duration)
