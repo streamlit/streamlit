@@ -86,6 +86,23 @@ def fix_arg(subdirectory: str, arg: str) -> str:
     return str(arg_path.relative_to(subdirectory))
 
 
+def try_as_shell(fixed_args: List[str], subdirectory: str):
+    # Windows doesn't know how to run "yarn" using the CreateProcess
+    # WINAPI because it's looking for an executable, and yarn is a node script.
+    # Yarn happens to be the only thing currently run with this patching script,
+    # so add a fall-back which tries to run the requested command in a shell
+    # if directly calling the process doesn't work.
+    import shlex
+
+    print("Direct call failed, trying as shell command:")
+    shell_cmd = shlex.join(fixed_args)
+    print(shell_cmd)
+    try:
+        subprocess.run(shell_cmd, cwd=subdirectory, check=True, shell=True)
+    except subprocess.CalledProcessError as ex:
+        sys.exit(ex.returncode)
+
+
 def main():
     subdirectory, subprocess_args = parse_args()
 
@@ -94,6 +111,11 @@ def main():
         subprocess.run(fixed_args, cwd=subdirectory, check=True)
     except subprocess.CalledProcessError as ex:
         sys.exit(ex.returncode)
+    except FileNotFoundError:
+        if "win32" in sys.platform:
+            try_as_shell(fixed_args, subdirectory)
+        else:
+            sys.exit(1)
 
 
 main()
