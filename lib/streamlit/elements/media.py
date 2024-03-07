@@ -70,11 +70,14 @@ class MediaMixin:
             or a 2D array of shape ``(num_channels, num_samples)`` with waveforms
             for all channels. See the default channel order at
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
+
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
+
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
@@ -150,31 +153,42 @@ class MediaMixin:
 
         Parameters
         ----------
-        data : str, bytes, BytesIO, numpy.ndarray, or file
+        data : str, bytes, io.BytesIO, numpy.ndarray, or file
             Raw video data, filename, or URL pointing to a video to load.
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
+
         format : str
-            The mime type for the video file. Defaults to 'video/mp4'.
+            The mime type for the video file. Defaults to ``"video/mp4"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
-        subtitles: str, dict, or io.BytesIO
+
+        subtitles: str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
-            * None (default): No subtitles.
-            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or
+
+            * ``None`` (default): No subtitles.
+
+            * A string, bytes, or Path: File path to a subtitle file in ``.vtt`` or ``.srt`` formats, or
               the raw content of subtitles conforming to these formats.
               If providing raw content, the string must adhere to the WebVTT or SRT
               format specifications.
+
+            * io.BytesIO: A BytesIO stream that contains valid ``.vtt`` or ``.srt``
+              formatted subtitle data.
+
             * A dictionary: Pairs of labels and file paths or raw subtitle content in
-              '.vtt' or '.srt' formats.
-              Enables multiple subtitle tracks. The label will be shown in the video
-              player. Example:
-              {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
-            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt'
-              formatted subtitle data. When provided, subtitles are displayed
-              by default. For multiple tracks, the first one is displayed by default.
+              ``.vtt`` or ``.srt`` formats to enable multiple subtitle tracks.
+              The label will be shown in the video player. Example:
+              ``{"English": "path/to/english.vtt", "French": "path/to/french.srt"}``
+
+            When provided, subtitles are displayed by default. For multiple
+            tracks, the first one is displayed by default. If you don't want any
+            subtitles displayed by default, use an empty string for the value
+            in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
+
             Not supported for YouTube videos.
 
         end_time: int or None
@@ -194,6 +208,35 @@ class MediaMixin:
         .. output::
            https://doc-video.streamlit.app/
            height: 700px
+
+        When you include subtitles, they will be turned on by default. A viewer
+        can turn off the subtitles (or captions) from the browser's default video
+        control menu, usually located in the lower-right corner of the video.
+
+        Here is a simple VTT file (``subtitles.vtt``):
+
+        >>> WEBVTT
+        >>>
+        >>> 0:00:01.000 --> 0:00:02.000
+        >>> Look!
+        >>>
+        >>> 0:00:03.000 --> 0:00:05.000
+        >>> Look at the pretty stars!
+
+        If the above VTT file lives in the same directory as your app, you can
+        add subtitles like so:
+
+        >>> import streamlit as st
+        >>>
+        >>> VIDEO_URL = "https://example.com/not-youtube.mp4"
+        >>> st.video(VIDEO_URL, subtitles="subtitles.vtt")
+
+        .. output::
+           https://doc-video-subtitles.streamlit.app/
+           height: 700px
+
+        See additional examples of supported subtitle input types in our
+        `video subtitles feature demo <https://doc-video-subtitle-inputs.streamlit.app/>`_.
 
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
@@ -223,16 +266,10 @@ class MediaMixin:
         return cast("DeltaGenerator", self)
 
 
-# Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
-# URL (incl. shortlinks and embed links) and extracts its code.
-YOUTUBE_RE: Final = re.compile(
-    # Protocol
-    r"http(?:s?):\/\/"
-    # Domain
-    r"(?:www\.)?youtu(?:be\.com|\.be)\/"
-    # Path and query string
-    r"(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
-)
+# Regular expression from
+# https://gist.github.com/rodrigoborgesdeoliveira/987683cfbfcc8d800192da1e73adc486?permalink_comment_id=4645864#gistcomment-4645864
+# Covers any youtube URL (incl. shortlinks and embed links) and extracts its video code.
+YOUTUBE_RE: Final = r"^((https?://(?:www\.)?(?:m\.)?youtube\.com))/((?:oembed\?url=https?%3A//(?:www\.)youtube.com/watch\?(?:v%3D)(?P<video_id_1>[\w\-]{10,20})&format=json)|(?:attribution_link\?a=.*watch(?:%3Fv%3D|%3Fv%3D)(?P<video_id_2>[\w\-]{10,20}))(?:%26feature.*))|(https?:)?(\/\/)?((www\.|m\.)?youtube(-nocookie)?\.com\/((watch)?\?(app=desktop&)?(feature=\w*&)?v=|embed\/|v\/|e\/)|youtu\.be\/)(?P<video_id_3>[\w\-]{10,20})"
 
 
 def _reshape_youtube_url(url: str) -> str | None:
@@ -252,9 +289,14 @@ def _reshape_youtube_url(url: str) -> str | None:
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc
     """
-    match = YOUTUBE_RE.match(url)
+    match = re.match(YOUTUBE_RE, url)
     if match:
-        return "https://www.youtube.com/embed/{code}".format(**match.groupdict())
+        code = (
+            match.group("video_id_1")
+            or match.group("video_id_2")
+            or match.group("video_id_3")
+        )
+        return f"https://www.youtube.com/embed/{code}"
     return None
 
 

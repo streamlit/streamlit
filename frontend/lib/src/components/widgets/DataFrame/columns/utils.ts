@@ -31,6 +31,7 @@ import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
 
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { Type as ArrowType } from "@streamlit/lib/src/dataframes/Quiver"
 import {
   notNullOrUndefined,
@@ -103,7 +104,7 @@ export interface BaseColumn extends BaseColumnProps {
  * some column properties.
  */
 export type ColumnCreator = {
-  (props: BaseColumnProps): BaseColumn
+  (props: BaseColumnProps, theme: EmotionTheme): BaseColumn
   readonly isEditableType: boolean
 }
 

@@ -27,7 +27,6 @@ import {
   BaseColumn,
   BaseColumnProps,
   getErrorCell,
-  ColumnCreator,
   toSafeString,
   mergeColumnParameters,
   toSafeNumber,
@@ -212,4 +211,4 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
 NumberColumn.isEditableType = true
 
-export default NumberColumn as ColumnCreator
+export default NumberColumn
