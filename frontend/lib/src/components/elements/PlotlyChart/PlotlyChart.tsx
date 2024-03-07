@@ -59,13 +59,7 @@ function renderIFrame({
   height: propHeight,
 }: PlotlyIFrameProps): ReactElement {
   const height = propHeight || DEFAULT_HEIGHT
-  return (
-    <iframe
-      title="Plotly"
-      src={url}
-      style={{ width, height }}
-    />
-  )
+  return <iframe title="Plotly" src={url} style={{ width, height }} />
 }
 
 /** Render a Plotly chart from a FigureProto */
