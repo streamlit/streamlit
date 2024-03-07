@@ -49,8 +49,22 @@ class StreamlitWriteTest(unittest.TestCase):
             def _repr_html_(self):
                 return "<strong>hello world</strong>"
 
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            fake = FakeHTMLable()
+            st.write(fake)
+
+            p.assert_called_once_with(fake)
+
+    def test_repr_html_allowing_html(self):
+        """Test st.write with an object that defines _repr_html_ and allows
+        unsafe HTML explicitly."""
+
+        class FakeHTMLable(object):
+            def _repr_html_(self):
+                return "<strong>hello world</strong>"
+
         with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
-            st.write(FakeHTMLable())
+            st.write(FakeHTMLable(), unsafe_allow_html=True)
 
             p.assert_called_once_with(
                 "<strong>hello world</strong>", unsafe_allow_html=True
@@ -69,6 +83,18 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write(FakeHTMLable())
 
             p.assert_called_once_with("hello **world**", unsafe_allow_html=False)
+
+    def test_repr_html_not_callable(self):
+        """Test st.write with an object that defines _repr_html_ but is not callable"""
+
+        class FakeHTMLable(object):
+            _repr_html_ = "hello **world**"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.help") as p:
+            fake = FakeHTMLable()
+            st.write(fake)
+
+            p.assert_called_once_with(fake)
 
     def test_string(self):
         """Test st.write with a string."""
@@ -299,7 +325,22 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write(SomeObject())
 
             p.assert_called_once_with(
-                "`1 * 2 - 3 = 4 \\`ok\\` !`", unsafe_allow_html=False
+                "``1 * 2 - 3 = 4 `ok` !``", unsafe_allow_html=False
+            )
+
+    def test_default_object_multiline(self):
+        """Test st.write with default clause ie some object with multiline string."""
+
+        class SomeObject(object):
+            def __str__(self):
+                return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as p:
+            st.write(SomeObject())
+
+            p.assert_called_once_with(
+                "`````\n1 * 2\n - 3\n ``` = \n````\n4 `ok` !\n`````",
+                unsafe_allow_html=False,
             )
 
     def test_class(self):

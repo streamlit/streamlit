@@ -20,6 +20,7 @@ from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Generic,
     List,
     Sequence,
@@ -73,7 +74,7 @@ from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.state.common import user_key_from_widget_id
+from streamlit.runtime.state.common import TESTING_KEY, user_key_from_widget_id
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 
 if TYPE_CHECKING:
@@ -739,15 +740,15 @@ class Multiselect(Widget, Generic[T]):
     @property
     def indices(self) -> Sequence[int]:
         """The indices of the currently selected values from the options. (list)"""
-        return [self.options.index(str(v)) for v in self.value]
+        return [self.options.index(self.format_func(v)) for v in self.value]
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
         """Set the value of the multiselect widget. (list)"""
-
-        # Implementation note: set_value not work correctly if `format_func` is also
-        # passed to the multiselect. This is because we send options via proto with
-        # applied `format_func`, but keep original values in session state
-        # as widget value.
 
         self._value = v
         return self
@@ -873,7 +874,7 @@ class Radio(Widget, Generic[T]):
         """The index of the current selection. (int)"""
         if self.value is None:
             return None
-        return self.options.index(str(self.value))
+        return self.options.index(self.format_func(self.value))
 
     @property
     def value(self) -> T | None:
@@ -884,6 +885,11 @@ class Radio(Widget, Generic[T]):
             state = self.root.session_state
             assert state
             return cast(T, state[self.id])
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: T | None) -> Radio[T]:
         """Set the selection by value."""
@@ -929,7 +935,7 @@ class Selectbox(Widget, Generic[T]):
 
         if len(self.options) == 0:
             return 0
-        return self.options.index(str(self.value))
+        return self.options.index(self.format_func(self.value))
 
     @property
     def value(self) -> T | None:
@@ -941,13 +947,13 @@ class Selectbox(Widget, Generic[T]):
             assert state
             return cast(T, state[self.id])
 
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
+
     def set_value(self, v: T | None) -> Selectbox[T]:
         """Set the selection by value."""
-
-        # Implementation note: set_value not work correctly if `format_func` is also
-        # passed to the selectbox. This is because we send options via proto with applied
-        # `format_func`, but keep original values in session state as widget value.
-
         self._value = v
         return self
 
@@ -1000,14 +1006,11 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def _widget_state(self) -> WidgetState:
         serde = SelectSliderSerde(self.options, [], False)
-        # We don't have access to the `format_func`, and options have been
-        # converted to strings already, so hope that formatting with `str`
-        # will let us find the right option.
         try:
-            v = serde.serialize(str(self.value))
+            v = serde.serialize(self.format_func(self.value))
         except (ValueError, TypeError):
             try:
-                v = serde.serialize([str(val) for val in self.value])  # type: ignore
+                v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
             except:
                 raise ValueError(f"Could not find index for {self.value}")
 
@@ -1026,6 +1029,11 @@ class SelectSlider(Widget, Generic[T]):
             assert state
             # Awkward to do this with `cast`
             return state[self.id]  # type: ignore
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
         """Set the ranged selection by values."""

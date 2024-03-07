@@ -22,7 +22,7 @@ def test_dataframe_supports_various_configurations(
 ):
     """Screenshot test that st.dataframe supports various configuration options."""
     dataframe_elements = themed_app.get_by_test_id("stDataFrame")
-    expect(dataframe_elements).to_have_count(22)
+    expect(dataframe_elements).to_have_count(23)
 
     # The dataframe component might require a bit more time for rendering the canvas
     themed_app.wait_for_timeout(250)
@@ -47,5 +47,6 @@ def test_dataframe_supports_various_configurations(
     assert_snapshot(dataframe_elements.nth(17), name="st_dataframe-list_column")
     assert_snapshot(dataframe_elements.nth(18), name="st_dataframe-bar_chart_column")
     assert_snapshot(dataframe_elements.nth(19), name="st_dataframe-line_chart_column")
-    assert_snapshot(dataframe_elements.nth(20), name="st_dataframe-image_column")
-    assert_snapshot(dataframe_elements.nth(21), name="st_dataframe-auto_sized_columns")
+    assert_snapshot(dataframe_elements.nth(20), name="st_dataframe-area_chart_column")
+    assert_snapshot(dataframe_elements.nth(21), name="st_dataframe-image_column")
+    assert_snapshot(dataframe_elements.nth(22), name="st_dataframe-auto_sized_columns")
