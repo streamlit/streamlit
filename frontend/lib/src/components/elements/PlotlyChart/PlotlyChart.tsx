@@ -146,58 +146,6 @@ function PlotlyFigure({
   height,
   widgetMgr,
 }: PlotlyChartProps): ReactElement {
-  // const figure = element.figure as FigureProto
-
-  // const theme: EmotionTheme = useTheme()
-  const selectedPoints = useRef<Array<any> | undefined>()
-
-  // const generateSpec = useCallback((): any => {
-  //   const spec = JSON.parse(
-  //     replaceTemporaryColors(figure.spec, theme, element.theme)
-  //   )
-  //   const initialHeight = spec.layout.height
-  //   const initialWidth = spec.layout.width
-
-  //   if (isFullScreen(height)) {
-  //     spec.layout.width = width
-  //     spec.layout.height = height
-  //   } else if (element.useContainerWidth) {
-  //     spec.layout.width = width
-  //   } else {
-  //     spec.layout.width = initialWidth
-  //     spec.layout.height = initialHeight
-  //   }
-  //   if (element.theme === "streamlit") {
-  //     applyStreamlitTheme(spec, theme)
-  //   } else {
-  //     // Apply minor theming improvements to work better with Streamlit
-  //     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-  //   }
-
-  //   return spec
-  // }, [
-  //   element.theme,
-  //   element.useContainerWidth,
-  //   figure.spec,
-  //   height,
-  //   theme,
-  //   width,
-  // ])
-
-  // const [config, setConfig] = useState(JSON.parse(figure.config))
-  // const [spec, setSpec] = useState(generateSpec())
-
-  // // Update config and spec references iff the theme or props change
-  // // Use useLayoutEffect to synchronize rerender by updating state
-  // // More information: https://kentcdodds.com/blog/useeffect-vs-uselayouteffect
-  // useLayoutEffect(() => {
-  //   setConfig(JSON.parse(figure.config))
-  //   setSpec(generateSpec())
-  // }, [element, theme, height, width, figure.config, generateSpec])
-
-  // const { data, layout, frames } = spec
-
-  // console.log(element.onSelect)
   const figure = element.figure as FigureProto
 
   const [config] = useState(JSON.parse(figure.config))
