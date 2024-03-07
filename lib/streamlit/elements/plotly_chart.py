@@ -284,8 +284,6 @@ def marshall(
         config.setdefault("showLink", kwargs.get("show_link", False))
         config.setdefault("linkText", kwargs.get("link_text", False))
 
-        # https://github.com/plotly/plotly.py/issues/3567
-        plotly.io.json.config.default_engine = "orjson"
         proto.figure.spec = plotly.io.to_json(figure, validate=False)
         proto.figure.config = json.dumps(config)
 
