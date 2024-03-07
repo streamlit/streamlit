@@ -17,7 +17,9 @@ from playwright.sync_api import Page, expect
 
 
 def test_audio_has_correct_properties(app: Page):
-    audio = app.get_by_test_id("stAudio")
-    expect(audio).to_be_visible()
-    expect(audio).to_have_attribute("controls", "")
-    expect(audio).to_have_attribute("src", re.compile(r".*media.*wav"))
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements).to_have_count(2)
+
+    expect(audio_elements.nth(0)).to_be_visible()
+    expect(audio_elements.nth(0)).to_have_attribute("controls", "")
+    expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))

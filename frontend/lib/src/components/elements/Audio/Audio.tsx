@@ -33,23 +33,50 @@ export default function Audio({
 
   const { startTime, endTime, loop } = element
 
+  // Handle startTime changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = startTime
     }
   }, [startTime])
 
+  useEffect(() => {
+    const audioNode = audioRef.current
+
+    const setStartTime: () => void = () => {
+      if (audioNode) {
+        // setStartTime
+        audioNode.currentTime = element.startTime
+      }
+    }
+
+    if (audioNode) {
+      audioNode.addEventListener("loadedmetadata", setStartTime)
+    }
+
+    return () => {
+      if (audioNode) {
+        audioNode.removeEventListener("loadedmetadata", setStartTime)
+      }
+    }
+  }, [element])
+
   // Stop the audio at 'endTime' and handle loop
   useEffect(() => {
     const audioNode = audioRef.current
     if (!audioNode) return
 
+    // Flag to avoid calling 'audioNode.pause()' multiple times
+    let stoppedByEndTime = false
+
     const handleTimeUpdate = (): void => {
       if (endTime > 0 && audioNode.currentTime >= endTime) {
         if (loop) {
+          // If loop is true and we reached 'endTime', reset to 'startTime'
           audioNode.currentTime = startTime || 0
           audioNode.play()
-        } else {
+        } else if (!stoppedByEndTime) {
+          stoppedByEndTime = true
           audioNode.pause()
         }
       }
@@ -71,9 +98,10 @@ export default function Audio({
     const audioNode = audioRef.current
     if (!audioNode) return
 
+    // Loop the audio when it has ended
     const handleAudioEnd = (): void => {
       if (loop) {
-        audioNode.currentTime = startTime || 0
+        audioNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
         audioNode.play()
       }
     }
