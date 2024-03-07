@@ -173,7 +173,7 @@ def test_text_input_labels_handle_markdown(
 
     for index, case in enumerate(cases):
         current_app = themed_app if index == 1 else app
-        current_app.get_by_test_id("stTextInput")
+        text_inputs = current_app.get_by_test_id("stTextInput")
         assert_snapshot(
             text_inputs.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_text_input-{case[0]}_{case[1]}",
