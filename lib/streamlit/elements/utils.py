@@ -12,21 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from enum import Enum, EnumMeta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Hashable,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, Sequence, cast, overload
 
 import streamlit
 from streamlit import config, runtime, type_util
@@ -43,8 +32,8 @@ if TYPE_CHECKING:
 
 
 def last_index_for_melted_dataframes(
-    data: Union["DataFrameCompatible", Any]
-) -> Optional[Hashable]:
+    data: DataFrameCompatible | Any,
+) -> Hashable | None:
     if type_util.is_dataframe_compatible(data):
         data = type_util.convert_anything_to_df(data)
 
@@ -54,9 +43,7 @@ def last_index_for_melted_dataframes(
     return None
 
 
-def check_callback_rules(
-    dg: "DeltaGenerator", on_change: Optional[WidgetCallback]
-) -> None:
+def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
     if runtime.exists() and is_in_form(dg) and on_change is not None:
         raise StreamlitAPIException(
             "With forms, callbacks can only be defined on the `st.form_submit_button`."
@@ -73,7 +60,7 @@ st.chat_input, and st.form cannot be set using st.session_state.
 
 
 def check_session_state_rules(
-    default_value: Any, key: Optional[str], writes_allowed: bool = True
+    default_value: Any, key: str | None, writes_allowed: bool = True
 ) -> None:
     global _shown_default_value_warning
 
@@ -101,7 +88,7 @@ def check_session_state_rules(
 
 def get_label_visibility_proto_value(
     label_visibility_string: type_util.LabelVisibility,
-) -> "LabelVisibilityMessage.LabelVisibilityOptions.ValueType":
+) -> LabelVisibilityMessage.LabelVisibilityOptions.ValueType:
     """Returns one of LabelVisibilityMessage enum constants.py based on string value."""
 
     if label_visibility_string == "visible":
@@ -117,7 +104,7 @@ def get_label_visibility_proto_value(
 @overload
 def maybe_coerce_enum(
     register_widget_result: RegisterWidgetResult[Enum],
-    options: Type[Enum],
+    options: type[Enum],
     opt_sequence: Sequence[Any],
 ) -> RegisterWidgetResult[Enum]:
     ...
@@ -141,7 +128,7 @@ def maybe_coerce_enum(register_widget_result, options, opt_sequence):
     if not isinstance(register_widget_result.value, Enum):
         return register_widget_result
 
-    coerce_class: Optional[EnumMeta]
+    coerce_class: EnumMeta | None
     if isinstance(options, EnumMeta):
         coerce_class = options
     else:
@@ -159,19 +146,19 @@ def maybe_coerce_enum(register_widget_result, options, opt_sequence):
 # (https://github.com/python/typing/issues/548)
 @overload
 def maybe_coerce_enum_sequence(
-    register_widget_result: RegisterWidgetResult[List[T]],
+    register_widget_result: RegisterWidgetResult[list[T]],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[List[T]]:
+) -> RegisterWidgetResult[list[T]]:
     ...
 
 
 @overload
 def maybe_coerce_enum_sequence(
-    register_widget_result: RegisterWidgetResult[Tuple[T, T]],
+    register_widget_result: RegisterWidgetResult[tuple[T, T]],
     options: type_util.OptionSequence[T],
     opt_sequence: Sequence[T],
-) -> RegisterWidgetResult[Tuple[T, T]]:
+) -> RegisterWidgetResult[tuple[T, T]]:
     ...
 
 
@@ -185,7 +172,7 @@ def maybe_coerce_enum_sequence(register_widget_result, options, opt_sequence):
         return register_widget_result
 
     # Extract the class to coerce
-    coerce_class: Optional[EnumMeta]
+    coerce_class: EnumMeta | None
     if isinstance(options, EnumMeta):
         coerce_class = options
     else:

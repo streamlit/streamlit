@@ -17,6 +17,7 @@
 import React, { ReactElement, useEffect, useRef } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
 
 const DEFAULT_HEIGHT = 528
 
@@ -24,6 +25,11 @@ export interface VideoProps {
   endpoints: StreamlitEndpoints
   width: number
   element: VideoProto
+}
+
+export interface Subtitle {
+  label: string
+  url: string
 }
 
 export default function Video({
@@ -35,7 +41,7 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
 
-  const { type, url, startTime } = element
+  const { type, url, startTime, subtitles } = element
 
   // Handle startTime changes
   useEffect(() => {
@@ -100,6 +106,8 @@ export default function Video({
     )
   }
 
+  // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
+  // when streamlit frontend and backend are running on different ports
   return (
     <video
       data-testid="stVideo"
@@ -108,6 +116,20 @@ export default function Video({
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
-    />
+      crossOrigin={
+        IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined
+      }
+    >
+      {subtitles &&
+        subtitles.map((subtitle: Subtitle, idx: number) => (
+          <track
+            key={idx}
+            kind="captions"
+            src={endpoints.buildMediaURL(subtitle.url)}
+            label={subtitle.label}
+            default={idx === 0}
+          />
+        ))}
+    </video>
   )
 }

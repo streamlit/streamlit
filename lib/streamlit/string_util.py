@@ -16,14 +16,14 @@ from __future__ import annotations
 
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Tuple, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
 
-_ALPHANUMERIC_CHAR_REGEX = re.compile(r"^[a-zA-Z0-9_&\-\. ]+$")
+_ALPHANUMERIC_CHAR_REGEX: Final = re.compile(r"^[a-zA-Z0-9_&\-\. ]+$")
 
 
 def decode_ascii(string: bytes) -> str:
@@ -31,7 +31,7 @@ def decode_ascii(string: bytes) -> str:
     return string.decode("ascii")
 
 
-def clean_text(text: "SupportsStr") -> str:
+def clean_text(text: SupportsStr) -> str:
     """Convert an object to text, dedent it, and strip whitespace."""
     return textwrap.dedent(str(text)).strip()
 
@@ -67,7 +67,7 @@ def validate_emoji(maybe_emoji: str | None) -> str:
         )
 
 
-def extract_leading_emoji(text: str) -> Tuple[str, str]:
+def extract_leading_emoji(text: str) -> tuple[str, str]:
     """Return a tuple containing the first emoji found in the given string and
     the rest of the string (minus an optional separator between the two).
     """
@@ -115,7 +115,9 @@ def escape_markdown(raw_string: str) -> str:
     return result
 
 
-TEXTCHARS = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7F})
+TEXTCHARS: Final = bytearray(
+    {7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7F}
+)
 
 
 def is_binary_string(inp: bytes) -> bool:
@@ -126,18 +128,20 @@ def is_binary_string(inp: bytes) -> bool:
 
 def simplify_number(num: int) -> str:
     """Simplifies number into Human readable format, returns str"""
-    num_converted = float("{:.2g}".format(num))
+    num_converted = float(f"{num:.2g}")
     magnitude = 0
     while abs(num_converted) >= 1000:
         magnitude += 1
         num_converted /= 1000.0
     return "{}{}".format(
-        "{:f}".format(num_converted).rstrip("0").rstrip("."),
+        f"{num_converted:f}".rstrip("0").rstrip("."),
         ["", "k", "m", "b", "t"][magnitude],
     )
 
 
-_OBJ_MEM_ADDRESS = re.compile(r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-f]+\>$")
+_OBJ_MEM_ADDRESS: Final = re.compile(
+    r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-f]+\>$"
+)
 
 
 def is_mem_address_str(string):
@@ -148,7 +152,7 @@ def is_mem_address_str(string):
     return False
 
 
-_RE_CONTAINS_HTML = re.compile(r"(?:</[^<]+>)|(?:<[^<]+/>)")
+_RE_CONTAINS_HTML: Final = re.compile(r"(?:</[^<]+>)|(?:<[^<]+/>)")
 
 
 def probably_contains_html_tags(s: str) -> bool:

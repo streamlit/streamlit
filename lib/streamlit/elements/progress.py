@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import math
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -78,7 +80,7 @@ def _get_value(value):
         )
 
 
-def _get_text(text: Optional[str]) -> Optional[str]:
+def _get_text(text: str | None) -> str | None:
     if text is None:
         return None
     if isinstance(text, str):
@@ -90,9 +92,7 @@ def _get_text(text: Optional[str]) -> Optional[str]:
 
 
 class ProgressMixin:
-    def progress(
-        self, value: FloatOrInt, text: Optional[str] = None
-    ) -> "DeltaGenerator":
+    def progress(self, value: FloatOrInt, text: str | None = None) -> DeltaGenerator:
         r"""Display a progress bar.
 
         Parameters
@@ -157,6 +157,6 @@ class ProgressMixin:
         return self.dg._enqueue("progress", progress_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

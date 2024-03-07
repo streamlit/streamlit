@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 
-from typing import List, MutableMapping, Optional
+from typing import MutableMapping
 
 from streamlit.runtime.session_manager import SessionInfo, SessionStorage
 from streamlit.util import TimedCleanupCache
@@ -59,7 +60,7 @@ class MemorySessionStorage(SessionStorage):
             maxsize=maxsize, ttl=ttl_seconds
         )
 
-    def get(self, session_id: str) -> Optional[SessionInfo]:
+    def get(self, session_id: str) -> SessionInfo | None:
         return self._cache.get(session_id, None)
 
     def save(self, session_info: SessionInfo) -> None:
@@ -68,5 +69,5 @@ class MemorySessionStorage(SessionStorage):
     def delete(self, session_id: str) -> None:
         del self._cache[session_id]
 
-    def list(self) -> List[SessionInfo]:
+    def list(self) -> list[SessionInfo]:
         return list(self._cache.values())

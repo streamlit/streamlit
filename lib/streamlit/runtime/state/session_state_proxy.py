@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Iterator, MutableMapping
+from __future__ import annotations
 
-from typing_extensions import Final
+from typing import Any, Final, Iterator, MutableMapping
 
 from streamlit import logger as _logger
 from streamlit import runtime
@@ -24,7 +24,7 @@ from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.type_util import Key
 
-LOGGER: Final = _logger.get_logger(__name__)
+_LOGGER: Final = _logger.get_logger(__name__)
 
 
 _state_use_warning_already_displayed: bool = False
@@ -48,7 +48,7 @@ def get_session_state() -> SafeSessionState:
         if not _state_use_warning_already_displayed:
             _state_use_warning_already_displayed = True
             if not runtime.exists():
-                LOGGER.warning(
+                _LOGGER.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )
         return SafeSessionState(SessionState(), lambda: None)
@@ -130,7 +130,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         except KeyError:
             raise AttributeError(_missing_attr_error_message(key))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return a dict containing all session_state and keyed widget values."""
         return get_session_state().filtered_state
 

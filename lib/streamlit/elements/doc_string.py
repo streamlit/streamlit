@@ -14,17 +14,16 @@
 
 """Allows us to create and absorb changes (aka Deltas) to elements."""
 
+from __future__ import annotations
+
 import ast
 import contextlib
 import inspect
 import re
 import types
-from typing import TYPE_CHECKING, Any, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
-from streamlit.logger import get_logger
 from streamlit.proto.DocString_pb2 import DocString as DocStringProto
 from streamlit.proto.DocString_pb2 import Member as MemberProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -38,15 +37,12 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-LOGGER: Final = get_logger(__name__)
-
-
 CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
     @gather_metrics("help")
-    def help(self, obj: Any = streamlit) -> "DeltaGenerator":
+    def help(self, obj: Any = streamlit) -> DeltaGenerator:
         """Display help and other information for a given object.
 
         Depending on the type of object that is passed in, this displays the
@@ -123,7 +119,7 @@ class HelpMixin:
         return self.dg._enqueue("doc_string", doc_string_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -518,30 +514,35 @@ def _get_members(obj):
         if attr_name.startswith("_"):
             continue
 
-        is_computed_value = _is_computed_property(obj, attr_name)
+        try:
+            is_computed_value = _is_computed_property(obj, attr_name)
+            if is_computed_value:
+                parent_attr = getattr(obj.__class__, attr_name)
 
-        if is_computed_value:
-            parent_attr = getattr(obj.__class__, attr_name)
+                member_type = "property"
 
-            member_type = "property"
-
-            weight = 0
-            member_docs = _get_docstring(parent_attr)
-            member_value = None
-        else:
-            attr_value = getattr(obj, attr_name)
-            weight = _get_weight(attr_value)
-
-            human_readable_value = _get_human_readable_value(attr_value)
-
-            member_type = _get_type_as_str(attr_value)
-
-            if human_readable_value is None:
-                member_docs = _get_docstring(attr_value)
+                weight = 0
+                member_docs = _get_docstring(parent_attr)
                 member_value = None
             else:
-                member_docs = None
-                member_value = human_readable_value
+                attr_value = getattr(obj, attr_name)
+                weight = _get_weight(attr_value)
+
+                human_readable_value = _get_human_readable_value(attr_value)
+
+                member_type = _get_type_as_str(attr_value)
+
+                if human_readable_value is None:
+                    member_docs = _get_docstring(attr_value)
+                    member_value = None
+                else:
+                    member_docs = None
+                    member_value = human_readable_value
+        except AttributeError:
+            # If there's an AttributeError, we can just skip it.
+            # This can happen when members are exposed with `dir()`
+            # but are conditionally unavailable.
+            continue
 
         if member_type == "module":
             # Don't pollute the output with all imported modules.

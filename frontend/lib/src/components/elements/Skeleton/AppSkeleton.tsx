@@ -26,7 +26,7 @@ import {
 
 const SHOW_DELAY_MS = 500
 
-const RawAppSkeleton: FC = () => {
+const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {

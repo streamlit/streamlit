@@ -30,7 +30,10 @@ export interface State {
  * A component that catches errors that take place when React is asynchronously
  * rendering child components.
  */
-class ErrorBoundary extends React.PureComponent<Props, State> {
+class ErrorBoundary extends React.PureComponent<
+  React.PropsWithChildren<Props>,
+  State
+> {
   public state: State = {
     error: null,
   }

@@ -19,6 +19,11 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "VideoProto";
 
+message SubtitleTrack {
+    string label = 1;  // Label for the subtitle e.g. "English" or "Spanish".
+    string url = 2;
+}
+
 message Video {
   // A url pointing to a video file
   string url = 6;
@@ -34,6 +39,9 @@ message Video {
 
   // Type affects how browser wraps the video in tags: plain HTML5, YouTube...
   Type type = 5;
+
+  // Repeated field for subtitle tracks
+  repeated SubtitleTrack subtitles = 7;
 
   reserved 1,2,4;
   reserved "format", "data";

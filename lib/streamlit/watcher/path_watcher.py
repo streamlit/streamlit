@@ -17,11 +17,8 @@ from __future__ import annotations
 from typing import Callable, Type, Union
 
 import streamlit.watcher
-from streamlit import config, env_util
-from streamlit.logger import get_logger
+from streamlit import cli_util, config, env_util
 from streamlit.watcher.polling_path_watcher import PollingPathWatcher
-
-LOGGER = get_logger(__name__)
 
 
 # local_sources_watcher.py caches the return value of
@@ -70,17 +67,14 @@ def report_watchdog_availability():
         and config.get_option("server.fileWatcherType") not in ["poll", "none"]
         and not _is_watchdog_available()
     ):
-        import click
-
         msg = "\n  $ xcode-select --install" if env_util.IS_DARWIN else ""
 
-        print("print message")
-        click.secho(
+        cli_util.print_to_cli(
             "  %s" % "For better performance, install the Watchdog module:",
             fg="blue",
             bold=True,
         )
-        click.secho(
+        cli_util.print_to_cli(
             """%s
   $ pip install watchdog
             """

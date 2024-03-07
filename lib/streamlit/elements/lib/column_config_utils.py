@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import TYPE_CHECKING, Dict, Final, List, Literal, Mapping, Union
+from typing import TYPE_CHECKING, Dict, Final, Literal, Mapping, Union
 
 from typing_extensions import TypeAlias
 
@@ -69,7 +69,7 @@ DataframeSchema: TypeAlias = Dict[str, ColumnDataKind]
 
 # This mapping contains all editable column types mapped to the data kinds
 # that the column type is compatible for editing.
-_EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = {
+_EDITING_COMPATIBILITY_MAPPING: Final[dict[ColumnType, list[ColumnDataKind]]] = {
     "text": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
     "number": [
         ColumnDataKind.INTEGER,

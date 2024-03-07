@@ -62,7 +62,7 @@ describe("websocket reconnects", () => {
 
     cy.fixture(fileName1).then((file1) => {
       cy.getIndexed(
-        "[data-testid='stFileUploadDropzone']",
+        "[data-testid='stFileUploaderDropzone']",
         uploaderIndex
       ).attachFile(
         {
@@ -82,7 +82,7 @@ describe("websocket reconnects", () => {
       // The script should have printed the contents of the first files
       // into an st.text. (This tests that the upload actually went
       // through.)
-      cy.get(".uploadedFileName").should("have.text", fileName1);
+      cy.get(".stFileUploaderFileName").should("have.text", fileName1);
       cy.getIndexed("[data-testid='stText']", uploaderIndex).should(
         "contain.text",
         file1
@@ -110,40 +110,47 @@ describe("websocket reconnects", () => {
     });
   });
 
-  it("retains captured pictures when the websocket connection is dropped and reconnects", { retries: { runMode: 1 } }, () => {
-    // Be generous with some of the timeouts in this test as uploading and
-    // rendering images can be quite slow.
-    const timeout = 30000;
+  it(
+    "retains captured pictures when the websocket connection is dropped and reconnects",
+    { retries: { runMode: 1 } },
+    () => {
+      // Be generous with some of the timeouts in this test as uploading and
+      // rendering images can be quite slow.
+      const timeout = 30000;
 
-    cy.get("[data-testid='stCameraInputButton']", { timeout })
-      .should("have.length", 1)
-      .first()
-      .wait(1000)
-      .should("not.be.disabled")
-      .contains("Take Photo")
-      .click();
+      cy.get("[data-testid='stCameraInputButton']", { timeout })
+        .should("have.length", 1)
+        .first()
+        .wait(1000)
+        .should("not.be.disabled")
+        .contains("Take Photo")
+        .click();
 
-    cy.wait("@uploadFile", { timeout });
+      cy.wait("@uploadFile", { timeout });
 
-    cy.get("img").should("have.length.at.least", 2);
+      cy.get("img").should("have.length.at.least", 2);
 
-    cy.get("[data-testid='stImage']", { timeout }).should(
-      "have.length.at.least",
-      1
-    );
+      cy.get("[data-testid='stImage']", { timeout }).should(
+        "have.length.at.least",
+        1
+      );
 
-    cy.window().then((win) => {
-      setTimeout(() => {
-        win.streamlitDebug.disconnectWebsocket();
-      }, 100);
-    });
+      cy.window().then((win) => {
+        setTimeout(() => {
+          win.streamlitDebug.disconnectWebsocket();
+        }, 100);
+      });
 
-    // Wait until we've disconnected.
-    cy.get("[data-testid='stStatusWidget']").should("have.text", "Connecting");
-    // Wait until we've reconnected and rerun the script.
-    cy.get("[data-testid='stStatusWidget']").should("not.exist");
+      // Wait until we've disconnected.
+      cy.get("[data-testid='stStatusWidget']").should(
+        "have.text",
+        "Connecting"
+      );
+      // Wait until we've reconnected and rerun the script.
+      cy.get("[data-testid='stStatusWidget']").should("not.exist");
 
-    // Confirm that our picture is still there.
-    cy.get("[data-testid='stImage']").should("have.length.at.least", 1);
-  });
+      // Confirm that our picture is still there.
+      cy.get("[data-testid='stImage']").should("have.length.at.least", 1);
+    }
+  );
 });

@@ -118,7 +118,9 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
   )
 }
 
-const ModalButton: FunctionComponent<BaseButtonProps> = buttonProps => (
+const ModalButton: FunctionComponent<
+  React.PropsWithChildren<BaseButtonProps>
+> = buttonProps => (
   <StyledModalButton>
     <BaseButton {...buttonProps} />
   </StyledModalButton>

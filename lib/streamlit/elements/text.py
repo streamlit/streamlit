@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -27,10 +29,10 @@ class TextMixin:
     @gather_metrics("text")
     def text(
         self,
-        body: "SupportsStr",
+        body: SupportsStr,
         *,  # keyword-only arguments:
-        help: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        help: str | None = None,
+    ) -> DeltaGenerator:
         """Write fixed-width and preformatted text.
 
         Parameters
@@ -55,6 +57,6 @@ class TextMixin:
         return self.dg._enqueue("text", text_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -39,7 +39,7 @@ describe("TextElement element", () => {
   it("renders text with help tooltip", async () => {
     const props = getProps({ help: "help text" })
     render(<TextElement {...props} />)
-    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltip).toBeInTheDocument()
     fireEvent.mouseOver(tooltip)
 

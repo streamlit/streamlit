@@ -14,13 +14,13 @@
 
 """MediaFileStorage implementation that stores files in memory."""
 
+from __future__ import annotations
+
 import contextlib
 import hashlib
 import mimetypes
 import os.path
-from typing import Dict, List, NamedTuple, Optional, Union
-
-from typing_extensions import Final
+from typing import Final, NamedTuple
 
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import (
@@ -31,7 +31,7 @@ from streamlit.runtime.media_file_storage import (
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.util import HASHLIB_KWARGS
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # Mimetype -> filename extension map for the `get_extension_for_mimetype`
 # function. We use Python's `mimetypes.guess_extension` for most mimetypes,
@@ -39,12 +39,11 @@ LOGGER = get_logger(__name__)
 # so we handle it ourselves.
 PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
     "audio/wav": ".wav",
+    "text/vtt": ".vtt",
 }
 
 
-def _calculate_file_id(
-    data: bytes, mimetype: str, filename: Optional[str] = None
-) -> str:
+def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) -> str:
     """Hash data, mimetype, and an optional filename to generate a stable file ID.
 
     Parameters
@@ -83,7 +82,7 @@ class MemoryFile(NamedTuple):
     content: bytes
     mimetype: str
     kind: MediaFileKind
-    filename: Optional[str]
+    filename: str | None
 
     @property
     def content_size(self) -> int:
@@ -100,15 +99,15 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
             The name of the local endpoint that media is served from.
             This endpoint should start with a forward-slash (e.g. "/media").
         """
-        self._files_by_id: Dict[str, MemoryFile] = {}
+        self._files_by_id: dict[str, MemoryFile] = {}
         self._media_endpoint = media_endpoint
 
     def load_and_get_id(
         self,
-        path_or_data: Union[str, bytes],
+        path_or_data: str | bytes,
         mimetype: str,
         kind: MediaFileKind,
-        filename: Optional[str] = None,
+        filename: str | None = None,
     ) -> str:
         """Add a file to the manager and return its ID."""
         file_data: bytes
@@ -121,7 +120,7 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         # given ID, we don't need to create a new one.
         file_id = _calculate_file_id(file_data, mimetype, filename)
         if file_id not in self._files_by_id:
-            LOGGER.debug("Adding media file %s", file_id)
+            _LOGGER.debug("Adding media file %s", file_id)
             media_file = MemoryFile(
                 content=file_data, mimetype=mimetype, kind=kind, filename=filename
             )
@@ -167,12 +166,12 @@ class MemoryMediaFileStorage(MediaFileStorage, CacheStatsProvider):
         except Exception as ex:
             raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.
         files_by_id = self._files_by_id.copy()
 
-        stats: List[CacheStat] = []
+        stats: list[CacheStat] = []
         for file_id, file in files_by_id.items():
             stats.append(
                 CacheStat(

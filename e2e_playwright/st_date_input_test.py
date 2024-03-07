@@ -19,23 +19,23 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.date_input renders correctly via screenshots matching."""
-    date_time_widgets = themed_app.get_by_test_id("stDateInput")
-    expect(date_time_widgets).to_have_count(14)
+    date_widgets = themed_app.get_by_test_id("stDateInput")
+    expect(date_widgets).to_have_count(14)
 
-    assert_snapshot(date_time_widgets.nth(0), name="date_input-single_date")
-    assert_snapshot(date_time_widgets.nth(1), name="date_input-single_datetime")
-    assert_snapshot(date_time_widgets.nth(2), name="date_input-range_no_date")
-    assert_snapshot(date_time_widgets.nth(3), name="date_input-range_one_date")
-    assert_snapshot(date_time_widgets.nth(4), name="date_input-range_two_dates")
-    assert_snapshot(date_time_widgets.nth(5), name="date_input-disabled_no_date")
-    assert_snapshot(date_time_widgets.nth(6), name="date_input-label_hidden")
-    assert_snapshot(date_time_widgets.nth(7), name="date_input-label_collapsed")
-    assert_snapshot(date_time_widgets.nth(8), name="date_input-single_date_format")
-    assert_snapshot(date_time_widgets.nth(9), name="date_input-range_two_dates_format")
-    assert_snapshot(date_time_widgets.nth(10), name="date_input-range_no_date_format")
-    assert_snapshot(date_time_widgets.nth(11), name="date_input-single_date_callback")
-    assert_snapshot(date_time_widgets.nth(12), name="date_input-empty_value")
-    assert_snapshot(date_time_widgets.nth(13), name="date_input-value_from_state")
+    assert_snapshot(date_widgets.nth(0), name="st_date_input-single_date")
+    assert_snapshot(date_widgets.nth(1), name="st_date_input-single_datetime")
+    assert_snapshot(date_widgets.nth(2), name="st_date_input-range_no_date")
+    assert_snapshot(date_widgets.nth(3), name="st_date_input-range_one_date")
+    assert_snapshot(date_widgets.nth(4), name="st_date_input-range_two_dates")
+    assert_snapshot(date_widgets.nth(5), name="st_date_input-disabled_no_date")
+    assert_snapshot(date_widgets.nth(6), name="st_date_input-label_hidden")
+    assert_snapshot(date_widgets.nth(7), name="st_date_input-label_collapsed")
+    assert_snapshot(date_widgets.nth(8), name="st_date_input-single_date_format")
+    assert_snapshot(date_widgets.nth(9), name="st_date_input-range_two_dates_format")
+    assert_snapshot(date_widgets.nth(10), name="st_date_input-range_no_date_format")
+    assert_snapshot(date_widgets.nth(11), name="st_date_input-single_date_callback")
+    assert_snapshot(date_widgets.nth(12), name="st_date_input-empty_value")
+    assert_snapshot(date_widgets.nth(13), name="st_date_input-value_from_state")
 
 
 def test_date_input_has_correct_initial_values(app: Page):
@@ -82,7 +82,7 @@ def test_handles_date_selection(app: Page):
 def test_handle_value_changes(app: Page):
     """Test that st.date_input has the correct value after typing in a date."""
 
-    first_date_input_field = app.locator(".stDateInput input").first
+    first_date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
     first_date_input_field.type("1970/01/02")
     first_date_input_field.blur()
 
@@ -96,7 +96,7 @@ def test_empty_date_input_behaves_correctly(
 ):
     """Test that st.date_input behaves correctly when empty."""
     # Enter 10 in the first empty input:
-    empty_number_input = app.locator(".stDateInput input").nth(12)
+    empty_number_input = app.get_by_test_id("stDateInput").nth(12).locator("input")
     empty_number_input.type("1970/01/02")
     empty_number_input.press("Enter")
 
@@ -113,7 +113,7 @@ def test_empty_date_input_behaves_correctly(
     )
 
     # Press escape to clear value:
-    empty_number_input = app.locator(".stDateInput input").nth(12)
+    empty_number_input = app.get_by_test_id("stDateInput").nth(12).locator("input")
     empty_number_input.focus()
     empty_number_input.press("Escape")
     # Click outside to enter value:
@@ -184,7 +184,7 @@ def test_calls_callback_on_change(app: Page):
     )
 
     # Change different date input to trigger delta path change
-    first_date_input_field = app.locator(".stDateInput input").first
+    first_date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
     first_date_input_field.type("1971/01/03")
     first_date_input_field.press("Enter")
 
@@ -210,7 +210,7 @@ def test_single_date_calendar_picker_rendering(
     themed_app.get_by_test_id("stDateInput").first.click()
     assert_snapshot(
         themed_app.locator('[data-baseweb="calendar"]').first,
-        name="date_input-single_date_calendar",
+        name="st_date_input-single_date_calendar",
     )
 
 
@@ -221,7 +221,7 @@ def test_range_date_calendar_picker_rendering(
     themed_app.get_by_test_id("stDateInput").nth(4).click()
     assert_snapshot(
         themed_app.locator('[data-baseweb="calendar"]').first,
-        name="date_input-range_two_dates_calendar",
+        name="st_date_input-range_two_dates_calendar",
     )
 
 
@@ -239,7 +239,7 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     )
 
     # Close calendar without selecting a date
-    date_input_field = app.locator(".stDateInput input").first
+    date_input_field = app.get_by_test_id("stDateInput").first.locator("input")
     date_input_field.focus()
     date_input_field.clear()
 
@@ -277,7 +277,7 @@ def test_range_is_empty_if_calendar_closed_empty(app: Page):
     )
 
     # Close calendar without selecting a date
-    date_input_field = app.locator(".stDateInput input").nth(4)
+    date_input_field = app.get_by_test_id("stDateInput").nth(4).locator("input")
     date_input_field.focus()
     date_input_field.clear()
 

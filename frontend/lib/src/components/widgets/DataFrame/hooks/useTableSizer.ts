@@ -30,14 +30,14 @@ export const MIN_COLUMN_WIDTH = 50
 export const MAX_COLUMN_WIDTH = 1000
 // Max column width used for automatic column sizing
 export const MAX_COLUMN_AUTO_WIDTH = 500
-// The border size in pixels (2) + and one additional pixel
+// The border size in pixels (2)
 // to prevent overlap problem with selection ring.
-export const BORDER_THRESHOLD = 3
+export const BORDER_THRESHOLD = 2
 // The default row height in pixels
 export const ROW_HEIGHT = 35
 // Min width for the resizable table container:
 // Based on one column at minimum width + borders
-const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + 2
+const MIN_TABLE_WIDTH = MIN_COLUMN_WIDTH + BORDER_THRESHOLD
 // Min height for the resizable table container:
 // Based on header + one column, and border threshold
 const MIN_TABLE_HEIGHT = 2 * ROW_HEIGHT + BORDER_THRESHOLD
@@ -54,8 +54,7 @@ export type AutoSizerReturn = {
 }
 
 export function calculateMaxHeight(numRows: number): number {
-  // +2 pixels for borders
-  return Math.max(numRows * ROW_HEIGHT + 1 + 2, MIN_TABLE_HEIGHT)
+  return Math.max(numRows * ROW_HEIGHT + BORDER_THRESHOLD, MIN_TABLE_HEIGHT)
 }
 /**
  * A custom React hook that manages all aspects related to the size of the table.
