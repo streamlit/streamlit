@@ -33,7 +33,7 @@ greenlet==3.0.3
 hypothesis==6.98.17
 identify==2.5.35
 idna==3.6
-importlib-metadata==7.0.1
+importlib_metadata==7.0.2
 iniconfig==2.0.0
 jaraco.classes==3.3.1
 jeepney==0.8.0
