@@ -18,7 +18,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_button_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "image"],
@@ -27,9 +27,11 @@ def test_button_labels_handle_markdown(
         ["invalid", "link"],
     ]
 
-    buttons = app.get_by_test_id("stButton")
-    expect(buttons).to_have_count(4)
+    expect(app.get_by_test_id("stButton")).to_have_count(4)
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+
+        buttons = current_app.get_by_test_id("stButton")
         assert_snapshot(
             buttons.nth(index),
             name=f"st_button-{case[0]}_{case[1]}",
@@ -37,7 +39,7 @@ def test_button_labels_handle_markdown(
 
 
 def test_checkbox_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "table"],
@@ -46,16 +48,20 @@ def test_checkbox_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    checkboxes = app.get_by_test_id("stCheckbox")
-    expect(checkboxes).to_have_count(4)
+    expect(app.get_by_test_id("stCheckbox")).to_have_count(4)
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+
+        checkboxes = current_app.get_by_test_id("stCheckbox")
         assert_snapshot(
             checkboxes.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_checkbox-{case[0]}_{case[1]}",
         )
 
 
-def test_radio_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunction):
+def test_radio_labels_handle_markdown(
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
+):
     cases = [
         ["invalid", "heading1"],
         ["valid", "markdown"],
@@ -63,9 +69,11 @@ def test_radio_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFu
         ["valid", "link"],
     ]
 
-    radios = app.get_by_test_id("stRadio")
-    expect(radios).to_have_count(4)
+    expect(app.get_by_test_id("stRadio")).to_have_count(4)
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        radios = current_app.get_by_test_id("stRadio")
+
         assert_snapshot(
             radios.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_radio-{case[0]}_{case[1]}",
@@ -81,7 +89,7 @@ def test_radio_option_supports_links(app: Page, assert_snapshot: ImageCompareFun
 
 
 def test_selectbox_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "heading2"],
@@ -90,10 +98,11 @@ def test_selectbox_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    selectboxes = app.get_by_test_id("stSelectbox")
     # There is an extra selectbox at the bottom with an empty label
-    expect(selectboxes).to_have_count(5)
+    expect(app.get_by_test_id("stSelectbox")).to_have_count(5)
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        selectboxes = current_app.get_by_test_id("stSelectbox")
         assert_snapshot(
             selectboxes.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_selectbox-{case[0]}_{case[1]}",
@@ -101,7 +110,7 @@ def test_selectbox_labels_handle_markdown(
 
 
 def test_multiselect_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "ordered-list"],
@@ -110,9 +119,10 @@ def test_multiselect_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    multiselects = app.get_by_test_id("stMultiSelect")
-    expect(multiselects).to_have_count(4)
+    expect(app.get_by_test_id("stMultiSelect")).to_have_count(4)
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        multiselects = current_app.get_by_test_id("stMultiSelect")
         assert_snapshot(
             multiselects.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_multiselect-{case[0]}_{case[1]}",
@@ -133,10 +143,11 @@ def test_slider_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    sliders = app.get_by_test_id("stSlider")
-    expect(sliders).to_have_count(8)
+    expect(app.get_by_test_id("stSlider")).to_have_count(8)
     for index, case in enumerate(cases):
         even = index % 2 == 0
+        current_app = themed_app if index == 2 or index == 3 else app
+        sliders = current_app.get_by_test_id("stSlider")
         if even:
             assert_snapshot(
                 sliders.nth(index).get_by_test_id("stWidgetLabel"),
@@ -149,7 +160,7 @@ def test_slider_labels_handle_markdown(
 
 
 def test_text_input_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "blockquote"],
@@ -158,10 +169,11 @@ def test_text_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    text_inputs = app.get_by_test_id("stTextInput")
-    expect(text_inputs).to_have_count(4)
+    expect(app.get_by_test_id("stTextInput")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        current_app.get_by_test_id("stTextInput")
         assert_snapshot(
             text_inputs.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_text_input-{case[0]}_{case[1]}",
@@ -169,7 +181,7 @@ def test_text_input_labels_handle_markdown(
 
 
 def test_number_input_labels_handle_markdown(
-    app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     cases = [
         ["invalid", "horizontal-rule"],
@@ -178,10 +190,11 @@ def test_number_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    number_inputs = app.get_by_test_id("stNumberInput")
-    expect(number_inputs).to_have_count(4)
+    expect(app.get_by_test_id("stNumberInput")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        number_inputs = current_app.get_by_test_id("stNumberInput")
         assert_snapshot(
             number_inputs.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_number_input-{case[0]}_{case[1]}",
@@ -198,10 +211,11 @@ def test_text_area_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    text_areas = app.get_by_test_id("stTextArea")
-    expect(text_areas).to_have_count(4)
+    expect(app.get_by_test_id("stTextArea")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        text_areas = current_app.get_by_test_id("stTextArea")
         assert_snapshot(
             text_areas.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_text_area-{case[0]}_{case[1]}",
@@ -218,10 +232,11 @@ def test_date_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    date_inputs = app.get_by_test_id("stDateInput")
-    expect(date_inputs).to_have_count(4)
+    expect(app.get_by_test_id("stDateInput")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        date_inputs = current_app.get_by_test_id("stDateInput")
         assert_snapshot(
             date_inputs.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_date_input-{case[0]}_{case[1]}",
@@ -238,10 +253,11 @@ def test_time_input_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    time_inputs = app.get_by_test_id("stTimeInput")
-    expect(time_inputs).to_have_count(4)
+    expect(app.get_by_test_id("stTimeInput")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        time_inputs = current_app.get_by_test_id("stTimeInput")
         assert_snapshot(
             time_inputs.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_time_input-{case[0]}_{case[1]}",
@@ -258,10 +274,11 @@ def test_file_uploader_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    file_uploaders = app.get_by_test_id("stFileUploader")
-    expect(file_uploaders).to_have_count(4)
+    expect(app.get_by_test_id("stFileUploader")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        file_uploaders = current_app.get_by_test_id("stFileUploader")
         assert_snapshot(
             file_uploaders.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_file_uploader-{case[0]}_{case[1]}",
@@ -278,10 +295,11 @@ def test_color_picker_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    color_pickers = app.get_by_test_id("stColorPicker")
-    expect(color_pickers).to_have_count(4)
+    expect(app.get_by_test_id("stColorPicker")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        color_pickers = current_app.get_by_test_id("stColorPicker")
         assert_snapshot(
             color_pickers.nth(index).get_by_test_id("stWidgetLabel"),
             name=f"st_color_picker-{case[0]}_{case[1]}",
@@ -298,10 +316,11 @@ def test_metric_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    metrics = app.get_by_test_id("stMetric")
-    expect(metrics).to_have_count(4)
+    expect(app.get_by_test_id("stMetric")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        metrics = current_app.get_by_test_id("stMetric")
         assert_snapshot(
             metrics.nth(index).get_by_test_id("stMetricLabel"),
             name=f"st_metric-{case[0]}_{case[1]}",
@@ -318,10 +337,11 @@ def test_expander_labels_handle_markdown(
         ["valid", "link"],
     ]
 
-    expanders = app.get_by_test_id("stExpander")
-    expect(expanders).to_have_count(4)
+    expect(app.get_by_test_id("stExpander")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        expanders = current_app.get_by_test_id("stExpander")
         assert_snapshot(
             expanders.nth(index),
             name=f"st_expander-{case[0]}_{case[1]}",
@@ -336,10 +356,11 @@ def test_tab_labels_handle_markdown(app: Page, assert_snapshot: ImageCompareFunc
         ["valid", "link"],
     ]
 
-    tabs = app.get_by_test_id("stTab")
-    expect(tabs).to_have_count(4)
+    expect(app.get_by_test_id("stTab")).to_have_count(4)
 
     for index, case in enumerate(cases):
+        current_app = themed_app if index == 1 else app
+        tabs = current_app.get_by_test_id("stTab")
         assert_snapshot(
             tabs.nth(index),
             name=f"st_tab-{case[0]}_{case[1]}",
