@@ -206,9 +206,13 @@ def main_run(target: str, args=None, **kwargs):
     _, extension = os.path.splitext(target)
     if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
         if extension[1:] == "":
-            raise click.BadArgumentUsage(
-                "Streamlit requires raw Python (.py) files, but the provided file has no extension.\nFor more information, please see https://docs.streamlit.io"
-            )
+            with open(target) as f:
+                maybe_shebang = f.readline().strip('\n')
+
+            if not maybe_shebang.startswith("#!") or not "python" in maybe_shebang:
+                raise click.BadArgumentUsage(
+                    "Streamlit requires raw Python (.py) files, but the provided file has no extension.\nFor more information, please see https://docs.streamlit.io"
+                )
         else:
             raise click.BadArgumentUsage(
                 f"Streamlit requires raw Python (.py) files, not {extension}.\nFor more information, please see https://docs.streamlit.io"
