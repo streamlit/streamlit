@@ -47,6 +47,7 @@ class ClassWithReprHtml:
 
 
 st.write(ClassWithReprHtml())
+st.write(ClassWithReprHtml(), unsafe_allow_html=True)
 
 st.write(100)
 
@@ -55,6 +56,22 @@ st.write(None)
 st.write(datetime(2021, 1, 1))
 
 st.write(np.float64(1.0))
+
+
+class SomeObject1(object):
+    def __str__(self):
+        return "1 * 2 - 3 = 4 `ok` !"
+
+
+st.write(SomeObject1())  # escaped single line string
+
+
+class SomeObject2(object):
+    def __str__(self):
+        return "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
+
+
+st.write(SomeObject2())  # escaped multiline string
 
 string_io = io.StringIO()
 string_io.write("This is a string IO object!")

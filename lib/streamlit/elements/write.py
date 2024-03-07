@@ -26,7 +26,11 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
-from streamlit.string_util import is_mem_address_str, probably_contains_html_tags
+from streamlit.string_util import (
+    is_mem_address_str,
+    max_char_sequence,
+    probably_contains_html_tags,
+)
 from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
@@ -461,12 +465,13 @@ class WriteMixin:
                 # We cast arg to type here to appease mypy, due to bug in mypy:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
-            elif hasattr(arg, "_repr_html_"):
-                repr_html = arg._repr_html_()
-                unsafe_allow_html = unsafe_allow_html or probably_contains_html_tags(
-                    repr_html
-                )
-
+            elif (
+                hasattr(arg, "_repr_html_")
+                and callable(arg._repr_html_)
+                and (repr_html := arg._repr_html_())
+                and (unsafe_allow_html or not probably_contains_html_tags(repr_html))
+            ):
+                # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
             else:
                 stringified_arg = str(arg)
@@ -475,8 +480,24 @@ class WriteMixin:
                     flush_buffer()
                     self.dg.help(arg)
 
+                elif "\n" in stringified_arg:
+                    # With a multi-line string, use a preformatted block
+                    # To fully escape backticks, we wrap with backticks larger than
+                    # the largest sequence of backticks in the string.
+                    backtick_count = max(3, max_char_sequence(stringified_arg, "`") + 1)
+                    backtick_wrapper = "`" * backtick_count
+                    string_buffer.append(
+                        f"{backtick_wrapper}\n{stringified_arg}\n{backtick_wrapper}"
+                    )
                 else:
-                    string_buffer.append("`%s`" % stringified_arg.replace("`", "\\`"))
+                    # With a single-line string, use a preformatted text
+                    # To fully escape backticks, we wrap with backticks larger than
+                    # the largest sequence of backticks in the string.
+                    backtick_count = max_char_sequence(stringified_arg, "`") + 1
+                    backtick_wrapper = "`" * backtick_count
+                    string_buffer.append(
+                        f"{backtick_wrapper}{stringified_arg}{backtick_wrapper}"
+                    )
 
         flush_buffer()
 
