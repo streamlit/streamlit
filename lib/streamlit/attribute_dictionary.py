@@ -15,6 +15,14 @@
 # Hack for now from https://stackoverflow.com/questions/4984647/accessing-dict-keys-like-an-attribute
 # This should likely be more finalized or just used a library imo but not sure if we want to add a library as there seems to be opposition
 class AttributeDictionary(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttributeDictionary, self).__init__(*args, **kwargs)
-        self.__dict__ = self
+    __slots__ = ()
+
+    def __getattr__(self, key):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            )
+
+    __setattr__ = dict.__setitem__
