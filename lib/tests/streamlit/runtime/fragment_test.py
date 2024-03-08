@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from parameterized import parameterized
 
-from streamlit.delta_generator import dg_stack
+from streamlit.delta_generator import DeltaGenerator, dg_stack
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.fragment import MemoryFragmentStorage, fragment
 
@@ -67,52 +67,26 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
 class FragmentTest(unittest.TestCase):
     def setUp(self):
-        dg_stack.set(())
+        self.original_dg_stack = dg_stack.get()
+        dg_stack.set((DeltaGenerator(),))
+
+    def tearDown(self):
+        dg_stack.set(self.original_dg_stack)
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
     def test_wrapped_fragment_calls_original_function(self):
-        # Sanity check that we don't currently have a wrapping container.
-        assert len(dg_stack.get()) == 0
-
         called = False
+
+        dg_stack_len = len(dg_stack.get())
 
         @fragment
         def my_fragment():
             nonlocal called
             called = True
 
-            # Verify that a container was added automagically.
-            assert len(dg_stack.get()) == 1
-
-        my_fragment()
-        assert called
-
-    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
-    def test_fragment_with_run_every(self):
-        # TODO(vdonato): Actually test that run_every works properly once we implement
-        # the parameter. We still add this test for now to verify that we can call
-        # the @fragment decorator with an argument.
-        called = False
-
-        @fragment(run_every=5.0)
-        def my_fragment():
-            nonlocal called
-            called = True
-
-        my_fragment()
-        assert called
-
-    @patch("streamlit.runtime.fragment.get_script_run_ctx", MagicMock())
-    def test_does_not_add_container_if_unnecessary(self):
-        dg_stack.set((MagicMock(), MagicMock()))
-
-        called = False
-
-        @fragment
-        def my_fragment():
-            nonlocal called
-            called = True
-            assert len(dg_stack.get()) == 2
+            # Verify that a new container gets created for the contents of this
+            # fragment to be written to.
+            assert len(dg_stack.get()) == dg_stack_len + 1
 
         my_fragment()
         assert called
@@ -160,14 +134,19 @@ class FragmentTest(unittest.TestCase):
         ctx.fragment_storage.set.assert_called_once()
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_sets_dg_stack_to_snapshot(self, patched_get_script_run_ctx):
+    def test_sets_dg_stack_and_cursor_to_snapshots_if_current_fragment_id_set(
+        self, patched_get_script_run_ctx
+    ):
         ctx = MagicMock()
+        ctx.current_fragment_id = "my_fragment_id"
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
         dg = MagicMock()
         dg.my_random_field = 7
         dg_stack.set((dg,))
+        ctx.cursors = MagicMock()
+        ctx.cursors.my_other_random_field = 8
 
         call_count = 0
 
@@ -176,10 +155,14 @@ class FragmentTest(unittest.TestCase):
             nonlocal call_count
 
             curr_dg_stack = dg_stack.get()
+            # Verify that mutations made in previous runs of my_fragment aren't
+            # persisted.
             assert curr_dg_stack[0].my_random_field == 7
+            assert ctx.cursors.my_other_random_field == 8
 
-            # Attempt to mutate the dg_stack.
+            # Attempt to mutate cursors and the dg_stack.
             curr_dg_stack[0].my_random_field += 1
+            ctx.cursors.my_other_random_field += 1
 
             call_count += 1
 
@@ -192,13 +175,45 @@ class FragmentTest(unittest.TestCase):
         # Verify that we can't mutate our dg_stack from within my_fragment. If a
         # mutation is persisted between fragment runs, the assert on `my_random_field`
         # will fail.
+        ctx.current_fragment_id = "my_fragment_id"
         saved_fragment()
-        saved_fragment()
+        ctx.current_fragment_id = "my_fragment_id"
         saved_fragment()
 
         # Called once when calling my_fragment and three times calling the saved
         # fragment.
-        assert call_count == 4
+        assert call_count == 3
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_sets_current_fragment_id_if_not_set(self, patched_get_script_run_ctx):
+        ctx = MagicMock()
+        ctx.current_fragment_id = None
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        dg = MagicMock()
+        dg.my_random_field = 0
+        dg_stack.set((dg,))
+
+        @fragment
+        def my_fragment():
+            assert ctx.current_fragment_id is not None
+
+            curr_dg_stack = dg_stack.get()
+            curr_dg_stack[0].my_random_field += 1
+
+        my_fragment()
+
+        # Reach inside our MemoryFragmentStorage internals to pull out our saved
+        # fragment.
+        saved_fragment = list(ctx.fragment_storage._fragments.values())[0]
+        saved_fragment()
+        saved_fragment()
+
+        # This time, dg should have been mutated since we don't restore it from a
+        # snapshot in a regular script run.
+        assert dg.my_random_field == 3
+        assert ctx.current_fragment_id is None
 
     @parameterized.expand(
         [
@@ -215,15 +230,21 @@ class FragmentTest(unittest.TestCase):
         expected_interval,
         patched_get_script_run_ctx,
     ):
+        called = False
+
         ctx = MagicMock()
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment(run_every=run_every)
         def my_fragment():
-            pass
+            nonlocal called
+
+            called = True
 
         my_fragment()
+
+        assert called
 
         if expected_interval is not None:
             [(args, _)] = ctx.enqueue.call_args_list

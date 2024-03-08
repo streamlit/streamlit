@@ -411,6 +411,9 @@ class ScriptRunner:
             The RerunData to use.
 
         """
+        # Avoid circular imports
+        from streamlit.delta_generator import dg_stack
+
         assert self._is_in_script_thread()
 
         # An explicit loop instead of recursion to avoid stack overflows
@@ -462,6 +465,7 @@ class ScriptRunner:
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
+                current_fragment_id=rerun_data.fragment_id,
             )
 
             self.on_event.send(
@@ -514,6 +518,17 @@ class ScriptRunner:
             # This will be set to a RerunData instance if our execution
             # is interrupted by a RerunException.
             rerun_exception_data: RerunData | None = None
+
+            # Saving and restoring our original cursors/dg_stack is needed
+            # specifically to handle the case where a RerunException is raised while
+            # running a fragment. In this case, we need to restore both to their states
+            # at the start of the script run to ensure that we write to the correct
+            # places in the app during the rerun (without this, ctx.cursors and dg_stack
+            # will still be set to the snapshots they were restored from when running
+            # the fragment).
+            # TODO(vdonato): See if there's a cleaner way of doing this.
+            original_cursors = ctx.cursors
+            original_dg_stack = dg_stack.get()
 
             # If the script stops early, we don't want to remove unseen widgets,
             # so we track this to potentially skip session state cleanup later.
@@ -580,6 +595,8 @@ class ScriptRunner:
                     self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
             except RerunException as e:
                 rerun_exception_data = e.rerun_data
+                ctx.cursors = original_cursors
+                dg_stack.set(original_dg_stack)
                 # Interruption due to a rerun is usually from `st.rerun()`, which
                 # we want to count as a script completion so triggers reset.
                 # It is also possible for this to happen if fast reruns is off,

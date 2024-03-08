@@ -112,7 +112,10 @@ export interface AppNode {
    * Recursively remove children nodes whose scriptRunId is no longer current.
    * If this node should no longer exist, return undefined.
    */
-  clearStaleNodes(currentScriptRunId: string): AppNode | undefined
+  clearStaleNodes(
+    currentScriptRunId: string,
+    currentFragmentId?: string
+  ): AppNode | undefined
 
   /**
    * Return a Set of all the Elements contained in the tree.
@@ -209,7 +212,15 @@ export class ElementNode implements AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public clearStaleNodes(currentScriptRunId: string): ElementNode | undefined {
+  public clearStaleNodes(
+    currentScriptRunId: string,
+    currentFragmentId?: string
+  ): ElementNode | undefined {
+    // If we're currently running a fragment, nodes unrelated to the fragment
+    // shouldn't be cleared.
+    if (currentFragmentId && currentFragmentId != this.fragmentId) {
+      return this
+    }
     return this.scriptRunId === currentScriptRunId ? this : undefined
   }
 
@@ -382,14 +393,40 @@ export class BlockNode implements AppNode {
     return new BlockNode(newChildren, this.deltaBlock, scriptRunId)
   }
 
-  public clearStaleNodes(currentScriptRunId: string): BlockNode | undefined {
-    if (this.scriptRunId !== currentScriptRunId) {
-      return undefined
+  public clearStaleNodes(
+    currentScriptRunId: string,
+    currentFragmentId?: string
+  ): BlockNode | undefined {
+    if (!currentFragmentId) {
+      // If we're not currently running a fragment, then we can remove any blocks
+      // that don't correspond to currentScriptRunId.
+      if (this.scriptRunId !== currentScriptRunId) {
+        return undefined
+      }
+    } else {
+      // Otherwise, we are currently running a fragment, and our behavior
+      // depends on the fragmentId of this BlockNode.
+
+      if (this.fragmentId) {
+        if (this.fragmentId != currentFragmentId) {
+          // This BlockNode corresponds to a different fragment, so we know we
+          // won't be modifying it and can return early.
+          return this
+        }
+
+        // If this BlockNode *does* correspond to the current fragment, we
+        // recurse into it below.
+      }
+
+      // If this BlockNode doesn't correspond to a fragment at all, we recurse
+      // into it below as one of its children might.
     }
 
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child => child.clearStaleNodes(currentScriptRunId))
+      .map(child =>
+        child.clearStaleNodes(currentScriptRunId, currentFragmentId)
+      )
       .filter(notUndefined)
 
     // If we have no children and our `allowEmpty` flag is not set, prune
@@ -575,15 +612,22 @@ export class AppRoot {
     }
   }
 
-  public clearStaleNodes(currentScriptRunId: string): AppRoot {
+  public clearStaleNodes(
+    currentScriptRunId: string,
+    currentFragmentId?: string
+  ): AppRoot {
     const main =
-      this.main.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      this.main.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      new BlockNode()
     const sidebar =
-      this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      this.sidebar.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      new BlockNode()
     const event =
-      this.event.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      this.event.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      new BlockNode()
     const bottom =
-      this.bottom.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      this.bottom.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      new BlockNode()
 
     return new AppRoot(
       new BlockNode(

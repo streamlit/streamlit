@@ -81,7 +81,12 @@ class ScriptRunContext:
     _experimental_query_params_used = False
     _production_query_params_used = False
 
-    def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
+    def reset(
+        self,
+        query_string: str = "",
+        page_script_hash: str = "",
+        current_fragment_id: str | None = None,
+    ) -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
         self.widget_user_keys_this_run = set()
@@ -94,7 +99,7 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
-        self.current_fragment_id = None
+        self.current_fragment_id = current_fragment_id
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
