@@ -54,7 +54,7 @@
     "d3-graphviz": "^2.6.1",
     "date-fns": "^2.29.3",
     "date-fns-tz": "^2.0.0",
-    "decamelize": "^4.0.0",
+    "decamelize": "^6.0.0",
     "deck.gl": "^8.8.23",
     "fzy.js": "^0.4.1",
     "hoist-non-react-statics": "^3.3.2",
