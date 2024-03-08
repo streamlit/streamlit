@@ -49,7 +49,7 @@ langchain==0.1.11
 langchain-community==0.0.27
 langchain-core==0.1.30
 langchain-text-splitters==0.0.1
-langsmith==0.1.22
+langsmith==0.1.23
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -81,7 +81,7 @@ pre-commit==3.6.2
 protobuf==3.20.3
 psycopg2-binary==2.9.9
 py4j==0.10.9.7
-pyarrow==15.0.0
+pyarrow==15.0.1
 pycparser==2.21
 pydantic==1.10.14
 pydeck==0.8.1b0
@@ -132,7 +132,7 @@ types-click==7.1.8
 types-protobuf==4.24.0.20240302
 types-pytz==2024.1.0.20240203
 types-requests==2.31.0.20240218
-types-setuptools==69.1.0.20240302
+types-setuptools==69.1.0.20240308
 types-toml==0.10.8.7
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
