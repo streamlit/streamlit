@@ -17,18 +17,13 @@
 import fs from "fs"
 import path from "path"
 
-jest.dontMock("fs")
-
 // Current hashes for our preloaded font assets:
-const REGULAR_HASH = "0d69e5ff5e92ac64a0c9"
-const SEMI_BOLD_HASH = "abed79cd0df1827e18cf"
-const BOLD_HASH = "118dea98980e20a81ced"
+const REGULAR_HASH = "DZLUzqI4"
+const SEMI_BOLD_HASH = "sKQIyTMz"
+const BOLD_HASH = "-6c9oR8J"
 
 // Render a copy of index.html file to test
-const HTML = fs.readFileSync(
-  path.resolve(__dirname, "../public/index.html"),
-  "utf8"
-)
+const HTML = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8")
 document.documentElement.innerHTML = HTML.toString()
 
 function getFontHref(index: number): string {

@@ -5,5 +5,5 @@
       "@streamlit/lib": ["lib/src"],
       "@streamlit/app": ["app/src"]
     }
-  },
+  }
 }

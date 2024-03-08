@@ -40,12 +40,6 @@ import {
 } from "@streamlit/lib/src/util/utils"
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
 import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatcher"
-/*
- * IMPORTANT: If you change the asset import below, make sure it still works if Streamlit is served
- * from a subpath.
- */
-import iconRunning from "@streamlit/app/src/assets/img/icon_running.gif"
-import newYearsRunning from "@streamlit/app/src/assets/img/fireworks.gif"
 
 import {
   StyledAppButtonContainer,
@@ -338,7 +332,8 @@ class StatusWidget extends PureComponent<StatusWidgetProps, State> {
 
     // check if current date between 12/31 and 1/06 to render correct gif
     const isNewYears = StatusWidget.isNewYears()
-    const runningSrc = isNewYears ? newYearsRunning : iconRunning
+    // Use paths in the public folder to keep the paths relative
+    const runningSrc = isNewYears ? "fireworks.gif" : "icon_running.gif"
     const runningIcon = (
       <StyledAppRunningIcon
         isNewYears={isNewYears}

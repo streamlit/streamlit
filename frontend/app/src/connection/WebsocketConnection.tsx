@@ -441,7 +441,7 @@ export class WebsocketConnection {
     const localWebsocket = this.websocket
     const checkWebsocket = (): boolean => localWebsocket === this.websocket
 
-    this.websocket.onmessage = (event: MessageEvent) => {
+    this.websocket.addEventListener("message", (event: MessageEvent) => {
       if (checkWebsocket()) {
         this.handleMessage(event.data).catch(reason => {
           const err = `Failed to process a Websocket message (${reason})`
@@ -449,30 +449,30 @@ export class WebsocketConnection {
           this.stepFsm("FATAL_ERROR", err)
         })
       }
-    }
+    })
 
-    this.websocket.onopen = () => {
+    this.websocket.addEventListener("open", () => {
       if (checkWebsocket()) {
         logMessage(LOG, "WebSocket onopen")
         this.stepFsm("CONNECTION_SUCCEEDED")
       }
-    }
+    })
 
-    this.websocket.onclose = () => {
+    this.websocket.addEventListener("close", () => {
       if (checkWebsocket()) {
         logWarning(LOG, "WebSocket onclose")
         this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }
-    }
+    })
 
-    this.websocket.onerror = () => {
+    this.websocket.addEventListener("error", () => {
       if (checkWebsocket()) {
         logError(LOG, "WebSocket onerror")
         this.closeConnection()
         this.stepFsm("CONNECTION_ERROR")
       }
-    }
+    })
   }
 
   private setConnectionTimeout(uri: string): void {

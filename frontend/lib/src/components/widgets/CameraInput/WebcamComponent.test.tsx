@@ -24,9 +24,9 @@ import { render } from "@streamlit/lib/src/test_util"
 import { FacingMode } from "./SwitchFacingModeButton"
 import WebcamComponent, { Props, WebcamPermission } from "./WebcamComponent"
 
-jest.mock("react-webcam")
+vi.mock("react-webcam")
 
-jest.mock("react-device-detect", () => {
+vi.mock("react-device-detect", () => {
   return {
     isMobile: true,
   }

@@ -9,11 +9,9 @@
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
     "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
-    "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
     "buildLib": "yarn workspace @streamlit/lib build",
     "buildLibProd": "yarn workspace @streamlit/lib build:prod",
     "buildApp": "yarn workspace @streamlit/app build",
-    "buildAppFast": "yarn workspace @streamlit/app buildFast",
     "typecheck": "yarn workspace @streamlit/lib typecheck && yarn workspace @streamlit/app typecheck",
     "lint": "yarn lintApp && yarn lintLib",
     "lintApp": "yarn workspace @streamlit/app lint",
@@ -23,6 +21,9 @@
     "testcoverage": "yarn workspace @streamlit/lib test --coverage && yarn workspace @streamlit/app test --coverage",
     "testLib": "yarn workspace @streamlit/lib testWatch",
     "testApp": "yarn workspace @streamlit/app testWatch"
+  },
+  "resolutions": {
+    "nwsapi": "2.2.9"
   },
   "browserslist": [
     ">0.2%",

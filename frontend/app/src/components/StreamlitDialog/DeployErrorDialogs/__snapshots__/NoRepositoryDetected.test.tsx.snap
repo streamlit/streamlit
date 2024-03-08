@@ -1,8 +1,8 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`DeployErrorDialog - NoRepositoryDetected should render without crashing 1`] = `
-Object {
-  "body": <StyledParagraph>
+exports[`DeployErrorDialog - NoRepositoryDetected > should render without crashing 1`] = `
+{
+  "body": <Styled(p)>
     The app’s code is not connected to a remote GitHub repository. To deploy on Streamlit Community Cloud, please put your code in a GitHub repository and publish the current branch. Read more in
      
     <a
@@ -13,7 +13,7 @@ Object {
       our documentation
     </a>
     .
-  </StyledParagraph>,
+  </Styled(p)>,
   "title": "Unable to deploy",
 }
 `;

@@ -15,10 +15,10 @@
  */
 
 import React from "react"
-import "@testing-library/jest-dom"
 
+import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
-import { enableFetchMocks } from "jest-fetch-mock"
+import createFetchMock from "vitest-fetch-mock"
 
 import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -30,7 +30,8 @@ import {
 
 import CameraInput, { Props } from "./CameraInput"
 
-jest.mock("react-webcam")
+vi.mock("react-webcam")
+const fetchMocker = createFetchMock(vi)
 
 const getProps = (
   elementProps: Partial<CameraInputProto> = {},
@@ -73,10 +74,10 @@ const getProps = (
 }
 
 describe("CameraInput widget", () => {
-  enableFetchMocks()
+  fetchMocker.enableMocks()
   it("renders without crashing", () => {
     const props = getProps()
-    jest.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<CameraInput {...props} />)
     const cameraInput = screen.getByTestId("stCameraInput")
     expect(cameraInput).toBeInTheDocument()

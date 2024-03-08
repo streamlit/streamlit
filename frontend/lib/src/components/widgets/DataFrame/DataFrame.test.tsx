@@ -25,15 +25,15 @@ import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import "@testing-library/jest-dom"
 
-jest.mock("@glideapps/glide-data-grid", () => ({
-  ...jest.requireActual("@glideapps/glide-data-grid"),
-  DataEditor: jest.fn(props => <div {...props} />),
+vi.mock("@glideapps/glide-data-grid", async () => ({
+  ...(await vi.importActual("@glideapps/glide-data-grid")),
+  DataEditor: vi.fn(props => <div {...props} />),
 }))
 
 // The native-file-system-adapter creates some issues in the test environment
 // so we mock it out. The errors might be related to the missing typescript
 // distribution. But the file picker most likely wouldn't work anyways in jest-dom.
-jest.mock("native-file-system-adapter", () => ({}))
+vi.mock("native-file-system-adapter", () => ({}))
 
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
@@ -76,7 +76,7 @@ describe("DataFrame widget", () => {
 
   afterEach(() => {
     window.ResizeObserver = ResizeObserver
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   it("renders without crashing", () => {

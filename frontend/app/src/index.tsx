@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-// NOTE: The following line needs to be the first import to ensure that we
-// correctly configure where chunked static assets are fetched from.
-import "./setWebpackPublicPath"
-
 import React from "react"
 
 import ReactDOM from "react-dom"
@@ -30,6 +26,7 @@ const engine = new Styletron({ prefix: "st-" })
 
 // TODO: Deprecated in React 18 - Need to revise to new API
 // react-18-upgrade
+// eslint-disable-next-line react/no-deprecated
 ReactDOM.render(
   <StyletronProvider value={engine}>
     <ThemedApp />

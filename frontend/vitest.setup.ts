@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
+import * as polyfill from "polyfill-pseudoclass-has"
+import "vitest-canvas-mock"
+import { vi } from "vitest"
+
+global.jest = vi
+
 if (typeof window.URL.createObjectURL === "undefined") {
   window.URL.createObjectURL = jest.fn()
 }
-
-// Required for vega-lite tests since
-// structuredClone is not supported in Jest
-global.structuredClone = v => JSON.parse(JSON.stringify(v))
 
 // TODO: Hides console error for running FE tests
 // react-18-upgrade
@@ -33,3 +35,18 @@ console.error = (...args) => {
   // For all other warnings, call the original console.warn
   originalConsoleError(...args)
 }
+
+const originalConsoleWarn = console.warn
+console.warn = (...args) => {
+  if (/`LayersManager` was not found./.test(args[0])) {
+    // If the warning message matches, don't call the original console.warn
+    return
+  }
+  // For all other warnings, call the original console.warn
+  originalConsoleWarn(...args)
+}
+
+// Add fake animate method to Elements
+Element.prototype.animate = vi
+  .fn()
+  .mockImplementation(() => ({ addEventListener: vi.fn() }))

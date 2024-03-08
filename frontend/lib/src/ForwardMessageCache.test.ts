@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
+import { Mock } from "vitest"
+
 import { ForwardMsg } from "./proto"
 import { ForwardMsgCache } from "./ForwardMessageCache"
 
 interface MockCache {
   cache: ForwardMsgCache
   getCachedMessage: (hash: string) => ForwardMsg | undefined
-  mockFetchCachedForwardMsg: jest.Mock
+  mockFetchCachedForwardMsg: Mock
 }
 
 function createCache(): MockCache {
-  const mockFetchCachedForwardMsg = jest.fn()
+  const mockFetchCachedForwardMsg = vi.fn()
 
   const cache = new ForwardMsgCache({
     buildComponentURL: jest.fn(),
