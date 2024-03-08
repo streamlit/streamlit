@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -249,6 +249,23 @@ describe("Streamlit", () => {
         "--text-color"
       )
     ).toEqual(theme.textColor);
+
+    expect(
+      document.getElementById(Streamlit.INJECTED_STYLE_ELEMENT_ID)
+    ).toBeInstanceOf(HTMLStyleElement)
+    expect(
+      document.querySelectorAll(`style#${Streamlit.INJECTED_STYLE_ELEMENT_ID}`)
+    ).toHaveLength(1);
+
+    window.postMessage(
+      { type: "streamlit:render", args: {}, theme: theme },
+      "*"
+    );
+    await tick();
+
+    expect(
+      document.querySelectorAll(`style#${Streamlit.INJECTED_STYLE_ELEMENT_ID}`)
+    ).toHaveLength(1);
   });
 
   test("The parent frame can sent plain arguments", async () => {

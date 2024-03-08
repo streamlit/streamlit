@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,10 @@
 
 """st.help unit test."""
 import inspect
-import sys
 import unittest
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 
 import streamlit as st
 from streamlit.elements.doc_string import _get_variable_name_from_code_str
@@ -111,21 +109,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("st.audio", ds.name)
         self.assertEqual("method", ds.type)
 
-        if sys.version_info < (3, 9):
-            # Python < 3.9 represents the signature slightly differently
-            signature = (
-                "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
-                "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
-                "format: str = 'audio/wav', start_time: int = 0, *, "
-                "sample_rate: Union[int, NoneType] = None) -> 'DeltaGenerator'"
-            )
-        else:
-            signature = (
-                "(data: Union[str, bytes, _io.BytesIO, io.RawIOBase, "
-                "_io.BufferedReader, ForwardRef('npt.NDArray[Any]'), NoneType], "
-                "format: str = 'audio/wav', start_time: int = 0, *, "
-                "sample_rate: Optional[int] = None) -> 'DeltaGenerator'"
-            )
+        signature = "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'int' = 0, *, sample_rate: 'int | None' = None) -> 'DeltaGenerator'"
 
         self.assertEqual(
             f"streamlit.delta_generator.MediaMixin.audio{signature}", ds.value
@@ -394,9 +378,6 @@ class GetVariableNameFromCodeStrTest(unittest.TestCase):
                 actual = _get_variable_name_from_code_str(code)
                 self.assertEqual(actual, None)
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8), reason="Walrus was introduced in Python 3.8"
-    )
     def test_walrus_should_return_var_name(self):
         for st_call in st_calls:
             # Wrap test in an st call.

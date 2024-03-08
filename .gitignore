@@ -87,11 +87,11 @@ lib/Pipfile.lock
 # Playwright
 ########################################################################
 # Playwright test
-e2e/playwright/playwright-report
-e2e/playwright/test-results
+playwright-report
+e2e_playwright/test-results
 # Only keep the snapshots in the linux folder
-e2e/playwright/snapshots/*
-!e2e/playwright/snapshots/linux
+e2e_playwright/__snapshots__/*
+!e2e_playwright/__snapshots__/linux
 
 ########################################################################
 # Cypress

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import {
   FileUploadClient,
   createFormsData,
   WidgetStateManager,
-  ChatInput as ChatInputProto,
   ForwardMsgMetadata,
   PageConfig,
   Element,
@@ -42,6 +41,16 @@ import {
 } from "@streamlit/lib"
 import AppView, { AppViewProps } from "./AppView"
 
+// Mock needed for Block.tsx
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserver
+
 function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
   return {
     wideMode: false,
@@ -49,7 +58,6 @@ function getContextOutput(context: Partial<AppContextProps>): AppContextProps {
     embedded: false,
     showPadding: false,
     disableScrolling: false,
-    showFooter: false,
     showToolbar: false,
     showColoredLine: false,
     pageLinkBaseUrl: "",
@@ -67,7 +75,7 @@ function getProps(props: Partial<AppViewProps> = {}): AppViewProps {
 
   return {
     endpoints: endpoints,
-    elements: AppRoot.empty(),
+    elements: AppRoot.empty(true),
     sendMessageToHost: jest.fn(),
     sessionInfo: sessionInfo,
     scriptRunId: "script run 123",
@@ -125,9 +133,10 @@ describe("AppView element", () => {
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
     })
     render(<AppView {...props} />)
 
@@ -146,6 +155,17 @@ describe("AppView element", () => {
     expect(sidebarDOMElement).toBeInTheDocument()
   })
 
+  it("does not render a sidebar when there are no elements, multiple pages, and hideSidebarNav is true", () => {
+    const appPages = [
+      { pageName: "streamlit_app", pageScriptHash: "page_hash" },
+      { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
+    ]
+    render(<AppView {...getProps({ appPages, hideSidebarNav: true })} />)
+
+    const sidebar = screen.queryByTestId("stSidebar")
+    expect(sidebar).not.toBeInTheDocument()
+  })
+
   it("renders a sidebar when there are elements and multiple pages", () => {
     const sidebarElement = new ElementNode(
       makeElementWithInfoText("sidebar!"),
@@ -160,13 +180,14 @@ describe("AppView element", () => {
 
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const appPages = [
       { pageName: "streamlit_app", pageScriptHash: "page_hash" },
       { pageName: "streamlit_app2", pageScriptHash: "page_hash2" },
     ]
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
       appPages,
     })
     render(<AppView {...props} />)
@@ -203,14 +224,15 @@ describe("AppView element", () => {
     const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
+    const bottom = new BlockNode([], new BlockProto({ allowEmpty: true }))
 
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
     })
     render(<AppView {...props} />)
 
     const style = window.getComputedStyle(
-      screen.getByTestId("block-container")
+      screen.getByTestId("stAppViewBlockContainer")
     )
     expect(style.maxWidth).not.toEqual("initial")
   })
@@ -226,48 +248,9 @@ describe("AppView element", () => {
     })
     render(<AppView {...getProps()} />)
     const style = window.getComputedStyle(
-      screen.getByTestId("block-container")
+      screen.getByTestId("stAppViewBlockContainer")
     )
     expect(style.maxWidth).toEqual("initial")
-  })
-
-  it("opens link to streamlit.io in new tab", () => {
-    render(<AppView {...getProps()} />)
-    const link = screen.getByRole("link", { name: "Streamlit" })
-    expect(link).toHaveAttribute("href", "//streamlit.io")
-    expect(link).toHaveAttribute("target", "_blank")
-  })
-
-  it("renders the Spacer and Footer when not embedded", () => {
-    const realUseContext = React.useContext
-    jest.spyOn(React, "useContext").mockImplementation(input => {
-      if (input === AppContext) {
-        return getContextOutput({ wideMode: false, embedded: false })
-      }
-
-      return realUseContext(input)
-    })
-
-    render(<AppView {...getProps()} />)
-
-    expect(screen.getByTestId("AppViewBlockSpacer")).toBeInTheDocument()
-    expect(screen.getByRole("contentinfo")).toBeInTheDocument()
-  })
-
-  it("does not render the Spacer and Footer when embedded", () => {
-    const realUseContext = React.useContext
-    jest.spyOn(React, "useContext").mockImplementation(input => {
-      if (input === AppContext) {
-        return getContextOutput({ wideMode: false, embedded: true })
-      }
-
-      return realUseContext(input)
-    })
-
-    render(<AppView {...getProps()} />)
-
-    expect(screen.queryByTestId("AppViewBlockSpacer")).not.toBeInTheDocument()
-    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument()
   })
 
   describe("when window.location.hash changes", () => {
@@ -288,7 +271,7 @@ describe("AppView element", () => {
     })
   })
 
-  it("does not render a Scroll To Bottom container when no chat input is present", () => {
+  it("does not render a Scroll To Bottom container when no bottom container is present", () => {
     const props = getProps()
     render(<AppView {...props} />)
 
@@ -296,7 +279,7 @@ describe("AppView element", () => {
     expect(stbContainer).not.toBeInTheDocument()
   })
 
-  it("renders a Scroll To Bottom container when a chat input is present", () => {
+  it("renders a Scroll To Bottom container if there is an element in the bottom container.", () => {
     const chatInputElement = new ElementNode(
       new Element({
         chatInput: {
@@ -304,22 +287,22 @@ describe("AppView element", () => {
           placeholder: "Enter Text Here",
           disabled: false,
           default: "",
-          position: ChatInputProto.Position.BOTTOM,
         },
       }),
       ForwardMsgMetadata.create({}),
       "no script run id"
     )
 
+    const main = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const sidebar = new BlockNode([], new BlockProto({ allowEmpty: true }))
     const event = new BlockNode([], new BlockProto({ allowEmpty: true }))
-
-    const main = new BlockNode(
+    const bottom = new BlockNode(
       [chatInputElement],
       new BlockProto({ allowEmpty: true })
     )
+
     const props = getProps({
-      elements: new AppRoot(new BlockNode([main, sidebar, event])),
+      elements: new AppRoot(new BlockNode([main, sidebar, event, bottom])),
     })
 
     render(<AppView {...props} />)

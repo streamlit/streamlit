@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,13 @@
 export {
   IS_DEV_ENV,
   RERUN_PROMPT_MODAL_DIALOG,
-  SHOW_DEPLOY_BUTTON,
   WEBSOCKET_PORT_DEV,
 } from "./baseconsts"
 export { default as VerticalBlock } from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
-export type { StreamlitEndpoints } from "./StreamlitEndpoints"
+export type { StreamlitEndpoints, JWTHeader } from "./StreamlitEndpoints"
 export { SessionInfo } from "./SessionInfo"
 export { ScriptRunState } from "./ScriptRunState"
 export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
@@ -34,13 +33,13 @@ export { FileUploadClient } from "./FileUploadClient"
 export { ComponentRegistry } from "./components/widgets/CustomComponent"
 export { BlockNode, AppRoot, ElementNode } from "./AppNode"
 export { Quiver } from "./dataframes/Quiver"
-export { default as VegaLiteChartElement } from "./components/elements/VegaLiteChart"
 export type {
   DeployedAppMetadata,
   IGuestToHostMessage,
   IMenuItem,
-  IAllowedMessageOriginsResponse,
+  IHostConfigResponse,
   IToolbarItem,
+  AppConfig,
 } from "./hostComm/types"
 export {
   default as Modal,
@@ -72,15 +71,9 @@ export {
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
-export { mount, shallow, mockWindowLocation, render } from "./test_util"
+export { mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
-export {
-  getPossibleBaseUris,
-  buildHttpUri,
-  SVG_PREFIX,
-  xssSanitizeSvg,
-  buildWsUri,
-} from "./util/UriUtil"
+export { getPossibleBaseUris, buildHttpUri, buildWsUri } from "./util/UriUtil"
 export type { BaseUriParts } from "./util/UriUtil"
 export { ensureError } from "./util/ErrorHandling"
 export {
@@ -107,13 +100,11 @@ export {
   isColoredLineDisplayed,
   isDarkTheme,
   isEmbed,
-  isFooterDisplayed,
   isInChildFrame,
   isLightTheme,
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
-  isTesting,
   notUndefined,
   setCookie,
   extractPageNameFromPathName,
@@ -122,7 +113,7 @@ export {
 } from "./util/utils"
 export { useIsOverflowing } from "./util/Hooks"
 export { LibContext } from "./components/core/LibContext"
-export type { LibContextProps } from "./components/core/LibContext"
+export type { LibContextProps, LibConfig } from "./components/core/LibContext"
 export { handleFavicon } from "./components/elements/Favicon"
 export { default as HostCommunicationManager } from "./hostComm"
 export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"

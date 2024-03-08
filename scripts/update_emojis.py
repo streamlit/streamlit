@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,13 +25,14 @@ import re
 from emoji.unicode_codes.data_dict import EMOJI_DATA  # type: ignore
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-EMOJI_SET_REGEX = re.compile(r"ALL_EMOJIS.+?}", re.DOTALL)
+EMOJI_SET_REGEX = re.compile(r"### EMOJIS START ###(.+?)### EMOJIS END ###", re.DOTALL)
 EMOJIS_SCRIPT_PATH = os.path.join(BASE_DIR, "lib", "streamlit", "emojis.py")
 
 emoji_unicodes = set(EMOJI_DATA.keys())
 
-
-generated_code = 'ALL_EMOJIS = {"' + '","'.join(sorted(emoji_unicodes)) + '"}'
+generated_code = f"""### EMOJIS START ###
+ALL_EMOJIS = {{{", ".join([f'"{emoji}"' for emoji in sorted(emoji_unicodes)])}}}
+### EMOJIS END ###"""
 
 with open(EMOJIS_SCRIPT_PATH, "r") as file:
     script_content = file.read()

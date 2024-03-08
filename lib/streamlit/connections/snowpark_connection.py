@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,63 +18,40 @@
 # way to configure this at a per-line level :(
 # mypy: no-warn-unused-ignores
 
-import configparser
-import os
+from __future__ import annotations
+
 import threading
 from collections import ChainMap
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional, Union, cast
+from typing import TYPE_CHECKING, Iterator, cast
 
-import pandas as pd
-
-from streamlit.connections import ExperimentalBaseConnection
+from streamlit.connections import BaseConnection
+from streamlit.connections.util import (
+    SNOWSQL_CONNECTION_FILE,
+    load_from_snowsql_config_file,
+    running_in_sis,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
-    from snowflake.snowpark.session import Session  # type: ignore
+    from pandas import DataFrame
+    from snowflake.snowpark.session import Session  # type:ignore[import]
 
 
 _REQUIRED_CONNECTION_PARAMS = {"account"}
-_DEFAULT_CONNECTION_FILE = "~/.snowsql/config"
 
 
-def _load_from_snowsql_config_file(connection_name: str) -> Dict[str, Any]:
-    """Loads the dictionary from snowsql config file."""
-    snowsql_config_file = os.path.expanduser(_DEFAULT_CONNECTION_FILE)
-    if not os.path.exists(snowsql_config_file):
-        return {}
-
-    config = configparser.ConfigParser(inline_comment_prefixes="#")
-    config.read(snowsql_config_file)
-
-    if f"connections.{connection_name}" in config:
-        raw_conn_params = config[f"connections.{connection_name}"]
-    elif "connections" in config:
-        raw_conn_params = config["connections"]
-    else:
-        return {}
-
-    conn_params = {
-        k.replace("name", ""): v.strip('"') for k, v in raw_conn_params.items()
-    }
-
-    if "db" in conn_params:
-        conn_params["database"] = conn_params["db"]
-        del conn_params["db"]
-
-    return conn_params
-
-
-class SnowparkConnection(ExperimentalBaseConnection["Session"]):
+class SnowparkConnection(BaseConnection["Session"]):
     """A connection to Snowpark using snowflake.snowpark.session.Session. Initialize using
-    ``st.experimental_connection("<name>", type="snowpark")``.
+    ``st.connection("<name>", type="snowpark")``.
 
-    In addition to accessing the Snowpark Session, SnowparkConnection supports direct SQL querying using
-    ``query("...")`` and thread safe access using ``with conn.safe_session():``. See methods
-    below for more information. SnowparkConnections should always be created using
-    ``st.experimental_connection()``, **not** initialized directly.
+    In addition to providing access to the Snowpark Session, SnowparkConnection supports
+    direct SQL querying using ``query("...")`` and thread safe access using
+    ``with conn.safe_session():``. See methods below for more information.
+    SnowparkConnections should always be created using ``st.connection()``, **not**
+    initialized directly.
 
     .. note::
         We don't expect this iteration of SnowparkConnection to be able to scale
@@ -86,32 +63,29 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         self._lock = threading.RLock()
         super().__init__(connection_name, **kwargs)
 
-    def _connect(self, **kwargs) -> "Session":
-        from snowflake.snowpark.context import get_active_session  # type: ignore
-        from snowflake.snowpark.exceptions import (  # type: ignore
+    def _connect(self, **kwargs) -> Session:
+        from snowflake.snowpark.context import get_active_session  # type:ignore[import]
+        from snowflake.snowpark.exceptions import (  # type:ignore[import]
             SnowparkSessionException,
         )
         from snowflake.snowpark.session import Session
 
-        # If we're in a runtime environment where there's already an active session
-        # available, we just use that one. Otherwise, we fall back to attempting to
-        # create a new one from whatever credentials we have available.
-        try:
+        # If we're running in SiS, just call get_active_session(). Otherwise, attempt to
+        # create a new session from whatever credentials we have available.
+        if running_in_sis():
             return get_active_session()
-        except SnowparkSessionException:
-            pass
 
         conn_params = ChainMap(
             kwargs,
             self._secrets.to_dict(),
-            _load_from_snowsql_config_file(self._connection_name),
+            load_from_snowsql_config_file(self._connection_name),
         )
 
         if not len(conn_params):
             raise StreamlitAPIException(
                 "Missing Snowpark connection configuration. "
-                f"Did you forget to set this in `secrets.toml`, `{_DEFAULT_CONNECTION_FILE}`, "
-                "or as kwargs to `st.experimental_connection`?"
+                f"Did you forget to set this in `secrets.toml`, `{SNOWSQL_CONNECTION_FILE}`, "
+                "or as kwargs to `st.connection`?"
             )
 
         for p in _REQUIRED_CONNECTION_PARAMS:
@@ -123,8 +97,8 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
     def query(
         self,
         sql: str,
-        ttl: Optional[Union[float, int, timedelta]] = None,
-    ) -> pd.DataFrame:
+        ttl: float | int | timedelta | None = None,
+    ) -> DataFrame:
         """Run a read-only SQL query.
 
         This method implements both query result caching (with caching behavior
@@ -143,18 +117,18 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
 
         Example
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("snowpark")
+        >>> conn = st.connection("snowpark")
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
-        from snowflake.snowpark.exceptions import (  # type: ignore
+        from snowflake.snowpark.exceptions import (  # type:ignore[import]
             SnowparkServerException,
         )
         from tenacity import (
@@ -171,18 +145,27 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
             retry=retry_if_exception_type(SnowparkServerException),
             wait=wait_fixed(1),
         )
-        @cache_data(
-            show_spinner="Running `snowpark.query(...)`.",
-            ttl=ttl,
-        )
-        def _query(sql: str) -> pd.DataFrame:
+        def _query(sql: str) -> DataFrame:
             with self._lock:
                 return self._instance.sql(sql).to_pandas()
+
+        # We modify our helper function's `__qualname__` here to work around default
+        # `@st.cache_data` behavior. Otherwise, `.query()` being called with different
+        # `ttl` values will reset the cache with each call, and the query caches won't
+        # be scoped by connection.
+        ttl_str = str(  # Avoid adding extra `.` characters to `__qualname__`
+            ttl
+        ).replace(".", "_")
+        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
+        _query = cache_data(
+            show_spinner="Running `snowpark.query(...)`.",
+            ttl=ttl,
+        )(_query)
 
         return _query(sql)
 
     @property
-    def session(self) -> "Session":
+    def session(self) -> Session:
         """Access the underlying Snowpark session.
 
         .. note::
@@ -198,14 +181,14 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         -------
         >>> import streamlit as st
         >>>
-        >>> session = st.experimental_connection("snowpark").session
+        >>> session = st.connection("snowpark").session
         >>> df = session.table("mytable").limit(10).to_pandas()
         >>> st.dataframe(df)
         """
         return self._instance
 
     @contextmanager
-    def safe_session(self) -> Iterator["Session"]:
+    def safe_session(self) -> Iterator[Session]:
         """Grab the underlying Snowpark session in a thread-safe manner.
 
         As operations on a Snowpark session are not thread safe, we need to take care
@@ -221,7 +204,7 @@ class SnowparkConnection(ExperimentalBaseConnection["Session"]):
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("snowpark")
+        >>> conn = st.connection("snowpark")
         >>> with conn.safe_session() as session:
         ...     df = session.table("mytable").limit(10).to_pandas()
         ...

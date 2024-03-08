@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,14 +24,14 @@ describe("Empty Arrow Tables", () => {
     cy.prepForElementSnapshots();
 
     // Wait for the site to be fully loaded
-    cy.get(".element-container").should($els => {
+    cy.get(".element-container").should(($els) => {
       expect($els).to.have.length.of.at.least(6);
     });
   });
 
   it("have consistent empty table visuals", () => {
     cy.get(TABLE_SELECTOR)
-      .filter(idx => idx >= 0 && idx <= 3)
+      .filter((idx) => idx >= 0 && idx <= 3)
       .each((el, idx) => {
         return cy.wrap(el).matchThemedSnapshots(`arrow_empty_tables${idx}`);
       });

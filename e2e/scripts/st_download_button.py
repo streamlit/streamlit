@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from random import random
 
 import streamlit as st
 
@@ -56,3 +58,8 @@ st.download_button(
     file_name="hello.txt",
     type="primary",
 )
+
+random_str = str(random())
+clicked = st.download_button(label="Download random text", data=random_str)
+
+st.write(f"value: {clicked}")

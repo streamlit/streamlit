@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-describe("st._arrow_area_chart, st._arrow_bar_chart, st._arrow_line_chart", () => {
+describe("st.area_chart, st.bar_chart, st.line_chart", () => {
   before(() => {
     cy.loadApp("http://localhost:3000/");
 

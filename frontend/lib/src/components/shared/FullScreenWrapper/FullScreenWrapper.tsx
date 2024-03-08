@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ export type Size = {
   width: number
   expanded: boolean
   height?: number
+  expand: () => void
+  collapse: () => void
 }
 
 /*
@@ -41,6 +43,7 @@ export interface FullScreenWrapperProps {
   width: number
   height?: number
   theme: EmotionTheme
+  disableFullscreenMode?: boolean
 }
 
 interface State {
@@ -129,7 +132,7 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
 
   public render(): JSX.Element {
     const { expanded, fullWidth, fullHeight } = this.state
-    const { children, width, height } = this.props
+    const { children, width, height, disableFullscreenMode } = this.props
 
     let buttonImage = FullscreenEnter
     let buttonOnClick = this.zoomIn
@@ -141,11 +144,12 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
       buttonTitle = "Exit fullscreen"
     }
 
-    const { hideFullScreenButtons } = this.context
-
     return (
-      <StyledFullScreenFrame isExpanded={expanded}>
-        {!hideFullScreenButtons && (
+      <StyledFullScreenFrame
+        isExpanded={expanded}
+        data-testid={"stFullScreenFrame"}
+      >
+        {!disableFullscreenMode && (
           <StyledFullScreenButton
             data-testid={"StyledFullScreenButton"}
             onClick={buttonOnClick}
@@ -156,8 +160,20 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
           </StyledFullScreenButton>
         )}
         {expanded
-          ? children({ width: fullWidth, height: fullHeight, expanded })
-          : children({ width, height, expanded })}
+          ? children({
+              width: fullWidth,
+              height: fullHeight,
+              expanded,
+              expand: this.zoomIn,
+              collapse: this.zoomOut,
+            })
+          : children({
+              width,
+              height,
+              expanded,
+              expand: this.zoomIn,
+              collapse: this.zoomOut,
+            })}
       </StyledFullScreenFrame>
     )
   }

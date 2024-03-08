@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,16 @@
 
 """A Python wrapper around Bokeh."""
 
+from __future__ import annotations
+
 import hashlib
 import json
-from typing import TYPE_CHECKING, cast
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.BokehChart_pb2 import BokehChart as BokehChartProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     from bokeh.plotting.figure import Figure
@@ -36,9 +37,9 @@ class BokehMixin:
     @gather_metrics("bokeh_chart")
     def bokeh_chart(
         self,
-        figure: "Figure",
+        figure: Figure,
         use_container_width: bool = False,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an interactive Bokeh chart.
 
         Bokeh is a charting library for Python. The arguments to this function
@@ -91,21 +92,21 @@ class BokehMixin:
 
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
-        element_id = hashlib.md5(delta_path.encode()).hexdigest()
 
+        element_id = hashlib.md5(delta_path.encode(), **HASHLIB_KWARGS).hexdigest()
         bokeh_chart_proto = BokehChartProto()
         marshall(bokeh_chart_proto, figure, use_container_width, element_id)
         return self.dg._enqueue("bokeh_chart", bokeh_chart_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
 def marshall(
     proto: BokehChartProto,
-    figure: "Figure",
+    figure: Figure,
     use_container_width: bool,
     element_id: str,
 ) -> None:

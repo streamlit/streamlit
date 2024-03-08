@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,11 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
   if (!children[0] || !children[0].props.item) {
     const childrenProps = children[0] ? children[0].props : {}
     return (
-      <StyledList $style={{ height: `${EMPTY_LIST_HEIGHT}px` }} ref={ref}>
+      <StyledList
+        $style={{ height: `${EMPTY_LIST_HEIGHT}px` }}
+        ref={ref}
+        data-testid="stVirtualDropdownEmpty"
+      >
         <StyledEmptyState {...childrenProps} />
       </StyledList>
     )
@@ -70,7 +74,11 @@ const VirtualDropdown = React.forwardRef<any, any>((props, ref) => {
   const height = Math.min(MAX_LIST_HEIGHT, children.length * LIST_ITEM_HEIGHT)
 
   return (
-    <StyledList ref={ref} $style={{ paddingTop: 0, paddingBottom: 0 }}>
+    <StyledList
+      ref={ref}
+      $style={{ paddingTop: 0, paddingBottom: 0 }}
+      data-testid="stVirtualDropdown"
+    >
       <FixedSizeList
         width="100%"
         height={height}

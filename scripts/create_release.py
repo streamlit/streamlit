@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,8 +30,26 @@ def create_release():
 
     url = "https://api.github.com/repos/streamlit/streamlit/releases"
     header = {"Authorization": f"token {access_token}"}
-    payload = {"tag_name": tag, "name": tag}
 
+    # Get the latest release tag to compare against
+    response = requests.get(f"{url}/latest", headers=header)
+    previous_tag_name = None
+    if response.status_code == 200:
+        previous_tag_name = response.json()["tag_name"]
+    else:
+        raise Exception(f"Unable get the latest release: {response.text}")
+
+    # Generate the automated release notes
+    payload = {"tag_name": tag, "previous_tag_name": previous_tag_name}
+    response = requests.post(f"{url}/generate-notes", json=payload, headers=header)
+    body = None
+    if response.status_code == 200:
+        body = response.json()["body"]
+    else:
+        raise Exception(f"Unable generate the latest release notes: {response.text}")
+
+    # Create the release with the generated release notes
+    payload = {"tag_name": tag, "name": tag, "body": body}
     response = requests.post(url, json=payload, headers=header)
 
     if response.status_code == 201:
@@ -41,7 +59,6 @@ def create_release():
 
 
 def main():
-
     create_release()
 
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 
 import axios from "axios"
-import _ from "lodash"
+import isEqual from "lodash/isEqual"
+import zip from "lodash/zip"
 import React from "react"
 import { FileRejection } from "react-dropzone"
 
@@ -142,54 +143,40 @@ class FileUploader extends React.PureComponent<Props, State> {
     return "ready"
   }
 
-  public componentDidUpdate = (prevProps: Props): void => {
-    const { element, widgetMgr } = this.props
-
-    // TODO(vdonato): Rework this now that there's a short window where the app
-    // may reconnect to the server without losing its uploaded files. Just
-    // removing the if statement below (to avoid resetting widget state on a
-    // disconnect) seemed to work, but I'm not entirely sure if it's a complete
-    // fix.
-    //
-    // Widgets are disabled if the app is not connected anymore.
-    // If the app disconnects from the server, a new session is created and users
-    // will lose access to the files they uploaded in their previous session.
-    // If we are reconnecting, reset the file uploader so that the widget is
-    // in sync with the new session.
-    if (prevProps.disabled !== this.props.disabled && this.props.disabled) {
-      this.reset()
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        new FileUploaderStateProto(),
-        { fromUi: false }
-      )
-      return
-    }
-
-    // Maybe send a widgetValue update to the widgetStateManager.
-
+  public componentDidUpdate = (): void => {
     // If our status is not "ready", then we have uploads in progress.
     // We won't submit a new widgetValue until all uploads have resolved.
     if (this.status !== "ready") {
       return
     }
 
-    // If we have had no completed uploads, our widgetValue will be
-    // undefined, and we can early-out of the state update.
     const newWidgetValue = this.createWidgetValue()
-    if (newWidgetValue === undefined) {
-      return
-    }
+    const { element, widgetMgr } = this.props
 
+    // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
+    if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
         fromUi: true,
       })
     }
   }
 
-  private createWidgetValue(): FileUploaderStateProto | undefined {
+  public componentDidMount(): void {
+    const newWidgetValue = this.createWidgetValue()
+    const { element, widgetMgr } = this.props
+
+    // Set the state value on mount, to avoid triggering an extra rerun after
+    // the first rerun.
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (prevWidgetValue === undefined) {
+      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
+        fromUi: false,
+      })
+    }
+  }
+
+  private createWidgetValue(): FileUploaderStateProto {
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
@@ -261,7 +248,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           }
         }
 
-        _.zip(fileURLsArray, acceptedFiles).forEach(
+        zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
             this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
           }

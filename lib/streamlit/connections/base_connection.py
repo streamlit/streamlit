@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import json
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 from streamlit.util import calc_md5
@@ -22,12 +24,12 @@ from streamlit.util import calc_md5
 RawConnectionT = TypeVar("RawConnectionT")
 
 
-class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
+class BaseConnection(ABC, Generic[RawConnectionT]):
     """The abstract base class that all Streamlit Connections must inherit from.
 
     This base class provides connection authors with a standardized way to hook into the
-    ``st.experimental_connection()`` factory function: connection authors are required to
-    provide an implementation for the abstract method ``_connect`` in their subclasses.
+    ``st.connection()`` factory function: connection authors are required to provide an
+    implementation for the abstract method ``_connect`` in their subclasses.
 
     Additionally, it also provides a few methods/properties designed to make
     implementation of connections more convenient. See the docstrings for each of the
@@ -42,13 +44,13 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
     """
 
     def __init__(self, connection_name: str, **kwargs) -> None:
-        """Create an ExperimentalBaseConnection.
+        """Create a BaseConnection.
 
         This constructor is called by the connection factory machinery when a user
-        script calls ``st.experimental_connection()``.
+        script calls ``st.connection()``.
 
-        Subclasses of ExperimentalBaseConnection that want to overwrite this method
-        should take care to also call the base class' implementation.
+        Subclasses of BaseConnection that want to overwrite this method should take care
+        to also call the base class' implementation.
 
         Parameters
         ----------
@@ -68,17 +70,27 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         self._config_section_hash = calc_md5(json.dumps(self._secrets.to_dict()))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
 
-        self._raw_instance: Optional[RawConnectionT] = self._connect(**kwargs)
+        self._raw_instance: RawConnectionT | None = self._connect(**kwargs)
 
     def __del__(self) -> None:
         secrets_singleton.file_change_listener.disconnect(self._on_secrets_changed)
+
+    def __getattribute__(self, name: str) -> Any:
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError as e:
+            if hasattr(self._instance, name):
+                raise AttributeError(
+                    f"`{name}` doesn't exist here, but you can call `._instance.{name}` instead"
+                )
+            raise e
 
     def _repr_html_(self) -> str:
         """Return a human-friendly markdown string describing this connection.
 
         This is the string that will be written to the app if a user calls
-        ``st.write(this_connection)``. Subclasses of ExperimentalBaseConnection can freely
-        overwrite this method if desired.
+        ``st.write(this_connection)``. Subclasses of BaseConnection can freely overwrite
+        this method if desired.
 
         Returns
         -------
@@ -146,7 +158,7 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
         -------
         >>> import streamlit as st
         >>>
-        >>> conn = st.experimental_connection("my_conn")
+        >>> conn = st.connection("my_conn")
         >>>
         >>> # Reset the connection before using it if it isn't healthy
         >>> # Note: is_healthy() isn't a real method and is just shown for example here.
@@ -165,14 +177,14 @@ class ExperimentalBaseConnection(ABC, Generic[RawConnectionT]):
 
         return self._raw_instance
 
-    # Abstract fields/methods that subclasses of ExperimentalBaseConnection must implement
+    # Abstract fields/methods that subclasses of BaseConnection must implement
     @abstractmethod
     def _connect(self, **kwargs) -> RawConnectionT:
         """Create an instance of an underlying connection object.
 
         This abstract method is the one method that we require subclasses of
-        ExperimentalBaseConnection to provide an implementation for. It is called when
-        first creating a connection and when reconnecting after a connection is reset.
+        BaseConnection to provide an implementation for. It is called when first
+        creating a connection and when reconnecting after a connection is reset.
 
         Parameters
         ----------

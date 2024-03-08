@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,6 +144,160 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander_block = self.get_delta_from_queue()
         self.assertEqual(expander_block.add_block.expandable.label, "label")
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
+
+
+class ContainerTest(DeltaGeneratorTestCase):
+    def test_border_parameter(self):
+        """Test that it can be called with border parameter"""
+        st.container(border=True)
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.border, True)
+
+    def test_without_parameters(self):
+        """Test that it can be called without any parameters."""
+        st.container()
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.border, False)
+        self.assertEqual(container_block.add_block.allow_empty, False)
+
+    def test_height_parameter(self):
+        """Test that it can be called with height parameter"""
+        st.container(height=100)
+
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.height, 100)
+        # Should allow empty and have a border as default:
+        self.assertEqual(container_block.add_block.vertical.border, True)
+        self.assertEqual(container_block.add_block.allow_empty, True)
+
+
+class PopoverContainerTest(DeltaGeneratorTestCase):
+    def test_label_required(self):
+        """Test that label is required"""
+        with self.assertRaises(TypeError):
+            st.popover()
+
+    def test_just_label(self):
+        """Test that it correctly applies label param."""
+        popover = st.popover("label")
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.use_container_width, False)
+        self.assertEqual(popover_block.add_block.popover.disabled, False)
+        self.assertEqual(popover_block.add_block.popover.help, "")
+        self.assertEqual(popover_block.add_block.allow_empty, True)
+
+    def test_use_container_width(self):
+        """Test that it correctly applies use_container_width param."""
+        popover = st.popover("label", use_container_width=True)
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.use_container_width, True)
+
+    def test_disabled(self):
+        """Test that it correctly applies disabled param."""
+        popover = st.popover("label", disabled=True)
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.disabled, True)
+
+    def test_help(self):
+        """Test that it correctly applies help param."""
+        popover = st.popover("label", help="help text")
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.help, "help text")
+
+
+class StatusContainerTest(DeltaGeneratorTestCase):
+    def test_label_required(self):
+        """Test that label is required"""
+        with self.assertRaises(TypeError):
+            st.status()
+
+    def test_throws_error_on_wrong_state(self):
+        """Test that it throws an error on unknown state."""
+        with self.assertRaises(StreamlitAPIException):
+            st.status("label", state="unknown")
+
+    def test_just_label(self):
+        """Test that it correctly applies label param."""
+        st.status("label")
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "spinner")
+
+    def test_expanded_param(self):
+        """Test that it correctly applies expanded param."""
+        st.status("label", expanded=True)
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, True)
+        self.assertEqual(status_block.add_block.expandable.icon, "spinner")
+
+    def test_state_param_complete(self):
+        """Test that it correctly applies state param with `complete`."""
+        st.status("label", state="complete")
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "check")
+
+    def test_state_param_error(self):
+        """Test that it correctly applies state param with `error`."""
+        st.status("label", state="error")
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "error")
+
+    def test_usage_with_context_manager(self):
+        """Test that it correctly switches to complete state when used as context manager."""
+        status = st.status("label")
+
+        with status:
+            pass
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "label")
+        self.assertEqual(status_block.add_block.expandable.expanded, False)
+        self.assertEqual(status_block.add_block.expandable.icon, "check")
+
+    def test_mutation_via_update(self):
+        """Test that update can be used to change the label, state and expand."""
+        status = st.status("label", expanded=False)
+        status.update(label="new label", state="error", expanded=True)
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "new label")
+        self.assertEqual(status_block.add_block.expandable.expanded, True)
+        self.assertEqual(status_block.add_block.expandable.icon, "error")
+
+    def test_mutation_via_update_in_cm(self):
+        """Test that update can be used in context manager to change the label, state and expand."""
+        with st.status("label", expanded=False) as status:
+            status.update(label="new label", state="error", expanded=True)
+
+        status_block = self.get_delta_from_queue()
+        self.assertEqual(status_block.add_block.expandable.label, "new label")
+        self.assertEqual(status_block.add_block.expandable.expanded, True)
+        self.assertEqual(status_block.add_block.expandable.icon, "error")
 
 
 class TabsTest(DeltaGeneratorTestCase):

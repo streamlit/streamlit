@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,23 +52,23 @@ df = pd.concat([df, pd.DataFrame(np.random.randn(5, 4), columns=list("BCDE"))], 
 df.iloc[0, 2] = np.nan
 
 # Unstyled
-st._arrow_table(df)
+st.table(df)
 
 # Custom formatting
-st._arrow_table(df.style.format("{:.2%}"))
+st.table(df.style.format("{:.2%}"))
 
 # Colors
-st._arrow_table(
+st.table(
     df.style.applymap(color_negative_red).apply(
         highlight_max, color="darkorange", axis=0
     )
 )
 
 # Add rows throws an exception when the dataframe has a styler
-x = st._arrow_table(
+x = st.table(
     df.style.set_properties(**{"background-color": "black", "color": "lawngreen"})
 )
-x._arrow_add_rows(
+x.add_rows(
     pd.DataFrame(np.random.randn(3, 5)).style.set_properties(
         **{"background-color": "lawngreen", "color": "black"}
     )

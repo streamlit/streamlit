@@ -1,0 +1,91 @@
+name: Component-template repository
+
+on:
+  push:
+    branches:
+      - "develop"
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest-8-cores
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "19.x"
+          cache: "yarn"
+          cache-dependency-path: "component-lib/yarn.lock"
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+
+      - name: Run make develop
+        run: make develop
+
+      - name: Build Package
+        timeout-minutes: 120
+        run: BUILD_AS_FAST_AS_POSSIBLE=1 make package
+
+      - name: Return path to Streamlit wheel
+        id: streamlit_wheel
+        shell: bash
+        run: |
+          streamlit_wheel=$(find "./lib/dist" -maxdepth 1 -name '*.whl')
+          streamlit_wheel=$(readlink -e "${streamlit_wheel}")
+          echo "output_file=${streamlit_wheel}" >> $GITHUB_OUTPUT
+
+      - name: Install node dependencies for streamlit-component-lib
+        working-directory: component-lib
+        shell: bash
+        run: yarn install
+
+      - name: Build streamlit-component-lib package
+        working-directory: component-lib
+        shell: bash
+        run: yarn run build && npm pack
+
+      - name: Return path to Component Library
+        working-directory: component-lib
+        id: component_library
+        shell: bash
+        run: |
+          component_lib_tar_gz=$(find "./" -maxdepth 1 -name 'streamlit-component-lib-*.tgz')
+          component_lib_tar_gz=$(readlink -e "${component_lib_tar_gz}")
+          echo "output_file=${component_lib_tar_gz}" >> $GITHUB_OUTPUT
+
+      - name: Checkout streamlit/component-template
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: streamlit/component-template
+          path: ./component-template
+
+      - name: Build components wheels
+        uses: ./component-template/.github/actions/build_component_wheels
+        id: component_wheels
+        with:
+          custom_streamlit_component_lib_file: >-
+            ${{ steps.component_library.outputs.output_file }}
+
+      - name: Run E2E tests
+        uses: ./component-template/.github/actions/run_e2e
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+          streamlit_wheel_file: ${{ steps.streamlit_wheel.outputs.output_file }}

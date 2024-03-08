@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,3 +16,6 @@ import streamlit as st
 
 st.title("This title is awesome!")
 st.title("This title is awesome too!", anchor="awesome-title")
+
+st.title("日本語タイトル")
+st.title("その他の邦題", anchor="アンカー")

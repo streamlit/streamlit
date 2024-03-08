@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -120,6 +120,28 @@ class MyClass(object):
         self.assertEqual(echo_str, element.code.code_text)
         element = self.get_delta_from_queue(output_index).new_element
         self.assertEqual("Hello", element.markdown.body)
+        self.clear_queue()
+
+    def test_if_elif_else(self):
+        page = "Dual"
+
+        if page == "Single":
+            with st.echo():
+                st.write("Single")
+
+        elif page == "Dual":
+            with st.echo():
+                st.write("Dual")
+
+        else:
+            with st.echo():
+                st.write("ELSE")
+
+        echo_str = 'st.write("Dual")'
+        element = self.get_delta_from_queue(0).new_element
+        self.assertEqual(echo_str, element.code.code_text)
+        element = self.get_delta_from_queue(1).new_element
+        self.assertEqual("Dual", element.markdown.body)
         self.clear_queue()
 
     def test_root_level_echo(self):

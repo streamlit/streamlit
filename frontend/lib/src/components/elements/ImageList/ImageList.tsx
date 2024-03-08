@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,13 @@
  */
 
 import React, { ReactElement } from "react"
-import ReactHtmlParser from "react-html-parser"
 
 import {
   IImage,
   Image as ImageProto,
   ImageList as ImageListProto,
 } from "@streamlit/lib/src/proto"
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
-import { xssSanitizeSvg } from "@streamlit/lib/src/util/UriUtil"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
 import {
@@ -97,18 +95,13 @@ export function ImageList({
         const image = iimage as ImageProto
         return (
           <StyledImageContainer key={idx} data-testid="stImage">
-            {image.markup ? (
-              // SVGs are received unsanitized
-              ReactHtmlParser(xssSanitizeSvg(image.markup))
-            ) : (
-              <img
-                style={imgStyle}
-                src={endpoints.buildMediaURL(image.url)}
-                alt={idx.toString()}
-              />
-            )}
+            <img
+              style={imgStyle}
+              src={endpoints.buildMediaURL(image.url)}
+              alt={idx.toString()}
+            />
             {image.caption && (
-              <StyledCaption data-testid="caption" style={imgStyle}>
+              <StyledCaption data-testid="stImageCaption" style={imgStyle}>
                 {` ${image.caption} `}
               </StyledCaption>
             )}

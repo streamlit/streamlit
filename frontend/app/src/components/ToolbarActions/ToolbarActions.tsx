@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import {
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
+  StyledToolbarActions,
 } from "./styled-components"
 
 export interface ActionButtonProps {
@@ -39,11 +40,16 @@ export function ActionButton({
   onClick,
 }: ActionButtonProps): ReactElement {
   return (
-    <div className="stActionButton">
+    <div className="stActionButton" data-testid="stActionButton">
       <BaseButton onClick={onClick} kind={BaseButtonKind.HEADER_BUTTON}>
         <StyledActionButtonContainer>
-          {icon && <StyledActionButtonIcon icon={icon} />}
-          {label && <span>{label}</span>}
+          {icon && (
+            <StyledActionButtonIcon
+              data-testid={"stActionButtonIcon"}
+              icon={icon}
+            />
+          )}
+          {label && <span data-testid="stActionButtonLabel">{label}</span>}
         </StyledActionButtonContainer>
       </BaseButton>
     </div>
@@ -60,7 +66,7 @@ function ToolbarActions({
   hostToolbarItems,
 }: ToolbarActionsProps): ReactElement {
   return (
-    <>
+    <StyledToolbarActions data-testid="stToolbarActions">
       {hostToolbarItems.map(({ key, label, icon }) => (
         <ActionButton
           key={key}
@@ -74,7 +80,7 @@ function ToolbarActions({
           }
         />
       ))}
-    </>
+    </StyledToolbarActions>
   )
 }
 

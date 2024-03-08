@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,9 +17,18 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
-from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
@@ -37,6 +46,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
@@ -45,21 +55,45 @@ from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-TimeValue: TypeAlias = Union[time, datetime, None]
 SingleDateValue: TypeAlias = Union[date, datetime, None]
 DateValue: TypeAlias = Union[SingleDateValue, Sequence[SingleDateValue]]
-DateWidgetReturn: TypeAlias = Union[date, Tuple[()], Tuple[date], Tuple[date, date]]
+DateWidgetReturn: TypeAlias = Union[
+    date, Tuple[()], Tuple[date], Tuple[date, date], None
+]
 
-DEFAULT_STEP_MINUTES = 15
-ALLOWED_DATE_FORMATS = re.compile(
+DEFAULT_STEP_MINUTES: Final = 15
+ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
 
 
-def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
-    parsed_dates: List[date]
+def _adjust_years(input_date: date, years: int) -> date:
+    """Add or subtract years from a date."""
+    try:
+        # Attempt to directly add/subtract years
+        return input_date.replace(year=input_date.year + years)
+    except ValueError as err:
+        # Handle case for leap year date (February 29) that doesn't exist in the target year
+        # by moving the date to February 28
+        if input_date.month == 2 and input_date.day == 29:
+            return input_date.replace(year=input_date.year + years, month=2, day=28)
+
+        raise StreamlitAPIException(
+            f"Date {input_date} does not exist in the target year {input_date.year + years}. "
+            "This should never happen. Please report this bug."
+        ) from err
+
+
+def _parse_date_value(
+    value: DateValue | Literal["today"] | Literal["default_value_today"],
+) -> tuple[list[date] | None, bool]:
+    parsed_dates: list[date]
     range_value: bool = False
     if value is None:
+        return None, range_value
+    if value == "today":
+        parsed_dates = [datetime.now().date()]
+    elif value == "default_value_today":
         # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
@@ -85,7 +119,7 @@ def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
 
 def _parse_min_date(
     min_value: SingleDateValue,
-    parsed_dates: Sequence[date],
+    parsed_dates: Sequence[date] | None,
 ) -> date:
     parsed_min_date: date
     if isinstance(min_value, datetime):
@@ -94,9 +128,9 @@ def _parse_min_date(
         parsed_min_date = min_value
     elif min_value is None:
         if parsed_dates:
-            parsed_min_date = parsed_dates[0] - relativedelta.relativedelta(years=10)
+            parsed_min_date = _adjust_years(parsed_dates[0], years=-10)
         else:
-            parsed_min_date = date.today() - relativedelta.relativedelta(years=10)
+            parsed_min_date = _adjust_years(date.today(), years=-10)
     else:
         raise StreamlitAPIException(
             "DateInput min should either be a date/datetime or None"
@@ -106,7 +140,7 @@ def _parse_min_date(
 
 def _parse_max_date(
     max_value: SingleDateValue,
-    parsed_dates: Sequence[date],
+    parsed_dates: Sequence[date] | None,
 ) -> date:
     parsed_max_date: date
     if isinstance(max_value, datetime):
@@ -115,9 +149,9 @@ def _parse_max_date(
         parsed_max_date = max_value
     elif max_value is None:
         if parsed_dates:
-            parsed_max_date = parsed_dates[-1] + relativedelta.relativedelta(years=10)
+            parsed_max_date = _adjust_years(parsed_dates[-1], years=10)
         else:
-            parsed_max_date = date.today() + relativedelta.relativedelta(years=10)
+            parsed_max_date = _adjust_years(date.today(), years=10)
     else:
         raise StreamlitAPIException(
             "DateInput max should either be a date/datetime or None"
@@ -127,7 +161,7 @@ def _parse_max_date(
 
 @dataclass(frozen=True)
 class _DateInputValues:
-    value: Sequence[date]
+    value: Sequence[date] | None
     is_range: bool
     max: date
     min: date
@@ -135,10 +169,10 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue,
+        value: DateValue | Literal["today"] | Literal["default_value_today"],
         min_value: SingleDateValue,
         max_value: SingleDateValue,
-    ) -> "_DateInputValues":
+    ) -> _DateInputValues:
         parsed_value, is_range = _parse_date_value(value=value)
         return cls(
             value=parsed_value,
@@ -174,16 +208,18 @@ class _DateInputValues:
 
 @dataclass
 class TimeInputSerde:
-    value: time
+    value: time | None
 
-    def deserialize(self, ui_value: Optional[str], widget_id: Any = "") -> time:
+    def deserialize(self, ui_value: str | None, widget_id: Any = "") -> time | None:
         return (
             datetime.strptime(ui_value, "%H:%M").time()
             if ui_value is not None
             else self.value
         )
 
-    def serialize(self, v: Union[datetime, time]) -> str:
+    def serialize(self, v: datetime | time | None) -> str | None:
+        if v is None:
+            return None
         if isinstance(v, datetime):
             v = v.time()
         return time.strftime(v, "%H:%M")
@@ -198,7 +234,7 @@ class DateInputSerde:
         ui_value: Any,
         widget_id: str = "",
     ) -> DateWidgetReturn:
-        return_value: Sequence[date]
+        return_value: Sequence[date] | None
         if ui_value is not None:
             return_value = tuple(
                 datetime.strptime(v, "%Y/%m/%d").date() for v in ui_value
@@ -206,31 +242,71 @@ class DateInputSerde:
         else:
             return_value = self.value.value
 
+        if return_value is None or len(return_value) == 0:
+            return () if self.value.is_range else None
+
         if not self.value.is_range:
             return return_value[0]
         return cast(DateWidgetReturn, tuple(return_value))
 
-    def serialize(self, v: DateWidgetReturn) -> List[str]:
+    def serialize(self, v: DateWidgetReturn) -> list[str]:
+        if v is None:
+            return []
+
         to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]
         return [date.strftime(v, "%Y/%m/%d") for v in to_serialize]
 
 
 class TimeWidgetsMixin:
+    @overload
+    def time_input(
+        self,
+        label: str,
+        value: time | datetime | Literal["now"] = "now",
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+    ) -> time:
+        pass
+
+    @overload
+    def time_input(
+        self,
+        label: str,
+        value: None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+    ) -> time | None:
+        pass
+
     @gather_metrics("time_input")
     def time_input(
         self,
         label: str,
-        value: TimeValue = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: time | datetime | Literal["now"] | None = "now",
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
-    ) -> time:
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+    ) -> time | None:
         r"""Display a time input widget.
 
         Parameters
@@ -252,7 +328,7 @@ class TimeWidgetsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -261,9 +337,11 @@ class TimeWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : datetime.time/datetime.datetime
+        value : datetime.time/datetime.datetime, "now" or None
             The value of this widget when it first renders. This will be
-            cast to str internally. Defaults to the current time.
+            cast to str internally. If ``None``, will initialize empty and
+            return ``None`` until the user selects a time. If "now" (default),
+            will initialize with the current time.
         key : str or int
             An optional string or integer to use as the unique key for the widget.
             If this is omitted, a key will be generated for the widget
@@ -279,20 +357,21 @@ class TimeWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
         disabled : bool
             An optional boolean, which disables the time input if set to True.
-            The default is False. This argument can only be supplied by keyword.
+            The default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
         step : int or timedelta
             The stepping interval in seconds. Defaults to 900, i.e. 15 minutes.
             You can also pass a datetime.timedelta object.
 
         Returns
         -------
-        datetime.time
-            The current value of the time input widget.
+        datetime.time or None
+            The current value of the time input widget or ``None`` if no time has been
+            selected.
 
         Example
         -------
@@ -304,6 +383,18 @@ class TimeWidgetsMixin:
 
         .. output::
            https://doc-time-input.streamlit.app/
+           height: 260px
+
+        To initialize an empty time input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> t = st.time_input('Set an alarm for', value=None)
+        >>> st.write('Alarm is set for', t)
+
+        .. output::
+           https://doc-time-input-empty.streamlit.app/
            height: 260px
 
         """
@@ -325,26 +416,29 @@ class TimeWidgetsMixin:
     def _time_input(
         self,
         label: str,
-        value: Union[time, datetime, None] = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        value: time | datetime | Literal["now"] | None = "now",
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> time:
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        ctx: ScriptRunContext | None = None,
+    ) -> time | None:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
-
+        check_session_state_rules(
+            default_value=value if value != "now" else None, key=key
+        )
         maybe_raise_label_warnings(label, label_visibility)
 
-        parsed_time: time
+        parsed_time: time | None
         if value is None:
+            parsed_time = None
+        elif value == "now":
             # Set value default.
             parsed_time = datetime.now().time().replace(second=0, microsecond=0)
         elif isinstance(value, datetime):
@@ -360,18 +454,20 @@ class TimeWidgetsMixin:
             "time_input",
             user_key=key,
             label=label,
-            value=(None if value is None else parsed_time),
+            value=parsed_time if isinstance(value, (datetime, time)) else value,
             key=key,
             help=help,
             step=step,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
         del value
 
         time_input_proto = TimeInputProto()
         time_input_proto.id = id
         time_input_proto.label = label
-        time_input_proto.default = time.strftime(parsed_time, "%H:%M")
+        if parsed_time is not None:
+            time_input_proto.default = time.strftime(parsed_time, "%H:%M")
         time_input_proto.form_id = current_form_id(self.dg)
         if not isinstance(step, (int, timedelta)):
             raise StreamlitAPIException(
@@ -406,7 +502,8 @@ class TimeWidgetsMixin:
         )
 
         if widget_state.value_changed:
-            time_input_proto.value = serde.serialize(widget_state.value)
+            if (serialized_value := serde.serialize(widget_state.value)) is not None:
+                time_input_proto.value = serialized_value
             time_input_proto.set_value = True
 
         self.dg._enqueue("time_input", time_input_proto)
@@ -416,14 +513,14 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue = None,
+        value: DateValue | Literal["today"] = "default_value_today",  # type: ignore[assignment]
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
@@ -450,7 +547,7 @@ class TimeWidgetsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -459,10 +556,12 @@ class TimeWidgetsMixin:
             For accessibility reasons, you should never set an empty label (label="")
             but hide it with label_visibility if needed. In the future, we may disallow
             empty labels by raising an exception.
-        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime or None
+        value : datetime.date or datetime.datetime or list/tuple of datetime.date or datetime.datetime, "today", or None
             The value of this widget when it first renders. If a list/tuple with
             0 to 2 date/datetime values is provided, the datepicker will allow
-            users to provide a range. Defaults to today as a single-date picker.
+            users to provide a range. If ``None``, will initialize empty and
+            return ``None`` until the user provides input. If "today" (default),
+            will initialize with today as a single-date picker.
         min_value : datetime.date or datetime.datetime
             The minimum selectable date. If value is a date, defaults to value - 10 years.
             If value is the interval [start, end], defaults to start - 10 years.
@@ -488,18 +587,19 @@ class TimeWidgetsMixin:
             You may also use a period (.) or hyphen (-) as separators.
         disabled : bool
             An optional boolean, which disables the date input if set to True.
-            The default is False. This argument can only be supplied by keyword.
+            The default is False.
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. If "hidden", the label doesn't show but there
             is still empty space for it above the widget (equivalent to label="").
             If "collapsed", both the label and the space are removed. Default is
-            "visible". This argument can only be supplied by keyword.
+            "visible".
 
 
         Returns
         -------
-        datetime.date or a tuple with 0-2 dates
-            The current value of the date input widget.
+        datetime.date or a tuple with 0-2 dates or None
+            The current value of the date input widget or ``None`` if no date has been
+            selected.
 
         Examples
         --------
@@ -534,6 +634,18 @@ class TimeWidgetsMixin:
            https://doc-date-input1.streamlit.app/
            height: 380px
 
+        To initialize an empty date input, use ``None`` as the value:
+
+        >>> import datetime
+        >>> import streamlit as st
+        >>>
+        >>> d = st.date_input("When's your birthday", value=None)
+        >>> st.write('Your birthday is:', d)
+
+        .. output::
+           https://doc-date-input-empty.streamlit.app/
+           height: 380px
+
         """
         ctx = get_script_run_ctx()
         return self._date_input(
@@ -555,41 +667,49 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value: DateValue = None,
+        value: (
+            DateValue | Literal["today"] | Literal["default_value_today"]
+        ) = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
+        ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(default_value=value, key=key)
+        check_session_state_rules(
+            default_value=value if value != "default_value_today" else None, key=key
+        )
 
         maybe_raise_label_warnings(label, label_visibility)
 
-        def parse_date_deterministic(v: SingleDateValue) -> str | None:
-            if v is None:
-                return None
-            elif isinstance(v, datetime):
+        def parse_date_deterministic(
+            v: SingleDateValue | Literal["today"] | Literal["default_value_today"],
+        ) -> str | None:
+            if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
             elif isinstance(v, date):
                 return date.strftime(v, "%Y/%m/%d")
+            return None
 
         parsed_min_date = parse_date_deterministic(min_value)
         parsed_max_date = parse_date_deterministic(max_value)
 
-        if isinstance(value, datetime) or isinstance(value, date) or value is None:
-            parsed: str | None | List[str | None] = parse_date_deterministic(value)
+        parsed: str | None | list[str | None]
+        if value == "today" or value == "default_value_today" or value is None:
+            parsed = None
+        elif isinstance(value, (datetime, date)):
+            parsed = parse_date_deterministic(value)
         else:
-            parsed = [parse_date_deterministic(v) for v in value]
+            parsed = [parse_date_deterministic(cast(SingleDateValue, v)) for v in value]
 
         # TODO this is missing the error path, integrate with the dateinputvalues parsing
 
@@ -602,7 +722,9 @@ class TimeWidgetsMixin:
             max_value=parsed_max_date,
             key=key,
             help=help,
+            format=format,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(
@@ -616,6 +738,23 @@ class TimeWidgetsMixin:
             min_value=min_value,
             max_value=max_value,
         )
+
+        if value == "default_value_today":
+            # We need to know if this is a single or range date_input, but don't have
+            # a default value, so we check if session_state can tell us.
+            # We already calculated the id, so there is no risk of this causing
+            # the id to change.
+
+            session_state = get_session_state().filtered_state
+
+            if key is not None and key in session_state:
+                state_value = session_state[key]
+                parsed_values = _DateInputValues.from_raw_values(
+                    value=state_value,
+                    min_value=min_value,
+                    max_value=max_value,
+                )
+
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
@@ -627,9 +766,15 @@ class TimeWidgetsMixin:
         )
         date_input_proto.format = format
         date_input_proto.label = label
-        date_input_proto.default[:] = [
-            date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
-        ]
+        if parsed_values.value is None:
+            # An empty array represents the empty state. The reason for using an empty
+            # array here is that we cannot optional keyword for repeated fields
+            # in protobuf.
+            date_input_proto.default[:] = []
+        else:
+            date_input_proto.default[:] = [
+                date.strftime(v, "%Y/%m/%d") for v in parsed_values.value
+            ]
         date_input_proto.min = date.strftime(parsed_values.min, "%Y/%m/%d")
         date_input_proto.max = date.strftime(parsed_values.max, "%Y/%m/%d")
         date_input_proto.form_id = current_form_id(self.dg)
@@ -659,6 +804,6 @@ class TimeWidgetsMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

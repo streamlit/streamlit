@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ export interface TooltipProps {
   children: ReactNode
   inline?: boolean
   style?: React.CSSProperties
+  onMouseEnterDelay?: number
 }
 
 function Tooltip({
@@ -53,6 +54,7 @@ function Tooltip({
   children,
   inline,
   style,
+  onMouseEnterDelay,
 }: TooltipProps): ReactElement {
   const theme: EmotionTheme = useTheme()
   const { colors, fontSizes, radii } = theme
@@ -61,7 +63,10 @@ function Tooltip({
     <StatefulTooltip
       content={
         content ? (
-          <StyledTooltipContentWrapper className="stTooltipContent">
+          <StyledTooltipContentWrapper
+            className="stTooltipContent"
+            data-testid="stTooltipContent"
+          >
             {content}
           </StyledTooltipContentWrapper>
         ) : null
@@ -70,6 +75,7 @@ function Tooltip({
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
       showArrow={false}
       popoverMargin={10}
+      onMouseEnterDelay={onMouseEnterDelay}
       overrides={{
         Body: {
           style: {
@@ -117,7 +123,8 @@ function Tooltip({
           justifyContent: inline ? "flex-end" : "",
           ...style,
         }}
-        data-testid="tooltipHoverTarget"
+        data-testid="stTooltipHoverTarget"
+        className="stTooltipHoverTarget"
       >
         {children}
       </div>

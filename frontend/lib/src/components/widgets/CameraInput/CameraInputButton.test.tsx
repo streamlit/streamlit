@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { shallow } from "@streamlit/lib/src/test_util"
 import React from "react"
-import { StyledCameraInputBaseButton } from "./styled-components"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
 
 const getProps = (
@@ -25,7 +26,6 @@ const getProps = (
   return {
     onClick: jest.fn(),
     disabled: false,
-    children: jest.fn(),
     progress: 0,
     ...props,
   }
@@ -34,16 +34,16 @@ const getProps = (
 describe("Testing Camera Input Button", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<CameraInputButton {...props} />)
-    expect(wrapper).toBeDefined()
+    render(<CameraInputButton {...props} />)
+    expect(screen.getByTestId("stCameraInputButton")).toBeInTheDocument()
   })
 
   it("plumbs progress properly", () => {
     const props = getProps({ progress: 50 })
-    const wrapper = shallow(<CameraInputButton {...props} />)
-    const styledCameraInputBaseButton = wrapper.find(
-      StyledCameraInputBaseButton
-    )
-    expect(styledCameraInputBaseButton.props().progress).toEqual(50)
+
+    render(<CameraInputButton {...props} />)
+
+    const progress = screen.getByRole("progressbar")
+    expect(progress).toHaveAttribute("aria-valuenow", "50")
   })
 })

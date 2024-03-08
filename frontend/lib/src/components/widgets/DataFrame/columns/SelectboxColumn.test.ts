@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ describe("SelectboxColumn", () => {
     expect(mockColumn.getCellValue(mockCell)).toEqual("foo")
 
     expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
-      "",
+      null,
       "foo",
       "bar",
     ])
@@ -91,7 +91,7 @@ describe("SelectboxColumn", () => {
     expect(mockColumn.getCellValue(mockCell)).toEqual(1)
 
     expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
-      "",
+      null,
       "1",
       "2",
       "3",
@@ -108,7 +108,7 @@ describe("SelectboxColumn", () => {
     expect(mockColumn.getCellValue(mockCell)).toEqual(true)
 
     expect((mockCell as DropdownCellType).data.allowedValues).toEqual([
-      "",
+      null,
       "true",
       "false",
     ])

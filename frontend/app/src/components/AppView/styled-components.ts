@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,46 +71,109 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
   })
 )
 
+export const StyledStickyBottomContainer = styled.div(() => ({
+  position: "sticky",
+  left: 0,
+  bottom: 0,
+  width: "100%",
+}))
+
+export const StyledInnerBottomContainer = styled.div(({ theme }) => ({
+  position: "relative",
+  bottom: 0,
+  width: "100%",
+  minWidth: "100%",
+  backgroundColor: theme.colors.bgColor,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  zIndex: theme.zIndices.bottom,
+}))
+
 export interface StyledAppViewBlockContainerProps {
+  hasSidebar: boolean
+  isEmbedded: boolean
   isWideMode: boolean
   showPadding: boolean
   addPaddingForHeader: boolean
-  addPaddingForChatInput: boolean
-  events: boolean
+  hasBottom: boolean
 }
 
 export const StyledAppViewBlockContainer =
   styled.div<StyledAppViewBlockContainerProps>(
     ({
+      hasSidebar,
+      hasBottom,
+      isEmbedded,
       isWideMode,
       showPadding,
       addPaddingForHeader,
-      addPaddingForChatInput,
-      events,
       theme,
     }) => {
-      let topEmbedPadding: string = showPadding ? "6rem" : "1rem"
-      if (addPaddingForHeader && !showPadding) {
+      let topEmbedPadding: string = showPadding ? "6rem" : "2.1rem"
+      if (
+        (addPaddingForHeader && !showPadding) ||
+        (isEmbedded && hasSidebar)
+      ) {
         topEmbedPadding = "3rem"
       }
       const bottomEmbedPadding =
-        showPadding || addPaddingForChatInput ? "10rem" : "1rem"
+        showPadding && !hasBottom ? "10rem" : theme.spacing.lg
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
       return {
-        // Don't want to display this element for events (which are outside main/sidebar flow)
-        ...(events && { display: "none" }),
         width: theme.sizes.full,
-        paddingLeft: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
-        paddingRight: theme.inSidebar ? theme.spacing.none : theme.spacing.lg,
+        paddingLeft: theme.spacing.lg,
+        paddingRight: theme.spacing.lg,
         // Increase side padding, if layout = wide and we're not on mobile
         "@media (min-width: 576px)": {
-          paddingLeft: theme.inSidebar ? theme.spacing.none : wideSidePadding,
-          paddingRight: theme.inSidebar ? theme.spacing.none : wideSidePadding,
+          paddingLeft: wideSidePadding,
+          paddingRight: wideSidePadding,
         },
-        paddingTop: theme.inSidebar ? theme.spacing.none : topEmbedPadding,
-        paddingBottom: theme.inSidebar
-          ? theme.spacing.none
-          : bottomEmbedPadding,
+        paddingTop: topEmbedPadding,
+        paddingBottom: bottomEmbedPadding,
+        minWidth: isWideMode ? "auto" : undefined,
+        maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
+
+        [`@media print`]: {
+          minWidth: "100%",
+          paddingTop: 0,
+        },
+      }
+    }
+  )
+
+export const StyledSidebarBlockContainer = styled.div(({ theme }) => {
+  return {
+    width: theme.sizes.full,
+  }
+})
+
+export const StyledEventBlockContainer = styled.div(() => {
+  return {
+    display: "none",
+  }
+})
+
+export interface StyledBottomBlockContainerProps {
+  isWideMode: boolean
+  showPadding: boolean
+}
+
+export const StyledBottomBlockContainer =
+  styled.div<StyledBottomBlockContainerProps>(
+    ({ isWideMode, showPadding, theme }) => {
+      const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
+      return {
+        width: theme.sizes.full,
+        paddingLeft: theme.spacing.lg,
+        paddingRight: theme.spacing.lg,
+        // Increase side padding, if layout = wide and we're not on mobile
+        "@media (min-width: 576px)": {
+          paddingLeft: wideSidePadding,
+          paddingRight: wideSidePadding,
+        },
+        paddingTop: theme.spacing.lg,
+        paddingBottom: showPadding ? "55px" : theme.spacing.threeXL,
         minWidth: isWideMode ? "auto" : undefined,
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
 
@@ -129,53 +192,7 @@ export const StyledAppViewBlockSpacer = styled.div(({ theme }) => {
   }
 })
 
-export const StyledAppViewFooterLink = styled.a(({ theme }) => ({
-  color: theme.colors.fadedText60,
-  // We do not want to change the font for this based on theme.
-  fontFamily: theme.genericFonts.bodyFont,
-  textDecoration: "none",
-  transition: "color 300ms",
-  "&:hover": {
-    color: theme.colors.bodyText,
-    textDecoration: "underline",
-  },
+export const StyledIFrameResizerAnchor = styled.div(() => ({
+  position: "relative",
+  bottom: "0",
 }))
-
-export interface StyledAppViewFooterProps {
-  isWideMode: boolean
-}
-
-export const StyledAppViewFooter = styled.footer<StyledAppViewFooterProps>(
-  ({ isWideMode, theme }) => {
-    const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
-    return {
-      color: theme.colors.fadedText40,
-      fontSize: theme.fontSizes.sm,
-      height: theme.sizes.footerHeight,
-      minWidth: isWideMode ? "auto" : undefined,
-      maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
-      padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-      // Increase side padding, if layout = wide and we're not on mobile
-      "@media (min-width: 576px)": {
-        paddingLeft: wideSidePadding,
-        paddingRight: wideSidePadding,
-      },
-      width: theme.sizes.full,
-      a: {
-        color: theme.colors.fadedText60,
-      },
-    }
-  }
-)
-
-export interface StyledIFrameResizerAnchorProps {
-  hasFooter: boolean
-}
-
-// The anchor appears above the footer, so we need to offset it by the footer
-// if the app is not embedded.
-export const StyledIFrameResizerAnchor =
-  styled.div<StyledIFrameResizerAnchorProps>(({ theme, hasFooter }) => ({
-    position: "relative",
-    bottom: hasFooter ? `-${theme.sizes.footerHeight}` : "0",
-  }))

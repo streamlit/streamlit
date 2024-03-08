@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,11 @@ export default function StreamlitSyntaxHighlighter({
   children,
 }: StreamlitSyntaxHighlighterProps): ReactElement {
   return (
-    <StyledCodeBlock>
+    <StyledCodeBlock
+      className="stCodeBlock"
+      data-testid="stCodeBlock"
+      isMarkdown={false}
+    >
       <StyledPre>
         <SyntaxHighlighter
           language={language}

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,11 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
 import asyncio
 import sys
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
 from streamlit import config, runtime, source_util
@@ -44,9 +47,10 @@ from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.watcher import LocalSourcesWatcher
 
-LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
     from streamlit.runtime.state import SessionState
+
+_LOGGER: Final = get_logger(__name__)
 
 
 class AppSessionState(Enum):
@@ -77,9 +81,10 @@ class AppSession:
         script_data: ScriptData,
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
-        message_enqueued_callback: Optional[Callable[[], None]],
+        message_enqueued_callback: Callable[[], None] | None,
         local_sources_watcher: LocalSourcesWatcher,
-        user_info: Dict[str, Optional[str]],
+        user_info: dict[str, str | None],
+        session_id_override: str | None = None,
     ) -> None:
         """Initialize the AppSession.
 
@@ -113,9 +118,13 @@ class AppSession:
             Information about the current user is optionally provided when a
             websocket connection is initialized via the "X-Streamlit-User" header.
 
+        session_id_override
+            The ID to assign to this session. Setting this can be useful when the
+            service that a Streamlit Runtime is running in wants to tie the lifecycle of
+            a Streamlit session to some other session-like object that it manages.
         """
         # Each AppSession has a unique string ID.
-        self.id = str(uuid.uuid4())
+        self.id = session_id_override or str(uuid.uuid4())
 
         self._event_loop = asyncio.get_running_loop()
         self._script_data = script_data
@@ -134,17 +143,15 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        self._local_sources_watcher: Optional[
-            LocalSourcesWatcher
-        ] = local_sources_watcher
-        self._stop_config_listener: Optional[Callable[[], bool]] = None
-        self._stop_pages_listener: Optional[Callable[[], bool]] = None
+        self._local_sources_watcher: LocalSourcesWatcher | None = local_sources_watcher
+        self._stop_config_listener: Callable[[], bool] | None = None
+        self._stop_pages_listener: Callable[[], None] | None = None
 
         self.register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 
-        self._scriptrunner: Optional[ScriptRunner] = None
+        self._scriptrunner: ScriptRunner | None = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
         from streamlit.runtime.state import SessionState
@@ -152,9 +159,9 @@ class AppSession:
         self._session_state = SessionState()
         self._user_info = user_info
 
-        self._debug_last_backmsg_id: Optional[str] = None
+        self._debug_last_backmsg_id: str | None = None
 
-        LOGGER.debug("AppSession initialized (id=%s)", self.id)
+        _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def __del__(self) -> None:
         """Ensure that we call shutdown() when an AppSession is garbage collected."""
@@ -205,7 +212,7 @@ class AppSession:
         self._stop_config_listener = None
         self._stop_pages_listener = None
 
-    def flush_browser_queue(self) -> List[ForwardMsg]:
+    def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
 
         The Server calls this periodically to deliver new messages
@@ -227,7 +234,7 @@ class AppSession:
 
         """
         if self._state != AppSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.debug("Shutting down (id=%s)", self.id)
+            _LOGGER.debug("Shutting down (id=%s)", self.id)
             # Clear any unused session files in upload file manager and media
             # file manager
             self._uploaded_file_mgr.remove_session_files(self.id)
@@ -284,6 +291,8 @@ class AppSession:
                 self._handle_git_information_request()
             elif msg_type == "clear_cache":
                 self._handle_clear_cache_request()
+            elif msg_type == "app_heartbeat":
+                self._handle_app_heartbeat_request()
             elif msg_type == "set_run_on_save":
                 self._handle_set_run_on_save_request(msg.set_run_on_save)
             elif msg_type == "stop_script":
@@ -291,10 +300,10 @@ class AppSession:
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
             else:
-                LOGGER.warning('No handler for "%s"', msg_type)
+                _LOGGER.warning('No handler for "%s"', msg_type)
 
         except Exception as ex:
-            LOGGER.error(ex)
+            _LOGGER.error(ex)
             self.handle_backmsg_exception(ex)
 
     def handle_backmsg_exception(self, e: BaseException) -> None:
@@ -326,7 +335,7 @@ class AppSession:
             lambda: self._enqueue_forward_msg(self._create_exception_message(e))
         )
 
-    def request_rerun(self, client_state: Optional[ClientState]) -> None:
+    def request_rerun(self, client_state: ClientState | None) -> None:
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -340,7 +349,7 @@ class AppSession:
 
         """
         if self._state == AppSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.warning("Discarding rerun request after shutdown")
+            _LOGGER.warning("Discarding rerun request after shutdown")
             return
 
         if client_state:
@@ -386,7 +395,6 @@ class AppSession:
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,
-            client_state=self._client_state,
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             script_cache=self._script_cache,
@@ -397,7 +405,7 @@ class AppSession:
         self._scriptrunner.start()
 
     @property
-    def session_state(self) -> "SessionState":
+    def session_state(self) -> SessionState:
         return self._session_state
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
@@ -415,7 +423,7 @@ class AppSession:
 
         return True
 
-    def _on_source_file_changed(self, filepath: Optional[str] = None) -> None:
+    def _on_source_file_changed(self, filepath: str | None = None) -> None:
         """One of our source files changed. Clear the cache and schedule a rerun if appropriate."""
         self._script_cache.clear()
 
@@ -442,17 +450,20 @@ class AppSession:
         _populate_app_pages(msg.pages_changed, self._script_data.main_script_path)
         self._enqueue_forward_msg(msg)
 
+        if self._local_sources_watcher is not None:
+            self._local_sources_watcher.update_watched_pages()
+
     def _clear_queue(self) -> None:
         self._browser_queue.clear()
 
     def _on_scriptrunner_event(
         self,
-        sender: Optional[ScriptRunner],
+        sender: ScriptRunner | None,
         event: ScriptRunnerEvent,
-        forward_msg: Optional[ForwardMsg] = None,
-        exception: Optional[BaseException] = None,
-        client_state: Optional[ClientState] = None,
-        page_script_hash: Optional[str] = None,
+        forward_msg: ForwardMsg | None = None,
+        exception: BaseException | None = None,
+        client_state: ClientState | None = None,
+        page_script_hash: str | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -468,12 +479,12 @@ class AppSession:
 
     def _handle_scriptrunner_event_on_event_loop(
         self,
-        sender: Optional[ScriptRunner],
+        sender: ScriptRunner | None,
         event: ScriptRunnerEvent,
-        forward_msg: Optional[ForwardMsg] = None,
-        exception: Optional[BaseException] = None,
-        client_state: Optional[ClientState] = None,
-        page_script_hash: Optional[str] = None,
+        forward_msg: ForwardMsg | None = None,
+        exception: BaseException | None = None,
+        client_state: ClientState | None = None,
+        page_script_hash: str | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -516,7 +527,7 @@ class AppSession:
             # rerun request, for example) while another ScriptRunner is still
             # shutting down. The shutting-down ScriptRunner may still
             # emit events.
-            LOGGER.debug("Ignoring event from non-current ScriptRunner: %s", event)
+            _LOGGER.debug("Ignoring event from non-current ScriptRunner: %s", event)
             return
 
         prev_state = self._state
@@ -574,6 +585,7 @@ class AppSession:
             script_finished_msg = self._create_script_finished_message(
                 ForwardMsg.FINISHED_EARLY_FOR_RERUN
             )
+            self._state = AppSessionState.APP_NOT_RUNNING
             self._enqueue_forward_msg(script_finished_msg)
             if self._local_sources_watcher:
                 self._local_sources_watcher.update_watched_modules()
@@ -647,13 +659,13 @@ class AppSession:
             self._state == AppSessionState.APP_IS_RUNNING
         )
 
-        imsg.command_line = self._script_data.command_line
+        imsg.is_hello = self._script_data.is_hello
         imsg.session_id = self.id
 
         return msg
 
     def _create_script_finished_message(
-        self, status: "ForwardMsg.ScriptFinishedStatus.ValueType"
+        self, status: ForwardMsg.ScriptFinishedStatus.ValueType
     ) -> ForwardMsg:
         """Create and return a script_finished ForwardMsg."""
         msg = ForwardMsg()
@@ -680,6 +692,10 @@ class AppSession:
 
             repository_name, branch, module = repo_info
 
+            if repository_name.endswith(".git"):
+                # Remove the .git extension from the repository name
+                repository_name = repository_name[:-4]
+
             msg.git_info_changed.repository = repository_name
             msg.git_info_changed.branch = branch
             msg.git_info_changed.module = module
@@ -698,10 +714,10 @@ class AppSession:
         except Exception as ex:
             # Users may never even install Git in the first place, so this
             # error requires no action. It can be useful for debugging.
-            LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
+            _LOGGER.debug("Obtaining Git information produced an error", exc_info=ex)
 
     def _handle_rerun_script_request(
-        self, client_state: Optional[ClientState] = None
+        self, client_state: ClientState | None = None
     ) -> None:
         """Tell the ScriptRunner to re-run its script.
 
@@ -728,6 +744,17 @@ class AppSession:
         caching.cache_data.clear()
         caching.cache_resource.clear()
         self._session_state.clear()
+
+    def _handle_app_heartbeat_request(self) -> None:
+        """Handle an incoming app heartbeat.
+
+        The heartbeat indicates the frontend is active and keeps the
+        websocket from going idle and disconnecting.
+
+        The actual handler here is a noop
+
+        """
+        pass
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
@@ -769,10 +796,10 @@ class AppSession:
 # This field will be available at runtime as of protobuf 3.20.1, but
 # we are using an older version.
 # For details, see: https://github.com/protocolbuffers/protobuf/issues/8175
-def _get_toolbar_mode() -> "Config.ToolbarMode.ValueType":
+def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
     config_key = "client.toolbarMode"
     config_value = config.get_option(config_key)
-    enum_value: Optional["Config.ToolbarMode.ValueType"] = getattr(
+    enum_value: Config.ToolbarMode.ValueType | None = getattr(
         Config.ToolbarMode, config_value.upper()
     )
     if enum_value is None:
@@ -788,10 +815,12 @@ def _get_toolbar_mode() -> "Config.ToolbarMode.ValueType":
 def _populate_config_msg(msg: Config) -> None:
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
-    msg.mapbox_token = config.get_option("mapbox.token")
     msg.allow_run_on_save = config.get_option("server.allowRunOnSave")
     msg.hide_top_bar = config.get_option("ui.hideTopBar")
+    # ui.hideSidebarNav is deprecated, will be removed in the future
     msg.hide_sidebar_nav = config.get_option("ui.hideSidebarNav")
+    if config.get_option("client.showSidebarNavigation") == False:
+        msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
 
 
@@ -817,7 +846,7 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     base = theme_opts["base"]
     if base is not None:
         if base not in base_map:
-            LOGGER.warning(
+            _LOGGER.warning(
                 f'"{base}" is an invalid value for theme.base.'
                 f" Allowed values include {list(base_map.keys())}."
                 ' Setting theme.base to "light".'
@@ -833,7 +862,7 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
     font = theme_opts["font"]
     if font is not None:
         if font not in font_map:
-            LOGGER.warning(
+            _LOGGER.warning(
                 f'"{font}" is an invalid value for theme.font.'
                 f" Allowed values include {list(font_map.keys())}."
                 ' Setting theme.font to "sans serif".'
@@ -847,9 +876,7 @@ def _populate_user_info_msg(msg: UserInfo) -> None:
     msg.installation_id_v3 = Installation.instance().installation_id_v3
 
 
-def _populate_app_pages(
-    msg: Union[NewSession, PagesChanged], main_script_path: str
-) -> None:
+def _populate_app_pages(msg: NewSession | PagesChanged, main_script_path: str) -> None:
     for page_script_hash, page_info in source_util.get_pages(main_script_path).items():
         page_proto = msg.app_pages.add()
 

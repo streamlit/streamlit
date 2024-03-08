@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
-from typing import Any, Iterator, Union
+from typing import Any, Iterator
 
 from google.protobuf.message import Message
 
@@ -23,7 +25,7 @@ from streamlit.runtime.caching.cache_data_api import (
     CacheDataAPI,
     _data_caches,
 )
-from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL as CACHE_DOCS_URL
+from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
@@ -77,9 +79,7 @@ def save_widget_metadata(metadata: WidgetMetadata[Any]) -> None:
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_widget_metadata(metadata)
 
 
-def save_media_data(
-    image_data: Union[bytes, str], mimetype: str, image_id: str
-) -> None:
+def save_media_data(image_data: bytes | str, mimetype: str, image_id: str) -> None:
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
 
@@ -100,11 +100,9 @@ def suppress_cached_st_function_warning() -> Iterator[None]:
 
 
 # Explicitly export public symbols
-from streamlit.runtime.caching.cache_data_api import (
-    get_data_cache_stats_provider as get_data_cache_stats_provider,
-)
+from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
 from streamlit.runtime.caching.cache_resource_api import (
-    get_resource_cache_stats_provider as get_resource_cache_stats_provider,
+    get_resource_cache_stats_provider,
 )
 
 # Create and export public API singletons.
@@ -130,3 +128,20 @@ experimental_singleton = CacheResourceAPI(
     decorator_metric_name="experimental_singleton",
     deprecation_warning=_SINGLETON_WARNING,
 )
+
+
+__all__ = [
+    "CACHE_DOCS_URL",
+    "save_element_message",
+    "save_block_message",
+    "save_widget_metadata",
+    "save_media_data",
+    "maybe_show_cached_st_function_warning",
+    "suppress_cached_st_function_warning",
+    "get_data_cache_stats_provider",
+    "get_resource_cache_stats_provider",
+    "cache_data",
+    "cache_resource",
+    "experimental_memo",
+    "experimental_singleton",
+]

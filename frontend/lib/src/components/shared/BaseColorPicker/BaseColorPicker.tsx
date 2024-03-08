@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,6 +131,7 @@ class BaseColorPicker extends React.PureComponent<
           )}
         </WidgetLabel>
         <UIPopover
+          data-testid="stColorPickerPopover"
           onClose={this.onColorClose}
           content={() => (
             <StyledChromePicker>
@@ -143,7 +144,7 @@ class BaseColorPicker extends React.PureComponent<
           )}
         >
           <StyledColorPreview style={previewStyle}>
-            <StyledColorBlock style={blockStyle} />
+            <StyledColorBlock style={blockStyle} data-testid="stColorBlock" />
             {showValue && (
               <StyledColorValue>{value.toUpperCase()}</StyledColorValue>
             )}

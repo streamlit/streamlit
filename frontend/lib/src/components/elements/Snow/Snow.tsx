@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,11 +39,13 @@ export interface Props {
   scriptRunId: string
 }
 
-const Flake: FC<ParticleProps> = ({ particleType }) => (
-  <StyledFlake src={FLAKE_IMAGES[particleType]} />
-)
+const Flake: FC<React.PropsWithChildren<ParticleProps>> = ({
+  particleType,
+}) => <StyledFlake src={FLAKE_IMAGES[particleType]} />
 
-const Snow: FC<Props> = function Snow({ scriptRunId }) {
+const Snow: FC<React.PropsWithChildren<Props>> = function Snow({
+  scriptRunId,
+}) {
   // Keys should be unique each time, so React replaces the images in the DOM and their animations
   // actually rerun.
   return (

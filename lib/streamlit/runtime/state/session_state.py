@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ from dataclasses import dataclass, field, replace
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Iterator,
     KeysView,
     List,
@@ -28,8 +30,7 @@ from typing import (
     cast,
 )
 
-from pympler.asizeof import asizeof
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import config, util
@@ -43,7 +44,8 @@ from streamlit.runtime.state.common import (
     is_keyed_widget_id,
     is_widget_id,
 )
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.state.query_params import QueryParams
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
 
 if TYPE_CHECKING:
@@ -112,7 +114,11 @@ class WStates(MutableMapping[str, Any]):
             ValueFieldName,
             wstate.value.WhichOneof("value"),
         )
-        value = wstate.value.__getattribute__(value_field_name)
+        value = (
+            wstate.value.__getattribute__(value_field_name)
+            if value_field_name  # Field name is None if the widget value was cleared
+            else None
+        )
 
         if is_array_value_field_name(value_field_name):
             # Array types are messages with data in a `data` field
@@ -146,8 +152,7 @@ class WStates(MutableMapping[str, Any]):
         # For this and many other methods, we can't simply delegate to the
         # states field, because we need to invoke `__getitem__` for any
         # values, to handle deserialization and unwrapping of values.
-        for key in self.states:
-            yield key
+        yield from self.states
 
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
@@ -158,7 +163,7 @@ class WStates(MutableMapping[str, Any]):
     def values(self) -> set[Any]:  # type: ignore[override]
         return {self[wid] for wid in self}
 
-    def update(self, other: "WStates") -> None:  # type: ignore[override]
+    def update(self, other: WStates) -> None:  # type: ignore[override]
         """Copy all widget values and metadata from 'other' into this mapping,
         overwriting any data in this mapping that's also present in 'other'.
         """
@@ -210,6 +215,7 @@ class WStates(MutableMapping[str, Any]):
 
         field = metadata.value_type
         serialized = metadata.serializer(item.value)
+
         if is_array_value_field_name(field):
             arr = getattr(widget, field)
             arr.data.extend(serialized)
@@ -219,7 +225,11 @@ class WStates(MutableMapping[str, Any]):
             widget.file_uploader_state_value.CopyFrom(serialized)
         elif field == "string_trigger_value":
             widget.string_trigger_value.CopyFrom(serialized)
-        else:
+        elif field is not None and serialized is not None:
+            # If the field is None, the widget value was cleared
+            # by the user and therefore is None. But we cannot
+            # set it to None here, since the proto properties are
+            # not nullable. So we just don't set it.
             setattr(widget, field, serialized)
 
         return widget
@@ -289,6 +299,9 @@ class SessionState:
     # Keys used for widgets will be eagerly converted to the matching widget id
     _key_id_mapping: dict[str, str] = field(default_factory=dict)
 
+    # query params are stored in session state because query params will be tied with widget state at one point.
+    query_params: QueryParams = field(default_factory=QueryParams)
+
     def __repr__(self):
         return util.repr_(self)
 
@@ -299,7 +312,12 @@ class SessionState:
         widget_state.
         """
         for key_or_wid in self:
-            self._old_state[key_or_wid] = self[key_or_wid]
+            try:
+                self._old_state[key_or_wid] = self[key_or_wid]
+            except KeyError:
+                # handle key errors from widget state not having metadata gracefully
+                # https://github.com/streamlit/streamlit/issues/7206
+                pass
         self._new_session_state.clear()
         self._new_widget_state.clear()
 
@@ -479,8 +497,8 @@ class SessionState:
         Update widget data and call callbacks on widgets whose value changed
         between the previous and current script runs.
         """
-        # Update ourselves with the new widget_states. The old widget states,
-        # used to skip callbacks if values haven't changed, are also preserved.
+        # Clear any triggers that weren't reset because the script was disconnected
+        self._reset_triggers()
         self._compact_state()
         self.set_widgets_from_proto(latest_widget_states)
         self._call_callbacks()
@@ -498,9 +516,7 @@ class SessionState:
             try:
                 self._new_widget_state.call_callback(wid)
             except RerunException:
-                st.warning(
-                    "Calling st.experimental_rerun() within a callback is a no-op."
-                )
+                st.warning("Calling st.rerun() within a callback is a no-op.")
 
     def _widget_changed(self, widget_id: str) -> bool:
         """True if the given widget's value changed between the previous
@@ -621,6 +637,9 @@ class SessionState:
             return True
 
     def get_stats(self) -> list[CacheStat]:
+        # Lazy-load vendored package to prevent import of numpy
+        from streamlit.vendor.pympler.asizeof import asizeof
+
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
 
@@ -654,11 +673,11 @@ def _is_internal_key(key: str) -> bool:
 
 @dataclass
 class SessionStateStatProvider(CacheStatsProvider):
-    _session_mgr: "SessionManager"
+    _session_mgr: SessionManager
 
     def get_stats(self) -> list[CacheStat]:
         stats: list[CacheStat] = []
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
             stats.extend(session_state.get_stats())
-        return stats
+        return group_stats(stats)

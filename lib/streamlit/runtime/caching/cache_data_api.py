@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import pickle
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, TypeVar, Union, cast, overload
+from typing import Any, Callable, Final, Literal, TypeVar, Union, cast, overload
 
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import runtime
@@ -60,9 +60,9 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
@@ -236,7 +236,7 @@ class DataCaches(CacheStatsProvider):
         stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
-        return stats
+        return group_stats(stats)
 
     def validate_cache_params(
         self,
@@ -428,17 +428,17 @@ class CacheDataAPI:
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
 
-        show_spinner : boolean or string
+        show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
-        persist : "disk", boolean, or None
+        persist : "disk", bool, or None
             Optional location to persist cached data to. Passing "disk" (or True)
             will persist the cached data to the local disk. None (or False) will disable
             persistence. The default is None.
 
-        experimental_allow_widgets : boolean
+        experimental_allow_widgets : bool
             Allow widgets to be used in the cached function. Defaults to False.
             Support for widgets in cached functions is currently experimental.
             Setting this parameter to True may lead to excessive memory use since the

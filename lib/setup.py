@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@ import os
 import sys
 from pathlib import Path
 
-import setuptools
+from setuptools import find_packages, setup
 from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.25.0"  # PEP-440
-
-NAME = "streamlit"
+VERSION = "1.31.1"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -35,13 +33,11 @@ INSTALL_REQUIRES = [
     "blinker>=1.0.0, <2",
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
-    # 1.4 introduced the functionality found in python 3.8's importlib.metadata module
-    "importlib-metadata>=1.4, <7",
     "numpy>=1.19.3, <2",
     "packaging>=16.8, <24",
     # Lowest version with available wheel for 3.7 + amd64 + linux
     "pandas>=1.3.0, <3",
-    "pillow>=7.1.0, <10",
+    "pillow>=7.1.0, <11",
     # Python protobuf 4.21 (the first 4.x version) is compatible with protobufs
     # generated from `protoc` >= 3.20. (`protoc` is installed separately from the Python
     # protobuf package, so this pin doesn't actually enforce a `protoc` minimum version.
@@ -50,16 +46,12 @@ INSTALL_REQUIRES = [
     # pyarrow is not semantically versioned, gets new major versions frequently, and
     # doesn't tend to break the API on major version upgrades, so we don't put an
     # upper bound on it.
-    "pyarrow>=6.0",
-    "pympler>=0.9, <2",
-    "python-dateutil>=2.7.3, <3",
-    "requests>=2.18, <3",
+    "pyarrow>=7.0",
+    "requests>=2.27, <3",
     "rich>=10.14.0, <14",
     "tenacity>=8.1.0, <9",
     "toml>=0.10.1, <2",
-    "typing-extensions>=4.1.0, <5",
-    "tzlocal>=1.1, <5",
-    "validators>=0.2, <1",
+    "typing-extensions>=4.3.0, <5",
     # Don't require watchdog on MacOS, since it'll fail without xcode tools.
     # Without watchdog, we fallback to a polling file watcher to check for app changes.
     "watchdog>=2.1.5; platform_system != 'Darwin'",
@@ -71,7 +63,7 @@ INSTALL_REQUIRES = [
 # `pip install streamlit` or `conda install -c conda-forge streamlit`)
 SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
     "gitpython>=3.0.7, <4, !=3.1.19",
-    "pydeck>=0.8, <1",
+    "pydeck>=0.8.0b4, <1",
     # Tornado 6.0.3 was the current Tornado version when Python 3.8, our earliest supported Python version,
     # was released (Oct 14, 2019).
     "tornado>=6.0.3, <7",
@@ -80,7 +72,12 @@ SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES = [
 if not os.getenv("SNOWPARK_CONDA_BUILD"):
     INSTALL_REQUIRES.extend(SNOWPARK_CONDA_EXCLUDED_DEPENDENCIES)
 
-EXTRA_REQUIRES = {"snowflake": ["snowflake-snowpark-python; python_version=='3.8'"]}
+EXTRA_REQUIRES = {
+    "snowflake": [
+        "snowflake-snowpark-python>=0.9.0; python_version=='3.8'",
+        "snowflake-connector-python>=2.8.0; python_version=='3.8'",
+    ]
+}
 
 
 class VerifyVersionCommand(install):
@@ -108,8 +105,8 @@ else:
     # being missing isn't problematic.
     long_description = ""
 
-setuptools.setup(
-    name=NAME,
+setup(
+    name="streamlit",
     version=VERSION,
     description="A faster way to build and share data apps",
     long_description=long_description,
@@ -137,6 +134,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Database :: Front-Ends",
         "Topic :: Office/Business :: Financial :: Spreadsheet",
         "Topic :: Scientific/Engineering :: Information Analysis",
@@ -150,7 +148,7 @@ setuptools.setup(
     python_requires=">=3.8, !=3.9.7",
     # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
     package_data={"streamlit": ["py.typed", "hello/**/*.py"]},
-    packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     # Requirements
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRA_REQUIRES,

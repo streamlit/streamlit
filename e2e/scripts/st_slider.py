@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from datetime import date
 
 import streamlit as st
 from streamlit import runtime
@@ -52,19 +54,27 @@ st.write("Value 5:", w5)
 w6 = st.slider("Label 6", 0, 100, 36, label_visibility="collapsed")
 st.write("Value 6:", w6)
 
+dates = st.slider(
+    "Label 7",
+    min_value=date(2019, 8, 1),
+    max_value=date(2021, 6, 4),
+    value=(date(2019, 8, 1), date(2019, 9, 1)),
+)
+st.write("Value 7:", dates[0], dates[1])
+
 if runtime.exists():
 
     def on_change():
         st.session_state.slider_changed = True
 
     st.slider(
-        "Label 7",
+        "Label 8",
         min_value=0,
         max_value=100,
         value=25,
         step=1,
-        key="slider7",
+        key="slider8",
         on_change=on_change,
     )
-    st.write("Value 7:", st.session_state.slider7)
+    st.write("Value 8:", st.session_state.slider8)
     st.write("Slider changed:", "slider_changed" in st.session_state)

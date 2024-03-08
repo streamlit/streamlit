@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
@@ -39,8 +41,8 @@ class ToastMixin:
         self,
         body: SupportsStr,
         *,  # keyword-only args:
-        icon: Optional[str] = None,
-    ) -> "DeltaGenerator":
+        icon: str | None = None,
+    ) -> DeltaGenerator:
         """Display a short message, known as a notification "toast".
         The toast appears in the app's bottom-right corner and disappears after four seconds.
 
@@ -67,9 +69,9 @@ class ToastMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
         icon : str or None
-            An optional, keyword-only argument that specifies an emoji to use as
+            An optional argument that specifies an emoji to use as
             the icon for the toast. Shortcodes are not allowed, please use a
             single character instead. E.g. "🚨", "🔥", "🤖", etc.
             Defaults to None, which means no icon is displayed.
@@ -86,6 +88,6 @@ class ToastMixin:
         return self.dg._enqueue("toast", toast_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

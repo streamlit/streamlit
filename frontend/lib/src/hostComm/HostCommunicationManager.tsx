@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@
 import { ICustomThemeConfig, WidgetStates } from "@streamlit/lib/src/proto"
 
 import {
-  IAllowedMessageOriginsResponse,
   IGuestToHostMessage,
   IHostToGuestMessage,
   VersionedMessage,
   IMenuItem,
   IToolbarItem,
   DeployedAppMetadata,
+  AppConfig,
 } from "./types"
 
 import { isValidOrigin } from "@streamlit/lib/src/util/UriUtil"
@@ -41,9 +41,15 @@ export interface HostCommunicationProps {
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
+  readonly sendAppHeartbeat: () => void
+  readonly setInputsDisabled: (inputsDisabled: boolean) => void
   readonly themeChanged: (themeInfo: ICustomThemeConfig) => void
   readonly pageChanged: (pageScriptHash: string) => void
   readonly isOwnerChanged: (isOwner: boolean) => void
+  readonly jwtHeaderChanged: (jwtPayload: {
+    jwtHeaderName: string
+    jwtHeaderValue: string
+  }) => void
   readonly hostMenuItemsChanged: (menuItems: IMenuItem[]) => void
   readonly hostToolbarItemsChanged: (toolbarItems: IToolbarItem[]) => void
   readonly hostHideSidebarNavChanged: (hideSidebarNav: boolean) => void
@@ -109,23 +115,16 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Function to set the response body received from hitting the Streamlit
-   * server's /_stcore/allowed-message-origins endpoint. The response contains
-   *   - allowedOrigins: A list of origins that we're allowed to receive
-   *     cross-iframe messages from via the browser's window.postMessage API.
-   *   - useExternalAuthToken: Whether to wait until we've received a
-   *     SET_AUTH_TOKEN message before resolving deferredAuthToken.promise. The
-   *     WebsocketConnection class waits for this promise to resolve before
-   *     attempting to establish a connection with the Streamlit server.
+   * Sets the allowed origins configuration.
    */
-  public setAllowedOriginsResp = ({
+  public setAllowedOrigins = ({
     allowedOrigins,
     useExternalAuthToken,
-  }: IAllowedMessageOriginsResponse): void => {
+  }: AppConfig): void => {
     if (!useExternalAuthToken) {
       this.deferredAuthToken.resolve(undefined)
     }
-    if (!allowedOrigins.length) {
+    if (!allowedOrigins?.length) {
       return
     }
     this.allowedOrigins = allowedOrigins
@@ -187,6 +186,14 @@ export default class HostCommunicationManager {
       this.props.pageChanged(message.pageScriptHash)
     }
 
+    if (message.type === "SEND_APP_HEARTBEAT") {
+      this.props.sendAppHeartbeat()
+    }
+
+    if (message.type === "SET_INPUTS_DISABLED") {
+      this.props.setInputsDisabled(message.disabled)
+    }
+
     if (message.type === "SET_AUTH_TOKEN") {
       // NOTE: The edge case (that should technically never happen) where
       // useExternalAuthToken is false but we still receive this message
@@ -194,6 +201,9 @@ export default class HostCommunicationManager {
       // is a no-op, and we already resolved the promise to undefined
       // above.
       this.deferredAuthToken.resolve(message.authToken)
+      if (message.jwtHeaderName !== undefined) {
+        this.props.jwtHeaderChanged(message)
+      }
     }
 
     if (message.type === "SET_IS_OWNER") {

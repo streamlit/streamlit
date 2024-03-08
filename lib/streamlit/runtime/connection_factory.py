@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,19 +14,18 @@
 
 from __future__ import annotations
 
-import importlib
 import os
 import re
 from datetime import timedelta
-from typing import Any, Dict, Type, TypeVar, overload
-
-from typing_extensions import Final, Literal
+from typing import Any, Final, Literal, TypeVar, overload
 
 from streamlit.connections import (
-    ExperimentalBaseConnection,
+    BaseConnection,
+    SnowflakeConnection,
     SnowparkConnection,
     SQLConnection,
 )
+from streamlit.deprecation_util import deprecate_obj_name
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
@@ -38,29 +37,30 @@ from streamlit.runtime.secrets import secrets_singleton
 #      only the connection name is specified and another when both name and type are).
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 FIRST_PARTY_CONNECTIONS = {
+    "snowflake": SnowflakeConnection,
     "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
 MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
-MODULES_TO_PYPI_PACKAGES: Final[Dict[str, str]] = {
+MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
     "MySQLdb": "mysqlclient",
     "psycopg2": "psycopg2-binary",
     "sqlalchemy": "sqlalchemy",
-    "snowflake": "snowflake-snowpark-python",
+    "snowflake": "snowflake-connector-python",
+    "snowflake.connector": "snowflake-connector-python",
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
 
-# The ExperimentalBaseConnection bound is parameterized to `Any` below as subclasses of
-# ExperimentalBaseConnection are responsible for binding the type parameter of
-# ExperimentalBaseConnection to a concrete type, but the type it gets bound to isn't
-# important to us here.
-ConnectionClass = TypeVar("ConnectionClass", bound=ExperimentalBaseConnection[Any])
+# The BaseConnection bound is parameterized to `Any` below as subclasses of
+# BaseConnection are responsible for binding the type parameter of BaseConnection to a
+# concrete type, but the type it gets bound to isn't important to us here.
+ConnectionClass = TypeVar("ConnectionClass", bound=BaseConnection[Any])
 
 
-@gather_metrics("experimental_connection")
+@gather_metrics("connection")
 def _create_connection(
     name: str,
-    connection_class: Type[ConnectionClass],
+    connection_class: type[ConnectionClass],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
@@ -70,23 +70,33 @@ def _create_connection(
     The weird implementation of this function with the @cache_resource annotated
     function defined internally is done to:
       * Always @gather_metrics on the call even if the return value is a cached one.
-      * Allow the user to specify ttl and max_entries when calling st.experimental_connection.
+      * Allow the user to specify ttl and max_entries when calling st.connection.
     """
 
-    @cache_resource(
-        max_entries=max_entries,
-        show_spinner="Running `st.experimental_connection(...)`.",
-        ttl=ttl,
-    )
     def __create_connection(
-        name: str, connection_class: Type[ConnectionClass], **kwargs
+        name: str, connection_class: type[ConnectionClass], **kwargs
     ) -> ConnectionClass:
         return connection_class(connection_name=name, **kwargs)
 
-    if not issubclass(connection_class, ExperimentalBaseConnection):
+    if not issubclass(connection_class, BaseConnection):
         raise StreamlitAPIException(
-            f"{connection_class} is not a subclass of ExperimentalBaseConnection!"
+            f"{connection_class} is not a subclass of BaseConnection!"
         )
+
+    # We modify our helper function's `__qualname__` here to work around default
+    # `@st.cache_resource` behavior. Otherwise, `st.connection` being called with
+    # different `ttl` or `max_entries` values will reset the cache with each call.
+    ttl_str = str(ttl).replace(  # Avoid adding extra `.` characters to `__qualname__`
+        ".", "_"
+    )
+    __create_connection.__qualname__ = (
+        f"{__create_connection.__qualname__}_{ttl_str}_{max_entries}"
+    )
+    __create_connection = cache_resource(
+        max_entries=max_entries,
+        show_spinner="Running `st.connection(...)`.",
+        ttl=ttl,
+    )(__create_connection)
 
     return __create_connection(name, connection_class, **kwargs)
 
@@ -126,6 +136,29 @@ def connection_factory(
 
 @overload
 def connection_factory(
+    name: Literal["snowflake"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs,
+) -> SnowflakeConnection:
+    pass
+
+
+@overload
+def connection_factory(
+    name: str,
+    type: Literal["snowflake"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs,
+) -> SnowflakeConnection:
+    pass
+
+
+@overload
+def connection_factory(
     name: Literal["snowpark"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
@@ -148,7 +181,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: str,
-    type: Type[ConnectionClass],
+    type: type[ConnectionClass],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
@@ -163,7 +196,7 @@ def connection_factory(
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     **kwargs,
-) -> ExperimentalBaseConnection[Any]:
+) -> BaseConnection[Any]:
     pass
 
 
@@ -187,13 +220,13 @@ def connection_factory(
     ----------
     name : str
         The connection name used for secrets lookup in ``[connections.<name>]``.
-        Type will be inferred from passing ``"sql"`` or ``"snowpark"``.
+        Type will be inferred from passing ``"sql"``, ``"snowflake"``, or ``"snowpark"``.
     type : str, connection class, or None
-        The type of connection to create. It can be a keyword (``"sql"`` or ``"snowpark"``),
-        a path to an importable class, or an imported class reference. All classes
-        must extend ``st.connections.ExperimentalBaseConnection`` and implement the
-        ``_connect()`` method. If the type kwarg is None, a ``type`` field must be set
-        in the connection's section in ``secrets.toml``.
+        The type of connection to create. It can be a keyword (``"sql"``, ``"snowflake"``,
+        or ``"snowpark"``), a path to an importable class, or an imported class reference.
+        All classes must extend ``st.connections.BaseConnection`` and implement the
+        ``_connect()`` method. If the type kwarg is None, a ``type`` field must be set in
+        the connection's section in ``secrets.toml``.
     max_entries : int or None
         The maximum number of connections to keep in the cache, or None
         for an unbounded cache. (When a new entry is added to a full cache,
@@ -212,33 +245,34 @@ def connection_factory(
 
     Examples
     --------
-    The easiest way to create a first-party (SQL or Snowpark) connection is to use their
-    default names and define corresponding sections in your ``secrets.toml`` file.
+    The easiest way to create a first-party (SQL, Snowflake, or Snowpark) connection is
+    to use their default names and define corresponding sections in your ``secrets.toml``
+    file.
 
     >>> import streamlit as st
-    >>> conn = st.experimental_connection("sql") # Config section defined in [connections.sql] in secrets.toml.
+    >>> conn = st.connection("sql") # Config section defined in [connections.sql] in secrets.toml.
 
     Creating a SQLConnection with a custom name requires you to explicitly specify the
     type. If type is not passed as a kwarg, it must be set in the appropriate section of
     ``secrets.toml``.
 
     >>> import streamlit as st
-    >>> conn1 = st.experimental_connection("my_sql_connection", type="sql") # Config section defined in [connections.my_sql_connection].
-    >>> conn2 = st.experimental_connection("my_other_sql_connection") # type must be set in [connections.my_other_sql_connection].
+    >>> conn1 = st.connection("my_sql_connection", type="sql") # Config section defined in [connections.my_sql_connection].
+    >>> conn2 = st.connection("my_other_sql_connection") # type must be set in [connections.my_other_sql_connection].
 
     Passing the full module path to the connection class that you want to use can be
     useful, especially when working with a custom connection:
 
     >>> import streamlit as st
-    >>> conn = st.experimental_connection("my_sql_connection", type="streamlit.connections.SQLConnection")
+    >>> conn = st.connection("my_sql_connection", type="streamlit.connections.SQLConnection")
 
     Finally, you can pass the connection class to use directly to this function. Doing
     so allows static type checking tools such as ``mypy`` to infer the exact return
-    type of ``st.experimental_connection``.
+    type of ``st.connection``.
 
     >>> import streamlit as st
     >>> from streamlit.connections import SQLConnection
-    >>> conn = st.experimental_connection("my_sql_connection", type=SQLConnection)
+    >>> conn = st.connection("my_sql_connection", type=SQLConnection)
     """
     USE_ENV_PREFIX = "env:"
 
@@ -250,8 +284,8 @@ def connection_factory(
 
     if type is None:
         if name in FIRST_PARTY_CONNECTIONS:
-            # We allow users to simply write `st.experimental_connection("sql")`
-            # instead of `st.experimental_connection("sql", type="sql")`.
+            # We allow users to simply write `st.connection("sql")` instead of
+            # `st.connection("sql", type="sql")`.
             type = _get_first_party_connection(name)
         else:
             # The user didn't specify a type, so we try to pull it out from their
@@ -262,9 +296,9 @@ def connection_factory(
             secrets_singleton.load_if_toml_exists()
             type = secrets_singleton["connections"][name]["type"]
 
-    # type is a nice kwarg name for the st.experimental_connection user but is annoying
-    # to work with since it conflicts with the builtin function name and thus gets
-    # syntax highlighted.
+    # type is a nice kwarg name for the st.connection user but is annoying to work with
+    # since it conflicts with the builtin function name and thus gets syntax
+    # highlighted.
     connection_class = type
 
     if isinstance(connection_class, str):
@@ -275,6 +309,9 @@ def connection_factory(
         if "." in connection_class:
             parts = connection_class.split(".")
             classname = parts.pop()
+
+            import importlib
+
             connection_module = importlib.import_module(".".join(parts))
             connection_class = getattr(connection_module, classname)
         else:
@@ -282,9 +319,17 @@ def connection_factory(
 
     # At this point, connection_class should be of type Type[ConnectionClass].
     try:
-        return _create_connection(
+        conn = _create_connection(
             name, connection_class, max_entries=max_entries, ttl=ttl, **kwargs
         )
+        if isinstance(conn, SnowparkConnection):
+            conn = deprecate_obj_name(
+                conn,
+                'connection("snowpark")',
+                'connection("snowflake")',
+                "2024-04-01",
+            )
+        return conn
     except ModuleNotFoundError as e:
         err_string = str(e)
         missing_module = re.search(MODULE_EXTRACTION_REGEX, err_string)

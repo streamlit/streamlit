@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,9 +28,11 @@ from tests.testutil import patch_config_options
 
 
 class FileWatcherTest(unittest.TestCase):
+    @patch_config_options({"server.fileWatcherType": "watchdog"})
     def test_report_watchdog_availability_mac(self):
         with patch(
-            "streamlit.watcher.path_watcher.watchdog_available", new=False
+            "streamlit.watcher.path_watcher._is_watchdog_available",
+            return_value=False,
         ), patch("streamlit.env_util.IS_DARWIN", new=True), patch(
             "click.secho"
         ) as mock_echo:
@@ -52,9 +54,29 @@ class FileWatcherTest(unittest.TestCase):
         ]
         mock_echo.assert_has_calls(calls)
 
+    @patch_config_options({"server.fileWatcherType": "poll"})
+    def test_no_watchdog_suggestion_for_poll_type(self):
+        with patch(
+            "streamlit.watcher.path_watcher._is_watchdog_available", return_value=False
+        ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
+            "click.secho"
+        ) as mock_echo:
+            streamlit.watcher.path_watcher.report_watchdog_availability()
+        mock_echo.assert_not_called()
+
+    @patch_config_options({"server.fileWatcherType": "none"})
+    def test_no_watchdog_suggestion_for_none_type(self):
+        with patch(
+            "streamlit.watcher.path_watcher._is_watchdog_available", return_value=False
+        ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
+            "click.secho"
+        ) as mock_echo:
+            streamlit.watcher.path_watcher.report_watchdog_availability()
+        mock_echo.assert_not_called()
+
     def test_report_watchdog_availability_nonmac(self):
         with patch(
-            "streamlit.watcher.path_watcher.watchdog_available", new=False
+            "streamlit.watcher.path_watcher._is_watchdog_available", return_value=False
         ), patch("streamlit.env_util.IS_DARWIN", new=False), patch(
             "click.secho"
         ) as mock_echo:
@@ -77,7 +99,7 @@ class FileWatcherTest(unittest.TestCase):
         mock_echo.assert_has_calls(calls)
 
     @patch("streamlit.watcher.path_watcher.PollingPathWatcher")
-    @patch("streamlit.watcher.path_watcher.EventBasedPathWatcher")
+    @patch("streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher")
     def test_watch_file(self, mock_event_watcher, mock_polling_watcher):
         """Test all possible outcomes of both `get_default_path_watcher_class` and
         `watch_file`, based on config.fileWatcherType and whether
@@ -99,8 +121,8 @@ class FileWatcherTest(unittest.TestCase):
                 with patch_config_options(
                     {"server.fileWatcherType": watcher_config}
                 ), patch(
-                    "streamlit.watcher.path_watcher.watchdog_available",
-                    watchdog_available,
+                    "streamlit.watcher.path_watcher._is_watchdog_available",
+                    return_value=watchdog_available,
                 ):
                     # Test get_default_path_watcher_class() result
                     self.assertEqual(
@@ -124,8 +146,10 @@ class FileWatcherTest(unittest.TestCase):
                     else:
                         self.assertFalse(watching_file)
 
-    @patch("streamlit.watcher.path_watcher.watchdog_available", Mock(return_value=True))
-    @patch("streamlit.watcher.path_watcher.EventBasedPathWatcher")
+    @patch(
+        "streamlit.watcher.path_watcher._is_watchdog_available", Mock(return_value=True)
+    )
+    @patch("streamlit.watcher.event_based_path_watcher.EventBasedPathWatcher")
     def test_watch_dir_kwarg_plumbing(self, mock_event_watcher):
         # NOTE: We only test kwarg plumbing for watch_dir since watcher_class
         # selection is tested extensively in test_watch_file, and the two

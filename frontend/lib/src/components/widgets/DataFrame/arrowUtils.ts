@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ import {
   TextCell,
   NumberCell,
   GridCellKind,
+  UriCell,
 } from "@glideapps/glide-data-grid"
+import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment from "moment"
 
 import {
@@ -156,7 +158,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (typeName === "date") {
     return DateColumn
   }
-  if (["object", "decimal", "bytes"].includes(typeName)) {
+  if (["object", "bytes"].includes(typeName)) {
     return ObjectColumn
   }
   if (["bool"].includes(typeName)) {
@@ -178,6 +180,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
       "float96",
       "float128",
       "range", // The default index in pandas uses a range type.
+      "decimal",
     ].includes(typeName)
   ) {
     return NumberColumn
@@ -229,6 +232,7 @@ export function getIndexFromArrow(
  *
  * @param data - The Arrow data.
  * @param columnPosition - The numeric position of the data column.
+ *        Starts with 0 at the first non-index column.
  *
  * @return the column props for the data column.
  */
@@ -295,9 +299,9 @@ export function getEmptyIndexColumn(): BaseColumnProps {
 export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
-  // TODO(lukasmasuch): use data.dimensions instead here?
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
+  const { dimensions } = data
+  const numIndices = dimensions.headerColumns
+  const numColumns = dimensions.dataColumns
 
   if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
@@ -342,6 +346,10 @@ export function getCellFromArrow(
   arrowCell: DataFrameCell,
   cssStyles: string | undefined = undefined
 ): GridCell {
+  const typeName = column.arrowType
+    ? Quiver.getTypeName(column.arrowType)
+    : null
+
   let cellTemplate
   if (column.kind === "object") {
     // Always use display value from Quiver for object types
@@ -369,12 +377,17 @@ export function getCellFromArrow(
     // do some custom conversion here.
     let parsedDate
     if (
-      Quiver.getTypeName(column.arrowType) === "time" &&
+      typeName === "time" &&
       notNullOrUndefined(arrowCell.field?.type?.unit)
     ) {
       // Time values needs to be adjusted to seconds based on the unit
       parsedDate = moment
-        .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
+        .unix(
+          Quiver.convertToSeconds(
+            arrowCell.content,
+            arrowCell.field?.type?.unit ?? 0
+          )
+        )
         .utc()
         .toDate()
     } else {
@@ -383,6 +396,18 @@ export function getCellFromArrow(
     }
 
     cellTemplate = column.getCell(parsedDate)
+  } else if (typeName === "decimal") {
+    // This is a special case where we want to already prepare a decimal value
+    // to a number string based on the arrow field metadata. This is required
+    // because we don't have access to the required scale in the number column.
+    const decimalStr = isNullOrUndefined(arrowCell.content)
+      ? null
+      : Quiver.format(
+          arrowCell.content,
+          arrowCell.contentType,
+          arrowCell.field
+        )
+    cellTemplate = column.getCell(decimalStr)
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }
@@ -410,6 +435,22 @@ export function getCellFromArrow(
           ...cellTemplate,
           displayData,
         } as NumberCell
+      } else if (cellTemplate.kind === GridCellKind.Uri) {
+        cellTemplate = {
+          ...cellTemplate,
+          displayData,
+        } as UriCell
+      } else if (
+        cellTemplate.kind === GridCellKind.Custom &&
+        (cellTemplate as DatePickerType).data?.kind === "date-picker-cell"
+      ) {
+        cellTemplate = {
+          ...cellTemplate,
+          data: {
+            ...(cellTemplate as DatePickerType).data,
+            displayDate: displayData,
+          },
+        } as DatePickerType
       }
     }
 

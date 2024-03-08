@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ np.random.seed(0)
 data = np.random.randn(20, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 
-st._arrow_area_chart(df)
-st._arrow_area_chart(df, x="a")
-st._arrow_area_chart(df, y="a")
-st._arrow_area_chart(df, y=["a", "b"])
-st._arrow_area_chart(df, x="a", y="b")
-st._arrow_area_chart(df, x="b", y="a")
-st._arrow_area_chart(df, x="a", y=["b", "c"])
+st.area_chart(df)
+st.area_chart(df, x="a")
+st.area_chart(df, y="a")
+st.area_chart(df, y=["a", "b"])
+st.area_chart(df, x="a", y="b")
+st.area_chart(df, x="b", y="a")
+st.area_chart(df, x="a", y=["b", "c"])
 
-st._arrow_area_chart(snowpark_mocks.DataFrame())
+st.area_chart(snowpark_mocks.DataFrame())

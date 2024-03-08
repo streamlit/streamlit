@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,15 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "AppPageProto";
+
 // A page in the app. Includes both the name of the page as well as the full
 // path to the corresponding script file.
+//
+// NOTE: This proto type is used by some external services so needs to remain
+// relatively stable. While it isn't entirely set in stone, changing it
+// may require a good amount of effort so should be avoided if possible.
 message AppPage {
   string page_script_hash = 1;
   string page_name = 2;

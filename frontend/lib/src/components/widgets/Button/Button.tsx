@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,8 @@ function Button(props: Props): ReactElement {
             source={element.label}
             allowHTML={false}
             isLabel
-            isButton
+            largerLabel
+            disableLinks
           />
         </BaseButton>
       </BaseButtonTooltip>

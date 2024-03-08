@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,8 +62,9 @@ def call_on_threads(
                 session_id=f"Thread{ii}_Session",
                 _enqueue=ForwardMsgQueue().enqueue,
                 query_string="",
-                session_state=SafeSessionState(SessionState()),
+                session_state=SafeSessionState(SessionState(), lambda: None),
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+                main_script_path="",
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
             )

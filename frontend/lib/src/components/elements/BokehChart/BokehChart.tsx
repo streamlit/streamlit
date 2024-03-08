@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useEffect, useCallback } from "react"
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { BokehChart as BokehChartProto } from "@streamlit/lib/src/proto"
 
 // We import Bokeh from a vendored source file, because it doesn't play well with Babel (https://github.com/bokeh/bokeh/issues/10658)
@@ -124,7 +124,9 @@ export function BokehChart({
     memoizedUpdateChart(memoizedGetChartData())
   }, [width, height, element, memoizedGetChartData, memoizedUpdateChart])
 
-  return <div id={chartId} className="stBokehChart" />
+  return (
+    <div id={chartId} className="stBokehChart" data-testid="stBokehChart" />
+  )
 }
 
 export default withFullScreenWrapper(BokehChart)

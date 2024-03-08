@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,16 +14,15 @@
 
 """A Python wrapper around Vega-Lite."""
 
-import json
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
+from __future__ import annotations
 
-from typing_extensions import Final, Literal
+import json
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
@@ -33,24 +32,21 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-LOGGER: Final = get_logger(__name__)
-
-
 class ArrowVegaLiteMixin:
-    @gather_metrics("_arrow_vega_lite_chart")
-    def _arrow_vega_lite_chart(
+    @gather_metrics("vega_lite_chart")
+    def vega_lite_chart(
         self,
         data: Data = None,
-        spec: Optional[Dict[str, Any]] = None,
+        spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
-        theme: Union[None, Literal["streamlit"]] = "streamlit",
+        theme: Literal["streamlit"] | None = "streamlit",
         **kwargs: Any,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display a chart using the Vega-Lite library.
 
         Parameters
         ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.DataFrame, Iterable, dict, or None
+        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, Iterable, dict, or None
             Either the data to be plotted or a Vega-Lite spec containing the
             data (which more closely follows the Vega-Lite API).
 
@@ -76,19 +72,24 @@ class ArrowVegaLiteMixin:
         >>> import pandas as pd
         >>> import numpy as np
         >>>
-        >>> df = pd.DataFrame(
-        ...     np.random.randn(200, 3),
-        ...     columns=['a', 'b', 'c'])
+        >>> chart_data = pd.DataFrame(np.random.randn(200, 3), columns=["a", "b", "c"])
         >>>
-        >>> st._arrow_vega_lite_chart(df, {
-        ...     'mark': {'type': 'circle', 'tooltip': True},
-        ...     'encoding': {
-        ...         'x': {'field': 'a', 'type': 'quantitative'},
-        ...         'y': {'field': 'b', 'type': 'quantitative'},
-        ...         'size': {'field': 'c', 'type': 'quantitative'},
-        ...         'color': {'field': 'c', 'type': 'quantitative'},
-        ...     },
-        ... })
+        >>> st.vega_lite_chart(
+        ...    chart_data,
+        ...    {
+        ...        "mark": {"type": "circle", "tooltip": True},
+        ...        "encoding": {
+        ...            "x": {"field": "a", "type": "quantitative"},
+        ...            "y": {"field": "b", "type": "quantitative"},
+        ...            "size": {"field": "c", "type": "quantitative"},
+        ...            "color": {"field": "c", "type": "quantitative"},
+        ...        },
+        ...    },
+        ... )
+
+        .. output::
+           https://doc-vega-lite-chart.streamlit.app/
+           height: 300px
 
         Examples of Vega-Lite usage without Streamlit can be found at
         https://vega.github.io/vega-lite/examples/. Most of those can be easily
@@ -111,7 +112,7 @@ class ArrowVegaLiteMixin:
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -119,9 +120,9 @@ class ArrowVegaLiteMixin:
 def marshall(
     proto: ArrowVegaLiteChartProto,
     data: Data = None,
-    spec: Optional[Dict[str, Any]] = None,
+    spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
-    theme: Union[None, Literal["streamlit"]] = "streamlit",
+    theme: None | Literal["streamlit"] = "streamlit",
     **kwargs,
 ):
     """Construct a Vega-Lite chart object.
@@ -197,8 +198,8 @@ _CHANNELS = {
     "x2",
     "y2",
     "xError",
-    "yError2",
-    "xError",
+    "xError2",
+    "yError",
     "yError2",
     "longitude",
     "latitude",

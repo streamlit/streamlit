@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -225,6 +225,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
+            (st.query_params.__setattr__, "query_params.set_attr"),
+            (st.query_params.__getattr__, "query_params.get_attr"),
+            (st.query_params.__setitem__, "query_params.set_item"),
+            (st.query_params.__getitem__, "query_params.get_item"),
         ]
     )
     def test_internal_api_commands(
@@ -257,13 +261,12 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         """All commands of the public API should be tracked with the correct name."""
         # Some commands are currently not tracked for various reasons:
         ignored_commands = {
-            # We need to ignore `experimental_connection` because the `@gather_metrics`
-            # decorator is attached to a helper function rather than the
-            # publicly-exported function, which causes it not to be executed before an
-            # Exception is raised due to a lack of required arguments.
+            # We need to ignore `connection` because the `@gather_metrics` decorator is
+            # attached to a helper function rather than the publicly-exported function,
+            # which causes it not to be executed before an Exception is raised due to a
+            # lack of required arguments.
+            "connection",
             "experimental_connection",
-            "experimental_rerun",
-            "stop",
             "spinner",
             "empty",
             "progress",

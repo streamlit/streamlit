@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ export default function Metric({ element }: MetricProps): ReactElement {
   const deltaExists = element.delta !== ""
 
   return (
-    <div data-testid="metric-container">
+    <div data-testid="stMetric">
       <StyledMetricLabelText
         data-testid="stMetricLabel"
         visibility={labelVisibilityProtoValueToEnum(
@@ -102,7 +102,17 @@ export default function Metric({ element }: MetricProps): ReactElement {
       </StyledMetricValueText>
       {deltaExists && (
         <StyledMetricDeltaText data-testid="stMetricDelta" style={deltaStyle}>
-          <Icon content={direction} size="lg" margin={arrowMargin} />
+          <Icon
+            testid={
+              // if direction is null, icon will be null
+              direction === ArrowUpward
+                ? "stMetricDeltaIcon-Up"
+                : "stMetricDeltaIcon-Down"
+            }
+            content={direction}
+            size="lg"
+            margin={arrowMargin}
+          />
           <StyledTruncateText> {element.delta} </StyledTruncateText>
         </StyledMetricDeltaText>
       )}

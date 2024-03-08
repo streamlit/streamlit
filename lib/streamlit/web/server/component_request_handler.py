@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import mimetypes
 import os
+from typing import Final
 
 import tornado.web
 
 import streamlit.web.server.routes
-from streamlit.components.v1.components import ComponentRegistry
+from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class ComponentRequestHandler(tornado.web.RequestHandler):
-    def initialize(self, registry: ComponentRegistry):
+    def initialize(self, registry: BaseComponentRegistry):
         self._registry = registry
 
     def get(self, path: str) -> None:
@@ -43,18 +46,14 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         abspath = os.path.realpath(os.path.join(component_root, filename))
 
         # Do NOT expose anything outside of the component root.
-        if os.path.commonprefix([component_root, abspath]) != component_root or (
-            not os.path.normpath(abspath).startswith(
-                component_root
-            )  # this is a recommendation from CodeQL, probably a bit redundant
-        ):
+        if os.path.commonpath([component_root, abspath]) != component_root:
             self.write("forbidden")
             self.set_status(403)
             return
         try:
             with open(abspath, "rb") as file:
                 contents = file.read()
-        except (OSError) as e:
+        except OSError as e:
             _LOGGER.error(
                 "ComponentRequestHandler: GET %s read error", abspath, exc_info=e
             )
@@ -67,7 +66,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
 
         self.set_extra_headers(path)
 
-    def set_extra_headers(self, path) -> None:
+    def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
@@ -90,7 +89,7 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
         self.finish()
 
     @staticmethod
-    def get_content_type(abspath) -> str:
+    def get_content_type(abspath: str) -> str:
         """Returns the ``Content-Type`` header to be used for this request.
         From tornado.web.StaticFileHandler.
         """
@@ -112,4 +111,4 @@ class ComponentRequestHandler(tornado.web.RequestHandler):
     @staticmethod
     def get_url(file_id: str) -> str:
         """Return the URL for a component file with the given ID."""
-        return "components/{}".format(file_id)
+        return f"components/{file_id}"

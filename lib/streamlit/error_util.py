@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from typing import Final
+
 import streamlit as st
 from streamlit import config
 from streamlit.errors import UncaughtAppException
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
-def _print_rich_exception(e: BaseException):
+def _print_rich_exception(e: BaseException) -> None:
     from rich import box, panel
 
     # Monkey patch the panel to use our custom box style
@@ -31,7 +35,7 @@ def _print_rich_exception(e: BaseException):
             box=box.Box("────\n    \n────\n    \n────\n────\n    \n────\n"),
             **kwargs,
         ):
-            super(ConfigurablePanel, self).__init__(renderable, box, **kwargs)
+            super().__init__(renderable, box, **kwargs)
 
     from rich import traceback as rich_traceback
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,12 +74,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   .disabled {
     color: ${theme.colors.disabled};
-  }
-
-  // glide-data-grid
-  // Fix issue with empty option in dropdown cell
-  div#portal div.click-outside-ignore > div > div {
-    min-height: ${theme.spacing.threeXLPx}px;
   }
 
   // VegaLite-specific CSS to style tooltips

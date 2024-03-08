@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 const path = require("path");
-const NO_OF_BUTTONS = 6
+const NO_OF_BUTTONS = 7
 
 describe("st.download_button", () => {
   beforeEach(() => {
@@ -74,5 +74,15 @@ describe("st.download_button", () => {
     cy.getIndexed(".stDownloadButton", 5).matchThemedSnapshots(
       "primary-download-button"
     );
+  });
+
+  it("sets value correctly when user clicks", () => {
+    cy.get(".stMarkdown").contains("value: False");
+
+    cy.get(".stDownloadButton button")
+      .last()
+      .click();
+
+    cy.get(".stMarkdown").contains("value: True");
   });
 });

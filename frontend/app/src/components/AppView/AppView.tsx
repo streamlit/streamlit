@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import {
   SessionInfo,
   IGuestToHostMessage,
   StreamlitEndpoints,
+  LibContext,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -39,11 +40,14 @@ import { AppContext } from "@streamlit/app/src/components/AppContext"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewContainer,
-  StyledAppViewFooter,
-  StyledAppViewFooterLink,
   StyledAppViewMain,
   StyledIFrameResizerAnchor,
+  StyledEventBlockContainer,
+  StyledInnerBottomContainer,
+  StyledStickyBottomContainer,
   StyledAppViewBlockSpacer,
+  StyledSidebarBlockContainer,
+  StyledBottomBlockContainer,
 } from "./styled-components"
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
 
@@ -103,16 +107,6 @@ function AppView(props: AppViewProps): ReactElement {
     endpoints,
   } = props
 
-  // TODO: This works for scroll to bottom, but we will need
-  // to revisit this when we support multiple position options
-  const containsChatInput =
-    Array.from(elements.main.getElements()).find(element => {
-      return element.type === "chatInput"
-    }) !== undefined
-  const Component = containsChatInput
-    ? ScrollToBottomContainer
-    : StyledAppViewMain
-
   React.useEffect(() => {
     const listener = (): void => {
       sendMessageToHost({
@@ -130,42 +124,69 @@ function AppView(props: AppViewProps): ReactElement {
     embedded,
     showPadding,
     disableScrolling,
-    showFooter,
     showToolbar,
     showColoredLine,
     toastAdjustment,
   } = React.useContext(AppContext)
 
-  const renderBlock = (node: BlockNode, events = false): ReactElement => (
-    <StyledAppViewBlockContainer
-      className="block-container"
-      data-testid="block-container"
-      isWideMode={wideMode}
-      showPadding={showPadding}
-      addPaddingForHeader={showToolbar || showColoredLine}
-      addPaddingForChatInput={containsChatInput}
-      events={events}
-    >
-      <VerticalBlock
-        node={node}
-        endpoints={endpoints}
-        sessionInfo={sessionInfo}
-        scriptRunId={scriptRunId}
-        scriptRunState={scriptRunState}
-        widgetMgr={widgetMgr}
-        widgetsDisabled={widgetsDisabled}
-        uploadClient={uploadClient}
-        componentRegistry={componentRegistry}
-        formsData={formsData}
-      />
-    </StyledAppViewBlockContainer>
-  )
+  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
+    React.useContext(LibContext)
 
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
-  const showSidebar =
-    hasSidebarElements || (!hideSidebarNav && appPages.length > 1)
   const hasEventElements = !elements.event.isEmpty
+  const hasBottomElements = !elements.bottom.isEmpty
+
+  const [showSidebarOverride, setShowSidebarOverride] = React.useState(false)
+  const showSidebar =
+    hasSidebarElements ||
+    (!hideSidebarNav && appPages.length > 1) ||
+    showSidebarOverride
+
+  React.useEffect(() => {
+    // Handle sidebar flicker/unmount with MPA & hideSidebarNav
+    if (showSidebar && hideSidebarNav && !showSidebarOverride) {
+      setShowSidebarOverride(true)
+    }
+  }, [showSidebar, hideSidebarNav, showSidebarOverride])
+
+  const scriptFinishedHandler = React.useCallback(() => {
+    // Check at end of script run if no sidebar elements
+    if (!hasSidebarElements && showSidebarOverride) {
+      setShowSidebarOverride(false)
+    }
+  }, [hasSidebarElements, showSidebarOverride])
+
+  React.useEffect(() => {
+    addScriptFinishedHandler(scriptFinishedHandler)
+    return () => {
+      removeScriptFinishedHandler(scriptFinishedHandler)
+    }
+  }, [
+    scriptFinishedHandler,
+    addScriptFinishedHandler,
+    removeScriptFinishedHandler,
+  ])
+
+  // Activate scroll to bottom whenever there are bottom elements:
+  const Component = hasBottomElements
+    ? ScrollToBottomContainer
+    : StyledAppViewMain
+
+  const renderBlock = (node: BlockNode): ReactElement => (
+    <VerticalBlock
+      node={node}
+      endpoints={endpoints}
+      sessionInfo={sessionInfo}
+      scriptRunId={scriptRunId}
+      scriptRunState={scriptRunState}
+      widgetMgr={widgetMgr}
+      widgetsDisabled={widgetsDisabled}
+      uploadClient={uploadClient}
+      componentRegistry={componentRegistry}
+      formsData={formsData}
+    />
+  )
 
   // The tabindex is required to support scrolling by arrow keys.
   return (
@@ -184,7 +205,9 @@ function AppView(props: AppViewProps): ReactElement {
           currentPageScriptHash={currentPageScriptHash}
           hideSidebarNav={hideSidebarNav}
         >
-          {renderBlock(elements.sidebar)}
+          <StyledSidebarBlockContainer>
+            {renderBlock(elements.sidebar)}
+          </StyledSidebarBlockContainer>
         </ThemedSidebar>
       )}
       <Component
@@ -193,30 +216,48 @@ function AppView(props: AppViewProps): ReactElement {
         disableScrolling={disableScrolling}
         className="main"
       >
-        {renderBlock(elements.main)}
+        <StyledAppViewBlockContainer
+          className="block-container"
+          data-testid="stAppViewBlockContainer"
+          isWideMode={wideMode}
+          showPadding={showPadding}
+          addPaddingForHeader={showToolbar || showColoredLine}
+          hasBottom={hasBottomElements}
+          isEmbedded={embedded}
+          hasSidebar={showSidebar}
+        >
+          {renderBlock(elements.main)}
+        </StyledAppViewBlockContainer>
         {/* Anchor indicates to the iframe resizer that this is the lowest
         possible point to determine height. But we don't add an anchor if there is
-        a bottom pinned chat_input in the app, since those two aspects don't work
+        a bottom container in the app, since those two aspects don't work
         well together. */}
-        {!containsChatInput && (
+        {!hasBottomElements && (
           <StyledIFrameResizerAnchor
-            hasFooter={!embedded || showFooter}
             data-testid="IframeResizerAnchor"
             data-iframe-height
           />
         )}
-        {/* Spacer fills up dead space to ensure the footer remains at the
-        bottom of the page in larger views */}
-        {(!embedded || showFooter) && (
-          <StyledAppViewBlockSpacer data-testid="AppViewBlockSpacer" />
-        )}
-        {(!embedded || showFooter) && !containsChatInput && (
-          <StyledAppViewFooter isWideMode={wideMode}>
-            Made with{" "}
-            <StyledAppViewFooterLink href="//streamlit.io" target="_blank">
-              Streamlit
-            </StyledAppViewFooterLink>
-          </StyledAppViewFooter>
+        {hasBottomElements && (
+          <>
+            {/* We add spacing here to make sure that the sticky bottom is
+           always pinned the bottom. Using sticky layout here instead of
+           absolut / fixed is a trick to automatically account for the bottom
+           height in the scroll area. Thereby, the bottom container will never
+           cover something if you scroll to the end.*/}
+            <StyledAppViewBlockSpacer />
+            <StyledStickyBottomContainer data-testid="stBottom">
+              <StyledInnerBottomContainer>
+                <StyledBottomBlockContainer
+                  data-testid="stBottomBlockContainer"
+                  isWideMode={wideMode}
+                  showPadding={showPadding}
+                >
+                  {renderBlock(elements.bottom)}
+                </StyledBottomBlockContainer>
+              </StyledInnerBottomContainer>
+            </StyledStickyBottomContainer>
+          </>
         )}
       </Component>
       {hasEventElements && (
@@ -224,7 +265,9 @@ function AppView(props: AppViewProps): ReactElement {
           toastAdjustment={toastAdjustment}
           scriptRunId={elements.event.scriptRunId}
         >
-          {renderBlock(elements.event, true)}
+          <StyledEventBlockContainer>
+            {renderBlock(elements.event)}
+          </StyledEventBlockContainer>
         </EventContainer>
       )}
     </StyledAppViewContainer>

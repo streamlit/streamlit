@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Explicitly re-export public symbols from runtime.py and session_manager.py
-from streamlit.runtime.runtime import Runtime as Runtime
-from streamlit.runtime.runtime import RuntimeConfig as RuntimeConfig
-from streamlit.runtime.runtime import RuntimeState as RuntimeState
-from streamlit.runtime.session_manager import SessionClient as SessionClient
+from __future__ import annotations
+
+from streamlit.runtime.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.session_manager import (
-    SessionClientDisconnectedError as SessionClientDisconnectedError,
+    SessionClient,
+    SessionClientDisconnectedError,
 )
 
 
@@ -38,3 +37,14 @@ def exists() -> bool:
     to adapt.
     """
     return Runtime.exists()
+
+
+__all__ = [
+    "Runtime",
+    "RuntimeConfig",
+    "RuntimeState",
+    "SessionClient",
+    "SessionClientDisconnectedError",
+    "get_instance",
+    "exists",
+]

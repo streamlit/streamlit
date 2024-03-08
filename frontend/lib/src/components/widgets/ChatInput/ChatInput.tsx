@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,11 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import Icon from "@streamlit/lib/src/components/shared/Icon"
 import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 import { hasLightBackgroundColor } from "@streamlit/lib/src/theme"
+import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 
 import {
   StyledChatInputContainer,
   StyledChatInput,
-  StyledFloatingChatInputContainer,
   StyledInputInstructionsContainer,
   StyledSendIconButton,
   StyledSendIconButtonContainer,
@@ -148,7 +148,7 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
     }
   }, [chatInputRef])
 
-  const { disabled, placeholder, maxChars, position } = element
+  const { disabled, placeholder, maxChars } = element
   const lightTheme = hasLightBackgroundColor(theme)
   const { minHeight, maxHeight } = heightGuidance.current
   const placeholderColor = lightTheme
@@ -161,63 +161,64 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
       : false
 
   return (
-    <StyledFloatingChatInputContainer className="stChatFloatingInputContainer">
-      <StyledChatInputContainer
-        className="stChatInputContainer"
-        width={width}
-        position={position}
-      >
-        <StyledChatInput>
-          <UITextArea
-            inputRef={chatInputRef}
-            value={value}
-            placeholder={placeholder}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            aria-label={placeholder}
-            disabled={disabled}
-            rows={1}
-            overrides={{
-              Root: {
-                style: {
-                  outline: "none",
-                  backgroundColor: theme.colors.transparent,
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  borderLeftWidth: "1px",
-                  borderRightWidth: "1px",
-                  borderTopWidth: "1px",
-                  borderBottomWidth: "1px",
-                  width: `${width}px`,
-                },
+    <StyledChatInputContainer
+      className="stChatInput"
+      data-testid="stChatInput"
+      width={width}
+    >
+      <StyledChatInput>
+        <UITextArea
+          inputRef={chatInputRef}
+          value={value}
+          placeholder={placeholder}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          aria-label={placeholder}
+          disabled={disabled}
+          rows={1}
+          overrides={{
+            Root: {
+              style: {
+                outline: "none",
+                backgroundColor: theme.colors.transparent,
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                borderLeftWidth: "1px",
+                borderRightWidth: "1px",
+                borderTopWidth: "1px",
+                borderBottomWidth: "1px",
+                width: `${width}px`,
               },
-              InputContainer: {
-                style: {
-                  backgroundColor: theme.colors.transparent,
-                },
+            },
+            InputContainer: {
+              style: {
+                backgroundColor: theme.colors.transparent,
               },
-              Input: {
-                props: {
-                  "data-testid": "stChatInput",
-                },
-                style: {
-                  lineHeight: "1.4",
-                  backgroundColor: theme.colors.transparent,
-                  "::placeholder": {
-                    color: placeholderColor,
-                  },
-                  height: isInputExtended
-                    ? `${scrollHeight + ROUNDING_OFFSET}px`
-                    : "auto",
-                  maxHeight: maxHeight ? `${maxHeight}px` : "none",
-                  // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                  paddingRight: "3rem",
-                  paddingLeft: theme.spacing.sm,
-                  paddingBottom: theme.spacing.sm,
-                  paddingTop: theme.spacing.sm,
-                },
+            },
+            Input: {
+              props: {
+                "data-testid": "stChatInputTextArea",
               },
-            }}
-          />
+              style: {
+                lineHeight: "1.4",
+                backgroundColor: theme.colors.transparent,
+                "::placeholder": {
+                  color: placeholderColor,
+                },
+                height: isInputExtended
+                  ? `${scrollHeight + ROUNDING_OFFSET}px`
+                  : "auto",
+                maxHeight: maxHeight ? `${maxHeight}px` : "none",
+                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
+                paddingRight: "3rem",
+                paddingLeft: theme.spacing.sm,
+                paddingBottom: theme.spacing.sm,
+                paddingTop: theme.spacing.sm,
+              },
+            },
+          }}
+        />
+        {/* Hide the character limit in small widget sizes */}
+        {width > breakpoints.hideWidgetDetails && (
           <StyledInputInstructionsContainer>
             <InputInstructions
               dirty={dirty}
@@ -228,18 +229,19 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
               inForm={false}
             />
           </StyledInputInstructionsContainer>
-          <StyledSendIconButtonContainer>
-            <StyledSendIconButton
-              onClick={handleSubmit}
-              disabled={!dirty || disabled}
-              extended={isInputExtended}
-            >
-              <Icon content={Send} size="xl" color="inherit" />
-            </StyledSendIconButton>
-          </StyledSendIconButtonContainer>
-        </StyledChatInput>
-      </StyledChatInputContainer>
-    </StyledFloatingChatInputContainer>
+        )}
+        <StyledSendIconButtonContainer>
+          <StyledSendIconButton
+            onClick={handleSubmit}
+            disabled={!dirty || disabled}
+            extended={isInputExtended}
+            data-testid="stChatInputSubmitButton"
+          >
+            <Icon content={Send} size="xl" color="inherit" />
+          </StyledSendIconButton>
+        </StyledSendIconButtonContainer>
+      </StyledChatInput>
+    </StyledChatInputContainer>
   )
 }
 

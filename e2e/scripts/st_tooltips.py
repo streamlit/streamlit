@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,3 +72,6 @@ st.text_area("textarea", help=leading_indent_regular_text_tooltip)
 st.select_slider("selectslider", options=["a", "b", "c"], help=indented_code_tooltip)
 st.button("some button", help=no_indent_tooltip)
 st.metric("some metric", value=500, help=no_indent_tooltip)
+
+# Insert some space, otherwise the last tooltip is overlapping
+st.write("--")

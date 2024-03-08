@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -216,6 +216,12 @@ export class WidgetStateManager {
     const form = this.getOrCreateFormState(formId)
 
     const submitButtons = this.formsData.submitButtons.get(formId)
+    const disableForm = submitButtons?.some(
+      submitButton => submitButton.disabled
+    )
+    if (disableForm) {
+      return
+    }
 
     let selectedSubmitButton
 
@@ -309,7 +315,11 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setIntValue(widget: WidgetInfo, value: number, source: Source): void {
+  public setIntValue(
+    widget: WidgetInfo,
+    value: number | null,
+    source: Source
+  ): void {
     this.createWidgetState(widget, source).intValue = value
     this.onWidgetValueChanged(widget.formId, source)
   }
@@ -325,7 +335,7 @@ export class WidgetStateManager {
 
   public setDoubleValue(
     widget: WidgetInfo,
-    value: number,
+    value: number | null,
     source: Source
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
@@ -343,7 +353,7 @@ export class WidgetStateManager {
 
   public setStringValue(
     widget: WidgetInfo,
-    value: string,
+    value: string | null,
     source: Source
   ): void {
     this.createWidgetState(widget, source).stringValue = value

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,11 +39,9 @@ export interface Props {
 
   fileName: string
 }
-const VideoRecordedDialog: FunctionComponent<Props> = ({
-  onClose,
-  videoBlob,
-  fileName,
-}) => {
+const VideoRecordedDialog: FunctionComponent<
+  React.PropsWithChildren<Props>
+> = ({ onClose, videoBlob, fileName }) => {
   const videoSource = URL.createObjectURL(videoBlob)
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
@@ -70,7 +68,7 @@ const VideoRecordedDialog: FunctionComponent<Props> = ({
     >
       <ModalHeader>Next steps</ModalHeader>
       <ModalBody>
-        <StyledDialogContainer>
+        <StyledDialogContainer data-testid="stVideoRecordedDialog">
           <StyledRow>
             <StyledFirstColumn>Step 1</StyledFirstColumn>
             <StyledSecondColumn>

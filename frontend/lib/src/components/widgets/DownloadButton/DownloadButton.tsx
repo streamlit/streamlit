@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,8 @@ function DownloadButton(props: Props): ReactElement {
     const link = document.createElement("a")
     const uri = endpoints.buildMediaURL(element.url)
     link.setAttribute("href", uri)
-    link.setAttribute("target", "_blank")
+    link.setAttribute("target", "_self")
+    link.setAttribute("download", "")
     link.click()
   }
 
@@ -75,7 +76,8 @@ function DownloadButton(props: Props): ReactElement {
             source={element.label}
             allowHTML={false}
             isLabel
-            isButton
+            largerLabel
+            disableLinks
           />
         </BaseButton>
       </BaseButtonTooltip>

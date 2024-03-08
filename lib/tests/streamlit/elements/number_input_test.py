@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -58,9 +59,11 @@ class NumberInputTest(DeltaGeneratorTestCase):
             LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE,
         )
         self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), True)
         self.assertEqual(c.has_min, False)
         self.assertEqual(c.has_max, False)
         self.assertEqual(c.disabled, False)
+        self.assertEqual(c.placeholder, "")
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -68,6 +71,39 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         self.assertEqual(c.disabled, True)
+
+    def test_placeholder(self):
+        """Test that it can be called with placeholder param."""
+        st.number_input("the label", placeholder="Type a number...")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.placeholder, "Type a number...")
+
+    def test_none_value(self):
+        """Test that it can be called with None as value."""
+        st.number_input("the label", value=None)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), False)
+
+    def test_none_value_with_int_min(self):
+        """Test that it can be called with None as value and
+        will be interpreted as integer if min_value is set to int."""
+        st.number_input("the label", value=None, min_value=1)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, 0.0)
+        self.assertEqual(c.HasField("default"), False)
+        self.assertEqual(c.has_min, True)
+        self.assertEqual(c.min, 1)
+        self.assertEqual(c.data_type, NumberInput.INT)
 
     def test_default_value_when_min_is_passed(self):
         st.number_input("the label", min_value=1, max_value=10)
@@ -333,3 +369,31 @@ class NumberInputTest(DeltaGeneratorTestCase):
         max_value = 10
         with pytest.raises(StreamlitAPIException):
             st.number_input("My Label", value=value, max_value=max_value)
+
+
+def test_number_input_interaction():
+    """Test interactions with an empty number input widget."""
+
+    def script():
+        import streamlit as st
+
+        st.number_input("the label", value=None)
+
+    at = AppTest.from_function(script).run()
+    number_input = at.number_input[0]
+    assert number_input.value is None
+
+    # Set the value to 10
+    at = number_input.set_value(10).run()
+    number_input = at.number_input[0]
+    assert number_input.value == 10
+
+    # # Increment the value
+    at = number_input.increment().run()
+    number_input = at.number_input[0]
+    assert number_input.value == 10.01
+
+    # # Clear the value
+    at = number_input.set_value(None).run()
+    number_input = at.number_input[0]
+    assert number_input.value is None

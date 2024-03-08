@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,10 @@ describe("HostCommunicationManager messaging", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
+      setInputsDisabled: jest.fn(),
       isOwnerChanged: jest.fn(),
+      jwtHeaderChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),
       hostHideSidebarNavChanged: jest.fn(),
@@ -66,7 +69,7 @@ describe("HostCommunicationManager messaging", () => {
 
     setAllowedOriginsFunc = jest.spyOn(
       hostCommunicationMgr,
-      "setAllowedOriginsResp"
+      "setAllowedOrigins"
     )
     openCommFunc = jest.spyOn(hostCommunicationMgr, "openHostCommunication")
     sendMessageToHostFunc = jest.spyOn(
@@ -74,7 +77,7 @@ describe("HostCommunicationManager messaging", () => {
       "sendMessageToHost"
     )
 
-    hostCommunicationMgr.setAllowedOriginsResp({
+    hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })
@@ -176,6 +179,41 @@ describe("HostCommunicationManager messaging", () => {
     // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.pageChanged).toHaveBeenCalledWith(
       "hash1"
+    )
+  })
+
+  it("can process a received SEND_APP_HEARTBEAT message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith()
+  })
+
+  it("can process a received SET_INPUTS_DISABLED message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_INPUTS_DISABLED",
+          disabled: true,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.setInputsDisabled).toHaveBeenCalledWith(
+      true
     )
   })
 
@@ -376,6 +414,7 @@ describe("HostCommunicationManager messaging", () => {
       textColor: "#1A1D21",
       widgetBackgroundColor: "#FFFFFF",
       widgetBorderColor: "#D3DAE8",
+      skeletonBackgroundColor: "#CCDDEE",
     }
     dispatchEvent(
       "message",
@@ -394,6 +433,24 @@ describe("HostCommunicationManager messaging", () => {
       hostCommunicationMgr.props.themeChanged
     ).toHaveBeenCalledWith(mockCustomThemeConfig)
   })
+
+  it("can process a received SET_AUTH_TOKEN message with JWT pair", () => {
+    const message = new MessageEvent("message", {
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "SET_AUTH_TOKEN",
+        jwtHeaderName: "X-JWT-HEADER-NAME",
+        jwtHeaderValue: "X-JWT-HEADER-VALUE",
+      },
+      origin: "https://devel.streamlit.test",
+    })
+    dispatchEvent("message", message)
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.jwtHeaderChanged
+    ).toHaveBeenCalledWith(message.data)
+  })
 })
 
 describe("Test different origins", () => {
@@ -409,6 +466,9 @@ describe("Test different origins", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
+      setInputsDisabled: jest.fn(),
+      jwtHeaderChanged: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),
@@ -427,7 +487,7 @@ describe("Test different origins", () => {
   })
 
   it("exact pattern", () => {
-    hostCommunicationMgr.setAllowedOriginsResp({
+    hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["http://share.streamlit.io"],
       useExternalAuthToken: false,
     })
@@ -448,7 +508,7 @@ describe("Test different origins", () => {
   })
 
   it("wildcard pattern", () => {
-    hostCommunicationMgr.setAllowedOriginsResp({
+    hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["http://*.streamlitapp.com"],
       useExternalAuthToken: false,
     })
@@ -469,7 +529,7 @@ describe("Test different origins", () => {
   })
 
   it("ignores non-matching origins", () => {
-    hostCommunicationMgr.setAllowedOriginsResp({
+    hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["http://share.streamlit.io"],
       useExternalAuthToken: false,
     })
@@ -502,6 +562,9 @@ describe("HostCommunicationManager external auth token handling", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
+      setInputsDisabled: jest.fn(),
+      jwtHeaderChanged: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),
@@ -516,10 +579,10 @@ describe("HostCommunicationManager external auth token handling", () => {
   it("resolves promise to undefined immediately if useExternalAuthToken is false", async () => {
     const setAllowedOriginsFunc = jest.spyOn(
       hostCommunicationMgr,
-      "setAllowedOriginsResp"
+      "setAllowedOrigins"
     )
 
-    hostCommunicationMgr.setAllowedOriginsResp({
+    hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["http://devel.streamlit.test"],
       useExternalAuthToken: false,
     })
@@ -534,11 +597,10 @@ describe("HostCommunicationManager external auth token handling", () => {
   it("waits to receive SET_AUTH_TOKEN message before resolving promise if useExternalAuthToken is true", async () => {
     const dispatchEvent = mockEventListeners()
 
-    hostCommunicationMgr.setAllowedOriginsResp({
+    hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["http://devel.streamlit.test"],
       useExternalAuthToken: true,
     })
-
     // Asynchronously send a SET_AUTH_TOKEN message to the
     // HostCommunicationManager, which won't proceed past the `await`
     // statement below until the message is received and handled.
@@ -567,8 +629,8 @@ describe("HostCommunicationManager external auth token handling", () => {
 
     // Simulate the browser tab disconnecting and reconnecting, which from the
     // HostCommunication's perspective is only seen as a new call to
-    // setAllowedOriginsResp.
-    hostCommunicationMgr.setAllowedOriginsResp({
+    // setAllowedOrigins.
+    hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["http://devel.streamlit.test"],
       useExternalAuthToken: true,
     })

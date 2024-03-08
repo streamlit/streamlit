@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ export default function Markdown({
 }: MarkdownProps): ReactElement {
   const styleProp = { width }
   return (
-    <div className="stMarkdown" style={styleProp}>
+    <div className="stMarkdown" style={styleProp} data-testid="stMarkdown">
       {element.help ? (
         <StyledLabelHelpWrapper>
           <StreamlitMarkdown

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,7 @@
 from __future__ import annotations
 
 import textwrap
-from typing import TYPE_CHECKING, NamedTuple, cast
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple, cast
 
 from streamlit import runtime
 from streamlit.errors import StreamlitAPIException
@@ -43,6 +41,9 @@ def _current_form(this_dg: DeltaGenerator) -> FormData | None:
     To find the current form, we walk up the dg_stack until we find
     a DeltaGenerator that has FormData.
     """
+    # Avoid circular imports.
+    from streamlit.delta_generator import dg_stack
+
     if not runtime.exists():
         return None
 
@@ -52,11 +53,7 @@ def _current_form(this_dg: DeltaGenerator) -> FormData | None:
     if this_dg == this_dg._main_dg:
         # We were created via an `st.foo` call.
         # Walk up the dg_stack to see if we're nested inside a `with st.form` statement.
-        ctx = get_script_run_ctx()
-        if ctx is None or len(ctx.dg_stack) == 0:
-            return None
-
-        for dg in reversed(ctx.dg_stack):
+        for dg in reversed(dg_stack.get()):
             if dg._form_data is not None:
                 return dg._form_data
     else:
@@ -116,7 +113,9 @@ def _build_duplicate_form_message(user_key: str | None = None) -> str:
 
 class FormMixin:
     @gather_metrics("form")
-    def form(self, key: str, clear_on_submit: bool = False) -> DeltaGenerator:
+    def form(
+        self, key: str, clear_on_submit: bool = False, *, border: bool = True
+    ) -> DeltaGenerator:
         """Create a form that batches elements together with a "Submit" button.
 
         A form is a container that visually groups other elements and
@@ -147,6 +146,14 @@ class FormMixin:
             values after the user presses the Submit button. Defaults to False.
             (Note that Custom Components are unaffected by this flag, and
             will not be reset to their defaults on form submission.)
+        border : bool
+            Whether to show a border around the form. Defaults to True.
+
+            .. note::
+                Not showing a border can be confusing to viewers since interacting with a
+                widget in the form will do nothing. You should only remove the border if
+                there's another border (e.g. because of an expander) or the form is small
+                (e.g. just a text input and a submit button).
 
         Examples
         --------
@@ -208,6 +215,7 @@ class FormMixin:
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
         block_proto.form.clear_on_submit = clear_on_submit
+        block_proto.form.border = border
         block_dg = self.dg._block(block_proto)
 
         # Attach the form's button info to the newly-created block's
@@ -255,11 +263,11 @@ class FormMixin:
             An optional dict of kwargs to pass to the callback.
         type : "secondary" or "primary"
             An optional string that specifies the button type. Can be "primary" for a
-            button with additional emphasis or "secondary" for a normal button. This
-            argument can only be supplied by keyword. Defaults to "secondary".
+            button with additional emphasis or "secondary" for a normal button. Defaults
+            to "secondary".
         disabled : bool
             An optional boolean, which disables the button if set to True. The
-            default is False. This argument can only be supplied by keyword.
+            default is False.
         use_container_width: bool
             An optional boolean, which makes the button stretch its width to match the parent container.
 

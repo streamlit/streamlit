@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 
 """A hashing utility for code."""
 
+from __future__ import annotations
+
 import collections
-import dis
 import enum
 import functools
 import hashlib
-import importlib
 import inspect
 import io
 import os
@@ -28,14 +28,14 @@ import sys
 import tempfile
 import textwrap
 import threading
-import unittest.mock
 import weakref
-from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
+from typing import Any, Callable, Dict, Pattern, Type, Union
 
 from streamlit import config, file_util, type_util, util
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+from streamlit.util import HASHLIB_KWARGS
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
 _PANDAS_ROWS_LARGE = 100000
@@ -94,8 +94,8 @@ def update_hash(
     hasher,
     hash_reason: HashReason,
     hash_source: Callable[..., Any],
-    context: Optional[Context] = None,
-    hash_funcs: Optional[HashFuncsDict] = None,
+    context: Context | None = None,
+    hash_funcs: HashFuncsDict | None = None,
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
 
@@ -121,15 +121,15 @@ class _HashStack:
     """
 
     def __init__(self):
-        self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
+        self._stack: collections.OrderedDict[int, list[Any]] = collections.OrderedDict()
 
         # The reason why we're doing this hashing, for debug purposes.
-        self.hash_reason: Optional[HashReason] = None
+        self.hash_reason: HashReason | None = None
 
         # Either a function or a code block, depending on whether the reason is
         # due to hashing part of a function (i.e. body, args, output) or an
         # st.Cache codeblock.
-        self.hash_source: Optional[Callable[..., Any]] = None
+        self.hash_source: Callable[..., Any] | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -146,7 +146,7 @@ class _HashStack:
     def pretty_print(self):
         def to_str(v):
             try:
-                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
+                return "Object of type {}: {}".format(type_util.get_fqn_type(v), str(v))
             except Exception:
                 return "<Unable to convert item to string>"
 
@@ -271,7 +271,7 @@ def _int_to_bytes(i: int) -> bytes:
     return i.to_bytes(num_bytes, "little", signed=True)
 
 
-def _key(obj: Optional[Any]) -> Any:
+def _key(obj: Any | None) -> Any:
     """Return key for memoization."""
 
     if obj is None:
@@ -314,7 +314,7 @@ def _key(obj: Optional[Any]) -> Any:
 class _CodeHasher:
     """A hasher that can hash code objects including dependencies."""
 
-    def __init__(self, hash_funcs: Optional[HashFuncsDict] = None):
+    def __init__(self, hash_funcs: HashFuncsDict | None = None):
         # Can't use types as the keys in the internal _hash_funcs because
         # we always remove user-written modules from memory when rerunning a
         # script in order to reload it and grab the latest code changes.
@@ -331,7 +331,7 @@ class _CodeHasher:
         else:
             self._hash_funcs = {}
 
-        self._hashes: Dict[Any, bytes] = {}
+        self._hashes: dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
         self.size = 0
@@ -339,7 +339,7 @@ class _CodeHasher:
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def to_bytes(self, obj: Any, context: Optional[Context] = None) -> bytes:
+    def to_bytes(self, obj: Any, context: Context | None = None) -> bytes:
         """Add memoization to _to_bytes and protect against cycles in data structures."""
         tname = type(obj).__qualname__.encode()
         key = (tname, _key(obj))
@@ -380,7 +380,7 @@ class _CodeHasher:
 
         return b
 
-    def update(self, hasher, obj: Any, context: Optional[Context] = None) -> None:
+    def update(self, hasher, obj: Any, context: Context | None = None) -> None:
         """Update the provided hasher with the hash of an object."""
         b = self.to_bytes(obj, context)
         hasher.update(b)
@@ -402,14 +402,18 @@ class _CodeHasher:
             filepath, self._get_main_script_directory()
         ) or file_util.file_in_pythonpath(filepath)
 
-    def _to_bytes(self, obj: Any, context: Optional[Context]) -> bytes:
+    def _to_bytes(self, obj: Any, context: Context | None) -> bytes:
         """Hash objects to bytes, including code with dependencies.
 
         Python's built in `hash` does not produce consistent results across
         runs.
         """
 
-        if isinstance(obj, unittest.mock.Mock):
+        h = hashlib.new("md5", **HASHLIB_KWARGS)
+
+        if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
+            obj, "unittest.mock.MagicMock"
+        ):
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
@@ -437,13 +441,11 @@ class _CodeHasher:
             return _int_to_bytes(obj)
 
         elif isinstance(obj, (list, tuple)):
-            h = hashlib.new("md5")
             for item in obj:
                 self.update(h, item, context)
             return h.digest()
 
         elif isinstance(obj, dict):
-            h = hashlib.new("md5")
             for item in obj.items():
                 self.update(h, item, context)
             return h.digest()
@@ -472,7 +474,6 @@ class _CodeHasher:
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "numpy.ndarray"):
-            h = hashlib.new("md5")
             self.update(h, obj.shape)
 
             if obj.size >= _NP_SIZE_LARGE:
@@ -502,7 +503,7 @@ class _CodeHasher:
             # UploadedFile is a BytesIO (thus IOBase) but has a name.
             # It does not have a timestamp so this must come before
             # temporary files
-            h = hashlib.new("md5")
+            h = hashlib.new("md5", **HASHLIB_KWARGS)
             self.update(h, obj.name)
             self.update(h, obj.tell())
             self.update(h, obj.getvalue())
@@ -518,7 +519,6 @@ class _CodeHasher:
             # on-disk and in-memory StringIO/BytesIO file representations.
             # That means that this condition must come *before* the next
             # condition, which just checks for StringIO/BytesIO.
-            h = hashlib.new("md5")
             obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
@@ -531,7 +531,6 @@ class _CodeHasher:
         elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
             # Hash in-memory StringIO/BytesIO by their full contents
             # and seek position.
-            h = hashlib.new("md5")
             self.update(h, obj.tell())
             self.update(h, obj.getvalue())
             return h.digest()
@@ -617,9 +616,7 @@ class _CodeHasher:
             if obj.__module__.startswith("streamlit"):
                 # Ignore streamlit modules even if they are in the CWD
                 # (e.g. during development).
-                return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
-
-            h = hashlib.new("md5")
+                return self.to_bytes("{}.{}".format(obj.__module__, obj.__name__))
 
             code = getattr(obj, "__code__", None)
             assert code is not None
@@ -663,7 +660,7 @@ class _CodeHasher:
             # The return value of functools.partial is not a plain function:
             # it's a callable object that remembers the original function plus
             # the values you pickled into it. So here we need to special-case it.
-            h = hashlib.new("md5")
+            h = hashlib.new("md5", **HASHLIB_KWARGS)
             self.update(h, obj.args)
             self.update(h, obj.func)
             self.update(h, obj.keywords)
@@ -671,7 +668,6 @@ class _CodeHasher:
 
         else:
             # As a last resort, hash the output of the object's __reduce__ method
-            h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
             except Exception as ex:
@@ -682,7 +678,7 @@ class _CodeHasher:
             return h.digest()
 
     def _code_to_bytes(self, code, context: Context, func=None) -> bytes:
-        h = hashlib.new("md5")
+        h = hashlib.new("md5", **HASHLIB_KWARGS)
 
         # Hash the bytecode.
         self.update(h, code.co_code)
@@ -715,11 +711,11 @@ class _CodeHasher:
         return str(abs_main_path.parent)
 
 
-def get_referenced_objects(code, context: Context) -> List[Any]:
+def get_referenced_objects(code, context: Context) -> list[Any]:
     # Top of the stack
     tos: Any = None
     lineno = None
-    refs: List[Any] = []
+    refs: list[Any] = []
 
     def set_tos(t):
         nonlocal tos
@@ -734,6 +730,7 @@ def get_referenced_objects(code, context: Context) -> List[Any]:
     # code reads `bar` of `foo`. We are going over the bytecode to resolve
     # from which object an attribute is requested.
     # Read more about bytecode at https://docs.python.org/3/library/dis.html
+    import dis
 
     for op in dis.get_instructions(code):
         try:
@@ -752,6 +749,8 @@ def get_referenced_objects(code, context: Context) -> List[Any]:
                 set_tos(context.cells.values[op.argval])
             elif op.opname == "IMPORT_NAME":
                 try:
+                    import importlib
+
                     set_tos(importlib.import_module(op.argval))
                 except ImportError:
                     set_tos(op.argval)
@@ -790,7 +789,7 @@ class NoResult:
 class UnhashableTypeError(StreamlitAPIException):
     def __init__(self, orig_exc, failed_obj):
         msg = self._get_message(orig_exc, failed_obj)
-        super(UnhashableTypeError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     def _get_message(self, orig_exc, failed_obj):
@@ -839,7 +838,7 @@ class UserHashError(StreamlitAPIException):
         else:
             msg = self._get_message_from_code(orig_exc, cached_func_or_code, lineno)
 
-        super(UserHashError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     def _get_message_from_func(self, orig_exc, cached_func, hash_func):
@@ -911,7 +910,7 @@ class InternalHashError(MarkdownFormattedException):
 
     def __init__(self, orig_exc: BaseException, failed_obj: Any):
         msg = self._get_message(orig_exc, failed_obj)
-        super(InternalHashError, self).__init__(msg)
+        super().__init__(msg)
         self.with_traceback(orig_exc.__traceback__)
 
     def _get_message(self, orig_exc: BaseException, failed_obj: Any) -> str:
@@ -954,7 +953,7 @@ for more details.
         ).strip("\n")
 
 
-def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[str, Any]:
+def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> dict[str, Any]:
     hash_reason = hash_stacks.current.hash_reason
     hash_source = hash_stacks.current.hash_source
 
@@ -989,7 +988,7 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
     }
 
 
-def _get_failing_lines(code, lineno: int) -> List[str]:
+def _get_failing_lines(code, lineno: int) -> list[str]:
     """Get list of strings (lines of code) from lineno to lineno+3.
 
     Ideally we'd return the exact line where the error took place, but there

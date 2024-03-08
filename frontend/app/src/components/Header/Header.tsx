@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ function Header({ isStale, children }: HeaderProps): ReactElement {
       data-testid="stHeader"
     >
       {showColoredLine && (
-        <StyledHeaderDecoration data-testid="stDecoration" />
+        <StyledHeaderDecoration data-testid="stDecoration" id="stDecoration" />
       )}
       {showToolbar && (
         <StyledHeaderToolbar data-testid="stToolbar">

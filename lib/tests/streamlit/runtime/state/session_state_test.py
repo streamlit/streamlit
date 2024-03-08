@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from typing import Any, List, Tuple
 from unittest.mock import MagicMock, patch
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as hst
 
 import streamlit as st
@@ -28,7 +28,6 @@ import tests.streamlit.runtime.state.strategies as stst
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_WIDGET_ID_PREFIX
@@ -39,7 +38,7 @@ from streamlit.runtime.state.session_state import (
     WStates,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
 
@@ -259,102 +258,85 @@ class SessionStateTest(DeltaGeneratorTestCase):
         ctx = get_script_run_ctx()
         assert ctx.session_state["color"] is not color
 
-    @patch("streamlit.warning")
-    def test_callbacks_with_experimental_rerun(self, patched_warning):
-        """Calling 'experimental_rerun' from within a widget callback
-        is disallowed and results in a warning.
-        """
 
-        # A mock on_changed handler for our checkbox. It will call
-        # `st.experimental_rerun`, which should result in a warning
-        # being printed to the user's app.
-        mock_on_checkbox_changed = MagicMock(side_effect=st.experimental_rerun)
+def test_callbacks_with_rerun():
+    """Calling 'rerun' from within a widget callback
+    is disallowed and results in a warning.
+    """
 
-        st.checkbox("the checkbox", on_change=mock_on_checkbox_changed)
+    def script():
+        import streamlit as st
 
-        session_state = _raw_session_state()
+        def callback():
+            st.session_state["message"] = "ran callback"
+            st.rerun()
 
-        # Pretend that the checkbox has a new state value
-        checkbox_state = WidgetStateProto()
-        checkbox_state.id = list(session_state._new_widget_state.keys())[0]
-        checkbox_state.bool_value = True
-        widget_states = WidgetStatesProto()
-        widget_states.widgets.append(checkbox_state)
+        st.checkbox("cb", on_change=callback)
 
-        # Tell session_state to call our callbacks.
-        session_state.on_script_will_rerun(widget_states)
-
-        mock_on_checkbox_changed.assert_called_once()
-        patched_warning.assert_called_once()
+    at = AppTest.from_function(script).run()
+    at.checkbox[0].check().run()
+    assert at.session_state["message"] == "ran callback"
+    warning = at.warning[0]
+    assert "no-op" in warning.value
 
 
-class SessionStateInteractionTest(InteractiveScriptTests):
-    def test_updates(self):
-        script = self.script_from_filename("test_data/linked_sliders.py")
-        sr = script.run()
-        assert sr.get("slider")[0].value == -100.0
-        assert sr.get("markdown")[0].value == "Celsius `-100.0`"
-        assert sr.get("slider")[1].value == -148.0
-        assert sr.get("markdown")[1].value == "Fahrenheit `-148.0`"
+def test_updates():
+    at = AppTest.from_file("test_data/linked_sliders.py").run()
+    assert at.slider.values == [-100.0, -148.0]
+    assert at.markdown.values == ["Celsius `-100.0`", "Fahrenheit `-148.0`"]
 
-        # Both sliders update when first is changed
-        sr2 = sr.get("slider")[0].set_value(0.0).run()
-        assert sr2.get("slider")[0].value == 0.0
-        assert sr2.get("markdown")[0].value == "Celsius `0.0`"
-        assert sr2.get("slider")[1].value == 32.0
-        assert sr2.get("markdown")[1].value == "Fahrenheit `32.0`"
+    # Both sliders update when first is changed
+    at.slider[0].set_value(0.0).run()
+    assert at.slider.values == [0.0, 32.0]
+    assert at.markdown.values == ["Celsius `0.0`", "Fahrenheit `32.0`"]
 
-        # Both sliders update when second is changed
-        sr3 = sr2.get("slider")[1].set_value(212.0).run()
-        assert sr3.get("slider")[0].value == 100.0
-        assert sr3.get("markdown")[0].value == "Celsius `100.0`"
-        assert sr3.get("slider")[1].value == 212.0
-        assert sr3.get("markdown")[1].value == "Fahrenheit `212.0`"
+    # Both sliders update when second is changed
+    at.slider[1].set_value(212.0).run()
+    assert at.slider.values == [100.0, 212.0]
+    assert at.markdown.values == ["Celsius `100.0`", "Fahrenheit `212.0`"]
 
-        # Sliders update when one is changed repeatedly
-        sr4 = sr3.get("slider")[0].set_value(0.0).run()
-        assert sr4.get("slider")[0].value == 0.0
-        assert sr4.get("slider")[1].value == 32.0
-        sr5 = sr4.get("slider")[0].set_value(100.0).run()
-        assert sr5.get("slider")[0].value == 100.0
-        assert sr5.get("slider")[1].value == 212.0
+    # Sliders update when one is changed repeatedly
+    at.slider[0].set_value(0.0).run()
+    assert at.slider.values == [0.0, 32.0]
+    at.slider[0].set_value(100.0).run()
+    assert at.slider.values == [100.0, 212.0]
 
-    def test_serializable_check(self):
-        """When the config option is on, adding unserializable data to session
-        state should result in an exception.
-        """
-        with patch_config_options({"runner.enforceSerializableSessionState": True}):
-            script = self.script_from_string(
-                """
-                import streamlit as st
 
-                def unserializable_data():
-                    return lambda x: x
+def test_serializable_check():
+    """When the config option is on, adding unserializable data to session
+    state should result in an exception.
+    """
+    with patch_config_options({"runner.enforceSerializableSessionState": True}):
 
-                st.session_state.unserializable = unserializable_data()
-                """,
-            )
-            sr = script.run()
-            assert sr.get("exception")
-            assert "pickle" in sr.get("exception")[0].value
+        def script():
+            import streamlit as st
 
-    def test_serializable_check_off(self):
-        """When the config option is off, adding unserializable data to session
-        state should work without errors.
-        """
-        with patch_config_options({"runner.enforceSerializableSessionState": False}):
-            script = self.script_from_string(
-                """
-                import streamlit as st
+            def unserializable_data():
+                return lambda x: x
 
-                def unserializable_data():
-                    return lambda x: x
+            st.session_state.unserializable = unserializable_data()
 
-                st.session_state.unserializable = unserializable_data()
-                """,
-            )
-            sr = script.run()
-            assert not sr.get("exception")
+        at = AppTest.from_function(script).run()
+        assert at.exception
+        assert "pickle" in at.exception[0].value
+
+
+def test_serializable_check_off():
+    """When the config option is off, adding unserializable data to session
+    state should work without errors.
+    """
+    with patch_config_options({"runner.enforceSerializableSessionState": False}):
+
+        def script():
+            import streamlit as st
+
+            def unserializable_data():
+                return lambda x: x
+
+            st.session_state.unserializable = unserializable_data()
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
 
 
 def check_roundtrip(widget_id: str, value: Any) -> None:
@@ -538,8 +520,8 @@ def _sorted_items(state: SessionState) -> List[Tuple[str, Any]]:
 
 class SessionStateMethodTests(unittest.TestCase):
     def setUp(self):
-        old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
-        new_session_state = {"foo": "bar2"}
+        self.old_state = {"foo": "bar", "baz": "qux", "corge": "grault"}
+        self.new_session_state = {"foo": "bar2"}
         new_widget_state = WStates(
             {
                 "baz": Value("qux2"),
@@ -547,7 +529,7 @@ class SessionStateMethodTests(unittest.TestCase):
             },
         )
         self.session_state = SessionState(
-            old_state, new_session_state, new_widget_state
+            self.old_state, self.new_session_state, new_widget_state
         )
 
     def test_compact(self):
@@ -560,6 +542,21 @@ class SessionStateMethodTests(unittest.TestCase):
         }
         assert self.session_state._new_session_state == {}
         assert self.session_state._new_widget_state == WStates()
+
+    # https://github.com/streamlit/streamlit/issues/7206
+    def test_ignore_key_error_within_compact_state(self):
+        wstates = WStates()
+
+        widget_state = WidgetStateProto()
+        widget_state.id = "widget_id_1"
+        widget_state.int_value = 5
+        wstates.set_widget_from_proto(widget_state)
+        session_state = SessionState(self.old_state, self.new_session_state, wstates)
+        # KeyError should be thrown from grabbing a key with no metadata
+        # but _compact_state catches it so no KeyError should be thrown
+        session_state._compact_state()
+        with pytest.raises(KeyError):
+            wstates["baz"]
 
     def test_clear_state(self):
         # Sanity test
@@ -704,16 +701,19 @@ class SessionStateMethodTests(unittest.TestCase):
 
 
 @given(state=stst.session_state())
+@settings(deadline=400)
 def test_compact_idempotent(state):
     assert _compact_copy(state) == _compact_copy(_compact_copy(state))
 
 
 @given(state=stst.session_state())
+@settings(deadline=400)
 def test_compact_len(state):
     assert len(state) >= len(_compact_copy(state))
 
 
 @given(state=stst.session_state())
+@settings(deadline=400)
 def test_compact_presence(state):
     assert _sorted_items(state) == _sorted_items(_compact_copy(state))
 

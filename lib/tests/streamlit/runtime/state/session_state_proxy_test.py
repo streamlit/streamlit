@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ def _create_mock_session_state(
     session_state = SessionState()
     for key, value in initial_state_values.items():
         session_state[key] = value
-    return SafeSessionState(session_state)
+    return SafeSessionState(session_state, lambda: None)
 
 
 @patch(

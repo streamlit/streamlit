@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,8 +99,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
       this.props.theme.breakpoints.md
     )
-    // Immediately expand/collapse sidebar when initialSidebarState changes.
-    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
+    // Immediately expand/collapse sidebar when initialSidebarState or hasElements changes
+    if (
+      this.props.initialSidebarState !== prevProps.initialSidebarState ||
+      this.props.hasElements !== prevProps.hasElements
+    ) {
       this.setState({
         collapsedSidebar: Sidebar.shouldCollapse(
           this.props,
@@ -200,6 +203,20 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ hideScrollbar: newValue })
   }
 
+  // Additional safeguard for sidebar height sizing
+  headerDecorationVisible(): boolean {
+    let coloredLineExists = false
+    const headerDecoration = document.getElementById("stDecoration")
+    if (headerDecoration) {
+      const decorationStyles = window.getComputedStyle(headerDecoration)
+      coloredLineExists =
+        decorationStyles.visibility !== "hidden" &&
+        decorationStyles.visibility !== "collapse" &&
+        decorationStyles.display !== "none"
+    }
+    return coloredLineExists
+  }
+
   public render(): ReactNode {
     const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
     const {
@@ -213,6 +230,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     } = this.props
 
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
+    // Handles checking the URL params
+    const isEmbedded = isEmbed() && !isColoredLineDisplayed()
+    // If header decoration visible, move sidebar down so decoration doesn't go below it
+    const sidebarAdjust = !isEmbedded && this.headerDecorationVisible()
 
     // The tabindex is required to support scrolling by arrow keys.
     return (
@@ -244,7 +265,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           handleComponent={{
             right: <StyledResizeHandle onClick={this.resetSidebarWidth} />,
           }}
-          size={{ width: sidebarWidth, height: "100%" }}
+          size={{
+            width: sidebarWidth,
+            // Addresses height glitch when anchor used - issue #6264
+            height: sidebarAdjust ? window.innerHeight - 2 : "100%",
+          }}
           as={StyledSidebar}
           onResizeStop={(e, direction, ref, d) => {
             const newWidth = parseInt(sidebarWidth, 10) + d.width
@@ -253,10 +278,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
           // Props part of StyledSidebar, but not Resizable component
           // @ts-expect-error
           isCollapsed={collapsedSidebar}
-          isEmbed={isEmbed() && !isColoredLineDisplayed()}
+          adjustTop={sidebarAdjust}
           sidebarWidth={sidebarWidth}
         >
           <StyledSidebarContent
+            data-testid="stSidebarContent"
             hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
@@ -279,7 +305,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 onPageChange={onPageChange}
               />
             )}
-            <StyledSidebarUserContent hasPageNavAbove={hasPageNavAbove}>
+            <StyledSidebarUserContent
+              data-testid="stSidebarUserContent"
+              hasPageNavAbove={hasPageNavAbove}
+            >
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>

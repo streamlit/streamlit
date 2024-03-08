@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,19 @@ import { transparentize } from "color2k"
 
 export interface StyledSidebarProps {
   isCollapsed: boolean
-  isEmbed: boolean
+  adjustTop: boolean
   sidebarWidth: string
 }
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
-  ({ theme, isCollapsed, isEmbed, sidebarWidth }) => {
+  ({ theme, isCollapsed, adjustTop, sidebarWidth }) => {
     const minWidth = isCollapsed ? 0 : Math.min(244, window.innerWidth)
     const maxWidth = isCollapsed ? 0 : Math.min(550, window.innerWidth * 0.9)
 
     return {
       // Nudge the sidebar by 2px so the header decoration doesn't go below it
       position: "relative",
-      top: isEmbed ? "0px" : "2px",
+      top: adjustTop ? "2px" : "0px",
       backgroundColor: theme.colors.bgColor,
       zIndex: theme.zIndices.header + 1,
 
@@ -244,8 +244,8 @@ export const StyledSidebarUserContent =
       ? theme.spacing.lg
       : theme.sizes.sidebarTopSpace,
     paddingBottom: theme.sizes.sidebarTopSpace,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
+    paddingLeft: theme.spacing.twoXL,
+    paddingRight: theme.spacing.twoXL,
 
     "@media print": {
       paddingTop: `1rem`,

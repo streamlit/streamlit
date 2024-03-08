@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                 config = RuntimeConfig(
                     "mock/script/path.py",
                     "",
+                    component_registry=MagicMock(),
                     media_file_storage=MagicMock(),
                     uploaded_file_manager=MagicMock(),
                     session_manager_class=MagicMock,

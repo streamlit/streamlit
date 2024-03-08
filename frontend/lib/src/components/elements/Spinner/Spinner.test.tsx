@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,23 @@
  */
 
 import React from "react"
-import { mount } from "@streamlit/lib/src/test_util"
-
 import { BaseProvider, LightTheme } from "baseui"
+import { screen } from "@testing-library/react"
+
+import "@testing-library/jest-dom"
+
 import { Spinner as SpinnerProto } from "@streamlit/lib/src/proto"
+import { render } from "@streamlit/lib/src/test_util"
+
 import Spinner, { SpinnerProps } from "./Spinner"
 
 const getProps = (
-  propOverrides: Partial<SpinnerProps> = {}
+  propOverrides: Partial<SpinnerProps> = {},
+  elementOverrides: Partial<SpinnerProto> = {}
 ): SpinnerProps => ({
   element: SpinnerProto.create({
     text: "Loading...",
+    ...elementOverrides,
   }),
   width: 0,
   ...propOverrides,
@@ -33,26 +39,43 @@ const getProps = (
 
 describe("Spinner component", () => {
   it("renders without crashing", () => {
-    const wrapper = mount(
+    render(
       <BaseProvider theme={LightTheme}>
         <Spinner {...getProps()} />
       </BaseProvider>
     )
 
-    expect(wrapper.find("StyledSpinnerContainer").length).toBe(1)
-    expect(wrapper.find("StyledSpinnerContainer").html()).toMatchSnapshot()
+    const spinnerContainer = screen.getByTestId("stSpinner")
+    expect(spinnerContainer).toBeInTheDocument()
   })
 
   it("sets the text and width correctly", () => {
-    const wrapper = mount(
+    render(
       <BaseProvider theme={LightTheme}>
         <Spinner {...getProps({ width: 100 })} />
       </BaseProvider>
     )
 
-    expect(wrapper.find("StreamlitMarkdown").prop("source")).toEqual(
-      "Loading..."
+    const markdownText = screen.getByText("Loading...")
+    expect(markdownText).toBeInTheDocument()
+
+    // For the width, as it's a style attribute, we can test it this way:
+    const spinnerElement = screen.getByTestId("stSpinner")
+    expect(spinnerElement).toHaveStyle(`width: 100px`)
+  })
+
+  it("sets additional className/CSS for caching spinner", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Spinner {...getProps({}, { cache: true })} />
+      </BaseProvider>
     )
-    expect(wrapper.find("Spinner").prop("width")).toEqual(100)
+
+    const spinnerContainer = screen.getByTestId("stSpinner")
+    expect(spinnerContainer).toBeInTheDocument()
+
+    expect(spinnerContainer).toHaveClass("stSpinner")
+    expect(spinnerContainer).toHaveClass("cacheSpinner")
+    expect(spinnerContainer).toHaveStyle("paddingBottom: 1rem")
   })
 })

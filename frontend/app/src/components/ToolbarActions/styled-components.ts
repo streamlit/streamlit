@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,3 +39,9 @@ export const StyledActionButtonIcon = styled.div<StyledActionButtonIconProps>(
     height: "1rem",
   })
 )
+
+export const StyledToolbarActions = styled.div(({}) => ({
+  display: "flex",
+  alignItems: "center",
+  flexDirection: "row",
+}))

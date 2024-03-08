@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
             can easily share what you're seeing with others.
           </p>
           <p>
-            <StyledRecordAudioLabel>
+            <StyledRecordAudioLabel data-testid="stScreencastAudioCheckbox">
               <input
                 type="checkbox"
                 name="recordAudio"
@@ -88,7 +88,7 @@ class ScreencastDialog extends PureComponent<Props, State> {
               Also record audio
             </StyledRecordAudioLabel>
           </p>
-          <StyledInstruction>
+          <StyledInstruction data-testid="stScreencastInstruction">
             Press <kbd>Esc</kbd> any time to stop recording.
           </StyledInstruction>
         </ModalBody>

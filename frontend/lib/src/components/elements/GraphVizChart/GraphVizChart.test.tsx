@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,11 @@
  */
 
 import React from "react"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
 import { logError } from "@streamlit/lib/src/util/log"
-import { mount } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/lib/src/proto"
 import { GraphVizChart, GraphVizChartProps } from "./GraphVizChart"
 
@@ -26,8 +28,10 @@ jest.mock("d3-graphviz", () => ({
     zoom: () => ({
       fit: () => ({
         scale: () => ({
-          renderDot: () => ({
-            on: jest.fn(),
+          engine: () => ({
+            renderDot: () => ({
+              on: jest.fn(),
+            }),
           }),
         }),
       }),
@@ -47,8 +51,7 @@ const getProps = (
     elementId: "1",
     ...elementProps,
   }),
-  width: 0,
-  height: undefined,
+  isFullScreen: false,
 })
 
 describe("GraphVizChart Element", () => {
@@ -57,40 +60,75 @@ describe("GraphVizChart Element", () => {
     logError.mockClear()
   })
 
+  afterEach(() => {
+    // @ts-expect-error
+    graphviz.mockClear()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = mount(<GraphVizChart {...props} />)
+    render(<GraphVizChart {...props} />)
 
-    expect(wrapper.find("StyledGraphVizChart").length).toBe(1)
+    expect(screen.getByTestId("stGraphVizChart")).toBeInTheDocument()
     expect(logError).not.toHaveBeenCalled()
     expect(graphviz).toHaveBeenCalled()
   })
 
-  it("should call updateChart and log error when crashes", () => {
+  it("should update chart and log error when crashes", () => {
+    // Mock graphviz().renderDot() to throw an error for the "crash" spec
+    const mockRenderDot = jest.fn().mockImplementation(spec => {
+      if (spec === "crash") {
+        throw new Error("Simulated GraphViz crash")
+      }
+      return {
+        on: jest.fn(),
+      }
+    })
+
+    // Modify the graphviz mock to use the mockRenderDot
+    ;(graphviz as jest.Mock).mockReturnValue({
+      zoom: () => ({
+        fit: () => ({
+          scale: () => ({
+            engine: () => ({
+              renderDot: mockRenderDot,
+            }),
+          }),
+        }),
+      }),
+    })
+
     const props = getProps({
       spec: "crash",
     })
-    const wrapper = mount(<GraphVizChart {...props} />)
 
-    // @ts-expect-error
-    logError.mockClear()
-
-    wrapper.setProps({
-      width: 400,
-      height: 500,
-    })
+    render(<GraphVizChart {...props} />)
 
     expect(logError).toHaveBeenCalledTimes(1)
+    expect(mockRenderDot).toHaveBeenCalledWith("crash")
+    expect(graphviz).toHaveBeenCalledTimes(1)
   })
 
-  it("should render with height and width", () => {
+  it("shoud render with height and width set to auto", () => {
     const props = {
       ...getProps(),
-      height: 500,
-      width: 400,
     }
-    const wrapper = mount(<GraphVizChart {...props} />)
+    render(<GraphVizChart {...props} />)
 
-    expect(wrapper.find("StyledGraphVizChart").props()).toMatchSnapshot()
+    expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
+      "height: auto; width: auto"
+    )
+  })
+
+  it("shoud render with height and width set to 100%", () => {
+    const props = {
+      ...getProps(),
+      isFullScreen: true,
+    }
+    render(<GraphVizChart {...props} />)
+
+    expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
+      "height: 100%; width: 100%"
+    )
   })
 })

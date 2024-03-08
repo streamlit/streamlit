@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,11 @@
 
 import { CancelToken } from "axios"
 import { IAppPage } from "./proto"
+
+export type JWTHeader = {
+  jwtHeaderName: string
+  jwtHeaderValue: string
+}
 
 /** Exposes non-websocket endpoints used by the frontend. */
 export interface StreamlitEndpoints {
@@ -94,4 +99,10 @@ export interface StreamlitEndpoints {
    * from the server. Callers can use `ForwardMsg.decode` to deserialize the data.
    */
   fetchCachedForwardMsg(hash: string): Promise<Uint8Array>
+
+  /**
+   * Set JWT Header.
+   * @param jwtHeader the object that contains jwtHeaderName and jwtHeaderValue
+   */
+  setJWTHeader?(jwtHeader: JWTHeader): void
 }

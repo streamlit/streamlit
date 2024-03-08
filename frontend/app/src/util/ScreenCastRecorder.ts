@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,12 +36,17 @@ class ScreenCastRecorder {
 
   /** True if the current browser likely supports screencasts. */
   public static isSupportedBrowser(): boolean {
-    return (
-      navigator.mediaDevices != null &&
-      navigator.mediaDevices.getUserMedia != null &&
-      navigator.mediaDevices.getDisplayMedia != null &&
-      MediaRecorder.isTypeSupported(BLOB_TYPE)
-    )
+    try {
+      return (
+        navigator.mediaDevices != null &&
+        navigator.mediaDevices.getUserMedia != null &&
+        navigator.mediaDevices.getDisplayMedia != null &&
+        MediaRecorder.isTypeSupported(BLOB_TYPE)
+      )
+    } catch (e) {
+      // In the event of an error, assume it won't support screencasts
+      return false
+    }
   }
 
   constructor({ recordAudio, onErrorOrStop }: ScreenCastRecorderOptions) {

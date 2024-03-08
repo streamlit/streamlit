@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,11 +18,14 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -41,6 +44,8 @@ class RadioTest(DeltaGeneratorTestCase):
         )
         self.assertEqual(c.default, 0)
         self.assertEqual(c.disabled, False)
+        self.assertEqual(c.HasField("default"), True)
+        self.assertEqual(c.captions, [])
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -48,6 +53,17 @@ class RadioTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.radio
         self.assertEqual(c.disabled, True)
+
+    def test_none_value(self):
+        """Test that it can be called with None as index value."""
+        st.radio("the label", ("m", "f"), index=None)
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, "the label")
+        # If a proto property is null is not determined by this value,
+        # but by the check via the HasField method:
+        self.assertEqual(c.default, 0)
+        self.assertEqual(c.HasField("default"), False)
 
     def test_horizontal(self):
         """Test that it can be called with horizontal param."""
@@ -212,3 +228,82 @@ class RadioTest(DeltaGeneratorTestCase):
             "Unsupported label_visibility option 'wrong_value'. Valid values are "
             "'visible', 'hidden' or 'collapsed'.",
         )
+
+    def test_no_captions(self):
+        """Test that it can be called with no captions."""
+        st.radio("the label", ("option1", "option2", "option3"), captions=None)
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, 0)
+        self.assertEqual(c.captions, [])
+
+    def test_some_captions(self):
+        """Test that it can be called with some captions."""
+        st.radio(
+            "the label",
+            ("option1", "option2", "option3", "option4"),
+            captions=("first caption", None, "", "last caption"),
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        self.assertEqual(c.label, "the label")
+        self.assertEqual(c.default, 0)
+        self.assertEqual(c.captions, ["first caption", "", "", "last caption"])
+
+
+def test_radio_interaction():
+    """Test interactions with an empty radio widget."""
+
+    def script():
+        import streamlit as st
+
+        st.radio("the label", ("m", "f"), index=None)
+
+    at = AppTest.from_function(script).run()
+    radio = at.radio[0]
+    assert radio.value is None
+
+    # Select option m
+    at = radio.set_value("m").run()
+    radio = at.radio[0]
+    assert radio.value == "m"
+
+    # # Clear the value
+    at = radio.set_value(None).run()
+    radio = at.radio[0]
+    assert radio.value is None
+
+
+def test_radio_enum_coercion():
+    """Test E2E Enum Coercion on a radio."""
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class EnumA(Enum):
+            A = 1
+            B = 2
+            C = 3
+
+        selected = st.radio("my_enum", EnumA, index=0)
+        st.text(id(selected.__class__))
+        st.text(id(EnumA))
+        st.text(selected in EnumA)
+
+    at = AppTest.from_function(script).run()
+
+    def test_enum():
+        radio = at.radio[0]
+        original_class = radio.value.__class__
+        radio.set_value(original_class.C).run()
+        assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
+        assert at.text[2].value == "True", "Not all enums found in class"
+
+    with patch_config_options({"runner.enumCoercion": "nameOnly"}):
+        test_enum()
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        with pytest.raises(AssertionError):
+            test_enum()  # expect a failure with the config value off.

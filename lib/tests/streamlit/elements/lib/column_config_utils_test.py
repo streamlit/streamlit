@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnConfigMapping,
     ColumnConfigMappingInput,
     ColumnDataKind,
+    _convert_column_config_to_json,
     _determine_data_kind,
     _determine_data_kind_via_arrow,
     _determine_data_kind_via_inferred_type,
@@ -491,6 +492,19 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         else:
             self.assertNotIn(INDEX_IDENTIFIER, columns_config)
 
+    def test_apply_data_specific_configs_makes_index_required(self):
+        """Test that a non-range index gets configured as required."""
+        columns_config: ColumnConfigMapping = {}
+        data_df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}, index=["a", "b", "c"])
+        apply_data_specific_configs(
+            columns_config, data_df, DataFormat.PANDAS_DATAFRAME
+        )
+        self.assertEqual(
+            columns_config[INDEX_IDENTIFIER]["required"],
+            True,
+            f"Index of type {type(data_df.index)} should be configured as required.",
+        )
+
     @parameterized.expand(
         [
             (DataFormat.SET_OF_VALUES, True),
@@ -552,3 +566,17 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         self.assertNotIn("b", columns_config)
         self.assertTrue(columns_config["c"]["disabled"])
         self.assertTrue(columns_config["d"]["disabled"])
+
+    def test_nan_as_value_raises_exception(self):
+        """Test that the usage of `nan` as value in column config raises an exception."""
+
+        with self.assertRaises(StreamlitAPIException):
+            _convert_column_config_to_json(
+                {
+                    "label": "Col1",
+                    "type_config": {
+                        "type": "selectbox",
+                        "options": ["a", "b", "c", np.nan],
+                    },
+                },
+            )

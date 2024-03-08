@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,9 @@
 # limitations under the License.
 
 """Hashing for st.cache_data and st.cache_resource."""
+
+from __future__ import annotations
+
 import collections
 import dataclasses
 import datetime
@@ -25,31 +28,35 @@ import pickle
 import sys
 import tempfile
 import threading
-import unittest.mock
 import uuid
 import weakref
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Pattern, Type, Union
+from typing import Any, Callable, Dict, Final, Pattern, Type, Union
+
+from typing_extensions import TypeAlias
 
 from streamlit import type_util, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+from streamlit.util import HASHLIB_KWARGS
 
 # If a dataframe has more than this many rows, we consider it large and hash a sample.
-_PANDAS_ROWS_LARGE = 100000
-_PANDAS_SAMPLE_SIZE = 10000
+_PANDAS_ROWS_LARGE: Final = 100000
+_PANDAS_SAMPLE_SIZE: Final = 10000
 
 # Similar to dataframes, we also sample large numpy arrays.
-_NP_SIZE_LARGE = 1000000
-_NP_SAMPLE_SIZE = 100000
+_NP_SIZE_LARGE: Final = 1000000
+_NP_SAMPLE_SIZE: Final = 100000
 
-HashFuncsDict = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
+HashFuncsDict: TypeAlias = Dict[Union[str, Type[Any]], Callable[[Any], Any]]
 
 # Arbitrary item to denote where we found a cycle in a hashed object.
 # This allows us to hash self-referencing lists, dictionaries, etc.
-_CYCLE_PLACEHOLDER = b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+_CYCLE_PLACEHOLDER: Final = (
+    b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
+)
 
 
 class UserHashError(StreamlitAPIException):
@@ -58,7 +65,7 @@ class UserHashError(StreamlitAPIException):
         orig_exc,
         object_to_hash,
         hash_func,
-        cache_type: Optional[CacheType] = None,
+        cache_type: CacheType | None = None,
     ):
         self.alternate_name = type(orig_exc).__name__
         self.hash_func = hash_func
@@ -99,7 +106,7 @@ If you think this is actually a Streamlit bug, please
         self,
         orig_exc: BaseException,
         failed_obj: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         hash_source = hash_stacks.current.hash_source
 
         failed_obj_type_str = type_util.get_fqn_type(failed_obj)
@@ -137,8 +144,8 @@ def update_hash(
     val: Any,
     hasher,
     cache_type: CacheType,
-    hash_source: Optional[Callable[..., Any]] = None,
-    hash_funcs: Optional[HashFuncsDict] = None,
+    hash_source: Callable[..., Any] | None = None,
+    hash_funcs: HashFuncsDict | None = None,
 ) -> None:
     """Updates a hashlib hasher with the hash of val.
 
@@ -164,10 +171,10 @@ class _HashStack:
     """
 
     def __init__(self):
-        self._stack: collections.OrderedDict[int, List[Any]] = collections.OrderedDict()
+        self._stack: collections.OrderedDict[int, list[Any]] = collections.OrderedDict()
         # A function that we decorate with streamlit cache
         # primitive (st.cache_data or st.cache_resource).
-        self.hash_source: Optional[Callable[..., Any]] = None
+        self.hash_source: Callable[..., Any] | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -223,7 +230,15 @@ def _int_to_bytes(i: int) -> bytes:
     return i.to_bytes(num_bytes, "little", signed=True)
 
 
-def _key(obj: Optional[Any]) -> Any:
+def _float_to_bytes(f: float) -> bytes:
+    # Lazy-load for performance reasons.
+    import struct
+
+    # Floats are 64bit in Python, so we need to use the "d" format.
+    return struct.pack("<d", f)
+
+
+def _key(obj: Any | None) -> Any:
     """Return key for memoization."""
 
     if obj is None:
@@ -252,13 +267,7 @@ def _key(obj: Optional[Any]) -> Any:
         if all(map(is_simple, obj)):
             return ("__l", tuple(obj))
 
-    if (
-        type_util.is_type(obj, "pandas.core.frame.DataFrame")
-        or type_util.is_type(obj, "numpy.ndarray")
-        or inspect.isbuiltin(obj)
-        or inspect.isroutine(obj)
-        or inspect.iscode(obj)
-    ):
+    if inspect.isbuiltin(obj) or inspect.isroutine(obj) or inspect.iscode(obj):
         return id(obj)
 
     return NoResult
@@ -267,9 +276,7 @@ def _key(obj: Optional[Any]) -> Any:
 class _CacheFuncHasher:
     """A hasher that can hash objects with cycles."""
 
-    def __init__(
-        self, cache_type: CacheType, hash_funcs: Optional[HashFuncsDict] = None
-    ):
+    def __init__(self, cache_type: CacheType, hash_funcs: HashFuncsDict | None = None):
         # Can't use types as the keys in the internal _hash_funcs because
         # we always remove user-written modules from memory when rerunning a
         # script in order to reload it and grab the latest code changes.
@@ -285,7 +292,7 @@ class _CacheFuncHasher:
             }
         else:
             self._hash_funcs = {}
-        self._hashes: Dict[Any, bytes] = {}
+        self._hashes: dict[Any, bytes] = {}
 
         # The number of the bytes in the hash.
         self.size = 0
@@ -341,7 +348,11 @@ class _CacheFuncHasher:
         runs.
         """
 
-        if isinstance(obj, unittest.mock.Mock):
+        h = hashlib.new("md5", **HASHLIB_KWARGS)
+
+        if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
+            obj, "unittest.mock.MagicMock"
+        ):
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
@@ -364,7 +375,7 @@ class _CacheFuncHasher:
             return obj.encode()
 
         elif isinstance(obj, float):
-            return self.to_bytes(hash(obj))
+            return _float_to_bytes(obj)
 
         elif isinstance(obj, int):
             return _int_to_bytes(obj)
@@ -376,13 +387,11 @@ class _CacheFuncHasher:
             return obj.isoformat().encode()
 
         elif isinstance(obj, (list, tuple)):
-            h = hashlib.new("md5")
             for item in obj:
                 self.update(h, item)
             return h.digest()
 
         elif isinstance(obj, dict):
-            h = hashlib.new("md5")
             for item in obj.items():
                 self.update(h, item)
             return h.digest()
@@ -402,23 +411,46 @@ class _CacheFuncHasher:
         elif isinstance(obj, Enum):
             return str(obj).encode()
 
-        elif type_util.is_type(obj, "pandas.core.frame.DataFrame") or type_util.is_type(
-            obj, "pandas.core.series.Series"
-        ):
+        elif type_util.is_type(obj, "pandas.core.series.Series"):
             import pandas as pd
+
+            self.update(h, obj.size)
+            self.update(h, obj.dtype.name)
+
+            if len(obj) >= _PANDAS_ROWS_LARGE:
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
+
+            try:
+                self.update(h, pd.util.hash_pandas_object(obj).values.tobytes())
+                return h.digest()
+            except TypeError:
+                # Use pickle if pandas cannot hash the object for example if
+                # it contains unhashable objects.
+                return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+
+        elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
+            import pandas as pd
+
+            self.update(h, obj.shape)
 
             if len(obj) >= _PANDAS_ROWS_LARGE:
                 obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
             try:
-                return b"%s" % pd.util.hash_pandas_object(obj).sum()
+                column_hash_bytes = self.to_bytes(
+                    pd.util.hash_pandas_object(obj.dtypes)
+                )
+                self.update(h, column_hash_bytes)
+                values_hash_bytes = self.to_bytes(pd.util.hash_pandas_object(obj))
+                self.update(h, values_hash_bytes)
+                return h.digest()
             except TypeError:
                 # Use pickle if pandas cannot hash the object for example if
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "numpy.ndarray"):
-            h = hashlib.new("md5")
             self.update(h, obj.shape)
+            self.update(h, str(obj.dtype))
 
             if obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
@@ -451,7 +483,6 @@ class _CacheFuncHasher:
             # UploadedFile is a BytesIO (thus IOBase) but has a name.
             # It does not have a timestamp so this must come before
             # temporary files
-            h = hashlib.new("md5")
             self.update(h, obj.name)
             self.update(h, obj.tell())
             self.update(h, obj.getvalue())
@@ -467,7 +498,6 @@ class _CacheFuncHasher:
             # on-disk and in-memory StringIO/BytesIO file representations.
             # That means that this condition must come *before* the next
             # condition, which just checks for StringIO/BytesIO.
-            h = hashlib.new("md5")
             obj_name = getattr(obj, "name", "wonthappen")  # Just to appease MyPy.
             self.update(h, obj_name)
             self.update(h, os.path.getmtime(obj_name))
@@ -480,7 +510,6 @@ class _CacheFuncHasher:
         elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
             # Hash in-memory StringIO/BytesIO by their full contents
             # and seek position.
-            h = hashlib.new("md5")
             self.update(h, obj.tell())
             self.update(h, obj.getvalue())
             return h.digest()
@@ -512,7 +541,6 @@ class _CacheFuncHasher:
             # The return value of functools.partial is not a plain function:
             # it's a callable object that remembers the original function plus
             # the values you pickled into it. So here we need to special-case it.
-            h = hashlib.new("md5")
             self.update(h, obj.args)
             self.update(h, obj.func)
             self.update(h, obj.keywords)
@@ -520,7 +548,6 @@ class _CacheFuncHasher:
 
         else:
             # As a last resort, hash the output of the object's __reduce__ method
-            h = hashlib.new("md5")
             try:
                 reduce_data = obj.__reduce__()
             except Exception as ex:

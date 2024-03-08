@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ export interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInSidebar: boolean
   isLabel?: boolean
+  boldLabel?: boolean
   largerLabel?: boolean
-  isButton?: boolean
   isToast?: boolean
 }
 
@@ -45,13 +45,13 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInSidebar,
       isLabel,
+      boldLabel,
       largerLabel,
-      isButton,
       isToast,
     }) => {
       // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
       // Toasts also have smaller font size
-      const labelFontSize = (isLabel && !largerLabel && !isButton) || isToast
+      const labelFontSize = (isLabel && !largerLabel) || isToast
       return {
         fontFamily: theme.genericFonts.bodyFont,
         marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
@@ -60,6 +60,7 @@ export const StyledStreamlitMarkdown =
         p: {
           wordBreak: "break-word",
           marginBottom: isLabel ? 0 : "",
+          fontWeight: boldLabel ? 600 : "",
           ...(labelFontSize ? { fontSize: theme.fontSizes.sm } : {}),
         },
 
@@ -185,3 +186,22 @@ export const StyledHeaderContent = styled.span(() => ({
   flex: "1",
   marginLeft: "calc(2.5rem + 0.5rem)",
 }))
+
+export interface StyledDividerProps {
+  rainbow: boolean
+  color: string
+}
+
+export const StyledDivider = styled.hr<StyledDividerProps>(
+  ({ rainbow, color }) => {
+    return {
+      // Height needs to be !important due to globalStyles.tsx hr height override - line #170
+      height: "2px !important",
+      marginTop: "0.5rem",
+      marginBottom: "0px",
+      border: "none",
+      borderRadius: "3px",
+      ...(rainbow ? { background: color } : { backgroundColor: color }),
+    }
+  }
+)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,9 +46,10 @@ describe("LinkColumn", () => {
     expect(mockColumn.id).toEqual(MOCK_LINK_COLUMN_PROPS.id)
     expect(mockColumn.sortMode).toEqual("default")
 
-    const mockCell = mockColumn.getCell("https://streamlit.io")
+    const mockCell = mockColumn.getCell("https://streamlit.io") as UriCell
     expect(mockCell.kind).toEqual(GridCellKind.Uri)
-    expect((mockCell as UriCell).data).toEqual("https://streamlit.io")
+    expect(mockCell.data).toEqual("https://streamlit.io")
+    expect(mockCell.displayData).toEqual("https://streamlit.io")
   })
 
   it.each([
@@ -61,7 +62,7 @@ describe("LinkColumn", () => {
     // should also be supported by the UrlColumn.
   ])(
     "supports string-compatible value (%p parsed as %p)",
-    (input: any, value: string | null) => {
+    (input: any, value: any | null) => {
       const mockColumn = LinkColumn(MOCK_LINK_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
@@ -75,8 +76,8 @@ describe("LinkColumn", () => {
     })
 
     expect(mockColumn.validateInput!("12345")).toBe(true)
-    expect(mockColumn.validateInput!("123456")).toBe("12345")
-    expect(mockColumn.validateInput!("1234567890")).toBe("12345")
+    expect(mockColumn.validateInput!("123456")).toBe(false)
+    expect(mockColumn.validateInput!("1234567890")).toBe(false)
   })
 
   it("validates input based on validate regex", () => {
@@ -118,7 +119,8 @@ describe("LinkColumn", () => {
     expect(
       isErrorCell(mockColumn.getCell("https://issues.streamlit.io/", true))
     ).toBe(true)
-    // A too long input is fine since it can be auto fixed (doesn't make a lot of sense in this example)
+
+    // We do not auto fix a link cell that's too long
     expect(
       isErrorCell(
         mockColumn.getCell(
@@ -126,7 +128,7 @@ describe("LinkColumn", () => {
           true
         )
       )
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it("handles invalid validate regex", () => {
@@ -135,9 +137,9 @@ describe("LinkColumn", () => {
       columnTypeOptions: { validate: "[" }, // Invalid regex
     })
 
-    const cell = mockColumn.getCell("test", true)
+    const cell = mockColumn.getCell("test", true) as UriCell
     expect(isErrorCell(cell)).toEqual(true)
-    expect((cell as UriCell).data).toContain("Invalid validate regex")
+    expect(cell.data).toContain("Invalid validate regex")
   })
 
   it("ignores empty validate", () => {
@@ -148,5 +150,69 @@ describe("LinkColumn", () => {
 
     const cell = mockColumn.getCell("test", true)
     expect(isErrorCell(cell)).toEqual(false)
+  })
+
+  it("sets the href and displayText values correctly", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: "Click me" },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
+
+    const cellValue = mockColumn.getCellValue(cell)
+    expect(cellValue).toBe("https://streamlit.io")
+    expect(cell.displayData).toBe("Click me")
+  })
+
+  it("sets displayed value to be the href when displayText is empty", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: undefined },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
+
+    expect(cell.displayData).toBe("https://streamlit.io")
+  })
+
+  it("sets displayed value to be displayText when displayText is defined and not a regexp", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: "streamlit" },
+    })
+
+    const cell = mockColumn.getCell("https://streamlit.io", true) as UriCell
+
+    expect(cell.displayData).toBe("streamlit")
+  })
+
+  it("sets displayed value as the applied regex to the href when displayText is a regex", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: "https://(.*?).streamlit.app" },
+    })
+
+    const cell = mockColumn.getCell(
+      "https://roadmap.streamlit.app",
+      true
+    ) as UriCell
+
+    expect(cell.displayData).toBe("roadmap")
+  })
+
+  it("sets displayed value as the href, when displayText is a regex but there is no match", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      // eslint-disable-next-line prettier/prettier
+      columnTypeOptions: { display_text: "https://(.*?)\\.google.com" },
+    })
+
+    const cell = mockColumn.getCell(
+      "https://roadmap.streamlit.app",
+      true
+    ) as UriCell
+
+    expect(cell.displayData).toBe("https://roadmap.streamlit.app")
   })
 })

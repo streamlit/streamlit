@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 
 import { produce } from "immer"
-import { Map as ImmutableMap } from "immutable"
 import {
   Arrow as ArrowProto,
   ArrowNamedDataSet,
@@ -26,19 +25,19 @@ import {
   ForwardMsgMetadata,
   IArrow,
   IArrowNamedDataSet,
-  NamedDataSet,
 } from "./proto"
 import {
   VegaLiteChartElement,
   WrappedNamedDataset,
 } from "./components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
 import { Quiver } from "./dataframes/Quiver"
-import { addRows } from "./dataframes/dataFrameProto"
 import { ensureError } from "./util/ErrorHandling"
-import { toImmutableProto } from "./util/immutableProto"
 import {
-  makeElementWithInfoText,
+  getLoadingScreenType,
+  LoadingScreenType,
   makeElementWithErrorText,
+  makeElementWithInfoText,
+  makeSkeletonElement,
   notUndefined,
 } from "./util/utils"
 
@@ -127,19 +126,6 @@ export class ElementNode implements AppNode {
 
   public readonly scriptRunId: string
 
-  /**
-   * A lazily-created immutableJS version of our element.
-   *
-   * This is temporary! `immutableElement` is currently needed for
-   * dataframe-consuming elements because our dataframe API is
-   * immutableJS-based. It'll go away when we've converted to an ArrowJS-based
-   * dataframe API.
-   *
-   * Because most elements do *not* use the Dataframe API, and therefore
-   * do not need to access `immutableElement`, it is calculated lazily.
-   */
-  private lazyImmutableElement?: ImmutableMap<string, any>
-
   private lazyQuiverElement?: Quiver
 
   private lazyVegaLiteChartElement?: VegaLiteChartElement
@@ -153,16 +139,6 @@ export class ElementNode implements AppNode {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
-  }
-
-  public get immutableElement(): ImmutableMap<string, any> {
-    if (this.lazyImmutableElement !== undefined) {
-      return this.lazyImmutableElement
-    }
-
-    const toReturn = toImmutableProto(Element, this.element)
-    this.lazyImmutableElement = toReturn
-    return toReturn
   }
 
   public get quiverElement(): Quiver {
@@ -233,18 +209,6 @@ export class ElementNode implements AppNode {
     }
     elements.add(this.element)
     return elements
-  }
-
-  public addRows(
-    namedDataSet: NamedDataSet,
-    scriptRunId: string
-  ): ElementNode {
-    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
-    newNode.lazyImmutableElement = addRows(
-      this.immutableElement,
-      toImmutableProto(NamedDataSet, namedDataSet)
-    )
-    return newNode
   }
 
   public arrowAddRows(
@@ -443,19 +407,41 @@ export class AppRoot {
   private readonly root: BlockNode
 
   /**
-   * Create an empty AppRoot with an optional placeholder element.
+   * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(placeholderText?: string): AppRoot {
-    let mainNodes: AppNode[]
-    if (placeholderText != null) {
-      const waitNode = new ElementNode(
-        makeElementWithInfoText(placeholderText),
-        ForwardMsgMetadata.create({}),
-        NO_SCRIPT_RUN_ID
+  public static empty(
+    isInitialRender = true,
+    sidebarElements?: BlockNode | undefined
+  ): AppRoot {
+    const mainNodes: AppNode[] = []
+
+    let waitElement: Element | undefined
+
+    switch (getLoadingScreenType()) {
+      case LoadingScreenType.NONE:
+        break
+
+      case LoadingScreenType.V1:
+        // Only show the v1 loading state when it's the initial render.
+        // This is how v1 used to work, and we don't want any backward
+        // incompatibility.
+        if (isInitialRender) {
+          waitElement = makeElementWithInfoText("Please wait...")
+        }
+        break
+
+      default:
+        waitElement = makeSkeletonElement()
+    }
+
+    if (waitElement) {
+      mainNodes.push(
+        new ElementNode(
+          waitElement,
+          ForwardMsgMetadata.create({}),
+          NO_SCRIPT_RUN_ID
+        )
       )
-      mainNodes = [waitNode]
-    } else {
-      mainNodes = []
     }
 
     const main = new BlockNode(
@@ -464,11 +450,9 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    const sidebar = new BlockNode(
-      [],
-      new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
-    )
+    const sidebar =
+      sidebarElements ||
+      new BlockNode([], new BlockProto({ allowEmpty: true }), NO_SCRIPT_RUN_ID)
 
     const event = new BlockNode(
       [],
@@ -476,26 +460,33 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    return new AppRoot(new BlockNode([main, sidebar, event]))
+    const bottom = new BlockNode(
+      [],
+      new BlockProto({ allowEmpty: true }),
+      NO_SCRIPT_RUN_ID
+    )
+
+    return new AppRoot(new BlockNode([main, sidebar, event, bottom]))
   }
 
   public constructor(root: BlockNode) {
     this.root = root
 
-    // Verify that our root node has exactly 3 children: a 'main' block,
-    // a 'sidebar' block, and an 'event' block.
+    // Verify that our root node has exactly 4 children: a 'main' block,
+    // a 'sidebar' block, a `bottom` block and an 'event' block.
     if (
-      this.root.children.length !== 3 ||
+      this.root.children.length !== 4 ||
       this.main == null ||
       this.sidebar == null ||
-      this.event == null
+      this.event == null ||
+      this.bottom == null
     ) {
       throw new Error(`Invalid root node children! ${root}`)
     }
   }
 
   public get main(): BlockNode {
-    const [main, ,] = this.root.children
+    const [main] = this.root.children
     return main as BlockNode
   }
 
@@ -507,6 +498,11 @@ export class AppRoot {
   public get event(): BlockNode {
     const [, , event] = this.root.children
     return event as BlockNode
+  }
+
+  public get bottom(): BlockNode {
+    const [, , , bottom] = this.root.children
+    return bottom as BlockNode
   }
 
   public applyDelta(
@@ -528,14 +524,6 @@ export class AppRoot {
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
-          scriptRunId
-        )
-      }
-
-      case "addRows": {
-        return this.addRows(
-          deltaPath,
-          delta.addRows as NamedDataSet,
           scriptRunId
         )
       }
@@ -573,10 +561,12 @@ export class AppRoot {
       this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
     const event =
       this.event.clearStaleNodes(currentScriptRunId) || new BlockNode()
+    const bottom =
+      this.bottom.clearStaleNodes(currentScriptRunId) || new BlockNode()
 
     return new AppRoot(
       new BlockNode(
-        [main, sidebar, event],
+        [main, sidebar, event, bottom],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       )
@@ -589,6 +579,7 @@ export class AppRoot {
     this.main.getElements(elements)
     this.sidebar.getElements(elements)
     this.event.getElements(elements)
+    this.bottom.getElements(elements)
     return elements
   }
 
@@ -617,20 +608,6 @@ export class AppRoot {
 
     const blockNode = new BlockNode(children, block, scriptRunId)
     return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
-  }
-
-  private addRows(
-    deltaPath: number[],
-    namedDataSet: NamedDataSet,
-    scriptRunId: string
-  ): AppRoot {
-    const existingNode = this.root.getIn(deltaPath) as ElementNode
-    if (existingNode == null) {
-      throw new Error(`Can't addRows: invalid deltaPath: ${deltaPath}`)
-    }
-
-    const elementNode = existingNode.addRows(namedDataSet, scriptRunId)
-    return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private arrowAddRows(

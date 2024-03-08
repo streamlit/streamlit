@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,17 @@
 # limitations under the License.
 
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorage as CacheStorage,
+    CacheStorage,
+    CacheStorageContext,
+    CacheStorageError,
+    CacheStorageKeyNotFoundError,
+    CacheStorageManager,
 )
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageContext as CacheStorageContext,
-)
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageError as CacheStorageError,
-)
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageKeyNotFoundError as CacheStorageKeyNotFoundError,
-)
-from streamlit.runtime.caching.storage.cache_storage_protocol import (
-    CacheStorageManager as CacheStorageManager,
-)
+
+__all__ = [
+    "CacheStorage",
+    "CacheStorageContext",
+    "CacheStorageError",
+    "CacheStorageKeyNotFoundError",
+    "CacheStorageManager",
+]

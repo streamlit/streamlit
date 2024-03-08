@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.watcher.local_sources_watcher import (
-    LocalSourcesWatcher as LocalSourcesWatcher,
-)
+
+from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from streamlit.watcher.path_watcher import (
-    report_watchdog_availability as report_watchdog_availability,
+    report_watchdog_availability,
+    watch_dir,
+    watch_file,
 )
-from streamlit.watcher.path_watcher import watch_dir as watch_dir
-from streamlit.watcher.path_watcher import watch_file as watch_file
+
+__all__ = [
+    "LocalSourcesWatcher",
+    "report_watchdog_availability",
+    "watch_dir",
+    "watch_file",
+]

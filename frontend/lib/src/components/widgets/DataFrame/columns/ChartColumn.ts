@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,10 @@ import {
   formatNumber,
 } from "./utils"
 
+export const LINE_CHART_TYPE = "line_chart"
+export const AREA_CHART_TYPE = "area_chart"
+export const BAR_CHART_TYPE = "bar_chart"
+
 export interface ChartColumnParams {
   // The minimum value used for plotting the chart. Defaults to 0.
   readonly y_min?: number
@@ -49,7 +53,7 @@ export interface ChartColumnParams {
 function BaseChartColumn(
   kind: string,
   props: BaseColumnProps,
-  chart_type: "line" | "bar"
+  chart_type: "line" | "bar" | "area"
 ): BaseColumn {
   const parameters = mergeColumnParameters(
     // Default parameters:
@@ -137,13 +141,6 @@ function BaseChartColumn(
         convertedChartData.push(convertedValue)
       }
 
-      if (chart_type === "line" && convertedChartData.length <= 2) {
-        // TODO(lukasmasuch): This is only a temporary workaround to prevent
-        // an error in glide-data-grid that occurs during cell drawing when the
-        // line chart has less than 3 values. This needs to a fix in glide-data-grid.
-        return getEmptyCell()
-      }
-
       if (
         convertedChartData.length > 0 &&
         (maxValue > parameters.y_max || minValue < parameters.y_min)
@@ -193,7 +190,7 @@ function BaseChartColumn(
  * This column type is currently read-only.
  */
 export function LineChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("line_chart", props, "line")
+  return BaseChartColumn(LINE_CHART_TYPE, props, "line")
 }
 
 LineChartColumn.isEditableType = false
@@ -205,7 +202,19 @@ LineChartColumn.isEditableType = false
  * This column type is currently read-only.
  */
 export function BarChartColumn(props: BaseColumnProps): BaseColumn {
-  return BaseChartColumn("bar_chart", props, "bar")
+  return BaseChartColumn(BAR_CHART_TYPE, props, "bar")
 }
 
 BarChartColumn.isEditableType = false
+
+/**
+ * A column type that renders the cell value as an area-chart.
+ * The data is expected to be a numeric array.
+ *
+ * This column type is currently read-only.
+ */
+export function AreaChartColumn(props: BaseColumnProps): BaseColumn {
+  return BaseChartColumn(AREA_CHART_TYPE, props, "area")
+}
+
+AreaChartColumn.isEditableType = false

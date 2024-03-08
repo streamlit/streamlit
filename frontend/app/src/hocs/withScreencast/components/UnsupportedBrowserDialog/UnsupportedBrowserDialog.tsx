@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ class UnsupportedBrowserDialog extends PureComponent<Props> {
       <Modal isOpen onClose={onClose}>
         <ModalHeader>Record a screencast</ModalHeader>
         <ModalBody>
-          <StyledScreenCastWarningDialog>
+          <StyledScreenCastWarningDialog data-testid="stUnsupportedBrowserDialog">
             <StyledUnsupportedScreenCastIcon>
               <span role="img" aria-label="Alien Monster">
                 👾

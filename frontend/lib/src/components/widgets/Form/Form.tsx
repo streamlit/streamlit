@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ export interface Props {
   scriptRunState: ScriptRunState
   children?: ReactNode
   widgetMgr: WidgetStateManager
+  border: boolean
 }
 
 export const MISSING_SUBMIT_BUTTON_WARNING =
@@ -37,7 +38,7 @@ export const MISSING_SUBMIT_BUTTON_WARNING =
   "never be sent to your Streamlit app." +
   "\n\nTo create a submit button, use the `st.form_submit_button()` function." +
   "\n\nFor more information, refer to the " +
-  "[documentation for forms](https://docs.streamlit.iorary/api-reference/control-flow/st.form)."
+  "[documentation for forms](https://docs.streamlit.io/library/api-reference/control-flow/st.form)."
 
 export function Form(props: Props): ReactElement {
   const {
@@ -48,6 +49,7 @@ export function Form(props: Props): ReactElement {
     width,
     scriptRunState,
     clearOnSubmit,
+    border,
   } = props
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` so that it can
@@ -88,7 +90,7 @@ export function Form(props: Props): ReactElement {
   }
 
   return (
-    <StyledForm data-testid="stForm">
+    <StyledForm border={border} data-testid="stForm">
       {children}
       {submitWarning}
     </StyledForm>

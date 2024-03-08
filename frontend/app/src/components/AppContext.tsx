@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { PageConfig } from "@streamlit/lib"
+import { PageConfig, IGitInfo, AppConfig } from "@streamlit/lib"
 
 export interface Props {
   /**
@@ -49,12 +49,6 @@ export interface Props {
    * @see isScrollingHidden
    */
   disableScrolling: boolean
-
-  /**
-   * True if the footer should be displayed.
-   * @see isFooterDisplayed
-   */
-  showFooter: boolean
 
   /**
    * True if the toolbar should be displayed.
@@ -90,6 +84,16 @@ export interface Props {
    * @see EventContainer
    */
   toastAdjustment: boolean
+
+  /**
+   * The latest state of the git information related to the app.
+   */
+  gitInfo: IGitInfo | null
+
+  /** The app-specific configuration from the apps host which is requested via the
+   * _stcore/host-config endpoint.
+   */
+  appConfig: AppConfig
 }
 
 export const AppContext = React.createContext<Props>({
@@ -98,10 +102,11 @@ export const AppContext = React.createContext<Props>({
   embedded: false,
   showPadding: false,
   disableScrolling: false,
-  showFooter: false,
   showToolbar: false,
   showColoredLine: false,
   pageLinkBaseUrl: "",
   sidebarChevronDownshift: 0,
   toastAdjustment: false,
+  gitInfo: null,
+  appConfig: {},
 })

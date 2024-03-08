@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,16 +15,15 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 import time
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Awaitable, Dict, NamedTuple, Optional, Tuple, Type
-
-from typing_extensions import Final
+from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
 from streamlit import config
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
+from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -70,7 +69,7 @@ if TYPE_CHECKING:
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
 
-LOGGER: Final = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class RuntimeStoppedError(Exception):
@@ -84,9 +83,9 @@ class RuntimeConfig:
     # The filesystem path of the Streamlit script to run.
     script_path: str
 
-    # The (optional) command line that Streamlit was started with
-    # (e.g. "streamlit run app.py")
-    command_line: Optional[str]
+    # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
+    # longer use this anywhere.
+    command_line: str | None
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
@@ -99,11 +98,19 @@ class RuntimeConfig:
         default_factory=LocalDiskCacheStorageManager
     )
 
+    # The ComponentRegistry instance to use.
+    component_registry: BaseComponentRegistry = field(
+        default_factory=LocalComponentRegistry
+    )
+
     # The SessionManager class to be used.
-    session_manager_class: Type[SessionManager] = WebsocketSessionManager
+    session_manager_class: type[SessionManager] = WebsocketSessionManager
 
     # The SessionStorage instance for the SessionManager to use.
     session_storage: SessionStorage = field(default_factory=MemorySessionStorage)
+
+    # True if the command used to start Streamlit was `streamlit hello`.
+    is_hello: bool = False
 
 
 class RuntimeState(Enum):
@@ -139,7 +146,7 @@ class AsyncObjects(NamedTuple):
 
 
 class Runtime:
-    _instance: Optional[Runtime] = None
+    _instance: Runtime | None = None
 
     @classmethod
     def instance(cls) -> Runtime:
@@ -177,18 +184,19 @@ class Runtime:
         Runtime._instance = self
 
         # Will be created when we start.
-        self._async_objs: Optional[AsyncObjects] = None
+        self._async_objs: AsyncObjects | None = None
 
         # The task that runs our main loop. We need to save a reference
         # to it so that it doesn't get garbage collected while running.
-        self._loop_coroutine_task: Optional[asyncio.Task[None]] = None
+        self._loop_coroutine_task: asyncio.Task[None] | None = None
 
         self._main_script_path = config.script_path
-        self._command_line = config.command_line or ""
+        self._is_hello = config.is_hello
 
         self._state = RuntimeState.INITIAL
 
         # Initialize managers
+        self._component_registry = config.component_registry
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
@@ -213,6 +221,10 @@ class Runtime:
     @property
     def state(self) -> RuntimeState:
         return self._state
+
+    @property
+    def component_registry(self) -> BaseComponentRegistry:
+        return self._component_registry
 
     @property
     def message_cache(self) -> ForwardMsgCache:
@@ -245,7 +257,7 @@ class Runtime:
     # happen to be threadsafe. This may change with future SessionManager implementations,
     # at which point we'll need to formalize our thread safety rules for each
     # SessionManager method.
-    def get_client(self, session_id: str) -> Optional[SessionClient]:
+    def get_client(self, session_id: str) -> SessionClient | None:
         """Get the SessionClient for the given session_id, or None
         if no such session exists.
 
@@ -281,14 +293,9 @@ class Runtime:
         )
         self._async_objs = async_objs
 
-        if sys.version_info >= (3, 8, 0):
-            # Python 3.8+ supports a create_task `name` parameter, which can
-            # make debugging a bit easier.
-            self._loop_coroutine_task = asyncio.create_task(
-                self._loop_coroutine(), name="Runtime.loop_coroutine"
-            )
-        else:
-            self._loop_coroutine_task = asyncio.create_task(self._loop_coroutine())
+        self._loop_coroutine_task = asyncio.create_task(
+            self._loop_coroutine(), name="Runtime.loop_coroutine"
+        )
 
         await async_objs.started
 
@@ -307,7 +314,7 @@ class Runtime:
             if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
                 return
 
-            LOGGER.debug("Runtime stopping...")
+            _LOGGER.debug("Runtime stopping...")
             self._set_state(RuntimeState.STOPPING)
             async_objs.must_stop.set()
 
@@ -325,8 +332,9 @@ class Runtime:
     def connect_session(
         self,
         client: SessionClient,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
+        user_info: dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 
@@ -342,6 +350,17 @@ class Runtime:
             {
                 "email": "example@example.com"
             }
+        existing_session_id
+            The ID of an existing session to reconnect to. If one is not provided, a new
+            session is created. Note that whether the Runtime's SessionManager supports
+            reconnecting to an existing session depends on the SessionManager that this
+            runtime is configured with.
+        session_id_override
+            The ID to assign to a new session being created with this method. Setting
+            this can be useful when the service that a Streamlit Runtime is running in
+            wants to tie the lifecycle of a Streamlit session to some other session-like
+            object that it manages. Only one of existing_session_id and
+            session_id_override should be set.
 
         Returns
         -------
@@ -352,14 +371,19 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        assert not (
+            existing_session_id and session_id_override
+        ), "Only one of existing_session_id and session_id_override should be set!"
+
         if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
         session_id = self._session_mgr.connect_session(
             client=client,
-            script_data=ScriptData(self._main_script_path, self._command_line or ""),
+            script_data=ScriptData(self._main_script_path, self._is_hello),
             user_info=user_info,
             existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
         )
         self._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
         self._get_async_objs().has_connection.set()
@@ -369,8 +393,9 @@ class Runtime:
     def create_session(
         self,
         client: SessionClient,
-        user_info: Dict[str, Optional[str]],
-        existing_session_id: Optional[str] = None,
+        user_info: dict[str, str | None],
+        existing_session_id: str | None = None,
+        session_id_override: str | None = None,
     ) -> str:
         """Create a new session (or connect to an existing one) and return its unique ID.
 
@@ -379,9 +404,12 @@ class Runtime:
         This method is simply an alias for connect_session added for backwards
         compatibility.
         """
-        LOGGER.warning("create_session is deprecated! Use connect_session instead.")
+        _LOGGER.warning("create_session is deprecated! Use connect_session instead.")
         return self.connect_session(
-            client=client, user_info=user_info, existing_session_id=existing_session_id
+            client=client,
+            user_info=user_info,
+            existing_session_id=existing_session_id,
+            session_id_override=session_id_override,
         )
 
     def close_session(self, session_id: str) -> None:
@@ -460,7 +488,7 @@ class Runtime:
 
         session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info is None:
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Discarding BackMsg for disconnected session (id=%s)", session_id
             )
             return
@@ -490,7 +518,7 @@ class Runtime:
 
         session_info = self._session_mgr.get_active_session_info(session_id)
         if session_info is None:
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Discarding BackMsg Exception for disconnected session (id=%s)",
                 session_id,
             )
@@ -499,7 +527,7 @@ class Runtime:
         session_info.session.handle_backmsg_exception(exc)
 
     @property
-    async def is_ready_for_browser_connection(self) -> Tuple[bool, str]:
+    async def is_ready_for_browser_connection(self) -> tuple[bool, str]:
         if self._state not in (
             RuntimeState.INITIAL,
             RuntimeState.STOPPING,
@@ -509,7 +537,7 @@ class Runtime:
 
         return False, "unavailable"
 
-    async def does_script_run_without_error(self) -> Tuple[bool, str]:
+    async def does_script_run_without_error(self) -> tuple[bool, str]:
         """Load and execute the app's script to verify it runs without an error.
 
         Returns
@@ -525,7 +553,7 @@ class Runtime:
         # SessionManager intentionally. This isn't a "real" session and is only being
         # used to test that the script runs without error.
         session = AppSession(
-            script_data=ScriptData(self._main_script_path, self._command_line),
+            script_data=ScriptData(self._main_script_path, self._is_hello),
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
@@ -554,7 +582,7 @@ class Runtime:
             session.shutdown()
 
     def _set_state(self, new_state: RuntimeState) -> None:
-        LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
+        _LOGGER.debug("Runtime state: %s -> %s", self._state, new_state)
         self._state = new_state
 
     async def _loop_coroutine(self) -> None:
@@ -581,18 +609,7 @@ class Runtime:
             async_objs.started.set_result(None)
 
             while not async_objs.must_stop.is_set():
-                if self._state == RuntimeState.NO_SESSIONS_CONNECTED:  # type: ignore[comparison-overlap]
-                    # mypy 1.4 incorrectly thinks this if-clause is unreachable,
-                    # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
-                    await asyncio.wait(  # type: ignore[unreachable]
-                        (
-                            asyncio.create_task(async_objs.must_stop.wait()),
-                            asyncio.create_task(async_objs.has_connection.wait()),
-                        ),
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
-                elif self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
+                if self._state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
                     async_objs.need_send_data.clear()
 
                     for active_session_info in self._session_mgr.list_active_sessions():
@@ -611,18 +628,29 @@ class Runtime:
                     # Yield for a few milliseconds between session message
                     # flushing.
                     await asyncio.sleep(0.01)
+                elif self._state == RuntimeState.NO_SESSIONS_CONNECTED:  # type: ignore[comparison-overlap]
+                    # mypy 1.4 incorrectly thinks this if-clause is unreachable,
+                    # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
 
+                    # This will jump to the asyncio.wait below.
+                    pass
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break
 
-                await asyncio.wait(
+                _, pending_tasks = await asyncio.wait(
                     (
                         asyncio.create_task(async_objs.must_stop.wait()),
                         asyncio.create_task(async_objs.need_send_data.wait()),
                     ),
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+                # We need to cancel the pending tasks (the `must_stop` one in most situations).
+                # Otherwise, this would stack up one waiting task per loop
+                # (e.g. per forward message). These tasks cannot be garbage collected
+                # causing an increase in memory (-> memory leak).
+                for task in pending_tasks:
+                    task.cancel()
 
             # Shut down all AppSessions.
             for session_info in self._session_mgr.list_sessions():
@@ -637,7 +665,7 @@ class Runtime:
         except Exception as e:
             async_objs.stopped.set_exception(e)
             traceback.print_exc()
-            LOGGER.info(
+            _LOGGER.info(
                 """
 Please report this bug at https://github.com/streamlit/streamlit/issues.
 """
@@ -671,13 +699,13 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             ):
                 # This session has probably cached this message. Send
                 # a reference instead.
-                LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
+                _LOGGER.debug("Sending cached message ref (hash=%s)", msg.hash)
                 msg_to_send = create_reference_msg(msg)
 
             # Cache the message so it can be referenced in the future.
             # If the message is already cached, this will reset its
             # age.
-            LOGGER.debug("Caching message (hash=%s)", msg.hash)
+            _LOGGER.debug("Caching message (hash=%s)", msg.hash)
             self._message_cache.add_message(
                 msg, session_info.session, session_info.script_run_count
             )
@@ -688,7 +716,7 @@ Please report this bug at https://github.com/streamlit/streamlit/issues.
             msg.WhichOneof("type") == "script_finished"
             and msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
         ):
-            LOGGER.debug(
+            _LOGGER.debug(
                 "Script run finished successfully; "
                 "removing expired entries from MessageCache "
                 "(max_age=%s)",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.runtime.legacy_caching.caching import cache as cache
-from streamlit.runtime.legacy_caching.caching import clear_cache as clear_cache
-from streamlit.runtime.legacy_caching.caching import get_cache_path as get_cache_path
 from streamlit.runtime.legacy_caching.caching import (
-    maybe_show_cached_st_function_warning as maybe_show_cached_st_function_warning,
+    cache,
+    clear_cache,
+    get_cache_path,
+    maybe_show_cached_st_function_warning,
 )
+
+__all__ = [
+    "cache",
+    "clear_cache",
+    "get_cache_path",
+    "maybe_show_cached_st_function_warning",
+]

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Tuple, cast
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import runtime
+from streamlit.elements.form import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
@@ -51,14 +51,17 @@ class PresetNames(str, Enum):
 
 
 def _process_avatar_input(
-    avatar: str | AtomicImage | None = None,
-) -> Tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
+    avatar: str | AtomicImage | None, delta_path: str
+) -> tuple[BlockProto.ChatMessage.AvatarType.ValueType, str]:
     """Detects the avatar type and prepares the avatar data for the frontend.
 
     Parameters
     ----------
     avatar :
         The avatar that was provided by the user.
+    delta_path : str
+        The delta path is used as media ID when a local image is served via the media
+        file manager.
 
     Returns
     -------
@@ -81,15 +84,13 @@ def _process_avatar_input(
         return AvatarType.EMOJI, avatar
     else:
         try:
-            # TODO(lukasmasuch): Pure SVGs are not yet supported here.
-            # They have a special handling in `st.image` and might require some refactoring.
             return AvatarType.IMAGE, image_to_url(
                 avatar,
                 width=WidthBehaviour.ORIGINAL,
                 clamp=False,
                 channels="RGB",
                 output_format="auto",
-                image_id="",
+                image_id=delta_path,
             )
         except Exception as ex:
             raise StreamlitAPIException(
@@ -97,13 +98,10 @@ def _process_avatar_input(
             ) from ex
 
 
-DISALLOWED_CONTAINERS_ERROR_TEXT = "`st.chat_input()` can't be used inside an `st.expander`, `st.form`, `st.tabs`, `st.columns`, or `st.sidebar`."
-
-
 @dataclass
 class ChatInputSerde:
     def deserialize(
-        self, ui_value: Optional[StringTriggerValueProto], widget_id: str = ""
+        self, ui_value: StringTriggerValueProto | None, widget_id: str = ""
     ) -> str | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
@@ -121,7 +119,7 @@ class ChatMixin:
         name: Literal["user", "assistant", "ai", "human"] | str,
         *,
         avatar: Literal["user", "assistant"] | str | AtomicImage | None = None,
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Insert a chat message container.
 
         To add elements to the returned container, you can use ``with`` notation
@@ -131,8 +129,8 @@ class ChatMixin:
         Parameters
         ----------
         name : "user", "assistant", "ai", "human", or str
-            The name of the message author. Can be “user”, “assistant”, “ai”, or “human”
-            to enable preset styling and avatars.
+            The name of the message author. Can be "human"/"user" or
+            "ai"/"assistant" to enable preset styling and avatars.
 
             Currently, the name is not shown in the UI but is only set as an
             accessibility label. For accessibility reasons, you should not use
@@ -144,8 +142,9 @@ class ChatMixin:
             * A single emoji, e.g. "🧑‍💻", "🤖", "🦖". Shortcodes are not supported.
 
             * An image using one of the formats allowed for ``st.image``: path of a local
-                image file; URL to fetch the image from; array of shape (w,h) or (w,h,1)
-                for a monochrome image, (w,h,3) for a color image, or (w,h,4) for an RGBA image.
+                image file; URL to fetch the image from; an SVG image; array of shape
+                (w,h) or (w,h,1) for a monochrome image, (w,h,3) for a color image,
+                or (w,h,4) for an RGBA image.
 
             If None (default), uses default icons if ``name`` is "user",
             "assistant", "ai", "human" or the first letter of the ``name`` value.
@@ -194,7 +193,9 @@ class ChatMixin:
         ):
             # For selected labels, we are mapping the label to an avatar
             avatar = name.lower()
-        avatar_type, converted_avatar = _process_avatar_input(avatar)
+        avatar_type, converted_avatar = _process_avatar_input(
+            avatar, self.dg._get_delta_path_str()
+        )
 
         message_container_proto = BlockProto.ChatMessage()
         message_container_proto.name = name
@@ -220,11 +221,6 @@ class ChatMixin:
     ) -> str | None:
         """Display a chat input widget.
 
-        .. warning::
-            Chat input can only be used once per app page and inside the main area of the app.
-            It cannot be used in the sidebar, columns, expanders, forms or tabs.
-            We plan to support this in the future.
-
         Parameters
         ----------
         placeholder : str
@@ -238,11 +234,11 @@ class ChatMixin:
             its content. Multiple widgets of the same type may not share the same key.
 
         max_chars : int or None
-            The maximum number of characters that can be entered. If None
+            The maximum number of characters that can be entered. If ``None``
             (default), there will be no maximum.
 
         disabled : bool
-            Whether the chat input should be disabled. Defaults to False.
+            Whether the chat input should be disabled. Defaults to ``False``.
 
         on_submit : callable
             An optional callback invoked when the chat input's value is submitted.
@@ -257,10 +253,13 @@ class ChatMixin:
         -------
         str or None
             The current (non-empty) value of the text input widget on the last
-            run of the app, None otherwise.
+            run of the app. Otherwise, ``None``.
 
         Examples
         --------
+        When ``st.chat_input`` is used in the main body of an app, it will be
+        pinned to the bottom of the page.
+
         >>> import streamlit as st
         >>>
         >>> prompt = st.chat_input("Say something")
@@ -271,6 +270,21 @@ class ChatMixin:
             https://doc-chat-input.streamlit.app/
             height: 350px
 
+        The chat input can also be used inline by nesting it inside any layout
+        container (container, columns, tabs, sidebar, etc). Create chat
+        interfaces embedded next to other content or have multiple chat bots!
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.sidebar:
+        >>>     messages = st.container(height=300)
+        >>>     if prompt := st.chat_input("Say something"):
+        >>>         messages.chat_message("user").write(prompt)
+        >>>         messages.chat_message("assistant").write(f"Echo: {prompt}")
+
+        .. output ::
+            https://doc-chat-input-inline.streamlit.app/
+            height: 350px
         """
         # We default to an empty string here and disallow user choice intentionally
         default = ""
@@ -278,27 +292,38 @@ class ChatMixin:
         check_callback_rules(self.dg, on_submit)
         check_session_state_rules(default_value=default, key=key, writes_allowed=False)
 
+        ctx = get_script_run_ctx()
         id = compute_widget_id(
             "chat_input",
             user_key=key,
+            key=key,
             placeholder=placeholder,
             max_chars=max_chars,
+            page=ctx.page_script_hash if ctx else None,
         )
 
+        # It doesn't make sense to create a chat input inside a form.
+        # We throw an error to warn the user about this.
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
         if runtime.exists():
-            if (
-                len(list(self.dg._active_dg._parent_block_types)) > 0
-                or self.dg._active_dg._root_container == RootContainer.SIDEBAR
-            ):
-                # TODO: This allows the user to create a chat_input inside a
-                # container but it still cannot be in other containers. This is
-                # a result of the Vertical field not being set in Blocks by
-                # default and seems like a "bug", but one that is not producing
-                # major issues. We should look into what's the correct behavior
-                # to implement.
-                raise StreamlitAPIException(DISALLOWED_CONTAINERS_ERROR_TEXT)
+            if is_in_form(self.dg):
+                raise StreamlitAPIException(
+                    "`st.chat_input()` can't be used in a `st.form()`."
+                )
+
+        # Determine the position of the chat input:
+        # Use bottom position if chat input is within the main container
+        # either directly or within a vertical container. If it has any
+        # other container types as parents, we use inline position.
+        parent_block_types = set(self.dg._active_dg._parent_block_types)
+        if (
+            self.dg._active_dg._root_container == RootContainer.MAIN
+            and not parent_block_types
+        ):
+            position = "bottom"
+        else:
+            position = "inline"
 
         chat_input_proto = ChatInputProto()
         chat_input_proto.id = id
@@ -308,9 +333,6 @@ class ChatMixin:
             chat_input_proto.max_chars = max_chars
 
         chat_input_proto.default = default
-        chat_input_proto.position = ChatInputProto.Position.BOTTOM
-
-        ctx = get_script_run_ctx()
 
         serde = ChatInputSerde()
         widget_state = register_widget(
@@ -330,10 +352,19 @@ class ChatMixin:
             chat_input_proto.value = widget_state.value
             chat_input_proto.set_value = True
 
-        self.dg._enqueue("chat_input", chat_input_proto)
+        if position == "bottom":
+            # We import it here to avoid circular imports.
+            from streamlit import _bottom
+
+            # We need to enqueue the chat input into the bottom container
+            # instead of the currently active dg.
+            _bottom._enqueue("chat_input", chat_input_proto)
+        else:
+            self.dg._enqueue("chat_input", chat_input_proto)
+
         return widget_state.value if not widget_state.value_changed else None
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

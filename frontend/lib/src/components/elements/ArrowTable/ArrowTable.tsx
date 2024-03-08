@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { range } from "lodash"
+import range from "lodash/range"
 import React, { ReactElement } from "react"
 
-import withFullScreenWrapper from "@streamlit/lib/src/hocs/withFullScreenWrapper"
+import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
   StyledEmptyTableCell,
@@ -42,7 +42,7 @@ export function ArrowTable(props: TableProps): ReactElement {
   return (
     <StyledTableContainer data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
-      <StyledTable id={cssId}>
+      <StyledTable id={cssId} data-testid="stTableStyledTable">
         {caption && (
           <caption>
             <small>{caption}</small>
@@ -58,7 +58,10 @@ export function ArrowTable(props: TableProps): ReactElement {
         <tbody>
           {dataRows.length === 0 ? (
             <tr>
-              <StyledEmptyTableCell colSpan={columns || 1}>
+              <StyledEmptyTableCell
+                data-testid="stTableStyledEmptyTableCell"
+                colSpan={columns || 1}
+              >
                 empty
               </StyledEmptyTableCell>
             </tr>

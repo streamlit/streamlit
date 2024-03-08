@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,14 +24,9 @@ export const StyledWrapper = styled.div({
 })
 
 export const StyledEllipsizedDiv = styled.div({
-  // We only want it to to be truncated on desktop,
-  // where we can use the tooltip to show the whole content.
-  // On mobile, we'll let it wrap
-  [`@media (min-width: 768px)`]: {
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    textOverflow: "ellipsis",
-  },
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
   display: "table-cell",
 })
 

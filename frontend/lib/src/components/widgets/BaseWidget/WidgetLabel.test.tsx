@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 
 import React from "react"
-import { mount, shallow } from "@streamlit/lib/src/test_util"
+import "@testing-library/jest-dom"
+import { screen } from "@testing-library/react"
+import { render } from "@streamlit/lib/src/test_util"
 import { LabelVisibilityOptions } from "@streamlit/lib/src/util/utils"
-import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { WidgetLabel, LabelProps } from "./WidgetLabel"
 
@@ -29,33 +30,33 @@ const getProps = (props?: Partial<LabelProps>): LabelProps => ({
 describe("Widget Label", () => {
   it("renders WidgetLabel as expected", () => {
     const props = getProps()
-    const wrapper = shallow(<WidgetLabel {...props} />)
+    render(<WidgetLabel {...props} />)
 
-    expect(wrapper).toMatchSnapshot()
+    expect(screen.getByTestId("stWidgetLabel")).toBeInTheDocument()
   })
 
   it("renders label text as expected", () => {
     const props = getProps()
-    const wrapper = mount(<WidgetLabel {...props} />)
-    const labelMarkdown = wrapper.find(StreamlitMarkdown)
+    render(<WidgetLabel {...props} />)
 
-    expect(wrapper.props().label).toBe(getProps().label)
-    expect(labelMarkdown.props().isLabel).toBe(true)
+    expect(screen.getByTestId("stWidgetLabel")).toBeInTheDocument()
+    // Test that isLabel prop is true, which makes font size smaller
+    expect(screen.getByText(`${props.label}`)).toHaveStyle(`font-size: 14px`)
   })
 
   it("can be disabled", () => {
     const props = getProps({ disabled: true })
-    const wrapper = mount(<WidgetLabel {...props} />)
+    render(<WidgetLabel {...props} />)
 
-    expect(wrapper.props().disabled).toBe(true)
+    expect(screen.getByTestId("stWidgetLabel")).toHaveAttribute("disabled")
   })
 
   it("can hide label visibility", () => {
     const props = getProps({ labelVisibility: LabelVisibilityOptions.Hidden })
-    const wrapper = mount(<WidgetLabel {...props} />)
+    render(<WidgetLabel {...props} />)
 
-    expect(wrapper.props().labelVisibility).toEqual(
-      LabelVisibilityOptions.Hidden
+    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+      "visibility: hidden"
     )
   })
 })

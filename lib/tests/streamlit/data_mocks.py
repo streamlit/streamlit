@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,9 @@ class TestCaseMetadata(NamedTuple):
     expected_rows: int
     expected_cols: int
     expected_data_format: DataFormat
-    __test__ = False  # Tell pytest that this is not a test class
+
+    # Tell pytest this is not a TestClass despite having "Test" in the name.
+    __test__ = False
 
 
 SHARED_TEST_CASES = [
@@ -382,7 +384,13 @@ SPECIAL_TYPES_DF = pd.DataFrame(
     {
         "categorical": pd.Series(["a", "b", "c", "a", None]).astype("category"),
         "decimal": pd.Series(
-            [Decimal("1.1"), Decimal("2.2"), Decimal("1000"), Decimal("2.212"), None]
+            [
+                Decimal("1.1"),
+                Decimal("-0.03864734299516908213"),
+                Decimal("1000"),
+                Decimal("2.212"),
+                None,
+            ]
         ),
         "bytes": pd.Series(
             [
@@ -394,6 +402,15 @@ SPECIAL_TYPES_DF = pd.DataFrame(
             ]
         ),
         "emojis 🌈": pd.Series(["Black ⚫", "Red 🔴", "White ⚪", "Red 🔴", None]),
+        "timedelta": pd.Series(
+            [
+                pd.Timedelta("1 days"),
+                np.timedelta64(100, "D"),
+                pd.Timedelta("2 hours"),
+                timedelta(seconds=5),
+                None,
+            ]
+        ),
     }
 )
 
@@ -405,14 +422,6 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         ]
         + [None],
         "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j, None]),
-        "timedelta": pd.Series(
-            [
-                pd.Timedelta("1 days"),
-                np.timedelta64(366, "D"),
-                pd.Timedelta("2 hours"),
-                None,
-            ]
-        ),
         "mixed_integer": pd.Series([1, 2, "3", None]),
         "mixed_types": pd.Series([2.1, "3", True, None]),
         "frozenset": pd.Series(

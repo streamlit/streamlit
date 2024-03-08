@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,16 +21,12 @@ import {
   Element,
   ForwardMsgMetadata,
   IArrowVegaLiteChart,
-  NamedDataSet,
 } from "./proto"
+import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
 import { IndexTypeName } from "./dataframes/Quiver"
-import { mockDataFrame as mockDataFrameData } from "./components/elements/DataFrame/mock"
+import { UNICODE } from "./mocks/arrow"
 import { Writer } from "protobufjs"
 import { vectorFromArray } from "apache-arrow"
-import { addRows } from "./dataframes/dataFrameProto"
-import { toImmutableProto } from "./util/immutableProto"
-import { BlockNode, ElementNode, AppNode, AppRoot } from "./AppNode"
-import { UNICODE } from "./mocks/arrow"
 
 const NO_SCRIPT_RUN_ID = "NO_SCRIPT_RUN_ID"
 
@@ -42,9 +38,9 @@ const BLOCK = block([
   ]),
 ])
 
-// Initialize new AppRoot with a main block node and two child block nodes - sidebar and events.
+// Initialize new AppRoot with a main block node and three child block nodes - sidebar, events and bottom.
 const ROOT = new AppRoot(
-  new BlockNode([BLOCK, new BlockNode(), new BlockNode()])
+  new BlockNode([BLOCK, new BlockNode(), new BlockNode(), new BlockNode()])
 )
 
 describe("AppNode.getIn", () => {
@@ -90,21 +86,6 @@ describe("AppNode.setIn", () => {
     expect(() => BLOCK.setIn([1, 2], text("new"), NO_SCRIPT_RUN_ID)).toThrow(
       "Bad 'setIn' index 2 (should be between [0, 1])"
     )
-  })
-})
-
-describe("ElementNode.immutableElement", () => {
-  it("returns an immutableJS element", () => {
-    const node = text("ahoy!")
-    expect(node.immutableElement).toEqual(
-      toImmutableProto(Element, new Element({ text: { body: "ahoy!" } }))
-    )
-  })
-
-  it("does not recompute its value", () => {
-    // accessing `immutableElement` twice should return the same instance.
-    const node = text("ahoy!")
-    expect(node.immutableElement).toStrictEqual(node.immutableElement)
   })
 })
 
@@ -812,19 +793,87 @@ describe("ElementNode.arrowAddRows", () => {
 })
 
 describe("AppRoot.empty", () => {
-  it("creates an empty tree", () => {
+  let windowSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    windowSpy = jest.spyOn(window, "window", "get")
+  })
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+  })
+
+  it("creates empty tree except for a skeleton", async () => {
     const empty = AppRoot.empty()
+
+    // The linter is misfiring here. We're not accessing a DOM node.
+    // eslint-disable-next-line testing-library/no-node-access
+    expect(empty.main.children.length).toBe(1)
+    const child = empty.main.getIn([0]) as ElementNode
+    expect(child.element.skeleton).not.toBeNull()
+
+    expect(empty.sidebar.isEmpty).toBe(true)
+  })
+
+  it("creates empty tree with no loading screen if query param is set", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=hide_loading_screen",
+      },
+    }))
+
+    const empty = AppRoot.empty()
+
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 
-  it("creates placeholder alert", () => {
-    const empty = AppRoot.empty("placeholder text!")
+  it("creates empty tree with v1 loading screen if query param is set", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v1",
+      },
+    }))
 
+    const empty = AppRoot.empty()
+
+    // The linter is misfiring here. We're not accessing a DOM node.
+    // eslint-disable-next-line testing-library/no-node-access
     expect(empty.main.children.length).toBe(1)
     const child = empty.main.getIn([0]) as ElementNode
-    expect(child.element.alert?.body).toBe("placeholder text!")
+    expect(child.element.alert).toBeDefined()
 
+    expect(empty.sidebar.isEmpty).toBe(true)
+  })
+
+  it("creates empty tree with v2 loading screen if query param is set", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v2",
+      },
+    }))
+
+    const empty = AppRoot.empty()
+
+    // The linter is misfiring here. We're not accessing a DOM node.
+    // eslint-disable-next-line testing-library/no-node-access
+    expect(empty.main.children.length).toBe(1)
+    const child = empty.main.getIn([0]) as ElementNode
+    expect(child.element.skeleton).not.toBeNull()
+
+    expect(empty.sidebar.isEmpty).toBe(true)
+  })
+
+  it("creates empty tree with no loading screen if query param is v1 and it's not first load", async () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v1",
+      },
+    }))
+
+    const empty = AppRoot.empty(false)
+
+    expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
   })
 })
@@ -870,42 +919,6 @@ describe("AppRoot.applyDelta", () => {
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
-  })
-
-  const addRowsTypes = ["dataFrame", "table", "vegaLiteChart"]
-  it.each(addRowsTypes)("handles 'addRows' for %s", elementType => {
-    // Create an app with a dataframe node
-    const root = AppRoot.empty().applyDelta(
-      "preAddRows",
-      makeProto(DeltaProto, {
-        newElement: { [elementType]: mockDataFrameData },
-      }),
-      forwardMsgMetadata([0, 0])
-    )
-
-    // Add rows
-    const newRoot = root.applyDelta(
-      "postAddRows",
-      makeProto(DeltaProto, { addRows: { data: mockDataFrameData } }),
-      forwardMsgMetadata([0, 0])
-    )
-
-    // Our new element should look like the result of calling `addRows`
-    // with the same dataframe data twice.
-    const expectedData = addRows(
-      toImmutableProto(
-        Element,
-        makeProto(Element, { [elementType]: mockDataFrameData })
-      ),
-      toImmutableProto(
-        NamedDataSet,
-        makeProto(NamedDataSet, { data: mockDataFrameData })
-      )
-    )
-
-    const addRowsElement = newRoot.main.getIn([0]) as ElementNode
-    expect(addRowsElement.scriptRunId).toBe("postAddRows")
-    expect(addRowsElement.immutableElement).toEqual(expectedData)
   })
 })
 

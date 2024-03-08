@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import axios from "axios"
 import { WS } from "jest-websocket-mock"
-import { zip } from "lodash"
+import zip from "lodash/zip"
 import React, { Fragment } from "react"
 
 import { ConnectionState } from "@streamlit/app/src/connection/ConnectionState"
@@ -34,11 +34,13 @@ import {
   Args,
 } from "@streamlit/app/src/connection/WebsocketConnection"
 
-const MOCK_ALLOWED_ORIGINS_RESPONSE = {
-  data: {
-    allowedOrigins: ["list", "of", "allowed", "origins"],
-    useExternalAuthToken: false,
-  },
+const MOCK_ALLOWED_ORIGINS_CONFIG = {
+  allowedOrigins: ["list", "of", "allowed", "origins"],
+  useExternalAuthToken: false,
+}
+
+const MOCK_HOST_CONFIG_RESPONSE = {
+  data: MOCK_ALLOWED_ORIGINS_CONFIG,
 }
 
 const MOCK_HEALTH_RESPONSE = { status: "ok" }
@@ -60,7 +62,7 @@ function createMockArgs(overrides?: Partial<Args>): Args {
     onRetry: jest.fn(),
     claimHostAuthToken: () => Promise.resolve(undefined),
     resetHostAuthToken: jest.fn(),
-    setAllowedOriginsResp: jest.fn(),
+    onHostConfigResp: jest.fn(),
     ...overrides,
   }
 }
@@ -74,8 +76,7 @@ describe("doInitPings", () => {
     timeoutMs: 10,
     maxTimeoutMs: 100,
     retryCallback: jest.fn(),
-    setAllowedOriginsResp: jest.fn(),
-    userCommandLine: "streamlit run not-a-real-script.py",
+    setAllowedOrigins: jest.fn(),
   }
 
   let originalAxiosGet: any
@@ -85,7 +86,7 @@ describe("doInitPings", () => {
     originalAxiosGet = axios.get
     axios.get = jest.fn()
     MOCK_PING_DATA.retryCallback = jest.fn()
-    MOCK_PING_DATA.setAllowedOriginsResp = jest.fn()
+    MOCK_PING_DATA.setAllowedOrigins = jest.fn()
     originalPromiseAll = Promise.all
   })
 
@@ -99,8 +100,8 @@ describe("doInitPings", () => {
       if (url.endsWith("_stcore/health")) {
         return MOCK_HEALTH_RESPONSE
       }
-      if (url.endsWith("_stcore/allowed-message-origins")) {
-        return MOCK_ALLOWED_ORIGINS_RESPONSE
+      if (url.endsWith("_stcore/host-config")) {
+        return MOCK_HOST_CONFIG_RESPONSE
       }
       return {}
     })
@@ -110,51 +111,48 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setAllowedOriginsResp).toHaveBeenCalledWith(
-      MOCK_ALLOWED_ORIGINS_RESPONSE.data
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_CONFIG
     )
   })
 
-  it("returns the uri index and sets allowedOrigins for the first successful ping (0)", async () => {
+  it("returns the uri index and sets hostConfig for the first successful ping (0)", async () => {
     Promise.all = jest
       .fn()
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const uriIndex = await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
     expect(uriIndex).toEqual(0)
-    expect(MOCK_PING_DATA.setAllowedOriginsResp).toHaveBeenCalledWith(
-      MOCK_ALLOWED_ORIGINS_RESPONSE.data
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_CONFIG
     )
   })
 
-  it("returns the uri index and sets allowedOrigins for the first successful ping (1)", async () => {
+  it("returns the uri index and sets hostConfig for the first successful ping (1)", async () => {
     Promise.all = jest
       .fn()
       .mockRejectedValueOnce(new Error(""))
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const uriIndex = await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
     expect(uriIndex).toEqual(1)
-    expect(MOCK_PING_DATA.setAllowedOriginsResp).toHaveBeenCalledWith(
-      MOCK_ALLOWED_ORIGINS_RESPONSE.data
+    expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
+      MOCK_ALLOWED_ORIGINS_CONFIG
     )
   })
 
@@ -165,15 +163,14 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(new Error(TEST_ERROR_MESSAGE))
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -190,15 +187,14 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -219,15 +215,14 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -246,15 +241,14 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -286,9 +280,7 @@ describe("doInitPings", () => {
           just restart it in your terminal:
         </p>
         <pre>
-          <StyledBashCode>
-            {MOCK_PING_DATA_LOCALHOST.userCommandLine}
-          </StyledBashCode>
+          <StyledBashCode>streamlit run yourscript.py</StyledBashCode>
         </pre>
       </Fragment>
     )
@@ -297,15 +289,14 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA_LOCALHOST.uri,
       MOCK_PING_DATA_LOCALHOST.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA_LOCALHOST.retryCallback,
-      MOCK_PING_DATA_LOCALHOST.setAllowedOriginsResp,
-      MOCK_PING_DATA_LOCALHOST.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA_LOCALHOST.retryCallback).toHaveBeenCalledWith(
@@ -337,15 +328,14 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -367,15 +357,14 @@ describe("doInitPings", () => {
       .fn()
       .mockRejectedValueOnce(TEST_ERROR)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
@@ -396,15 +385,14 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     await doInitPings(
       MOCK_PING_DATA.uri,
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       MOCK_PING_DATA.retryCallback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledTimes(5)
@@ -421,7 +409,7 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -437,8 +425,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(timeouts.length).toEqual(5)
@@ -464,7 +451,7 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -480,8 +467,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(timeouts.length).toEqual(5)
@@ -499,11 +485,11 @@ describe("doInitPings", () => {
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // Reset after second doInitPings call
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       .mockRejectedValueOnce(TEST_ERROR_MESSAGE)
       // The promise should be resolved to avoid an infinite loop.
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     const timeouts: number[] = []
     const callback = (
@@ -519,8 +505,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     const timeouts2: number[] = []
@@ -537,8 +522,7 @@ describe("doInitPings", () => {
       MOCK_PING_DATA.timeoutMs,
       MOCK_PING_DATA.maxTimeoutMs,
       callback2,
-      MOCK_PING_DATA.setAllowedOriginsResp,
-      MOCK_PING_DATA.userCommandLine
+      MOCK_PING_DATA.setAllowedOrigins
     )
 
     expect(timeouts[0]).toEqual(10)
@@ -563,7 +547,7 @@ describe("WebsocketConnection", () => {
     originalPromiseAll = Promise.all
     Promise.all = jest
       .fn()
-      .mockResolvedValueOnce(["", MOCK_ALLOWED_ORIGINS_RESPONSE])
+      .mockResolvedValueOnce(["", MOCK_HOST_CONFIG_RESPONSE])
 
     client = new WebsocketConnection(createMockArgs())
   })
@@ -654,7 +638,7 @@ describe("WebsocketConnection auth token handling", () => {
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit"]
+      ["streamlit", "PLACEHOLDER_AUTH_TOKEN"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
@@ -677,7 +661,7 @@ describe("WebsocketConnection auth token handling", () => {
     )
   })
 
-  it("sets second Sec-WebSocket-Protocol option to lastSessionId", async () => {
+  it("sets third Sec-WebSocket-Protocol option to lastSessionId if available", async () => {
     // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(
@@ -694,11 +678,11 @@ describe("WebsocketConnection auth token handling", () => {
     // "lastSessionId" should be the WebSocket's session token
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit", "lastSessionId"]
+      ["streamlit", "PLACEHOLDER_AUTH_TOKEN", "lastSessionId"]
     )
   })
 
-  it("prioritizes host provided auth token over lastSessionId if both set", async () => {
+  it("sets both host provided auth token and lastSessionId if both set", async () => {
     // Create a mock SessionInfo with sessionInfo.last.sessionId == "lastSessionId"
     const sessionInfo = new SessionInfo()
     sessionInfo.setCurrent(
@@ -721,7 +705,7 @@ describe("WebsocketConnection auth token handling", () => {
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
-      ["streamlit", "iAmAnAuthToken"]
+      ["streamlit", "iAmAnAuthToken", "lastSessionId"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })

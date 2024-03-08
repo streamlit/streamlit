@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ export interface ProgressProps {
 
 function Progress({ element, width }: ProgressProps): ReactElement {
   return (
-    <div className="stProgress">
+    <div className="stProgress" data-testid="stProgress">
       <StyledCaptionText>
         <StreamlitMarkdown source={element.text} allowHTML={false} isLabel />
       </StyledCaptionText>

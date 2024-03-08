@@ -5,3 +5,4 @@ paths:
 paths-ignore:
   - "frontend/lib/src/vendor/**"
   - "frontend/app/src/vendor/**"
+  - "lib/streamlit/vendor/**"

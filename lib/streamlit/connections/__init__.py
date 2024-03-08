@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.connections.base_connection import BaseConnection
+from streamlit.connections.snowflake_connection import SnowflakeConnection
+from streamlit.connections.snowpark_connection import SnowparkConnection
+from streamlit.connections.sql_connection import SQLConnection
 
-# Explicitly re-export public symbols.
-from streamlit.connections.base_connection import (
-    ExperimentalBaseConnection as ExperimentalBaseConnection,
-)
-from streamlit.connections.snowpark_connection import (
-    SnowparkConnection as SnowparkConnection,
-)
-from streamlit.connections.sql_connection import SQLConnection as SQLConnection
+ExperimentalBaseConnection = BaseConnection
+
+__all__ = [
+    "BaseConnection",
+    "SnowflakeConnection",
+    "SnowparkConnection",
+    "SQLConnection",
+    "ExperimentalBaseConnection",
+]

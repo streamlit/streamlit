@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,6 +66,29 @@ class StringUtilTest(unittest.TestCase):
     def test_extract_leading_emoji(self, text, expected):
         self.assertEqual(string_util.extract_leading_emoji(text), expected)
 
+    @parameterized.expand(
+        [
+            ("A", False),
+            ("hello", False),
+            ("1_foo", False),
+            ("1.foo", False),
+            ("1-foo", False),
+            ("foo bar", False),
+            ("foo.bar", False),
+            ("foo&bar", False),
+            ("", False),
+            ("a 😃bc", True),
+            ("X😃", True),
+            ("%", True),
+            ("😃", True),
+            ("😃 page name", True),
+            ("👨‍👨‍👧‍👦_page name", True),
+            ("何_is_this", True),
+        ]
+    )
+    def test_contains_special_chars(self, text: str, expected: bool):
+        self.assertEqual(string_util._contains_special_chars(text), expected)
+
     def test_simplify_number(self):
         """Test streamlit.string_util.simplify_number."""
 
@@ -78,3 +101,42 @@ class StringUtilTest(unittest.TestCase):
         self.assertEqual(string_util.simplify_number(1000000000), "1b")
 
         self.assertEqual(string_util.simplify_number(1000000000000), "1t")
+
+    @parameterized.expand(
+        [
+            # Correctly identified as containing HTML tags.
+            ("<br/>", True),
+            ("<p>foo</p>", True),
+            ("bar <div>baz</div>", True),
+            # Correctly identified as not containing HTML tags.
+            ("Hello, World", False),  # No HTML tags
+            ("<a>", False),  # No closing tag
+            ("<<a>>", False),  # Malformatted tag
+            ("a < 3 && b > 3", False),  # Easily mistaken for a tag by more naive regex
+        ]
+    )
+    def test_probably_contains_html_tags(self, text, expected):
+        self.assertEqual(string_util.probably_contains_html_tags(text), expected)
+
+    @parameterized.expand(
+        [
+            ("", "`", 0),
+            ("`", "`", 1),
+            ("a", "`", 0),
+            ("``", "`", 2),
+            ("aba", "a", 1),
+            ("a``a", "`", 2),
+            ("```abc```", "`", 3),
+            ("a`b``c```d", "`", 3),
+            ("``````", "`", 6),
+            (
+                "a`b`c`d`e",
+                "`",
+                1,
+            ),
+            ("a``b```c````d", "`", 4),
+            ("no backticks here", "`", 0),
+        ]
+    )
+    def test_max_char_sequence(self, text, char, expected):
+        self.assertEqual(string_util.max_char_sequence(text, char), expected)

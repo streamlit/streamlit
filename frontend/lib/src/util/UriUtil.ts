@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { take } from "lodash"
+import take from "lodash/take"
 
 import { IS_DEV_ENV, WEBSOCKET_PORT_DEV } from "@streamlit/lib/src/baseconsts"
-import DOMPurify from "dompurify"
 
 /**
  * host:port tuple
@@ -30,7 +29,6 @@ export interface BaseUriParts {
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
-export const SVG_PREFIX = "data:image/svg+xml,"
 
 /**
  * Return the BaseUriParts for the global window
@@ -136,15 +134,6 @@ function makePath(basePath: string, subPath: string): string {
  */
 function isHttps(): boolean {
   return window.location.href.startsWith("https://")
-}
-
-/**
- * Run SVG strings through DOMPurify to prevent Javascript execution
- */
-export function xssSanitizeSvg(uri: string): string {
-  const SVG_PREFIX = "data:image/svg+xml,"
-  const unsafe = uri.substring(SVG_PREFIX.length)
-  return DOMPurify.sanitize(unsafe, {})
 }
 
 /**

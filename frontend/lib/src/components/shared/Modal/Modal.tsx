@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,7 +118,9 @@ function ModalFooter({ children }: ModalFooterProps): ReactElement {
   )
 }
 
-const ModalButton: FunctionComponent<BaseButtonProps> = buttonProps => (
+const ModalButton: FunctionComponent<
+  React.PropsWithChildren<BaseButtonProps>
+> = buttonProps => (
   <StyledModalButton>
     <BaseButton {...buttonProps} />
   </StyledModalButton>
@@ -132,6 +134,9 @@ function Modal(props: ModalProps): ReactElement {
       style: {
         background: colors.darkenedBgMix25,
       },
+      props: {
+        "data-testid": "stModal",
+      },
     },
     DialogContainer: {
       style: {
@@ -141,7 +146,10 @@ function Modal(props: ModalProps): ReactElement {
     },
     Dialog: {
       style: {
-        borderRadius: radii.xl,
+        borderBottomRadius: radii.xl,
+        borderTopRadius: radii.xl,
+        borderLeftRadius: radii.xl,
+        borderRightRadius: radii.xl,
       },
     },
     Close: {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ const SidebarNav = ({
   const { pageLinkBaseUrl } = React.useContext(AppContext)
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
-  const isOverflowing = useIsOverflowing(navItemsRef)
+  const isOverflowing = useIsOverflowing(navItemsRef, expanded)
 
   const onMouseOver = useCallback(() => {
     if (isOverflowing) {
@@ -95,6 +95,7 @@ const SidebarNav = ({
         hasSidebarElements={hasSidebarElements}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
+        data-testid="stSidebarNavItems"
       >
         {appPages.map((page: IAppPage, pageIndex: number) => {
           const pageUrl = endpoints.buildAppPageURL(
@@ -111,6 +112,7 @@ const SidebarNav = ({
             <li key={pageName}>
               <StyledSidebarNavLinkContainer>
                 <StyledSidebarNavLink
+                  data-testid="stSidebarNavLink"
                   isActive={isActive}
                   href={pageUrl}
                   onClick={e => {
@@ -136,14 +138,25 @@ const SidebarNav = ({
 
       {hasSidebarElements && (
         <StyledSidebarNavSeparatorContainer
+          data-testid="stSidebarNavSeparator"
           isExpanded={expanded}
           isOverflowing={isOverflowing}
           onClick={toggleExpanded}
         >
           {isOverflowing && !expanded && (
-            <Icon content={ExpandMore} size="md" />
+            <Icon
+              content={ExpandMore}
+              size="md"
+              testid="stSidebarNavExpandIcon"
+            />
           )}
-          {expanded && <Icon content={ExpandLess} size="md" />}
+          {expanded && (
+            <Icon
+              content={ExpandLess}
+              size="md"
+              testid="stSidebarNavCollapseIcon"
+            />
+          )}
         </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>

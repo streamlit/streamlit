@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,3 +23,4 @@ export { default as useColumnSort } from "./useColumnSort"
 export { default as useColumnLoader } from "./useColumnLoader"
 export { default as useTooltips } from "./useTooltips"
 export { default as useCustomRenderer } from "./useCustomRenderer"
+export { default as useDataExporter } from "./useDataExporter"

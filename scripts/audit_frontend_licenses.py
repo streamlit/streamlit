@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,11 +79,20 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
     (
         # Apache 2.0 license: https://github.com/google/flatbuffers
         "flatbuffers",
-        "2.0.4",
-        "SEE LICENSE IN LICENSE.txt",
+        "23.5.26",
+        "SEE LICENSE IN LICENSE",
         "git+https://github.com/google/flatbuffers.git",
         "https://google.github.io/flatbuffers/",
         "The FlatBuffers project",
+    ),
+    (
+        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
+        "@plotly/mapbox-gl",
+        "1.13.4",
+        "SEE LICENSE IN LICENSE.txt",
+        "git://github.com/plotly/mapbox-gl-js.git",
+        "Unknown",
+        "Unknown",
     ),
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
@@ -93,24 +102,6 @@ PACKAGE_EXCEPTIONS: Set[PackageInfo] = {
         "git://github.com/mapbox/mapbox-gl-js.git",
         "Unknown",
         "Unknown",
-    ),
-    (
-        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
-        "mapbox-gl",
-        "1.10.1",
-        "SEE LICENSE IN LICENSE.txt",
-        "git://github.com/mapbox/mapbox-gl-js.git",
-        "Unknown",
-        "Unknown",
-    ),
-    (
-        # MIT license: https://github.com/dy/image-palette
-        "image-palette",
-        "2.1.0",
-        "MIT*",
-        "https://github.com/dy/image-palette.git",
-        "Unknown",
-        "Dmitry Yv",
     ),
     (
         # CC-BY-3.0 license: https://github.com/cartodb/cartocolor#licensing

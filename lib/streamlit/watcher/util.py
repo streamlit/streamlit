@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,11 +18,14 @@ These are functions that only make sense within the watcher. In particular,
 functions that use streamlit.config can go here to avoid a dependency cycle.
 """
 
+from __future__ import annotations
+
 import hashlib
 import os
 import time
 from pathlib import Path
-from typing import Optional
+
+from streamlit.util import HASHLIB_KWARGS
 
 # How many times to try to grab the MD5 hash.
 _MAX_RETRIES = 5
@@ -34,7 +37,7 @@ _RETRY_WAIT_SECS = 0.1
 def calc_md5_with_blocking_retries(
     path: str,
     *,  # keyword-only arguments:
-    glob_pattern: Optional[str] = None,
+    glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> str:
     """Calculate the MD5 checksum of a given path.
@@ -55,7 +58,7 @@ def calc_md5_with_blocking_retries(
     else:
         content = _get_file_content_with_blocking_retries(path)
 
-    md5 = hashlib.md5()
+    md5 = hashlib.md5(**HASHLIB_KWARGS)
     md5.update(content)
 
     # Use hexdigest() instead of digest(), so it's easier to debug.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import {
   getPossibleBaseUris,
   getWindowBaseUriParts,
   isValidOrigin,
-  xssSanitizeSvg,
 } from "./UriUtil"
 
 const location: Partial<Location> = {}
@@ -156,14 +155,6 @@ test("builds WS URI with no base path", () => {
     "baz"
   )
   expect(uri).toBe("ws://the_host:9988/baz")
-})
-
-test("sanitizes SVG uris", () => {
-  const uri = xssSanitizeSvg(
-    `data:image/svg+xml,<svg><script>alert('evil')</script></svg>`
-  )
-
-  expect(uri).toBe(`<svg></svg>`)
 })
 
 describe("isValidOrigin", () => {

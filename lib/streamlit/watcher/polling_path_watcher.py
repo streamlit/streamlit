@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,19 +14,20 @@
 
 """A class that watches a given path via polling."""
 
+from __future__ import annotations
+
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, Optional
+from typing import Callable, Final
 
 from streamlit.logger import get_logger
 from streamlit.util import repr_
 from streamlit.watcher import util
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-
-_MAX_WORKERS = 4
-_POLLING_PERIOD_SECS = 0.2
+_MAX_WORKERS: Final = 4
+_POLLING_PERIOD_SECS: Final = 0.2
 
 
 class PollingPathWatcher:
@@ -41,14 +42,14 @@ class PollingPathWatcher:
         This is a no-op, and exists for interface parity with
         EventBasedPathWatcher.
         """
-        LOGGER.debug("Watcher closed")
+        _LOGGER.debug("Watcher closed")
 
     def __init__(
         self,
         path: str,
         on_changed: Callable[[str], None],
         *,  # keyword-only arguments:
-        glob_pattern: Optional[str] = None,
+        glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
         """Constructor.
@@ -94,7 +95,9 @@ class PollingPathWatcher:
         modification_time = util.path_modification_time(
             self._path, self._allow_nonexistent
         )
-        if modification_time <= self._modification_time:
+        # We add modification_time != 0.0 check since on some file systems (s3fs/fuse)
+        # modification_time is always 0.0 because of file system limitations.
+        if modification_time != 0.0 and modification_time <= self._modification_time:
             self._schedule()
             return
 
@@ -111,7 +114,7 @@ class PollingPathWatcher:
 
         self._md5 = md5
 
-        LOGGER.debug("Change detected: %s", self._path)
+        _LOGGER.debug("Change detected: %s", self._path)
         self._on_changed(self._path)
 
         self._schedule()

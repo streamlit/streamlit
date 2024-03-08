@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,8 @@ import {
   Components,
   ReactMarkdownProps,
 } from "react-markdown/lib/ast-to-react"
-import { once, omit } from "lodash"
+import once from "lodash/once"
+import omit from "lodash/omit"
 import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
@@ -41,13 +42,7 @@ import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import {
-  getMdBlue,
-  getMdGreen,
-  getMdOrange,
-  getMdRed,
-  getMdViolet,
-} from "@streamlit/lib/src/theme"
+import { getMarkdownTextColors } from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
@@ -59,6 +54,7 @@ import {
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
+import xxhash from "xxhashjs"
 import StreamlitSyntaxHighlighter from "@streamlit/lib/src/components/elements/CodeBlock/StreamlitSyntaxHighlighter"
 
 export enum Tags {
@@ -87,17 +83,22 @@ export interface Props {
   isLabel?: boolean
 
   /**
+   * Make the label bold
+   */
+  boldLabel?: boolean
+
+  /**
    * Checkbox labels have larger font sizing
    */
   largerLabel?: boolean
 
   /**
-   * Does not allow links & has larger font sizing
+   * Does not allow links
    */
-  isButton?: boolean
+  disableLinks?: boolean
 
   /**
-   * Toast has smaller font sizing
+   * Toast has smaller font sizing & special CSS
    */
   isToast?: boolean
 }
@@ -107,12 +108,21 @@ export interface Props {
  * Splits the string on non-alphanumeric characters, and joins with a dash.
  */
 export function createAnchorFromText(text: string | null): string {
-  const newAnchor = text
-    ?.toLowerCase()
-    .split(/[^A-Za-z0-9]/)
-    .filter(Boolean)
-    .join("-")
-  return newAnchor || ""
+  let newAnchor = ""
+  // Check if the text is valid ASCII characters - necessary for fully functional anchors (issue #5291)
+  const isASCII = text && /^[\x00-\x7F]*$/.test(text)
+
+  if (isASCII) {
+    newAnchor = text
+      ?.toLowerCase()
+      .split(/[^\p{L}\p{N}]+/gu) // split on non-alphanumeric characters
+      .filter(Boolean) // filter out falsy values using Boolean constructor
+      .join("-")
+  } else if (text) {
+    // if the text is not valid ASCII, use a hash of the text
+    newAnchor = xxhash.h32(text, 0xabcd).toString(16)
+  }
+  return newAnchor
 }
 
 // Note: React markdown limits hrefs to specific protocols ('http', 'https',
@@ -135,14 +145,10 @@ interface HeadingWithAnchorProps {
   tagProps?: HTMLProps<HTMLHeadingElement>
 }
 
-export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
-  tag,
-  anchor: propsAnchor,
-  hideAnchor,
-  children,
-  tagProps,
-}) => {
-  const isSidebar = React.useContext(IsSidebarContext)
+export const HeadingWithAnchor: FunctionComponent<
+  React.PropsWithChildren<HeadingWithAnchorProps>
+> = ({ tag, anchor: propsAnchor, hideAnchor, children, tagProps }) => {
+  const isInSidebar = React.useContext(IsSidebarContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
@@ -165,7 +171,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   }, [addScriptFinishedHandler, removeScriptFinishedHandler, onScriptFinished])
 
   const ref = React.useCallback(
-    node => {
+    (node: any) => {
       if (node === null) {
         return
       }
@@ -178,14 +184,14 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     },
     [propsAnchor]
   )
-  if (isSidebar) {
+  if (isInSidebar) {
     return React.createElement(tag, tagProps, children)
   }
 
   return React.createElement(
     tag,
     { ...tagProps, ref, id: elementId },
-    <StyledLinkIconContainer>
+    <StyledLinkIconContainer data-testid="StyledLinkIconContainer">
       {elementId && !hideAnchor && (
         <StyledLinkIcon href={`#${elementId}`}>
           <LinkIcon size="18" />
@@ -199,11 +205,9 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
 type HeadingProps = JSX.IntrinsicElements["h1"] &
   ReactMarkdownProps & { level: number; "data-anchor"?: string }
 
-export const CustomHeading: FunctionComponent<HeadingProps> = ({
-  node,
-  children,
-  ...rest
-}) => {
+export const CustomHeading: FunctionComponent<
+  React.PropsWithChildren<HeadingProps>
+> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
     <StyledHeaderContainer>
@@ -233,9 +237,9 @@ export interface RenderedMarkdownProps {
   isLabel?: boolean
 
   /**
-   * Does not allow links & has larger font sizing
+   * Does not allow links
    */
-  isButton?: boolean
+  disableLinks?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -244,12 +248,9 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 /**
  * Renders code tag with highlighting based on requested language.
  */
-export const CustomCodeTag: FunctionComponent<CustomCodeTagProps> = ({
-  inline,
-  className,
-  children,
-  ...props
-}) => {
+export const CustomCodeTag: FunctionComponent<
+  React.PropsWithChildren<CustomCodeTagProps>
+> = ({ inline, className, children, ...props }) => {
   const match = /language-(\w+)/.exec(className || "")
   const codeText = String(children).trim().replace(/\n$/, "")
 
@@ -270,7 +271,7 @@ export function RenderedMarkdown({
   source,
   overrideComponents,
   isLabel,
-  isButton,
+  disableLinks,
 }: RenderedMarkdownProps): ReactElement {
   const renderers: Components = {
     pre: CodeBlock,
@@ -285,13 +286,20 @@ export function RenderedMarkdown({
     ...(overrideComponents || {}),
   }
   const theme = useTheme()
+  const { red, orange, yellow, green, blue, violet, purple, gray } =
+    getMarkdownTextColors(theme)
   const colorMapping = new Map(
     Object.entries({
-      red: getMdRed(theme),
-      blue: getMdBlue(theme),
-      green: getMdGreen(theme),
-      violet: getMdViolet(theme),
-      orange: getMdOrange(theme),
+      red: `color: ${red}`,
+      blue: `color: ${blue}`,
+      green: `color: ${green}`,
+      violet: `color: ${violet}`,
+      orange: `color: ${orange}`,
+      gray: `color: ${gray}`,
+      grey: `color: ${gray}`,
+      // Gradient from red, orange, yellow, green, blue, violet, purple
+      rainbow: `color: transparent; background-clip: text; -webkit-background-clip: text; background-image: linear-gradient(to right,
+        ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple});`,
     })
   )
   function remarkColoring() {
@@ -303,7 +311,7 @@ export function RenderedMarkdown({
             const data = node.data || (node.data = {})
             data.hName = "span"
             data.hProperties = {
-              style: `color: ${colorMapping.get(nodeName)}`,
+              style: colorMapping.get(nodeName),
             }
           }
         }
@@ -342,8 +350,8 @@ export function RenderedMarkdown({
     "input",
     "hr",
     "blockquote",
-    // Button labels additionally restrict links
-    ...(isButton ? ["a"] : []),
+    // additionally restrict links
+    ...(disableLinks ? ["a"] : []),
   ]
 
   return (
@@ -370,6 +378,8 @@ export function RenderedMarkdown({
 class StreamlitMarkdown extends PureComponent<Props> {
   static contextType = IsSidebarContext
 
+  context!: React.ContextType<typeof IsSidebarContext>
+
   public componentDidCatch = (): void => {
     const { source } = this.props
 
@@ -387,8 +397,9 @@ class StreamlitMarkdown extends PureComponent<Props> {
       style,
       isCaption,
       isLabel,
+      boldLabel,
       largerLabel,
-      isButton,
+      disableLinks,
       isToast,
     } = this.props
     const isInSidebar = this.context
@@ -398,8 +409,8 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        boldLabel={boldLabel}
         largerLabel={largerLabel}
-        isButton={isButton}
         isToast={isToast}
         style={style}
         data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
@@ -408,7 +419,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
           source={source}
           allowHTML={allowHTML}
           isLabel={isLabel}
-          isButton={isButton}
+          disableLinks={disableLinks}
         />
       </StyledStreamlitMarkdown>
     )

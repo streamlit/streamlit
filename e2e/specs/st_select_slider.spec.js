@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -169,13 +169,17 @@ describe("st.select_slider", () => {
 
   it("realigns label values when expander re-opened", () => {
     // Closes the expander
-    cy.get(".streamlit-expanderHeader").click();
+    cy.get('[data-testid="stExpander"] summary').click();
 
     // Reopens the expander
-    cy.get(".streamlit-expanderHeader").click();
+    cy.get('[data-testid="stExpander"] summary').click();
 
     // Positioning error occurs on overflow of expander container
     // which occurs when position left set to 0px
-    cy.getIndexed(".StyledThumbValue", 11).should("not.have.css", "left", "0px")
+    cy.getIndexed(".StyledThumbValue", 11).should(
+      "not.have.css",
+      "left",
+      "0px"
+    );
   });
 });

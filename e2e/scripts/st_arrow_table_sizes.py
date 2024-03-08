@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,19 +33,19 @@ st.write(
 
 ROWS = 2
 
-st.header("Using st._arrow_table")
+st.header("Using st.table")
 
 for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
-    st._arrow_table(df)
+    st.table(df)
 
-st.header("Overriding st._arrow_table")
+st.header("Overriding st.table")
 
 for cols in [4, 5, 6, 20]:
     df = pd.DataFrame(
         np.random.randn(ROWS, cols), index=range(ROWS), columns=range(cols)
     )
-    df_elt = st._arrow_table(np.random.randn(200, 200))
-    df_elt._arrow_table(df)
+    df_elt = st.table(np.random.randn(200, 200))
+    df_elt.table(df)

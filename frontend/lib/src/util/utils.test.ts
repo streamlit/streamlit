@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,15 @@
  */
 
 import {
-  getCookie,
-  setCookie,
-  isEmbed,
-  getEmbedUrlParams,
-  EMBED_QUERY_PARAM_VALUES,
   EMBED_QUERY_PARAM_KEY,
+  EMBED_QUERY_PARAM_VALUES,
+  LoadingScreenType,
+  getCookie,
+  getEmbedUrlParams,
+  getLoadingScreenType,
+  isEmbed,
+  setCookie,
+  preserveEmbedQueryParams,
 } from "./utils"
 
 describe("getCookie", () => {
@@ -110,9 +113,11 @@ describe("embedParamValues", () => {
     "show_toolbar",
     "show_padding",
     "disable_scrolling",
-    "show_footer",
     "light_theme",
     "dark_theme",
+    "hide_loading_screen",
+    "show_loading_screen_v1",
+    "show_loading_screen_v2",
     "true",
   ]
   it("embedParamValues have correct values", () => {
@@ -263,5 +268,111 @@ describe("isEmbed", () => {
       },
     }))
     expect(isEmbed()).toBe(false)
+  })
+})
+
+describe("getLoadingScreenType", () => {
+  let windowSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    windowSpy = jest.spyOn(window, "window", "get")
+  })
+
+  afterEach(() => {
+    windowSpy.mockRestore()
+  })
+
+  it("should return v2 by default", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: null,
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
+  })
+
+  it("should give precendence to 'hide'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search:
+          "?embed_options=hide_loading_screen&show_loading_screen_v1&show_loading_screen_v2",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.NONE)
+  })
+
+  it("should support 'hide'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=hide_loading_screen",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.NONE)
+  })
+
+  it("should support 'v1'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v1",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.V1)
+  })
+
+  it("should support 'v2'", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=show_loading_screen_v2",
+      },
+    }))
+
+    expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
+  })
+
+  describe("preserveEmbedQueryParams", () => {
+    let prevWindowLocation: Location
+    afterEach(() => {
+      window.location = prevWindowLocation
+    })
+
+    it("should return an empty string if not in embed mode", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search: "foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe("")
+    })
+
+    it("should preserve embed query string even with no embed options and remove foo=bar", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search: "embed=true&foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe("embed=true")
+    })
+
+    it("should preserve embed query string with embed options and remove foo=bar", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search:
+          "embed=true&embed_options=option1&embed_options=option2&foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe(
+        "embed=true&embed_options=option1&embed_options=option2"
+      )
+    })
   })
 })

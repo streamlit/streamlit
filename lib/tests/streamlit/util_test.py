@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import gc
 import random
 import unittest
 from typing import Dict, List, Set
@@ -145,15 +147,13 @@ class UtilTest(unittest.TestCase):
             ),
         ]
     )
-    def test_drop_key_query_params(
+    def test_exclude_keys_in_dict(
         self,
-        query_params: Dict[str, List[str]],
+        d: Dict[str, List[str]],
         keys_to_drop: List[str],
         result: Dict[str, List[str]],
     ):
-        self.assertDictEqual(
-            util.exclude_key_query_params(query_params, keys_to_drop), result
-        )
+        self.assertDictEqual(util.exclude_keys_in_dict(d, keys_to_drop), result)
 
     @parameterized.expand(
         [
@@ -187,3 +187,26 @@ class UtilTest(unittest.TestCase):
             util.calc_md5("eventually bytes"),
             util.calc_md5("eventually bytes".encode("utf-8")),
         )
+
+    def test_timed_cleanup_cache_gc(self):
+        """Test that the TimedCleanupCache does not leave behind tasks when
+        the cache is not externally reachable"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def create_cache():
+            cache = util.TimedCleanupCache(maxsize=2, ttl=10)
+            cache["foo"] = "bar"
+
+            # expire_cache and create_cache
+            assert len(asyncio.all_tasks()) > 1
+
+        asyncio.run(create_cache())
+
+        gc.collect()
+
+        async def check():
+            # Only has this function running
+            assert len(asyncio.all_tasks()) == 1
+
+        asyncio.run(check())

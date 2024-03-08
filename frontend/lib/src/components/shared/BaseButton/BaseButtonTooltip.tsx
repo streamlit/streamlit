@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,16 +22,21 @@ import { StyledTooltipNormal, StyledTooltipMobile } from "./styled-components"
 interface Props {
   children: ReactElement
   help?: string
+  placement?: Placement
 }
 
-export function BaseButtonTooltip({ children, help }: Props): ReactElement {
+export function BaseButtonTooltip({
+  children,
+  help,
+  placement,
+}: Props): ReactElement {
   if (!help) {
     return children
   }
   return (
     <div className="stTooltipIcon">
       <StyledTooltipNormal>
-        <TooltipIcon content={help} placement={Placement.TOP}>
+        <TooltipIcon content={help} placement={placement || Placement.TOP}>
           {children}
         </TooltipIcon>
       </StyledTooltipNormal>

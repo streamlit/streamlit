@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,25 +16,26 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Final,
     Iterable,
     List,
+    Literal,
     Mapping,
-    Optional,
     Set,
     Tuple,
+    TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
-import pandas as pd
-import pyarrow as pa
-from typing_extensions import Literal, TypeAlias, TypedDict
+from typing_extensions import TypeAlias
 
 from streamlit import logger as _logger
 from streamlit import type_util
@@ -71,11 +72,13 @@ from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     import numpy as np
+    import pandas as pd
+    import pyarrow as pa
     from pandas.io.formats.style import Styler
 
     from streamlit.delta_generator import DeltaGenerator
 
-_LOGGER = _logger.get_logger("root")
+_LOGGER: Final = _logger.get_logger(__name__)
 
 # All formats that support direct editing, meaning that these
 # formats will be returned with the same type when used with data_editor.
@@ -98,11 +101,11 @@ EditableData = TypeVar(
 
 # All data types supported by the data editor.
 DataTypes: TypeAlias = Union[
-    pd.DataFrame,
-    pd.Series,
-    pd.Index,
+    "pd.DataFrame",
+    "pd.Series",
+    "pd.Index",
     "Styler",
-    pa.Table,
+    "pa.Table",
     "np.ndarray[Any, np.dtype[np.float64]]",
     Tuple[Any],
     List[Any],
@@ -127,16 +130,16 @@ class EditingState(TypedDict, total=False):
         A list of deleted rows, where each row is the numerical position of the deleted row.
     """
 
-    edited_rows: Dict[int, Dict[str, str | int | float | bool | None]]
-    added_rows: List[Dict[str, str | int | float | bool | None]]
-    deleted_rows: List[int]
+    edited_rows: dict[int, dict[str, str | int | float | bool | None]]
+    added_rows: list[dict[str, str | int | float | bool | None]]
+    deleted_rows: list[int]
 
 
 @dataclass
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: Optional[str], widget_id: str = "") -> EditingState:
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> EditingState:
         data_editor_state: EditingState = (
             {
                 "edited_rows": {},
@@ -181,7 +184,7 @@ def _parse_value(
 
     column_data_kind : ColumnDataKind
         The determined data kind of the column. The column data kind refers to the
-        shared data type of the values in the column (e.g. integer, float, string).
+        shared data type of the values in the column (e.g. int, float, str).
 
     Returns
     -------
@@ -189,6 +192,8 @@ def _parse_value(
     """
     if value is None:
         return None
+
+    import pandas as pd
 
     try:
         if column_data_kind == ColumnDataKind.STRING:
@@ -202,6 +207,15 @@ def _parse_value(
 
         if column_data_kind == ColumnDataKind.BOOLEAN:
             return bool(value)
+
+        if column_data_kind == ColumnDataKind.DECIMAL:
+            # Decimal theoretically can also be initialized via number values.
+            # However, using number values here seems to cause issues with Arrow
+            # serialization, once you try to render the returned dataframe.
+            return Decimal(str(value))
+
+        if column_data_kind == ColumnDataKind.TIMEDELTA:
+            return pd.Timedelta(value)
 
         if column_data_kind in [
             ColumnDataKind.DATETIME,
@@ -267,7 +281,7 @@ def _apply_cell_edits(
 
 def _apply_row_additions(
     df: pd.DataFrame,
-    added_rows: List[Dict[str, Any]],
+    added_rows: list[dict[str, Any]],
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply row additions to the provided dataframe (inplace).
@@ -284,8 +298,11 @@ def _apply_row_additions(
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
     """
+
     if not added_rows:
         return
+
+    import pandas as pd
 
     # This is only used if the dataframe has a range index:
     # There seems to be a bug in older pandas versions with RangeIndex in
@@ -298,7 +315,7 @@ def _apply_row_additions(
 
     for added_row in added_rows:
         index_value = None
-        new_row: List[Any] = [None for _ in range(df.shape[1])]
+        new_row: list[Any] = [None for _ in range(df.shape[1])]
         for col_name in added_row.keys():
             value = added_row[col_name]
             if col_name == INDEX_IDENTIFIER:
@@ -322,7 +339,7 @@ def _apply_row_additions(
             df.loc[index_value, :] = new_row
 
 
-def _apply_row_deletions(df: pd.DataFrame, deleted_rows: List[int]) -> None:
+def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
     """Apply row deletions to the provided dataframe (inplace).
 
     Parameters
@@ -382,12 +399,21 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     bool
         True if the index is supported, False otherwise.
     """
+    import pandas as pd
 
     return (
         type(df_index)
         in [
             pd.RangeIndex,
             pd.Index,
+            pd.DatetimeIndex,
+            # Categorical index doesn't work since arrow
+            # does serialize the options:
+            # pd.CategoricalIndex,
+            # Interval type isn't editable currently:
+            # pd.IntervalIndex,
+            # Period type isn't editable currently:
+            # pd.PeriodIndex,
         ]
         # We need to check these index types without importing, since they are deprecated
         # and planned to be removed soon.
@@ -397,6 +423,25 @@ def _is_supported_index(df_index: pd.Index) -> bool:
     )
 
 
+def _fix_column_headers(data_df: pd.DataFrame) -> None:
+    """Fix the column headers of the provided dataframe inplace to work
+    correctly for data editing."""
+    import pandas as pd
+
+    if isinstance(data_df.columns, pd.MultiIndex):
+        # Flatten hierarchical column headers to a single level:
+        data_df.columns = [
+            "_".join(map(str, header)) for header in data_df.columns.to_flat_index()
+        ]
+    elif pd.api.types.infer_dtype(data_df.columns) != "string":
+        # If the column names are not all strings, we need to convert them to strings
+        # to avoid issues with editing:
+        data_df.rename(
+            columns={column: str(column) for column in data_df.columns},
+            inplace=True,
+        )
+
+
 def _check_column_names(data_df: pd.DataFrame):
     """Check if the column names in the provided dataframe are valid.
 
@@ -404,6 +449,10 @@ def _check_column_names(data_df: pd.DataFrame):
     named ``_index``. If the column names are not valid, a ``StreamlitAPIException``
     is raised.
     """
+
+    if data_df.columns.empty:
+        return
+
     # Check if the column names are unique and raise an exception if not.
     # Add the names of the duplicated columns to the exception message.
     duplicated_columns = data_df.columns[data_df.columns.duplicated()]
@@ -554,7 +603,7 @@ class DataEditorMixin:
             The ``edited_cells`` dictionary is now called ``edited_rows`` and uses a
             different format (``{0: {"column name": "edited value"}}`` instead of
             ``{"0:1": "edited value"}``). You may need to adjust the code if your app uses
-            ``st.experimental_data_editor`` in combination with ``st.session_state``."
+            ``st.experimental_data_editor`` in combination with ``st.session_state``.
 
         Parameters
         ----------
@@ -566,8 +615,10 @@ class DataEditorMixin:
                 - Mixing data types within a column can make the column uneditable.
                 - Additionally, the following data types are not yet supported for editing:
                   complex, list, tuple, bytes, bytearray, memoryview, dict, set, frozenset,
-                  datetime.timedelta, decimal.Decimal, fractions.Fraction, pandas.Interval,
-                  pandas.Period, pandas.Timedelta.
+                  fractions.Fraction, pandas.Interval, and pandas.Period.
+                - To prevent overflow in JavaScript, columns containing datetime.timedelta
+                  and pandas.Timedelta values will default to uneditable but this can be
+                  changed through column configuration.
 
         width : int or None
             Desired width of the data editor expressed in pixels. If None, the width will
@@ -585,7 +636,7 @@ class DataEditorMixin:
             Whether to hide the index column(s). If None (default), the visibility of
             index columns is automatically determined based on the data.
 
-        column_order : iterable of str or None
+        column_order : Iterable of str or None
             Specifies the display order of columns. This also affects which columns are
             visible. For example, ``column_order=("col2", "col1")`` will display 'col2'
             first, followed by 'col1', and will hide all other non-index columns. If
@@ -614,9 +665,9 @@ class DataEditorMixin:
             add and delete rows in the data editor, but column sorting is disabled.
             Defaults to "fixed".
 
-        disabled : bool or iterable of str
+        disabled : bool or Iterable of str
             Controls the editing of columns. If True, editing is disabled for all columns.
-            If an iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
+            If an Iterable of column names is provided (e.g., ``disabled=("col1", "col2"))``,
             only the specified columns will be disabled for editing. If False (default),
             all columns that support editing are editable.
 
@@ -640,7 +691,7 @@ class DataEditorMixin:
         pandas.DataFrame, pandas.Series, pyarrow.Table, numpy.ndarray, list, set, tuple, or dict.
             The edited data. The edited data is returned in its original data type if
             it corresponds to any of the supported return types. All other data types
-            are returned as a ``pd.DataFrame``.
+            are returned as a ``pandas.DataFrame``.
 
         Examples
         --------
@@ -723,6 +774,8 @@ class DataEditorMixin:
            height: 350px
 
         """
+        import pandas as pd
+        import pyarrow as pa
 
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
@@ -760,6 +813,8 @@ class DataEditorMixin:
             column_config_mapping, data_df, data_format, check_arrow_compatibility=True
         )
 
+        # Fix the column headers to work correctly for data editing:
+        _fix_column_headers(data_df)
         # Temporary workaround: We hide range indices if num_rows is dynamic.
         # since the current way of handling this index during editing is a bit confusing.
         if isinstance(data_df.index, pd.RangeIndex) and num_rows == "dynamic":
@@ -797,6 +852,7 @@ class DataEditorMixin:
         # but it isn't clear how much processing is needed to have the data in a
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
+        ctx = get_script_run_ctx()
         id = compute_widget_id(
             "data_editor",
             user_key=key,
@@ -809,6 +865,7 @@ class DataEditorMixin:
             num_rows=num_rows,
             key=key,
             form_id=current_form_id(self.dg),
+            page=ctx.page_script_hash if ctx else None,
         )
 
         proto = ArrowProto()
@@ -865,7 +922,7 @@ class DataEditorMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
-            ctx=get_script_run_ctx(),
+            ctx=ctx,
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
@@ -873,7 +930,7 @@ class DataEditorMixin:
         return type_util.convert_df_to_data_format(data_df, data_format)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 

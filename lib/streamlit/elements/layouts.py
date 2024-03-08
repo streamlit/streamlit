@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
+
+from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -19,22 +24,45 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.mutable_status_container import StatusContainer
 
-SpecType = Union[int, Sequence[Union[int, float]]]
+SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 
 
 class LayoutsMixin:
     @gather_metrics("container")
-    def container(self) -> "DeltaGenerator":
+    def container(
+        self, *, height: int | None = None, border: bool | None = None
+    ) -> DeltaGenerator:
         """Insert a multi-element container.
 
         Inserts an invisible container into your app that can be used to hold
         multiple elements. This allows you to, for example, insert multiple
         elements into your app out of order.
 
-        To add elements to the returned container, you can use "with" notation
+        To add elements to the returned container, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
+
+        Parameters
+        ----------
+        height : int or None
+            Desired height of the container expressed in pixels. If ``None`` (default)
+            the container grows to fit its content. If a fixed height, scrolling is
+            enabled for large content and a grey border is shown around the container
+            to visually separate its scroll surface from the rest of the app.
+
+            .. note::
+                Use containers with scroll sparingly. If you do, try to keep
+                the height small (below 500 pixels). Otherwise, the scroll
+                surface of the container might cover the majority of the screen
+                on mobile devices, which makes it hard to scroll the rest of the app.
+
+        border : bool or None
+            Whether to show a border around the container. If ``None`` (default), a
+            border is shown if the container is set to a fixed height and not
+            shown otherwise.
+
 
         Examples
         --------
@@ -58,7 +86,7 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> container = st.container()
+        >>> container = st.container(border=True)
         >>> container.write("This is inside the container")
         >>> st.write("This is outside the container")
         >>>
@@ -67,21 +95,62 @@ class LayoutsMixin:
 
         .. output ::
             https://doc-container2.streamlit.app/
-            height: 480px
-        """
-        return self.dg._block()
+            height: 300px
 
-    # TODO: Enforce that columns are not nested or in Sidebar
+        Using ``height`` to make a grid:
+
+        >>> import streamlit as st
+        >>>
+        >>> row1 = st.columns(3)
+        >>> row2 = st.columns(3)
+        >>>
+        >>> for col in row1 + row2:
+        >>>     tile = col.container(height=120)
+        >>>     tile.title(":balloon:")
+
+        .. output ::
+            https://doc-container3.streamlit.app/
+            height: 350px
+
+        Using ``height`` to create a scrolling container for long content:
+
+        >>> import streamlit as st
+        >>>
+        >>> long_text = "Lorem ipsum. " * 1000
+        >>>
+        >>> with st.container(height=300):
+        >>>     st.markdown(long_text)
+
+        .. output ::
+            https://doc-container4.streamlit.app/
+            height: 400px
+
+        """
+        block_proto = BlockProto()
+        block_proto.allow_empty = False
+        block_proto.vertical.border = border or False
+        if height:
+            # Activate scrolling container behavior:
+            block_proto.allow_empty = True
+            block_proto.vertical.height = height
+            if border is None:
+                # If border is None, we activated the
+                # border as default setting for scrolling
+                # containers.
+                block_proto.vertical.border = True
+
+        return self.dg._block(block_proto)
+
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: Optional[str] = "small"
-    ) -> List["DeltaGenerator"]:
+        self, spec: SpecType, *, gap: str | None = "small"
+    ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
         returns a list of container objects.
 
-        To add elements to the returned containers, you can use "with" notation
+        To add elements to the returned containers, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -92,20 +161,19 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        spec : int or iterable of numbers
+        spec : int or Iterable of numbers
             Controls the number and width of columns to insert. Can be one of:
 
             * An integer that specifies the number of columns. All columns have equal
               width in this case.
-            * An iterable of numbers (int or float) that specify the relative width of
+            * An Iterable of numbers (int or float) that specify the relative width of
               each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
               one takes up 70% of the available with and the second one takes up 30%.
               Or ``[1, 2, 3]`` creates three columns where the second one is two times
               the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", or "large"
-            The size of the gap between the columns. Defaults to "small". This
-            argument can only be supplied by keyword.
+            The size of the gap between the columns. Defaults to "small".
 
         Returns
         -------
@@ -114,7 +182,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into a column:
+        You can use the `with` notation to insert any element into a column:
 
         >>> import streamlit as st
         >>>
@@ -136,7 +204,7 @@ class LayoutsMixin:
             https://doc-columns1.streamlit.app/
             height: 620px
 
-        Or you can just call methods directly in the returned objects:
+        Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>> import numpy as np
@@ -201,14 +269,14 @@ class LayoutsMixin:
         return [row._block(column_proto(w / total_weight)) for w in weights]
 
     @gather_metrics("tabs")
-    def tabs(self, tabs: Sequence[str]) -> Sequence["DeltaGenerator"]:
+    def tabs(self, tabs: Sequence[str]) -> Sequence[DeltaGenerator]:
         r"""Insert containers separated into tabs.
 
         Inserts a number of multi-element containers as tabs.
         Tabs are a navigational element that allows users to easily
         move between groups of related content.
 
-        To add elements to the returned containers, you can use "with" notation
+        To add elements to the returned containers, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -218,7 +286,7 @@ class LayoutsMixin:
 
         Parameters
         ----------
-        tabs : list of strings
+        tabs : list of str
             Creates a tab for each string in the list. The first tab is selected by default.
             The string is used as the name of the tab and can optionally contain Markdown,
             supporting the following elements: Bold, Italics, Strikethroughs, Inline Code,
@@ -236,7 +304,7 @@ class LayoutsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -249,7 +317,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into a tab:
+        You can use the `with` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
@@ -271,7 +339,7 @@ class LayoutsMixin:
             https://doc-tabs1.streamlit.app/
             height: 620px
 
-        Or you can just call methods directly in the returned objects:
+        Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>> import numpy as np
@@ -313,14 +381,14 @@ class LayoutsMixin:
         return tuple(tab_container._block(tab_proto(tab_label)) for tab_label in tabs)
 
     @gather_metrics("expander")
-    def expander(self, label: str, expanded: bool = False) -> "DeltaGenerator":
+    def expander(self, label: str, expanded: bool = False) -> DeltaGenerator:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
         Inserts a container into your app that can be used to hold multiple elements
         and can be expanded or collapsed by the user. When collapsed, all that is
         visible is the provided label.
 
-        To add elements to the returned container, you can use "with" notation
+        To add elements to the returned container, you can use the "with" notation
         (preferred) or just call methods directly on the returned object. See
         examples below.
 
@@ -346,7 +414,7 @@ class LayoutsMixin:
 
             * Colored text, using the syntax ``:color[text to be colored]``,
               where ``color`` needs to be replaced with any of the following
-              supported colors: blue, green, orange, red, violet.
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -357,7 +425,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use `with` notation to insert any element into an expander
+        You can use the `with` notation to insert any element into an expander
 
         >>> import streamlit as st
         >>>
@@ -375,7 +443,7 @@ class LayoutsMixin:
             https://doc-expander.streamlit.app/
             height: 750px
 
-        Or you can just call methods directly in the returned objects:
+        Or you can just call methods directly on the returned objects:
 
         >>> import streamlit as st
         >>>
@@ -402,12 +470,247 @@ class LayoutsMixin:
         expandable_proto.label = label
 
         block_proto = BlockProto()
-        block_proto.allow_empty = True
+        block_proto.allow_empty = False
         block_proto.expandable.CopyFrom(expandable_proto)
 
         return self.dg._block(block_proto=block_proto)
 
+    @gather_metrics("popover")
+    def popover(
+        self,
+        label: str,
+        *,
+        help: str | None = None,
+        disabled: bool = False,
+        use_container_width: bool = False,
+    ) -> "DeltaGenerator":
+        r"""Insert a popover container.
+
+        Inserts a multi-element container as a popover. It consists of a button-like
+        element and a container that opens when the button is clicked.
+
+        Opening and closing the popover will not trigger a rerun. Interacting
+        with widgets inside of an open popover will rerun the app while keeping
+        the popover open. Clicking outside of the popover will close it.
+
+        To add elements to the returned container, you can use the "with"
+        notation (preferred) or just call methods directly on the returned object.
+        See examples below.
+
+        .. warning::
+            You may not put a popover inside another popover.
+
+        Parameters
+        ----------
+        label : str
+            The label of the button that opens the popover container.
+            The label can optionally contain Markdown and supports the
+            following elements: Bold, Italics, Strikethroughs, Inline Code,
+            Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+                For a list of all supported codes,
+                see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+                must be on their own lines). Supported LaTeX functions are listed
+                at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+                where ``color`` needs to be replaced with any of the following
+                supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+
+            Unsupported elements are unwrapped so only their children (text contents) render.
+            Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
+        help : str
+            An optional tooltip that gets displayed when the popover button is
+            hovered over.
+
+        disabled : bool
+            An optional boolean, which disables the popover button if set to
+            True. The default is False.
+
+        use_container_width : bool
+            An optional boolean, which makes the popover button stretch its width
+            to match the parent container. This only affects the button and not
+            the width of the popover container.
+
+        Examples
+        --------
+        You can use the `with` notation to insert any element into a popover:
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.popover("Open popover"):
+        >>>     st.markdown("Hello World 👋")
+        >>>     name = st.text_input("What's your name?")
+        >>>
+        >>> st.write("Your name:", name)
+
+        .. output ::
+            https://doc-popover.streamlit.app/
+            height: 400px
+
+        Or you can just call methods directly on the returned objects:
+
+        >>> import streamlit as st
+        >>>
+        >>> popover = st.popover("Filter items")
+        >>> red = popover.checkbox("Show red items.", True)
+        >>> blue = popover.checkbox("Show blue items.", True)
+        >>>
+        >>> if red:
+        ...     st.write(":red[This is a red item.]")
+        >>> if blue:
+        ...     st.write(":blue[This is a blue item.]")
+
+        .. output ::
+            https://doc-popover2.streamlit.app/
+            height: 400px
+        """
+        if label is None:
+            raise StreamlitAPIException("A label is required for a popover")
+
+        popover_proto = BlockProto.Popover()
+        popover_proto.label = label
+        popover_proto.use_container_width = use_container_width
+        popover_proto.disabled = disabled
+        if help:
+            popover_proto.help = str(help)
+
+        block_proto = BlockProto()
+        block_proto.allow_empty = True
+        block_proto.popover.CopyFrom(popover_proto)
+
+        return self.dg._block(block_proto=block_proto)
+
+    @gather_metrics("status")
+    def status(
+        self,
+        label: str,
+        *,
+        expanded: bool = False,
+        state: Literal["running", "complete", "error"] = "running",
+    ) -> StatusContainer:
+        r"""Insert a status container to display output from long-running tasks.
+
+        Inserts a container into your app that is typically used to show the status and
+        details of a process or task. The container can hold multiple elements and can
+        be expanded or collapsed by the user similar to ``st.expander``.
+        When collapsed, all that is visible is the status icon and label.
+
+        The label, state, and expanded state can all be updated by calling ``.update()``
+        on the returned object. To add elements to the returned container, you can
+        use "with" notation (preferred) or just call methods directly on the returned
+        object.
+
+        By default, ``st.status()`` initializes in the "running" state. When called using
+        "with" notation, it automatically updates to the "complete" state at the end
+        of the "with" block. See examples below for more details.
+
+        Parameters
+        ----------
+
+        label : str
+            The initial label of the status container. The label can optionally
+            contain Markdown and supports the following elements: Bold,
+            Italics, Strikethroughs, Inline Code, Emojis, and Links.
+
+            This also supports:
+
+            * Emoji shortcodes, such as ``:+1:``  and ``:sunglasses:``.
+              For a list of all supported codes,
+              see https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+            * LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
+              must be on their own lines). Supported LaTeX functions are listed
+              at https://katex.org/docs/supported.html.
+
+            * Colored text, using the syntax ``:color[text to be colored]``,
+              where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+
+            Unsupported elements are unwrapped so only their children (text contents)
+            render. Display unsupported elements as literal characters by
+            backslash-escaping them. E.g. ``1\. Not an ordered list``.
+
+        expanded : bool
+            If True, initializes the status container in "expanded" state. Defaults to
+            False (collapsed).
+
+        state : "running", "complete", or "error"
+            The initial state of the status container which determines which icon is
+            shown:
+
+            * ``running`` (default): A spinner icon is shown.
+
+            * ``complete``: A checkmark icon is shown.
+
+            * ``error``: An error icon is shown.
+
+        Returns
+        -------
+
+        StatusContainer
+            A mutable status container that can hold multiple elements. The label, state,
+            and expanded state can be updated after creation via ``.update()``.
+
+        Examples
+        --------
+
+        You can use the `with` notation to insert any element into an status container:
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> with st.status("Downloading data..."):
+        ...     st.write("Searching for data...")
+        ...     time.sleep(2)
+        ...     st.write("Found URL.")
+        ...     time.sleep(1)
+        ...     st.write("Downloading data...")
+        ...     time.sleep(1)
+        >>>
+        >>> st.button('Rerun')
+
+        .. output ::
+            https://doc-status.streamlit.app/
+            height: 300px
+
+        You can also use `.update()` on the container to change the label, state,
+        or expanded state:
+
+        >>> import time
+        >>> import streamlit as st
+        >>>
+        >>> with st.status("Downloading data...", expanded=True) as status:
+        ...     st.write("Searching for data...")
+        ...     time.sleep(2)
+        ...     st.write("Found URL.")
+        ...     time.sleep(1)
+        ...     st.write("Downloading data...")
+        ...     time.sleep(1)
+        ...     status.update(label="Download complete!", state="complete", expanded=False)
+        >>>
+        >>> st.button('Rerun')
+
+        .. output ::
+            https://doc-status-update.streamlit.app/
+            height: 300px
+
+        """
+        # We need to import StatusContainer here to avoid a circular import
+        from streamlit.elements.lib.mutable_status_container import StatusContainer
+
+        return StatusContainer._create(
+            self.dg, label=label, expanded=expanded, state=state
+        )
+
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

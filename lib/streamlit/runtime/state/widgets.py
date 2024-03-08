@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import textwrap
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Dict, Mapping, Optional
+from typing import TYPE_CHECKING, Final, Mapping
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.errors import DuplicateWidgetID
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -86,12 +88,12 @@ def register_widget(
     element_proto: WidgetProto,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
-    ctx: Optional["ScriptRunContext"],
-    user_key: Optional[str] = None,
-    widget_func_name: Optional[str] = None,
-    on_change_handler: Optional[WidgetCallback] = None,
-    args: Optional[WidgetArgs] = None,
-    kwargs: Optional[WidgetKwargs] = None,
+    ctx: ScriptRunContext | None,
+    user_key: str | None = None,
+    widget_func_name: str | None = None,
+    on_change_handler: WidgetCallback | None = None,
+    args: WidgetArgs | None = None,
+    kwargs: WidgetKwargs | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -107,21 +109,21 @@ def register_widget(
         its st.<widget_name> function.
     serializer : WidgetSerializer[T]
         Called to convert a widget's value to its protobuf representation.
-    ctx : Optional[ScriptRunContext]
+    ctx : ScriptRunContext or None
         Used to ensure uniqueness of widget IDs, and to look up widget values.
-    user_key : Optional[str]
+    user_key : str or None
         Optional user-specified string to use as the widget ID.
         If this is None, we'll generate an ID by hashing the element.
-    widget_func_name : Optional[str]
+    widget_func_name : str or None
         The widget's DeltaGenerator function name, if it's different from
         its element_type. Custom components are a special case: they all have
         the element_type "component_instance", but are instantiated with
         dynamically-named functions.
-    on_change_handler : Optional[WidgetCallback]
+    on_change_handler : WidgetCallback or None
         An optional callback invoked when the widget's value changes.
-    args : Optional[WidgetArgs]
+    args : WidgetArgs or None
         args to pass to on_change_handler when invoked
-    kwargs : Optional[WidgetKwargs]
+    kwargs : WidgetKwargs or None
         kwargs to pass to on_change_handler when invoked
 
     Returns
@@ -163,8 +165,8 @@ def register_widget(
 
 def register_widget_from_metadata(
     metadata: WidgetMetadata[T],
-    ctx: Optional["ScriptRunContext"],
-    widget_func_name: Optional[str],
+    ctx: ScriptRunContext | None,
+    widget_func_name: str | None,
     element_type: ElementType,
 ) -> RegisterWidgetResult[T]:
     """Register a widget and return its value, using an already constructed
@@ -226,7 +228,7 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
-    states_by_id: Dict[str, WidgetState] = {
+    states_by_id: dict[str, WidgetState] = {
         wstate.id: wstate for wstate in new_states.widgets
     }
 
@@ -254,7 +256,7 @@ def coalesce_widget_states(
 
 
 def _build_duplicate_widget_message(
-    widget_func_name: str, user_key: Optional[str] = None
+    widget_func_name: str, user_key: str | None = None
 ) -> str:
     if user_key is not None:
         message = textwrap.dedent(

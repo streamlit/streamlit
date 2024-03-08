@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,17 +16,20 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, Final, Literal, Mapping, Union
 
-import pandas as pd
-import pyarrow as pa
-from typing_extensions import Final, Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.elements.lib.column_types import ColumnConfig, ColumnType
 from streamlit.elements.lib.dicttools import remove_none_values
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.type_util import DataFormat, is_colum_type_arrow_incompatible
+
+if TYPE_CHECKING:
+    import pyarrow as pa
+    from pandas import DataFrame, Index, Series
+
 
 # The index identifier can be used to apply configuration options
 IndexIdentifierType = Literal["_index"]
@@ -66,12 +69,14 @@ DataframeSchema: TypeAlias = Dict[str, ColumnDataKind]
 
 # This mapping contains all editable column types mapped to the data kinds
 # that the column type is compatible for editing.
-_EDITING_COMPATIBILITY_MAPPING: Final[Dict[ColumnType, List[ColumnDataKind]]] = {
+_EDITING_COMPATIBILITY_MAPPING: Final[dict[ColumnType, list[ColumnDataKind]]] = {
     "text": [ColumnDataKind.STRING, ColumnDataKind.EMPTY],
     "number": [
         ColumnDataKind.INTEGER,
         ColumnDataKind.FLOAT,
+        ColumnDataKind.DECIMAL,
         ColumnDataKind.STRING,
+        ColumnDataKind.TIMEDELTA,
         ColumnDataKind.EMPTY,
     ],
     "checkbox": [
@@ -130,7 +135,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     """Determine the data kind via the arrow type information.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -143,6 +148,8 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     ColumnDataKind
         The data kind of the field.
     """
+    import pyarrow as pa
+
     field_type = field.type
     if pa.types.is_integer(field_type):
         return ColumnDataKind.INTEGER
@@ -191,12 +198,12 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
 
 
 def _determine_data_kind_via_pandas_dtype(
-    column: pd.Series | pd.Index,
+    column: Series | Index,
 ) -> ColumnDataKind:
     """Determine the data kind by using the pandas dtype.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -208,6 +215,8 @@ def _determine_data_kind_via_pandas_dtype(
     ColumnDataKind
         The data kind of the column.
     """
+    import pandas as pd
+
     column_dtype = column.dtype
     if pd.api.types.is_bool_dtype(column_dtype):
         return ColumnDataKind.BOOLEAN
@@ -224,10 +233,10 @@ def _determine_data_kind_via_pandas_dtype(
     if pd.api.types.is_timedelta64_dtype(column_dtype):
         return ColumnDataKind.TIMEDELTA
 
-    if pd.api.types.is_period_dtype(column_dtype):
+    if isinstance(column_dtype, pd.PeriodDtype):
         return ColumnDataKind.PERIOD
 
-    if pd.api.types.is_interval_dtype(column_dtype):
+    if isinstance(column_dtype, pd.IntervalDtype):
         return ColumnDataKind.INTERVAL
 
     if pd.api.types.is_complex_dtype(column_dtype):
@@ -243,12 +252,12 @@ def _determine_data_kind_via_pandas_dtype(
 
 
 def _determine_data_kind_via_inferred_type(
-    column: pd.Series | pd.Index,
+    column: Series | Index,
 ) -> ColumnDataKind:
     """Determine the data kind by inferring it from the underlying data.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -260,8 +269,9 @@ def _determine_data_kind_via_inferred_type(
     ColumnDataKind
         The data kind of the column.
     """
+    from pandas.api.types import infer_dtype
 
-    inferred_type = pd.api.types.infer_dtype(column)
+    inferred_type = infer_dtype(column)
 
     if inferred_type == "string":
         return ColumnDataKind.STRING
@@ -305,17 +315,18 @@ def _determine_data_kind_via_inferred_type(
     if inferred_type == "empty":
         return ColumnDataKind.EMPTY
 
-    # TODO(lukasmasuch): Unused types: mixed, unknown-array, categorical, mixed-integer
+    # Unused types: mixed, unknown-array, categorical, mixed-integer
+
     return ColumnDataKind.UNKNOWN
 
 
 def _determine_data_kind(
-    column: pd.Series | pd.Index, field: Optional[pa.Field] = None
+    column: Series | Index, field: pa.Field | None = None
 ) -> ColumnDataKind:
     """Determine the data kind of a column.
 
     The column data kind refers to the shared data type of the values
-    in the column (e.g. integer, float, string, bool).
+    in the column (e.g. int, float, str, bool).
 
     Parameters
     ----------
@@ -329,8 +340,9 @@ def _determine_data_kind(
     ColumnDataKind
         The data kind of the column.
     """
+    import pandas as pd
 
-    if pd.api.types.is_categorical_dtype(column.dtype):
+    if isinstance(column.dtype, pd.CategoricalDtype):
         # Categorical columns can have different underlying data kinds
         # depending on the categories.
         return _determine_data_kind_via_inferred_type(column.dtype.categories)
@@ -347,7 +359,7 @@ def _determine_data_kind(
 
 
 def determine_dataframe_schema(
-    data_df: pd.DataFrame, arrow_schema: pa.Schema
+    data_df: DataFrame, arrow_schema: pa.Schema
 ) -> DataframeSchema:
     """Determine the schema of a dataframe.
 
@@ -383,7 +395,7 @@ def determine_dataframe_schema(
 
 # A mapping of column names/IDs to column configs.
 ColumnConfigMapping: TypeAlias = Dict[Union[IndexIdentifierType, str], ColumnConfig]
-ColumnConfigMappingInput: TypeAlias = Dict[
+ColumnConfigMappingInput: TypeAlias = Mapping[
     Union[IndexIdentifierType, str],
     Union[ColumnConfig, None, str],
 ]
@@ -450,7 +462,7 @@ def update_column_config(
 
 def apply_data_specific_configs(
     columns_config: ColumnConfigMapping,
-    data_df: pd.DataFrame,
+    data_df: DataFrame,
     data_format: DataFormat,
     check_arrow_compatibility: bool = False,
 ) -> None:
@@ -473,13 +485,15 @@ def apply_data_specific_configs(
     check_arrow_compatibility : bool
         Whether to check if the data is compatible with arrow.
     """
+    import pandas as pd
+
     # Deactivate editing for columns that are not compatible with arrow
     if check_arrow_compatibility:
         for column_name, column_data in data_df.items():
             if is_colum_type_arrow_incompatible(column_data):
                 update_column_config(columns_config, column_name, {"disabled": True})
                 # Convert incompatible type to string
-                data_df[column_name] = column_data.astype(str)
+                data_df[column_name] = column_data.astype("string")
 
     # Pandas adds a range index as default to all datastructures
     # but for most of the non-pandas data objects it is unnecessary
@@ -508,6 +522,29 @@ def apply_data_specific_configs(
         # We rename it to "value" in selected cases to make it more descriptive
         data_df.rename(columns={0: "value"}, inplace=True)
 
+    if not isinstance(data_df.index, pd.RangeIndex):
+        # If the index is not a range index, we will configure it as required
+        # since the user is required to provide a (unique) value for editing.
+        update_column_config(columns_config, INDEX_IDENTIFIER, {"required": True})
+
+
+def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -> str:
+    try:
+        # Ignore all None values and prefix columns specified by numerical index:
+        return json.dumps(
+            {
+                (
+                    f"{_NUMERICAL_POSITION_PREFIX}{str(k)}" if isinstance(k, int) else k
+                ): v
+                for (k, v) in remove_none_values(column_config_mapping).items()
+            },
+            allow_nan=False,
+        )
+    except ValueError as ex:
+        raise StreamlitAPIException(
+            f"The provided column config cannot be serialized into JSON: {ex}"
+        ) from ex
+
 
 def marshall_column_config(
     proto: ArrowProto, column_config_mapping: ColumnConfigMapping
@@ -523,10 +560,4 @@ def marshall_column_config(
         The column config to marshall.
     """
 
-    # Ignore all None values and prefix columns specified by numerical index:
-    proto.columns = json.dumps(
-        {
-            (f"{_NUMERICAL_POSITION_PREFIX}{str(k)}" if isinstance(k, int) else k): v
-            for (k, v) in remove_none_values(column_config_mapping).items()
-        }
-    )
+    proto.columns = _convert_column_config_to_json(column_config_mapping)

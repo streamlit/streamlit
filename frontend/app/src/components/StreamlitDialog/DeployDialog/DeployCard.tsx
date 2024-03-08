@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,21 +33,42 @@ function DeployCard(
       overrides={{
         Root: {
           style: {
-            borderWidth: "1px",
-            borderStyle: "solid",
-            borderColor: colors.fadedText10,
-            borderRadius: radii.lg,
+            borderTopWidth: "1px",
+            borderBottomWidth: "1px",
+            borderLeftWidth: "1px",
+            borderRightWidth: "1px",
+
+            borderTopStyle: "solid",
+            borderBottomStyle: "solid",
+            borderLeftStyle: "solid",
+            borderRightStyle: "solid",
+
+            borderTopColor: colors.fadedText10,
+            borderBottomColor: colors.fadedText10,
+            borderLeftColor: colors.fadedText10,
+            borderRightColor: colors.fadedText10,
+
+            borderTopLeftRadius: radii.lg,
+            borderTopRightRadius: radii.lg,
+            borderBottomLeftRadius: radii.lg,
+            borderBottomRightRadius: radii.lg,
           },
         },
         Contents: {
           style: {
-            margin: 0,
+            marginBottom: 0,
+            marginTop: 0,
+            marginLeft: 0,
+            marginRight: 0,
           },
         },
         Body: {
           style: {
             padding: spacing.threeXL,
-            margin: 0,
+            marginBottom: 0,
+            marginTop: 0,
+            marginLeft: 0,
+            marginRight: 0,
 
             [`@media (max-width: ${breakpoints.md})`]: {
               padding: spacing.xl,

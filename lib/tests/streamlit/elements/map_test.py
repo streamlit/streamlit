@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,11 +28,7 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks
 from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
-from tests.testutil import (
-    create_snowpark_session,
-    patch_config_options,
-    should_skip_pyspark_tests,
-)
+from tests.testutil import create_snowpark_session, patch_config_options
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
@@ -94,6 +90,51 @@ class StMapTest(DeltaGeneratorTestCase):
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
         self.assertEqual(c.get("layers")[0].get("getPosition"), "@@=[xlon, xlat]")
+        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
+        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+
+        # Also test that the radius property is set up correctly.
+        self.assertEqual(c.get("layers")[0].get("radiusMinPixels"), 3)
+
+    @parameterized.expand(
+        [
+            ("string_index", ["a", "b", "c"]),
+            ("indexed_from_1", [1, 2, 3]),
+        ]
+    )
+    def test_alternative_dataframe_index(self, _, index):
+        """Test that the map method does not error with non-standard dataframe indexes"""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
+                "size": [100, 50, 30],
+            },
+            index=index,
+        )
+
+        st.map(df, size="size", color="color")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+
+        self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
+        self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
+
+    def test_named_dataframe_index(self):
+        """Test that the map method does not error with a dataframe with a named index"""
+        df = pd.DataFrame(
+            {
+                "lat": [38.8762997, 38.8742997, 38.9025842],
+                "lon": [-77.0037, -77.0057, -77.0556545],
+                "color": [[255, 0, 0, 128], [0, 255, 0, 128], [0, 0, 255, 128]],
+                "size": [100, 50, 30],
+            }
+        )
+        df.index.name = "my index"
+
+        st.map(df, color="color", size="size")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+
         self.assertEqual(c.get("layers")[0].get("getFillColor"), "@@=color")
         self.assertEqual(c.get("layers")[0].get("getRadius"), "@@=size")
 
@@ -368,9 +409,6 @@ class StMapTest(DeltaGeneratorTestCase):
         """Check if map data have 4 rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 4)
 
-    @pytest.mark.skipif(
-        should_skip_pyspark_tests(), reason="pyspark is incompatible with Python3.11"
-    )
     def test_pyspark_dataframe(self):
         """Test st.map with pyspark.sql.DataFrame"""
         pyspark_map_dataframe = (
@@ -389,3 +427,14 @@ class StMapTest(DeltaGeneratorTestCase):
 
         """Check if map data has 5 rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 5)
+
+    def test_id_changes_when_data_changes(self):
+        st.map()
+
+        orig_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        np.random.seed(0)
+
+        df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
+        st.map(df)
+        new_id = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        self.assertNotEqual(orig_id, new_id)

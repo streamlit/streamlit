@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@
 import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
+
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
+import { render, customRenderLibContext } from "@streamlit/lib/src/test_util"
+
 import FullScreenWrapper, { FullScreenWrapperProps } from "./FullScreenWrapper"
-import { customRenderLibContext } from "@streamlit/lib/src/test_util"
-import { LibContextProps } from "src/components/core/LibContext"
 
 describe("FullScreenWrapper", () => {
   const getProps = (
@@ -33,13 +34,9 @@ describe("FullScreenWrapper", () => {
     ...props,
   })
 
-  it("cannot find StyledFullScreenButton when hideFullScreenButtons is true", () => {
+  it("cannot find StyledFullScreenButton when disableFullscreenMode is true", () => {
     const props = getProps()
-    const providerProps = {
-      hideFullScreenButtons: true,
-    } as Partial<LibContextProps>
-
-    customRenderLibContext(<FullScreenWrapper {...props} />, providerProps)
+    render(<FullScreenWrapper {...props} disableFullscreenMode={true} />)
     // queryBy returns null vs. error
     expect(screen.queryByTestId("StyledFullScreenButton")).toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
   })
@@ -50,5 +47,15 @@ describe("FullScreenWrapper", () => {
     customRenderLibContext(<FullScreenWrapper {...props} />, {})
     // queryBy returns null vs. error
     expect(screen.queryByTestId("StyledFullScreenButton")).not.toBeNull() // eslint-disable-line testing-library/prefer-presence-queries
+  })
+
+  it("hides StyledFullScreenScreenButton when disableFullscreenMode is true", () => {
+    const props = getProps({ disableFullscreenMode: true })
+
+    customRenderLibContext(<FullScreenWrapper {...props} />, {})
+
+    expect(
+      screen.queryByTestId("StyledFullScreenButton")
+    ).not.toBeInTheDocument()
   })
 })

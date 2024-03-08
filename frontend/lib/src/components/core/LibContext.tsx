@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,24 @@
 import React from "react"
 
 import { baseTheme, ThemeConfig } from "@streamlit/lib/src/theme"
+
+/**
+ * The lib config contains various configurations that the host platform can
+ * use to configure streamlit-lib frontend behavior. This should to be treated as part of the public
+ * API, and changes need to be backwards-compatible meaning that an old host configuration
+ * should still work with a new frontend versions.
+ */
+export type LibConfig = {
+  /**
+   * the mapbox token that can be configured by a platform
+   */
+  mapboxToken?: string
+
+  /**
+   * Whether to disable the full screen mode all elements / widgets.
+   */
+  disableFullscreenMode?: boolean
+}
 
 export interface LibContextProps {
   /** True if the app is in full-screen mode. */
@@ -53,11 +71,21 @@ export interface LibContextProps {
   addThemes: (themes: ThemeConfig[]) => void
 
   /**
-   * Whether or not to hide full screen for all elements / widgets
-   * this is to get rid of unnecessary scroll bars in @streamlit/lib use cases
-   * will default to false for regular streamlit
+   * Change the page in a multi-page app.
+   * @see PageLink
    */
-  hideFullScreenButtons: boolean
+  onPageChange: (pageScriptHash: string) => void
+
+  /**
+   * The current page of a multi-page app.
+   * @see PageLink
+   */
+  currentPageScriptHash: string
+
+  /** The lib-specific configuration from the apps host which is requested via the
+   * _stcore/host-config endpoint.
+   */
+  libConfig: LibConfig
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -69,5 +97,7 @@ export const LibContext = React.createContext<LibContextProps>({
   setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
-  hideFullScreenButtons: false,
+  onPageChange: () => {},
+  currentPageScriptHash: "",
+  libConfig: {},
 })

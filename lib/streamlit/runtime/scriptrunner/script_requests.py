@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import threading
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, cast
+from typing import cast
 
 from streamlit import util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -41,7 +43,7 @@ class RerunData:
     """Data attached to RERUN requests. Immutable."""
 
     query_string: str = ""
-    widget_states: Optional[WidgetStates] = None
+    widget_states: WidgetStates | None = None
     page_script_hash: str = ""
     page_name: str = ""
 
@@ -54,7 +56,7 @@ class ScriptRequest:
     """A STOP or RERUN request and associated data."""
 
     type: ScriptRequestType
-    _rerun_data: Optional[RerunData] = None
+    _rerun_data: RerunData | None = None
 
     @property
     def rerun_data(self) -> RerunData:
@@ -141,7 +143,7 @@ class ScriptRequests:
             # We'll never get here
             raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
 
-    def on_scriptrunner_yield(self) -> Optional[ScriptRequest]:
+    def on_scriptrunner_yield(self) -> ScriptRequest | None:
         """Called by the ScriptRunner when it's at a yield point.
 
         If we have no request, return None.

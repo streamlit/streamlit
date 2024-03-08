@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ const Pagination = ({
   onPrevious,
 }: Props): React.ReactElement => {
   return (
-    <StyledPagination className={className}>
+    <StyledPagination className={className} data-testid="stPagination">
       <Small>{`Showing page ${currentPage} of ${totalPages}`}</Small>
       <StyledPaginators>
         <BaseButton onClick={onPrevious} kind={BaseButtonKind.MINIMAL}>

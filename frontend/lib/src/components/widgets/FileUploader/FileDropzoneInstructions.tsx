@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ const FileDropzoneInstructions = ({
   acceptedExtensions,
   maxSizeBytes,
 }: Props): React.ReactElement => (
-  <StyledFileDropzoneInstructions>
+  <StyledFileDropzoneInstructions data-testid="stFileUploaderDropzoneInstructions">
     <StyledFileDropzoneInstructionsFileUploaderIcon>
       <Icon content={CloudUpload} size="threeXL" />
     </StyledFileDropzoneInstructionsFileUploaderIcon>
@@ -50,9 +50,8 @@ const FileDropzoneInstructions = ({
         {`Limit ${getSizeDisplay(maxSizeBytes, FileSize.Byte, 0)} per file`}
         {acceptedExtensions.length
           ? ` • ${acceptedExtensions
-              .join(", ")
-              .replace(/\./g, "")
-              .toUpperCase()}`
+              .map(ext => ext.replace(/^\./, "").toUpperCase())
+              .join(", ")}`
           : null}
       </Small>
     </StyledFileDropzoneInstructionsColumn>

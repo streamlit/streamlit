@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "develop"
-      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -23,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -33,7 +32,7 @@ jobs:
       # We need to install Python 3.9 here because it's the latest version
       # supported by the miniconda installer as of 2022/10/11.
       - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.9"
       - name: Setup virtual env
@@ -44,7 +43,7 @@ jobs:
         run: |
           curl -sO "https://repo.anaconda.com/miniconda/${MINICONDA_RELEASE}.sh"
           bash "${MINICONDA_RELEASE}.sh" -b
-          conda install conda-build
+          conda install conda-build=3.28.4
       - name: Build Snowpark Conda Package - Fast
         timeout-minutes: 120
         run: |

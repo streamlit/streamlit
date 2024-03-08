@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,15 @@
 
 """Loads the configuration data."""
 
+from __future__ import annotations
+
 import copy
 import os
 import secrets
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Dict, Optional, cast
+from typing import Any, Callable
 
-import toml
 from blinker import Signal
 
 from streamlit import config_util, development, env_util, file_util, util
@@ -33,7 +34,7 @@ from streamlit.errors import StreamlitAPIException
 # Descriptions of each of the possible config sections.
 # (We use OrderedDict to make the order in which sections are declared in this
 # file be the same order as the sections appear with `streamlit config show`)
-_section_descriptions: Dict[str, str] = OrderedDict(
+_section_descriptions: dict[str, str] = OrderedDict(
     _test="Special test section just used for unit tests."
 )
 
@@ -46,10 +47,10 @@ _config_lock = threading.RLock()
 # to `streamlit run`, etc. Note that this and _config_options below are
 # OrderedDicts to ensure stable ordering when printed using
 # `streamlit config show`.
-_config_options_template: Dict[str, ConfigOption] = OrderedDict()
+_config_options_template: dict[str, ConfigOption] = OrderedDict()
 
 # Stores the current state of config options.
-_config_options: Optional[Dict[str, ConfigOption]] = None
+_config_options: dict[str, ConfigOption] | None = None
 
 
 # Indicates that a config option was defined by the user.
@@ -114,9 +115,7 @@ def set_user_option(key: str, value: Any) -> None:
     try:
         opt = _config_options_template[key]
     except KeyError as ke:
-        raise StreamlitAPIException(
-            "Unrecognized config option: {key}".format(key=key)
-        ) from ke
+        raise StreamlitAPIException(f"Unrecognized config option: {key}") from ke
     if opt.scriptable:
         set_option(key, value)
         return
@@ -147,7 +146,7 @@ def get_option(key: str) -> Any:
         return config_options[key].value
 
 
-def get_options_for_section(section: str) -> Dict[str, Any]:
+def get_options_for_section(section: str) -> dict[str, Any]:
     """Get all of the config options for the given section.
 
     Run `streamlit config show` in the terminal to see all available options.
@@ -159,7 +158,7 @@ def get_options_for_section(section: str) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         A dict mapping the names of the options in the given section (without
         the section name as a prefix) to their values.
     """
@@ -183,14 +182,14 @@ def _create_section(section: str, description: str) -> None:
 
 def _create_option(
     key: str,
-    description: Optional[str] = None,
-    default_val: Optional[Any] = None,
+    description: str | None = None,
+    default_val: Any | None = None,
     scriptable: bool = False,
     visibility: str = "visible",
     deprecated: bool = False,
-    deprecation_text: Optional[str] = None,
-    expiration_date: Optional[str] = None,
-    replaced_by: Optional[str] = None,
+    deprecation_text: str | None = None,
+    expiration_date: str | None = None,
+    replaced_by: str | None = None,
     type_: type = str,
     sensitive: bool = False,
 ) -> ConfigOption:
@@ -244,7 +243,7 @@ def _create_option(
     )
     assert (
         option.section in _section_descriptions
-    ), 'Section "%s" must be one of %s.' % (
+    ), 'Section "{}" must be one of {}.'.format(
         option.section,
         ", ".join(_section_descriptions.keys()),
     )
@@ -260,7 +259,10 @@ def _delete_option(key: str) -> None:
     """
     try:
         del _config_options_template[key]
-        del cast(Dict[str, ConfigOption], _config_options)[key]
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
+        del _config_options[key]
     except Exception:
         # We don't care if the option already doesn't exist.
         pass
@@ -282,6 +284,9 @@ _create_option(
         """,
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="global.disableWatchdogWarning has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
 )
 
 
@@ -346,6 +351,14 @@ _create_option(
 )
 
 _create_option(
+    "global.appTest",
+    description="Are we in an app test? Set automatically when the AppTest framework is running",
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "global.suppressDeprecationWarnings",
     description="Hide deprecation warnings in the streamlit app.",
     visibility="hidden",
@@ -373,6 +386,16 @@ _create_option(
 )
 
 _create_option(
+    "global.storeCachedForwardMessagesInMemory",
+    description="""If True, store cached ForwardMsgs in backend memory.
+        This is an internal flag to validate a potential removal of the in-memory
+        forward message cache.""",
+    visibility="hidden",
+    default_val=True,
+    type_=bool,
+)
+
+_create_option(
     "global.dataFrameSerialization",
     description="""
         DataFrame serialization.
@@ -383,8 +406,10 @@ _create_option(
         - 'arrow': Serialize DataFrames using Apache Arrow. Much faster and versatile.""",
     default_val="arrow",
     type_=str,
+    deprecated=True,
+    deprecation_text="Legacy serialization has been removed. All dataframes will be serialized using Apache Arrow.",
+    expiration_date="2023-11-01",
 )
-
 
 # Config Section: Logger #
 _create_section("logger", "Settings to customize Streamlit log messages.")
@@ -448,6 +473,9 @@ _create_option(
     default_val=True,
     type_=bool,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="client.caching has been deprecated and is not required anymore for our new caching commands.",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -457,6 +485,9 @@ _create_option(
     default_val=True,
     type_=bool,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="client.displayEnabled has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -498,6 +529,14 @@ _create_option(
     scriptable=True,
 )
 
+_create_option(
+    "client.showSidebarNavigation",
+    description="""Controls whether the default sidebar page navigation in a multi-page app is displayed.""",
+    default_val=True,
+    type_=bool,
+    scriptable=True,
+)
+
 # Config Section: Runner #
 
 _create_section("runner", "Settings for how Streamlit executes your script")
@@ -521,6 +560,9 @@ _create_option(
         """,
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="runner.installTracer has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
 )
 
 _create_option(
@@ -530,6 +572,9 @@ _create_option(
         prevent Python crashing.
         """,
     default_val=True,
+    deprecated=True,
+    deprecation_text="runner.fixMatplotlib has been deprecated and will be removed in a future version.",
+    expiration_date="2024-01-20",
     type_=bool,
 )
 
@@ -543,6 +588,7 @@ _create_option(
         """,
     default_val=True,
     type_=bool,
+    visibility="hidden",
 )
 
 _create_option(
@@ -568,6 +614,23 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
+)
+
+_create_option(
+    "runner.enumCoercion",
+    description="""
+        Adjust how certain 'options' widgets like radio, selectbox, and
+        multiselect coerce Enum members when the Enum class gets
+        re-defined during a script re-run.
+
+        Allowed values:
+        * "off": Disables Enum coercion.
+        * "nameOnly": Enum classes can be coerced if their member names match.
+        * "nameAndValue": Enum classes can be coerced if their member names AND
+          member values match.
+    """,
+    default_val="nameOnly",
+    type_=str,
 )
 
 # Config Section: Server #
@@ -654,7 +717,7 @@ _create_option(
 
 
 @_create_option("server.address")
-def _server_address() -> Optional[str]:
+def _server_address() -> str | None:
     """The address where the server will listen for client and browser
     connections. Use this if you want to bind the server to a specific address.
     If set, the server will only be accessible from this address, and not from
@@ -668,7 +731,10 @@ def _server_address() -> Optional[str]:
 _create_option(
     "server.port",
     description="""
-        The port where the server will listen for browser connections.""",
+        The port where the server will listen for browser connections.
+
+        Don't use port 3000 which is reserved for internal development.
+        """,
     default_val=8501,
     type_=int,
 )
@@ -677,7 +743,7 @@ _create_option(
     "server.scriptHealthCheckEnabled",
     visibility="hidden",
     description="""
-    Flag for enabling the script health check endpoint. It used for checking if
+    Flag for enabling the script health check endpoint. It's used for checking if
     a script loads successfully. On success, the endpoint will return a 200
     HTTP status code. On failure, the endpoint will return a 503 HTTP status code.
 
@@ -742,6 +808,18 @@ _create_option(
 )
 
 _create_option(
+    "server.enableArrowTruncation",
+    description="""
+        Enable automatically truncating all data structures that get serialized into Arrow (e.g. DataFrames)
+        to ensure that the size is under `server.maxMessageSize`.
+        """,
+    visibility="hidden",
+    default_val=False,
+    scriptable=True,
+    type_=bool,
+)
+
+_create_option(
     "server.enableWebsocketCompression",
     description="""
         Enables support for websocket compression.
@@ -796,9 +874,13 @@ def _browser_server_port() -> int:
     app.
 
     This is used to:
-    - Set the correct URL for CORS and XSRF protection purposes.
-    - Show the URL on the terminal
-    - Open the browser
+    - Set the correct URL for XSRF protection purposes.
+    - Show the URL on the terminal (part of `streamlit run`).
+    - Open the browser automatically (part of `streamlit run`).
+
+    This option is for advanced use cases. To change the port of your app, use
+    `server.Port` instead. Don't use port 3000 which is reserved for internal
+    development.
 
     Default: whatever value is set in server.port.
     """
@@ -837,10 +919,6 @@ _create_option(
 
 # Config Section: UI #
 
-# NOTE: We currently hide the ui config section in the `streamlit config show`
-# output as all of its options are hidden. If a non-hidden option is eventually
-# added, the section should be unhidden by removing it from the `SKIP_SECTIONS`
-# set in config_util.show_config.
 _create_section("ui", "Configuration of UI elements displayed in the browser.")
 
 _create_option(
@@ -860,6 +938,9 @@ _create_option(
     description="Flag to hide the sidebar page navigation component.",
     default_val=False,
     type_=bool,
+    deprecated=True,
+    deprecation_text="ui.hideSidebarNav has been deprecated and replaced with client.showSidebarNavigation. It will be removed in a future version.",
+    expiration_date="2024-01-20",
     visibility="hidden",
 )
 
@@ -879,6 +960,36 @@ _create_option(
 )
 
 
+# Config Section: Magic #
+
+_create_section("magic", "Settings for how Streamlit pre-processes your script")
+
+_create_option(
+    "magic.displayRootDocString",
+    description="""
+        Streamlit's "magic" parser typically skips strings that appear to be
+        docstrings. When this flag is set to True, Streamlit will instead display
+        the root-level docstring in the app, just like any other magic string.
+        This is useful for things like notebooks.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "magic.displayLastExprIfNoSemicolon",
+    description="""
+        Make Streamlit's "magic" parser always display the last expression in the
+        root file if it has no semicolon at the end. This matches the behavior of
+        Jupyter notebooks, for example.
+        """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+
 # Config Section: deprecations
 
 _create_section("deprecation", "Configuration to show or hide deprecation warnings.")
@@ -889,6 +1000,8 @@ _create_option(
     default_val=True,
     scriptable=True,
     type_=bool,
+    deprecated=True,
+    deprecation_text="deprecation.showfileUploaderEncoding has been deprecated and will be removed in a future version.",
     expiration_date="2021-01-06",
 )
 
@@ -908,6 +1021,9 @@ _create_option(
     description="Set to false to disable the deprecation warning for using the global pyplot instance.",
     default_val=True,
     scriptable=True,
+    deprecated=True,
+    deprecation_text="The support for global pyplot instances is planned to be removed soon.",
+    expiration_date="2024-04-15",
     type_=bool,
 )
 
@@ -1077,9 +1193,10 @@ def is_manually_set(option_name: str) -> bool:
 def show_config() -> None:
     """Print all config options to the terminal."""
     with _config_lock:
-        config_util.show_config(
-            _section_descriptions, cast(Dict[str, ConfigOption], _config_options)
-        )
+        assert (
+            _config_options is not None
+        ), "_config_options should always be populated here."
+        config_util.show_config(_section_descriptions, _config_options)
 
 
 # Load Config Files #
@@ -1118,7 +1235,7 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         _config_options[key].set_value(value, where_defined)
 
 
-def _update_config_with_sensitive_env_var(config_options: Dict[str, ConfigOption]):
+def _update_config_with_sensitive_env_var(config_options: dict[str, ConfigOption]):
     """Update the config system by parsing the environment variable.
 
     This should only be called from get_config_options.
@@ -1145,6 +1262,8 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
         Tells the config system where this was set.
 
     """
+    import toml
+
     parsed_config_file = toml.loads(raw_toml)
 
     for section, options in parsed_config_file.items():
@@ -1213,8 +1332,8 @@ CONFIG_FILENAMES = [
 
 
 def get_config_options(
-    force_reparse=False, options_from_flags: Optional[Dict[str, Any]] = None
-) -> Dict[str, ConfigOption]:
+    force_reparse=False, options_from_flags: dict[str, Any] | None = None
+) -> dict[str, ConfigOption]:
     """Create and return a dict mapping config option names to their values,
     returning a cached dict if possible.
 
@@ -1231,12 +1350,12 @@ def get_config_options(
     force_reparse : bool
         Force config files to be parsed so that we pick up any changes to them.
 
-    options_from_flags : Optional[Dict[str, any]
+    options_from_flags : dict[str, any] or None
         Config options that we received via CLI flag.
 
     Returns
     -------
-    Dict[str, ConfigOption]
+    dict[str, ConfigOption]
         An ordered dict that maps config option names to their values.
     """
     global _config_options
@@ -1264,7 +1383,7 @@ def get_config_options(
             if not os.path.exists(filename):
                 continue
 
-            with open(filename, "r", encoding="utf-8") as input:
+            with open(filename, encoding="utf-8") as input:
                 file_contents = input.read()
 
             _update_config_with_toml(file_contents, filename)

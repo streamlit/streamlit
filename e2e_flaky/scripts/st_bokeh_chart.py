@@ -1,1 +1,0 @@
-../../e2e/scripts/st_bokeh_chart.py

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import functools
 import hashlib
 import os
 import subprocess
-from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar, Union, cast
+import sys
+from typing import Any, Callable, Final, Generic, Iterable, Mapping, TypeVar
 
-from typing_extensions import Final
+from cachetools import TTLCache
 
 from streamlit import env_util
 
@@ -31,10 +33,16 @@ from streamlit import env_util
 HELP_DOC: Final = "https://docs.streamlit.io/"
 FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 
+# Due to security issue in md5 and sha1, usedforsecurity
+# argument is added to hashlib for python versions higher than 3.8
+HASHLIB_KWARGS: dict[str, Any] = (
+    {"usedforsecurity": False} if sys.version_info >= (3, 9) else {}
+)
 
-def memoize(func):
+
+def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to memoize the result of a no-args func."""
-    result: List[Any] = []
+    result: list[Any] = []
 
     @functools.wraps(func)
     def wrapped_func():
@@ -45,7 +53,7 @@ def memoize(func):
     return wrapped_func
 
 
-def open_browser(url):
+def open_browser(url: str) -> None:
     """Open a web browser pointing to a given URL.
 
     We use this function instead of Python's `webbrowser` module because this
@@ -87,23 +95,16 @@ def open_browser(url):
     raise Error('Cannot open browser in platform "%s"' % platform.system())
 
 
-def _open_browser_with_webbrowser(url):
+def _open_browser_with_webbrowser(url: str) -> None:
     import webbrowser
 
     webbrowser.open(url)
 
 
-def _open_browser_with_command(command, url):
+def _open_browser_with_command(command: str, url: str) -> None:
     cmd_line = [command, url]
     with open(os.devnull, "w") as devnull:
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
-
-
-def _maybe_tuple_to_list(item: Any) -> Any:
-    """Convert a tuple to a list. Leave as is if it's not a tuple."""
-    if isinstance(item, tuple):
-        return list(item)
-    return item
 
 
 def repr_(self: Any) -> str:
@@ -154,13 +155,13 @@ def index_(iterable: Iterable[_Value], x: _Value) -> int:
         elif isinstance(value, float) and isinstance(x, float):
             if abs(x - value) < FLOAT_EQUALITY_EPSILON:
                 return i
-    raise ValueError("{} is not in iterable".format(str(x)))
+    raise ValueError(f"{str(x)} is not in iterable")
 
 
 _Key = TypeVar("_Key", bound=str)
 
 
-def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> Dict[str, _Value]:
+def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> dict[str, _Value]:
     return {k.lower().strip(): v for k, v in dict.items()}
 
 
@@ -169,41 +170,69 @@ class Error(Exception):
     pass
 
 
-def calc_md5(s: Union[bytes, str]) -> str:
+def calc_md5(s: bytes | str) -> str:
     """Return the md5 hash of the given string."""
-    h = hashlib.new("md5")
+    h = hashlib.new("md5", **HASHLIB_KWARGS)
 
-    # mypy seems to have trouble inferring that the type of the if/else expression is
-    # always bytes.
-    b = cast(bytes, s.encode("utf-8") if type(s) is str else s)
+    b = s.encode("utf-8") if isinstance(s, str) else s
 
     h.update(b)
     return h.hexdigest()
 
 
-def exclude_key_query_params(
-    query_params: Dict[str, List[str]], keys_to_exclude: List[str]
-) -> Dict[str, List[str]]:
-    """Returns new object query_params : Dict[str, List[str]], but without keys defined with keys_to_drop : List[str]."""
+def exclude_keys_in_dict(
+    d: dict[str, Any], keys_to_exclude: list[str]
+) -> dict[str, Any]:
+    """Returns new object but without keys defined in keys_to_exclude"""
     return {
-        key: value
-        for key, value in query_params.items()
-        if key.lower() not in keys_to_exclude
+        key: value for key, value in d.items() if key.lower() not in keys_to_exclude
     }
 
 
 def extract_key_query_params(
-    query_params: Dict[str, List[str]], param_key: str
-) -> Set[str]:
+    query_params: dict[str, list[str]], param_key: str
+) -> set[str]:
     """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
-    return set(
-        [
-            item.lower()
-            for sublist in [
-                [value.lower() for value in query_params[key]]
-                for key in query_params.keys()
-                if key.lower() == param_key and query_params.get(key)
-            ]
-            for item in sublist
+    return {
+        item.lower()
+        for sublist in [
+            [value.lower() for value in query_params[key]]
+            for key in query_params.keys()
+            if key.lower() == param_key and query_params.get(key)
         ]
-    )
+        for item in sublist
+    }
+
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class TimedCleanupCache(TTLCache, Generic[K, V]):
+    """A TTLCache that asynchronously expires its entries."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._task: asyncio.Task[Any] | None = None
+
+    def __setitem__(self, key: K, value: V) -> None:
+        # Set an expiration task to run periodically
+        # Can't be created in init because that only runs once and
+        # the event loop might not exist yet.
+        if self._task is None:
+            try:
+                self._task = asyncio.create_task(expire_cache(self))
+            except RuntimeError:
+                # Just continue if the event loop isn't started yet.
+                pass
+        super().__setitem__(key, value)
+
+    def __del__(self):
+        if self._task is not None:
+            self._task.cancel()
+
+
+async def expire_cache(cache: TTLCache) -> None:
+    while True:
+        await asyncio.sleep(30)
+        cache.expire()

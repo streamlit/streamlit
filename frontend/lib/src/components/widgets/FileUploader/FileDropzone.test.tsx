@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 
 import React from "react"
-import { shallow } from "@streamlit/lib/src/test_util"
-import Dropzone from "react-dropzone"
+import { render } from "@streamlit/lib/src/test_util"
 import FileDropzone, { Props } from "./FileDropzone"
+import { screen } from "@testing-library/react"
+import "@testing-library/jest-dom"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
@@ -32,26 +33,28 @@ const getProps = (props: Partial<Props> = {}): Props => ({
 describe("FileDropzone widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
-    const wrapper = shallow(<FileDropzone {...props} />)
+    render(<FileDropzone {...props} />)
 
-    expect(wrapper).toBeDefined()
+    expect(screen.getByTestId("stFileUploaderDropzone")).toBeInTheDocument()
   })
 
   it("renders dropzone without extensions", () => {
     const props = getProps({
       acceptedExtensions: [],
     })
-    const wrapper = shallow(<FileDropzone {...props} />)
-    const dropzoneWrapper = wrapper.find(Dropzone)
-    expect(dropzoneWrapper.props().accept).toBe(undefined)
+    render(<FileDropzone {...props} />)
+    expect(
+      screen.queryByTestId("stFileUploaderDropzoneInput")
+    ).not.toHaveAttribute("accept")
   })
 
   it("renders dropzone with extensions", () => {
     const props = getProps({
       acceptedExtensions: [".jpg"],
     })
-    const wrapper = shallow(<FileDropzone {...props} />)
-    const dropzoneWrapper = wrapper.find(Dropzone)
-    expect(dropzoneWrapper.props().accept).toEqual([".jpg"])
+    render(<FileDropzone {...props} />)
+    expect(
+      screen.queryByTestId("stFileUploaderDropzoneInput")
+    ).toHaveAttribute("accept", ".jpg")
   })
 })

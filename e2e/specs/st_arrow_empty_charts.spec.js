@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ describe("handles arrow empty charts", () => {
     cy.loadApp("http://localhost:3000/");
 
     // Wait for the site to be fully loaded
-    cy.get(".element-container").should($els => {
+    cy.get(".element-container").should(($els) => {
       expect($els).to.have.length.of.at.least(10);
     });
 
@@ -65,7 +65,7 @@ describe("handles arrow empty charts", () => {
 
     cy.getIndexed(".stException .message", 4).should(
       "have.text",
-      "TypeError: ArrowAltairMixin._arrow_altair_chart() missing 1 required positional argument: 'altair_chart'"
+      "TypeError: ArrowAltairMixin.altair_chart() missing 1 required positional argument: 'altair_chart'"
     );
   });
 });

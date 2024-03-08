@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,7 +133,11 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
           />
         </StyledToastMessage>
         {shortened && (
-          <StyledViewButton className="toastViewButton" onClick={handleClick}>
+          <StyledViewButton
+            data-testid="toastViewButton"
+            className="toastViewButton"
+            onClick={handleClick}
+          >
             {expanded ? "view less" : "view more"}
           </StyledViewButton>
         )}

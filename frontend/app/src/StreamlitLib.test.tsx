@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,32 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { CancelToken } from "axios"
-import { ReactWrapper } from "enzyme"
 import React, { PureComponent, ReactElement } from "react"
+import "@testing-library/jest-dom"
+import { screen, waitFor } from "@testing-library/react"
 import {
   AppRoot,
   VerticalBlock,
-  AlertElement,
   ComponentRegistry,
   FileUploadClient,
   ScriptRunState,
   SessionInfo,
   StreamlitEndpoints,
-  mount,
   createFormsData,
   FormsData,
   WidgetStateManager,
   Delta as DeltaProto,
   Element as ElementProto,
   ForwardMsgMetadata as ForwardMsgMetadataProto,
-  IAppPage,
   Text as TextProto,
-  WidgetStates,
-  TextElement,
+  render,
 } from "@streamlit/lib"
 
 /**
  * Example StreamlitEndpoints implementation.
  */
 class Endpoints implements StreamlitEndpoints {
-  public buildComponentURL(componentName: string, path: string): string {
+  public buildComponentURL(): string {
     throw new Error("Unimplemented")
   }
 
@@ -57,29 +53,19 @@ class Endpoints implements StreamlitEndpoints {
     return url
   }
 
-  public buildAppPageURL(
-    pageLinkBaseURL: string | undefined,
-    page: IAppPage,
-    pageIndex: number
-  ): string {
+  public buildAppPageURL(): string {
     throw new Error("Unimplemented")
   }
 
-  public uploadFileUploaderFile(
-    fileUploadUrl: string,
-    file: File,
-    sessionId: string,
-    onUploadProgress?: (progressEvent: any) => void,
-    cancelToken?: CancelToken
-  ): Promise<void> {
+  public uploadFileUploaderFile(): Promise<void> {
     return Promise.reject(new Error("Unimplemented"))
   }
 
-  public deleteFileAtURL(fileUrl: string, sessionId: string): Promise<void> {
+  public deleteFileAtURL(): Promise<void> {
     return Promise.reject(new Error("Unimplemented"))
   }
 
-  public fetchCachedForwardMsg(hash: string): Promise<Uint8Array> {
+  public fetchCachedForwardMsg(): Promise<Uint8Array> {
     return Promise.reject(new Error("Unimplemented"))
   }
 }
@@ -92,6 +78,16 @@ interface State {
   scriptRunState: ScriptRunState
   scriptRunId: string
 }
+
+// Mock needed for Block.tsx
+class ResizeObserver {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserver
 
 /** An example root component for an app that uses StreamlitLib. */
 class StreamlitLibExample extends PureComponent<Props, State> {
@@ -141,12 +137,12 @@ class StreamlitLibExample extends PureComponent<Props, State> {
       installationId: "",
       installationIdV3: "",
       commandLine: "",
-      userMapboxToken: "",
+      isHello: false,
     })
 
     // Initialize React state
     this.state = {
-      elements: AppRoot.empty("Please wait..."),
+      elements: AppRoot.empty(),
       formsData: createFormsData(),
       scriptRunState: ScriptRunState.NOT_RUNNING,
       // ScriptRunID should get a new unique ID every time the
@@ -219,18 +215,25 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 }
 
 describe("StreamlitLibExample", () => {
-  it("can be mounted", () => {
-    const wrapper = mount(<StreamlitLibExample />)
+  it("can be rendered without crashing", async () => {
+    render(<StreamlitLibExample />)
 
     // Before any Elements are explicitly added, our example class
-    // will show a placeholder "Please wait..." info message
-    const alert = wrapper.find(AlertElement)
-    expect(alert.text()).toBe("Please wait...")
+    // will show placeholder skeleton.
+    await waitFor(() =>
+      expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+    )
   })
 
   it("handles Delta messages", () => {
-    const wrapper: ReactWrapper<Props, State, StreamlitLibExample> = mount(
-      <StreamlitLibExample />
+    // there's nothing within the app ui to cycle through script run messages so we need a reference
+    let streamlitLibInstance: any
+    render(
+      <StreamlitLibExample
+        ref={ref => {
+          streamlitLibInstance = ref
+        }}
+      />
     )
 
     // construct a delta
@@ -246,19 +249,15 @@ describe("StreamlitLibExample", () => {
     })
 
     // Send the delta to our app
-    wrapper.instance().beginScriptRun("newScriptRun")
-    wrapper.instance().handleDeltaMsg(delta, metadata)
-    wrapper.instance().endScriptRun()
-
-    wrapper.update()
+    streamlitLibInstance.beginScriptRun("newScriptRun")
+    streamlitLibInstance.handleDeltaMsg(delta, metadata)
+    streamlitLibInstance.endScriptRun()
 
     // our "Please wait..." alert should be gone, because it
     // belonged to a previous "script run"
-    const alert = wrapper.find(AlertElement)
-    expect(alert.exists()).toBe(false)
+    expect(screen.queryByText("Please wait...")).not.toBeInTheDocument()
 
     // And we should have the single Text element we created
-    const text = wrapper.find(TextElement)
-    expect(text.text()).toBe("Hello, world!")
+    expect(screen.getByText("Hello, world!")).toBeInTheDocument()
   })
 })

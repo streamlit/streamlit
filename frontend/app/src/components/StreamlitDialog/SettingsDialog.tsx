@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,6 +63,8 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
   private activeSettings: UserSettings
 
   static contextType = LibContext
+
+  context!: React.ContextType<typeof LibContext>
 
   constructor(props: Props) {
     super(props)
@@ -174,10 +176,10 @@ export class SettingsDialog extends PureComponent<Props, UserSettings> {
     this.changeSingleSetting(e.target.name, e.target.checked)
   }
 
-  private handleThemeChange = (index: number): void => {
+  private handleThemeChange = (index: number | null): void => {
     const { activeTheme: oldTheme, availableThemes }: LibContextProps =
       this.context
-    const newTheme = availableThemes[index]
+    const newTheme = availableThemes[index ?? 0]
 
     this.props.metricsMgr.enqueue("themeChanged", {
       oldThemeName: oldTheme.name,

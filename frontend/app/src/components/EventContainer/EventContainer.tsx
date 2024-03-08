@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,8 +41,10 @@ function EventContainer({
         overrides={{
           Root: {
             style: {
-              // If deployed in Community Cloud, move toasts up to avoid blocking Manage App button
+              // Avoids blocking host elements at bottom of page
               bottom: toastAdjustment ? "45px" : "0px",
+              // Toasts overlap chatInput container
+              zIndex: 100,
             },
             props: {
               "data-testid": "toastContainer",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -114,6 +114,9 @@ python-init:
 	fi;\
 	echo "Running command: pip install $${pip_args[@]}";\
 	pip install $${pip_args[@]};
+	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
+		python -m playwright install --with-deps; \
+	fi;\
 
 .PHONY: pylint
 # Verify that our Python files are properly formatted.
@@ -196,8 +199,14 @@ conda-distribution:
 	GIT_HASH=$$(git rev-parse --short HEAD) conda build lib/conda-recipe --output-folder lib/conda-recipe/dist
 
 .PHONY: conda-package
-# Build lib and frontend, and then run 'conda-distribution'
-conda-package: build-deps frontend conda-distribution
+# Build lib and (maybe) frontend assets, and then run 'conda-distribution'
+conda-package: build-deps
+	if [ "${SNOWPARK_CONDA_BUILD}" = "1" ] ; then\
+		echo "Creating Snowpark conda build, so skipping building frontend assets."; \
+	else \
+		make frontend; \
+	fi
+	make conda-distribution;
 
 .PHONY: clean
 # Remove all generated files.
@@ -221,7 +230,7 @@ clean:
 	rm -rf frontend/public/reports
 	rm -rf frontend/lib/dist
 	rm -rf ~/.cache/pre-commit
-	rm -rf e2e/playwright/test-results
+	rm -rf e2e_playwright/test-results
 	find . -name .streamlit -type d -exec rm -rfv {} \; || true
 	cd lib; rm -rf .coverage .coverage\.*
 
@@ -260,7 +269,7 @@ protobuf: check-protoc
 		echo ; \
 		yarn --silent pbjs \
 			../proto/streamlit/proto/*.proto \
-			-t static-module --wrap es6 \
+			--path=proto -t static-module --wrap es6 \
 	) > ./lib/src/proto.js
 
 	@# Typescript type declarations for our generated protobufs
@@ -331,10 +340,9 @@ e2etest:
 .PHONY: playwright
 # Run playwright E2E tests.
 playwright:
-	python -m playwright install --with-deps; \
-	cd e2e/playwright; \
+	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto -v
+	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 
 .PHONY: loc
 # Count the number of lines of code in the project.
@@ -385,36 +393,6 @@ headers:
 gen-min-dep-constraints:
 	make develop >/dev/null
 	python scripts/get_min_versions.py >lib/min-constraints-gen.txt
-
-.PHONY: build-test-env
-# Build docker image that mirrors circleci
-build-test-env:
-	if ! command -v node &> /dev/null ; then \
-		echo "node not installed."; \
-		exit 1; \
-	fi
-	if [[ ! -f lib/streamlit/proto/Common_pb2.py ]]; then \
-		echo "Proto files not generated."; \
-		exit 1; \
-	fi
-	docker build \
-		--build-arg UID=$$(id -u) \
-		--build-arg GID=$$(id -g) \
-		--build-arg OSTYPE=$$(uname) \
-		--build-arg NODE_VERSION=$$(node --version) \
-		-t streamlit_e2e_tests \
-		-f e2e/Dockerfile \
-		.
-
-.PHONY: run-test-env
-# Run test env image with volume mounts
-run-test-env:
-	./e2e/run_compose.py
-
-.PHONY: connect-test-env
-# Connect to an already-running test env container
-connect-test-env:
-	docker exec -it streamlit_e2e_tests /bin/bash
 
 .PHONY: pre-commit-install
 pre-commit-install:

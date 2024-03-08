@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ describe("st.pydeck_chart", () => {
     cy.loadApp("http://localhost:3000/");
   });
 
-  it("displays 2 maps", () => {
+  it("displays 3 maps", () => {
     const els = cy.get(".element-container .stDeckGlJsonChart");
 
-    els.should("have.length", 2);
+    els.should("have.length", 3);
 
     els.find("canvas").should("have.css", "height", "500px");
   });

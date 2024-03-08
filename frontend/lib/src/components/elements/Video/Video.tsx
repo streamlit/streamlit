@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 import React, { ReactElement, useEffect, useRef } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
 
 const DEFAULT_HEIGHT = 528
 
@@ -24,6 +25,11 @@ export interface VideoProps {
   endpoints: StreamlitEndpoints
   width: number
   element: VideoProto
+}
+
+export interface Subtitle {
+  label: string
+  url: string
 }
 
 export default function Video({
@@ -35,7 +41,14 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
 
-  const { type, url } = element
+  const { type, url, startTime, subtitles } = element
+
+  // Handle startTime changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = startTime
+    }
+  }, [startTime])
 
   useEffect(() => {
     const videoNode = videoRef.current
@@ -80,10 +93,12 @@ export default function Video({
 
     return (
       <iframe
+        data-testid="stVideo"
         title={url}
         src={getYoutubeSrc(url)}
         width={width}
         height={height}
+        style={{ colorScheme: "light dark" }}
         frameBorder="0"
         allow="autoplay; encrypted-media"
         allowFullScreen
@@ -91,13 +106,30 @@ export default function Video({
     )
   }
 
+  // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
+  // when streamlit frontend and backend are running on different ports
   return (
     <video
+      data-testid="stVideo"
       ref={videoRef}
       controls
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
-    />
+      crossOrigin={
+        IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined
+      }
+    >
+      {subtitles &&
+        subtitles.map((subtitle: Subtitle, idx: number) => (
+          <track
+            key={idx}
+            kind="captions"
+            src={endpoints.buildMediaURL(subtitle.url)}
+            label={subtitle.label}
+            default={idx === 0}
+          />
+        ))}
+    </video>
   )
 }

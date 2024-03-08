@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,9 @@ describe("st.DataFrame with unevaluated pyspark.sql.DataFrame", () => {
     // dataframes, and charts to be rendered.
     var timeout = 300000
     Cypress.config("defaultCommandTimeout", timeout)
-    cy.visit("http://localhost:3000/")
-    cy.get("[data-testid='stAppViewContainer']", { timeout: timeout }).should(
-      "not.contain",
-      "Please wait..."
-    )
-    // Wait until the script is no longer running.
-    cy.get("[data-testid='stStatusWidget']", { timeout: timeout }).should(
-      "not.exist"
-    )
+
+    cy.loadApp("http://localhost:3000/", timeout);
+
     cy.prepForElementSnapshots();
   });
 

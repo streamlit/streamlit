@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,8 +50,7 @@ from streamlit.runtime.scriptrunner import (
     script_run_context,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
-from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.testing.script_interactions import InteractiveScriptTests
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import ExceptionCapturingThread, call_on_threads
 from tests.streamlit.elements.image_test import create_image
@@ -256,8 +255,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 session_id="test session id",
                 _enqueue=forward_msg_queue.enqueue,
                 query_string="",
-                session_state=SafeSessionState(SessionState()),
+                session_state=SafeSessionState(SessionState(), lambda: None),
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+                main_script_path="",
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
             ),
@@ -989,30 +989,26 @@ class CommonCacheThreadingTest(unittest.TestCase):
         self.assertEqual(1, get_counter())
 
 
-class WidgetReplayInteractionTest(InteractiveScriptTests):
-    def test_dynamic_widget_replay(self):
-        script = self.script_from_filename("test_data/cached_widget_replay_dynamic.py")
+def test_dynamic_widget_replay():
+    at = AppTest.from_file("test_data/cached_widget_replay_dynamic.py").run()
 
-        sr = script.run()
-        assert len(sr.get("checkbox")) == 1
-        assert sr.get("text")[0].value == "['foo']"
+    assert at.checkbox.len == 1
+    assert at.text[0].value == "['foo']"
 
-        sr2 = sr.get("checkbox")[0].check().run()
-        assert len(sr2.get("multiselect")) == 1
-        assert sr2.get("text")[0].value == "[]"
+    at.checkbox[0].check().run()
+    assert at.multiselect.len == 1
+    assert at.text[0].value == "[]"
 
-        sr3 = sr2.get("multiselect")[0].select("baz").run()
-        assert sr3.get("text")[0].value == "['baz']"
+    at.multiselect[0].select("baz").run()
+    assert at.text[0].value == "['baz']"
 
-        sr4 = sr3.get("checkbox")[0].uncheck().run()
-        sr5 = sr4.get("button")[0].click().run()
-        assert sr5.get("text")[0].value == "['foo']"
+    at.checkbox[0].uncheck().run()
+    at.button[0].click().run()
+    assert at.text[0].value == "['foo']"
 
 
-class WidgetReplayTest(InteractiveScriptTests):
-    def test_arrow_replay(self):
-        """Regression test for https://github.com/streamlit/streamlit/issues/6103"""
-        script = self.script_from_filename("test_data/arrow_replay.py")
+def test_arrow_replay():
+    """Regression test for https://github.com/streamlit/streamlit/issues/6103"""
+    at = AppTest.from_file("test_data/arrow_replay.py").run()
 
-        sr = script.run()
-        assert len(sr.get("exception")) == 0
+    assert not at.exception

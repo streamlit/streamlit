@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "develop"
-      - "feature/**"
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -32,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: "recursive"
@@ -40,7 +39,7 @@ jobs:
       - name: Set Python version vars
         uses: ./.github/actions/build_info
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
@@ -96,7 +95,7 @@ jobs:
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request' && github.event.sender.type == 'User'
         name: Set S3 URL as Github Status
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
         with:
@@ -125,7 +124,7 @@ jobs:
 
     steps:
       - name: Checkout Core Previews Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: streamlit/core-previews
           # The default GITHUB_TOKEN is scoped only to the triggering streamlit/streamlit repo.

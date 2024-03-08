@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-export { default as RepoIsAhead } from "./RepoIsAhead"
 export { default as DetachedHead } from "./DetachedHead"
-export { default as UntrackedFiles } from "./UntrackedFiles"
 export { default as ModuleIsNotAdded } from "./ModuleIsNotAdded"
-export { default as UncommittedChanges } from "./UncommittedChanges"
 export { default as NoRepositoryDetected } from "./NoRepositoryDetected"

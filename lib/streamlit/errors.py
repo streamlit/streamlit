@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from streamlit import util
 
 
@@ -22,6 +24,12 @@ class Error(Exception):
     StreamlitAPIException) as well as exceptions raised by Streamlit's internal
     code.
     """
+
+    pass
+
+
+class CustomComponentError(Error):
+    """Exceptions thrown in the custom components code path."""
 
     pass
 
@@ -89,7 +97,7 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     """
 
     def __init__(self, *args):
-        super(StreamlitAPIWarning, self).__init__(*args)
+        super().__init__(*args)
         import inspect
         import traceback
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,11 @@
 # limitations under the License.
 
 from streamlit.external.langchain.streamlit_callback_handler import (
-    LLMThoughtLabeler as LLMThoughtLabeler,
+    LLMThoughtLabeler,
+    StreamlitCallbackHandler,
 )
-from streamlit.external.langchain.streamlit_callback_handler import (
-    StreamlitCallbackHandler as StreamlitCallbackHandler,
-)
+
+__all__ = [
+    "LLMThoughtLabeler",
+    "StreamlitCallbackHandler",
+]

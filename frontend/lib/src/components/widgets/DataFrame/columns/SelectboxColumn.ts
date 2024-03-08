@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import {
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "@streamlit/lib/src/util/utils"
 
 import {
   BaseColumn,
   BaseColumnProps,
-  ColumnCreator,
   getErrorCell,
   toSafeString,
   mergeColumnParameters,
@@ -69,7 +71,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
 
   const cellTemplate = {
     kind: GridCellKind.Custom,
-    allowOverlay: props.isEditable,
+    allowOverlay: true,
     copyData: "",
     contentAlign: props.contentAlignment,
     readonly: !props.isEditable,
@@ -77,9 +79,9 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       kind: "dropdown-cell",
       allowedValues: [
         // Add empty option if the column is not configured as required:
-        ...(props.isRequired !== true ? [""] : []),
+        ...(props.isRequired !== true ? [null] : []),
         ...parameters.options
-          .filter(opt => opt !== "") // ignore empty option if it exists
+          .filter(opt => opt !== null && opt !== "") // ignore empty option if it exists
           .map(opt => toSafeString(opt)), // convert everything to string
       ],
       value: "",
@@ -93,8 +95,8 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     sortMode: "default",
     getCell(data?: any, validate?: boolean): GridCell {
       // Empty string refers to a missing value
-      let cellData = ""
-      if (notNullOrUndefined(data)) {
+      let cellData = null
+      if (notNullOrUndefined(data) && data !== "") {
         cellData = toSafeString(data)
       }
 
@@ -105,44 +107,18 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
         )
       }
 
-      if (!props.isEditable) {
-        // TODO (lukasmasuch): This is a temporary workaround until the following PR is merged:
-        // https://github.com/glideapps/glide-data-grid/pull/657
-        // The issue is that measuring dropdown cells is not supported yet.
-        // This results in dropdown columns not correctly adapting the width to the content.
-        // Therefore, we use a text cell here so that we are not affecting the behavior
-        // for read-only cells.
-
-        return {
-          kind: GridCellKind.Text,
-          isMissingValue: cellData === "",
-          data: cellData !== "" ? cellData : null,
-          displayData: cellData,
-          allowOverlay: true,
-          contentAlignment: props.contentAlignment,
-          readonly: true,
-          style: props.isIndex ? "faded" : "normal",
-        } as TextCell
-      }
-
       return {
         ...cellTemplate,
-        isMissingValue: cellData === "",
-        copyData: cellData, // Column sorting is done via the copyData value
+        isMissingValue: cellData === null,
+        copyData: cellData || "", // Column sorting is done via the copyData value
         data: {
           ...cellTemplate.data,
           value: cellData,
         },
       } as DropdownCellType
     },
-    getCellValue(
-      cell: DropdownCellType | TextCell
-    ): string | number | boolean | null {
-      if (cell.kind === GridCellKind.Text) {
-        return cell.data === undefined ? null : cell.data
-      }
-
-      if (cell.data?.value === undefined || cell.data?.value === "") {
+    getCellValue(cell: DropdownCellType): string | number | boolean | null {
+      if (isNullOrUndefined(cell.data?.value) || cell.data?.value === "") {
         return null
       }
       if (dataType === "number") {
@@ -157,4 +133,4 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
 
 SelectboxColumn.isEditableType = true
 
-export default SelectboxColumn as ColumnCreator
+export default SelectboxColumn

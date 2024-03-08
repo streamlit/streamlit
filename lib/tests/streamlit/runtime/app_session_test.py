@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,7 +60,10 @@ def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
 
 
-def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppSession:
+def _create_test_session(
+    event_loop: Optional[AbstractEventLoop] = None,
+    session_id_override: Optional[str] = None,
+) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
         event_loop = MagicMock()
@@ -70,12 +73,13 @@ def _create_test_session(event_loop: Optional[AbstractEventLoop] = None) -> AppS
         return_value=event_loop,
     ):
         return AppSession(
-            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
             local_sources_watcher=MagicMock(),
             user_info={"email": "test@test.com"},
+            session_id_override=session_id_override,
         )
 
 
@@ -96,6 +100,19 @@ class AppSessionTest(unittest.TestCase):
     def tearDown(self) -> None:
         super().tearDown()
         Runtime._instance = None
+
+    @patch(
+        "streamlit.runtime.app_session.uuid.uuid4", MagicMock(return_value="some_uuid")
+    )
+    def test_generates_uuid_for_session_id_if_no_override(self):
+        session = _create_test_session()
+
+        assert session.id == "some_uuid"
+
+    def test_uses_session_id_override_if_set(self):
+        session = _create_test_session(session_id_override="some_custom_session_id")
+
+        assert session.id == "some_custom_session_id"
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"
@@ -266,7 +283,6 @@ class AppSessionTest(unittest.TestCase):
         mock_scriptrunner.assert_called_once_with(
             session_id=session.id,
             main_script_path=session._script_data.main_script_path,
-            client_state=session._client_state,
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
             script_cache=session._script_cache,
@@ -333,6 +349,25 @@ class AppSessionTest(unittest.TestCase):
             )
 
             self.assertIsNone(session._debug_last_backmsg_id)
+
+    @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
+    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
+    def test_sets_state_to_not_running_on_rerun_event(self):
+        session = _create_test_session()
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._state = AppSessionState.APP_IS_RUNNING
+
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                forward_msg=ForwardMsg(),
+            )
+
+            self.assertEqual(session._state, AppSessionState.APP_NOT_RUNNING)
 
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
@@ -591,6 +626,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
         )
@@ -785,6 +821,22 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         session.handle_backmsg(msg)
         self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
 
+    @patch("streamlit.runtime.app_session._LOGGER")
+    async def test_handles_app_heartbeat_backmsg(self, patched_logger):
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(
+            session, "handle_backmsg_exception"
+        ) as handle_backmsg_exception, patch.object(
+            session, "_handle_app_heartbeat_request"
+        ) as handle_app_heartbeat_request:
+            msg = BackMsg()
+            msg.app_heartbeat = True
+            session.handle_backmsg(msg)
+
+            handle_app_heartbeat_request.assert_called_once()
+            handle_backmsg_exception.assert_not_called()
+            patched_logger.warning.assert_not_called()
+
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config")
@@ -844,7 +896,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         self.assertEqual(new_session_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_session_msg.custom_theme.background_color, "white")
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_base_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (
@@ -860,7 +912,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
         )
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_font_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (

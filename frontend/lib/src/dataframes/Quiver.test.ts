@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 import { Field, Utf8, vectorFromArray } from "apache-arrow"
-import { cloneDeep } from "lodash"
+import cloneDeep from "lodash/cloneDeep"
 
 import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
@@ -35,6 +35,7 @@ import {
   RANGE,
   UINT64,
   UNICODE,
+  TIMEDELTA,
   // Special cases
   EMPTY,
   MULTI,
@@ -215,6 +216,16 @@ describe("Quiver", () => {
           const firstColumnType = q.types.data[0]
 
           expect(Quiver.getTypeName(firstColumnType)).toEqual("decimal")
+        })
+
+        test("timedelta", () => {
+          const mockElement = { data: TIMEDELTA }
+          const q = new Quiver(mockElement)
+          const firstColumnType = q.types.data[0]
+
+          expect(Quiver.getTypeName(firstColumnType)).toEqual(
+            "timedelta64[ns]"
+          )
         })
 
         test("dictionary", () => {
@@ -489,8 +500,49 @@ describe("Quiver", () => {
       test("decimal", () => {
         const mockElement = { data: DECIMAL }
         const q = new Quiver(mockElement)
-        const { content, contentType, field } = q.getCell(1, 1)
-        expect(Quiver.format(content, contentType, field)).toEqual("1.1")
+        const cell1 = q.getCell(1, 1)
+        expect(
+          Quiver.format(cell1.content, cell1.contentType, cell1.field)
+        ).toEqual("1.1")
+
+        const cell2 = q.getCell(2, 1)
+        expect(
+          Quiver.format(cell2.content, cell2.contentType, cell2.field)
+        ).toEqual("10000")
+
+        const cell3 = q.getCell(1, 2)
+        expect(
+          Quiver.format(cell3.content, cell3.contentType, cell3.field)
+        ).toEqual("2.23")
+
+        const cell4 = q.getCell(2, 2)
+        expect(
+          Quiver.format(cell4.content, cell4.contentType, cell4.field)
+        ).toEqual("-0.1")
+      })
+
+      test("timedelta", () => {
+        const mockElement = { data: TIMEDELTA }
+        const q = new Quiver(mockElement)
+        const cell1 = q.getCell(1, 1)
+        expect(
+          Quiver.format(cell1.content, cell1.contentType, cell1.field)
+        ).toEqual("a few seconds")
+
+        const cell2 = q.getCell(2, 1)
+        expect(
+          Quiver.format(cell2.content, cell2.contentType, cell2.field)
+        ).toEqual("4 hours")
+
+        const cell3 = q.getCell(1, 2)
+        expect(
+          Quiver.format(cell3.content, cell3.contentType, cell3.field)
+        ).toEqual("20 days")
+
+        const cell4 = q.getCell(2, 2)
+        expect(
+          Quiver.format(cell4.content, cell4.contentType, cell4.field)
+        ).toEqual("2 hours")
       })
 
       test("dictionary", () => {

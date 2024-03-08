@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,9 @@ function StackTrace({ stackTrace }: StackTraceProps): ReactElement {
       <StyledStackTrace>
         <code>
           {stackTrace.map((row: string, index: number) => (
-            <StyledStackTraceRow key={index}>{row}</StyledStackTraceRow>
+            <StyledStackTraceRow key={index} data-testid="stExceptionTraceRow">
+              {row}
+            </StyledStackTraceRow>
           ))}
         </code>
       </StyledStackTrace>
@@ -98,7 +100,7 @@ export default function ExceptionElement({
   width,
 }: ExceptionElementProps): ReactElement {
   return (
-    <div className="stException">
+    <div className="stException" data-testid="stException">
       <AlertContainer
         kind={element.isWarning ? Kind.WARNING : Kind.ERROR}
         width={width}

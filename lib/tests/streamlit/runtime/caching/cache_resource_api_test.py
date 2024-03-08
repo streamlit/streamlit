@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ from typing import Any, List
 from unittest.mock import Mock, patch
 
 from parameterized import parameterized
-from pympler.asizeof import asizeof
 
 import streamlit as st
 from streamlit.runtime.caching import (
@@ -32,6 +31,7 @@ from streamlit.runtime.caching.cached_message_replay import MultiCacheResults
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.stats import CacheStat
+from streamlit.vendor.pympler.asizeof import asizeof
 from tests.streamlit.runtime.caching.common_cache_test import (
     as_cached_result as _as_cached_result,
 )
@@ -313,12 +313,10 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length(as_cached_result([3.14])),
-            ),
-            CacheStat(
-                category_name="st_cache_resource",
-                cache_name=foo_cache_name,
-                byte_length=get_byte_length(as_cached_result([3.14] * 53)),
+                byte_length=(
+                    get_byte_length(as_cached_result([3.14]))
+                    + get_byte_length(as_cached_result([3.14] * 53))
+                ),
             ),
             CacheStat(
                 category_name="st_cache_resource",

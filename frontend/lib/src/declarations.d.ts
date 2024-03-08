@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ declare module "@loaders.gl/core"
 declare module "@loaders.gl/csv"
 
 declare module "@loaders.gl/gltf"
+
+declare module "native-file-system-adapter"
 
 declare module "fzy.js" {
   export function score(pattern: string, subject: string): number

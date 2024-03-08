@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,5 +28,13 @@ export interface CodeBlockProps {
 export default function CodeBlock({
   children,
 }: Record<any, any>): ReactElement {
-  return <StyledCodeBlock className="stCodeBlock">{children}</StyledCodeBlock>
+  return (
+    <StyledCodeBlock
+      className="stCodeBlock"
+      data-testid="stCodeBlock"
+      isMarkdown={true}
+    >
+      {children}
+    </StyledCodeBlock>
+  )
 }
