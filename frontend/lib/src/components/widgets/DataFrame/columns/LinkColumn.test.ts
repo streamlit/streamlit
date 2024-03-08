@@ -190,20 +190,6 @@ describe("LinkColumn", () => {
   it("sets displayed value as the applied regex to the href when displayText is a regex", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
-      columnTypeOptions: { display_text: "https://streamlit.app?app=(.*)" },
-    })
-
-    const cell = mockColumn.getCell(
-      "https://streamlit.app?app=foo%20app%20%25",
-      true
-    ) as UriCell
-
-    expect(cell.displayData).toBe("foo app %")
-  })
-
-  it("sets displayed value as the applied regex to the href when displayText is a regex with URL encoding", () => {
-    const mockColumn = LinkColumn({
-      ...MOCK_LINK_COLUMN_PROPS,
       columnTypeOptions: { display_text: "https://(.*?).streamlit.app" },
     })
 
@@ -213,6 +199,20 @@ describe("LinkColumn", () => {
     ) as UriCell
 
     expect(cell.displayData).toBe("roadmap")
+  })
+
+  it("sets displayed value as the applied regex to the href when displayText is a regex with URL encoding", () => {
+    const mockColumn = LinkColumn({
+      ...MOCK_LINK_COLUMN_PROPS,
+      columnTypeOptions: { display_text: "https://streamlit.app?app=(.*)" },
+    })
+
+    const cell = mockColumn.getCell(
+      "https://streamlit.app?app=foo%20app%20%25",
+      true
+    ) as UriCell
+
+    expect(cell.displayData).toBe("foo app %")
   })
 
   it("sets displayed value as the href, when displayText is a regex but there is no match", () => {
