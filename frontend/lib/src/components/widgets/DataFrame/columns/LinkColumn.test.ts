@@ -204,7 +204,9 @@ describe("LinkColumn", () => {
   it("sets displayed value as the applied regex to the href when displayText is a regex with URL encoding", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
-      columnTypeOptions: { display_text: "https://streamlit.app?app=(.*)" },
+      columnTypeOptions: {
+        display_text: "https://streamlit\\.app\\?app=(.*)",
+      },
     })
 
     const cell = mockColumn.getCell(
