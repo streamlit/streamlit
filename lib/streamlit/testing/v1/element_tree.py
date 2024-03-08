@@ -54,9 +54,11 @@ from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
+from streamlit.proto.Common_pb2 import FileUploaderState, UploadedFileInfo
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
+from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.proto.Json_pb2 import Json as JsonProto
@@ -75,6 +77,11 @@ from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import user_key_from_widget_id
 from streamlit.runtime.state.safe_session_state import SafeSessionState
+from streamlit.runtime.uploaded_file_manager import (
+    DeletedFile,
+    UploadedFile,
+    UploadedFileRec,
+)
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
@@ -581,6 +588,64 @@ class Exception(Element):
     @property
     def value(self) -> str:
         return self.message
+
+
+@dataclass(repr=False)
+class FileUploader(Widget):
+    _value: list[UploadedFileRec]
+    proto: FileUploaderProto = field(repr=False)
+
+    def __init__(self, proto: FileUploaderProto, root: ElementTree):
+        super().__init__(proto, root)
+        self.type = "file_uploader"
+        self._value = []
+
+    @property
+    def value(self):
+        """The current value of the widget."""
+        if self._value:
+            files = []
+            file_recs = {f.file_id: f for f in self._value}
+            for f in self._value:
+                maybe_file_rec = file_recs.get(f.file_id)
+                if maybe_file_rec is not None:
+                    uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
+                    files.append(uploaded_file)
+                else:
+                    files.append(DeletedFile(f.file_id))
+            return files
+        else:
+            state = self.root.session_state
+            assert state
+            # Awkward to do this with `cast`
+            return state[self.id]  # type: ignore
+
+    def upload(self, f: bytes, file_id: str, name: str, type: str) -> FileUploader:
+        rec = UploadedFileRec(file_id, name, type, f)
+        self._value.append(rec)
+
+        runner = self.root._runner
+        assert runner is not None
+        ufm = runner._mufm
+        ufm.add_file(session_id="session", file=rec)
+        return self
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+
+        ufis = []
+        for rec in self._recs:
+            ufi = UploadedFileInfo()
+            ufi.name = rec.name
+            # ufi.size?
+            ufi.file_id = rec.file_id
+            ufis.append(ufi)
+
+        ws.file_uploader_state_value.uploaded_file_info[:] = ufis
+
+        return ws
 
 
 @dataclass(repr=False)
@@ -1451,6 +1516,10 @@ class Block:
         return self.get("expander")  # type: ignore
 
     @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        return WidgetList(self.get("file_uploader"))  # type: ignore
+
+    @property
     def header(self) -> ElementList[Header]:
         return ElementList(self.get("header"))  # type: ignore
 
@@ -1890,6 +1959,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = DateInput(elt.date_input, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
+            elif ty == "file_uploader":
+                new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)

@@ -16,6 +16,7 @@ from datetime import date, datetime, time
 
 import numpy as np
 import pandas as pd
+import PIL
 import pytest
 
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
@@ -238,6 +239,17 @@ def test_expander():
 
     at = AppTest.from_function(script).run()
     assert at.markdown[0].value == "some text"
+
+
+def test_file_uploader():
+    def script():
+        import streamlit as st
+
+        file = st.file_uploader("give me something", key="f")
+
+    at = AppTest.from_function(script).run()
+    image = PIL.Image.open("snowflake-logo.svg.png").tobytes()
+    at.file_uploader("f").upload(image, "logo", "logo", "png").run()
 
 
 def test_markdown_exception():
