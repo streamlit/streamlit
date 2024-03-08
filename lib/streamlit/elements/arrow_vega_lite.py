@@ -33,19 +33,18 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state.session_state_proxy import SessionStateProxy
 from streamlit.runtime.state.widgets import register_widget
+from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-LOGGER: Final = get_logger(__name__)
-
-
-def _on_selection(
+def _on_select(
     proto: ArrowVegaLiteChartProto,
-    on_selection: Union[str, Callable[..., None], None] = None,
+    on_select: Union[str, Callable[..., None], None] = None,
+    key: str | None = None,
 ):
-    if on_selection is not None and on_selection != False:
+    if on_select is not None and on_select != False:
 
         def deserialize_vega_lite_event(ui_value, widget_id=""):
             if ui_value is None:
@@ -57,11 +56,13 @@ def _on_selection(
 
         def serialize_vega_lite_event(v):
             return json.dumps(v, default=str)
+        
+        print(f'{proto.id=}')
 
         current_value = register_widget(
             "arrow_vega_lite_chart",
             proto,
-            user_key=str(proto),
+            user_key=key,
             on_change_handler=None,
             args=None,
             kwargs=None,
@@ -70,17 +71,17 @@ def _on_selection(
             ctx=get_script_run_ctx(),
         )
 
-        if isinstance(on_selection, str):
+        if isinstance(on_select, str):
             # Set in session state
             session_state = SessionStateProxy()
-            session_state[on_selection] = AttributeDictionary(current_value.value)
-        elif callable(on_selection):
+            session_state[on_select] = AttributeDictionary(current_value.value)
+        elif callable(on_select):
             # Call the callback function
             kwargs_callback = {}
-            arguments = inspect.getfullargspec(on_selection).args
+            arguments = inspect.getfullargspec(on_select).args
             if "selections" in arguments:
                 kwargs_callback["selections"] = current_value
-            on_selection(**kwargs_callback)
+            on_select(**kwargs_callback)
 
 
 class ArrowVegaLiteMixin:
@@ -91,7 +92,7 @@ class ArrowVegaLiteMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_selection: Union[str, Callable[..., None], None] = None,
+        on_select: Union[str, Callable[..., None], None] = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
         """Display a chart using the Vega-Lite library.
@@ -153,16 +154,18 @@ class ArrowVegaLiteMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         proto = ArrowVegaLiteChartProto()
-        if on_selection:
-            _on_selection(proto, on_selection)
         marshall(
             proto,
             data,
             spec,
             use_container_width=use_container_width,
             theme=theme,
+            on_select=on_select,
+            key=key,
             **kwargs,
         )
+        if on_select:
+            _on_select(proto, on_select, key)
         return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
@@ -177,12 +180,15 @@ def marshall(
     spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
+    on_select: Union[str, Callable[..., None], True, False, None] = None,
+    key: str | None = None,
     **kwargs,
 ):
     """Construct a Vega-Lite chart object.
 
     See DeltaGenerator.vega_lite_chart for docs.
     """
+    print(f'vega_lite marshall: {key=}')
     # Support passing data inside spec['datasets'] and spec['data'].
     # (The data gets pulled out of the spec dict later on.)
     if isinstance(data, dict) and spec is None:
@@ -240,7 +246,24 @@ def marshall(
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
-    proto.id = proto.id
+    
+    ctx = get_script_run_ctx()
+    id = compute_widget_id(
+        "arrow_vega_lite",
+        user_key=key,
+        data=data,
+        spec=spec,
+        use_container_width=use_container_width,
+        key=key,
+        theme=theme,
+        page=ctx.page_script_hash if ctx else None,
+    )
+    proto.id = id
+
+    if on_select:
+        proto.is_select_enabled = True
+    else:
+        proto.is_select_enabled = False
 
     if data is not None:
         arrow.marshall(proto.data, data)

@@ -159,7 +159,7 @@ function PlotlyFigure({
     const selections: any[] = []
 
     if (storedValue !== undefined) {
-      const parsedStoreValue = JSON.parse(storedValue.toString())
+      const parsedStoreValue = JSON.parse(storedValue)
       // check if there is a selection
       if (parsedStoreValue.select) {
         spec.data = parsedStoreValue.select._data

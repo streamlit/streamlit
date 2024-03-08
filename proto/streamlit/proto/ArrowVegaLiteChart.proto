@@ -43,5 +43,7 @@ message ArrowVegaLiteChart {
   // ID, required for selection events.
   string id = 7;
 
+  bool is_select_enabled = 8;
+
   reserved 3;
 }
