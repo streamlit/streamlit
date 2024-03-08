@@ -54,7 +54,7 @@ from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-from streamlit.proto.Common_pb2 import FileUploaderState, UploadedFileInfo
+from streamlit.proto.Common_pb2 import UploadedFileInfo
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
@@ -635,15 +635,11 @@ class FileUploader(Widget):
         ws = WidgetState()
         ws.id = self.id
 
-        ufis = []
-        for rec in self._recs:
-            ufi = UploadedFileInfo()
+        for rec in self._value:
+            ufi = ws.file_uploader_state_value.uploaded_file_info.add()
             ufi.name = rec.name
             # ufi.size?
             ufi.file_id = rec.file_id
-            ufis.append(ufi)
-
-        ws.file_uploader_state_value.uploaded_file_info[:] = ufis
 
         return ws
 
