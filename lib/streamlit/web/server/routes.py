@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import json
 import os
-from urllib.parse import urljoin
-
 from typing import Final
+from urllib.parse import urljoin
 
 import tornado.web
 from PIL import Image, UnidentifiedImageError

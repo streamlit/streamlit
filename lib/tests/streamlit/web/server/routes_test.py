@@ -246,7 +246,9 @@ class MetadataWebManifestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/manifest.webmanifest")
 
         self.assertEqual(500, response.code)
-        self.assertEqual("The custom icon file not found.", response.body.decode("utf-8"))
+        self.assertEqual(
+            "The custom icon file not found.", response.body.decode("utf-8")
+        )
 
     def test_server_error_if_icon_has_invalid_extension(self):
         config._set_option("metadata.icon", self._txt_tmpfile_name, "test")
@@ -270,7 +272,9 @@ class MetadataWebManifestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         response = self.fetch("/manifest.webmanifest")
 
         self.assertEqual(500, response.code)
-        self.assertEqual("The custom icon has invalid size.", response.body.decode("utf-8"))
+        self.assertEqual(
+            "The custom icon has invalid size.", response.body.decode("utf-8")
+        )
 
     def test_custom_icon_web_manifest(self):
         config._set_option("metadata.icon", self._tmpfile_name, "test")
