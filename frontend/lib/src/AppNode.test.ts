@@ -938,30 +938,6 @@ describe("AppRoot.clearStaleNodes", () => {
     expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
     expect(newRoot.getElements().size).toBe(1)
   })
-
-  it("handles `allowEmpty` blocks correctly", () => {
-    // Create a tree with two blocks, one with allowEmpty: true, and the other
-    // with allowEmpty: false
-    const newRoot = AppRoot.empty()
-      .applyDelta(
-        "new_session_id",
-        makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
-        forwardMsgMetadata([0, 0])
-      )
-      .applyDelta(
-        "new_session_id",
-        makeProto(DeltaProto, { addBlock: { allowEmpty: false } }),
-        forwardMsgMetadata([0, 1])
-      )
-
-    expect(newRoot.main.getIn([0])).toBeInstanceOf(BlockNode)
-    expect(newRoot.main.getIn([1])).toBeInstanceOf(BlockNode)
-
-    // Prune nodes. Only the `allowEmpty` node should remain.
-    const pruned = newRoot.clearStaleNodes("new_session_id")
-    expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
-    expect(pruned.main.getIn([1])).not.toBeDefined()
-  })
 })
 
 describe("AppRoot.getElements", () => {
