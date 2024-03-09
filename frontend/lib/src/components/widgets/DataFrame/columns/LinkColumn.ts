@@ -160,7 +160,11 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         displayData: displayText,
         isMissingValue: isNullOrUndefined(href),
         onClickUri: a => {
-          window.open(href, "_blank", "noopener,noreferrer")
+          window.open(
+            href.startsWith("www.") ? `https://${href}` : href,
+            "_blank",
+            "noopener,noreferrer"
+          )
           a.preventDefault()
         },
         copyData: href,
