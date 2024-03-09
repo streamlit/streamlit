@@ -381,23 +381,16 @@ export const removeCachedTheme = (): void => {
 
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
-  // 1. Previous user preference
-  // 2. Embed Parameter preference
-  // 3. OS preference
-  // If local storage has Auto, refetch system theme as it may have changed
-  // based on time of day. We shouldn't ever have this saved in our storage
-  // but checking in case!
   const cachedTheme = getCachedTheme()
 
-  if (cachedTheme) {
-    // User has DELIBERATELY said "Choose System Setting"
-    if (cachedTheme.name === AUTO_THEME_NAME) {
-      return createAutoTheme()
-    }
-
+  // 1. Previous user preference
+  // We shouldn't ever have auto saved in our storage in case
+  // OS theme changes but we explicitly check in case!
+  if (cachedTheme && cachedTheme.name !== AUTO_THEME_NAME) {
     return cachedTheme
   }
 
+  // 2. Embed Parameter preference
   if (isLightTheme()) {
     return lightTheme
   }
@@ -406,6 +399,7 @@ export const getDefaultTheme = (): ThemeConfig => {
     return darkTheme
   }
 
+  // 3. OS preference
   return createAutoTheme()
 }
 

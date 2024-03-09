@@ -156,8 +156,11 @@ export function isToolbarDisplayed(): boolean {
  * Returns true if the URL parameters contain ?embed=true&embed_options=disable_scrolling (case insensitive).
  */
 export function isScrollingHidden(): boolean {
-  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
-    EMBED_DISABLE_SCROLLING
+  return (
+    isEmbed() &&
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
+      EMBED_DISABLE_SCROLLING
+    )
   )
 }
 
@@ -175,8 +178,9 @@ export function isPaddingDisplayed(): boolean {
  * Returns true if the URL parameters contain ?embed_options=light_theme (case insensitive).
  */
 export function isLightTheme(): boolean {
-  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
-    EMBED_LIGHT_THEME
+  return (
+    isEmbed() &&
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_LIGHT_THEME)
   )
 }
 
@@ -184,7 +188,10 @@ export function isLightTheme(): boolean {
  * Returns true if the URL parameters contain ?embed_options=dark_theme (case insensitive).
  */
 export function isDarkTheme(): boolean {
-  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
+  return (
+    isEmbed() &&
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
+  )
 }
 
 /**
