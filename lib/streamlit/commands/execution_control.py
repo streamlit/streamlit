@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
-from typing import NoReturn
+from typing import Final, NoReturn
 
 import streamlit as st
 from streamlit import source_util
@@ -24,7 +26,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import RerunData, get_script_run_ctx
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 @gather_metrics("stop")
@@ -114,8 +116,8 @@ def switch_page(page: str) -> NoReturn:  # type: ignore[misc]
 
     >>> your-repository/
     >>> ├── pages/
-    >>> │   ├── page_1.py.py
-    >>> │   └── page_2.py.py
+    >>> │   ├── page_1.py
+    >>> │   └── page_2.py
     >>> └── your_app.py
 
     >>> import streamlit as st

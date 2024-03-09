@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 import re
-from typing import TYPE_CHECKING, Optional, Tuple, Union, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import runtime, type_util, url_util
+from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
@@ -37,6 +41,10 @@ MediaData: TypeAlias = Union[
     str, bytes, io.BytesIO, io.RawIOBase, io.BufferedReader, "npt.NDArray[Any]", None
 ]
 
+SubtitleData: TypeAlias = Union[
+    str, Path, bytes, io.BytesIO, Dict[str, Union[str, Path, bytes, io.BytesIO]], None
+]
+
 
 class MediaMixin:
     @gather_metrics("audio")
@@ -46,8 +54,8 @@ class MediaMixin:
         format: str = "audio/wav",
         start_time: int = 0,
         *,
-        sample_rate: Optional[int] = None,
-    ) -> "DeltaGenerator":
+        sample_rate: int | None = None,
+    ) -> DeltaGenerator:
         """Display an audio player.
 
         Parameters
@@ -60,11 +68,14 @@ class MediaMixin:
             or a 2D array of shape ``(num_channels, num_samples)`` with waveforms
             for all channels. See the default channel order at
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
+
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
+
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
@@ -118,21 +129,50 @@ class MediaMixin:
         data: MediaData,
         format: str = "video/mp4",
         start_time: int = 0,
-    ) -> "DeltaGenerator":
+        *,  # keyword-only arguments:
+        subtitles: SubtitleData = None,
+    ) -> DeltaGenerator:
         """Display a video player.
 
         Parameters
         ----------
-        data : str, bytes, BytesIO, numpy.ndarray, or file
+        data : str, bytes, io.BytesIO, numpy.ndarray, or file
             Raw video data, filename, or URL pointing to a video to load.
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
+
         format : str
-            The mime type for the video file. Defaults to 'video/mp4'.
+            The mime type for the video file. Defaults to ``"video/mp4"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
+
+        subtitles: str, bytes, Path, io.BytesIO, or dict
+            Optional subtitle data for the video, supporting several input types:
+
+            * ``None`` (default): No subtitles.
+
+            * A string, bytes, or Path: File path to a subtitle file in ``.vtt`` or ``.srt`` formats, or
+              the raw content of subtitles conforming to these formats.
+              If providing raw content, the string must adhere to the WebVTT or SRT
+              format specifications.
+
+            * io.BytesIO: A BytesIO stream that contains valid ``.vtt`` or ``.srt``
+              formatted subtitle data.
+
+            * A dictionary: Pairs of labels and file paths or raw subtitle content in
+              ``.vtt`` or ``.srt`` formats to enable multiple subtitle tracks.
+              The label will be shown in the video player. Example:
+              ``{"English": "path/to/english.vtt", "French": "path/to/french.srt"}``
+
+            When provided, subtitles are displayed by default. For multiple
+            tracks, the first one is displayed by default. If you don't want any
+            subtitles displayed by default, use an empty string for the value
+            in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
+
+            Not supported for YouTube videos.
 
         Example
         -------
@@ -147,6 +187,35 @@ class MediaMixin:
            https://doc-video.streamlit.app/
            height: 700px
 
+        When you include subtitles, they will be turned on by default. A viewer
+        can turn off the subtitles (or captions) from the browser's default video
+        control menu, usually located in the lower-right corner of the video.
+
+        Here is a simple VTT file (``subtitles.vtt``):
+
+        >>> WEBVTT
+        >>>
+        >>> 0:00:01.000 --> 0:00:02.000
+        >>> Look!
+        >>>
+        >>> 0:00:03.000 --> 0:00:05.000
+        >>> Look at the pretty stars!
+
+        If the above VTT file lives in the same directory as your app, you can
+        add subtitles like so:
+
+        >>> import streamlit as st
+        >>>
+        >>> VIDEO_URL = "https://example.com/not-youtube.mp4"
+        >>> st.video(VIDEO_URL, subtitles="subtitles.vtt")
+
+        .. output::
+           https://doc-video-subtitles.streamlit.app/
+           height: 700px
+
+        See additional examples of supported subtitle input types in our
+        `video subtitles feature demo <https://doc-video-subtitle-inputs.streamlit.app/>`_.
+
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
            not widely supported by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit.
@@ -157,28 +226,22 @@ class MediaMixin:
         """
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
-        marshall_video(coordinates, video_proto, data, format, start_time)
+        marshall_video(coordinates, video_proto, data, format, start_time, subtitles)
         return self.dg._enqueue("video", video_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
-# Regular expression explained at https://regexr.com/4n2l2 Covers any youtube
-# URL (incl. shortlinks and embed links) and extracts its code.
-YOUTUBE_RE: Final = re.compile(
-    # Protocol
-    r"http(?:s?):\/\/"
-    # Domain
-    r"(?:www\.)?youtu(?:be\.com|\.be)\/"
-    # Path and query string
-    r"(?P<watch>(watch\?v=)|embed\/)?(?P<code>[\w\-\_]*)(&(amp;)?[\w\?=]*)?"
-)
+# Regular expression from
+# https://gist.github.com/rodrigoborgesdeoliveira/987683cfbfcc8d800192da1e73adc486?permalink_comment_id=4645864#gistcomment-4645864
+# Covers any youtube URL (incl. shortlinks and embed links) and extracts its video code.
+YOUTUBE_RE: Final = r"^((https?://(?:www\.)?(?:m\.)?youtube\.com))/((?:oembed\?url=https?%3A//(?:www\.)youtube.com/watch\?(?:v%3D)(?P<video_id_1>[\w\-]{10,20})&format=json)|(?:attribution_link\?a=.*watch(?:%3Fv%3D|%3Fv%3D)(?P<video_id_2>[\w\-]{10,20}))(?:%26feature.*))|(https?:)?(\/\/)?((www\.|m\.)?youtube(-nocookie)?\.com\/((watch)?\?(app=desktop&)?(feature=\w*&)?v=|embed\/|v\/|e\/)|youtu\.be\/)(?P<video_id_3>[\w\-]{10,20})"
 
 
-def _reshape_youtube_url(url: str) -> Optional[str]:
+def _reshape_youtube_url(url: str) -> str | None:
     """Return whether URL is any kind of YouTube embed or watch link.  If so,
     reshape URL into an embed link suitable for use in an iframe.
 
@@ -195,15 +258,20 @@ def _reshape_youtube_url(url: str) -> Optional[str]:
     .. output::
         https://www.youtube.com/embed/_T8LGqJtuGc
     """
-    match = YOUTUBE_RE.match(url)
+    match = re.match(YOUTUBE_RE, url)
     if match:
-        return "https://www.youtube.com/embed/{code}".format(**match.groupdict())
+        code = (
+            match.group("video_id_1")
+            or match.group("video_id_2")
+            or match.group("video_id_3")
+        )
+        return f"https://www.youtube.com/embed/{code}"
     return None
 
 
 def _marshall_av_media(
     coordinates: str,
-    proto: Union[AudioProto, VideoProto],
+    proto: AudioProto | VideoProto,
     data: MediaData,
     mimetype: str,
 ) -> None:
@@ -224,7 +292,7 @@ def _marshall_av_media(
         # Allow empty values so media players can be shown without media.
         return
 
-    data_or_filename: Union[bytes, str]
+    data_or_filename: bytes | str
     if isinstance(data, (str, bytes)):
         # Pass strings and bytes through unchanged
         data_or_filename = data
@@ -261,6 +329,7 @@ def marshall_video(
     data: MediaData,
     mimetype: str = "video/mp4",
     start_time: int = 0,
+    subtitles: SubtitleData = None,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -279,6 +348,17 @@ def marshall_video(
         See https://tools.ietf.org/html/rfc4281 for more info.
     start_time : int
         The time from which this element should start playing. (default: 0)
+    subtitles: str, dict, or io.BytesIO
+        Optional subtitle data for the video, supporting several input types:
+        * None (default): No subtitles.
+        * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or the raw content of subtitles conforming to these formats.
+            If providing raw content, the string must adhere to the WebVTT or SRT format specifications.
+        * A dictionary: Pairs of labels and file paths or raw subtitle content in '.vtt' or '.srt' formats.
+            Enables multiple subtitle tracks. The label will be shown in the video player.
+            Example: {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
+        * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
+        When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
+        Not supported for YouTube videos.
     """
 
     proto.start_time = start_time
@@ -292,14 +372,52 @@ def marshall_video(
         if youtube_url := _reshape_youtube_url(data):
             proto.url = youtube_url
             proto.type = VideoProto.Type.YOUTUBE_IFRAME
+            if subtitles:
+                raise StreamlitAPIException(
+                    "Subtitles are not supported for YouTube videos."
+                )
         else:
             proto.url = data
 
     else:
         _marshall_av_media(coordinates, proto, data, mimetype)
 
+    if subtitles:
+        subtitle_items: list[tuple[str, str | Path | bytes | io.BytesIO]] = []
 
-def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
+        # Single subtitle
+        if isinstance(subtitles, (str, bytes, io.BytesIO, Path)):
+            subtitle_items.append(("default", subtitles))
+        # Multiple subtitles
+        elif isinstance(subtitles, dict):
+            subtitle_items.extend(subtitles.items())
+        else:
+            raise StreamlitAPIException(
+                f"Unsupported data type for subtitles: {type(subtitles)}. "
+                f"Only str (file paths) and dict are supported."
+            )
+
+        for label, subtitle_data in subtitle_items:
+            sub = proto.subtitles.add()
+            sub.label = label or ""
+
+            # Coordinates used in media_file_manager to identify the place of
+            # element, in case of subtitle, we use same video coordinates
+            # with suffix.
+            # It is not aligned with common coordinates format, but in
+            # media_file_manager we use it just as unique identifier, so it is fine.
+            subtitle_coordinates = f"{coordinates}[subtitle{label}]"
+            try:
+                sub.url = process_subtitle_data(
+                    subtitle_coordinates, subtitle_data, label
+                )
+            except (TypeError, ValueError) as original_err:
+                raise StreamlitAPIException(
+                    f"Failed to process the provided subtitle: {label}"
+                ) from original_err
+
+
+def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     """Validates and normalizes numpy array data.
     We validate numpy array shape (should be 1d or 2d)
     We normalize input data to int16 [-32768, 32767] range.
@@ -321,7 +439,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     # to st.audio data)
     import numpy as np
 
-    data: "npt.NDArray[Any]" = np.array(data, dtype=float)
+    data: npt.NDArray[Any] = np.array(data, dtype=float)
 
     if len(data.shape) == 1:
         nchan = 1
@@ -348,7 +466,7 @@ def _validate_and_normalize(data: "npt.NDArray[Any]") -> Tuple[bytes, int]:
     return scaled_data.tobytes(), nchan
 
 
-def _make_wav(data: "npt.NDArray[Any]", sample_rate: int) -> bytes:
+def _make_wav(data: npt.NDArray[Any], sample_rate: int) -> bytes:
     """
     Transform a numpy array to a PCM bytestring
     We use code from IPython display module to convert numpy array to wave bytes
@@ -369,9 +487,7 @@ def _make_wav(data: "npt.NDArray[Any]", sample_rate: int) -> bytes:
         return fp.getvalue()
 
 
-def _maybe_convert_to_wav_bytes(
-    data: MediaData, sample_rate: Optional[int]
-) -> MediaData:
+def _maybe_convert_to_wav_bytes(data: MediaData, sample_rate: int | None) -> MediaData:
     """Convert data to wav bytes if the data type is numpy array."""
     if type_util.is_type(data, "numpy.ndarray") and sample_rate is not None:
         data = _make_wav(cast("npt.NDArray[Any]", data), sample_rate)
@@ -384,7 +500,7 @@ def marshall_audio(
     data: MediaData,
     mimetype: str = "audio/wav",
     start_time: int = 0,
-    sample_rate: Optional[int] = None,
+    sample_rate: int | None = None,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 

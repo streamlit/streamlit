@@ -26,7 +26,6 @@ import {
 import {
   BaseColumn,
   BaseColumnProps,
-  ColumnCreator,
   getErrorCell,
   toSafeString,
   mergeColumnParameters,
@@ -134,4 +133,4 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
 
 SelectboxColumn.isEditableType = true
 
-export default SelectboxColumn as ColumnCreator
+export default SelectboxColumn

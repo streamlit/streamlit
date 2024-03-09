@@ -14,7 +14,10 @@
 
 """Column types that can be configured via the ``column_config`` parameter of ``st.dataframe`` and ``st.data_editor``."""
 
+from __future__ import annotations
+
 __all__ = [
+    "AreaChartColumn",
     "Column",
     "TextColumn",
     "NumberColumn",
@@ -33,6 +36,7 @@ __all__ = [
 
 
 from streamlit.elements.lib.column_types import (
+    AreaChartColumn,
     BarChartColumn,
     CheckboxColumn,
     Column,

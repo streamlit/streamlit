@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, Iterator, List, MutableMapping, Union
+from typing import TYPE_CHECKING, Iterable, Iterator, MutableMapping
 from urllib import parse
 
 from streamlit.constants import EMBED_QUERY_PARAMS_KEYS
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsKeysAndGetItem
 
 
 @dataclass
@@ -27,7 +32,7 @@ class QueryParams(MutableMapping[str, str]):
     It stores str keys with str and List[str] values.
     """
 
-    _query_params: Dict[str, Union[List[str], str]] = field(default_factory=dict)
+    _query_params: dict[str, list[str] | str] = field(default_factory=dict)
 
     def __iter__(self) -> Iterator[str]:
         self._ensure_single_query_api_used()
@@ -59,7 +64,11 @@ class QueryParams(MutableMapping[str, str]):
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
-    def __setitem__(self, key: str, value: Union[str, Iterable[str]]) -> None:
+    def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
+        self.__set_item_internal(key, value)
+        self._send_query_param_msg()
+
+    def __set_item_internal(self, key: str, value: str | Iterable[str]) -> None:
         if isinstance(value, dict):
             raise StreamlitAPIException(
                 f"You cannot set a query params key `{key}` to a dictionary."
@@ -75,7 +84,6 @@ class QueryParams(MutableMapping[str, str]):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
-        self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
         try:
@@ -86,7 +94,25 @@ class QueryParams(MutableMapping[str, str]):
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
-    def get_all(self, key: str) -> List[str]:
+    def update(
+        self,
+        other: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str] = (),
+        /,
+        **kwds: str,
+    ):
+        # an update function that only sends one ForwardMsg
+        # once all keys have been updated.
+        if hasattr(other, "keys") and hasattr(other, "__getitem__"):
+            for key in other.keys():
+                self.__set_item_internal(key, other[key])
+        else:
+            for (key, value) in other:
+                self.__set_item_internal(key, value)
+        for key, value in kwds.items():
+            self.__set_item_internal(key, value)
+        self._send_query_param_msg()
+
+    def get_all(self, key: str) -> list[str]:
         self._ensure_single_query_api_used()
         if key not in self._query_params or key in EMBED_QUERY_PARAMS_KEYS:
             return []
@@ -128,7 +154,7 @@ class QueryParams(MutableMapping[str, str]):
 
         self._send_query_param_msg()
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         self._ensure_single_query_api_used()
         # return the last query param if multiple values are set
         return {
@@ -137,7 +163,7 @@ class QueryParams(MutableMapping[str, str]):
             if key not in EMBED_QUERY_PARAMS_KEYS
         }
 
-    def set_with_no_forward_msg(self, key: str, val: Union[List[str], str]) -> None:
+    def set_with_no_forward_msg(self, key: str, val: list[str] | str) -> None:
         self._query_params[key] = val
 
     def clear_with_no_forward_msg(self) -> None:

@@ -14,12 +14,14 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import ImageCompareFunction
 
-def test_displays_markdown(app: Page):
+
+def test_displays_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that markdown is displayed correctly."""
 
     markdown_elements = app.get_by_test_id("stMarkdown")
-    expect(markdown_elements).to_have_count(12)
+    expect(markdown_elements).to_have_count(14)
 
     expect(markdown_elements.nth(0)).to_contain_text("Hello World")
     expect(markdown_elements.nth(1)).to_contain_text("This markdown is awesome! 😎")
@@ -32,9 +34,21 @@ def test_displays_markdown(app: Page):
     expect(markdown_elements.nth(6)).to_contain_text("None")
     expect(markdown_elements.nth(7)).to_contain_text("2021-01-01 00:00:00")
     expect(markdown_elements.nth(8)).to_contain_text("1.0")
-    expect(markdown_elements.nth(9)).to_contain_text("This is a string IO object!")
-    expect(markdown_elements.nth(10)).to_contain_text("This is streamed text")
-    expect(markdown_elements.nth(11)).to_contain_text("This is streamed text")
+
+    expect(markdown_elements.nth(9)).to_contain_text("1 * 2 - 3 = 4 `ok` !")
+    expect(markdown_elements.nth(10)).to_contain_text(
+        "1 * 2\n - 3\n ``` = \n````\n4 `ok` !"
+    )
+    assert_snapshot(markdown_elements.nth(5), name="write_int")
+    assert_snapshot(markdown_elements.nth(6), name="write_none")
+    assert_snapshot(markdown_elements.nth(7), name="write_datetime")
+    assert_snapshot(markdown_elements.nth(8), name="write_np_float")
+    assert_snapshot(markdown_elements.nth(9), name="write_single_line_monospace_block")
+    assert_snapshot(markdown_elements.nth(10), name="write_multi_line_monospace_block")
+
+    expect(markdown_elements.nth(11)).to_contain_text("This is a string IO object!")
+    expect(markdown_elements.nth(12)).to_contain_text("This is streamed text")
+    expect(markdown_elements.nth(13)).to_contain_text("This is streamed text")
 
 
 def test_display_dataframe(app: Page):
@@ -53,7 +67,7 @@ def test_display_json(app: Page):
 def test_display_help(app: Page):
     """Test that st.write displays objects via st.help."""
     help_elements = app.get_by_test_id("stDocstring")
-    expect(help_elements).to_have_count(2)
+    expect(help_elements).to_have_count(3)
 
 
 def test_display_exception(app: Page):

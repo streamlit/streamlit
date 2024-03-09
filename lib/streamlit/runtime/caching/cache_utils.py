@@ -26,9 +26,7 @@ import types
 from abc import abstractmethod
 from collections import defaultdict
 from datetime import timedelta
-from typing import Any, Callable, overload
-
-from typing_extensions import Literal
+from typing import Any, Callable, Final, Literal, overload
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
@@ -53,7 +51,7 @@ from streamlit.runtime.caching.cached_message_replay import (
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
 from streamlit.util import HASHLIB_KWARGS
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.

@@ -19,25 +19,18 @@ import inspect
 import json
 import types
 from io import StringIO
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Final,
-    Generator,
-    Iterable,
-    List,
-    Tuple,
-    Type,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Final, Generator, Iterable, List, cast
 
 from streamlit import type_util
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
-from streamlit.string_util import is_mem_address_str, probably_contains_html_tags
+from streamlit.string_util import (
+    is_mem_address_str,
+    max_char_sequence,
+    probably_contains_html_tags,
+)
 from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
@@ -45,7 +38,7 @@ if TYPE_CHECKING:
 
 
 # Special methods:
-HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
+HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.BuiltinFunctionType,
     types.BuiltinMethodType,
     types.FunctionType,
@@ -53,9 +46,9 @@ HELP_TYPES: Final[Tuple[Type[Any], ...]] = (
     types.ModuleType,
 )
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
-_TEXT_CURSOR = "▕"
+_TEXT_CURSOR: Final = "▕"
 
 
 class StreamingOutput(List[Any]):
@@ -66,7 +59,7 @@ class WriteMixin:
     @gather_metrics("write_stream")
     def write_stream(
         self, stream: Callable[..., Any] | Generator[Any, Any, Any] | Iterable[Any]
-    ) -> List[Any] | str:
+    ) -> list[Any] | str:
         """Stream a generator, iterable, or stream-like sequence to the app.
 
         ``st.write_stream`` iterates through the given sequences and writes all
@@ -78,13 +71,17 @@ class WriteMixin:
         stream : Callable, Generator, Iterable, OpenAI Stream, or LangChain Stream
             The generator or iterable to stream.
 
+            .. note::
+                To use additional LLM libraries, you can create a wrapper to
+                manually define a generator function and include custom output
+                parsing.
+
         Returns
         -------
         str or list
             The full response. If the streamed output only contains text, this
             is a string. Otherwise, this is a list of all the streamed objects.
             The return value is fully compatible as input for ``st.write``.
-
 
         Example
         -------
@@ -140,7 +137,7 @@ class WriteMixin:
 
         stream_container: DeltaGenerator | None = None
         streamed_response: str = ""
-        written_content: List[Any] = StreamingOutput()
+        written_content: list[Any] = StreamingOutput()
 
         def flush_stream_response():
             """Write the full response to the app."""
@@ -279,6 +276,15 @@ class WriteMixin:
 
             https://github.com/streamlit/streamlit/issues/152
 
+        **kwargs : any
+            Keyword arguments. Not used.
+
+        .. deprecated::
+            ``**kwargs`` is deprecated and will be removed in a later version.
+            Use other, more specific Streamlit commands to pass additional
+            keyword arguments.
+
+
         Example
         -------
 
@@ -349,7 +355,7 @@ class WriteMixin:
                 kwargs,
             )
 
-        string_buffer: List[str] = []
+        string_buffer: list[str] = []
 
         # This bans some valid cases like: e = st.empty(); e.write("a", "b").
         # BUT: 1) such cases are rare, 2) this rule is easy to understand,
@@ -459,12 +465,13 @@ class WriteMixin:
                 # We cast arg to type here to appease mypy, due to bug in mypy:
                 # https://github.com/python/mypy/issues/12933
                 self.dg.help(cast(type, arg))
-            elif hasattr(arg, "_repr_html_"):
-                repr_html = arg._repr_html_()
-                unsafe_allow_html = unsafe_allow_html or probably_contains_html_tags(
-                    repr_html
-                )
-
+            elif (
+                hasattr(arg, "_repr_html_")
+                and callable(arg._repr_html_)
+                and (repr_html := arg._repr_html_())
+                and (unsafe_allow_html or not probably_contains_html_tags(repr_html))
+            ):
+                # We either explicitly allow HTML or infer it's not HTML
                 self.dg.markdown(repr_html, unsafe_allow_html=unsafe_allow_html)
             else:
                 stringified_arg = str(arg)
@@ -473,12 +480,28 @@ class WriteMixin:
                     flush_buffer()
                     self.dg.help(arg)
 
+                elif "\n" in stringified_arg:
+                    # With a multi-line string, use a preformatted block
+                    # To fully escape backticks, we wrap with backticks larger than
+                    # the largest sequence of backticks in the string.
+                    backtick_count = max(3, max_char_sequence(stringified_arg, "`") + 1)
+                    backtick_wrapper = "`" * backtick_count
+                    string_buffer.append(
+                        f"{backtick_wrapper}\n{stringified_arg}\n{backtick_wrapper}"
+                    )
                 else:
-                    string_buffer.append("`%s`" % stringified_arg.replace("`", "\\`"))
+                    # With a single-line string, use a preformatted text
+                    # To fully escape backticks, we wrap with backticks larger than
+                    # the largest sequence of backticks in the string.
+                    backtick_count = max_char_sequence(stringified_arg, "`") + 1
+                    backtick_wrapper = "`" * backtick_count
+                    string_buffer.append(
+                        f"{backtick_wrapper}{stringified_arg}{backtick_wrapper}"
+                    )
 
         flush_buffer()
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

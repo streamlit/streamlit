@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
 
-from typing_extensions import Literal, TypeAlias
+from typing_extensions import TypeAlias
 
 from streamlit.elements.utils import get_label_visibility_proto_value
 from streamlit.errors import StreamlitAPIException
@@ -38,8 +40,8 @@ DeltaColor: TypeAlias = Literal["normal", "inverse", "off"]
 
 @dataclass(frozen=True)
 class MetricColorAndDirection:
-    color: "MetricProto.MetricColor.ValueType"
-    direction: "MetricProto.MetricDirection.ValueType"
+    color: MetricProto.MetricColor.ValueType
+    direction: MetricProto.MetricDirection.ValueType
 
 
 class MetricMixin:
@@ -50,9 +52,9 @@ class MetricMixin:
         value: Value,
         delta: Delta = None,
         delta_color: DeltaColor = "normal",
-        help: Optional[str] = None,
+        help: str | None = None,
         label_visibility: LabelVisibility = "visible",
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
         Tip: If you want to display a large number, it may be a good idea to
@@ -165,7 +167,7 @@ class MetricMixin:
         return self.dg._enqueue("metric", metric_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         return cast("DeltaGenerator", self)
 
 

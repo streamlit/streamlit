@@ -19,12 +19,10 @@ import threading
 from copy import deepcopy
 from typing import (
     Any,
-    Dict,
     Final,
     ItemsView,
     Iterator,
     KeysView,
-    List,
     Mapping,
     NoReturn,
     ValuesView,
@@ -37,8 +35,8 @@ import streamlit.watcher.path_watcher
 from streamlit import file_util, runtime
 from streamlit.logger import get_logger
 
-_LOGGER = get_logger(__name__)
-SECRETS_FILE_LOCS: Final[List[str]] = [
+_LOGGER: Final = get_logger(__name__)
+SECRETS_FILE_LOCS: Final[list[str]] = [
     file_util.get_streamlit_file_path("secrets.toml"),
     # NOTE: The order here is important! Project-level secrets should overwrite global
     # secrets.
@@ -107,7 +105,7 @@ class AttrDict(Mapping[str, Any]):
     def __setattr__(self, key, value) -> NoReturn:
         raise TypeError("Secrets does not support attribute assignment.")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return deepcopy(self.__nested_secrets__)
 
 
@@ -118,7 +116,7 @@ class Secrets(Mapping[str, Any]):
     Safe to use from multiple threads.
     """
 
-    def __init__(self, file_paths: List[str]):
+    def __init__(self, file_paths: list[str]):
         # Our secrets dict.
         self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()

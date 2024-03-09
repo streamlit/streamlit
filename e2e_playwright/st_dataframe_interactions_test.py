@@ -73,7 +73,7 @@ def test_data_editor_delete_row_via_toolbar(
     assert_snapshot(
         data_editor_element, name="st_data_editor-selected_row_for_deletion"
     )
-    expect(data_editor_element).to_have_css("height", "248px")
+    expect(data_editor_element).to_have_css("height", "247px")
 
     # The toolbar should be locked (visible):
     expect(data_editor_toolbar).to_have_css("opacity", "1")
@@ -85,14 +85,14 @@ def test_data_editor_delete_row_via_toolbar(
         "stElementToolbarButton"
     ).nth(0)
     delete_row_button.click()
-    # The height should reflect that one row is missing (248px-35px=213px):
-    expect(data_editor_element).to_have_css("height", "213px")
+    # The height should reflect that one row is missing (247px-35px=212px):
+    expect(data_editor_element).to_have_css("height", "212px")
 
 
 def test_data_editor_delete_row_via_hotkey(app: Page):
     """Test that a row can be deleted via delete hotkey."""
     data_editor_element = app.get_by_test_id("stDataFrame").nth(1)
-    expect(data_editor_element).to_have_css("height", "248px")
+    expect(data_editor_element).to_have_css("height", "247px")
 
     # Select the second row
     data_editor_element.click(position={"x": 10, "y": 100})
@@ -100,15 +100,15 @@ def test_data_editor_delete_row_via_hotkey(app: Page):
     # Press backspace to delete row:
     data_editor_element.press("Delete")
 
-    # The height should reflect that one row is missing (248px-35px=213px):
-    expect(data_editor_element).to_have_css("height", "213px")
+    # The height should reflect that one row is missing (247px-35px=212px):
+    expect(data_editor_element).to_have_css("height", "212px")
 
 
 def test_data_editor_add_row_via_toolbar(app: Page):
     """Test that a row can be added via the toolbar."""
     data_editor_element = app.get_by_test_id("stDataFrame").nth(1)
     data_editor_toolbar = data_editor_element.get_by_test_id("stElementToolbar")
-    expect(data_editor_element).to_have_css("height", "248px")
+    expect(data_editor_element).to_have_css("height", "247px")
 
     # Activate toolbar:
     data_editor_element.hover()
@@ -119,20 +119,20 @@ def test_data_editor_add_row_via_toolbar(app: Page):
     add_row_button = data_editor_toolbar.get_by_test_id("stElementToolbarButton").nth(0)
     add_row_button.click()
 
-    # The height should reflect that one row is added (248px+35px=283px):
-    expect(data_editor_element).to_have_css("height", "283px")
+    # The height should reflect that one row is added (247px+35px=282px):
+    expect(data_editor_element).to_have_css("height", "282px")
 
 
 def test_data_editor_add_row_via_trailing_row(app: Page):
     """Test that a row can be added by clicking on the trailing row."""
     data_editor_element = app.get_by_test_id("stDataFrame").nth(1)
-    expect(data_editor_element).to_have_css("height", "248px")
+    expect(data_editor_element).to_have_css("height", "247px")
 
     # Click on the trailing row:
     data_editor_element.click(position={"x": 40, "y": 220})
 
-    # The height should reflect that one row is added (248px+35px=283px):
-    expect(data_editor_element).to_have_css("height", "283px")
+    # The height should reflect that one row is added (247px+35px=282px):
+    expect(data_editor_element).to_have_css("height", "282px")
 
 
 # Firefox seems to be unable to run this test. But I tested it manually

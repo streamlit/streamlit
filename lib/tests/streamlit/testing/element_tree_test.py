@@ -229,6 +229,17 @@ def test_exception():
     repr(sr.exception[0])
 
 
+def test_expander():
+    def script():
+        import streamlit as st
+
+        with st.expander("expander"):
+            st.write("some text")
+
+    at = AppTest.from_function(script).run()
+    assert at.markdown[0].value == "some text"
+
+
 def test_markdown_exception():
     script = AppTest.from_string(
         """
@@ -589,6 +600,55 @@ def test_selectbox():
     repr(sr.selectbox[0])
 
 
+def test_format_func():
+    # Regression test for #8019
+    def script():
+        import streamlit as st
+
+        key_to_value = {"key1": "value1", "key2": "value2"}
+        st.selectbox(
+            "selectbox",
+            key_to_value.keys(),
+            format_func=lambda key: key_to_value[key],
+            key="sb",
+        )
+        st.radio(
+            "radio",
+            options=["FOO", "BAR", "BAZ"],
+            format_func=lambda x: x.lower(),
+            key="r",
+        )
+        st.multiselect(
+            "multi",
+            options=[1, 2, 3],
+            format_func=lambda x: f"Num: {x}",
+            key="m",
+        )
+        st.select_slider(
+            "slider",
+            options=[1, 2, 3, 5, 8],
+            value=[1, 2],
+            format_func=lambda x: str(float(x)),
+            key="s",
+        )
+
+    at = AppTest.from_function(script).run()
+
+    at.selectbox("sb").select("key1").run()
+    assert at.selectbox("sb").value == "key1"
+
+    at.radio("r").set_value("FOO").run()
+    assert at.radio("r").value == "FOO"
+
+    at.multiselect("m").select(1).select(2).run()
+    assert at.multiselect("m").value == [1, 2]
+
+    at.select_slider("s").set_range(2, 5).run()
+    assert at.select_slider("s").value == (2, 5)
+
+    assert not at.exception
+
+
 def test_select_slider():
     script = AppTest.from_string(
         """
@@ -681,6 +741,27 @@ def test_slider():
 
     # Verify that creating the reprs does not throw
     repr(sr.slider[0])
+
+
+def test_status():
+    def script():
+        import streamlit as st
+
+        # Not using `with` because exiting that changes status to "complete"
+        running = st.status("running status", state="running")
+        running.text("waiting")
+
+        with st.status("complete status", state="complete"):
+            st.text("yay")
+
+        with st.status("error status", state="error"):
+            st.text("oh no")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.status) == 3
+    assert at.status[0].state == "running"
+    assert at.status[1].state == "complete"
+    assert at.status[2].state == "error"
 
 
 def test_table():

@@ -124,9 +124,33 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             self.query_params["embed"] = "true"
 
-    def test__setitem__raises_error_with_embed_options_key(self):
+    def test_update_adds_values(self):
+        self.query_params.update({"foo": "bar"})
+        assert self.query_params.get("foo") == "bar"
+        message = self.get_message_from_queue(0)
+        assert "foo=bar" in message.page_info_changed.query_string
+
+    def test_update_raises_error_with_embed_key(self):
         with pytest.raises(StreamlitAPIException):
-            self.query_params["embed_options"] = "disable_scrolling"
+            self.query_params.update({"foo": "bar", "embed": "true"})
+
+    def test_update_raises_error_with_embed_options_key(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params.update({"foo": "bar", "embed_options": "show_toolbar"})
+
+    def test_update_raises_exception_with_dictionary_value(self):
+        with pytest.raises(StreamlitAPIException):
+            self.query_params.update({"a_dict": {"test": "test"}})
+
+    def test_update_changes_values_in_single_message(self):
+        self.query_params.set_with_no_forward_msg("foo", "test")
+        self.query_params.update({"foo": "bar", "baz": "test"})
+        assert self.query_params.get("foo") == "bar"
+        assert self.query_params.get("baz") == "test"
+        assert len(self.forward_msg_queue) == 1
+        message = self.get_message_from_queue(0)
+        assert "foo=bar" in message.page_info_changed.query_string
+        assert "baz=test" in message.page_info_changed.query_string
 
     def test__delitem__removes_existing_key(self):
         del self.query_params["foo"]

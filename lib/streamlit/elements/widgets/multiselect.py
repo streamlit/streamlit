@@ -12,20 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    List,
-    Optional,
-    Sequence,
-    Union,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overload
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
@@ -44,7 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
     Key,
     LabelVisibility,
@@ -65,20 +56,20 @@ if TYPE_CHECKING:
 @overload
 def _check_and_convert_to_indices(  # type: ignore[misc]
     opt: Sequence[Any], default_values: None
-) -> Optional[List[int]]:
+) -> list[int] | None:
     ...
 
 
 @overload
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Sequence[Any], Any]
-) -> List[int]:
+    opt: Sequence[Any], default_values: Sequence[Any] | Any
+) -> list[int]:
     ...
 
 
 def _check_and_convert_to_indices(
-    opt: Sequence[Any], default_values: Union[Sequence[Any], Any, None]
-) -> Optional[List[int]]:
+    opt: Sequence[Any], default_values: Sequence[Any] | Any | None
+) -> list[int] | None:
     """Perform validation checks and return indices based on the default values."""
     if default_values is None and None not in opt:
         return None
@@ -105,7 +96,7 @@ def _check_and_convert_to_indices(
     return [opt.index(value) for value in default_values]
 
 
-def _get_default_count(default: Union[Sequence[Any], Any, None]) -> int:
+def _get_default_count(default: Sequence[Any] | Any | None) -> int:
     if default is None:
         return 0
     if not is_iterable(default):
@@ -128,17 +119,17 @@ Please select at most {max_selections} {max_selections_noun}.
 @dataclass
 class MultiSelectSerde(Generic[T]):
     options: Sequence[T]
-    default_value: List[int]
+    default_value: list[int]
 
-    def serialize(self, value: List[T]) -> List[int]:
+    def serialize(self, value: list[T]) -> list[int]:
         return _check_and_convert_to_indices(self.options, value)
 
     def deserialize(
         self,
-        ui_value: Optional[List[int]],
+        ui_value: list[int] | None,
         widget_id: str = "",
-    ) -> List[T]:
-        current_value: List[int] = (
+    ) -> list[T]:
+        current_value: list[int] = (
             ui_value if ui_value is not None else self.default_value
         )
         return [self.options[i] for i in current_value]
@@ -150,19 +141,19 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        default: Optional[Any] = None,
+        default: Any | None = None,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        max_selections: Optional[int] = None,
+        max_selections: int | None = None,
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-    ) -> List[T]:
+    ) -> list[T]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
 
@@ -276,20 +267,20 @@ class MultiSelectMixin:
         self,
         label: str,
         options: OptionSequence[T],
-        default: Union[Sequence[Any], Any, None] = None,
+        default: Sequence[Any] | Any | None = None,
         format_func: Callable[[Any], Any] = str,
-        key: Optional[Key] = None,
-        help: Optional[str] = None,
-        on_change: Optional[WidgetCallback] = None,
-        args: Optional[WidgetArgs] = None,
-        kwargs: Optional[WidgetKwargs] = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
-        max_selections: Optional[int] = None,
+        max_selections: int | None = None,
         placeholder: str = "Choose an option",
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        ctx: Optional[ScriptRunContext] = None,
-    ) -> List[T]:
+        ctx: ScriptRunContext | None = None,
+    ) -> list[T]:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
@@ -314,7 +305,7 @@ class MultiSelectMixin:
             page=ctx.page_script_hash if ctx else None,
         )
 
-        default_value: List[int] = [] if indices is None else indices
+        default_value: list[int] = [] if indices is None else indices
 
         multiselect_proto = MultiSelectProto()
         multiselect_proto.id = id
@@ -356,10 +347,12 @@ class MultiSelectMixin:
             multiselect_proto.value[:] = serde.serialize(widget_state.value)
             multiselect_proto.set_value = True
 
+        if ctx:
+            save_for_app_testing(ctx, id, format_func)
         self.dg._enqueue("multiselect", multiselect_proto)
         return widget_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
