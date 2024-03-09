@@ -217,3 +217,20 @@ def test_from_function_kwargs():
 
     at = AppTest.from_function(script, args=("bar",), kwargs={"baz": "baz"}).run()
     assert at.text.values == ["bar", "baz"]
+
+
+def test_trigger_recursion():
+    # Regression test for #7768
+    def code():
+        import time
+
+        import streamlit as st
+
+        if st.button(label="Submit"):
+            print("CLICKED!")
+            time.sleep(1)
+            st.rerun()
+
+    at = AppTest.from_function(code).run()
+    # The script run should finish instead of recurring and timing out
+    at.button[0].click().run()
