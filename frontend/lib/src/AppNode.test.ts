@@ -994,6 +994,71 @@ describe("AppRoot.clearStaleNodes", () => {
     expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
     expect(pruned.main.getIn([1])).not.toBeDefined()
   })
+
+  it("handles currentFragmentId correctly", () => {
+    const root = AppRoot.empty()
+      // Block not corresponding to my_fragment_id. Should be untouched.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
+        forwardMsgMetadata([0, 0])
+      )
+      // Element in block unrelated to my_fragment_id. Should be untouched.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement!" } },
+        }),
+        forwardMsgMetadata([0, 0, 0])
+      )
+      // Another element in block unrelated to my_fragment_id. Should be untouched.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement2!" } },
+          fragmentId: "other_fragment_id",
+        }),
+        forwardMsgMetadata([0, 0, 1])
+      )
+      // Block corresponding to my_fragment_id
+      .applyDelta(
+        "new_session_id",
+        makeProto(DeltaProto, {
+          addBlock: { allowEmpty: false },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1])
+      )
+      // Old element related to my_fragment_id. Should be pruned.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement3!" } },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1, 0])
+      )
+      // New element related to my_fragment_id. Should be untouched.
+      .applyDelta(
+        "new_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "newElement!" } },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+    const pruned = root.clearStaleNodes("new_session_id", "my_fragment_id")
+
+    expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
+    expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(2)
+    expect(pruned.main.getIn([0, 0])).toBeTextNode("oldElement!")
+    expect(pruned.main.getIn([0, 1])).toBeTextNode("oldElement2!")
+
+    expect(pruned.main.getIn([1])).toBeInstanceOf(BlockNode)
+    expect((pruned.main.getIn([1]) as BlockNode).children).toHaveLength(1)
+    expect(pruned.main.getIn([1, 0])).toBeTextNode("newElement!")
+  })
 })
 
 describe("AppRoot.getElements", () => {

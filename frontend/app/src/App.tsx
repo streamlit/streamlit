@@ -1085,7 +1085,10 @@ export class App extends PureComponent<Props, State> {
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
       const successful =
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+        status ===
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+
       window.setTimeout(() => {
         // Set the theme if url query param ?embed_options=[light,dark]_theme is set
         const [light, dark] = this.props.theme.availableThemes.slice(1, 3)
@@ -1105,9 +1108,12 @@ export class App extends PureComponent<Props, State> {
         // (We don't do this if our script had a compilation error and didn't
         // finish successfully.)
         this.setState(
-          ({ scriptRunId }) => ({
+          ({ scriptRunId, currentFragmentId }) => ({
             // Apply any pending elements that haven't been applied.
-            elements: this.pendingElementsBuffer.clearStaleNodes(scriptRunId),
+            elements: this.pendingElementsBuffer.clearStaleNodes(
+              scriptRunId,
+              currentFragmentId
+            ),
           }),
           () => {
             // We now have no pending elements.

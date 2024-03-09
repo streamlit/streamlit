@@ -135,23 +135,16 @@ def fragment(
 
     @wraps(non_optional_func)
     def wrap(*args, **kwargs):
-        import streamlit as st
         from streamlit.delta_generator import dg_stack
 
         ctx = get_script_run_ctx()
         if ctx is None:
             return
 
-        # TODO(vdonato): Determine whether we can just always wrap the contents of a
-        # fragment in a new container.
-        if len(dg_stack.get()) > 0:
-            dg_stack_snapshot = deepcopy(dg_stack.get())
-        else:
-            with st.container():
-                dg_stack_snapshot = deepcopy(dg_stack.get())
-
-        # TODO(vdonato): Maybe improve how we construct fragment_id hashes.
+        cursors_snapshot = deepcopy(ctx.cursors)
+        dg_stack_snapshot = deepcopy(dg_stack.get())
         active_dg = dg_stack_snapshot[-1]
+        # TODO(vdonato): Maybe improve how we construct fragment_id hashes.
         h = hashlib.new("md5")
         h.update(
             f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(
@@ -161,14 +154,29 @@ def fragment(
         fragment_id = h.hexdigest()
 
         def wrapped_fragment():
+            import streamlit as st
+
             ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
-            dg_stack.set(deepcopy(dg_stack_snapshot))
-            ctx.current_fragment_id = fragment_id
+            if ctx.current_fragment_id:
+                # If ctx.current_fragment_id is already set, this script run is a run
+                # of only this fragment (we set ctx.current_fragment_id for fragment-
+                # specific script runs at the start of the script run). We restore the
+                # state of ctx.cursors and dg_stack to the snapshots we took when this
+                # fragment was declared.
+                ctx.cursors = deepcopy(cursors_snapshot)
+                dg_stack.set(deepcopy(dg_stack_snapshot))
+            else:
+                # Otherwise, we must be in a full script run. We need to temporarily set
+                # ctx.current_fragment_id so that elements corresponding to this
+                # fragment get tagged with the appropriate ID. ctx.current_fragment_id
+                # gets reset after the fragment function finishes running.
+                ctx.current_fragment_id = fragment_id
 
             try:
-                result = non_optional_func(*args, **kwargs)
+                with st.container():
+                    result = non_optional_func(*args, **kwargs)
             finally:
                 ctx.current_fragment_id = None
 
