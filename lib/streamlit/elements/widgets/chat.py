@@ -35,7 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import is_emoji
 from streamlit.type_util import Key, to_key
 
@@ -352,6 +352,8 @@ class ChatMixin:
             chat_input_proto.value = widget_state.value
             chat_input_proto.set_value = True
 
+        if ctx:
+            save_for_app_testing(ctx, id, widget_state.value)
         if position == "bottom":
             # We import it here to avoid circular imports.
             from streamlit import _bottom

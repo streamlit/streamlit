@@ -39,7 +39,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import validate_emoji
 from streamlit.type_util import Key, to_key
 
@@ -762,6 +762,8 @@ class ButtonMixin:
             ctx=ctx,
         )
 
+        if ctx:
+            save_for_app_testing(ctx, id, button_state.value)
         self.dg._enqueue("button", button_proto)
 
         return button_state.value

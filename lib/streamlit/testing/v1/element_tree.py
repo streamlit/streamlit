@@ -334,7 +334,7 @@ class Button(Widget):
         else:
             state = self.root.session_state
             assert state
-            return cast(bool, state[self.id])
+            return cast(bool, state[TESTING_KEY][self.id])
 
     def set_value(self, v: bool) -> Button:
         """Set the value of the button."""
@@ -379,7 +379,7 @@ class ChatInput(Widget):
         else:
             state = self.root.session_state
             assert state
-            return state[self.id]  # type: ignore
+            return state[TESTING_KEY][self.id]  # type: ignore
 
 
 @dataclass(repr=False)
