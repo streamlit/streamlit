@@ -28,7 +28,7 @@ gitdb==4.0.11
 GitPython==3.1.42
 graphviz==0.20.1
 greenlet==3.0.3
-hypothesis==6.98.17
+hypothesis==6.99.1
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.0.2
@@ -88,7 +88,7 @@ Pygments==2.17.2
 pyodbc==5.1.0
 pyparsing==3.1.2
 pyspark==3.5.1
-pytest==8.0.2
+pytest==8.1.1
 pytest-base-url==2.1.0
 pytest-cov==4.1.0
 pytest-github-actions-annotate-failures==0.2.0
@@ -127,9 +127,9 @@ twine==5.0.0
 types-click==7.1.8
 types-protobuf==4.24.0.20240302
 types-pytz==2024.1.0.20240203
-types-requests==2.31.0.20240218
-types-setuptools==69.1.0.20240309
-types-toml==0.10.8.7
+types-requests==2.31.0.20240310
+types-setuptools==69.1.0.20240310
+types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
 typing_extensions==4.10.0
