@@ -101,7 +101,6 @@ class StreamlitTest(unittest.TestCase):
                 "dataframe",
                 "data_editor",
                 "date_input",
-                "dialog",
                 "divider",
                 "download_button",
                 "expander",
@@ -169,6 +168,7 @@ class StreamlitTest(unittest.TestCase):
                 "cache_data",
                 "cache_resource",
                 # Experimental APIs:
+                "experimental_dialog",
                 "experimental_user",
                 "experimental_singleton",
                 "experimental_memo",
