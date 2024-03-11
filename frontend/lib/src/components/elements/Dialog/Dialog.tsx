@@ -24,7 +24,7 @@ import React, {
 
 import { SIZE } from "baseui/modal"
 
-import { EmotionTheme } from "@streamlit/lib"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import Modal, {
   ModalHeader,
   ModalBody,
