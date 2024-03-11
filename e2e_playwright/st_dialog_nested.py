@@ -15,12 +15,12 @@
 import streamlit as st
 
 
-@st.dialog("Level2 Dialog")
+@st.experimental_dialog("Level2 Dialog")
 def level2_dialog():
     st.write("Second level dialog")
 
 
-@st.dialog("Level1 Dialog")
+@st.experimental_dialog("Level1 Dialog")
 def level1_dialog():
     st.write("First level dialog")
     level2_dialog()
