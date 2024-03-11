@@ -454,4 +454,15 @@ describe("NumberInput widget", () => {
       )
     })
   })
+
+  it("focuses input when clicking label", async () => {
+    const props = getProps()
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInput-Input")
+    expect(numberInput).not.toHaveFocus()
+    const label = screen.getByText(props.element.label)
+    const user = userEvent.setup()
+    await user.click(label)
+    expect(numberInput).toHaveFocus()
+  })
 })
