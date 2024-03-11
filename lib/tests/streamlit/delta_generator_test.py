@@ -125,6 +125,7 @@ class RunWarningTest(unittest.TestCase):
                 "graphviz_chart",
                 "header",
                 "help",
+                "unsafe_html",
                 "id",
                 "image",
                 "info",

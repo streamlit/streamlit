@@ -166,6 +166,7 @@ form_submit_button = _main.form_submit_button
 graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
+unsafe_html = _main.unsafe_html
 image = _main.image
 info = _main.info
 json = _main.json
