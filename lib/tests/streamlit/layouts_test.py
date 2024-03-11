@@ -353,7 +353,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
         dialog_block = self.get_delta_from_queue()
         self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
-        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
@@ -361,15 +361,15 @@ class DialogTest(DeltaGeneratorTestCase):
 
         self.assertIsNotNone(dialog)
         dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
 
         dialog.open()
         dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.is_open, True)
+        self.assertTrue(dialog_block.add_block.dialog.is_open)
 
         dialog.close()
         dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.is_open, False)
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
 
     def test_dialog_decorator_title_required(self):
         """Test that the title is required"""
