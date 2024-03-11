@@ -24,6 +24,7 @@ import React, {
 
 import { SIZE } from "baseui/modal"
 
+import { EmotionTheme } from "@streamlit/lib"
 import Modal, {
   ModalHeader,
   ModalBody,
@@ -38,21 +39,19 @@ export interface Props {
   element: BlockProto.Dialog
 }
 
-const DIALOG_WIDTH = {
-  small: "default",
-  large: "60vw",
+type DialogWidth = "small" | "large"
+
+function parseWidthConfig(width: DialogWidth, theme: EmotionTheme): string {
+  if (width === "large") {
+    // this is the same width & padding as the AppView container is using for all inner elements
+    return `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`
+  }
+
+  return SIZE.default
 }
 
-function parseWidthConfig(width?: string): string {
-  if (width === undefined) {
-    return SIZE.default
-  }
-
-  if (!isNaN(Number(width))) {
-    return `${width}vw`
-  }
-
-  return DIALOG_WIDTH[width as keyof typeof DIALOG_WIDTH] ?? SIZE.default
+function isDialogWidth(str: string | null | undefined): str is DialogWidth {
+  return str === "small" || str === "large"
 }
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
@@ -88,13 +87,22 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     }
   }, [activeTheme.emotion, activeTheme.basewebTheme, isInSidebar])
 
+  const size: string = useMemo(
+    () =>
+      parseWidthConfig(
+        isDialogWidth(width) ? width : "small",
+        activeTheme.emotion
+      ),
+    [width, activeTheme]
+  )
+
   return (
     <ThemedModal>
       <Modal
         isOpen={isOpen}
         closeable={false}
         onClose={() => setIsOpen(false)}
-        size={parseWidthConfig(width ?? SIZE.default)}
+        size={size}
         overrides={{
           Dialog: {
             style: {
