@@ -18,7 +18,7 @@ import pandas as pd
 import streamlit as st
 
 
-@st.dialog("Test Dialog with Images")
+@st.experimental_dialog("Test Dialog with Images")
 def dialog_with_images():
     st.write("Hello!")
     st.slider("Slide me!", 0, 10)
@@ -41,7 +41,7 @@ if st.button("Open Dialog with Images"):
     dialog_with_images()
 
 
-@st.dialog("Simple Dialog")
+@st.experimental_dialog("Simple Dialog")
 def simple_dialog():
     st.write("Hello again!")
     st.text_input("Enter something!")
@@ -54,7 +54,7 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
-@st.dialog("Large-width Dialog", width="large")
+@st.experimental_dialog("Large-width Dialog", width="large")
 def large_width_dialog():
     st.write("This dialog has a large width.")
 
@@ -69,7 +69,7 @@ if st.button("Open large-width Dialog"):
 # is non-deterministic
 with st.sidebar:
 
-    @st.dialog("Simple Dialog in Sidebar")
+    @st.experimental_dialog("Simple Dialog in Sidebar")
     def dialog_in_sidebar():
         st.write("Hello sidebar dialog!")
 

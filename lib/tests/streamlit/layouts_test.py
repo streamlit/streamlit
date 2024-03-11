@@ -374,16 +374,16 @@ class DialogTest(DeltaGeneratorTestCase):
     def test_dialog_decorator_title_required(self):
         """Test that the title is required"""
         with self.assertRaises(TypeError):
-            st.dialog()
+            st.experimental_dialog()
 
     def test_nested_dialog_raises_errors(self):
         """Test that dialogs cannot be called nested."""
 
-        @st.dialog("Level2 dialog")
+        @st.experimental_dialog("Level2 dialog")
         def level2_dialog():
             st.empty()
 
-        @st.dialog("Level1 dialog")
+        @st.experimental_dialog("Level1 dialog")
         def level1_dialog():
             level2_dialog()
 
