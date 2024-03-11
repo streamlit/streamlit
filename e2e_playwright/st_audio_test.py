@@ -18,8 +18,34 @@ from playwright.sync_api import Page, expect
 
 def test_audio_has_correct_properties(app: Page):
     audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements).to_have_count(2)
+    expect(audio_elements).to_have_count(3)
 
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
     expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))
+
+
+def test_audio_end_time(app: Page):
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements).to_have_count(3)
+
+    expect(audio_elements.nth(1)).to_be_visible()
+
+    audio_element = audio_elements.nth(1)
+    audio_element.evaluate("e => e.play()")
+    app.wait_for_timeout(5000)
+    expect(audio_element).to_have_js_property("paused", True)
+    assert int(audio_element.evaluate("e => e.currentTime")) == 13
+
+
+def test_audio_end_time_loop(app: Page):
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements).to_have_count(3)
+
+    expect(audio_elements.nth(2)).to_be_visible()
+
+    audio_element = audio_elements.nth(2)
+    audio_element.evaluate("e => e.play()")
+    app.wait_for_timeout(6000)
+    expect(audio_element).to_have_js_property("paused", False)
+    assert 16 <= audio_element.evaluate("e => e.currentTime") <= 18
