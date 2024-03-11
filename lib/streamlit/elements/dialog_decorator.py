@@ -14,30 +14,25 @@
 
 from __future__ import annotations
 
-from typing import Callable, TypeVar
+from typing import Callable
 
 import streamlit as st
 from streamlit.elements.lib.dialog import DialogWidth
 
-# we can specify RT better if we know that we don't return anything in the fragment-dialog or
-# only use the boolean return types
-RT = TypeVar("RT")
-
 
 def dialog_decorator(
     title: str, *, width: DialogWidth = "small"
-) -> Callable[[Callable[..., RT]], Callable[..., RT]]:
-    def inner_decorator(fn: Callable[..., RT]) -> Callable[..., RT]:
-        def decorated_fn(*args, **kwargs) -> RT:
+) -> Callable[[Callable[..., None]], Callable[..., None]]:
+    def inner_decorator(fn: Callable[..., None]) -> Callable[..., None]:
+        def decorated_fn(*args, **kwargs) -> None:
             dialog = st._main.dialog(title=title, width=width)
             dialog.open()
 
             # TODO: here we add the @st.fragment annotation
-            def dialog_content() -> RT:
-                ret = fn(*args, **kwargs)
-                if ret is not None:
-                    dialog.close()
-                return ret
+            def dialog_content() -> None:
+                # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
+                _ = fn(*args, **kwargs)
+                return None
 
             with dialog:
                 return dialog_content()
