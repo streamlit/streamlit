@@ -54,18 +54,6 @@ if st.button("Open Dialog without Images"):
     simple_dialog()
 
 
-@st.dialog("Non-dismissible Dialog", dismissible=False)
-def non_dismissible_dialog():
-    st.write("This dialog should not show the X icon.")
-
-    if st.button("Submit", key="dialog3-btn"):
-        return True
-
-
-if st.button("Open non-dismissible Dialog"):
-    non_dismissible_dialog()
-
-
 @st.dialog("Large-width Dialog", width="large")
 def large_width_dialog():
     st.write("This dialog has a large width.")

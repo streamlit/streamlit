@@ -25,11 +25,11 @@ RT = TypeVar("RT")
 
 
 def dialog_decorator(
-    title: str, *, dismissible: bool = True, width: DialogWidth = "small"
+    title: str, *, width: DialogWidth = "small"
 ) -> Callable[[Callable[..., RT]], Callable[..., RT]]:
     def inner_decorator(fn: Callable[..., RT]) -> Callable[..., RT]:
         def decorated_fn(*args, **kwargs) -> RT:
-            dialog = st._main.dialog(title=title, dismissible=dismissible, width=width)
+            dialog = st._main.dialog(title=title, width=width)
             dialog.open()
 
             # TODO: here we add the @st.fragment annotation
