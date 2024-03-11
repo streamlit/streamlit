@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_audio_has_correct_properties(app: Page):
+    """Test that `st.audio` renders correct properties."""
     audio_elements = app.get_by_test_id("stAudio")
     expect(audio_elements).to_have_count(3)
 
@@ -26,26 +27,32 @@ def test_audio_has_correct_properties(app: Page):
 
 
 def test_audio_end_time(app: Page):
+    """Test that `st.audio` end_time property works correctly."""
     audio_elements = app.get_by_test_id("stAudio")
     expect(audio_elements).to_have_count(3)
 
     expect(audio_elements.nth(1)).to_be_visible()
 
     audio_element = audio_elements.nth(1)
-    audio_element.evaluate("e => e.play()")
+    audio_element.evaluate("el => el.play()")
     app.wait_for_timeout(5000)
     expect(audio_element).to_have_js_property("paused", True)
-    assert int(audio_element.evaluate("e => e.currentTime")) == 13
+    assert int(audio_element.evaluate("el => el.currentTime")) == 13
 
 
 def test_audio_end_time_loop(app: Page):
+    """Test that `st.audio` end_time and loop properties work correctly."""
     audio_elements = app.get_by_test_id("stAudio")
     expect(audio_elements).to_have_count(3)
 
     expect(audio_elements.nth(2)).to_be_visible()
 
     audio_element = audio_elements.nth(2)
-    audio_element.evaluate("e => e.play()")
+    audio_element.evaluate("el => el.play()")
+    # The corresponding element definition looks like this:
+    # st.audio(url2, start_time=15, end_time=19, loop=True)
+    # We wait for 6 seconds, which mean the current time should be
+    # approximately 17 (4 seconds until end_time and 2 seconds starting from start time)
     app.wait_for_timeout(6000)
     expect(audio_element).to_have_js_property("paused", False)
-    assert 16 <= audio_element.evaluate("e => e.currentTime") <= 18
+    assert 16 < audio_element.evaluate("el => el.currentTime") < 18
