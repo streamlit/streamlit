@@ -34,7 +34,7 @@ def dialog_with_images():
         st.image(np.repeat(0, 1000000).reshape(1000, 1000))
 
     if st.button("Submit", key="dialog-btn"):
-        return True
+        st.rerun()
 
 
 if st.button("Open Dialog with Images"):
@@ -47,7 +47,7 @@ def simple_dialog():
     st.text_input("Enter something!")
 
     if st.button("Submit", key="dialog2-btn"):
-        return True
+        st.rerun()
 
 
 if st.button("Open Dialog without Images"):
@@ -59,7 +59,7 @@ def large_width_dialog():
     st.write("This dialog has a large width.")
 
     if st.button("Submit", key="dialog4-btn"):
-        return True
+        st.rerun()
 
 
 if st.button("Open large-width Dialog"):
@@ -74,7 +74,7 @@ with st.sidebar:
         st.write("Hello sidebar dialog!")
 
         if st.button("Submit", key="dialog5-btn"):
-            return True
+            st.rerun()
 
     if st.button("Open Sidebar-Dialog"):
         dialog_in_sidebar()
