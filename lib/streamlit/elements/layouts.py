@@ -716,13 +716,12 @@ class LayoutsMixin:
         self,
         title: str,
         *,
-        dismissible: bool = True,
         width: Literal["small", "large"] = "small",
     ) -> "Dialog":
         # We need to import Dialog here to avoid a circular import
         from streamlit.elements.lib.dialog import Dialog
 
-        return Dialog._create(self.dg, title, dismissible=dismissible, width=width)
+        return Dialog._create(self.dg, title, width=width)
 
     @property
     def dg(self) -> DeltaGenerator:

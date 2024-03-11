@@ -354,7 +354,6 @@ class DialogTest(DeltaGeneratorTestCase):
         dialog_block = self.get_delta_from_queue()
         self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
         self.assertEqual(dialog_block.add_block.dialog.is_open, False)
-        self.assertEqual(dialog_block.add_block.dialog.dismissible, True)
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
@@ -376,21 +375,6 @@ class DialogTest(DeltaGeneratorTestCase):
         """Test that the title is required"""
         with self.assertRaises(TypeError):
             st.dialog()
-
-    def test_dismissible_param(self):
-        """Test that the 'dismissible' parameters work."""
-        dismissible = False
-
-        @st.dialog(title=DialogTest.title, dismissible=dismissible)
-        def non_dismissible_dialog():
-            """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
-
-        non_dismissible_dialog()
-
-        dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
-        self.assertEqual(dialog_block.add_block.dialog.dismissible, dismissible)
 
     def test_nested_dialog_raises_errors(self):
         """Test that dialogs cannot be called nested."""
