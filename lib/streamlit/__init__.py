@@ -74,7 +74,7 @@ from streamlit.delta_generator import (
 )
 from streamlit.elements.dialog_decorator import (
     # rename so that it is available as st.dialog
-    dialog_decorator as dialog,
+    dialog_decorator as experimental_dialog,
 )
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
