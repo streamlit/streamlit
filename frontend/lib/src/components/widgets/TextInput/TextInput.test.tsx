@@ -306,4 +306,15 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
+
+  it("focuses input when clicking label", async () => {
+    const props = getProps()
+    render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).not.toHaveFocus()
+    const label = screen.getByText(props.element.label)
+    const user = userEvent.setup()
+    await user.click(label)
+    expect(textInput).toHaveFocus()
+  })
 })

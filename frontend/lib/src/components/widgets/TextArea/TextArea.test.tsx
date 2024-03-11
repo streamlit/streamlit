@@ -26,6 +26,7 @@ import {
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import TextArea, { Props } from "./TextArea"
+import userEvent from "@testing-library/user-event"
 
 const getProps = (
   elementProps: Partial<TextAreaProto> = {},
@@ -240,6 +241,17 @@ describe("TextArea widget", () => {
         fromUi: true,
       }
     )
+  })
+
+  it("focuses input when clicking label", async () => {
+    const props = getProps()
+    render(<TextArea {...props} />)
+    const textArea = screen.getByRole("textbox")
+    expect(textArea).not.toHaveFocus()
+    const label = screen.getByText(props.element.label)
+    const user = userEvent.setup()
+    await user.click(label)
+    expect(textArea).toHaveFocus()
   })
 
   describe("on mac", () => {
