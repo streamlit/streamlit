@@ -87,9 +87,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               maxHeight: "70vh",
               overflow: "auto",
               maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2rem)`,
-              minWidth: "20rem",
+              minWidth: element.useContainerWidth
+                ? // If use_container_width==True, we use the container width as minimum:
+                  `${Math.max(width, 160)}px` // 10rem ~= 160px
+                : "20rem",
               [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                //  maxWidth: "80vw",
                 maxWidth: `calc(100% - 2rem)`,
               },
               borderTopLeftRadius: theme.radii.xl,
