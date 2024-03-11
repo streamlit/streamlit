@@ -84,6 +84,8 @@ class Dialog(DeltaGenerator):
     def open(self) -> None:
         self._update(True)
 
+    # Note: we don't expose close() yet and require that st.rerun() is called in order to close the dialog
+    # to stay in sync with st.fragment. This might change in the future.
     def close(self) -> None:
         self._update(False)
 
