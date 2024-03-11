@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+import { uniqueId } from "lodash"
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -191,6 +192,7 @@ class TextInput extends React.PureComponent<Props, State> {
     const { dirty, value } = this.state
     const { element, width, disabled, widgetMgr } = this.props
     const { placeholder } = element
+    const id = uniqueId()
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -211,6 +213,7 @@ class TextInput extends React.PureComponent<Props, State> {
           labelVisibility={labelVisibilityProtoValueToEnum(
             element.labelVisibility?.value
           )}
+          htmlFor={id}
         >
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -229,6 +232,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           aria-label={element.label}
           disabled={disabled}
+          id={id}
           type={this.getTypeString()}
           autoComplete={element.autocomplete}
           overrides={{
