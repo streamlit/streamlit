@@ -25,7 +25,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly via screenshots matching."""
     video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(5)
+    expect(video_elements).to_have_count(9)
 
     # Wait for the video to load
     app.wait_for_timeout(2000)
@@ -53,7 +53,7 @@ def test_video_rendering(app: Page, assert_snapshot: ImageCompareFunction):
 def test_video_rendering_webp(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that `st.video` renders correctly webm video via screenshots matching."""
     video_elements = app.get_by_test_id("stVideo")
-    expect(video_elements).to_have_count(5)
+    expect(video_elements).to_have_count(9)
 
     # Wait for the video to load
     app.wait_for_timeout(2000)
@@ -95,3 +95,45 @@ def test_handles_changes_in_start_time(
 
     video_elements = app.get_by_test_id("stVideo")
     assert_snapshot(video_elements.nth(1), name="video-updated-start")
+
+
+@pytest.mark.parametrize(
+    "nth_element",
+    [
+        pytest.param(5, marks=pytest.mark.skip_browser("webkit")),
+        pytest.param(6, marks=pytest.mark.skip_browser("chromium")),
+    ],
+)
+def test_video_end_time(app: Page, nth_element: int):
+    video_elements = app.get_by_test_id("stVideo")
+    expect(video_elements).to_have_count(9)
+
+    expect(video_elements.nth(nth_element)).to_be_visible()
+
+    video_element = video_elements.nth(nth_element)
+    video_element.scroll_into_view_if_needed()
+    video_element.evaluate("e => e.play()")
+    app.wait_for_timeout(3000)
+    expect(video_element).to_have_js_property("paused", True)
+    assert int(video_element.evaluate("e => e.currentTime")) == 33
+
+
+@pytest.mark.parametrize(
+    "nth_element",
+    [
+        pytest.param(7, marks=pytest.mark.skip_browser("webkit")),
+        pytest.param(8, marks=pytest.mark.skip_browser("chromium")),
+    ],
+)
+def test_video_end_time_loop(app: Page, nth_element: int):
+    video_elements = app.get_by_test_id("stVideo")
+    expect(video_elements).to_have_count(9)
+
+    expect(video_elements.nth(nth_element)).to_be_visible()
+
+    video_element = video_elements.nth(nth_element)
+    video_element.scroll_into_view_if_needed()
+    video_element.evaluate("e => e.play()")
+    app.wait_for_timeout(6000)
+    expect(video_element).to_have_js_property("paused", False)
+    assert 36 <= video_element.evaluate("e => e.currentTime") <= 38
