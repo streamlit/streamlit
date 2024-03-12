@@ -319,7 +319,7 @@ describe("TextInput widget", () => {
   })
 
   it("ensures id doesn't change on rerender", () => {
-    const props = getProps({ maxChars: 10 })
+    const props = getProps()
     render(<TextInput {...props} />)
 
     const textInputLabel1 = screen.getByTestId("stWidgetLabel")
