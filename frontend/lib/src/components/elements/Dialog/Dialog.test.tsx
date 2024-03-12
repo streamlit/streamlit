@@ -16,7 +16,7 @@
 
 import React from "react"
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 
 import { render } from "@streamlit/lib/src/test_util"
@@ -32,6 +32,7 @@ const getProps = (
   element: BlockProto.Dialog.create({
     title: "StreamlitDialog",
     isOpen: true,
+    dismissible: true,
     ...elementProps,
   }),
   ...props,
@@ -72,8 +73,22 @@ describe("Dialog container", () => {
     expect(() => screen.getByText("test")).toThrow()
   })
 
-  it("should not close when not dismissible (default)", () => {
+  it("should close when dismissible", () => {
     const props = getProps()
+    render(
+      <Dialog {...props}>
+        <div>test</div>
+      </Dialog>
+    )
+
+    expect(screen.getByText("test")).toBeVisible()
+    fireEvent.click(screen.getByLabelText("Close"))
+    // dialog should be closed by clicking outside and, thus, the content should be gone
+    expect(() => screen.getByText("test")).toThrow()
+  })
+
+  it("should not close when not dismissible", () => {
+    const props = getProps({ dismissible: false })
     render(
       <Dialog {...props}>
         <div>test</div>
