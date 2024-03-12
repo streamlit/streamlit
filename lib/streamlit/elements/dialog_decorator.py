@@ -18,12 +18,24 @@ from typing import Callable
 
 import streamlit as st
 from streamlit.elements.lib.dialog import DialogWidth
+from streamlit.errors import StreamlitAPIException
 
 
 def dialog_decorator(
-    title: str, *, width: DialogWidth = "small"
+    title: str = "", *, width: DialogWidth = "small"
 ) -> Callable[[Callable[..., None]], Callable[..., None]]:
-    def inner_decorator(fn: Callable[..., None]) -> Callable[..., None]:
+    if title is None or title == "":
+        raise StreamlitAPIException(
+            'A non-empty `title` argument has to be provided for dialogs, for example `@st.dialog("Example Title")`.'
+        )
+
+    def inner_decorator(fn: Callable[..., None], *args) -> Callable[..., None]:
+        # This check is for the scenario where @st.dialog is used without parentheses
+        if fn is None or len(args) > 0:
+            raise StreamlitAPIException(
+                'The dialog decoration failed. A common error for this to happen is when the dialog decorator is used like `@st.dialog` instead of `@st.dialog(title="My Title")`.'
+            )
+
         def decorated_fn(*args, **kwargs) -> None:
             dialog = st._main.dialog(title=title, dismissible=True, width=width)
             dialog.open()
