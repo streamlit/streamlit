@@ -380,6 +380,10 @@ class AppTest:
     def switch_page(self, page_name: str):
         main_dir = Path(self._script_path).parent
         page_path = main_dir / page_name
+        if not page_path.is_file():
+            raise ValueError(
+                f"Unable to find script at {page_path}, make sure the page given is relative to the main script."
+            )
         page_path_str = str(page_path.resolve())
         self._page_hash = calc_md5(page_path_str)
         return self
