@@ -465,4 +465,25 @@ describe("NumberInput widget", () => {
     await user.click(label)
     expect(numberInput).toHaveFocus()
   })
+
+  it("ensures id doesn't change on rerender", () => {
+    const props = getProps()
+    render(<NumberInput {...props} />)
+
+    const numberInputLabel1 = screen.getByTestId("stWidgetLabel")
+    const forId1 = numberInputLabel1.getAttribute("for")
+
+    // Make some change to cause a rerender
+    const numberInput = screen.getByTestId("stNumberInput-Input")
+    // Change the widget value
+    fireEvent.change(numberInput, {
+      target: { value: 15 },
+    })
+    expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15)
+
+    const numberInputLabel2 = screen.getByTestId("stWidgetLabel")
+    const forId2 = numberInputLabel2.getAttribute("for")
+
+    expect(forId2).toBe(forId1)
+  })
 })

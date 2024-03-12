@@ -36,7 +36,7 @@ import {
 } from "@streamlit/lib/src/util/utils"
 import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { StyledTextAreaContainer } from "./styled-components"
-import { uniqueId } from "lodash"
+import uniqueId from "lodash/uniqueId"
 
 export interface Props {
   disabled: boolean
@@ -61,6 +61,8 @@ interface State {
 class TextArea extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  private readonly id: string
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
@@ -71,6 +73,11 @@ class TextArea extends React.PureComponent<Props, State> {
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
     return storedValue ?? this.props.element.default ?? null
+  }
+
+  constructor(props: Props) {
+    super(props)
+    this.id = uniqueId("text_area_")
   }
 
   public componentDidMount(): void {
@@ -181,7 +188,6 @@ class TextArea extends React.PureComponent<Props, State> {
     const { value, dirty } = this.state
     const style = { width }
     const { height, placeholder } = element
-    const id = uniqueId()
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -198,7 +204,7 @@ class TextArea extends React.PureComponent<Props, State> {
           labelVisibility={labelVisibilityProtoValueToEnum(
             element.labelVisibility?.value
           )}
-          htmlFor={id}
+          htmlFor={this.id}
         >
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -218,7 +224,7 @@ class TextArea extends React.PureComponent<Props, State> {
             onKeyDown={this.onKeyDown}
             aria-label={element.label}
             disabled={disabled}
-            id={id}
+            id={this.id}
             overrides={{
               Input: {
                 style: {

@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { uniqueId } from "lodash"
+import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -60,9 +60,16 @@ interface State {
 class TextInput extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  private readonly id: string
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
+  }
+
+  constructor(props: Props) {
+    super(props)
+    this.id = uniqueId("text_input_")
   }
 
   private get initialValue(): string | null {
@@ -194,7 +201,6 @@ class TextInput extends React.PureComponent<Props, State> {
     const { dirty, value } = this.state
     const { element, width, disabled, widgetMgr } = this.props
     const { placeholder } = element
-    const id = uniqueId()
 
     // Manage our form-clear event handler.
     this.formClearHelper.manageFormClearListener(
@@ -215,7 +221,7 @@ class TextInput extends React.PureComponent<Props, State> {
           labelVisibility={labelVisibilityProtoValueToEnum(
             element.labelVisibility?.value
           )}
-          htmlFor={id}
+          htmlFor={this.id}
         >
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -234,7 +240,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           aria-label={element.label}
           disabled={disabled}
-          id={id}
+          id={this.id}
           type={this.getTypeString()}
           autoComplete={element.autocomplete}
           overrides={{
