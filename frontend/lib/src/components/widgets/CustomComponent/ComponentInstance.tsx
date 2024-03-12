@@ -389,7 +389,7 @@ function ComponentInstance(props: Props): ReactElement {
         ref={iframeRef}
         src={getSrc(componentName, registry, url)}
         width={width}
-        height={frameHeight}
+        height={frameHeight ?? 0}
         style={{
           colorScheme: "light dark",
           display: isReadyRef.current ? "initial" : "none",
