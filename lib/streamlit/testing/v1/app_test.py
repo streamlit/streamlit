@@ -84,7 +84,7 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.util import HASHLIB_KWARGS, calc_md5
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -162,6 +162,7 @@ class AppTest:
         self.secrets: dict[str, Any] = {}
         self.args = args
         self.kwargs = kwargs
+        self._page_hash = ""
 
         tree = ElementTree()
         tree._runner = self
@@ -293,6 +294,7 @@ class AppTest:
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
             filepath = pathlib.Path(stack[1].filename)
             path = str(filepath.parent / script_path)
+        print(path)
         return AppTest(path, default_timeout=default_timeout)
 
     def _run(
@@ -334,7 +336,9 @@ class AppTest:
             self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
         )
         with patch_config_options({"global.appTest": True}):
-            self._tree = script_runner.run(widget_state, self.query_params, timeout)
+            self._tree = script_runner.run(
+                widget_state, self.query_params, timeout, self._page_hash
+            )
             self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
@@ -372,6 +376,14 @@ class AppTest:
             self
         """
         return self._tree.run(timeout=timeout)
+
+    def switch_page(self, page_name: str):
+        main_dir = pathlib.Path(self._script_path).parent
+        page = main_dir / page_name
+        page_path = str(page.resolve())
+        psh = calc_md5(page_path)
+        self._page_hash = psh
+        return self
 
     @property
     def main(self) -> Block:
