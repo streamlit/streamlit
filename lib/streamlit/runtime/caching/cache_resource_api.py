@@ -22,6 +22,7 @@ import types
 from datetime import timedelta
 from typing import Any, Callable, Final, TypeVar, cast, overload
 
+from cachetools import TTLCache
 from typing_extensions import TypeAlias
 
 import streamlit as st
@@ -47,7 +48,6 @@ from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
-from streamlit.util import TimedCleanupCache
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -472,7 +472,7 @@ class ResourceCache(Cache):
         super().__init__()
         self.key = key
         self.display_name = display_name
-        self._mem_cache: TimedCleanupCache[str, MultiCacheResults] = TimedCleanupCache(
+        self._mem_cache: TTLCache[str, MultiCacheResults] = TTLCache(
             maxsize=max_entries, ttl=ttl_seconds, timer=cache_utils.TTLCACHE_TIMER
         )
         self._mem_cache_lock = threading.Lock()
