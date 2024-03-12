@@ -207,7 +207,7 @@ def main_run(target: str, args=None, **kwargs):
     if extension[1:] not in ACCEPTED_FILE_EXTENSIONS:
         if extension[1:] == "":
             with open(target) as f:
-                maybe_shebang = f.readline().strip('\n')
+                maybe_shebang = f.readline().strip("\n")
 
             if not maybe_shebang.startswith("#!") or not "python" in maybe_shebang:
                 raise click.BadArgumentUsage(
