@@ -14,21 +14,18 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any
-
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
 @gather_metrics("get_theme")
-def get_theme() -> dict[str, Any]:
-    """Return the current theme settings.
+def get_theme() -> str:
+    """Return the current active theme.
 
     Returns
     -------
-    dict
-      The current theme settings as a dict.
+    str
+      The current active theme as a string.
 
     Example
     -------
@@ -37,11 +34,9 @@ def get_theme() -> dict[str, Any]:
     >>> import streamlit as st
     >>>
     >>> st.get_theme()
-    {"primaryColor": "#f63366", "backgroundColor": "#f0f0f0", "secondaryBackgroundColor": "#d3d3d3", "textColor": "#262730", "font": "sans-serif", "codeFont": "monospace"}
-
     """
     ctx = get_script_run_ctx()
     if ctx is None:
         raise RuntimeError("Not in a script context")
 
-    return json.loads(ctx.theme_data)
+    return ctx.theme_data
