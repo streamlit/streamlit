@@ -126,15 +126,15 @@ export const StyledAppViewBlockContainer =
       // Full screen-enabled elements can overflow the page when the screen size
       // is slightly over the content max width.
       // 50rem = contentMaxWidth + 2 * 2rem (size of full screen button as margin)
-      // We use 0.125 to give a little extra space for the full screen button
-      // And avoid scrollbar jitter.
+      // We use 0.5 to give a little extra space for a scrollbar that takes space
+      // like safari and avoid scrollbar jitter.
       // See https://github.com/streamlit/streamlit/issues/6990
       const shouldHandleFullScreenButton =
         !isWideMode && !disableFullscreenMode
       const fullScreenButtonStyles = shouldHandleFullScreenButton
         ? {
-            [`@media (max-width: 50.125rem)`]: {
-              maxWidth: `calc(100vw - 4.125rem)`,
+            [`@media (max-width: 50.5rem)`]: {
+              maxWidth: `calc(100vw - 4.5rem)`,
             },
           }
         : {}
