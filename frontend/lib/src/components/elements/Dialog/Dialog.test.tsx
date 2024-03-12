@@ -22,6 +22,7 @@ import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import Dialog, { Props as DialogProps } from "./Dialog"
 
@@ -34,6 +35,10 @@ const getProps = (
     isOpen: true,
     dismissible: true,
     ...elementProps,
+  }),
+  widgetMgr: new WidgetStateManager({
+    sendRerunBackMsg: () => {},
+    formsDataChanged: () => {},
   }),
   ...props,
 })
@@ -98,5 +103,23 @@ describe("Dialog container", () => {
     expect(screen.getByText("test")).toBeVisible()
     // close button - and hence dismiss - does not exist
     expect(() => screen.getByLabelText("Close")).toThrow()
+  })
+
+  it("only one dialog can be open at any time", () => {
+    const props = getProps({ dismissible: false })
+    render(
+      <Dialog {...props}>
+        <div>first-dialog</div>
+      </Dialog>
+    )
+
+    render(
+      <Dialog {...props}>
+        <div>second-dialog</div>
+      </Dialog>
+    )
+
+    expect(screen.getByText("first-dialog")).toBeVisible()
+    expect(() => screen.getByText("second-dialog")).toThrow()
   })
 })
