@@ -44,7 +44,7 @@ type DialogWidth = "small" | "large"
 function parseWidthConfig(width: DialogWidth, theme: EmotionTheme): string {
   if (width === "large") {
     // this is the same width & padding as the AppView container is using for all inner elements
-    return `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`
+    return theme.sizes.contentMaxWidth
   }
 
   return SIZE.default

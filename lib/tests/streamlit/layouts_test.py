@@ -374,23 +374,38 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_decorator_title_required(self):
         """Test that the title is required"""
+        with self.assertRaises(StreamlitAPIException) as e:
+
+            @st.experimental_dialog()
+            def dialog():
+                return None
+
+            dialog()
+
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
+
+        with self.assertRaises(StreamlitAPIException) as e:
+
+            @st.experimental_dialog()
+            def dialog_with_arguments(a, b):
+                return None
+
+            dialog_with_arguments("", "")
+
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
+
+    def test_dialog_decorator_must_be_called_like_a_function(self):
+        """Test that the decorator must be called like a function.
+        Note that if this happens in context of an app, a StreamlitAPIException is thrown
+        instead of a TypeError. This seems to be due to how a Streamlit App is executed by the Streamlit Runtime.
+        """
         with self.assertRaises(TypeError):
-            st.experimental_dialog()
 
-    def test_dismissible_param(self):
-        """Test that the 'dismissible' parameters work."""
-        dismissible = False
+            @st.experimental_dialog
+            def dialog():
+                return None
 
-        @st.dialog(title=DialogTest.title, dismissible=dismissible)
-        def non_dismissible_dialog():
-            """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
-
-        non_dismissible_dialog()
-
-        dialog_block = self.get_delta_from_queue()
-        self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
-        self.assertEqual(dialog_block.add_block.dialog.dismissible, dismissible)
+            dialog()
 
     def test_nested_dialog_raises_errors(self):
         """Test that dialogs cannot be called nested."""
@@ -403,5 +418,9 @@ class DialogTest(DeltaGeneratorTestCase):
         def level1_dialog():
             level2_dialog()
 
-        with self.assertRaises(StreamlitAPIException):
+        with self.assertRaises(StreamlitAPIException) as e:
             level1_dialog()
+
+        self.assertEqual(
+            e.exception.args[0], "Dialogs may not be nested inside other dialogs."
+        )
