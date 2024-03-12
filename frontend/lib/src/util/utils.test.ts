@@ -259,7 +259,7 @@ describe("isEmbed", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search:
-          "?embed=false&embed_options=show_colored_line,show_toolbar,show_padding,disable_scrolling,light_theme,dark_theme",
+          "?embed=false&embed_options=show_colored_line,show_toolbar,show_padding,disable_scrolling",
       },
     }))
 
@@ -267,15 +267,13 @@ describe("isEmbed", () => {
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
-    expect(isLightTheme()).toBe(false)
-    expect(isDarkTheme()).toBe(false)
   })
 
   it("embed Options should return false even if ?embed is not set", () => {
     windowSpy.mockImplementation(() => ({
       location: {
         search:
-          "?embed_options=show_colored_line,show_toolbar,show_padding,disable_scrolling,light_theme,dark_theme",
+          "?embed_options=show_colored_line,show_toolbar,show_padding,disable_scrolling",
       },
     }))
 
@@ -283,37 +281,25 @@ describe("isEmbed", () => {
     expect(isToolbarDisplayed()).toBe(false)
     expect(isPaddingDisplayed()).toBe(false)
     expect(isScrollingHidden()).toBe(false)
-    expect(isLightTheme()).toBe(false)
-    expect(isDarkTheme()).toBe(false)
   })
 
   it("should specify light theme if in embed options", () => {
     windowSpy.mockImplementation(() => ({
       location: {
-        search: "?embed=true&embed_options=light_theme",
+        search: "?embed_options=light_theme",
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
-    expect(isToolbarDisplayed()).toBe(false)
-    expect(isPaddingDisplayed()).toBe(false)
-    expect(isScrollingHidden()).toBe(false)
     expect(isLightTheme()).toBe(true)
-    expect(isDarkTheme()).toBe(false)
   })
 
   it("should specify dark theme if in embed options", () => {
     windowSpy.mockImplementation(() => ({
       location: {
-        search: "?embed=true&embed_options=dark_theme",
+        search: "?embed_options=dark_theme",
       },
     }))
 
-    expect(isColoredLineDisplayed()).toBe(false)
-    expect(isToolbarDisplayed()).toBe(false)
-    expect(isPaddingDisplayed()).toBe(false)
-    expect(isScrollingHidden()).toBe(false)
-    expect(isLightTheme()).toBe(false)
     expect(isDarkTheme()).toBe(true)
   })
 

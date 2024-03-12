@@ -178,9 +178,10 @@ export function isPaddingDisplayed(): boolean {
  * Returns true if the URL parameters contain ?embed_options=light_theme (case insensitive).
  */
 export function isLightTheme(): boolean {
-  return (
-    isEmbed() &&
-    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_LIGHT_THEME)
+  // NOTE: We don't check for ?embed=true here, because we want to allow display without any
+  // other embed options (for example in our e2e tests).
+  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
+    EMBED_LIGHT_THEME
   )
 }
 
@@ -188,10 +189,9 @@ export function isLightTheme(): boolean {
  * Returns true if the URL parameters contain ?embed_options=dark_theme (case insensitive).
  */
 export function isDarkTheme(): boolean {
-  return (
-    isEmbed() &&
-    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
-  )
+  // NOTE: We don't check for ?embed=true here, because we want to allow display without any
+  // other embed options (for example in our e2e tests).
+  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
 }
 
 /**
