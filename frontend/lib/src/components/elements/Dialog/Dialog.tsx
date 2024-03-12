@@ -58,7 +58,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   element,
   children,
 }): ReactElement => {
-  const { title, width, isOpen: initialIsOpen } = element
+  const { title, dismissible, width, isOpen: initialIsOpen } = element
   const [isOpen, setIsOpen] = useState<boolean>(initialIsOpen ?? false)
   useEffect(() => {
     // Only apply the expanded state if it was actually set in the proto.
@@ -100,7 +100,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     <ThemedModal>
       <Modal
         isOpen={isOpen}
-        closeable={false}
+        closeable={dismissible}
         onClose={() => setIsOpen(false)}
         size={size}
         overrides={{

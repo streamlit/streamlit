@@ -25,7 +25,7 @@ def dialog_decorator(
 ) -> Callable[[Callable[..., None]], Callable[..., None]]:
     def inner_decorator(fn: Callable[..., None]) -> Callable[..., None]:
         def decorated_fn(*args, **kwargs) -> None:
-            dialog = st._main.dialog(title=title, width=width)
+            dialog = st._main.dialog(title=title, dismissible=True, width=width)
             dialog.open()
 
             # TODO: here we add the @st.fragment annotation
