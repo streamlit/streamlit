@@ -271,7 +271,7 @@ class ScriptRunner:
             _enqueue=self._enqueue_forward_msg,
             script_requests=self._requests,
             query_string="",
-            theme_data={},
+            theme_data="",
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             main_script_path=self._main_script_path,
