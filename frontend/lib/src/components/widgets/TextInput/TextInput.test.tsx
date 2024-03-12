@@ -317,4 +317,22 @@ describe("TextInput widget", () => {
     await user.click(label)
     expect(textInput).toHaveFocus()
   })
+
+  it("ensures id doesn't change on rerender", () => {
+    const props = getProps()
+    render(<TextInput {...props} />)
+
+    const textInputLabel1 = screen.getByTestId("stWidgetLabel")
+    const forId1 = textInputLabel1.getAttribute("for")
+
+    // Make some change to cause a rerender
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "0123456789" } })
+    expect(textInput).toHaveValue("0123456789")
+
+    const textInputLabel2 = screen.getByTestId("stWidgetLabel")
+    const forId2 = textInputLabel2.getAttribute("for")
+
+    expect(forId2).toBe(forId1)
+  })
 })
