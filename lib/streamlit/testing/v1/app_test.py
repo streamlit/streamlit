@@ -377,14 +377,27 @@ class AppTest:
         """
         return self._tree.run(timeout=timeout)
 
-    def switch_page(self, page_name: str):
+    def switch_page(self, page_path: str) -> AppTest:
+        """Switch to another page of the app.
+
+        Parameters
+        ----------
+        page_path
+            Path of the page to switch to. Must be relative to the location
+            of the main script.
+
+        Returns
+        -------
+        AppTest
+            self
+        """
         main_dir = Path(self._script_path).parent
-        page_path = main_dir / page_name
-        if not page_path.is_file():
+        full_page_path = main_dir / page_path
+        if not full_page_path.is_file():
             raise ValueError(
                 f"Unable to find script at {page_path}, make sure the page given is relative to the main script."
             )
-        page_path_str = str(page_path.resolve())
+        page_path_str = str(full_page_path.resolve())
         self._page_hash = calc_md5(page_path_str)
         return self
 
