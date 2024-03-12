@@ -237,8 +237,9 @@ def test_trigger_recursion():
 
 
 def test_switch_page():
-    at = AppTest.from_file("main.py").run()
+    at = AppTest.from_file("test_data/main.py").run()
     assert at.text[0].value == "main page"
 
+    # TODO: is requiring this to be relative to the main script path ok?
     at.switch_page("pages/page1.py").run()
     assert at.text[0].value == "page 1"
