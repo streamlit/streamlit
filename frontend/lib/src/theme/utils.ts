@@ -39,6 +39,8 @@ import {
   ThemeSpacing,
 } from "@streamlit/lib/src/theme"
 
+import { isLightTheme, isDarkTheme } from "@streamlit/lib/src/util/utils"
+
 import { fonts } from "./primitives/typography"
 import {
   computeDerivedColors,
@@ -379,15 +381,26 @@ export const removeCachedTheme = (): void => {
 
 export const getDefaultTheme = (): ThemeConfig => {
   // Priority for default theme
-  // 1. Previous user preference
-  // 2. OS preference
-  // If local storage has Auto, refetch system theme as it may have changed
-  // based on time of day. We shouldn't ever have this saved in our storage
-  // but checking in case!
   const cachedTheme = getCachedTheme()
-  return cachedTheme && cachedTheme.name !== AUTO_THEME_NAME
-    ? cachedTheme
-    : createAutoTheme()
+
+  // 1. Previous user preference
+  // We shouldn't ever have auto saved in our storage in case
+  // OS theme changes but we explicitly check in case!
+  if (cachedTheme && cachedTheme.name !== AUTO_THEME_NAME) {
+    return cachedTheme
+  }
+
+  // 2. Embed Parameter preference
+  if (isLightTheme()) {
+    return lightTheme
+  }
+
+  if (isDarkTheme()) {
+    return darkTheme
+  }
+
+  // 3. OS preference
+  return createAutoTheme()
 }
 
 const whiteSpace = /\s+/
