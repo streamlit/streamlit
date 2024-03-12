@@ -16,7 +16,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 
 VIDEO_ELEMENTS_COUNT = 9
 
@@ -118,7 +118,7 @@ def test_video_end_time(app: Page, nth_element: int):
     # Wait until video will reach end_time
     app.wait_for_timeout(3000)
     expect(video_element).to_have_js_property("paused", True)
-    assert int(video_element.evaluate("el => el.currentTime")) == 33
+    wait_until(app, lambda: int(video_element.evaluate("el => el.currentTime")) == 33)
 
 
 @pytest.mark.parametrize(
@@ -144,4 +144,4 @@ def test_video_end_time_loop(app: Page, nth_element: int):
     # 4 seconds until end_time and 2 seconds starting from start time
     app.wait_for_timeout(6000)
     expect(video_element).to_have_js_property("paused", False)
-    assert 36 < video_element.evaluate("el => el.currentTime") < 38
+    wait_until(app, lambda: 36 < video_element.evaluate("el => el.currentTime") < 38)

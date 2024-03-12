@@ -15,6 +15,8 @@ import re
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import wait_until
+
 
 def test_audio_has_correct_properties(app: Page):
     """Test that `st.audio` renders correct properties."""
@@ -37,7 +39,7 @@ def test_audio_end_time(app: Page):
     audio_element.evaluate("el => el.play()")
     app.wait_for_timeout(5000)
     expect(audio_element).to_have_js_property("paused", True)
-    assert int(audio_element.evaluate("el => el.currentTime")) == 13
+    wait_until(app, lambda: int(audio_element.evaluate("el => el.currentTime")) == 13)
 
 
 def test_audio_end_time_loop(app: Page):
@@ -55,4 +57,4 @@ def test_audio_end_time_loop(app: Page):
     # approximately 17 (4 seconds until end_time and 2 seconds starting from start time)
     app.wait_for_timeout(6000)
     expect(audio_element).to_have_js_property("paused", False)
-    assert 16 < audio_element.evaluate("el => el.currentTime") < 18
+    wait_until(app, lambda: 16 < audio_element.evaluate("el => el.currentTime") < 18)
