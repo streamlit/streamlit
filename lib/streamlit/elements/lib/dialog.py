@@ -34,10 +34,12 @@ class Dialog(DeltaGenerator):
         parent: DeltaGenerator,
         title: str,
         *,
+        dismissible: bool = True,
         width: DialogWidth = "small",
     ) -> Dialog:
         block_proto = BlockProto()
         block_proto.dialog.title = title
+        block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = str(width)
 
         delta_path: list[int] = (
