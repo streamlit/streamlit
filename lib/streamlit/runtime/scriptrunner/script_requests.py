@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import cast
+from typing import Any, cast
 
 from streamlit import util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -46,6 +46,7 @@ class RerunData:
     widget_states: WidgetStates | None = None
     page_script_hash: str = ""
     page_name: str = ""
+    theme_data: dict[str, Any] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -132,6 +133,7 @@ class ScriptRequests:
                         widget_states=coalesced_states,
                         page_script_hash=new_data.page_script_hash,
                         page_name=new_data.page_name,
+                        theme_data=new_data.theme_data,
                     )
                     return True
 

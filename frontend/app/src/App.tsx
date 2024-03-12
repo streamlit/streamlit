@@ -1348,9 +1348,17 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash = ""
     }
 
+    const themeData = this.getThemeData()
+
     this.sendBackMsg(
       new BackMsg({
-        rerunScript: { queryString, widgetStates, pageScriptHash, pageName },
+        rerunScript: {
+          queryString,
+          widgetStates,
+          pageScriptHash,
+          pageName,
+          themeData,
+        },
       })
     )
 
@@ -1596,6 +1604,10 @@ export class App extends PureComponent<Props, State> {
         : document.location.search
 
     return queryString.startsWith("?") ? queryString.substring(1) : queryString
+  }
+
+  getThemeData = (): string => {
+    return JSON.stringify(this.props.theme.activeTheme.name)
   }
 
   isInCloudEnvironment = (): boolean => {

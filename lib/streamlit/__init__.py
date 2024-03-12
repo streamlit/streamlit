@@ -93,6 +93,8 @@ from streamlit.commands.experimental_query_params import (
     set_query_params as _set_query_params,
 )
 
+from streamlit.commands.get_theme import get_theme as _get_theme
+
 # Modules that the user should have access to. These are imported with "as"
 # syntax pass mypy checking with implicit_reexport disabled.
 
@@ -222,6 +224,9 @@ query_params = _QueryParamsProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
+
+# Theme
+get_theme = _get_theme
 
 # Namespaces
 column_config = _column_config

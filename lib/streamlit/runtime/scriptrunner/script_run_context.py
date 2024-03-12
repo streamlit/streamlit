@@ -54,6 +54,7 @@ class ScriptRunContext:
     session_id: str
     _enqueue: Callable[[ForwardMsg], None]
     query_string: str
+    theme_data: str
     session_state: SafeSessionState
     uploaded_file_mgr: UploadedFileManager
     main_script_path: str
@@ -76,7 +77,9 @@ class ScriptRunContext:
     _experimental_query_params_used = False
     _production_query_params_used = False
 
-    def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
+    def reset(
+        self, query_string: str = "", page_script_hash: str = "", theme_data: str = ""
+    ) -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
         self.widget_user_keys_this_run = set()
@@ -89,6 +92,7 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
+        self.theme_data = theme_data
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:

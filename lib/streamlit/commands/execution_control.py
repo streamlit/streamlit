@@ -68,11 +68,13 @@ def rerun() -> NoReturn:  # type: ignore[misc]
     if ctx and ctx.script_requests:
         query_string = ctx.query_string
         page_script_hash = ctx.page_script_hash
+        theme_data = ctx.theme_data
 
         ctx.script_requests.request_rerun(
             RerunData(
                 query_string=query_string,
                 page_script_hash=page_script_hash,
+                theme_data=theme_data,
             )
         )
         # Force a yield point so the runner can do the rerun

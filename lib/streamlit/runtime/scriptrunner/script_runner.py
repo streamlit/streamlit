@@ -271,6 +271,7 @@ class ScriptRunner:
             _enqueue=self._enqueue_forward_msg,
             script_requests=self._requests,
             query_string="",
+            theme_data={},
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             main_script_path=self._main_script_path,
@@ -296,6 +297,7 @@ class ScriptRunner:
         client_state = ClientState()
         client_state.query_string = ctx.query_string
         client_state.page_script_hash = ctx.page_script_hash
+        client_state.theme_data = ctx.theme_data
         self.on_event.send(
             self, event=ScriptRunnerEvent.SHUTDOWN, client_state=client_state
         )
@@ -445,6 +447,7 @@ class ScriptRunner:
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
+                theme_data=rerun_data.theme_data,
             )
 
             self.on_event.send(

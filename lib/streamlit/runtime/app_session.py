@@ -358,6 +358,7 @@ class AppSession:
                 client_state.widget_states,
                 client_state.page_script_hash,
                 client_state.page_name,
+                client_state.theme_data,
             )
         else:
             rerun_data = RerunData()
