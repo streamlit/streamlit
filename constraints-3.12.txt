@@ -22,7 +22,7 @@ gitdb==4.0.11
 GitPython==3.1.42
 graphviz==0.20.1
 greenlet==3.0.3
-hypothesis==6.98.17
+hypothesis==6.99.4
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.0.2
@@ -62,7 +62,7 @@ pre-commit==3.6.2
 protobuf==3.20.3
 psycopg2-binary==2.9.9
 py4j==0.10.9.7
-pyarrow==15.0.0
+pyarrow==15.0.1
 pycparser==2.21
 pydantic==1.10.14
 pydeck==0.8.1b0
@@ -72,7 +72,7 @@ Pygments==2.17.2
 pyodbc==5.1.0
 pyparsing==3.1.2
 pyspark==3.5.1
-pytest==8.0.2
+pytest==8.1.1
 pytest-base-url==2.1.0
 pytest-cov==4.1.0
 pytest-github-actions-annotate-failures==0.2.0
@@ -109,11 +109,11 @@ toolz==0.12.1
 tornado==6.4
 twine==5.0.0
 types-click==7.1.8
-types-protobuf==4.24.0.20240302
+types-protobuf==4.24.0.20240311
 types-pytz==2024.1.0.20240203
-types-requests==2.31.0.20240218
-types-setuptools==69.1.0.20240302
-types-toml==0.10.8.7
+types-requests==2.31.0.20240311
+types-setuptools==69.1.0.20240310
+types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing_extensions==4.10.0
 tzdata==2024.1
@@ -121,5 +121,5 @@ tzlocal==5.2
 urllib3==2.2.1
 virtualenv==20.25.1
 watchdog==4.0.0
-wheel==0.42.0
+wheel==0.43.0
 zipp==3.17.0
