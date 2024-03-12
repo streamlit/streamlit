@@ -43,10 +43,8 @@ import {
   getIFrameEnclosingApp,
   hashString,
   isColoredLineDisplayed,
-  isDarkTheme,
   isEmbed,
   isInChildFrame,
-  isLightTheme,
   isPaddingDisplayed,
   isScrollingHidden,
   isToolbarDisplayed,
@@ -108,7 +106,6 @@ import {
   LibConfig,
   AppConfig,
 } from "@streamlit/lib"
-import noop from "lodash/noop"
 import without from "lodash/without"
 
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
@@ -1090,14 +1087,6 @@ export class App extends PureComponent<Props, State> {
           ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
 
       window.setTimeout(() => {
-        // Set the theme if url query param ?embed_options=[light,dark]_theme is set
-        const [light, dark] = this.props.theme.availableThemes.slice(1, 3)
-        if (isLightTheme()) {
-          this.setAndSendTheme(light)
-        } else if (isDarkTheme()) {
-          this.setAndSendTheme(dark)
-        } else noop() // Do nothing when ?embed_options=[light,dark]_theme is not set
-
         // Notify any subscribers of this event (and do it on the next cycle of
         // the event loop)
         this.state.scriptFinishedHandlers.map(handler => handler())
