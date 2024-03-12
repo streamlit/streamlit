@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import hashlib
 import inspect
-import pathlib
 import tempfile
 import textwrap
 import traceback
+from pathlib import Path
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
@@ -204,7 +204,7 @@ class AppTest:
         hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
-        path = pathlib.Path(TMP_DIR.name, script_name)
+        path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
         return AppTest(
@@ -285,14 +285,14 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        if pathlib.Path.is_file(pathlib.Path(script_path)):
+        if Path.is_file(Path(script_path)):
             path = script_path
         else:
             # TODO: Make this not super fragile
             # Attempt to find the test file calling this method, so the
             # path can be relative to there.
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-            filepath = pathlib.Path(stack[1].filename)
+            filepath = Path(stack[1].filename)
             path = str(filepath.parent / script_path)
         print(path)
         return AppTest(path, default_timeout=default_timeout)
@@ -378,7 +378,7 @@ class AppTest:
         return self._tree.run(timeout=timeout)
 
     def switch_page(self, page_name: str):
-        main_dir = pathlib.Path(self._script_path).parent
+        main_dir = Path(self._script_path).parent
         page = main_dir / page_name
         page_path = str(page.resolve())
         psh = calc_md5(page_path)
