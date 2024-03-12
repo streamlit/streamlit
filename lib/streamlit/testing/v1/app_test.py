@@ -379,10 +379,9 @@ class AppTest:
 
     def switch_page(self, page_name: str):
         main_dir = Path(self._script_path).parent
-        page = main_dir / page_name
-        page_path = str(page.resolve())
-        psh = calc_md5(page_path)
-        self._page_hash = psh
+        page_path = main_dir / page_name
+        page_path_str = str(page_path.resolve())
+        self._page_hash = calc_md5(page_path_str)
         return self
 
     @property
