@@ -35,6 +35,8 @@ import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
+import { StyledDialogContent } from "./styled-components"
+
 export interface Props {
   element: BlockProto.Dialog
 }
@@ -113,7 +115,9 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
         }}
       >
         <ModalHeader>{title}</ModalHeader>
-        <ModalBody>{children}</ModalBody>
+        <ModalBody>
+          <StyledDialogContent>{children}</StyledDialogContent>
+        </ModalBody>
       </Modal>
     </ThemedModal>
   )
