@@ -27,6 +27,7 @@ import streamlit.runtime.app_session as app_session
 from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
@@ -279,6 +280,25 @@ class AppSessionTest(unittest.TestCase):
 
         # And a new ScriptRunner should be created.
         mock_create_scriptrunner.assert_called_once()
+
+    @patch_config_options({"runner.fastReruns": True})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_fragment_requests_existing_scriptrunner(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        session = _create_test_session()
+
+        mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_active_scriptrunner
+
+        session.request_rerun(ClientState(fragment_id="my_fragment_id"))
+
+        # The active ScriptRunner should *not* be shut down or stopped.
+        mock_active_scriptrunner.request_rerun.assert_called_once()
+        mock_active_scriptrunner.request_stop.assert_not_called()
+
+        # And a new ScriptRunner should *not* be created.
+        mock_create_scriptrunner.assert_not_called()
 
     @patch("streamlit.runtime.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
@@ -645,6 +665,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
 
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
@@ -658,6 +679,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         sent_messages = session._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
+        session._clear_queue.assert_called_once()
 
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
@@ -710,6 +732,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
 
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
@@ -724,6 +747,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         sent_messages = session._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
+        session._clear_queue.assert_not_called()
 
         new_session_msg = sent_messages[0].new_session
         self.assertEqual(new_session_msg.fragment_id, "my_fragment_id")
