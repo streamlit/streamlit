@@ -612,6 +612,8 @@ class Runtime:
                 if self._state == RuntimeState.NO_SESSIONS_CONNECTED:  # type: ignore[comparison-overlap]
                     # mypy 1.4 incorrectly thinks this if-clause is unreachable,
                     # because it thinks self._state must be INITIAL | ONE_OR_MORE_SESSIONS_CONNECTED.
+
+                    # Wait for new websocket connections (new sessions):
                     _, pending_tasks = await asyncio.wait(  # type: ignore[unreachable]
                         (
                             asyncio.create_task(async_objs.must_stop.wait()),
@@ -644,7 +646,7 @@ class Runtime:
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break
-
+                # Wait for new data that needs to be send out:
                 _, pending_tasks = await asyncio.wait(
                     (
                         asyncio.create_task(async_objs.must_stop.wait()),
