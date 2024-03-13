@@ -628,7 +628,7 @@ class FileUploader(Widget):
         runner = self.root._runner
         assert runner is not None
         ufm = runner._mufm
-        ufm.add_file(session_id="session", file=rec)
+        ufm.add_file(session_id="test session id", file=rec)
         return self
 
     @property
