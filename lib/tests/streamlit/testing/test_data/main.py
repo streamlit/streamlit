@@ -15,3 +15,5 @@
 import streamlit as st
 
 st.text("main page")
+
+st.slider("slider", min_value=0, max_value=10)
