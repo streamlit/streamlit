@@ -16,7 +16,6 @@ from datetime import date, datetime, time
 
 import numpy as np
 import pandas as pd
-import PIL
 import pytest
 
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
