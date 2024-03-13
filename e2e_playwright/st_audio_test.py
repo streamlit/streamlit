@@ -13,6 +13,7 @@
 # limitations under the License.
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_until
@@ -28,6 +29,7 @@ def test_audio_has_correct_properties(app: Page):
     expect(audio_elements.nth(0)).to_have_attribute("src", re.compile(r".*media.*wav"))
 
 
+@pytest.mark.skip_browser("webkit")
 def test_audio_end_time(app: Page):
     """Test that `st.audio` end_time property works correctly."""
     audio_elements = app.get_by_test_id("stAudio")
@@ -42,6 +44,7 @@ def test_audio_end_time(app: Page):
     wait_until(app, lambda: int(audio_element.evaluate("el => el.currentTime")) == 13)
 
 
+@pytest.mark.skip_browser("webkit")
 def test_audio_end_time_loop(app: Page):
     """Test that `st.audio` end_time and loop properties work correctly."""
     audio_elements = app.get_by_test_id("stAudio")
