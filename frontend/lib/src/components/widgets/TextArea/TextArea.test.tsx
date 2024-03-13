@@ -277,4 +277,22 @@ describe("TextArea widget", () => {
       )
     })
   })
+
+  it("ensures id doesn't change on rerender", () => {
+    const props = getProps()
+    render(<TextArea {...props} />)
+
+    const textAreaLabel1 = screen.getByTestId("stWidgetLabel")
+    const forId1 = textAreaLabel1.getAttribute("for")
+
+    // Make some change to cause a rerender
+    const textArea = screen.getByRole("textbox")
+    fireEvent.change(textArea, { target: { value: "testing" } })
+    fireEvent.blur(textArea)
+
+    const textAreaLabel2 = screen.getByTestId("stWidgetLabel")
+    const forId2 = textAreaLabel2.getAttribute("for")
+
+    expect(forId2).toBe(forId1)
+  })
 })
