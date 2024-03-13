@@ -646,7 +646,7 @@ class Runtime:
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break
-                # Wait for new proto messages that needs to be send out:
+                # Wait for new proto messages that need to be sent out:
                 _, pending_tasks = await asyncio.wait(
                     (
                         asyncio.create_task(async_objs.must_stop.wait()),
