@@ -216,8 +216,8 @@ function ComponentInstance(props: Props): ReactElement {
   // By passing the args.height here, we can derive the initial height for
   // custom components that define a height property, e.g. in Python
   // my_custom_component(height=100)
-  const [frameHeight, setFrameHeight] = useState<number | undefined>(
-    isNaN(parsedNewArgs.height) ? undefined : parsedNewArgs.height
+  const [frameHeight, setFrameHeight] = useState<number>(
+    isNaN(parsedNewArgs.height) ? 0 : parsedNewArgs.height
   )
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
@@ -389,7 +389,7 @@ function ComponentInstance(props: Props): ReactElement {
         ref={iframeRef}
         src={getSrc(componentName, registry, url)}
         width={width}
-        height={frameHeight ?? 0}
+        height={frameHeight}
         style={{
           colorScheme: "light dark",
           display: isReadyRef.current ? "initial" : "none",
