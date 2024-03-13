@@ -25,6 +25,12 @@ message Audio {
   // The currentTime attribute of the HTML <audio> tag's <source> subtag.
   int32 start_time = 3;
 
+  // The time at which the audio should stop playing. If not specified, plays to the end.
+  int32 end_time = 6;
+
+  // Indicates whether the audio should start over from the beginning once it ends.
+  bool loop = 7;
+
   reserved 1, 2, 4;
   reserved "data", "format";
 }
