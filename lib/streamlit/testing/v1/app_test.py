@@ -294,7 +294,6 @@ class AppTest:
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
             filepath = Path(stack[1].filename)
             path = str(filepath.parent / script_path)
-        print(path)
         return AppTest(path, default_timeout=default_timeout)
 
     def _run(
