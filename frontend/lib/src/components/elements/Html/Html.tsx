@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-import { Html as HtmlProto } from "@streamlit/lib/src/proto"
+import React, {
+  ReactElement,
+  createElement,
+  useState,
+  useEffect,
+  useRef,
+} from "react"
 import DOMPurify from "dompurify"
 
+import { Html as HtmlProto } from "@streamlit/lib/src/proto"
 export interface HtmlProps {
   element: HtmlProto
+  scriptRunId: string
 }
-
-// TODO: Perhaps useState to check for changing HTML and not change the DOM?
-// Am I supposed to inject this into the index.html like favicon or like this??
-// eslint-disable-next-line react/no-danger
-//
 
 const sanitizeString = (html: string, unsafeScript: boolean): string => {
   const sanitizationOptions = {
@@ -39,12 +41,48 @@ const sanitizeString = (html: string, unsafeScript: boolean): string => {
   return DOMPurify.sanitize(html, sanitizationOptions)
 }
 
+const appendContent = (
+  divRef: React.RefObject<HTMLDivElement>,
+  content: string
+): void => {
+  if (!divRef.current) throw new Error("Cannot append content to null divRef.")
+
+  const slotHtml = document.createRange().createContextualFragment(content)
+  divRef.current.innerHTML = ""
+  divRef.current.appendChild(slotHtml)
+}
+
 /**
  * HTML code to insert into the page.
  */
-export default function Html({ element }: HtmlProps): ReactElement {
-  const { body, unsafeScript } = element
-  const sanitizedHtml = sanitizeString(body, unsafeScript)
-  console.log("Sanitized HTML: ", sanitizedHtml)
-  return <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+export default function Html({
+  element,
+  scriptRunId,
+}: HtmlProps): ReactElement {
+  const { body, unsafeScripts } = element
+  const [sanitizedHtml, setSanitizedHtml] = useState<string>()
+  const [firstRun, setFirstRun] = useState(true)
+  const divRef = useRef(null)
+
+  // Update if html string changes
+  useEffect(() => {
+    const htmlContent = sanitizeString(body, unsafeScripts)
+    if (htmlContent !== sanitizedHtml) {
+      appendContent(divRef, htmlContent)
+      setSanitizedHtml(htmlContent)
+    }
+    if (firstRun) {
+      setFirstRun(false)
+    }
+  }, [unsafeScripts, body])
+
+  // Must re-append to allow script execution outside initial mount
+  useEffect(() => {
+    const newSanitized = sanitizeString(body, unsafeScripts)
+    if (unsafeScripts && newSanitized === sanitizedHtml && !firstRun) {
+      appendContent(divRef, newSanitized)
+    }
+  }, [scriptRunId])
+
+  return createElement("div", { ref: divRef })
 }

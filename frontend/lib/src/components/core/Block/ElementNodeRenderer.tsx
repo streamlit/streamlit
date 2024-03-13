@@ -378,6 +378,7 @@ const RawElementNodeRenderer = (
       return (
         <Html
           element={node.element.unsafeHtml as HtmlProto}
+          scriptRunId={props.scriptRunId}
           {...elementProps}
         />
       )

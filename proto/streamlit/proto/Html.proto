@@ -23,5 +23,5 @@ option java_outer_classname = "HtmlProto";
 message Html {
   string body = 1;
 
-  bool unsafe_script = 2;
+  bool unsafe_scripts = 2;
 }

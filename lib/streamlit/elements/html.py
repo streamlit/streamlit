@@ -30,7 +30,7 @@ class HtmlMixin:
     def unsafe_html(
         self,
         body: str,
-        unsafe_script: bool = False,
+        unsafe_scripts: bool = False,
     ) -> DeltaGenerator:
         """Insert HTML into your app. We *strongly advise against it*. It is hard to write
             secure HTML, so by using this command you may be compromising your users' security.
@@ -58,7 +58,7 @@ class HtmlMixin:
         html_proto = HtmlProto()
         # TODO: Add support for file pointers
         html_proto.body = clean_text(body)
-        html_proto.unsafe_script = unsafe_script
+        html_proto.unsafe_scripts = unsafe_scripts
         return self.dg._enqueue("unsafe_html", html_proto)
 
     @property
