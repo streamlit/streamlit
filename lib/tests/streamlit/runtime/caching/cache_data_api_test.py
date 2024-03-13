@@ -460,6 +460,26 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
+        "streamlit.file_util.open",
+        wraps=mock_open(read_data=pickle.dumps(as_replay_test_data())),
+    )
+    def test_cached_st_function_clear_certain_args(self, _):
+
+        self.x = 0
+
+        @st.cache_data()
+        def foo(y):
+            self.x += y
+            return self.x
+
+        assert foo(1) == 1
+        foo.clear(2)
+        assert foo(1) == 1
+        foo.clear(1)
+        assert foo(1) == 2
+
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch(
         "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write",
         MagicMock(),
     )

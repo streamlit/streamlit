@@ -701,8 +701,11 @@ class DataCache(Cache):
 
         self.storage.set(key, pickled_entry)
 
-    def _clear(self) -> None:
-        self.storage.clear()
+    def _clear(self, key: str | None = None) -> None:
+        if not key:
+            self.storage.clear()
+        else:
+            self.storage.delete(key)
 
     def _read_multi_results_from_storage(self, key: str) -> MultiCacheResults:
         """Look up the results from storage and ensure it has the right type.
