@@ -382,8 +382,8 @@ class AppTest:
         Parameters
         ----------
         page_path
-            Path of the page to switch to. Must be relative to the location
-            of the main script.
+            Path of the page to switch to. The path must be relative to the
+            location of the main script (e.g. ``"pages/my_page.py"``).
 
         Returns
         -------
