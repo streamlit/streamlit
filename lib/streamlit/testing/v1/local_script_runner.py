@@ -98,6 +98,7 @@ class LocalScriptRunner(ScriptRunner):
         widget_state: WidgetStates | None = None,
         query_params=None,
         timeout: float = 3,
+        page_hash: str = "",
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction.
@@ -109,7 +110,11 @@ class LocalScriptRunner(ScriptRunner):
         if query_params:
             query_string = parse.urlencode(query_params, doseq=True)
 
-        rerun_data = RerunData(widget_states=widget_state, query_string=query_string)
+        rerun_data = RerunData(
+            widget_states=widget_state,
+            query_string=query_string,
+            page_script_hash=page_hash,
+        )
         self.request_rerun(rerun_data)
         if not self._script_thread:
             self.start()
