@@ -119,24 +119,6 @@ function getWarnMessage(componentName: string, url?: string): string {
   return message
 }
 
-type HeightUnit = "px"
-/**
- * Parse the height as a string and add the unit as a suffix, e.g. `(42) => '42px'`
- *
- * @param height height number
- * @returns the height number as a string with suffix or `undefined` if `height` is `undefined`
- */
-function parseToStringWithUnitSuffix(
-  height?: number,
-  unit: HeightUnit = "px"
-): string | undefined {
-  if (!height) {
-    return undefined
-  }
-
-  return `${height}${unit}`
-}
-
 function tryParseArgs(
   jsonArgs: string,
   specialArgs: ISpecialArg[],
@@ -352,7 +334,8 @@ function ComponentInstance(props: Props): ReactElement {
   // Show the loading Skeleton while we have not received the ready message from the custom component
   // but while we also have not waited until the ready timeout
   const loadingSkeleton = !isReadyRef.current && !isReadyTimeout && (
-    <Skeleton height={parseToStringWithUnitSuffix(frameHeight)} />
+    // Skeletons will have a default height if frameHeight is 0 (the default height)
+    <Skeleton height={frameHeight > 0 ? `${frameHeight}px` : undefined} />
   )
 
   // If we've timed out waiting for the READY message from the component,
