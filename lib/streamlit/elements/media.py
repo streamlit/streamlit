@@ -55,6 +55,8 @@ class MediaMixin:
         start_time: int = 0,
         *,
         sample_rate: int | None = None,
+        end_time: int | None = None,
+        loop: bool = False,
     ) -> DeltaGenerator:
         """Display an audio player.
 
@@ -79,6 +81,10 @@ class MediaMixin:
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
+        end_time: int
+            The time at which this element should stop playing.
+        loop: bool
+            Whether the audio should loop playback.
 
         Example
         -------
@@ -120,7 +126,16 @@ class MediaMixin:
                 "array."
             )
 
-        marshall_audio(coordinates, audio_proto, data, format, start_time, sample_rate)
+        marshall_audio(
+            coordinates,
+            audio_proto,
+            data,
+            format,
+            start_time,
+            sample_rate,
+            end_time,
+            loop,
+        )
         return self.dg._enqueue("audio", audio_proto)
 
     @gather_metrics("video")
@@ -131,6 +146,8 @@ class MediaMixin:
         start_time: int = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
+        end_time: int | None = None,
+        loop: bool = False,
     ) -> DeltaGenerator:
         """Display a video player.
 
@@ -173,6 +190,11 @@ class MediaMixin:
             in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
+
+        end_time: int or None
+            The time at which this element should stop playing
+        loop: bool
+            Whether the video should loop playback.
 
         Example
         -------
@@ -226,7 +248,16 @@ class MediaMixin:
         """
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
-        marshall_video(coordinates, video_proto, data, format, start_time, subtitles)
+        marshall_video(
+            coordinates,
+            video_proto,
+            data,
+            format,
+            start_time,
+            subtitles,
+            end_time,
+            loop,
+        )
         return self.dg._enqueue("video", video_proto)
 
     @property
@@ -330,6 +361,8 @@ def marshall_video(
     mimetype: str = "video/mp4",
     start_time: int = 0,
     subtitles: SubtitleData = None,
+    end_time: int | None = None,
+    loop: bool = False,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -359,9 +392,20 @@ def marshall_video(
         * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
         When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
         Not supported for YouTube videos.
+    end_time: int
+            The time at which this element should stop playing
+    loop: bool
+        Whether the video should loop playback.
     """
 
+    if start_time < 0 or (end_time is not None and end_time <= start_time):
+        raise StreamlitAPIException("Invalid start_time and end_time combination.")
+
     proto.start_time = start_time
+
+    if end_time is not None:
+        proto.end_time = end_time
+    proto.loop = loop
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -501,6 +545,8 @@ def marshall_audio(
     mimetype: str = "audio/wav",
     start_time: int = 0,
     sample_rate: int | None = None,
+    end_time: int | None = None,
+    loop: bool = False,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -520,9 +566,16 @@ def marshall_audio(
         The time from which this element should start playing. (default: 0)
     sample_rate: int or None
         Optional param to provide sample_rate in case of numpy array
+    end_time: int
+        The time at which this element should stop playing
+    loop: bool
+        Whether the audio should loop playback.
     """
 
     proto.start_time = start_time
+    if end_time is not None:
+        proto.end_time = end_time
+    proto.loop = loop
 
     if isinstance(data, str) and url_util.is_url(
         data, allowed_schemas=("http", "https", "data")

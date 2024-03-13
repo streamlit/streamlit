@@ -109,7 +109,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         self.assertEqual("st.audio", ds.name)
         self.assertEqual("method", ds.type)
 
-        signature = "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'int' = 0, *, sample_rate: 'int | None' = None) -> 'DeltaGenerator'"
+        signature = "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'int' = 0, *, sample_rate: 'int | None' = None, end_time: 'int | None' = None, loop: 'bool' = False) -> 'DeltaGenerator'"
 
         self.assertEqual(
             f"streamlit.delta_generator.MediaMixin.audio{signature}", ds.value

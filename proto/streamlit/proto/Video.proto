@@ -43,6 +43,12 @@ message Video {
   // Repeated field for subtitle tracks
   repeated SubtitleTrack subtitles = 7;
 
+  // The time at which the video should stop playing. If not specified, plays to the end.
+  int32 end_time = 8;
+
+  // Indicates whether the video should start over from the beginning once it ends.
+  bool loop = 9;
+
   reserved 1,2,4;
   reserved "format", "data";
 }
