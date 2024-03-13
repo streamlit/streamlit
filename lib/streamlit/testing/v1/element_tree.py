@@ -602,7 +602,7 @@ class FileUploader(Widget):
         self._value = []
 
     @property
-    def value(self):
+    def value(self) -> list[UploadedFile | DeletedFile]:
         """The current value of the widget."""
         if self._value:
             files = []
