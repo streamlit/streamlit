@@ -142,4 +142,4 @@ urllib3==2.2.1
 virtualenv==20.25.1
 watchdog==4.0.0
 yarl==1.9.4
-zipp==3.17.0
+zipp==3.18.0
