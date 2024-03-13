@@ -234,3 +234,27 @@ def test_trigger_recursion():
     at = AppTest.from_function(code).run()
     # The script run should finish instead of recurring and timing out
     at.button[0].click().run()
+
+
+def test_switch_page():
+    at = AppTest.from_file("test_data/main.py").run()
+    assert at.text[0].value == "main page"
+
+    at.switch_page("pages/page1.py").run()
+    assert at.text[0].value == "page 1"
+
+    with pytest.raises(ValueError) as e:
+        # Pages must be relative to main script path
+        at.switch_page("test_data/pages/page1.py")
+        assert "relative to the main script path" in str(e.value)
+
+
+def test_switch_page_widgets():
+    at = AppTest.from_file("test_data/main.py").run()
+    at.slider[0].set_value(5).run()
+    assert at.slider[0].value == 5
+
+    at.switch_page("pages/page1.py").run()
+    assert not at.slider
+    at.switch_page("main.py").run()
+    assert at.slider[0].value == 0
