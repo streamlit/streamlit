@@ -42,11 +42,11 @@ jsonschema==4.21.1
 jsonschema-specifications==2023.12.1
 keyring==24.3.1
 kiwisolver==1.4.5
-langchain==0.1.11
-langchain-community==0.0.27
-langchain-core==0.1.30
+langchain==0.1.12
+langchain-community==0.0.28
+langchain-core==0.1.31
 langchain-text-splitters==0.0.1
-langsmith==0.1.23
+langsmith==0.1.24
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
