@@ -336,6 +336,7 @@ function ComponentInstance(props: Props): ReactElement {
   // but while we also have not waited until the ready timeout
   const loadingSkeleton = !isReadyRef.current &&
     !isReadyTimeout &&
+    // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
       <Skeleton
@@ -377,6 +378,7 @@ function ComponentInstance(props: Props): ReactElement {
         ref={iframeRef}
         src={getSrc(componentName, registry, url)}
         width={width}
+        // for undefined height we set the height to 0 to avoid inconsistent behavior
         height={frameHeight ?? 0}
         style={{
           colorScheme: "light dark",
