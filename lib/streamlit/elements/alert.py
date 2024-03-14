@@ -119,7 +119,11 @@ class AlertMixin:
 
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        alert_proto.icon = validate_emoji(icon)
+
+        if icon is not None and icon.startswith(":material:"):
+            alert_proto.icon = icon
+        else:
+            alert_proto.icon = validate_emoji(icon)
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 

@@ -23,6 +23,7 @@ import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { StyledAlertContent } from "./styled-components"
+import { MaterialIcon } from "@streamlit/lib/src/components/shared/Icon/MaterialIcon"
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {
   switch (format) {
@@ -64,11 +65,19 @@ export default function AlertElement({
     <div className="stAlert" data-testid="stAlert">
       <AlertContainer width={width} kind={kind}>
         <StyledAlertContent>
-          {icon && (
+          {icon && !icon.startsWith(":material:") && (
             <EmojiIcon testid="stAlertEmojiIcon" size="lg">
               {icon}
             </EmojiIcon>
           )}
+          {icon && icon.startsWith(":material:") && (
+            <MaterialIcon
+              size="lg"
+              testid="stAlertMaterialIcon"
+              iconName={icon.replace(":material:", "").replace(":", "")}
+            ></MaterialIcon>
+          )}
+
           <StreamlitMarkdown
             source={body}
             allowHTML={false}
