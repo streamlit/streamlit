@@ -76,6 +76,9 @@ class ScriptRunContext:
     _experimental_query_params_used = False
     _production_query_params_used = False
 
+    # mapping of altair widget ids to param and view counter
+    altair_stable_ids = {}
+
     def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
@@ -100,6 +103,8 @@ class ScriptRunContext:
                     qp.set_with_no_forward_msg(key, val=val[-1])
                 else:
                     qp.set_with_no_forward_msg(key, val)
+        self.altair_stable_ids[widget_id]["params"] = 0
+        self.altair_stable_ids[widget_id]["views"] = 0
 
     def on_script_start(self) -> None:
         self._has_script_started = True

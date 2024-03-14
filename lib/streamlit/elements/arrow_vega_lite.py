@@ -16,8 +16,8 @@
 
 from __future__ import annotations
 
-import inspect
 import json
+import re
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
@@ -31,12 +31,29 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.session_state_proxy import SessionStateProxy
 from streamlit.runtime.state.widgets import register_widget
-from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+
+def replace_values_in_dict(d, old_value, new_value):
+    """
+    Recursively replaces old_value with new_value in string values of the dictionary, including nested dictionaries.
+
+    :param d: The dictionary to process.
+    :param old_value: The string value to be replaced.
+    :param new_value: The new string value to replace with.
+    """
+    for key, value in d.items():
+        # If the value is a string, perform the replacement
+        if isinstance(value, str) and value == old_value:
+            d[key] = new_value
+        # If the value is a dictionary, recursively process it
+        elif isinstance(value, dict):
+            replace_values_in_dict(value, old_value, new_value)
 
 
 def _on_select(
@@ -45,6 +62,9 @@ def _on_select(
     key: str | None = None,
 ):
     if on_select is not None and on_select != False:
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        if isinstance(on_select, bool) or isinstance(on_select, str):
+            on_select = None
 
         def deserialize_vega_lite_event(ui_value, widget_id=""):
             if ui_value is None:
@@ -56,32 +76,19 @@ def _on_select(
 
         def serialize_vega_lite_event(v):
             return json.dumps(v, default=str)
-        
-        print(f'{proto.id=}')
 
         current_value = register_widget(
             "arrow_vega_lite_chart",
             proto,
             user_key=key,
-            on_change_handler=None,
+            on_change_handler=on_select,
             args=None,
             kwargs=None,
             deserializer=deserialize_vega_lite_event,
             serializer=serialize_vega_lite_event,
             ctx=get_script_run_ctx(),
         )
-
-        if isinstance(on_select, str):
-            # Set in session state
-            session_state = SessionStateProxy()
-            session_state[on_select] = AttributeDictionary(current_value.value)
-        elif callable(on_select):
-            # Call the callback function
-            kwargs_callback = {}
-            arguments = inspect.getfullargspec(on_select).args
-            if "selections" in arguments:
-                kwargs_callback["selections"] = current_value
-            on_select(**kwargs_callback)
+        return AttributeDictionary(current_value.value)
 
 
 class ArrowVegaLiteMixin:
@@ -164,9 +171,14 @@ class ArrowVegaLiteMixin:
             key=key,
             **kwargs,
         )
+        current_value = None
         if on_select:
-            _on_select(proto, on_select, key)
-        return self.dg._enqueue("arrow_vega_lite_chart", proto)
+            current_value = _on_select(proto, on_select, key)
+        dg = self.dg._enqueue("arrow_vega_lite_chart", proto)
+        if on_select:
+            return current_value
+        else:
+            return dg
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -188,7 +200,7 @@ def marshall(
 
     See DeltaGenerator.vega_lite_chart for docs.
     """
-    print(f'vega_lite marshall: {key=}')
+    print(f"vega_lite marshall: {key=}")
     # Support passing data inside spec['datasets'] and spec['data'].
     # (The data gets pulled out of the spec dict later on.)
     if isinstance(data, dict) and spec is None:
@@ -243,11 +255,85 @@ def marshall(
             data = data_spec
             del spec["data"]
 
+    ctx = get_script_run_ctx()
+    if on_select:
+        regex = re.compile(r"^param_\d+$")
+        new_session = ctx.session_id not in ctx.altair_stable_ids
+        params_counter = 0
+        views_counter = 0
+        if new_session:
+            params_counter = 0
+            views_counter = 0
+            ctx.altair_stable_ids[ctx.session_id] = {}
+            ctx.altair_stable_ids[ctx.session_id]["params"] = params_counter
+            ctx.altair_stable_ids[ctx.session_id]["views"] = views_counter
+        else:
+            params_counter = ctx.altair_stable_ids[ctx.session_id]["params"]
+            views_counter = ctx.altair_stable_ids[ctx.session_id]["views"]
+
+        for param in spec["params"]:
+            name = param["name"]
+            if regex.match(name):
+                param["name"] = f"selection_{params_counter}"
+                ctx.altair_stable_ids[ctx.session_id]["params"] += 1
+                if "hconcat" in spec:
+                    for hconcat in spec["hconcat"]:
+                        replace_values_in_dict(
+                            hconcat, name, f"selection_{params_counter}"
+                        )
+                if "vconcat" in spec:
+                    for vconcat in spec["vconcat"]:
+                        replace_values_in_dict(
+                            vconcat, name, f"selection_{params_counter}"
+                        )
+                if "layer" in spec:
+                    for item in spec["layer"]:
+                        replace_values_in_dict(
+                            item, name, f"selection_{params_counter}"
+                        )
+                if "encoding" in spec:
+                    for item in spec["encoding"]:
+                        replace_values_in_dict(
+                            item, name, f"selection_{params_counter}"
+                        )
+            if "views" in param:
+                for view_index, view in enumerate(param["views"]):
+                    param["views"][view_index] = f"views_{views_counter}"
+                    if "hconcat" in spec:
+                        for hconcat in spec["hconcat"]:
+                            if "vconcat" in hconcat:
+                                for vconcat in hconcat["vconcat"]:
+                                    replace_values_in_dict(
+                                        vconcat, view, f"views_{views_counter}"
+                                    )
+                            else:
+                                replace_values_in_dict(
+                                    hconcat, view, f"views_{views_counter}"
+                                )
+                    if "vconcat" in spec:
+                        for vconcat in spec["vconcat"]:
+                            if "hconcat" in vconcat:
+                                for hconcat in vconcat["hconcat"]:
+                                    replace_values_in_dict(
+                                        hconcat, view, f"views_{views_counter}"
+                                    )
+                            else:
+                                replace_values_in_dict(
+                                    vconcat, view, f"views_{views_counter}"
+                                )
+                    if "layer" in spec:
+                        for item in spec["layer"]:
+                            replace_values_in_dict(item, view, f"views_{views_counter}")
+                    if "encoding" in spec:
+                        for item in spec["encoding"]:
+                            replace_values_in_dict(item, view, f"views_{views_counter}")
+                    views_counter += 1
+                    ctx.altair_stable_ids[ctx.session_id]["views"] = views_counter
+
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
-    
-    ctx = get_script_run_ctx()
+
     id = compute_widget_id(
         "arrow_vega_lite",
         user_key=key,

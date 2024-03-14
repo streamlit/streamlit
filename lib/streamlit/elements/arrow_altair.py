@@ -18,7 +18,6 @@ a nice JSON schema for expressing graphs and charts.
 """
 from __future__ import annotations
 
-import hashlib
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
@@ -799,6 +798,7 @@ class ArrowAltairMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         proto = ArrowVegaLiteChartProto()
+        current_widget = None
         # TODO(willhuang1997): This needs to be cleaned up probably
         if on_select == ON_SELECTION_IGNORE:
             on_select = False
@@ -826,7 +826,7 @@ class ArrowAltairMixin:
                 on_select=on_select,
                 key=key,
             )
-            arrow_vega_lite._on_select(proto, on_select, key)
+            current_widget = arrow_vega_lite._on_select(proto, on_select, key)
         else:
             marshall(
                 proto,
@@ -837,8 +837,11 @@ class ArrowAltairMixin:
                 key=key,
             )
 
-
-        return self.dg._enqueue("arrow_vega_lite_chart", proto)
+        dg = self.dg._enqueue("arrow_vega_lite_chart", proto)
+        if on_select:
+            return current_widget
+        else:
+            return dg
 
     @property
     def dg(self) -> DeltaGenerator:

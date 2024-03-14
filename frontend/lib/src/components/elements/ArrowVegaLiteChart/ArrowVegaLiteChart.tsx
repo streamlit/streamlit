@@ -94,6 +94,8 @@ export interface VegaLiteChartElement {
   vegaLiteTheme: string
 
   id: string
+
+  isSelectEnabled: boolean
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
@@ -202,7 +204,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   public generateSpec = (): any => {
     const { element: el, theme } = this.props
-    const spec = JSON.parse(el.spec)
+    let spec = JSON.parse(el.spec)
+
     const { useContainerWidth } = el
     if (el.vegaLiteTheme === "streamlit") {
       spec.config = applyStreamlitTheme(spec.config, theme)
@@ -215,22 +218,19 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 
-    const storedValue = this.props.widgetMgr.getJsonValue(
-      this.props.element
-    )
+    const storedValue = this.props.widgetMgr.getJsonValue(this.props.element)
     if (storedValue !== undefined) {
       const selectors = this.getSelectorsFromChart(spec)
       const parsedStoredValue = JSON.parse(storedValue)
       if (parsedStoredValue.select) {
-        selectors.forEach((selector) => {
+        selectors.forEach(selector => {
           spec.params.forEach((param: any) => {
             if (param.name && param.name === selector) {
               if (param.select.type && param.select.type === "point") {
                 const values = parsedStoredValue.select[selector].vlPoint.or
                 param.select.fields = Object.keys(values[0])
                 param.value = values
-              }
-              else if (param.select.type === "interval") {
+              } else if (param.select.type === "interval") {
                 const values = parsedStoredValue.select[selector]
                 param.value = values
               }
@@ -260,45 +260,58 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       throw new Error("Datasets should not be passed as part of the spec")
     }
 
-    if ("params" in spec && "encoding" in spec) {
-      spec.params.forEach((param: any) => {
-        if ("select" in param && "type" in param.select && param.select.type === "point" && param.select.encodings === undefined) {
-          param.select.encodings = Object.keys(spec.encoding)
-        } 
-      })
+    if (el.isSelectEnabled) {
+      // attempt to add encodings from chart to selection parameter in order to get point interval
+      // This is to ensure that we can consistently recreate state in fullscreen / non fullscreen mode
+      // https://github.com/altair-viz/altair/issues/3285#issuecomment-1858860696
+      if ("params" in spec) {
+        if ("encoding" in spec) {
+          spec.params.forEach((param: any) => {
+            if (
+              "select" in param &&
+              "type" in param.select &&
+              param.select.type === "point" &&
+              param.select.encodings === undefined
+            ) {
+              param.select.encodings = Object.keys(spec.encoding)
+            }
+          })
+        } else if ("hconcat" in spec) {
+          try {
+            spec.params.forEach((param: any) => {
+              if (
+                "select" in param &&
+                "type" in param.select &&
+                param.select.type === "point" &&
+                param.select.encodings === undefined
+              ) {
+                param.select.encodings = Object.keys(spec.hconcat[0].encoding)
+              }
+            })
+          } catch (e) {
+            logMessage(e)
+          }
+        } else if ("vconcat" in spec) {
+          try {
+            spec.params.forEach((param: any) => {
+              if (
+                "select" in param &&
+                "type" in param.select &&
+                param.select.type === "point" &&
+                param.select.encodings === undefined
+              ) {
+                param.select.encodings = Object.keys(spec.vconcat[0].encoding)
+              }
+            })
+          } catch (e) {
+            logMessage(e)
+          }
+        }
+      }
     }
-    console.log(JSON.stringify(spec))
+
     return spec
   }
-
-  // private getInitialValue(): any {
-  //   const storedValue = this.props.widgetMgr.getJsonValue(
-  //     this.props.element
-  //   )
-  //   const spec = this.generateSpec(JSON.parse(this.props.element.spec))
-  //   if (storedValue !== undefined) {
-  //     const selectors = this.getSelectorsFromChart(spec)
-  //     const parsedStoredValue = JSON.parse(storedValue)
-  //     if (parsedStoredValue.select) {
-  //       selectors.forEach((selector) => {
-  //         const values = parsedStoredValue.select[selector].vlPoint.or
-  //         spec.params.forEach((param: any) => {
-  //           if (param.name && param.name === selector) {
-  //             if (param.select.type && param.select.type === "point") {
-  //               param.select.fields = Object.keys(values[0])
-  //               param.select.value = values
-  //             }
-  //             else if (param.select === "interval") {
-  //               param.select.value = values
-  //             }
-  //           }
-  //         })
-  //       })
-  //     }
-  //   }
-  //   console.log(spec)
-  //   return spec
-  // }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
     const { element: prevElement, theme: prevTheme } = prevProps
@@ -313,7 +326,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       prevTheme !== theme ||
       prevProps.width !== this.props.width ||
       prevProps.height !== this.props.height ||
-      prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme
+      prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme ||
+      prevProps.element.isSelectEnabled !== this.props.element.isSelectEnabled
     ) {
       logMessage("Vega spec changed.")
       try {
@@ -421,7 +435,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
    */
   private async createView(): Promise<void> {
     logMessage("Creating a new Vega view.")
-
     if (!this.element) {
       throw Error("Element missing.")
     }
@@ -429,7 +442,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     // Finalize the previous view so it can be garbage collected.
     this.finalizeView()
 
-    const el = this.props.element
+    const { widgetMgr, element } = this.props
     const spec = this.generateSpec()
     const options = {
       // Adds interpreter support for Vega expressions that is compliant with CSP
@@ -444,18 +457,11 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       forceActionsMenu: true,
     }
 
-    console.log(spec)
     const { vgSpec, view, finalize } = await embed(this.element, spec, options)
 
     this.vegaView = view
 
-    if (
-      this.props.widgetMgr &&
-      this.props.element.id !== undefined &&
-      // if on_selection is False or "ignore", this will always be ""
-      // TODO(willhuang1997): This might need some refactoring as the above is kind of unclear and could be cleaner
-      this.props.element.id !== ""
-    ) {
+    if (widgetMgr && element?.id && element.isSelectEnabled) {
       // listen for selection events
       this.getSelectors(spec).forEach((item, _index) => {
         view.addSignalListener(
@@ -483,30 +489,35 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         )
       })
 
-      const debouncedHandler = debounce(150, (event: ScenegraphEvent) => {
-        // no datum means click was not on a useful location https://stackoverflow.com/a/61782407 
-        // @ts-expect-error
-        if (!event.item.datum) {
-          this.setState({
-            selections: {},
-          })
-          this.props.widgetMgr?.setJsonValue(
-            this.props.element as WidgetInfo,
-            {},
-            {
-              fromUi: true,
-            }
-          );
+      const resetGraph = debounce(150, (event: ScenegraphEvent) => {
+        // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
+        try {
+          // @ts-expect-error
+          if (!event.item.datum) {
+            this.setState({
+              selections: {},
+            })
+            this.props.widgetMgr?.setJsonValue(
+              this.props.element as WidgetInfo,
+              {},
+              {
+                fromUi: true,
+              }
+            )
+          }
+        } catch (e) {
+          logMessage(e)
         }
-      });
+      })
 
-      view.addEventListener("click", (event) => { debouncedHandler(event)
+      view.addEventListener("click", event => {
+        resetGraph(event)
       })
     }
 
     this.vegaFinalizer = finalize
 
-    const datasets = getDataArrays(el)
+    const datasets = getDataArrays(element)
 
     // Heuristic to determine the default dataset name.
     const datasetNames = datasets ? Object.keys(datasets) : []
@@ -517,7 +528,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       this.defaultDataName = DEFAULT_DATA_NAME
     }
 
-    const dataObj = getInlineData(el)
+    const dataObj = getInlineData(element)
     if (dataObj) {
       view.insert(this.defaultDataName, dataObj)
     }
