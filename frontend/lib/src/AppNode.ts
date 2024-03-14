@@ -183,6 +183,9 @@ export class ElementNode implements AppNode {
       datasets: modifiedDatasets,
       useContainerWidth: proto.useContainerWidth,
       vegaLiteTheme: proto.theme,
+      id: proto.id,
+      isSelectEnabled: proto.isSelectEnabled,
+      formId: null,
     }
 
     this.lazyVegaLiteChartElement = toReturn
@@ -377,6 +380,12 @@ export class BlockNode implements AppNode {
     const newChildren = this.children
       .map(child => child.clearStaleNodes(currentScriptRunId))
       .filter(notUndefined)
+
+    // If we have no children and our `allowEmpty` flag is not set, prune
+    // ourselves!
+    if (newChildren.length === 0 && !this.deltaBlock.allowEmpty) {
+      return undefined
+    }
 
     return new BlockNode(newChildren, this.deltaBlock, currentScriptRunId)
   }

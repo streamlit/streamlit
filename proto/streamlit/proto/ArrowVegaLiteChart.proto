@@ -40,5 +40,10 @@ message ArrowVegaLiteChart {
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
 
+  // ID, required for selection events.
+  string id = 7;
+
+  bool is_select_enabled = 8;
+
   reserved 3;
 }
