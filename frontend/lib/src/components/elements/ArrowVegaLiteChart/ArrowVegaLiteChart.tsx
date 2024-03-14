@@ -117,7 +117,6 @@ export interface PropsWithHeight extends Props {
 interface State {
   error?: Error
   selections: Record<string, any>
-  // spec: any
 }
 
 export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
@@ -145,7 +144,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   readonly state = {
     error: undefined,
     selections: {} as Record<string, any>,
-    // spec: {} as any
   }
 
   public async componentDidMount(): Promise<void> {
@@ -204,7 +202,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   public generateSpec = (): any => {
     const { element: el, theme } = this.props
-    let spec = JSON.parse(el.spec)
+    const spec = JSON.parse(el.spec)
 
     const { useContainerWidth } = el
     if (el.vegaLiteTheme === "streamlit") {
@@ -435,6 +433,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
    */
   private async createView(): Promise<void> {
     logMessage("Creating a new Vega view.")
+
     if (!this.element) {
       throw Error("Element missing.")
     }
