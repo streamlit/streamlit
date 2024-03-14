@@ -89,6 +89,8 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
+        # mapping of altair widget ids to param and view counter
+        self.altair_stable_ids = {}
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
@@ -100,6 +102,9 @@ class ScriptRunContext:
                     qp.set_with_no_forward_msg(key, val=val[-1])
                 else:
                     qp.set_with_no_forward_msg(key, val)
+        if self.session_id in self.altair_stable_ids:
+            self.altair_stable_ids[self.session_id]["params"] = 0
+            self.altair_stable_ids[self.session_id]["views"] = 0
 
     def on_script_start(self) -> None:
         self._has_script_started = True

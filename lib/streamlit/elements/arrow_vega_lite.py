@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
@@ -43,6 +44,8 @@ from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+# altair_stable_ids={}
 
 
 def replace_values_in_dict(d, old_value, new_value):
@@ -301,6 +304,82 @@ def marshall(
         else:
             data = data_spec
             del spec["data"]
+
+    ctx = get_script_run_ctx()
+
+    if on_select:
+        regex = re.compile(r"^param_\d+$")
+        new_session = ctx.session_id not in ctx.altair_stable_ids
+        params_counter = 0
+        views_counter = 0
+        if new_session:
+            params_counter = 0
+            views_counter = 0
+            ctx.altair_stable_ids[ctx.session_id] = {}
+            ctx.altair_stable_ids[ctx.session_id]["params"] = params_counter
+            ctx.altair_stable_ids[ctx.session_id]["views"] = views_counter
+        else:
+            params_counter = ctx.altair_stable_ids[ctx.session_id]["params"]
+            views_counter = ctx.altair_stable_ids[ctx.session_id]["views"]
+
+        for param in spec["params"]:
+            name = param["name"]
+            if regex.match(name):
+                param["name"] = f"selection_{params_counter}"
+                ctx.altair_stable_ids[ctx.session_id]["params"] += 1
+                if "hconcat" in spec:
+                    for hconcat in spec["hconcat"]:
+                        replace_values_in_dict(
+                            hconcat, name, f"selection_{params_counter}"
+                        )
+                if "vconcat" in spec:
+                    for vconcat in spec["vconcat"]:
+                        replace_values_in_dict(
+                            vconcat, name, f"selection_{params_counter}"
+                        )
+                if "layer" in spec:
+                    for item in spec["layer"]:
+                        replace_values_in_dict(
+                            item, name, f"selection_{params_counter}"
+                        )
+                if "encoding" in spec:
+                    for item in spec["encoding"]:
+                        replace_values_in_dict(
+                            item, name, f"selection_{params_counter}"
+                        )
+            if "views" in param:
+                for view_index, view in enumerate(param["views"]):
+                    param["views"][view_index] = f"views_{views_counter}"
+                    if "hconcat" in spec:
+                        for hconcat in spec["hconcat"]:
+                            if "vconcat" in hconcat:
+                                for vconcat in hconcat["vconcat"]:
+                                    replace_values_in_dict(
+                                        vconcat, view, f"views_{views_counter}"
+                                    )
+                            else:
+                                replace_values_in_dict(
+                                    hconcat, view, f"views_{views_counter}"
+                                )
+                    if "vconcat" in spec:
+                        for vconcat in spec["vconcat"]:
+                            if "hconcat" in vconcat:
+                                for hconcat in vconcat["hconcat"]:
+                                    replace_values_in_dict(
+                                        hconcat, view, f"views_{views_counter}"
+                                    )
+                            else:
+                                replace_values_in_dict(
+                                    vconcat, view, f"views_{views_counter}"
+                                )
+                    if "layer" in spec:
+                        for item in spec["layer"]:
+                            replace_values_in_dict(item, view, f"views_{views_counter}")
+                    if "encoding" in spec:
+                        for item in spec["encoding"]:
+                            replace_values_in_dict(item, view, f"views_{views_counter}")
+                    views_counter += 1
+                    ctx.altair_stable_ids[ctx.session_id]["views"] = views_counter
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
