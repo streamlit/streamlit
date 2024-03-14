@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, List, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
@@ -326,7 +326,6 @@ def marshall(
             name = param["name"]
             if regex.match(name):
                 param["name"] = f"selection_{params_counter}"
-                ctx.altair_stable_ids[ctx.session_id]["params"] += 1
                 if "hconcat" in spec:
                     for hconcat in spec["hconcat"]:
                         replace_values_in_dict(
@@ -343,10 +342,18 @@ def marshall(
                             item, name, f"selection_{params_counter}"
                         )
                 if "encoding" in spec:
-                    for item in spec["encoding"]:
+                    if isinstance(spec["encoding"], List):
+                        for item in spec["encoding"]:
+                            replace_values_in_dict(
+                                item, name, f"selection_{params_counter}"
+                            )
+                    # Assume dictionary
+                    else:
                         replace_values_in_dict(
-                            item, name, f"selection_{params_counter}"
+                            spec["encoding"], name, f"selection_{params_counter}"
                         )
+                params_counter += 1
+                ctx.altair_stable_ids[ctx.session_id]["params"] = params_counter
             if "views" in param:
                 for view_index, view in enumerate(param["views"]):
                     param["views"][view_index] = f"views_{views_counter}"
@@ -385,7 +392,6 @@ def marshall(
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
 
-    ctx = get_script_run_ctx()
     id = compute_widget_id(
         "arrow_vega_lite",
         user_key=key,
