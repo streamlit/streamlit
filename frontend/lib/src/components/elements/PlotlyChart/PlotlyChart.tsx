@@ -151,7 +151,7 @@ function PlotlyFigure({
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
-  const getInitialValue = () => {
+  const getInitialValue = (): any => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
@@ -207,6 +207,8 @@ function PlotlyFigure({
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
+    // TODO(willhuang1997): Regression where swapping themes will not change chart colors properly
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useLayoutEffect(() => {
@@ -320,7 +322,7 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
-  const reset = () => {
+  const reset = (): void => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
@@ -348,20 +350,8 @@ function PlotlyFigure({
       config={config}
       frames={frames}
       onSelected={element.isSelectEnabled ? handleSelect : () => {}}
-      onDoubleClick={
-        element.isSelectEnabled
-          ? () => {
-              reset()
-            }
-          : () => {}
-      }
-      onDeselect={
-        element.isSelectEnabled
-          ? () => {
-              reset()
-            }
-          : () => {}
-      }
+      onDoubleClick={element.isSelectEnabled ? reset : () => {}}
+      onDeselect={element.isSelectEnabled ? reset : () => {}}
     />
   )
 }
