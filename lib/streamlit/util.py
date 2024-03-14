@@ -24,7 +24,8 @@ import os
 import subprocess
 import sys
 import time
-from typing import Any, Callable, Final, Generic, Iterable, Mapping, TypeVar
+from concurrent.futures import Future
+from typing import Any, Callable, Final, Iterable, Mapping, TypeVar
 
 from cachetools import TTLCache
 
@@ -209,7 +210,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class TimedCleanupCache(TTLCache, Generic[K, V]):
+class TimedCleanupCache(TTLCache[K, V]):
     """A TTLCache that asynchronously expires its entries."""
 
     def __init__(
@@ -223,12 +224,12 @@ class TimedCleanupCache(TTLCache, Generic[K, V]):
             ttl=ttl,
             timer=timer,
         )
-        self._task = None
+        self._task: Future[None] | None = None
 
     def __setitem__(self, key: K, value: V) -> None:
         # Set an expiration task to run periodically
         # Can't be created in init because that only runs once and
-        # the event loop might not exist yet.
+        # the runtime might not exist yet.
         if self._task is None:
             try:
                 from streamlit.runtime.runtime import Runtime
@@ -239,7 +240,7 @@ class TimedCleanupCache(TTLCache, Generic[K, V]):
                         expire_cache(self), a_objs.eventloop
                     )
             except RuntimeError:
-                # Just continue if the event loop isn't started yet.
+                # Just continue if the runtime isn't started yet.
                 pass
         super().__setitem__(key, value)
 
@@ -248,7 +249,7 @@ class TimedCleanupCache(TTLCache, Generic[K, V]):
             self._task.cancel()
 
 
-async def expire_cache(cache: TTLCache) -> None:
+async def expire_cache(cache: TTLCache[K, V]) -> None:
     while True:
         await asyncio.sleep(30)
         cache.expire()
