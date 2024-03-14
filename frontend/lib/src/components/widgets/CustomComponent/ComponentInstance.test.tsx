@@ -146,6 +146,54 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("sandbox", DEFAULT_IFRAME_SANDBOX_POLICY)
   })
 
+  it("displays a skeleton initially with a certain height", () => {
+    const componentRegistry = getComponentRegistry()
+    render(
+      <ComponentInstance
+        element={createElementProp()}
+        registry={componentRegistry}
+        width={100}
+        disabled={false}
+        theme={mockTheme.emotion}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: jest.fn(),
+            formsDataChanged: jest.fn(),
+          })
+        }
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toBeInTheDocument()
+    expect(skeleton).toHaveStyle("height: 2.75rem")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "0")
+  })
+
+  it("will not displays a skeleton when height is explicitly set to 0", () => {
+    const componentRegistry = getComponentRegistry()
+    render(
+      <ComponentInstance
+        element={createElementProp({ height: 0 })}
+        registry={componentRegistry}
+        width={100}
+        disabled={false}
+        theme={mockTheme.emotion}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: jest.fn(),
+            formsDataChanged: jest.fn(),
+          })
+        }
+      />
+    )
+    expect(screen.queryByTestId("stSkeleton")).not.toBeInTheDocument()
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "0")
+  })
+
   describe("COMPONENT_READY handler", () => {
     it("posts a RENDER message to the iframe", () => {
       const jsonArgs = { foo: "string", bar: 5 }
@@ -182,6 +230,43 @@ describe("ComponentInstance", () => {
         })
       )
       expect(postMessage).toHaveBeenCalledWith(renderMsg(jsonArgs, []), "*")
+    })
+
+    it("hides the skeleton and maintains iframe height of 0", () => {
+      const componentRegistry = getComponentRegistry()
+      render(
+        <ComponentInstance
+          element={createElementProp()}
+          registry={componentRegistry}
+          width={100}
+          disabled={false}
+          theme={mockTheme.emotion}
+          widgetMgr={
+            new WidgetStateManager({
+              sendRerunBackMsg: jest.fn(),
+              formsDataChanged: jest.fn(),
+            })
+          }
+        />
+      )
+
+      const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+
+      // SET COMPONENT_READY
+      fireEvent(
+        window,
+        new MessageEvent("message", {
+          data: {
+            isStreamlitMessage: true,
+            apiVersion: 1,
+            type: ComponentMessageType.COMPONENT_READY,
+          },
+          // @ts-expect-error
+          source: iframe.contentWindow,
+        })
+      )
+      expect(screen.queryByTestId("stSkeleton")).not.toBeInTheDocument()
+      expect(iframe).toHaveAttribute("height", "0")
     })
 
     it("prevents RENDER message until component is ready", () => {
