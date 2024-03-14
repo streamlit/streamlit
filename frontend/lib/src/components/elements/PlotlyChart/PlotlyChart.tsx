@@ -156,14 +156,14 @@ function PlotlyFigure({
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
     const storedValue = widgetMgr.getJsonValue(element)
-    const selections: any[] = []
 
     if (storedValue !== undefined) {
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
       if (parsedStoreValue.select) {
-        spec.data = parsedStoreValue.select._data
-        spec.layout.selections = parsedStoreValue.select._selections
+        const { data, selections } = widgetMgr.getExtraWidgetInfo(element)
+        spec.data = data
+        spec.layout.selections = selections
       }
 
       const hasSelectedPoints: boolean = spec.data.some(
@@ -183,7 +183,6 @@ function PlotlyFigure({
         data: [...spec.data],
         layout: {
           ...spec.layout,
-          selections: selections.length ? selections : undefined,
         },
         frames: spec.frames ? { ...spec.frames } : [],
       }
@@ -300,10 +299,11 @@ function PlotlyFigure({
         }
       })
 
-      returnValue.select._data = data
-
-      // @ts-expect-error
-      returnValue.select._selections = event.selections
+      widgetMgr.setExtraWidgetInfo(element, {
+        data: data,
+        // @ts-expect-error
+        selections: event.selections,
+      })
     }
 
     // select_box to replicate pythonic return value

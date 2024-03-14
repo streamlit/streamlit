@@ -175,6 +175,9 @@ export class WidgetStateManager {
   // Internal state for each form we're managing.
   private readonly forms = new Map<string, FormState>()
 
+  // temporary bad name to store extra information for any widget
+  private readonly extraWidgetInfo = new Map<string, any>()
+
   // External data about all forms.
   private formsData: FormsData
 
@@ -260,6 +263,14 @@ export class WidgetStateManager {
     if (form.clearOnSubmit) {
       form.formCleared.emit()
     }
+  }
+
+  public setExtraWidgetInfo(widget: WidgetInfo, value: any) {
+    this.extraWidgetInfo.set(widget.id, value)
+  }
+
+  public getExtraWidgetInfo(widget: WidgetInfo): any {
+    return this.extraWidgetInfo.get(widget.id)
   }
 
   /**
