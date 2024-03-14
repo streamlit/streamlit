@@ -171,6 +171,29 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("height", "0")
   })
 
+  it("will not displays a skeleton when height is explicitly set to 0", () => {
+    const componentRegistry = getComponentRegistry()
+    render(
+      <ComponentInstance
+        element={createElementProp({ height: 0 })}
+        registry={componentRegistry}
+        width={100}
+        disabled={false}
+        theme={mockTheme.emotion}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: jest.fn(),
+            formsDataChanged: jest.fn(),
+          })
+        }
+      />
+    )
+    expect(screen.queryByTestId("stSkeleton")).not.toBeInTheDocument()
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "0")
+  })
+
   describe("COMPONENT_READY handler", () => {
     it("posts a RENDER message to the iframe", () => {
       const jsonArgs = { foo: "string", bar: 5 }
