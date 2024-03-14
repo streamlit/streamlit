@@ -197,9 +197,10 @@ function ComponentInstance(props: Props): ReactElement {
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
   // By passing the args.height here, we can derive the initial height for
   // custom components that define a height property, e.g. in Python
-  // my_custom_component(height=100)
-  const [frameHeight, setFrameHeight] = useState<number>(
-    isNaN(parsedNewArgs.height) ? 0 : parsedNewArgs.height
+  // my_custom_component(height=100). undefined means no explicit height
+  // was specified, but will be set to the default height of 0.
+  const [frameHeight, setFrameHeight] = useState<number | undefined>(
+    isNaN(parsedNewArgs.height) ? undefined : parsedNewArgs.height
   )
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
@@ -333,10 +334,14 @@ function ComponentInstance(props: Props): ReactElement {
 
   // Show the loading Skeleton while we have not received the ready message from the custom component
   // but while we also have not waited until the ready timeout
-  const loadingSkeleton = !isReadyRef.current && !isReadyTimeout && (
-    // Skeletons will have a default height if frameHeight is 0 (the default height)
-    <Skeleton height={frameHeight > 0 ? `${frameHeight}px` : undefined} />
-  )
+  const loadingSkeleton = !isReadyRef.current &&
+    !isReadyTimeout &&
+    frameHeight !== 0 && (
+      // Skeletons will have a default height if no frameHeight was specified
+      <Skeleton
+        height={frameHeight === undefined ? undefined : `${frameHeight}px`}
+      />
+    )
 
   // If we've timed out waiting for the READY message from the component,
   // display a warning.
@@ -372,7 +377,7 @@ function ComponentInstance(props: Props): ReactElement {
         ref={iframeRef}
         src={getSrc(componentName, registry, url)}
         width={width}
-        height={frameHeight}
+        height={frameHeight ?? 0}
         style={{
           colorScheme: "light dark",
           display: isReadyRef.current ? "initial" : "none",
