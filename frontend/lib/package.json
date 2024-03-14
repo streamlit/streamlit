@@ -70,7 +70,7 @@
     "native-file-system-adapter": "^3.0.0",
     "node-emoji": "^1.11.0",
     "numbro": "^2.3.6",
-    "plotly.js": "2.29.1",
+    "plotly.js": "^2.30.0",
     "plotly.js-dist": "^2.29.1",
     "protobufjs": "^7.2.4",
     "protobufjs-cli": "^1.1.0",
