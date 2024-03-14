@@ -65,6 +65,13 @@ def page_sort_key(script_path: Path) -> tuple[float, str]:
     return (float(number), label)
 
 
+def extract_path_after_pages(full_path_str: str) -> str:
+    pre, separator, post = full_path_str.rpartition("/pages/")
+    if post:
+        return post  # .replace('.py', '')
+    return ""
+
+
 def page_icon_and_name(script_path: Path) -> tuple[str, str]:
     """Compute the icon and name of a page from its script path.
 
@@ -74,7 +81,10 @@ def page_icon_and_name(script_path: Path) -> tuple[str, str]:
     URL-encode them. To solve this, we only swap the underscores for spaces
     right before we render page names.
     """
-    extraction = re.search(PAGE_FILENAME_REGEX, script_path.name)
+
+    path_after_pages = extract_path_after_pages(str(script_path))
+
+    extraction = re.search(PAGE_FILENAME_REGEX, path_after_pages)
     if extraction is None:
         return "", ""
 
@@ -139,7 +149,7 @@ def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:
         page_scripts = sorted(
             [
                 f
-                for f in pages_dir.glob("*.py")
+                for f in pages_dir.rglob("*.py")
                 if not f.name.startswith(".") and not f.name == "__init__.py"
             ],
             key=page_sort_key,
