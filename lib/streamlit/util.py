@@ -23,6 +23,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import time
 from typing import Any, Callable, Final, Generic, Iterable, Mapping, TypeVar
 
 from cachetools import TTLCache
@@ -211,9 +212,18 @@ V = TypeVar("V")
 class TimedCleanupCache(TTLCache, Generic[K, V]):
     """A TTLCache that asynchronously expires its entries."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._task: asyncio.Task[Any] | None = None
+    def __init__(
+        self,
+        maxsize: float,
+        ttl: float,
+        timer: Callable[[], float] = time.monotonic,
+    ):
+        super().__init__(
+            maxsize=maxsize,
+            ttl=ttl,
+            timer=timer,
+        )
+        self._task = None
 
     def __setitem__(self, key: K, value: V) -> None:
         # Set an expiration task to run periodically
@@ -221,7 +231,13 @@ class TimedCleanupCache(TTLCache, Generic[K, V]):
         # the event loop might not exist yet.
         if self._task is None:
             try:
-                self._task = asyncio.create_task(expire_cache(self))
+                from streamlit.runtime.runtime import Runtime
+
+                runtime = Runtime.instance()
+                if (a_objs := runtime._async_objs) is not None:
+                    self._task = asyncio.run_coroutine_threadsafe(
+                        expire_cache(self), a_objs.eventloop
+                    )
             except RuntimeError:
                 # Just continue if the event loop isn't started yet.
                 pass
