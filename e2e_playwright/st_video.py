@@ -46,3 +46,24 @@ st.video(
         "Deutsch": "test_assets/sintel-de.vtt",
     },
 )
+
+
+# Test end time webm video
+st.video(
+    "test_assets/sintel-short.webm",
+    start_time=31,
+    end_time=33,
+)
+
+# Test end time mp4 video
+st.video(
+    "test_assets/sintel-short.mp4",
+    start_time=31,
+    end_time=33,
+)
+
+# Test end time and loop webm video
+st.video("test_assets/sintel-short.webm", start_time=35, end_time=39, loop=True)
+
+# Test end time and loop mp4 video
+st.video("test_assets/sintel-short.mp4", start_time=35, end_time=39, loop=True)

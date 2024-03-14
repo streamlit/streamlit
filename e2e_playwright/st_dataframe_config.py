@@ -445,6 +445,28 @@ st.dataframe(
     },
 )
 
+st.header("Area chart column:")
+
+st.dataframe(
+    pd.DataFrame(
+        {
+            "col_0": [[1, 5, 2], [2, 3, 5, -4, -5], [], None],
+            "col_1": ["1,2,3,4", "6, 5, 1, 10", "invalid", None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.AreaChartColumn(
+            "Area chart column",
+            width="medium",
+            help="This is an area chart column",
+            y_min=-5,
+            y_max=5,
+        ),
+        "col_1": st.column_config.AreaChartColumn(),
+    },
+)
+
+
 st.header("Image column:")
 
 st.dataframe(

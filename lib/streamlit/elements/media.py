@@ -55,6 +55,8 @@ class MediaMixin:
         start_time: int = 0,
         *,
         sample_rate: int | None = None,
+        end_time: int | None = None,
+        loop: bool = False,
     ) -> DeltaGenerator:
         """Display an audio player.
 
@@ -68,14 +70,21 @@ class MediaMixin:
             or a 2D array of shape ``(num_channels, num_samples)`` with waveforms
             for all channels. See the default channel order at
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
+
         format : str
             The mime type for the audio file. Defaults to 'audio/wav'.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
+
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
+        end_time: int
+            The time at which this element should stop playing.
+        loop: bool
+            Whether the audio should loop playback.
 
         Example
         -------
@@ -117,7 +126,16 @@ class MediaMixin:
                 "array."
             )
 
-        marshall_audio(coordinates, audio_proto, data, format, start_time, sample_rate)
+        marshall_audio(
+            coordinates,
+            audio_proto,
+            data,
+            format,
+            start_time,
+            sample_rate,
+            end_time,
+            loop,
+        )
         return self.dg._enqueue("audio", audio_proto)
 
     @gather_metrics("video")
@@ -128,37 +146,55 @@ class MediaMixin:
         start_time: int = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
+        end_time: int | None = None,
+        loop: bool = False,
     ) -> DeltaGenerator:
         """Display a video player.
 
         Parameters
         ----------
-        data : str, bytes, BytesIO, numpy.ndarray, or file
+        data : str, bytes, io.BytesIO, numpy.ndarray, or file
             Raw video data, filename, or URL pointing to a video to load.
             Includes support for YouTube URLs.
             Numpy arrays and raw data formats must include all necessary file
             headers to match specified file format.
+
         format : str
-            The mime type for the video file. Defaults to 'video/mp4'.
+            The mime type for the video file. Defaults to ``"video/mp4"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
+
         start_time: int
             The time from which this element should start playing.
-        subtitles: str, dict, or io.BytesIO
+
+        subtitles: str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
-            * None (default): No subtitles.
-            * A string: File path to a subtitle file in '.vtt' or '.srt' formats, or
+
+            * ``None`` (default): No subtitles.
+
+            * A string, bytes, or Path: File path to a subtitle file in ``.vtt`` or ``.srt`` formats, or
               the raw content of subtitles conforming to these formats.
               If providing raw content, the string must adhere to the WebVTT or SRT
               format specifications.
+
+            * io.BytesIO: A BytesIO stream that contains valid ``.vtt`` or ``.srt``
+              formatted subtitle data.
+
             * A dictionary: Pairs of labels and file paths or raw subtitle content in
-              '.vtt' or '.srt' formats.
-              Enables multiple subtitle tracks. The label will be shown in the video
-              player. Example:
-              {'English': 'path/to/english.vtt', 'French': 'path/to/french.srt'}
-            * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt'
-              formatted subtitle data. When provided, subtitles are displayed
-              by default. For multiple tracks, the first one is displayed by default.
+              ``.vtt`` or ``.srt`` formats to enable multiple subtitle tracks.
+              The label will be shown in the video player. Example:
+              ``{"English": "path/to/english.vtt", "French": "path/to/french.srt"}``
+
+            When provided, subtitles are displayed by default. For multiple
+            tracks, the first one is displayed by default. If you don't want any
+            subtitles displayed by default, use an empty string for the value
+            in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
+
             Not supported for YouTube videos.
+
+        end_time: int or None
+            The time at which this element should stop playing
+        loop: bool
+            Whether the video should loop playback.
 
         Example
         -------
@@ -173,6 +209,35 @@ class MediaMixin:
            https://doc-video.streamlit.app/
            height: 700px
 
+        When you include subtitles, they will be turned on by default. A viewer
+        can turn off the subtitles (or captions) from the browser's default video
+        control menu, usually located in the lower-right corner of the video.
+
+        Here is a simple VTT file (``subtitles.vtt``):
+
+        >>> WEBVTT
+        >>>
+        >>> 0:00:01.000 --> 0:00:02.000
+        >>> Look!
+        >>>
+        >>> 0:00:03.000 --> 0:00:05.000
+        >>> Look at the pretty stars!
+
+        If the above VTT file lives in the same directory as your app, you can
+        add subtitles like so:
+
+        >>> import streamlit as st
+        >>>
+        >>> VIDEO_URL = "https://example.com/not-youtube.mp4"
+        >>> st.video(VIDEO_URL, subtitles="subtitles.vtt")
+
+        .. output::
+           https://doc-video-subtitles.streamlit.app/
+           height: 700px
+
+        See additional examples of supported subtitle input types in our
+        `video subtitles feature demo <https://doc-video-subtitle-inputs.streamlit.app/>`_.
+
         .. note::
            Some videos may not display if they are encoded using MP4V (which is an export option in OpenCV), as this codec is
            not widely supported by browsers. Converting your video to H.264 will allow the video to be displayed in Streamlit.
@@ -183,7 +248,16 @@ class MediaMixin:
         """
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
-        marshall_video(coordinates, video_proto, data, format, start_time, subtitles)
+        marshall_video(
+            coordinates,
+            video_proto,
+            data,
+            format,
+            start_time,
+            subtitles,
+            end_time,
+            loop,
+        )
         return self.dg._enqueue("video", video_proto)
 
     @property
@@ -287,6 +361,8 @@ def marshall_video(
     mimetype: str = "video/mp4",
     start_time: int = 0,
     subtitles: SubtitleData = None,
+    end_time: int | None = None,
+    loop: bool = False,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -316,9 +392,20 @@ def marshall_video(
         * io.BytesIO: A BytesIO stream that contains valid '.vtt' or '.srt' formatted subtitle data.
         When provided, subtitles are displayed by default. For multiple tracks, the first one is displayed by default.
         Not supported for YouTube videos.
+    end_time: int
+            The time at which this element should stop playing
+    loop: bool
+        Whether the video should loop playback.
     """
 
+    if start_time < 0 or (end_time is not None and end_time <= start_time):
+        raise StreamlitAPIException("Invalid start_time and end_time combination.")
+
     proto.start_time = start_time
+
+    if end_time is not None:
+        proto.end_time = end_time
+    proto.loop = loop
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -458,6 +545,8 @@ def marshall_audio(
     mimetype: str = "audio/wav",
     start_time: int = 0,
     sample_rate: int | None = None,
+    end_time: int | None = None,
+    loop: bool = False,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -477,9 +566,16 @@ def marshall_audio(
         The time from which this element should start playing. (default: 0)
     sample_rate: int or None
         Optional param to provide sample_rate in case of numpy array
+    end_time: int
+        The time at which this element should stop playing
+    loop: bool
+        Whether the audio should loop playback.
     """
 
     proto.start_time = start_time
+    if end_time is not None:
+        proto.end_time = end_time
+    proto.loop = loop
 
     if isinstance(data, str) and url_util.is_url(
         data, allowed_schemas=("http", "https", "data")
