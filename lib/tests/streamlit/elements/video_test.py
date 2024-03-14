@@ -59,11 +59,20 @@ class VideoTest(DeltaGeneratorTestCase):
             "https://youtu.be/_T8LGqJtuGc",
             "https://www.youtube.com/watch?v=kmfC-i9WgH0",
             "https://www.youtube.com/embed/sSn4e1lLVpA",
+            "https://youtube.com/e/0TSXM-BGqHU",
+            "https://youtube.com/v/OIQskkX_DK0",
+            # HTTP should also work correctly
+            "http://youtu.be/4sPnOqeUDmk",
+            "http://www.youtube.com/embed/92jUAXBmZyU",
         )
         yt_embeds = (
             "https://www.youtube.com/embed/_T8LGqJtuGc",
             "https://www.youtube.com/embed/kmfC-i9WgH0",
             "https://www.youtube.com/embed/sSn4e1lLVpA",
+            "https://www.youtube.com/embed/0TSXM-BGqHU",
+            "https://www.youtube.com/embed/OIQskkX_DK0",
+            "https://www.youtube.com/embed/4sPnOqeUDmk",
+            "https://www.youtube.com/embed/92jUAXBmZyU",
         )
         # url should be transformed into an embed link (or left alone).
         for x in range(0, len(yt_urls)):
@@ -94,10 +103,14 @@ class VideoTest(DeltaGeneratorTestCase):
     def test_st_video_options(self):
         """Test st.video with options."""
         fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
-        st.video(fake_video_data, format="video/mp4", start_time=10)
+        st.video(
+            fake_video_data, format="video/mp4", start_time=10, end_time=18, loop=True
+        )
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.video.start_time, 10)
+        self.assertEqual(el.video.end_time, 18)
+        self.assertTrue(el.video.loop)
         self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
         self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
 

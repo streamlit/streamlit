@@ -125,7 +125,7 @@ function DataFrame({
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
 
-  const theme = useCustomTheme()
+  const { theme, headerIcons, tableBorderRadius } = useCustomTheme()
 
   const [isFocused, setIsFocused] = React.useState<boolean>(true)
   const [showSearch, setShowSearch] = React.useState(false)
@@ -244,7 +244,8 @@ function DataFrame({
         }
       }
     },
-    // TODO: fix incorrect hook usage. Could misbehave with add_rows so leaving here for now
+    // We only want to run this effect once during the initial component load
+    // so we disable the eslint rule.
     /* eslint-disable react-hooks/exhaustive-deps */
     []
   )
@@ -323,15 +324,14 @@ function DataFrame({
     getCellContent
   )
 
-  const { drawCell, customRenderers } = useCustomRenderer(
-    columns,
-    // TODO(lukasmasuch): if we add row selections, we need to set it to true here as well:
-    element.editingMode === DYNAMIC
-  )
+  const { drawCell, customRenderers } = useCustomRenderer(columns)
 
-  const { columns: glideColumns, onColumnResize } = useColumnSizer(
-    columns.map(column => toGlideColumn(column))
+  const transformedColumns = React.useMemo(
+    () => columns.map(column => toGlideColumn(column)),
+    [columns]
   )
+  const { columns: glideColumns, onColumnResize } =
+    useColumnSizer(transformedColumns)
 
   const {
     minHeight,
@@ -391,25 +391,39 @@ function DataFrame({
 
   // Determine if the table requires horizontal or vertical scrolling:
   React.useEffect(() => {
-    if (resizableContainerRef.current) {
-      // TODO(lukasmasuch): This is only a hacky and temporary solution until
-      // glide-data-grid provides a better way to determine this:
-      // https://github.com/glideapps/glide-data-grid/issues/784
+    // The setTimeout is a workaround to get the scroll area bounding box
+    // after the grid has been rendered. Otherwise, the scroll area div
+    // (dvn-stack) might not have been created yet.
+    setTimeout(() => {
+      if (resizableContainerRef.current && dataEditorRef.current) {
+        // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+        const scrollAreaBounds = resizableContainerRef.current
+          ?.querySelector(".dvn-stack")
+          ?.getBoundingClientRect()
 
-      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-      const scrollAreaBounds = resizableContainerRef.current
-        ?.querySelector(".dvn-stack")
-        ?.getBoundingClientRect()
-      if (scrollAreaBounds) {
-        setHasVerticalScroll(
-          scrollAreaBounds.height > resizableContainerRef.current.clientHeight
-        )
-        setHasHorizontalScroll(
-          scrollAreaBounds.width > resizableContainerRef.current.clientWidth
-        )
+        // We might also be able to use the following as an alternative,
+        // but it seems to cause "Maximum update depth exceeded" when scrollbars
+        // are activated or deactivated.
+        // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+        // Also see: https://github.com/glideapps/glide-data-grid/issues/784
+
+        if (scrollAreaBounds) {
+          setHasVerticalScroll(
+            scrollAreaBounds.height >
+              resizableContainerRef.current.clientHeight
+          )
+          setHasHorizontalScroll(
+            scrollAreaBounds.width > resizableContainerRef.current.clientWidth
+          )
+        }
       }
-    }
+    }, 1)
   }, [resizableSize, numRows, glideColumns])
+
+  React.useEffect(() => {
+    // Clear cell selections if fullscreen mode changes
+    clearCellSelection()
+  }, [isFullScreen])
 
   return (
     <StyledResizableContainer
@@ -525,7 +539,7 @@ function DataFrame({
         defaultSize={resizableSize}
         style={{
           border: `1px solid ${theme.borderColor}`,
-          borderRadius: `${theme.tableBorderRadius}`,
+          borderRadius: `${tableBorderRadius}`,
         }}
         minHeight={minHeight}
         maxHeight={maxHeight}
@@ -549,7 +563,7 @@ function DataFrame({
             setResizableSize({
               width: resizableRef.current.size.width,
               height:
-                // Add an additional pixel if it is stretched to full width
+                // Add additional pixels if it is stretched to full width
                 // to allow the full cell border to be visible
                 maxHeight - resizableRef.current.size.height ===
                 BORDER_THRESHOLD
@@ -570,26 +584,21 @@ function DataFrame({
           rowHeight={ROW_HEIGHT}
           headerHeight={ROW_HEIGHT}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
-          onColumnResize={onColumnResize}
+          onColumnResize={isTouchDevice ? undefined : onColumnResize}
+          // Configure resize indicator to only show on the header:
+          resizeIndicator={"header"}
           // Freeze all index columns:
           freezeColumns={freezeColumns}
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:
-          verticalBorder={(col: number) =>
-            // Show no border for last column in certain situations
-            // This is required to prevent the cell selection border to not be cut off
-            !(
-              col >= columns.length &&
-              (element.useContainerWidth || resizableSize.width === "100%")
-            )
-          }
+          verticalBorder={true}
           // Activate copy to clipboard functionality:
           getCellsForSelection={true}
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={isTouchDevice ? "none" : "rect"}
+          rangeSelect={isTouchDevice ? "cell" : "rect"}
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable tooltips on hover of a cell or column header:
@@ -644,8 +653,9 @@ function DataFrame({
           fixedShadowX={true}
           fixedShadowY={true}
           experimental={{
-            // Prevent the cell border from being cut off at the bottom and right:
-            scrollbarWidthOverride: 1,
+            // We use overflow scrollbars, so we need to deactivate the native
+            // scrollbar override:
+            scrollbarWidthOverride: 0,
             ...(hasCustomizedScrollbars && {
               // Add negative padding to the right and bottom to allow the scrollbars in
               // webkit to overlay the table:
@@ -664,7 +674,7 @@ function DataFrame({
           // Custom image editor to render single images:
           imageEditorOverride={ImageCellEditor}
           // Add our custom SVG header icons:
-          headerIcons={theme.headerIcons}
+          headerIcons={headerIcons}
           // Add support for user input validation:
           validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:

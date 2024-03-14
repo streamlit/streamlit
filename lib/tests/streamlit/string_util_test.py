@@ -117,3 +117,26 @@ class StringUtilTest(unittest.TestCase):
     )
     def test_probably_contains_html_tags(self, text, expected):
         self.assertEqual(string_util.probably_contains_html_tags(text), expected)
+
+    @parameterized.expand(
+        [
+            ("", "`", 0),
+            ("`", "`", 1),
+            ("a", "`", 0),
+            ("``", "`", 2),
+            ("aba", "a", 1),
+            ("a``a", "`", 2),
+            ("```abc```", "`", 3),
+            ("a`b``c```d", "`", 3),
+            ("``````", "`", 6),
+            (
+                "a`b`c`d`e",
+                "`",
+                1,
+            ),
+            ("a``b```c````d", "`", 4),
+            ("no backticks here", "`", 0),
+        ]
+    )
+    def test_max_char_sequence(self, text, char, expected):
+        self.assertEqual(string_util.max_char_sequence(text, char), expected)

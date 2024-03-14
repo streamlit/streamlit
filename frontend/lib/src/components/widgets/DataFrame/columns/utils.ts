@@ -31,6 +31,7 @@ import moment, { Moment } from "moment"
 import "moment-duration-format"
 import "moment-timezone"
 
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { Type as ArrowType } from "@streamlit/lib/src/dataframes/Quiver"
 import {
   notNullOrUndefined,
@@ -103,7 +104,7 @@ export interface BaseColumn extends BaseColumnProps {
  * some column properties.
  */
 export type ColumnCreator = {
-  (props: BaseColumnProps): BaseColumn
+  (props: BaseColumnProps, theme: EmotionTheme): BaseColumn
   readonly isEditableType: boolean
 }
 
@@ -661,7 +662,8 @@ export function getLinkDisplayValueFromRegex(
     const patternMatch = href.match(displayTextRegex)
     if (patternMatch && patternMatch[1] !== undefined) {
       // return the first matching group
-      return patternMatch[1]
+      // Since this might be a URI encoded value, we decode it.
+      return decodeURI(patternMatch[1])
     }
 
     // if the regex doesn't find a match with the url, just use the url as display value
