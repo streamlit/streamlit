@@ -135,7 +135,6 @@ class StreamlitTest(unittest.TestCase):
                 "selectbox",
                 "select_slider",
                 "slider",
-                "skeleton",
                 "snow",
                 "subheader",
                 "success",

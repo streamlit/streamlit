@@ -15,8 +15,6 @@
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
-from streamlit.proto.Skeleton_pb2 import SkeletonStyle
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -29,48 +27,3 @@ class StEmptyAPITest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.empty, EmptyProto())
-
-
-class StSkeletonAPITest(DeltaGeneratorTestCase):
-    """Test Public Streamlit Public APIs."""
-
-    def test_st_skeleton_noargs(self):
-        """Test st.skeleton."""
-        st.skeleton()
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.skeleton, SkeletonProto(style=SkeletonStyle.PLAIN))
-
-    def test_st_skeleton_args(self):
-        """Test st.skeleton with arguments."""
-        st.skeleton(height=5, width=5)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(
-            el.skeleton, SkeletonProto(height=5, width=5, style=SkeletonStyle.PLAIN)
-        )
-
-    def test_st_skeleton_exceptions(self):
-        """Test st.skeleton validation exceptions."""
-
-        expected_msg = "Skeleton height must be a positive integer."
-        with self.assertRaises(StreamlitAPIException, msg=expected_msg):
-            st.skeleton(height=-1)
-
-        expected_msg = "Skeleton width must be a positive integer."
-        with self.assertRaises(StreamlitAPIException, msg=expected_msg):
-            st.skeleton(width=-1)
-
-        expected_msg = (
-            "Cannot set Skeleton.height to 1.5: 1.5 has type <class 'float'>, "
-            "but expected one of: (<class 'int'>,)",
-        )
-        with self.assertRaises(TypeError, msg=expected_msg):
-            st.skeleton(height=1.5)
-
-        expected_msg = (
-            "Cannot set Skeleton.width to 1.5: 1.5 has type <class 'float'>, "
-            "but expected one of: (<class 'int'>,)",
-        )
-        with self.assertRaises(TypeError, msg=expected_msg):
-            st.skeleton(height=1.5)
