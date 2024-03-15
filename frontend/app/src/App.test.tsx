@@ -450,7 +450,14 @@ describe("App", () => {
       )
     }
 
+    let documentTitle: string
+
+    beforeEach(() => {
+      documentTitle = document.title
+    })
+
     afterEach(() => {
+      document.title = documentTitle
       window.localStorage.clear()
     })
 
@@ -1063,6 +1070,32 @@ describe("App", () => {
         // @ts-expect-error
         window.history.pushState.mockClear()
       })
+    })
+
+    it("resets document title if not fragment", () => {
+      renderApp(getProps())
+
+      document.title = "some title"
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        fragmentId: undefined,
+      })
+
+      expect(document.title).toBe("streamlit_app · Streamlit")
+    })
+
+    it("does *not* reset document title if fragment", () => {
+      renderApp(getProps())
+
+      document.title = "some title"
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        fragmentId: "myFragmentId",
+      })
+
+      expect(document.title).toBe("some title")
     })
   })
 
