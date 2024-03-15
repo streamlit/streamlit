@@ -19,6 +19,7 @@ import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { StyledIcon, StyledEmojiIcon } from "./styled-components"
 import * as MaterialIcons from "@emotion-icons/material"
+import * as MaterialIconsOutlined from "@emotion-icons/material-outlined"
 
 interface DefaultProps {
   size: IconSize
@@ -56,8 +57,28 @@ export const MaterialIcon = ({
   iconName,
 }: MaterialIconProps): ReactElement => {
   console.log("MAMA MAMA JAN")
-  console.log(iconName)
-  const content = MaterialIcons[iconName as keyof typeof MaterialIcons]
+  const re = /^:(.*):(.*):$/
+  const matchResult = iconName.match(re)
+  let packName = ""
+  let icon = ""
+  if (matchResult !== null) {
+    packName = matchResult[1]
+    icon = matchResult[2]
+
+    console.log("BBBBBBB")
+    console.log(packName)
+    console.log(icon)
+  }
+  let content: EmotionIcon
+  if (packName === "material") {
+    content = MaterialIcons[icon as keyof typeof MaterialIcons]
+  } else if (packName === "material-outlined") {
+    content = MaterialIconsOutlined[icon as keyof typeof MaterialIconsOutlined]
+  } else {
+    throw new Error(`Unexpected icon pack: ${packName}`)
+  }
+  console.log("JJJJJJJJJ")
+  console.log(content)
   return (
     <StyledIcon
       as={content}

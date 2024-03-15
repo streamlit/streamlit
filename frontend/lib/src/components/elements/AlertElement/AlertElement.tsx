@@ -65,16 +65,16 @@ export default function AlertElement({
     <div className="stAlert" data-testid="stAlert">
       <AlertContainer width={width} kind={kind}>
         <StyledAlertContent>
-          {icon && !icon.startsWith(":material:") && (
+          {icon && !icon.startsWith(":material") && (
             <EmojiIcon testid="stAlertEmojiIcon" size="lg">
               {icon}
             </EmojiIcon>
           )}
-          {icon && icon.startsWith(":material:") && (
+          {icon && icon.startsWith(":material") && (
             <MaterialIcon
               size="lg"
               testid="stAlertMaterialIcon"
-              iconName={icon.replace(":material:", "").replace(":", "")}
+              iconName={icon}
             ></MaterialIcon>
           )}
 
