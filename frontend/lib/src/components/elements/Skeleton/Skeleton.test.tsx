@@ -34,7 +34,7 @@ describe("Skeleton element", () => {
   })
 
   it("converts properties appropriately", () => {
-    let props = SkeletonProto.create({ height: 5, width: 10 })
+    const props = SkeletonProto.create({ height: 5, width: 10 })
 
     render(<Skeleton element={props} />)
 
