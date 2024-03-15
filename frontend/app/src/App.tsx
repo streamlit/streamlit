@@ -856,18 +856,14 @@ export class App extends PureComponent<Props, State> {
       this.handleOneTimeInitialization(newSessionProto)
     }
 
-    if (!newSessionProto.fragmentId) {
-      // This is a normal rerun, remove all the auto reruns intervals
-      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
-        clearInterval(value)
-      })
-      this.setState({ autoReruns: [] })
-    }
-
-    const config = newSessionProto.config as Config
-    const themeInput = newSessionProto.customTheme as CustomThemeConfig
-    const { currentPageScriptHash: prevPageScriptHash } = this.state
-    const newPageScriptHash = newSessionProto.pageScriptHash
+    const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
+    const {
+      scriptRunId,
+      name: scriptName,
+      mainScriptPath,
+      fragmentId,
+      pageScriptHash: newPageScriptHash,
+    } = newSessionProto
 
     // mainPage must be a string as we're guaranteed at this point that
     // newSessionProto.appPages is nonempty and has a truthy pageName.
@@ -881,73 +877,86 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    const baseUriParts = this.getBaseUriParts()
-    if (baseUriParts) {
-      const { basePath } = baseUriParts
+    if (!fragmentId) {
+      // This is a normal rerun, remove all the auto reruns intervals
+      this.state.autoReruns.forEach((value: NodeJS.Timer) => {
+        clearInterval(value)
+      })
+      this.setState({ autoReruns: [] })
 
-      const prevPageNameInPath = extractPageNameFromPathName(
-        document.location.pathname,
-        basePath
-      )
-      const prevPageName =
-        prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
-      // It is important to compare `newPageName` with the previous one encoded in the URL
-      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
-      // e.g. the case where the user clicks the back button.
-      // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
-      if (prevPageName !== newPageName) {
-        // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
-        const queryString = preserveEmbedQueryParams()
-        const qs = queryString ? `?${queryString}` : ""
+      const config = newSessionProto.config as Config
+      const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
-        const basePathPrefix = basePath ? `/${basePath}` : ""
+      const baseUriParts = this.getBaseUriParts()
+      if (baseUriParts) {
+        const { basePath } = baseUriParts
 
-        const pagePath = viewingMainPage ? "" : newPageName
-        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+        const prevPageNameInPath = extractPageNameFromPathName(
+          document.location.pathname,
+          basePath
+        )
+        const prevPageName =
+          prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
+        // It is important to compare `newPageName` with the previous one encoded in the URL
+        // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+        // e.g. the case where the user clicks the back button.
+        // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
+        if (prevPageName !== newPageName) {
+          // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
+          const queryString = preserveEmbedQueryParams()
+          const qs = queryString ? `?${queryString}` : ""
 
-        window.history.pushState({}, "", pageUrl)
+          const basePathPrefix = basePath ? `/${basePath}` : ""
+
+          const pagePath = viewingMainPage ? "" : newPageName
+          const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
+          window.history.pushState({}, "", pageUrl)
+        }
       }
-    }
 
-    this.processThemeInput(themeInput)
-    this.setState(
-      {
-        allowRunOnSave: config.allowRunOnSave,
-        hideTopBar: config.hideTopBar,
-        hideSidebarNav: config.hideSidebarNav,
-        toolbarMode: config.toolbarMode,
-        appPages: newSessionProto.appPages,
-        currentPageScriptHash: newPageScriptHash,
-        latestRunTime: performance.now(),
-        currentFragmentId: newSessionProto.fragmentId ?? "",
-      },
-      () => {
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_APP_PAGES",
+      this.processThemeInput(themeInput)
+      this.setState(
+        {
+          allowRunOnSave: config.allowRunOnSave,
+          hideTopBar: config.hideTopBar,
+          hideSidebarNav: config.hideSidebarNav,
+          toolbarMode: config.toolbarMode,
           appPages: newSessionProto.appPages,
-        })
-
-        this.hostCommunicationMgr.sendMessageToHost({
-          type: "SET_CURRENT_PAGE_NAME",
-          currentPageName: viewingMainPage ? "" : newPageName,
           currentPageScriptHash: newPageScriptHash,
-        })
-      }
-    )
+          latestRunTime: performance.now(),
+        },
+        () => {
+          this.hostCommunicationMgr.sendMessageToHost({
+            type: "SET_APP_PAGES",
+            appPages: newSessionProto.appPages,
+          })
 
-    const { appHash } = this.state
-    const { scriptRunId, name: scriptName, mainScriptPath } = newSessionProto
+          this.hostCommunicationMgr.sendMessageToHost({
+            type: "SET_CURRENT_PAGE_NAME",
+            currentPageName: viewingMainPage ? "" : newPageName,
+            currentPageScriptHash: newPageScriptHash,
+          })
+        }
+      )
+
+      // Set the title and favicon to their default values if we are not running
+      // a fragment.
+      document.title = `${newPageName} · Streamlit`
+      handleFavicon(
+        `${process.env.PUBLIC_URL}/favicon.png`,
+        this.hostCommunicationMgr.sendMessageToHost,
+        this.endpoints
+      )
+    } else {
+      this.setState({
+        currentFragmentId: fragmentId,
+        latestRunTime: performance.now(),
+      })
+    }
 
     const newSessionHash = hashString(
       this.sessionInfo.current.installationId + mainScriptPath
-    )
-
-    // Set the title and favicon to their default values
-    document.title = `${newPageName} · Streamlit`
-    handleFavicon(
-      `${process.env.PUBLIC_URL}/favicon.png`,
-      this.hostCommunicationMgr.sendMessageToHost,
-      this.endpoints
     )
 
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
