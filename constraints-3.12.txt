@@ -10,7 +10,7 @@ cfgv==3.4.0
 charset-normalizer==3.3.2
 click==8.1.7
 contourpy==1.2.0
-coverage==7.4.3
+coverage==7.4.4
 cryptography==42.0.5
 cycler==0.12.1
 distlib==0.3.8
@@ -22,7 +22,7 @@ gitdb==4.0.11
 GitPython==3.1.42
 graphviz==0.20.1
 greenlet==3.0.3
-hypothesis==6.99.5
+hypothesis==6.99.6
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.0.2
@@ -122,4 +122,4 @@ urllib3==2.2.1
 virtualenv==20.25.1
 watchdog==4.0.0
 wheel==0.43.0
-zipp==3.18.0
+zipp==3.18.1
