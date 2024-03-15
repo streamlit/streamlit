@@ -18,7 +18,7 @@ import os
 import sys
 import time
 from typing import Any, List, Optional
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from parameterized import parameterized
@@ -283,7 +283,9 @@ class ScriptRunnerTest(AsyncTestCase):
     def test_run_nonexistent_fragment(self, patched_st_exception):
         """Tests that we raise an exception when trying to run a nonexistent fragment."""
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData(fragment_id="nonexistent_fragment"))
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["nonexistent_fragment"])
+        )
         scriptrunner.start()
         scriptrunner.join()
 
@@ -303,14 +305,14 @@ class ScriptRunnerTest(AsyncTestCase):
         self._assert_no_exceptions(scriptrunner)
         patched_st_exception.assert_called_once()
 
-    def test_run_fragment(self):
-        """Tests that we can run a fragment."""
+    def test_run_one_fragment(self):
+        """Tests that we can run one fragment."""
         fragment = MagicMock()
 
         scriptrunner = TestScriptRunner("good_script.py")
         scriptrunner._fragment_storage.set("my_fragment", fragment)
 
-        scriptrunner.request_rerun(RerunData(fragment_id="my_fragment"))
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -324,6 +326,34 @@ class ScriptRunnerTest(AsyncTestCase):
         )
 
         fragment.assert_called_once()
+
+    def test_run_multiple_fragments(self):
+        """Tests that we can run fragments."""
+        fragment = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("my_fragment1", fragment)
+        scriptrunner._fragment_storage.set("my_fragment2", fragment)
+        scriptrunner._fragment_storage.set("my_fragment3", fragment)
+
+        # scriptrunner.request_rerun assumes that fragments will only ever be enqueued
+        # one at a time as that's what happens with real rerun requests.
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+
+        fragment.assert_has_calls([call(), call(), call()])
 
     def test_compile_error(self):
         """Tests that we get an exception event when a script can't compile."""

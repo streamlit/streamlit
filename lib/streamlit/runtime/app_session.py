@@ -356,27 +356,33 @@ class AppSession:
             return
 
         if client_state:
+            fragment_id = client_state.fragment_id
+
             rerun_data = RerunData(
                 client_state.query_string,
                 client_state.widget_states,
                 client_state.page_script_hash,
                 client_state.page_name,
-                client_state.fragment_id,
+                fragment_id_queue=[fragment_id] if fragment_id else [],
             )
         else:
             rerun_data = RerunData()
 
         if self._scriptrunner is not None:
-            if bool(config.get_option("runner.fastReruns")):
-                # If fastReruns is enabled, we don't send rerun requests to our
-                # existing ScriptRunner. Instead, we tell it to shut down. We'll
-                # then spin up a new ScriptRunner, below, to handle the rerun
-                # immediately.
+            if (
+                bool(config.get_option("runner.fastReruns"))
+                and not rerun_data.fragment_id_queue
+            ):
+                # If fastReruns is enabled and this is *not* a rerun of a fragment,
+                # we don't send rerun requests to our existing ScriptRunner. Instead, we
+                # tell it to shut down. We'll then spin up a new ScriptRunner, below, to
+                # handle the rerun immediately.
                 self._scriptrunner.request_stop()
                 self._scriptrunner = None
             else:
-                # fastReruns is not enabled. Send our ScriptRunner a rerun
-                # request. If the request is accepted, we're done.
+                # Either fastReruns is not enabled or this RERUN request is a request to
+                # run a fragment. We send our current ScriptRunner a rerun request, and
+                # if it's accepted, we're done.
                 success = self._scriptrunner.request_rerun(rerun_data)
                 if success:
                     return
@@ -556,7 +562,15 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
-            self._clear_queue()
+            # When running the full script, we clear the browser ForwardMsg queue since
+            # anything from a previous script run that has yet to be sent to the browser
+            # will be overwritten. For fragment runs, however, we don't want to do this
+            # as the ForwardMsgs in the queue may not correspond to the running
+            # fragment, so dropping the messages may result in the app missing
+            # information.
+            if not fragment_id:
+                self._clear_queue()
+
             self._enqueue_forward_msg(
                 self._create_new_session_message(page_script_hash, fragment_id)
             )

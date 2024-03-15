@@ -463,16 +463,26 @@ class ScriptRunner:
 
             ctx = self._get_script_run_ctx()
             ctx.reset(
-                query_string=rerun_data.query_string,
-                page_script_hash=page_script_hash,
-                current_fragment_id=rerun_data.fragment_id,
+                query_string=rerun_data.query_string, page_script_hash=page_script_hash
             )
 
+            # TODO(vdonato): Changes to take into account multiple fragments running
+            # in a single script run. This will probably either involve:
+            #   * Sending a *set* of fragment_ids to the frontend (probably the easier
+            #     option)
+            #   * Sending events to update the currently running fragment_id to the
+            #     frontend as the script is running (probably the option with nicer UX)
+            # Until one of these changes is implemented, some weirdness with elements
+            # being marked as stale when multiple fragments are being run in a single
+            # script run is expected.
+            fragment_id = (
+                rerun_data.fragment_id_queue[0] if rerun_data.fragment_id_queue else ""
+            )
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
-                fragment_id=rerun_data.fragment_id,
+                fragment_id=fragment_id,
             )
 
             # Compile the script. Any errors thrown here will be surfaced
@@ -533,7 +543,6 @@ class ScriptRunner:
             # If the script stops early, we don't want to remove unseen widgets,
             # so we track this to potentially skip session state cleanup later.
             premature_stop: bool = False
-            fragment_run: bool = False
 
             try:
                 # Create fake module. This gives us a name global namespace to
@@ -574,19 +583,19 @@ class ScriptRunner:
                     ctx.on_script_start()
                     prep_time = timer() - start_time
 
-                    if rerun_data.fragment_id:
-                        fragment_run = True
+                    if rerun_data.fragment_id_queue:
+                        for fragment_id in rerun_data.fragment_id_queue:
+                            try:
+                                wrapped_fragment = self._fragment_storage.get(
+                                    fragment_id
+                                )
+                                ctx.current_fragment_id = fragment_id
+                                wrapped_fragment()
 
-                        try:
-                            wrapped_fragment = self._fragment_storage.get(
-                                rerun_data.fragment_id
-                            )
-                        except KeyError:
-                            raise RuntimeError(
-                                f"Could not find fragment with id {rerun_data.fragment_id}"
-                            )
-
-                        wrapped_fragment()
+                            except KeyError:
+                                raise RuntimeError(
+                                    f"Could not find fragment with id {fragment_id}"
+                                )
                     else:
                         self._fragment_storage.clear()
                         exec(code, module.__dict__)
@@ -619,7 +628,7 @@ class ScriptRunner:
                     # The handling for when a full script run or a fragment is stopped early
                     # is the same, so we only have one ScriptRunnerEvent for this scenario.
                     finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
-                elif fragment_run:
+                elif rerun_data.fragment_id_queue:
                     finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
                 else:
                     finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
