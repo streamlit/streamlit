@@ -189,6 +189,12 @@ class LLMThought:
         # If we're receiving streaming tokens from `on_llm_new_token`, this response
         # data is redundant
         self._reset_llm_token_stream()
+        # set the container status to complete
+        self._container.update(
+            label="",
+            state="complete",
+            expanded=self.expanded,
+        )
 
     def on_llm_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._container.markdown("**LLM encountered an error...**")
