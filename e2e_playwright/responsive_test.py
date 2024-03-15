@@ -23,6 +23,6 @@ def test_fullscreen_button_edge_case(app: Page, assert_snapshot: ImageCompareFun
     image = app.get_by_test_id("stFullScreenFrame")
     expect(image).to_have_count(1)
     image.hover()
-    expect(app.get_by_test_id("stFullScreenButton")).to_have_css("opacity", "1")
+    expect(app.get_by_test_id("StyledFullScreenButton")).to_have_css("opacity", "1")
 
     assert_snapshot(app, name="page_fullscreen_button_edge_case")
