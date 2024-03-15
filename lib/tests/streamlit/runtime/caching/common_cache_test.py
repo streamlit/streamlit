@@ -694,6 +694,7 @@ class CommonCacheTTLTest(unittest.TestCase):
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
 
     def tearDown(self):
@@ -830,6 +831,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
     def setUp(self):
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
 
     def tearDown(self):

@@ -17,12 +17,13 @@ import gc
 import random
 import unittest
 from typing import Dict, List, Set
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 from parameterized import parameterized
 
 from streamlit import util
+from streamlit.runtime.runtime import AsyncObjects, Runtime
 
 
 class UtilTest(unittest.TestCase):
@@ -192,6 +193,11 @@ class UtilTest(unittest.TestCase):
         """Test that the TimedCleanupCache does not leave behind tasks when
         the cache is not externally reachable"""
         loop = asyncio.new_event_loop()
+        mock_runtime = MagicMock(spec=Runtime)
+        mock_runtime._async_objs = MagicMock(spec=AsyncObjects)
+        mock_runtime._async_objs.eventloop = loop
+        Runtime._instance = mock_runtime
+
         asyncio.set_event_loop(loop)
 
         async def create_cache():
