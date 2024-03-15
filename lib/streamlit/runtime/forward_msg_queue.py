@@ -92,6 +92,9 @@ class ForwardMsgQueue:
         self.clear()
         return queue
 
+    def __len__(self) -> int:
+        return len(self._queue)
+
 
 def _is_composable_message(msg: ForwardMsg) -> bool:
     """True if the ForwardMsg is potentially composable with other ForwardMsgs."""

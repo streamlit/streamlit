@@ -61,6 +61,22 @@ def test_popover_container_rendering(
     assert_snapshot(popover_container, name="st_popover-container")
 
 
+def test_popover_with_use_container_width(app: Page):
+    """Test that the popover container is correctly stretched to the button width
+    if `use_container_width=True`."""
+    # Get the stretched popover container:
+    popover_element = app.get_by_test_id("stPopover").nth(2)
+    # Click the button to open it:
+    popover_element.locator("button").click()
+
+    # Check that it is open:
+    popover_container = app.get_by_test_id("stPopoverBody")
+    expect(popover_container).to_be_visible()
+    expect(popover_container.get_by_test_id("stMarkdown")).to_have_text("Hello")
+    # Check that the min width is stretched to the full container width:
+    expect(popover_container).to_have_css("min-width", "704px")
+
+
 def test_applying_changes_from_popover_container(app: Page):
     """Test that changes made in the popover container are applied correctly."""
     # Get the widgets popover container:

@@ -16,16 +16,13 @@
 
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import functools
 import hashlib
 import os
 import subprocess
 import sys
-from typing import Any, Callable, Final, Generic, Iterable, Mapping, TypeVar
-
-from cachetools import TTLCache
+from typing import Any, Callable, Final, Iterable, Mapping, TypeVar
 
 from streamlit import env_util
 
@@ -202,37 +199,3 @@ def extract_key_query_params(
         ]
         for item in sublist
     }
-
-
-K = TypeVar("K")
-V = TypeVar("V")
-
-
-class TimedCleanupCache(TTLCache, Generic[K, V]):
-    """A TTLCache that asynchronously expires its entries."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._task: asyncio.Task[Any] | None = None
-
-    def __setitem__(self, key: K, value: V) -> None:
-        # Set an expiration task to run periodically
-        # Can't be created in init because that only runs once and
-        # the event loop might not exist yet.
-        if self._task is None:
-            try:
-                self._task = asyncio.create_task(expire_cache(self))
-            except RuntimeError:
-                # Just continue if the event loop isn't started yet.
-                pass
-        super().__setitem__(key, value)
-
-    def __del__(self):
-        if self._task is not None:
-            self._task.cancel()
-
-
-async def expire_cache(cache: TTLCache) -> None:
-    while True:
-        await asyncio.sleep(30)
-        cache.expire()

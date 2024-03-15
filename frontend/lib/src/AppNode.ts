@@ -378,12 +378,6 @@ export class BlockNode implements AppNode {
       .map(child => child.clearStaleNodes(currentScriptRunId))
       .filter(notUndefined)
 
-    // If we have no children and our `allowEmpty` flag is not set, prune
-    // ourselves!
-    if (newChildren.length === 0 && !this.deltaBlock.allowEmpty) {
-      return undefined
-    }
-
     return new BlockNode(newChildren, this.deltaBlock, currentScriptRunId)
   }
 
