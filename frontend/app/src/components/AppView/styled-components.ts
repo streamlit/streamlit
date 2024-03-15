@@ -123,12 +123,14 @@ export const StyledAppViewBlockContainer =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg
       const wideSidePadding = isWideMode ? "5rem" : theme.spacing.lg
 
-      // Full screen-enabled elements can overflow the page when the screen size
-      // is slightly over the content max width.
-      // 50rem = contentMaxWidth + 2 * 2rem (size of full screen button as margin)
-      // We use 0.5 to give a little extra space for a scrollbar that takes space
-      // like safari and avoid scrollbar jitter.
+      // Full screen-enabled elements can overflow the page when the screen
+      // size is slightly over the content max width.
+      // 50rem = contentMaxWidth + 2 * 2rem (size of button as margin)
+      // We use 0.5 to give a little extra space for a scrollbar that takes
+      // space like safari and avoid scrollbar jitter.
+      //
       // See https://github.com/streamlit/streamlit/issues/6990
+      // TODO: Remove this workaround when we migrated to the new fullscreen buttons
       const shouldHandleFullScreenButton =
         !isWideMode && !disableFullscreenMode
       const fullScreenButtonStyles = shouldHandleFullScreenButton
