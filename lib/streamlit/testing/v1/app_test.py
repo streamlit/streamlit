@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import hashlib
 import inspect
-import pathlib
 import tempfile
 import textwrap
 import traceback
+from pathlib import Path
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
@@ -84,7 +84,7 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.util import HASHLIB_KWARGS, calc_md5
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -162,6 +162,7 @@ class AppTest:
         self.secrets: dict[str, Any] = {}
         self.args = args
         self.kwargs = kwargs
+        self._page_hash = ""
 
         tree = ElementTree()
         tree._runner = self
@@ -203,7 +204,7 @@ class AppTest:
         hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
-        path = pathlib.Path(TMP_DIR.name, script_name)
+        path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
         return AppTest(
@@ -284,14 +285,14 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        if pathlib.Path.is_file(pathlib.Path(script_path)):
+        if Path.is_file(Path(script_path)):
             path = script_path
         else:
             # TODO: Make this not super fragile
             # Attempt to find the test file calling this method, so the
             # path can be relative to there.
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-            filepath = pathlib.Path(stack[1].filename)
+            filepath = Path(stack[1].filename)
             path = str(filepath.parent / script_path)
         return AppTest(path, default_timeout=default_timeout)
 
@@ -334,7 +335,9 @@ class AppTest:
             self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
         )
         with patch_config_options({"global.appTest": True}):
-            self._tree = script_runner.run(widget_state, self.query_params, timeout)
+            self._tree = script_runner.run(
+                widget_state, self.query_params, timeout, self._page_hash
+            )
             self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
@@ -372,6 +375,30 @@ class AppTest:
             self
         """
         return self._tree.run(timeout=timeout)
+
+    def switch_page(self, page_path: str) -> AppTest:
+        """Switch to another page of the app.
+
+        Parameters
+        ----------
+        page_path: str
+            Path of the page to switch to. The path must be relative to the
+            location of the main script (e.g. ``"pages/my_page.py"``).
+
+        Returns
+        -------
+        AppTest
+            self
+        """
+        main_dir = Path(self._script_path).parent
+        full_page_path = main_dir / page_path
+        if not full_page_path.is_file():
+            raise ValueError(
+                f"Unable to find script at {page_path}, make sure the page given is relative to the main script."
+            )
+        page_path_str = str(full_page_path.resolve())
+        self._page_hash = calc_md5(page_path_str)
+        return self
 
     @property
     def main(self) -> Block:

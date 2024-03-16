@@ -50,7 +50,7 @@ import {
   StyledInputControls,
   StyledInstructionsContainer,
 } from "./styled-components"
-import { uniqueId } from "lodash"
+import uniqueId from "lodash/uniqueId"
 
 export interface Props {
   disabled: boolean
@@ -87,6 +87,8 @@ export interface State {
 export class NumberInput extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  private readonly id: string
+
   private inputRef = React.createRef<HTMLInputElement | HTMLTextAreaElement>()
 
   constructor(props: Props) {
@@ -98,6 +100,8 @@ export class NumberInput extends React.PureComponent<Props, State> {
       formattedValue: this.formatValue(this.initialValue),
       isFocused: false,
     }
+
+    this.id = uniqueId("number_input_")
   }
 
   get initialValue(): number | null {
@@ -365,7 +369,6 @@ export class NumberInput extends React.PureComponent<Props, State> {
   public render(): React.ReactNode {
     const { element, width, disabled, widgetMgr, theme } = this.props
     const { formattedValue, dirty, isFocused } = this.state
-    const id = uniqueId()
 
     const style = { width }
 
@@ -388,7 +391,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
           labelVisibility={labelVisibilityProtoValueToEnum(
             element.labelVisibility?.value
           )}
-          htmlFor={id}
+          htmlFor={this.id}
         >
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -417,7 +420,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
             clearOnEscape={clearable}
             disabled={disabled}
             aria-label={element.label}
-            id={id}
+            id={this.id}
             overrides={{
               ClearIcon: {
                 props: {
