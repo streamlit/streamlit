@@ -4,7 +4,7 @@ altair==5.2.0
 anyio==4.3.0
 async-timeout==4.0.3
 attrs==23.2.0
-black==24.2.0
+black==24.3.0
 blinker==1.7.0
 bokeh==2.4.3
 cachetools==5.3.3
@@ -24,7 +24,7 @@ docutils==0.20.1
 exceptiongroup==1.2.0
 execnet==2.0.2
 filelock==3.13.1
-fonttools==4.49.0
+fonttools==4.50.0
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.42
@@ -48,7 +48,7 @@ langchain==0.1.12
 langchain-community==0.0.28
 langchain-core==0.1.32
 langchain-text-splitters==0.0.1
-langsmith==0.1.26
+langsmith==0.1.27
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -102,7 +102,7 @@ python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
 readme_renderer==43.0
-referencing==0.33.0
+referencing==0.34.0
 requests==2.31.0
 requests-mock==1.11.0
 requests-toolbelt==1.0.0
@@ -131,7 +131,7 @@ types-click==7.1.8
 types-protobuf==4.24.0.20240311
 types-pytz==2024.1.0.20240203
 types-requests==2.31.0.20240311
-types-setuptools==69.1.0.20240310
+types-setuptools==69.2.0.20240316
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
