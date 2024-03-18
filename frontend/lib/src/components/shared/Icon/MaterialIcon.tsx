@@ -88,3 +88,5 @@ export const MaterialIcon = ({
     ></StyledIcon>
   )
 }
+
+export default MaterialIcon

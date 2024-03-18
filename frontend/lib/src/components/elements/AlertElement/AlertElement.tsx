@@ -23,7 +23,10 @@ import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { StyledAlertContent } from "./styled-components"
-import { MaterialIcon } from "@streamlit/lib/src/components/shared/Icon/MaterialIcon"
+// import { MaterialIcon } from "@streamlit/lib/src/components/shared/Icon/MaterialIcon"
+const LazyMaterialIcon = React.lazy(
+  () => import("@streamlit/lib/src/components/shared/Icon/MaterialIcon")
+)
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {
   switch (format) {
@@ -71,11 +74,11 @@ export default function AlertElement({
             </EmojiIcon>
           )}
           {icon && icon.startsWith(":material") && (
-            <MaterialIcon
+            <LazyMaterialIcon
               size="lg"
               testid="stAlertMaterialIcon"
               iconName={icon}
-            ></MaterialIcon>
+            ></LazyMaterialIcon>
           )}
 
           <StreamlitMarkdown
