@@ -20,9 +20,9 @@ filelock==3.13.1
 fonttools==4.50.0
 gitdb==4.0.11
 GitPython==3.1.42
-graphviz==0.20.2
+graphviz==0.20.1
 greenlet==3.0.3
-hypothesis==6.99.8
+hypothesis==6.99.6
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.0.2
@@ -84,7 +84,7 @@ python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
 readme_renderer==43.0
-referencing==0.34.0
+referencing==0.33.0
 requests==2.31.0
 requests-mock==1.11.0
 requests-toolbelt==1.0.0
@@ -112,7 +112,7 @@ types-click==7.1.8
 types-protobuf==4.24.0.20240311
 types-pytz==2024.1.0.20240203
 types-requests==2.31.0.20240311
-types-setuptools==69.2.0.20240317
+types-setuptools==69.2.0.20240316
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing_extensions==4.10.0
