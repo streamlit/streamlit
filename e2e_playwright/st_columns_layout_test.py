@@ -42,7 +42,7 @@ def test_show_columns_vertically_when_viewport_requires(
 def test_columns_always_take_up_space(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """stacks columns vertically when viewport <= 640"""
+    """columns still takes up space with no elements present"""
     horizontal_blocks = themed_app.get_by_test_id("stHorizontalBlock")
     expect(horizontal_blocks).to_have_count(2)
 
