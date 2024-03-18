@@ -12,15 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
-
 import streamlit as st
 
-url1 = "https://www.w3schools.com/html/horse.ogg"
-file = requests.get(url1).content
-st.audio(file)
+st.text("main page")
 
-url2 = "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-and-audio-content/viper.mp3"
-st.audio(url2, start_time=10, end_time=13)
-
-st.audio(url2, start_time=15, end_time=19, loop=True)
+st.slider("slider", min_value=0, max_value=10)

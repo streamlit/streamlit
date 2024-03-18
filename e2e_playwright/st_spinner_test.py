@@ -12,15 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
+from playwright.sync_api import Page, expect
 
-import streamlit as st
 
-url1 = "https://www.w3schools.com/html/horse.ogg"
-file = requests.get(url1).content
-st.audio(file)
-
-url2 = "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-and-audio-content/viper.mp3"
-st.audio(url2, start_time=10, end_time=13)
-
-st.audio(url2, start_time=15, end_time=19, loop=True)
+def test_spinner_execution(app: Page):
+    app.get_by_test_id("stButton").locator("button").click()
+    expect(app.get_by_test_id("stSpinner")).to_have_text("Loading...")

@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
 
-import streamlit as st
+from playwright.sync_api import Page, expect
 
-url1 = "https://www.w3schools.com/html/horse.ogg"
-file = requests.get(url1).content
-st.audio(file)
+from e2e_playwright.conftest import ImageCompareFunction
 
-url2 = "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-and-audio-content/viper.mp3"
-st.audio(url2, start_time=10, end_time=13)
 
-st.audio(url2, start_time=15, end_time=19, loop=True)
+def test_help_display(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.header renders correctly with dividers."""
+    help_elements = app.get_by_test_id("stDocstring")
+
+    for i, element in enumerate(help_elements.all()):
+        assert_snapshot(element, name=f"st_help-{i}")
