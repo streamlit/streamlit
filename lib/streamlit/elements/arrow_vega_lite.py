@@ -279,12 +279,13 @@ def marshall(
     if "autosize" not in spec:
         spec["autosize"] = {"type": "fit", "contains": "padding"}
 
+    stable_data_id = "0"
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
     if "datasets" in spec:
         for k, v in spec["datasets"].items():
             dataset = proto.datasets.add()
-            dataset.name = str(k)
+            dataset.name = stable_data_id
             dataset.has_name = True
             arrow.marshall(dataset.data, v)
         del spec["datasets"]
@@ -301,6 +302,8 @@ def marshall(
             if "values" in data_spec:
                 data = data_spec["values"]
                 del spec["data"]
+            if "name" in data_spec:
+                data_spec["name"] = stable_data_id
         else:
             data = data_spec
             del spec["data"]
@@ -409,6 +412,7 @@ def marshall(
     else:
         proto.is_select_enabled = False
 
+    print(f"{data=}")
     if data is not None:
         arrow.marshall(proto.data, data)
 
