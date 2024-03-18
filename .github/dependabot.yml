@@ -10,7 +10,6 @@ updates:
     open-pull-requests-limit: 0
 
     labels:
-      - "security-assessment-completed"
       - "change:chore"
       - "impact:internal"
 
@@ -23,7 +22,6 @@ updates:
     open-pull-requests-limit: 0
 
     labels:
-      - "security-assessment-completed"
       - "change:chore"
       - "impact:internal"
 
