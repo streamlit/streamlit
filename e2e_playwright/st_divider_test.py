@@ -15,5 +15,6 @@
 from playwright.sync_api import Page, expect
 
 
-def test_divider_renders(app: Page):
+def test_divider_renders(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.locator(".element-container .stMarkdown hr")).to_be_visible()
+    assert_snapshot(app.get_by_test_id("stMarkdown"), "st_divider")
