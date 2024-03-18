@@ -190,11 +190,7 @@ class LLMThought:
         # data is redundant
         self._reset_llm_token_stream()
         # set the container status to complete
-        self._container.update(
-            label="",
-            state="complete",
-            expanded=self.expanded,
-        )
+        self.complete(self._labeler.get_final_agent_thought_label())
 
     def on_llm_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
         self._container.markdown("**LLM encountered an error...**")
@@ -262,7 +258,7 @@ class LLMThought:
 
         self._container.update(
             label=final_label,
-            expanded=False if self._collapse_on_complete else None,
+            expanded=False if self._collapse_on_complete else True,
             state="error" if self._state == LLMThoughtState.ERROR else "complete",
         )
 
