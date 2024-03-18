@@ -28,13 +28,13 @@ fonttools==4.50.0
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.42
-graphviz==0.20.1
+graphviz==0.20.2
 greenlet==3.0.3
-hypothesis==6.99.6
+hypothesis==6.99.8
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.0.2
-importlib_resources==6.3.0
+importlib_resources==6.3.1
 iniconfig==2.0.0
 jaraco.classes==3.3.1
 jeepney==0.8.0
@@ -81,7 +81,7 @@ pre-commit==3.6.2
 protobuf==3.20.3
 psycopg2-binary==2.9.9
 py4j==0.10.9.7
-pyarrow==15.0.1
+pyarrow==15.0.2
 pycparser==2.21
 pydantic==1.10.14
 pydeck==0.8.1b0
@@ -103,7 +103,7 @@ python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
 readme_renderer==43.0
-referencing==0.33.0
+referencing==0.34.0
 requests==2.31.0
 requests-mock==1.11.0
 requests-toolbelt==1.0.0
@@ -132,7 +132,7 @@ types-click==7.1.8
 types-protobuf==4.24.0.20240311
 types-pytz==2024.1.0.20240203
 types-requests==2.31.0.20240311
-types-setuptools==69.2.0.20240316
+types-setuptools==69.2.0.20240317
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 typing-inspect==0.9.0
