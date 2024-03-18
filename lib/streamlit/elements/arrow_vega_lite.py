@@ -309,18 +309,8 @@ def marshall(
 
     if on_select:
         regex = re.compile(r"^param_\d+$")
-        new_session = ctx.session_id not in ctx.altair_stable_ids
         params_counter = 0
         views_counter = 0
-        if new_session:
-            params_counter = 0
-            views_counter = 0
-            ctx.altair_stable_ids[ctx.session_id] = {}
-            ctx.altair_stable_ids[ctx.session_id]["params"] = params_counter
-            ctx.altair_stable_ids[ctx.session_id]["views"] = views_counter
-        else:
-            params_counter = ctx.altair_stable_ids[ctx.session_id]["params"]
-            views_counter = ctx.altair_stable_ids[ctx.session_id]["views"]
 
         for param in spec["params"]:
             name = param["name"]
@@ -353,7 +343,6 @@ def marshall(
                             spec["encoding"], name, f"selection_{params_counter}"
                         )
                 params_counter += 1
-                ctx.altair_stable_ids[ctx.session_id]["params"] = params_counter
             if "views" in param:
                 for view_index, view in enumerate(param["views"]):
                     param["views"][view_index] = f"views_{views_counter}"
@@ -386,7 +375,6 @@ def marshall(
                         for item in spec["encoding"]:
                             replace_values_in_dict(item, view, f"views_{views_counter}")
                     views_counter += 1
-                    ctx.altair_stable_ids[ctx.session_id]["views"] = views_counter
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
