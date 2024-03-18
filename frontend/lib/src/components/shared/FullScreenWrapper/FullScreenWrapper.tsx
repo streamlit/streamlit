@@ -151,7 +151,7 @@ class FullScreenWrapper extends PureComponent<FullScreenWrapperProps, State> {
       >
         {!disableFullscreenMode && (
           <StyledFullScreenButton
-            data-testid={"StyledFullScreenButton"}
+            data-testid="StyledFullScreenButton"
             onClick={buttonOnClick}
             title={buttonTitle}
             isExpanded={expanded}
