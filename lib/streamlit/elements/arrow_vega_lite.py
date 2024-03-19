@@ -314,19 +314,13 @@ def marshall(
             name = param["name"]
             if regex.match(name):
                 param["name"] = f"selection_{param_counter}"
-                if "hconcat" in spec:
-                    for hconcat in spec["hconcat"]:
-                        replace_values_in_dict(
-                            hconcat, name, f"selection_{param_counter}"
-                        )
-                if "vconcat" in spec:
-                    for vconcat in spec["vconcat"]:
-                        replace_values_in_dict(
-                            vconcat, name, f"selection_{param_counter}"
-                        )
-                if "layer" in spec:
-                    for item in spec["layer"]:
-                        replace_values_in_dict(item, name, f"selection_{param_counter}")
+                for key in ["hconcat", "vconcat", "layer"]:
+                    if key in spec:
+                        for item in spec[key]:
+                            replace_values_in_dict(
+                                item, name, f"selection_{param_counter}"
+                            )
+
                 if "encoding" in spec:
                     if isinstance(spec["encoding"], List):
                         for item in spec["encoding"]:
