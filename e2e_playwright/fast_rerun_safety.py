@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ if runtime.exists():
     time.sleep(3)
     st.write(st.session_state.counter)
     live = st.empty()
-    for i in range(100):
+    for _ in range(50):
         st.session_state.counter += 1
         live.write(f"live: {st.session_state.counter}")
         time.sleep(0.1)

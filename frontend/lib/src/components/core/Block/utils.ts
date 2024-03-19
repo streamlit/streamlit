@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -149,4 +149,10 @@ export interface BaseBlockProps {
    * from that callback.
    */
   formsData: FormsData
+
+  /**
+   * If true , the element should not allow going into fullscreen. Right now we plan
+   * to use it, for example, in Dialogs to prevent fullscreen issues.
+   */
+  disableFullscreenMode?: boolean
 }

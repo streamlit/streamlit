@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,10 @@ describe("HostCommunicationManager messaging", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
+      setInputsDisabled: jest.fn(),
       isOwnerChanged: jest.fn(),
+      jwtHeaderChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),
       hostHideSidebarNavChanged: jest.fn(),
@@ -176,6 +179,41 @@ describe("HostCommunicationManager messaging", () => {
     // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.pageChanged).toHaveBeenCalledWith(
       "hash1"
+    )
+  })
+
+  it("can process a received SEND_APP_HEARTBEAT message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SEND_APP_HEARTBEAT",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.sendAppHeartbeat).toHaveBeenCalledWith()
+  })
+
+  it("can process a received SET_INPUTS_DISABLED message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "SET_INPUTS_DISABLED",
+          disabled: true,
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.setInputsDisabled).toHaveBeenCalledWith(
+      true
     )
   })
 
@@ -376,6 +414,7 @@ describe("HostCommunicationManager messaging", () => {
       textColor: "#1A1D21",
       widgetBackgroundColor: "#FFFFFF",
       widgetBorderColor: "#D3DAE8",
+      skeletonBackgroundColor: "#CCDDEE",
     }
     dispatchEvent(
       "message",
@@ -394,6 +433,24 @@ describe("HostCommunicationManager messaging", () => {
       hostCommunicationMgr.props.themeChanged
     ).toHaveBeenCalledWith(mockCustomThemeConfig)
   })
+
+  it("can process a received SET_AUTH_TOKEN message with JWT pair", () => {
+    const message = new MessageEvent("message", {
+      data: {
+        stCommVersion: HOST_COMM_VERSION,
+        type: "SET_AUTH_TOKEN",
+        jwtHeaderName: "X-JWT-HEADER-NAME",
+        jwtHeaderValue: "X-JWT-HEADER-VALUE",
+      },
+      origin: "https://devel.streamlit.test",
+    })
+    dispatchEvent("message", message)
+
+    expect(
+      // @ts-expect-error - props are private
+      hostCommunicationMgr.props.jwtHeaderChanged
+    ).toHaveBeenCalledWith(message.data)
+  })
 })
 
 describe("Test different origins", () => {
@@ -409,6 +466,9 @@ describe("Test different origins", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
+      setInputsDisabled: jest.fn(),
+      jwtHeaderChanged: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),
@@ -502,6 +562,9 @@ describe("HostCommunicationManager external auth token handling", () => {
       stopScript: jest.fn(),
       rerunScript: jest.fn(),
       clearCache: jest.fn(),
+      sendAppHeartbeat: jest.fn(),
+      setInputsDisabled: jest.fn(),
+      jwtHeaderChanged: jest.fn(),
       isOwnerChanged: jest.fn(),
       hostMenuItemsChanged: jest.fn(),
       hostToolbarItemsChanged: jest.fn(),

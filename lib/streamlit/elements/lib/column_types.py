@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import datetime
-from typing import Iterable, List, Union
+from typing import Iterable, Literal, TypedDict
 
-from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
+from typing_extensions import NotRequired, TypeAlias
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -38,6 +38,7 @@ ColumnType: TypeAlias = Literal[
     "link",
     "line_chart",
     "bar_chart",
+    "area_chart",
     "image",
     "progress",
 ]
@@ -63,13 +64,14 @@ class CheckboxColumnConfig(TypedDict):
 
 class SelectboxColumnConfig(TypedDict):
     type: Literal["selectbox"]
-    options: NotRequired[List[str | int | float] | None]
+    options: NotRequired[list[str | int | float] | None]
 
 
 class LinkColumnConfig(TypedDict):
     type: Literal["link"]
     max_chars: NotRequired[int | None]
     validate: NotRequired[str | None]
+    display_text: NotRequired[str | None]
 
 
 class BarChartColumnConfig(TypedDict):
@@ -80,6 +82,12 @@ class BarChartColumnConfig(TypedDict):
 
 class LineChartColumnConfig(TypedDict):
     type: Literal["line_chart"]
+    y_min: NotRequired[int | float | None]
+    y_max: NotRequired[int | float | None]
+
+
+class AreaChartColumnConfig(TypedDict):
+    type: Literal["area_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
 
@@ -135,7 +143,7 @@ class ColumnConfig(TypedDict, total=False):
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -166,22 +174,23 @@ class ColumnConfig(TypedDict, total=False):
     required: bool | None
     default: str | bool | int | float | None
     alignment: Literal["left", "center", "right"] | None
-    type_config: Union[
-        NumberColumnConfig,
-        TextColumnConfig,
-        CheckboxColumnConfig,
-        SelectboxColumnConfig,
-        LinkColumnConfig,
-        ListColumnConfig,
-        DatetimeColumnConfig,
-        DateColumnConfig,
-        TimeColumnConfig,
-        ProgressColumnConfig,
-        LineChartColumnConfig,
-        BarChartColumnConfig,
-        ImageColumnConfig,
-        None,
-    ]
+    type_config: (
+        NumberColumnConfig
+        | TextColumnConfig
+        | CheckboxColumnConfig
+        | SelectboxColumnConfig
+        | LinkColumnConfig
+        | ListColumnConfig
+        | DatetimeColumnConfig
+        | DateColumnConfig
+        | TimeColumnConfig
+        | ProgressColumnConfig
+        | LineChartColumnConfig
+        | BarChartColumnConfig
+        | AreaChartColumnConfig
+        | ImageColumnConfig
+        | None
+    )
 
 
 @gather_metrics("column_config.Column")
@@ -211,7 +220,7 @@ def Column(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -287,7 +296,7 @@ def NumberColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -381,7 +390,7 @@ def TextColumn(
     max_chars: int | None = None,
     validate: str | None = None,
 ) -> ColumnConfig:
-    """Configure a text column in ``st.dataframe`` or ``st.data_editor``.
+    r"""Configure a text column in ``st.dataframe`` or ``st.data_editor``.
 
     This is the default column type for string values. This command needs to be used in the
     ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``. When used with
@@ -395,7 +404,7 @@ def TextColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -474,6 +483,7 @@ def LinkColumn(
     default: str | None = None,
     max_chars: int | None = None,
     validate: str | None = None,
+    display_text: str | None = None,
 ) -> ColumnConfig:
     """Configure a link column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -490,7 +500,7 @@ def LinkColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -514,6 +524,22 @@ def LinkColumn(
         A regular expression (JS flavor, e.g. ``"^https://.+$"``) that edited values are validated against.
         If the input is invalid, it will not be submitted.
 
+    display_text: str or None
+        The text that is displayed in the cell. Can be one of:
+
+        * ``None`` (default) to display the URL itself.
+
+        * A string that is displayed in every cell, e.g. ``"Open link"``.
+
+        * A regular expression (JS flavor, detected by usage of parentheses)
+          to extract a part of the URL via a capture group, e.g. ``"https://(.*?)\.example\.com"``
+          to extract the display text "foo" from the URL "\https://foo.example.com".
+
+        For more complex cases, you may use `Pandas Styler's format \
+        <https://pandas.pydata.org/docs/reference/api/pandas.io.formats.style.Styler.format.html>`_
+        function on the underlying dataframe. Note that this makes the app slow,
+        doesn't work with editable columns, and might be removed in the future.
+
     Examples
     --------
 
@@ -528,6 +554,12 @@ def LinkColumn(
     >>>             "https://issues.streamlit.app",
     >>>             "https://30days.streamlit.app",
     >>>         ],
+    >>>         "creator": [
+    >>>             "https://github.com/streamlit",
+    >>>             "https://github.com/arnaudmiribel",
+    >>>             "https://github.com/streamlit",
+    >>>             "https://github.com/streamlit",
+    >>>         ],
     >>>     }
     >>> )
     >>>
@@ -537,9 +569,13 @@ def LinkColumn(
     >>>         "apps": st.column_config.LinkColumn(
     >>>             "Trending apps",
     >>>             help="The top trending Streamlit apps",
-    >>>             validate="^https://[a-z]+\.streamlit\.app$",
+    >>>             validate="^https://[a-z]+\\.streamlit\\.app$",
     >>>             max_chars=100,
-    >>>         )
+    >>>             display_text="https://(.*?)\\.streamlit\\.app"
+    >>>         ),
+    >>>         "creator": st.column_config.LinkColumn(
+    >>>             "App Creator", display_text="Open profile"
+    >>>         ),
     >>>     },
     >>>     hide_index=True,
     >>> )
@@ -557,7 +593,10 @@ def LinkColumn(
         required=required,
         default=default,
         type_config=LinkColumnConfig(
-            type="link", max_chars=max_chars, validate=validate
+            type="link",
+            max_chars=max_chars,
+            validate=validate,
+            display_text=display_text,
         ),
     )
 
@@ -586,7 +625,7 @@ def CheckboxColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -669,7 +708,7 @@ def SelectboxColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -687,7 +726,7 @@ def SelectboxColumn(
 
     options: Iterable of str or None
         The options that can be selected during editing. If None (default), this will be
-        inferred from the underlying dataframe column if its dtype is “category”
+        inferred from the underlying dataframe column if its dtype is "category"
         (`see Pandas docs on categorical data <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
 
     Examples
@@ -766,7 +805,7 @@ def BarChartColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -846,7 +885,7 @@ def LineChartColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -904,6 +943,87 @@ def LineChartColumn(
     )
 
 
+@gather_metrics("column_config.AreaChartColumn")
+def AreaChartColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    y_min: int | float | None = None,
+    y_max: int | float | None = None,
+) -> ColumnConfig:
+    """Configure an area chart column in ``st.dataframe`` or ``st.data_editor``.
+
+    Cells need to contain a list of numbers. Chart columns are not editable
+    at the moment. This command needs to be used in the ``column_config`` parameter
+    of ``st.dataframe`` or ``st.data_editor``.
+
+    Parameters
+    ----------
+
+    label: str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width: "small", "medium", "large", or None
+        The display width of the column. Can be one of "small", "medium", or "large".
+        If None (default), the column will be sized to fit the cell contents.
+
+    help: str or None
+        An optional tooltip that gets displayed when hovering over the column label.
+
+    y_min: int, float, or None
+        The minimum value on the y-axis for all cells in the column.
+        If None (default), every cell will use the minimum of its data.
+
+    y_max: int, float, or None
+        The maximum value on the y-axis for all cells in the column. If None (default),
+        every cell will use the maximum of its data.
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    >>>     {
+    >>>         "sales": [
+    >>>             [0, 4, 26, 80, 100, 40],
+    >>>             [80, 20, 80, 35, 40, 100],
+    >>>             [10, 20, 80, 80, 70, 0],
+    >>>             [10, 100, 20, 100, 30, 100],
+    >>>         ],
+    >>>     }
+    >>> )
+    >>>
+    >>> st.data_editor(
+    >>>     data_df,
+    >>>     column_config={
+    >>>         "sales": st.column_config.AreaChartColumn(
+    >>>             "Sales (last 6 months)",
+    >>>             width="medium",
+    >>>             help="The sales volume in the last 6 months",
+    >>>             y_min=0,
+    >>>             y_max=100,
+    >>>          ),
+    >>>     },
+    >>>     hide_index=True,
+    >>> )
+
+    .. output::
+        https://doc-areachart-column.streamlit.app/
+        height: 300px
+    """
+
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        type_config=AreaChartColumnConfig(type="area_chart", y_min=y_min, y_max=y_max),
+    )
+
+
 @gather_metrics("column_config.ImageColumn")
 def ImageColumn(
     label: str | None = None,
@@ -933,7 +1053,7 @@ def ImageColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -996,7 +1116,7 @@ def ListColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1070,7 +1190,7 @@ def DatetimeColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1189,7 +1309,7 @@ def TimeColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1303,7 +1423,7 @@ def DateColumn(
         the column name is used.
 
     width: "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help: str or None
@@ -1412,7 +1532,7 @@ def ProgressColumn(
         the column name is used.
 
     width : "small", "medium", "large", or None
-        The display width of the column. Can be one of “small”, “medium”, or “large”.
+        The display width of the column. Can be one of "small", "medium", or "large".
         If None (default), the column will be sized to fit the cell contents.
 
     help : str or None

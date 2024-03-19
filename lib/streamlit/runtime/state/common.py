@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Functions and data structures shared by session_state.py and widgets.py"""
+
 from __future__ import annotations
 
 import hashlib
@@ -23,8 +24,8 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Final,
     Generic,
-    Optional,
     Sequence,
     Tuple,
     TypeVar,
@@ -32,9 +33,9 @@ from typing import (
 )
 
 from google.protobuf.message import Message
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
-from streamlit import util
+from streamlit import config, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.Button_pb2 import Button
@@ -60,6 +61,7 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from builtins import ellipsis
 
+    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
     from streamlit.runtime.state.widgets import NoValue
 
 
@@ -86,6 +88,7 @@ WidgetProto: TypeAlias = Union[
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
+TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
 
 
 T = TypeVar("T")
@@ -151,7 +154,7 @@ class RegisterWidgetResult(Generic[T_co]):
     @classmethod
     def failure(
         cls, deserializer: WidgetDeserializer[T_co]
-    ) -> "RegisterWidgetResult[T_co]":
+    ) -> RegisterWidgetResult[T_co]:
         """The canonical way to construct a RegisterWidgetResult in cases
         where the true widget value could not be determined.
         """
@@ -200,7 +203,7 @@ def compute_widget_id(
     return f"{GENERATED_WIDGET_ID_PREFIX}-{h.hexdigest()}-{user_key}"
 
 
-def user_key_from_widget_id(widget_id: str) -> Optional[str]:
+def user_key_from_widget_id(widget_id: str) -> str | None:
     """Return the user key portion of a widget id, or None if the id does not
     have a user key.
 
@@ -229,3 +232,11 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_WIDGET_ID_PREFIX} are reserved."
         )
+
+
+def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
+    if config.get_option("global.appTest"):
+        try:
+            ctx.session_state[TESTING_KEY][k] = v
+        except KeyError:
+            ctx.session_state[TESTING_KEY] = {k: v}

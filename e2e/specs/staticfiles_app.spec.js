@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,28 @@ const STATICFILE_URL = 'http://localhost:8501/app/static/streamlit-mark-color.pn
 describe("static files", () => {
   beforeEach(() => {
     cy.intercept(
-      'GET',
-      STATICFILE_URL
+      STATICFILE_URL,
+
+      // Disable browser cache, so cy.intercept works on every rerun of the
+      // test. Useful for debugging.
+      { middleware: true },
+      (req) => {
+        req.on('before:response', (res) => {
+          // force all API responses to not be cached
+          res.headers['cache-control'] = 'no-store'
+        })
+      },
     ).as('staticFileLoad');
 
     cy.loadApp("http://localhost:3000/");
   });
 
   it("loads streamlit_app with static image", () => {
-    cy.wait("@staticFileLoad").get("img").matchThemedSnapshots(
-      "static_streamlit_logo"
+    cy.wait("@staticFileLoad").get("img").first().matchThemedSnapshots(
+      "static_streamlit_logo", {},
+      () => cy.get("img").first()
     );
   });
-
 
   it("serves existing static file correctly", () => {
     cy.request(STATICFILE_URL).its('status').should('eq', 200);

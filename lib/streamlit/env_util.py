@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
 import platform
 import re
@@ -23,7 +25,7 @@ IS_DARWIN = _system == "Darwin"
 IS_LINUX_OR_BSD = (_system == "Linux") or ("BSD" in _system)
 
 
-def is_pex():
+def is_pex() -> bool:
     """Return if streamlit running in pex.
 
     Pex modifies sys.path so the pex file is the first path and that's
@@ -34,7 +36,7 @@ def is_pex():
     return False
 
 
-def is_repl():
+def is_repl() -> bool:
     """Return True if running in the Python REPL."""
     import inspect
 
@@ -52,8 +54,8 @@ def is_repl():
     return False
 
 
-def is_executable_in_path(name):
+def is_executable_in_path(name: str) -> bool:
     """Check if executable is in OS path."""
-    from distutils.spawn import find_executable
+    from shutil import which
 
-    return find_executable(name) is not None
+    return which(name) is not None

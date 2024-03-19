@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,7 +137,11 @@ describe("DataFrame widget", () => {
     )
     // You have to set a second arg with {} to test work and get the received props
     expect(glideDataGridModule.DataEditor).toHaveBeenCalledWith(
-      expect.objectContaining({ rangeSelect: "none", fillHandle: false }),
+      expect.objectContaining({
+        rangeSelect: "cell",
+        fillHandle: false,
+        onColumnResize: undefined,
+      }),
       {}
     )
   })

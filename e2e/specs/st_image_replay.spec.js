@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ describe("st.image replay", () => {
 
   it("displays a caption for both calls", () => {
     cy.getIndexed(
-      ".element-container [data-testid='stImage'] [data-testid='caption']",
+      ".element-container [data-testid='stImage'] [data-testid='stImageCaption']",
       0
     )
       .should("contain", "Black Square")
       .should("have.css", "width", "100px");
     cy.getIndexed(
-      ".element-container [data-testid='stImage'] [data-testid='caption']",
+      ".element-container [data-testid='stImage'] [data-testid='stImageCaption']",
       1
     )
       .should("contain", "Black Square")

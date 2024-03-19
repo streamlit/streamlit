@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 
 import axios from "axios"
-import _ from "lodash"
+import isEqual from "lodash/isEqual"
+import zip from "lodash/zip"
 import React from "react"
 import { FileRejection } from "react-dropzone"
 
@@ -149,25 +150,33 @@ class FileUploader extends React.PureComponent<Props, State> {
       return
     }
 
-    // If we have had no completed uploads, our widgetValue will be
-    // undefined, and we can early-out of the state update.
     const newWidgetValue = this.createWidgetValue()
-    if (newWidgetValue === undefined) {
-      return
-    }
-
     const { element, widgetMgr } = this.props
 
     // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
+    if (!isEqual(newWidgetValue, prevWidgetValue)) {
       widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
         fromUi: true,
       })
     }
   }
 
-  private createWidgetValue(): FileUploaderStateProto | undefined {
+  public componentDidMount(): void {
+    const newWidgetValue = this.createWidgetValue()
+    const { element, widgetMgr } = this.props
+
+    // Set the state value on mount, to avoid triggering an extra rerun after
+    // the first rerun.
+    const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
+    if (prevWidgetValue === undefined) {
+      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
+        fromUi: false,
+      })
+    }
+  }
+
+  private createWidgetValue(): FileUploaderStateProto {
     const uploadedFileInfo: UploadedFileInfoProto[] = this.state.files
       .filter(f => f.status.type === "uploaded")
       .map(f => {
@@ -239,7 +248,7 @@ class FileUploader extends React.PureComponent<Props, State> {
           }
         }
 
-        _.zip(fileURLsArray, acceptedFiles).forEach(
+        zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
             this.uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
           }

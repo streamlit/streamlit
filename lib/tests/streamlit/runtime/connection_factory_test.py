@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -183,6 +183,28 @@ type="snowpark"
     def test_caches_connection_instance(self):
         conn = connection_factory("my_connection", MockConnection)
         assert connection_factory("my_connection", MockConnection) is conn
+
+    def test_does_not_clear_cache_when_ttl_changes(self):
+        with patch.object(
+            MockConnection, "__init__", return_value=None
+        ) as patched_init:
+            connection_factory("my_connection1", MockConnection, ttl=10)
+            connection_factory("my_connection2", MockConnection, ttl=20)
+            connection_factory("my_connection1", MockConnection, ttl=10)
+            connection_factory("my_connection2", MockConnection, ttl=20)
+
+        assert patched_init.call_count == 2
+
+    def test_does_not_clear_cache_when_max_entries_changes(self):
+        with patch.object(
+            MockConnection, "__init__", return_value=None
+        ) as patched_init:
+            connection_factory("my_connection1", MockConnection, max_entries=10)
+            connection_factory("my_connection2", MockConnection, max_entries=20)
+            connection_factory("my_connection1", MockConnection, max_entries=10)
+            connection_factory("my_connection2", MockConnection, max_entries=20)
+
+        assert patched_init.call_count == 2
 
     @parameterized.expand(
         [

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,24 +17,32 @@
 from __future__ import annotations
 
 import sys
+from contextvars import ContextVar
+from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Final,
     Hashable,
     Iterable,
+    Literal,
     NoReturn,
-    Optional,
-    Type,
     TypeVar,
     cast,
     overload,
 )
 
-import click
-from typing_extensions import Final, Literal
-
-from streamlit import config, cursor, env_util, logger, runtime, type_util, util
+from streamlit import (
+    cli_util,
+    config,
+    cursor,
+    env_util,
+    logger,
+    runtime,
+    type_util,
+    util,
+)
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.altair_utils import AddRowsMetadata
@@ -82,7 +90,6 @@ from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
 from streamlit.errors import NoSessionContext, StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching, legacy_caching
@@ -96,8 +103,6 @@ if TYPE_CHECKING:
 
     from streamlit.elements.arrow import Data
 
-
-LOGGER: Final = get_logger(__name__)
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
@@ -130,7 +135,7 @@ def _maybe_print_use_warning() -> None:
     if not _use_warning_has_been_displayed:
         _use_warning_has_been_displayed = True
 
-        warning = click.style("Warning:", bold=True, fg="yellow")
+        warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 
         if env_util.is_repl():
             logger.get_logger("root").warning(
@@ -273,7 +278,7 @@ class DeltaGenerator(
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)
         for mixin in self.__class__.__bases__:
-            for name, func in mixin.__dict__.items():
+            for _, func in mixin.__dict__.items():
                 if callable(func):
                     func.__module__ = self.__module__
 
@@ -282,9 +287,7 @@ class DeltaGenerator(
 
     def __enter__(self) -> None:
         # with block started
-        ctx = get_script_run_ctx()
-        if ctx:
-            ctx.dg_stack.append(self)
+        dg_stack.set(dg_stack.get() + (self,))
 
     def __exit__(
         self,
@@ -293,9 +296,8 @@ class DeltaGenerator(
         traceback: Any,
     ) -> Literal[False]:
         # with block ended
-        ctx = get_script_run_ctx()
-        if ctx is not None:
-            ctx.dg_stack.pop()
+
+        dg_stack.set(dg_stack.get()[:-1])
 
         # Re-raise any exceptions
         return False
@@ -310,9 +312,9 @@ class DeltaGenerator(
         if self == self._main_dg:
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
-            ctx = get_script_run_ctx()
-            if ctx and len(ctx.dg_stack) > 0:
-                return ctx.dg_stack[-1]
+            current_stack = dg_stack.get()
+            if len(current_stack) > 1:
+                return current_stack[-1]
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
         # current `with` dg.
@@ -337,23 +339,31 @@ class DeltaGenerator(
             if name in streamlit_methods:
                 if self._root_container == RootContainer.SIDEBAR:
                     message = (
-                        "Method `%(name)s()` does not exist for "
-                        "`st.sidebar`. Did you mean `st.%(name)s()`?" % {"name": name}
+                        f"Method `{name}()` does not exist for "
+                        f"`st.sidebar`. Did you mean `st.{name}()`?"
                     )
                 else:
                     message = (
-                        "Method `%(name)s()` does not exist for "
+                        f"Method `{name}()` does not exist for "
                         "`DeltaGenerator` objects. Did you mean "
-                        "`st.%(name)s()`?" % {"name": name}
+                        "`st.{name}()`?"
                     )
             else:
-                message = "`%(name)s()` is not a valid Streamlit command." % {
-                    "name": name
-                }
+                message = f"`{name}()` is not a valid Streamlit command."
 
             raise StreamlitAPIException(message)
 
         return wrapper
+
+    def __deepcopy__(self, _memo):
+        dg = DeltaGenerator(
+            root_container=self._root_container,
+            cursor=deepcopy(self._cursor),
+            parent=deepcopy(self._parent),
+            block_type=self._block_type,
+        )
+        dg._form_data = deepcopy(self._form_data)
+        return dg
 
     @property
     def _parent_block_types(self) -> ParentBlockTypes:
@@ -408,7 +418,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -419,8 +429,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue],
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        return_value: type[NoValue],
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> None:
@@ -432,7 +442,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: Value,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> Value:
@@ -444,7 +454,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         return_value: None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator:
@@ -455,8 +465,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue] | Value | None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        return_value: type[NoValue] | Value | None = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -466,8 +476,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: Type[NoValue] | Value | None = None,
-        add_rows_metadata: Optional[AddRowsMetadata] = None,
+        return_value: type[NoValue] | Value | None = None,
+        add_rows_metadata: AddRowsMetadata | None = None,
         element_width: int | None = None,
         element_height: int | None = None,
     ) -> DeltaGenerator | Value | None:
@@ -599,6 +609,10 @@ class DeltaGenerator(
         if block_type == "expandable" and block_type in frozenset(parent_block_types):
             raise StreamlitAPIException(
                 "Expanders may not be nested inside other expanders."
+            )
+        if block_type == "popover" and block_type in frozenset(parent_block_types):
+            raise StreamlitAPIException(
+                "Popovers may not be nested inside other popovers."
             )
 
         if dg._root_container is None or dg._cursor is None:
@@ -767,6 +781,19 @@ class DeltaGenerator(
         return self
 
 
+main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
+sidebar_dg = DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=main_dg)
+event_dg = DeltaGenerator(root_container=RootContainer.EVENT, parent=main_dg)
+bottom_dg = DeltaGenerator(root_container=RootContainer.BOTTOM, parent=main_dg)
+
+# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
+# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
+# so that different threads or async tasks can have their own stacks.
+dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
+    "dg_stack", default=(main_dg,)
+)
+
+
 def _prep_data_for_add_rows(
     data: Data,
     delta_type: str,
@@ -824,7 +851,7 @@ def _value_or_dg(value: None, dg: DG) -> DG:
 
 
 @overload
-def _value_or_dg(value: Type[NoValue], dg: DG) -> None:  # type: ignore[misc]
+def _value_or_dg(value: type[NoValue], dg: DG) -> None:  # type: ignore[misc]
     ...
 
 
@@ -842,7 +869,7 @@ def _value_or_dg(value: Value, dg: DG) -> Value:
 
 
 def _value_or_dg(
-    value: Type[NoValue] | Value | None,
+    value: type[NoValue] | Value | None,
     dg: DG,
 ) -> DG | Value | None:
     """Return either value, or None, or dg.

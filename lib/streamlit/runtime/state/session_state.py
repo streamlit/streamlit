@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ from dataclasses import dataclass, field, replace
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Iterator,
     KeysView,
     List,
@@ -28,7 +30,7 @@ from typing import (
     cast,
 )
 
-from typing_extensions import Final, TypeAlias
+from typing_extensions import TypeAlias
 
 import streamlit as st
 from streamlit import config, util
@@ -42,9 +44,9 @@ from streamlit.runtime.state.common import (
     is_keyed_widget_id,
     is_widget_id,
 )
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
+from streamlit.runtime.state.query_params import QueryParams
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 from streamlit.type_util import ValueFieldName, is_array_value_field_name
-from streamlit.vendor.pympler.asizeof import asizeof
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -150,8 +152,7 @@ class WStates(MutableMapping[str, Any]):
         # For this and many other methods, we can't simply delegate to the
         # states field, because we need to invoke `__getitem__` for any
         # values, to handle deserialization and unwrapping of values.
-        for key in self.states:
-            yield key
+        yield from self.states
 
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
@@ -162,7 +163,7 @@ class WStates(MutableMapping[str, Any]):
     def values(self) -> set[Any]:  # type: ignore[override]
         return {self[wid] for wid in self}
 
-    def update(self, other: "WStates") -> None:  # type: ignore[override]
+    def update(self, other: WStates) -> None:  # type: ignore[override]
         """Copy all widget values and metadata from 'other' into this mapping,
         overwriting any data in this mapping that's also present in 'other'.
         """
@@ -297,6 +298,9 @@ class SessionState:
 
     # Keys used for widgets will be eagerly converted to the matching widget id
     _key_id_mapping: dict[str, str] = field(default_factory=dict)
+
+    # query params are stored in session state because query params will be tied with widget state at one point.
+    query_params: QueryParams = field(default_factory=QueryParams)
 
     def __repr__(self):
         return util.repr_(self)
@@ -534,6 +538,7 @@ class SessionState:
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
         """
+        self._reset_triggers()
         self._remove_stale_widgets(widget_ids_this_run)
 
     def _reset_triggers(self) -> None:
@@ -632,6 +637,9 @@ class SessionState:
             return True
 
     def get_stats(self) -> list[CacheStat]:
+        # Lazy-load vendored package to prevent import of numpy
+        from streamlit.vendor.pympler.asizeof import asizeof
+
         stat = CacheStat("st_session_state", "", asizeof(self))
         return [stat]
 
@@ -665,11 +673,11 @@ def _is_internal_key(key: str) -> bool:
 
 @dataclass
 class SessionStateStatProvider(CacheStatsProvider):
-    _session_mgr: "SessionManager"
+    _session_mgr: SessionManager
 
     def get_stats(self) -> list[CacheStat]:
         stats: list[CacheStat] = []
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
             stats.extend(session_state.get_stats())
-        return stats
+        return group_stats(stats)

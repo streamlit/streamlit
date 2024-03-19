@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,19 +23,19 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING, cast
 
-import pandas as pd
-
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import running_in_sis
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
+    from pandas import DataFrame
+    from snowflake.connector.cursor import SnowflakeCursor  # type:ignore[import]
+    from snowflake.snowpark.session import Session  # type:ignore[import]
+
     from snowflake.connector import (  # type:ignore[import] # isort: skip
         SnowflakeConnection as InternalSnowflakeConnection,
     )
-    from snowflake.connector.cursor import SnowflakeCursor  # type:ignore[import]
-    from snowflake.snowpark.session import Session  # type:ignore[import]
 
 
 class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
@@ -49,14 +49,17 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
     initialized directly.
     """
 
-    def _connect(self, **kwargs) -> "InternalSnowflakeConnection":
+    def _connect(self, **kwargs) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
-        from snowflake.snowpark.context import get_active_session  # type:ignore[import]
 
         # If we're running in SiS, just call get_active_session() and retrieve the
         # lower-level connection from it.
         if running_in_sis():
+            from snowflake.snowpark.context import (  # type:ignore[import]  # isort: skip
+                get_active_session,
+            )
+
             session = get_active_session()
 
             if hasattr(session, "connection"):
@@ -109,8 +112,8 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
                     "Missing Snowflake connection configuration. "
                     "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "
                     "or as kwargs to `st.connection`? "
-                    "See the [Snowflake Python Connector documentation](https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-example#connecting-using-the-connections-toml-file) "
-                    "for some options on how to set connection params."
+                    "See the [SnowflakeConnection configuration documentation](https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
+                    "for more details and examples."
                 )
             raise e
 
@@ -122,7 +125,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         show_spinner: bool | str = "Running `snowflake.query(...)`.",
         params=None,
         **kwargs,
-    ) -> pd.DataFrame:
+    ) -> DataFrame:
         """Run a read-only SQL query.
 
         This method implements both query result caching (with caching behavior
@@ -151,7 +154,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             The result of running the query, formatted as a pandas DataFrame.
 
         Example
@@ -162,35 +165,66 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> df = conn.query("select * from pet_owners")
         >>> st.dataframe(df)
         """
-        from snowflake.connector import Error as SnowflakeError
-        from tenacity import (
-            retry,
-            retry_if_exception_type,
-            stop_after_attempt,
-            wait_fixed,
+        from snowflake.connector.errors import ProgrammingError  # type: ignore[import]
+        from snowflake.connector.network import (  # type: ignore[import]
+            BAD_REQUEST_GS_CODE,
+            ID_TOKEN_EXPIRED_GS_CODE,
+            MASTER_TOKEN_EXPIRED_GS_CODE,
+            MASTER_TOKEN_INVALD_GS_CODE,
+            MASTER_TOKEN_NOTFOUND_GS_CODE,
+            SESSION_EXPIRED_GS_CODE,
         )
+        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+
+        retryable_error_codes = {
+            int(code)
+            for code in (
+                ID_TOKEN_EXPIRED_GS_CODE,
+                SESSION_EXPIRED_GS_CODE,
+                MASTER_TOKEN_NOTFOUND_GS_CODE,
+                MASTER_TOKEN_EXPIRED_GS_CODE,
+                MASTER_TOKEN_INVALD_GS_CODE,
+                BAD_REQUEST_GS_CODE,
+            )
+        }
 
         @retry(
             after=lambda _: self.reset(),
             stop=stop_after_attempt(3),
             reraise=True,
-            retry=retry_if_exception_type(SnowflakeError),
+            # We don't have to implement retries ourself for most error types as the
+            # `snowflake-connector-python` library already implements retries for
+            # retryable HTTP errors.
+            retry=retry_if_exception(
+                lambda e: isinstance(e, ProgrammingError)
+                and hasattr(e, "errno")
+                and e.errno in retryable_error_codes
+            ),
             wait=wait_fixed(1),
         )
-        @cache_data(
-            show_spinner=show_spinner,
-            ttl=ttl,
-        )
-        def _query(sql: str) -> pd.DataFrame:
+        def _query(sql: str) -> DataFrame:
             cur = self._instance.cursor()
             cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()
+
+        # We modify our helper function's `__qualname__` here to work around default
+        # `@st.cache_data` behavior. Otherwise, `.query()` being called with different
+        # `ttl` values will reset the cache with each call, and the query caches won't
+        # be scoped by connection.
+        ttl_str = str(  # Avoid adding extra `.` characters to `__qualname__`
+            ttl
+        ).replace(".", "_")
+        _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
+        _query = cache_data(
+            show_spinner=show_spinner,
+            ttl=ttl,
+        )(_query)
 
         return _query(sql)
 
     def write_pandas(
         self,
-        df: pd.DataFrame,
+        df: DataFrame,
         table_name: str,
         database: str | None = None,
         schema: str | None = None,
@@ -226,7 +260,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
 
         return (success, nchunks, nrows)
 
-    def cursor(self) -> "SnowflakeCursor":
+    def cursor(self) -> SnowflakeCursor:
         """Return a PEP 249-compliant cursor object.
 
         For more information, see the `Snowflake Python Connector documentation
@@ -235,7 +269,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         return self._instance.cursor()
 
     @property
-    def raw_connection(self) -> "InternalSnowflakeConnection":
+    def raw_connection(self) -> InternalSnowflakeConnection:
         """Access the underlying Snowflake Python connector object.
 
         Information on how to use the Snowflake Python Connector can be found in the
@@ -243,7 +277,7 @@ class SnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         """
         return self._instance
 
-    def session(self) -> "Session":
+    def session(self) -> Session:
         """Create a new Snowpark Session from this connection.
 
         Information on how to use Snowpark sessions can be found in the `Snowpark documentation

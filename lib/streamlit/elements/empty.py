@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
@@ -21,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class EmptyMixin:
-    def empty(self) -> "DeltaGenerator":
+    def empty(self) -> DeltaGenerator:
         """Insert a single-element container.
 
         Inserts a container into your app that can be used to hold a single element.
@@ -70,6 +72,6 @@ class EmptyMixin:
         return self.dg._enqueue("empty", empty_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

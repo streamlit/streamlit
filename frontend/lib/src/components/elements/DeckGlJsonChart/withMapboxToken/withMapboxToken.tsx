@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-import AlertElement from "@streamlit/lib/src/components/elements/AlertElement"
-import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
 import hoistNonReactStatics from "hoist-non-react-statics"
 import React, { ComponentType, PureComponent, ReactNode } from "react"
 import MapboxTokenError from "./MapboxTokenError"
 import axios from "axios"
 import { DeckGlJsonChart } from "@streamlit/lib/src/proto"
+import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 interface InjectedProps {
@@ -67,7 +66,9 @@ const MAPBOX = "mapbox"
 
 const withMapboxToken =
   (deltaType: string) =>
-  <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+  <P extends InjectedProps>(
+    WrappedComponent: ComponentType<React.PropsWithChildren<P>>
+  ) => {
     // Return a wrapper that accepts the wrapped component's props, minus
     // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
     // the wrapped component automatically.
@@ -77,6 +78,8 @@ const withMapboxToken =
       })`
 
       static contextType = LibContext
+
+      context!: React.ContextType<typeof LibContext>
 
       public constructor(props: WrappedMapboxProps<P>) {
         super(props)
@@ -147,11 +150,10 @@ const withMapboxToken =
           )
         }
 
-        // If our mapboxToken hasn't been retrieved yet, show a loading alert.
+        // If our mapboxToken hasn't been retrieved yet, show a loading
+        // skeleton.
         if (isFetching) {
-          return (
-            <AlertElement body={"Loading..."} kind={Kind.INFO} width={width} />
-          )
+          return <Skeleton />
         }
 
         // We have the mapbox token. Pass it through to our component.

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ def test_link_button_display(themed_app: Page, assert_snapshot: ImageCompareFunc
     expect(link_elements).to_have_count(6)
 
     for i, element in enumerate(link_elements.all()):
-        assert_snapshot(element, name=f"link-button-{i}")
+        assert_snapshot(element, name=f"st_link_button-{i}")
         element.hover()
-        assert_snapshot(element, name=f"link-button-hover-{i}")
+        assert_snapshot(element, name=f"st_link_button-hover_{i}")
         element.focus()
-        assert_snapshot(element, name=f"link-button-focus-{i}")
+        assert_snapshot(element, name=f"st_link_button-focus_{i}")

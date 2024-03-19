@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import unittest
 from datetime import date
 from functools import reduce
 from typing import Any, Callable
@@ -20,13 +21,14 @@ from typing import Any, Callable
 import altair as alt
 import pandas as pd
 import pytest
+from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame
+from streamlit.type_util import bytes_to_data_frame, is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks, snowpark_mocks
 
@@ -585,6 +587,36 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
 
+    @parameterized.expand(ST_CHART_ARGS)
+    @unittest.skipIf(
+        version.parse(alt.__version__) < version.parse("5.0.0"),
+        "This test only runs if Altair is >= 5.0.0",
+    )
+    def test_chart_with_ordered_categorical_data(
+        self, chart_command: Callable, altair_type: str
+    ):
+        """Test that built-in charts support ordered categorical data."""
+        df = df = pd.DataFrame(
+            {
+                "categorical": pd.Series(
+                    pd.Categorical(
+                        ["b", "c", "a", "a"], categories=["c", "b", "a"], ordered=True
+                    )
+                ),
+                "numbers": pd.Series([1, 2, 3, 4]),
+            }
+        )
+
+        chart_command(df, x="categorical", y="numbers")
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
+        self.assertEqual(chart_spec["encoding"]["x"]["type"], "ordinal")
+        self.assertEqual(chart_spec["encoding"]["x"]["sort"], ["c", "b", "a"])
+        self.assertEqual(chart_spec["encoding"]["y"]["type"], "quantitative")
+
     def test_line_chart_with_named_index(self):
         """Test st.line_chart with a named index."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
@@ -605,6 +637,23 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
+
+    def test_line_chart_with_non_contiguous_index(self):
+        """Test st.line_chart with a non-zero-based, non-contiguous, non-sorted index."""
+        df = pd.DataFrame(
+            {
+                "a": [11, 2, 55],
+                "b": [100, 101, 102],
+                "c": [200, 201, 202],
+                "d": [300, 301, 302],
+            }
+        )
+        df.set_index("a", inplace=True)
+
+        # There used to be a bug where this line would throw an exception.
+        # (Because some color-handling code was dependent on the DF index starting at 0)
+        # So if there's no exception, then the test passes.
+        st.line_chart(df, x="b", y="c", color="d")
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_unused_columns_are_dropped(

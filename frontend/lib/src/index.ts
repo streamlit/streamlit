@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ export { default as VerticalBlock } from "./components/core/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
 export type { BlockPropsWithoutWidth } from "./components/core/Block"
-export type { StreamlitEndpoints } from "./StreamlitEndpoints"
+export type { StreamlitEndpoints, JWTHeader } from "./StreamlitEndpoints"
 export { SessionInfo } from "./SessionInfo"
 export { ScriptRunState } from "./ScriptRunState"
 export { WidgetStateManager, createFormsData } from "./WidgetStateManager"
@@ -71,7 +71,7 @@ export {
 } from "./theme"
 export { default as emotionLightTheme } from "./theme/emotionLightTheme"
 export type { ThemeConfig, EmotionTheme } from "./theme"
-export { mount, shallow, mockWindowLocation, render } from "./test_util"
+export { mockWindowLocation, render } from "./test_util"
 export { logError, logMessage, logWarning, logAlways } from "./util/log"
 export { getPossibleBaseUris, buildHttpUri, buildWsUri } from "./util/UriUtil"
 export type { BaseUriParts } from "./util/UriUtil"
@@ -100,7 +100,6 @@ export {
   isColoredLineDisplayed,
   isDarkTheme,
   isEmbed,
-  isFooterDisplayed,
   isInChildFrame,
   isLightTheme,
   isPaddingDisplayed,

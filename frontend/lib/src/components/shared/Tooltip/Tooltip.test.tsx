@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ describe("Tooltip element", () => {
   it("renders a Tooltip", async () => {
     renderTooltip()
 
-    const tooltipTarget = screen.getByTestId("tooltipHoverTarget")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltipTarget).toBeInTheDocument()
 
     // Hover to see tooltip content
@@ -57,7 +57,7 @@ describe("Tooltip element", () => {
   it("renders its children", () => {
     renderTooltip({ children: <div>Child Element</div> })
 
-    expect(screen.getByTestId("tooltipHoverTarget")).toBeInTheDocument()
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeInTheDocument()
     expect(screen.getByText("Child Element")).toBeInTheDocument()
   })
 
@@ -65,7 +65,7 @@ describe("Tooltip element", () => {
     const content = <span>Help Text</span>
     renderTooltip({ content })
 
-    const tooltipTarget = screen.getByTestId("tooltipHoverTarget")
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltipTarget).toBeInTheDocument()
 
     // Hover to see tooltip content

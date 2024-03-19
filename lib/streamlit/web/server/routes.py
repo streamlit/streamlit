@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import os
+from typing import Final
 
 import tornado.web
 
@@ -21,10 +24,10 @@ from streamlit.logger import get_logger
 from streamlit.runtime.runtime_util import serialize_forward_msg
 from streamlit.web.server.server_util import emit_endpoint_deprecation_notice
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
-def allow_cross_origin_requests():
+def allow_cross_origin_requests() -> bool:
     """True if cross-origin requests are allowed.
 
     We only allow cross-origin requests when CORS protection has been disabled
@@ -43,7 +46,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
 
         super().initialize(path=path, default_filename=default_filename)
 
-    def set_extra_headers(self, path):
+    def set_extra_headers(self, path: str) -> None:
         """Disable cache for HTML files.
 
         Other assets like JS and CSS are suffixed with their hash, so they can
@@ -135,6 +138,14 @@ class HealthHandler(_SpecialRequestHandler):
         self._callback = callback
 
     async def get(self):
+        await self.handle_request()
+
+    # Some monitoring services only support the HTTP HEAD method for requests to
+    # healthcheck endpoints, so we support HEAD as well to play nicely with them.
+    async def head(self):
+        await self.handle_request()
+
+    async def handle_request(self):
         if self.request.uri and "_stcore/" not in self.request.uri:
             new_path = (
                 "/_stcore/script-health-check"
@@ -148,13 +159,18 @@ class HealthHandler(_SpecialRequestHandler):
             self.write(msg)
             self.set_status(200)
 
-            # Tornado will set the _xsrf cookie automatically for the page on
+            # Tornado will set the _streamlit_xsrf cookie automatically for the page on
             # request for the document. However, if the server is reset and
             # server.enableXsrfProtection is updated, the browser does not reload the document.
             # Manually setting the cookie on /healthz since it is pinged when the
             # browser is disconnected from the server.
             if config.get_option("server.enableXsrfProtection"):
-                self.set_cookie("_xsrf", self.xsrf_token)
+                cookie_kwargs = self.settings.get("xsrf_cookie_kwargs", {})
+                self.set_cookie(
+                    self.settings.get("xsrf_cookie_name", "_streamlit_xsrf"),
+                    self.xsrf_token,
+                    **cookie_kwargs,
+                )
 
         else:
             # 503 = SERVICE_UNAVAILABLE
@@ -228,6 +244,11 @@ class MessageCacheHandler(tornado.web.RequestHandler):
 
     def get(self):
         msg_hash = self.get_argument("hash", None)
+        if not config.get_option("global.storeCachedForwardMessagesInMemory"):
+            # We use rare status code here, to distinguish between normal 404s.
+            self.set_status(418)
+            self.finish()
+            return
         if msg_hash is None:
             # Hash is missing! This is a malformed request.
             _LOGGER.error(

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,56 +20,12 @@ import {
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
-import {
-  mount as enzymeMount,
-  MountRendererProps,
-  ReactWrapper,
-  shallow as enzymeShallow,
-  ShallowRendererProps,
-  ShallowWrapper,
-} from "enzyme"
 /* eslint-enable */
-import React, { Component, FC, ReactElement } from "react"
+import React, { ReactElement } from "react"
 import ThemeProvider from "./components/core/ThemeProvider"
-import { baseTheme, EmotionTheme } from "./theme"
+import { baseTheme } from "./theme"
 import { mockTheme } from "./mocks/mockTheme"
 import { LibContext, LibContextProps } from "./components/core/LibContext"
-
-export function mount<C extends Component, P = C["props"], S = C["state"]>(
-  node: ReactElement<P>,
-  options?: MountRendererProps,
-  theme?: EmotionTheme
-): ReactWrapper<P, S, C> {
-  const opts: MountRendererProps = {
-    ...(options || {}),
-    wrappingComponent: ThemeProvider,
-    wrappingComponentProps: {
-      theme: theme || mockTheme.emotion,
-    },
-  }
-
-  return enzymeMount(node, opts)
-}
-
-export function shallow<C extends Component, P = C["props"], S = C["state"]>(
-  node: ReactElement<P>,
-  options?: ShallowRendererProps,
-  theme?: EmotionTheme
-): ShallowWrapper<P, S, C> {
-  const opts: ShallowRendererProps = {
-    ...(options || {}),
-    wrappingComponent: ThemeProvider,
-    wrappingComponentProps: {
-      theme: theme || mockTheme.emotion,
-    },
-  }
-
-  return enzymeShallow(node, opts)
-}
-
-const RenderWrapper: FC = ({ children }) => {
-  return <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
-}
 
 /**
  * Use react-testing-library to render a ReactElement. The element will be
@@ -80,8 +36,13 @@ export function render(
   options?: Omit<RenderOptions, "queries">
 ): RenderResult {
   return reactTestingLibraryRender(ui, {
-    wrapper: RenderWrapper,
+    wrapper: ({ children }) => (
+      <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+    ),
     ...options,
+    // TODO: Remove this to have RTL run on React 18
+    // react-18-upgrade
+    legacyRoot: true,
   })
 }
 
@@ -115,6 +76,8 @@ export const customRenderLibContext = (
     setTheme: jest.fn(),
     availableThemes: [],
     addThemes: jest.fn(),
+    onPageChange: jest.fn(),
+    currentPageScriptHash: "",
     libConfig: {},
   }
 

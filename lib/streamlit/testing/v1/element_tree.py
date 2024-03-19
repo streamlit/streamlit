@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +13,14 @@
 # limitations under the License.
 from __future__ import annotations
 
+import textwrap
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Generic,
     List,
     Sequence,
@@ -28,7 +30,6 @@ from typing import (
     overload,
 )
 
-from pandas import DataFrame
 from typing_extensions import TypeAlias
 
 from streamlit import type_util, util
@@ -73,10 +74,12 @@ from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime.state.common import user_key_from_widget_id
+from streamlit.runtime.state.common import TESTING_KEY, user_key_from_widget_id
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 
 if TYPE_CHECKING:
+    from pandas import DataFrame as PandasDataframe
+
     from streamlit.testing.v1.app_test import AppTest
 
 T = TypeVar("T")
@@ -331,7 +334,7 @@ class Button(Widget):
         else:
             state = self.root.session_state
             assert state
-            return cast(bool, state[self.id])
+            return cast(bool, state[TESTING_KEY][self.id])
 
     def set_value(self, v: bool) -> Button:
         """Set the value of the button."""
@@ -376,7 +379,7 @@ class ChatInput(Widget):
         else:
             state = self.root.session_state
             assert state
-            return state[self.id]  # type: ignore
+            return state[TESTING_KEY][self.id]  # type: ignore
 
 
 @dataclass(repr=False)
@@ -506,7 +509,7 @@ class Dataframe(Element):
         self.type = "arrow_data_frame"
 
     @property
-    def value(self) -> DataFrame:
+    def value(self) -> PandasDataframe:
         return type_util.bytes_to_data_frame(self.proto.data)
 
 
@@ -737,15 +740,15 @@ class Multiselect(Widget, Generic[T]):
     @property
     def indices(self) -> Sequence[int]:
         """The indices of the currently selected values from the options. (list)"""
-        return [self.options.index(str(v)) for v in self.value]
+        return [self.options.index(self.format_func(v)) for v in self.value]
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: list[T]) -> Multiselect[T]:
         """Set the value of the multiselect widget. (list)"""
-
-        # Implementation note: set_value not work correctly if `format_func` is also
-        # passed to the multiselect. This is because we send options via proto with
-        # applied `format_func`, but keep original values in session state
-        # as widget value.
 
         self._value = v
         return self
@@ -871,7 +874,7 @@ class Radio(Widget, Generic[T]):
         """The index of the current selection. (int)"""
         if self.value is None:
             return None
-        return self.options.index(str(self.value))
+        return self.options.index(self.format_func(self.value))
 
     @property
     def value(self) -> T | None:
@@ -882,6 +885,11 @@ class Radio(Widget, Generic[T]):
             state = self.root.session_state
             assert state
             return cast(T, state[self.id])
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_value(self, v: T | None) -> Radio[T]:
         """Set the selection by value."""
@@ -927,7 +935,7 @@ class Selectbox(Widget, Generic[T]):
 
         if len(self.options) == 0:
             return 0
-        return self.options.index(str(self.value))
+        return self.options.index(self.format_func(self.value))
 
     @property
     def value(self) -> T | None:
@@ -939,13 +947,13 @@ class Selectbox(Widget, Generic[T]):
             assert state
             return cast(T, state[self.id])
 
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
+
     def set_value(self, v: T | None) -> Selectbox[T]:
         """Set the selection by value."""
-
-        # Implementation note: set_value not work correctly if `format_func` is also
-        # passed to the selectbox. This is because we send options via proto with applied
-        # `format_func`, but keep original values in session state as widget value.
-
         self._value = v
         return self
 
@@ -998,14 +1006,11 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def _widget_state(self) -> WidgetState:
         serde = SelectSliderSerde(self.options, [], False)
-        # We don't have access to the `format_func`, and options have been
-        # converted to strings already, so hope that formatting with `str`
-        # will let us find the right option.
         try:
-            v = serde.serialize(str(self.value))
+            v = serde.serialize(self.format_func(self.value))
         except (ValueError, TypeError):
             try:
-                v = serde.serialize([str(val) for val in self.value])  # type: ignore
+                v = serde.serialize([self.format_func(val) for val in self.value])  # type: ignore
             except:
                 raise ValueError(f"Could not find index for {self.value}")
 
@@ -1024,6 +1029,11 @@ class SelectSlider(Widget, Generic[T]):
             assert state
             # Awkward to do this with `cast`
             return state[self.id]  # type: ignore
+
+    @property
+    def format_func(self) -> Callable[[Any], Any]:
+        ss = self.root.session_state
+        return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
     def set_range(self, lower: T, upper: T) -> SelectSlider[T]:
         """Set the ranged selection by values."""
@@ -1096,7 +1106,7 @@ class Table(Element):
         self.type = "arrow_table"
 
     @property
-    def value(self) -> DataFrame:
+    def value(self) -> PandasDataframe:
         return type_util.bytes_to_data_frame(self.proto.data)
 
 
@@ -1366,9 +1376,11 @@ class Block:
         self.proto = proto
         if proto:
             ty = proto.WhichOneof("type")
-            # TODO does not work for `st.container` which has no block proto
-            assert ty is not None
-            self.type = ty
+            if ty is not None:
+                self.type = ty
+            else:
+                # `st.container` has no sub-message
+                self.type = "container"
         else:
             self.type = "unknown"
         self.root = root
@@ -1379,8 +1391,7 @@ class Block:
     def __iter__(self):
         yield self
         for child_idx in self.children:
-            for c in self.children[child_idx]:
-                yield c
+            yield from self.children[child_idx]
 
     def __getitem__(self, k: int) -> Node:
         return self.children[k]
@@ -1444,6 +1455,10 @@ class Block:
         return ElementList(self.get("exception"))  # type: ignore
 
     @property
+    def expander(self) -> Sequence[Expander]:
+        return self.get("expander")  # type: ignore
+
+    @property
     def header(self) -> ElementList[Header]:
         return ElementList(self.get("header"))  # type: ignore
 
@@ -1490,6 +1505,10 @@ class Block:
     @property
     def slider(self) -> WidgetList[Slider[Any]]:
         return WidgetList(self.get("slider"))  # type: ignore
+
+    @property
+    def status(self) -> Sequence[Status]:
+        return self.get("status")  # type: ignore
 
     @property
     def subheader(self) -> ElementList[Subheader]:
@@ -1554,7 +1573,52 @@ class Block:
         return self.root.run(timeout=timeout)
 
     def __repr__(self):
-        return util.repr_(self)
+        return repr_(self)
+
+
+def repr_(self) -> str:
+    """A custom repr similar to `streamlit.util.repr_` but that shows tree
+    structure using indentation.
+    """
+    classname = self.__class__.__name__
+
+    defaults: list[Any] = [None, "", False, [], set(), dict()]
+
+    if is_dataclass(self):
+        fields_vals = (
+            (f.name, getattr(self, f.name))
+            for f in fields(self)
+            if f.repr
+            and getattr(self, f.name) != f.default
+            and getattr(self, f.name) not in defaults
+        )
+    else:
+        fields_vals = ((f, v) for (f, v) in self.__dict__.items() if v not in defaults)
+
+    reprs = []
+    for field, value in fields_vals:
+        if isinstance(value, dict):
+            line = f"{field}={format_dict(value)}"
+        else:
+            line = f"{field}={value!r}"
+        reprs.append(line)
+
+    reprs[0] = "\n" + reprs[0]
+    field_reprs = ",\n".join(reprs)
+
+    field_reprs = textwrap.indent(field_reprs, " " * 4)
+    return f"{classname}({field_reprs}\n)"
+
+
+def format_dict(d: dict[Any, Any]):
+    lines = []
+    for k, v in d.items():
+        line = f"{k}: {v!r}"
+        lines.append(line)
+    r = ",\n".join(lines)
+    r = textwrap.indent(r, " " * 4)
+    r = f"{{\n{r}\n}}"
+    return r
 
 
 @dataclass(repr=False)
@@ -1622,6 +1686,51 @@ class Column(Block):
         self.type = "column"
         self.weight = proto.weight
         self.gap = proto.gap
+
+
+@dataclass(repr=False)
+class Expander(Block):
+    type: str = field(repr=False)
+    proto: BlockProto.Expandable = field(repr=False)
+    icon: str
+    label: str
+
+    def __init__(self, proto: BlockProto.Expandable, root: ElementTree):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        # The internal name is "expandable" but the public API uses "expander"
+        # so the naming of the class and type follows the public name.
+        self.type = "expander"
+        self.icon = proto.icon
+        self.label = proto.label
+
+
+@dataclass(repr=False)
+class Status(Block):
+    type: str = field(repr=False)
+    proto: BlockProto.Expandable = field(repr=False)
+    icon: str
+    label: str
+
+    def __init__(self, proto: BlockProto.Expandable, root: ElementTree):
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        self.type = "status"
+        self.icon = proto.icon
+        self.label = proto.label
+
+    @property
+    def state(self):
+        if self.icon == "spinner":
+            return "running"
+        elif self.icon == "check":
+            return "complete"
+        elif self.icon == "error":
+            return "error"
+        else:
+            raise ValueError("Unknown Status state")
 
 
 @dataclass(repr=False)
@@ -1727,7 +1836,7 @@ class ElementTree(Block):
         return self._runner._run(widget_states, timeout=timeout)
 
     def __repr__(self):
-        return repr(self.children)
+        return format_dict(self.children)
 
 
 def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
@@ -1849,6 +1958,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = ChatMessage(block.chat_message, root=root)
             elif bty == "column":
                 new_node = Column(block.column, root=root)
+            elif bty == "expandable":
+                if block.expandable.icon:
+                    new_node = Status(block.expandable, root=root)
+                else:
+                    new_node = Expander(block.expandable, root=root)
             elif bty == "tab":
                 new_node = Tab(block.tab, root=root)
             else:
@@ -1867,6 +1981,13 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 children[idx] = child
             assert isinstance(child, Block)
             current_node = child
+
+        # Handle a block when we already have a placeholder for that location
+        if isinstance(new_node, Block):
+            placeholder_block = current_node.children.get(delta_path[-1])
+            if placeholder_block is not None:
+                new_node.children = placeholder_block.children
+
         current_node.children[delta_path[-1]] = new_node
 
     return root

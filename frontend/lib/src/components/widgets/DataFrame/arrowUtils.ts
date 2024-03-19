@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import {
   TextCell,
   NumberCell,
   GridCellKind,
+  UriCell,
 } from "@glideapps/glide-data-grid"
 import { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment from "moment"
@@ -231,6 +232,7 @@ export function getIndexFromArrow(
  *
  * @param data - The Arrow data.
  * @param columnPosition - The numeric position of the data column.
+ *        Starts with 0 at the first non-index column.
  *
  * @return the column props for the data column.
  */
@@ -297,9 +299,9 @@ export function getEmptyIndexColumn(): BaseColumnProps {
 export function getAllColumnsFromArrow(data: Quiver): BaseColumnProps[] {
   const columns: BaseColumnProps[] = []
 
-  // TODO(lukasmasuch): use data.dimensions instead here?
-  const numIndices = data.types?.index?.length ?? 0
-  const numColumns = data.columns?.[0]?.length ?? 0
+  const { dimensions } = data
+  const numIndices = dimensions.headerColumns
+  const numColumns = dimensions.dataColumns
 
   if (numIndices === 0 && numColumns === 0) {
     // Tables that don't have any columns cause an exception in glide-data-grid.
@@ -380,7 +382,12 @@ export function getCellFromArrow(
     ) {
       // Time values needs to be adjusted to seconds based on the unit
       parsedDate = moment
-        .unix(Quiver.adjustTimestamp(arrowCell.content, arrowCell.field))
+        .unix(
+          Quiver.convertToSeconds(
+            arrowCell.content,
+            arrowCell.field?.type?.unit ?? 0
+          )
+        )
         .utc()
         .toDate()
     } else {
@@ -428,6 +435,11 @@ export function getCellFromArrow(
           ...cellTemplate,
           displayData,
         } as NumberCell
+      } else if (cellTemplate.kind === GridCellKind.Uri) {
+        cellTemplate = {
+          ...cellTemplate,
+          displayData,
+        } as UriCell
       } else if (
         cellTemplate.kind === GridCellKind.Custom &&
         (cellTemplate as DatePickerType).data?.kind === "date-picker-cell"

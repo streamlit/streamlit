@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ export interface Props {
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
   facingMode: FacingMode
   setFacingMode: () => void
+  // Allow for unit testing
+  testOverride?: WebcamPermission
 }
 
 export enum WebcamPermission {
@@ -89,9 +91,10 @@ const WebcamComponent = ({
   setClearPhotoInProgress,
   facingMode,
   setFacingMode,
+  testOverride,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamPermissionState] = useState(
-    WebcamPermission.PENDING
+    testOverride || WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
 
@@ -117,7 +120,7 @@ const WebcamComponent = ({
   const theme: EmotionTheme = useTheme()
 
   return (
-    <StyledCameraInput width={debouncedWidth}>
+    <StyledCameraInput width={debouncedWidth} data-testid="stWebcamComponent">
       {webcamPermission !== WebcamPermission.SUCCESS &&
       !disabled &&
       !clearPhotoInProgress ? (
@@ -126,6 +129,7 @@ const WebcamComponent = ({
         isMobile && <SwitchFacingModeButton switchFacingMode={setFacingMode} />
       )}
       <StyledBox
+        data-testid="stWebcamStyledBox"
         hidden={
           webcamPermission !== WebcamPermission.SUCCESS &&
           !disabled &&

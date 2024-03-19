@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import (
     Runtime,
@@ -137,6 +138,18 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.disconnect_session(session_id)
         self.assertEqual(RuntimeState.NO_SESSIONS_CONNECTED, self.runtime.state)
 
+    async def test_connect_session_error_if_both_session_id_args(self):
+        """Test that setting both existing_session_id and session_id_override is an error."""
+        await self.runtime.start()
+
+        with pytest.raises(AssertionError):
+            self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info=MagicMock(),
+                existing_session_id="existing_session_id",
+                session_id_override="session_id_override",
+            )
+
     async def test_connect_session_existing_session_id_plumbing(self):
         """The existing_session_id parameter is plumbed to _session_mgr.connect_session."""
         await self.runtime.start()
@@ -159,9 +172,35 @@ class RuntimeTest(RuntimeTestCase):
                 script_data=ANY,
                 user_info=user_info,
                 existing_session_id=existing_session_id,
+                session_id_override=None,
             )
 
-    @patch("streamlit.runtime.runtime.LOGGER")
+    async def test_connect_session_session_id_override_plumbing(self):
+        """The session_id_override parameter is plumbed to _session_mgr.connect_session."""
+        await self.runtime.start()
+
+        with patch.object(
+            self.runtime._session_mgr, "connect_session", new=MagicMock()
+        ) as patched_connect_session:
+            client = MockSessionClient()
+            user_info = MagicMock()
+            session_id_override = "some_session_id"
+
+            session_id = self.runtime.connect_session(
+                client=client,
+                user_info=user_info,
+                session_id_override=session_id_override,
+            )
+
+            patched_connect_session.assert_called_with(
+                client=client,
+                script_data=ANY,
+                user_info=user_info,
+                existing_session_id=None,
+                session_id_override=session_id_override,
+            )
+
+    @patch("streamlit.runtime.runtime._LOGGER")
     async def test_create_session_alias(self, patched_logger):
         """Test that create_session defers to connect_session and logs a warning."""
         await self.runtime.start()
@@ -178,6 +217,7 @@ class RuntimeTest(RuntimeTestCase):
                 client=client,
                 user_info=user_info,
                 existing_session_id=None,
+                session_id_override=None,
             )
             patched_logger.warning.assert_called_with(
                 "create_session is deprecated! Use connect_session instead."
@@ -410,6 +450,24 @@ class RuntimeTest(RuntimeTestCase):
         raise_disconnected_error.assert_called_once()
         self.assertFalse(self.runtime.is_active_session(session_id))
 
+    async def test_stable_number_of_async_tasks(self):
+        """Test that the number of async tasks remains stable.
+
+        This is a regression test for a memory leak issue where the number of
+        tasks would grow with every loop.
+        """
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        for _ in range(100):
+            self.enqueue_forward_msg(session_id, create_dataframe_msg([1, 2, 3]))
+            await self.tick_runtime_loop()
+
+        # It is expected that there are a couple of tasks, but not one per loop:
+        self.assertLess(len(asyncio.all_tasks()), 10)
+
     async def test_forwardmsg_hashing(self):
         """Test that outgoing ForwardMsgs contain hashes."""
         await self.runtime.start()
@@ -581,12 +639,14 @@ class ScriptCheckTest(RuntimeTestCase):
         # to specify a non-mocked path.)
         config = RuntimeConfig(
             script_path=self._path,
-            command_line="mock command line",
+            command_line=None,
+            component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
             session_manager_class=MagicMock,
             session_storage=MagicMock(),
             cache_storage_manager=MagicMock(),
+            is_hello=False,
         )
         self.runtime = Runtime(config)
         await self.runtime.start()

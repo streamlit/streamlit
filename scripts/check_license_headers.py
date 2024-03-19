@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,22 +32,28 @@ LICENSE_TEXT = (SCRIPT_DIR / "license-template.txt").read_text().splitlines()[0]
 
 IGNORE_PATTERN = re.compile(
     # Exclude CI files.
-    r"^\.(github|circleci)/"
+    r"^\.(github)/"
     # Exclude images.
     r"|\.(?:png|jpg|jpeg|gif|ttf|woff|otf|eot|woff2|ico|svg)$"
+    # Exclude videos we use for testing st.video.
+    r"|e2e_playwright/test_assets/.*\.(mp4|webm)$"
+    # Exclude subtitle files we use for testing st.video.
+    r"|e2e_playwright/test_assets/.*\.(vtt|srt)$"
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
     r"|\.(json|prettierrc|nvmrc)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
+    # Exclude pytest config files, because they don't have any degree of creativity.
+    r"|pytest\.ini$"
     # Exclude empty files, because they don't have any degree of creativity.
     r"|py\.typed$"
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitignore|\.gitmodules)$"
     r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
-    r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini|pytest\.ini)$"
+    r"|^lib/(\.coveragerc|\.dockerignore|MANIFEST\.in|mypy\.ini)$"
     r"|^lib/(test|dev)-requirements\.txt$"
     r"|^lib/min-constraints-gen\.txt"
     r"|\.isort\.cfg$"

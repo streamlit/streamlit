@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,8 +99,11 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.mediumBreakpointPx = Sidebar.calculateMaxBreakpoint(
       this.props.theme.breakpoints.md
     )
-    // Immediately expand/collapse sidebar when initialSidebarState changes.
-    if (this.props.initialSidebarState !== prevProps.initialSidebarState) {
+    // Immediately expand/collapse sidebar when initialSidebarState or hasElements changes
+    if (
+      this.props.initialSidebarState !== prevProps.initialSidebarState ||
+      this.props.hasElements !== prevProps.hasElements
+    ) {
       this.setState({
         collapsedSidebar: Sidebar.shouldCollapse(
           this.props,

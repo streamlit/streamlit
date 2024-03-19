@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ describe("Markdown element with help", () => {
   it("renders markdown with help tooltip as expected", async () => {
     const props = getProps({ help: "help text" })
     render(<Markdown {...props} />)
-    const tooltip = screen.getByTestId("tooltipHoverTarget")
+    const tooltip = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltip).toBeInTheDocument()
     fireEvent.mouseOver(tooltip)
 

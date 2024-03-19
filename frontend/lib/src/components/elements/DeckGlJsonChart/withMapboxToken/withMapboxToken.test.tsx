@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,8 +96,7 @@ describe("withMapboxToken", () => {
       axios.get = jest.fn().mockReturnValue(new Promise(() => {}))
       render(<WrappedComponent element={emptyElement} width={500} />)
 
-      const loadingTextElement = screen.getByText("Loading...")
-      expect(loadingTextElement).toBeInTheDocument()
+      expect(screen.getByTestId("stSkeleton")).toBeInTheDocument()
     })
 
     it("should fetch the token if userMapboxToken is not present in config.toml and libConfig", async () => {

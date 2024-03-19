@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import {
   BaseUriParts,
   buildHttpUri,
   StreamlitEndpoints,
+  JWTHeader,
   getCookie,
   IAppPage,
 } from "@streamlit/lib"
@@ -41,6 +42,8 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
   private cachedServerUri?: BaseUriParts
 
+  private jwtHeader?: JWTHeader
+
   public constructor(props: Props) {
     this.getServerUri = props.getServerUri
     this.csrfEnabled = props.csrfEnabled
@@ -51,6 +54,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       this.requireServerUri(),
       `${COMPONENT_ENDPOINT_BASE}/${componentName}/${path}`
     )
+  }
+
+  public setJWTHeader(jwtHeader: JWTHeader): void {
+    this.jwtHeader = jwtHeader
   }
 
   /**
@@ -110,14 +117,19 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     cancelToken?: CancelToken
   ): Promise<void> {
     const form = new FormData()
-    form.append("sessionId", sessionId)
     form.append(file.name, file)
+
+    const headers: Record<string, string> = {}
+    if (this.jwtHeader !== undefined) {
+      headers[this.jwtHeader.jwtHeaderName] = this.jwtHeader.jwtHeaderValue
+    }
 
     return this.csrfRequest<number>(this.buildFileUploadURL(fileUploadUrl), {
       cancelToken,
       method: "PUT",
       data: form,
       responseType: "text",
+      headers,
       onUploadProgress,
     }).then(() => undefined) // If the request succeeds, we don't care about the response body
   }
@@ -179,7 +191,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     params.url = url
 
     if (this.csrfEnabled) {
-      const xsrfCookie = getCookie("_xsrf")
+      const xsrfCookie = getCookie("_streamlit_xsrf")
       if (xsrfCookie != null) {
         params.headers = {
           "X-Xsrftoken": xsrfCookie,

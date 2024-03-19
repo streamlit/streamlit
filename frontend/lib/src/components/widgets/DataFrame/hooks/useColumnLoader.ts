@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,10 @@
  */
 import React from "react"
 
-import { merge } from "lodash"
+import merge from "lodash/merge"
+import { useTheme } from "@emotion/react"
 
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
 import {
@@ -219,6 +221,8 @@ function useColumnLoader(
   data: Quiver,
   disabled: boolean
 ): ColumnLoaderReturn {
+  const theme: EmotionTheme = useTheme()
+
   const columnConfigMapping = React.useMemo(() => {
     return getColumnConfig(element.columns)
   }, [element.columns])
@@ -262,9 +266,20 @@ function useColumnLoader(
             ...updatedColumn,
             icon: "editable",
           }
+
+          // Make sure that required columns are not hidden when editing mode is dynamic:
+          if (
+            updatedColumn.isRequired &&
+            element.editingMode === ArrowProto.EditingMode.DYNAMIC
+          ) {
+            updatedColumn = {
+              ...updatedColumn,
+              isHidden: false,
+            }
+          }
         }
 
-        return ColumnType(updatedColumn)
+        return ColumnType(updatedColumn, theme)
       })
       .filter(column => {
         // Filter out all columns that are hidden
@@ -307,6 +322,7 @@ function useColumnLoader(
     disabled,
     element.editingMode,
     element.columnOrder,
+    theme,
   ])
 
   return {

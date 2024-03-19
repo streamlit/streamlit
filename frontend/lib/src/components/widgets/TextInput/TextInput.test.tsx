@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import "@testing-library/jest-dom"
 
 import { screen, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { render, shallow } from "@streamlit/lib/src/test_util"
+import { render } from "@streamlit/lib/src/test_util"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import {
@@ -27,7 +27,6 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
 } from "@streamlit/lib/src/proto"
 import TextInput, { Props } from "./TextInput"
-import InputInstructions from "@streamlit/lib/src/components/shared/InputInstructions/InputInstructions"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},
@@ -62,7 +61,7 @@ describe("TextInput widget", () => {
     const props = getProps()
     render(<TextInput {...props} />)
 
-    const widgetLabel = screen.queryByText(`${props.element.label}`)
+    const widgetLabel = screen.getByText(`${props.element.label}`)
     expect(widgetLabel).toBeInTheDocument()
   })
 
@@ -297,20 +296,43 @@ describe("TextInput widget", () => {
   })
 
   it("hides Please enter to apply text when width is smaller than 180px", () => {
-    const props = getProps()
-    const wrapper = shallow(<TextInput {...props} width={100} />)
-
-    wrapper.setState({ dirty: true })
-
-    expect(wrapper.find(InputInstructions).exists()).toBe(false)
+    const props = getProps({}, { width: 100 })
+    render(<TextInput {...props} />)
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
   })
 
   it("shows Please enter to apply text when width is bigger than 180px", () => {
+    const props = getProps({}, { width: 190 })
+    render(<TextInput {...props} />)
+    expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
+  })
+
+  it("focuses input when clicking label", async () => {
     const props = getProps()
-    const wrapper = shallow(<TextInput {...props} width={190} />)
+    render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).not.toHaveFocus()
+    const label = screen.getByText(props.element.label)
+    const user = userEvent.setup()
+    await user.click(label)
+    expect(textInput).toHaveFocus()
+  })
 
-    wrapper.setState({ dirty: true })
+  it("ensures id doesn't change on rerender", () => {
+    const props = getProps()
+    render(<TextInput {...props} />)
 
-    expect(wrapper.find(InputInstructions).exists()).toBe(true)
+    const textInputLabel1 = screen.getByTestId("stWidgetLabel")
+    const forId1 = textInputLabel1.getAttribute("for")
+
+    // Make some change to cause a rerender
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "0123456789" } })
+    expect(textInput).toHaveValue("0123456789")
+
+    const textInputLabel2 = screen.getByTestId("stWidgetLabel")
+    const forId2 = textInputLabel2.getAttribute("for")
+
+    expect(forId2).toBe(forId1)
   })
 })

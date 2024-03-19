@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -144,6 +144,81 @@ class ExpanderTest(DeltaGeneratorTestCase):
         expander_block = self.get_delta_from_queue()
         self.assertEqual(expander_block.add_block.expandable.label, "label")
         self.assertEqual(expander_block.add_block.expandable.expanded, False)
+
+
+class ContainerTest(DeltaGeneratorTestCase):
+    def test_border_parameter(self):
+        """Test that it can be called with border parameter"""
+        st.container(border=True)
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.border, True)
+
+    def test_without_parameters(self):
+        """Test that it can be called without any parameters."""
+        st.container()
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.border, False)
+        self.assertEqual(container_block.add_block.allow_empty, False)
+
+    def test_height_parameter(self):
+        """Test that it can be called with height parameter"""
+        st.container(height=100)
+
+        container_block = self.get_delta_from_queue()
+        self.assertEqual(container_block.add_block.vertical.height, 100)
+        # Should allow empty and have a border as default:
+        self.assertEqual(container_block.add_block.vertical.border, True)
+        self.assertEqual(container_block.add_block.allow_empty, True)
+
+
+class PopoverContainerTest(DeltaGeneratorTestCase):
+    def test_label_required(self):
+        """Test that label is required"""
+        with self.assertRaises(TypeError):
+            st.popover()
+
+    def test_just_label(self):
+        """Test that it correctly applies label param."""
+        popover = st.popover("label")
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.use_container_width, False)
+        self.assertEqual(popover_block.add_block.popover.disabled, False)
+        self.assertEqual(popover_block.add_block.popover.help, "")
+        self.assertEqual(popover_block.add_block.allow_empty, True)
+
+    def test_use_container_width(self):
+        """Test that it correctly applies use_container_width param."""
+        popover = st.popover("label", use_container_width=True)
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.use_container_width, True)
+
+    def test_disabled(self):
+        """Test that it correctly applies disabled param."""
+        popover = st.popover("label", disabled=True)
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.disabled, True)
+
+    def test_help(self):
+        """Test that it correctly applies help param."""
+        popover = st.popover("label", help="help text")
+        with popover:
+            pass
+
+        popover_block = self.get_delta_from_queue()
+        self.assertEqual(popover_block.add_block.popover.label, "label")
+        self.assertEqual(popover_block.add_block.popover.help, "help text")
 
 
 class StatusContainerTest(DeltaGeneratorTestCase):

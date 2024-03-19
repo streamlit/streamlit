@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import math
 import threading
 import types
 from datetime import timedelta
-from typing import Any, Callable, TypeVar, cast, overload
+from typing import Any, Callable, Final, TypeVar, cast, overload
 
 from cachetools import TTLCache
 from typing_extensions import TypeAlias
@@ -47,10 +47,9 @@ from streamlit.runtime.caching.cached_message_replay import (
 from streamlit.runtime.caching.hashing import HashFuncsDict
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider
-from streamlit.vendor.pympler.asizeof import asizeof
+from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 CACHE_RESOURCE_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.RESOURCE)
@@ -131,7 +130,7 @@ class ResourceCaches(CacheStatsProvider):
         stats: list[CacheStat] = []
         for cache in function_caches.values():
             stats.extend(cache.get_stats())
-        return stats
+        return group_stats(stats)
 
 
 # Singleton ResourceCaches instance
@@ -302,8 +301,6 @@ class CacheResourceAPI:
             * A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
               e.g. ``timedelta(days=1)``.
-
-            Note that ``ttl`` will be ignored if ``persist="disk"`` or ``persist=True``.
 
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
@@ -562,6 +559,9 @@ class ResourceCache(Cache):
         # the lock.
         with self._mem_cache_lock:
             cache_entries = list(self._mem_cache.values())
+
+        # Lazy-load vendored package to prevent import of numpy
+        from streamlit.vendor.pympler.asizeof import asizeof
 
         return [
             CacheStat(

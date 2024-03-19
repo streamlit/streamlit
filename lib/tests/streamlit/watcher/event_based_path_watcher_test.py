@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,6 +93,34 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         self.mock_util.path_modification_time = lambda *args: 102.0
         self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+
+        ev = events.FileSystemEvent("/this/is/my/dir")
+        ev.event_type = events.EVENT_TYPE_MODIFIED
+        ev.is_directory = True
+        folder_handler.on_modified(ev)
+
+        cb.assert_called_once()
+
+        ro.close()
+
+    def test_changed_modification_time_0_0(self):
+        """Test that when a directory is modified, but modification time is 0.0,
+        the callback is called anyway."""
+        cb = mock.Mock()
+
+        self.mock_util.path_modification_time = lambda *args: 0.0
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "42"
+
+        ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
+
+        fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+        fo._observer.schedule.assert_called_once()
+
+        folder_handler = fo._observer.schedule.call_args[0][0]
+
+        cb.assert_not_called()
+
+        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "64"
 
         ev = events.FileSystemEvent("/this/is/my/dir")
         ev.event_type = events.EVENT_TYPE_MODIFIED

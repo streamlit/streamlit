@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ export interface TooltipIconProps {
   content: string
   children?: ReactNode
   markdownProps?: Partial<StreamlitMarkdownProps>
+  onMouseEnterDelay?: number
 }
 
 function TooltipIcon({
@@ -45,6 +46,7 @@ function TooltipIcon({
   content,
   children,
   markdownProps,
+  onMouseEnterDelay,
 }: TooltipIconProps): ReactElement {
   const theme: EmotionTheme = useTheme()
   return (
@@ -63,6 +65,7 @@ function TooltipIcon({
           />
         }
         placement={placement}
+        onMouseEnterDelay={onMouseEnterDelay}
         inline
       >
         {children || <HelpCircleIcon className="icon" size={iconSize} />}

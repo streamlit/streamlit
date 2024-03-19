@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ describe("FileDropzone widget", () => {
     const props = getProps()
     render(<FileDropzone {...props} />)
 
-    expect(screen.getByTestId("stFileUploadDropzone")).toBeInTheDocument()
+    expect(screen.getByTestId("stFileUploaderDropzone")).toBeInTheDocument()
   })
 
   it("renders dropzone without extensions", () => {
@@ -43,9 +43,9 @@ describe("FileDropzone widget", () => {
       acceptedExtensions: [],
     })
     render(<FileDropzone {...props} />)
-    expect(screen.queryByTestId("stDropzoneInput")).not.toHaveAttribute(
-      "accept"
-    )
+    expect(
+      screen.queryByTestId("stFileUploaderDropzoneInput")
+    ).not.toHaveAttribute("accept")
   })
 
   it("renders dropzone with extensions", () => {
@@ -53,9 +53,8 @@ describe("FileDropzone widget", () => {
       acceptedExtensions: [".jpg"],
     })
     render(<FileDropzone {...props} />)
-    expect(screen.queryByTestId("stDropzoneInput")).toHaveAttribute(
-      "accept",
-      ".jpg"
-    )
+    expect(
+      screen.queryByTestId("stFileUploaderDropzoneInput")
+    ).toHaveAttribute("accept", ".jpg")
   })
 })

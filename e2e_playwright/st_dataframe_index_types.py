@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -70,4 +70,5 @@ st.dataframe(SPECIAL_TYPES_DF.set_index("categorical"), use_container_width=True
 st.subheader("Period Index (pd.PeriodIndex)")
 st.dataframe(PERIOD_TYPES_DF.set_index("L"), use_container_width=True)
 
-# TODO(lukasmasuch): Add timedelta index once the type is supported
+st.subheader("Timedelta Index (pd.TimedeltaIndex")
+st.dataframe(SPECIAL_TYPES_DF.set_index("timedelta"), use_container_width=True)

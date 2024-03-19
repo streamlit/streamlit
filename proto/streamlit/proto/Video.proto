@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,14 @@
  */
 
 syntax = "proto3";
+
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "VideoProto";
+
+message SubtitleTrack {
+    string label = 1;  // Label for the subtitle e.g. "English" or "Spanish".
+    string url = 2;
+}
 
 message Video {
   // A url pointing to a video file
@@ -32,7 +40,16 @@ message Video {
   // Type affects how browser wraps the video in tags: plain HTML5, YouTube...
   Type type = 5;
 
-  bool autoplay = 7;
+  // Repeated field for subtitle tracks
+  repeated SubtitleTrack subtitles = 7;
+
+  // The time at which the video should stop playing. If not specified, plays to the end.
+  int32 end_time = 8;
+
+  // Indicates whether the video should start over from the beginning once it ends.
+  bool loop = 9;
+
+  bool autoplay = 10;
 
   reserved 1,2,4;
   reserved "format", "data";

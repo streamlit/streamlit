@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,8 @@ import {
   Components,
   ReactMarkdownProps,
 } from "react-markdown/lib/ast-to-react"
-import { once, omit } from "lodash"
+import once from "lodash/once"
+import omit from "lodash/omit"
 import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
@@ -80,6 +81,11 @@ export interface Props {
    * Indicates widget labels & restricts allowed elements
    */
   isLabel?: boolean
+
+  /**
+   * Make the label bold
+   */
+  boldLabel?: boolean
 
   /**
    * Checkbox labels have larger font sizing
@@ -139,14 +145,10 @@ interface HeadingWithAnchorProps {
   tagProps?: HTMLProps<HTMLHeadingElement>
 }
 
-export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
-  tag,
-  anchor: propsAnchor,
-  hideAnchor,
-  children,
-  tagProps,
-}) => {
-  const isSidebar = React.useContext(IsSidebarContext)
+export const HeadingWithAnchor: FunctionComponent<
+  React.PropsWithChildren<HeadingWithAnchorProps>
+> = ({ tag, anchor: propsAnchor, hideAnchor, children, tagProps }) => {
+  const isInSidebar = React.useContext(IsSidebarContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
@@ -169,7 +171,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
   }, [addScriptFinishedHandler, removeScriptFinishedHandler, onScriptFinished])
 
   const ref = React.useCallback(
-    node => {
+    (node: any) => {
       if (node === null) {
         return
       }
@@ -182,7 +184,7 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
     },
     [propsAnchor]
   )
-  if (isSidebar) {
+  if (isInSidebar) {
     return React.createElement(tag, tagProps, children)
   }
 
@@ -203,11 +205,9 @@ export const HeadingWithAnchor: FunctionComponent<HeadingWithAnchorProps> = ({
 type HeadingProps = JSX.IntrinsicElements["h1"] &
   ReactMarkdownProps & { level: number; "data-anchor"?: string }
 
-export const CustomHeading: FunctionComponent<HeadingProps> = ({
-  node,
-  children,
-  ...rest
-}) => {
+export const CustomHeading: FunctionComponent<
+  React.PropsWithChildren<HeadingProps>
+> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
     <StyledHeaderContainer>
@@ -248,12 +248,9 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 /**
  * Renders code tag with highlighting based on requested language.
  */
-export const CustomCodeTag: FunctionComponent<CustomCodeTagProps> = ({
-  inline,
-  className,
-  children,
-  ...props
-}) => {
+export const CustomCodeTag: FunctionComponent<
+  React.PropsWithChildren<CustomCodeTagProps>
+> = ({ inline, className, children, ...props }) => {
   const match = /language-(\w+)/.exec(className || "")
   const codeText = String(children).trim().replace(/\n$/, "")
 
@@ -381,6 +378,8 @@ export function RenderedMarkdown({
 class StreamlitMarkdown extends PureComponent<Props> {
   static contextType = IsSidebarContext
 
+  context!: React.ContextType<typeof IsSidebarContext>
+
   public componentDidCatch = (): void => {
     const { source } = this.props
 
@@ -398,6 +397,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
       style,
       isCaption,
       isLabel,
+      boldLabel,
       largerLabel,
       disableLinks,
       isToast,
@@ -409,6 +409,7 @@ class StreamlitMarkdown extends PureComponent<Props> {
         isCaption={Boolean(isCaption)}
         isInSidebar={isInSidebar}
         isLabel={isLabel}
+        boldLabel={boldLabel}
         largerLabel={largerLabel}
         isToast={isToast}
         style={style}

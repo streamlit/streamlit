@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,17 +56,17 @@ function makeMarkdownHeading(tag: string, markdown: string): string {
 function Heading(props: HeadingProtoProps): ReactElement {
   const { width, element } = props
   const { tag, anchor, body, help, hideAnchor, divider } = element
-  const isSidebar = React.useContext(IsSidebarContext)
+  const isInSidebar = React.useContext(IsSidebarContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
 
   return (
-    <div className="stHeadingContainer">
+    <div className="stHeadingContainer" data-testid="stHeading">
       <div className="stMarkdown" style={{ width }}>
         <StyledStreamlitMarkdown
           isCaption={Boolean(false)}
-          isInSidebar={isSidebar}
+          isInSidebar={isInSidebar}
           style={{ width }}
           data-testid="stMarkdownContainer"
         >

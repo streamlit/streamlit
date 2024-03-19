@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ export const StyledTooltipIconWrapper =
     alignItems: "center",
     marginTop: isLatex ? theme.spacing.mdPx : "0",
 
-    svg: {
+    "& .stTooltipHoverTarget > svg": {
       stroke: theme.colors.fadedText60,
       strokeWidth: 2.25,
     },

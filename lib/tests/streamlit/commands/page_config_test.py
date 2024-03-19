@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,7 @@ from unittest import mock
 from parameterized import param, parameterized
 
 import streamlit as st
-from streamlit.commands.page_config import (
-    ENG_EMOJIS,
-    RANDOM_EMOJIS,
-    PageIcon,
-    valid_url,
-)
+from streamlit.commands.page_config import ENG_EMOJIS, RANDOM_EMOJIS, PageIcon
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.string_util import is_emoji
@@ -154,20 +149,3 @@ class PageConfigTest(DeltaGeneratorTestCase):
         st.set_page_config(menu_items={})
         c = self.get_message_from_queue().page_config_changed.menu_items
         self.assertEqual(c.about_section_md, "")
-
-    @parameterized.expand(
-        [
-            ("http://www.cwi.nl:80/%7Eguido/Python.html", True),
-            ("/data/Python.html", False),
-            (532, False),
-            ("dkakasdkjdjakdjadjfalskdjfalk", False),
-            ("https://stackoverflow.com", True),
-            ("mailto:test@example.com", True),
-            ("mailto:", False),
-        ]
-    )
-    def test_valid_url(self, url, expected_value):
-        if expected_value:
-            self.assertTrue(valid_url(url))
-        else:
-            self.assertFalse(valid_url(url))

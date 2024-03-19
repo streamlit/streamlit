@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import "@testing-library/jest-dom"
 import { customRenderLibContext } from "@streamlit/lib/src/test_util"
 
@@ -119,7 +119,7 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    screen.getByRole("combobox").click()
+    fireEvent.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length + 1)
   })
 
@@ -131,7 +131,7 @@ describe("SettingsDialog", () => {
 
     customRenderLibContext(<SettingsDialog {...props} />, context)
 
-    screen.getByRole("combobox").click()
+    fireEvent.click(screen.getByRole("combobox"))
     expect(screen.getAllByRole("option")).toHaveLength(presetThemes.length)
   })
 

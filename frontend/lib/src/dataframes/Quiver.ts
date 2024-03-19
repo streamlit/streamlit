@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,10 @@ import {
   util,
 } from "apache-arrow"
 import { immerable, produce } from "immer"
-import { range, unzip, zip, trimEnd } from "lodash"
+import range from "lodash/range"
+import unzip from "lodash/unzip"
+import zip from "lodash/zip"
+import trimEnd from "lodash/trimEnd"
 import moment from "moment-timezone"
 import numbro from "numbro"
 
@@ -120,68 +123,114 @@ type IntervalClosed = "left" | "right" | "both" | "neither"
 type IntervalType = `interval[${IntervalData}, ${IntervalClosed}]`
 
 // The frequency strings defined in pandas.
-// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#dateoffset-objects
-type SupportedPandasOffsetType = "W" | "Q" | "D" | "H" | "T" | "S" | "L"
+// See: https://pandas.pydata.org/docs/user_guide/timeseries.html#period-aliases
+// Not supported: "N" (nanoseconds), "U" & "us" (microseconds), and "B" (business days).
+// Reason is that these types are not supported by moment.js, but also they are not
+// very commonly used in practice.
+type SupportedPandasOffsetType =
+  // yearly frequency:
+  | "A" // deprecated alias
+  | "Y"
+  // quarterly frequency:
+  | "Q"
+  // monthly frequency:
+  | "M"
+  // weekly frequency:
+  | "W"
+  // calendar day frequency:
+  | "D"
+  // hourly frequency:
+  | "H" // deprecated alias
+  | "h"
+  // minutely frequency
+  | "T" // deprecated alias
+  | "min"
+  // secondly frequency:
+  | "S" // deprecated alias
+  | "s"
+  // milliseconds frequency:
+  | "L" // deprecated alias
+  | "ms"
+
 type PeriodFrequency =
   | SupportedPandasOffsetType
   | `${SupportedPandasOffsetType}-${string}`
 type PeriodType = `period[${PeriodFrequency}]`
 
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+const formatMs = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "ms")
+    .format("YYYY-MM-DD HH:mm:ss.SSS")
 
-// TODO: For now, we only support the most commonly used offset types.
-//  In the future, it is worth adding support for other types as needed.
+const formatSec = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "s")
+    .format("YYYY-MM-DD HH:mm:ss")
+
+const formatMin = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "m").format("YYYY-MM-DD HH:mm")
+
+const formatHours = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "h").format("YYYY-MM-DD HH:mm")
+
+const formatDay = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD")
+
+const formatMonth = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "M").format("YYYY-MM")
+
+const formatYear = (duration: number): string =>
+  moment("19700101", "YYYYMMDD").add(duration, "y").format("YYYY")
+
+const formatWeeks = (duration: number, freqParam?: string): string => {
+  if (!freqParam) {
+    throw new Error('Frequency "W" requires parameter')
+  }
+  const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
+  if (dayIndex < 0) {
+    throw new Error(
+      `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
+        WEEKDAY_SHORT
+      )}`
+    )
+  }
+  const startDate = moment("19700101", "YYYYMMDD")
+    .add(duration, "w")
+    .day(dayIndex - 6)
+    .format("YYYY-MM-DD")
+  const endDate = moment("19700101", "YYYYMMDD")
+    .add(duration, "w")
+    .day(dayIndex)
+    .format("YYYY-MM-DD")
+
+  return `${startDate}/${endDate}`
+}
+
+const formatQuarter = (duration: number): string =>
+  moment("19700101", "YYYYMMDD")
+    .add(duration, "Q")
+    .endOf("quarter")
+    .format("YYYY[Q]Q")
+
 const PERIOD_TYPE_FORMATTERS: Record<
   SupportedPandasOffsetType,
   (duration: number, freqParam?: string) => string
 > = {
-  L: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "ms")
-      .format("YYYY-MM-DD HH:mm:ss.SSS"),
-  S: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "s")
-      .format("YYYY-MM-DD HH:mm:ss"),
-  T: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "m")
-      .format("YYYY-MM-DD HH:mm"),
-  H: duration =>
-    moment("19700101", "YYYYMMDD")
-      .add(duration, "h")
-      .format("YYYY-MM-DD HH:mm"),
-  D: duration =>
-    moment("19700101", "YYYYMMDD").add(duration, "d").format("YYYY-MM-DD"),
-  W: (duration, freqParam) => {
-    if (!freqParam) {
-      throw new Error('Frequency "W" requires parameter')
-    }
-    const dayIndex = WEEKDAY_SHORT.indexOf(freqParam)
-    if (dayIndex < 0) {
-      throw new Error(
-        `Invalid value: ${freqParam}. Supported values: ${JSON.stringify(
-          WEEKDAY_SHORT
-        )}`
-      )
-    }
-    const startDate = moment("19700101", "YYYYMMDD")
-      .add(duration, "w")
-      .day(dayIndex - 6)
-      .format("YYYY-MM-DD")
-    const endDate = moment("19700101", "YYYYMMDD")
-      .add(duration, "w")
-      .day(dayIndex)
-      .format("YYYY-MM-DD")
-
-    return `${startDate}/${endDate}`
-  },
-  Q: duration => {
-    return moment("19700101", "YYYYMMDD")
-      .add(duration, "Q")
-      .endOf("quarter")
-      .format("YYYY[Q]Q")
-  },
+  L: formatMs,
+  ms: formatMs,
+  S: formatSec,
+  s: formatSec,
+  T: formatMin,
+  min: formatMin,
+  H: formatHours,
+  h: formatHours,
+  D: formatDay,
+  M: formatMonth,
+  W: formatWeeks,
+  Q: formatQuarter,
+  Y: formatYear,
+  A: formatYear,
 }
 
 /** Interval data type. */
@@ -549,25 +598,26 @@ export class Quiver {
   }
 
   /**
-   * Returns the categorical options defined for a given column.
+   * Returns the categorical options defined for a given data column.
    * Returns undefined if the column is not categorical.
+   *
+   * This function only works for non-index columns and expects the index at 0
+   * for the first non-index data column.
    */
-  public getCategoricalOptions(columnIndex: number): string[] | undefined {
-    // TODO(lukasmasuch): Also support headcolumns here to support
-    // categorical index columns in the future.
-    const { columns: numColumns } = this.dimensions
+  public getCategoricalOptions(dataColumnIndex: number): string[] | undefined {
+    const { dataColumns: numDataColumns } = this.dimensions
 
-    if (columnIndex < 0 || columnIndex >= numColumns) {
-      throw new Error(`Column index is out of range: ${columnIndex}`)
+    if (dataColumnIndex < 0 || dataColumnIndex >= numDataColumns) {
+      throw new Error(`Column index is out of range: ${dataColumnIndex}`)
     }
 
-    if (!(this._fields[columnIndex].type instanceof Dictionary)) {
+    if (!(this._fields[String(dataColumnIndex)].type instanceof Dictionary)) {
       // This is not a categorical column
       return undefined
     }
 
     const categoricalDict =
-      this._data.getChildAt(columnIndex)?.data[0]?.dictionary
+      this._data.getChildAt(dataColumnIndex)?.data[0]?.dictionary
     if (categoricalDict) {
       // get all values into a list
       const values = []
@@ -838,42 +888,57 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
   }
 
   /**
-   * Adjusts a timestamp to second based on the unit information in the field.
+   * Adjusts a time value to seconds based on the unit information in the field.
+   *
+   * The unit numbers are specified here:
+   * https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
    */
-  public static adjustTimestamp(data: number | bigint, field?: Field): number {
-    let timeInSeconds
+  public static convertToSeconds(
+    value: number | bigint,
+    unit: number
+  ): number {
+    let unitAdjustment
 
-    if (typeof data === "bigint") {
-      // TODO(lukasmasuch): We might need some special handling of nanoseconds since
-      // JavaScript's `Number` type can not represent those numbers accurately.
-      data = Number(data)
-    }
-
-    // Unit information:
-    // https://github.com/apache/arrow/blob/3ab246f374c17a216d86edcfff7ff416b3cff803/js/src/enum.ts#L95
-    if (field?.type?.unit === 1) {
+    if (unit === 1) {
       // Milliseconds
-      timeInSeconds = data / 1000
-    } else if (field?.type?.unit === 2) {
+      unitAdjustment = 1000
+    } else if (unit === 2) {
       // Microseconds
-      timeInSeconds = data / (1000 * 1000)
-    } else if (field?.type?.unit === 3) {
+      unitAdjustment = 1000 * 1000
+    } else if (unit === 3) {
       // Nanoseconds
-      timeInSeconds = data / (1000 * 1000 * 1000)
+      unitAdjustment = 1000 * 1000 * 1000
     } else {
-      // Interpret this as seconds as a fallback
-      timeInSeconds = data
+      // Interpret it as seconds as a fallback
+      return Number(value)
     }
 
-    return timeInSeconds
+    // Do the calculation based on bigints, if the value
+    // is a bigint and not safe for usage as number.
+    // This might lose some precision since it doesn't keep
+    // fractional parts.
+    if (typeof value === "bigint" && !Number.isSafeInteger(Number(value))) {
+      return Number(value / BigInt(unitAdjustment))
+    }
+
+    return Number(value) / unitAdjustment
   }
 
   private static formatTime(data: number, field?: Field): string {
-    const timeInSeconds = Quiver.adjustTimestamp(data, field)
+    const timeInSeconds = Quiver.convertToSeconds(data, field?.type?.unit ?? 0)
     return moment
-      .unix(Quiver.adjustTimestamp(data))
+      .unix(timeInSeconds)
       .utc()
       .format(timeInSeconds % 1 === 0 ? "HH:mm:ss" : "HH:mm:ss.SSS")
+  }
+
+  private static formatDuration(data: number | bigint, field?: Field): string {
+    return moment
+      .duration(
+        Quiver.convertToSeconds(data, field?.type?.unit ?? 3),
+        "seconds"
+      )
+      .humanize()
   }
 
   /**
@@ -1044,6 +1109,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
       )
     }
 
+    if (typeName?.startsWith("timedelta")) {
+      return this.formatDuration(x as number | bigint, field)
+    }
+
     if (typeName === "decimal") {
       return this.formatDecimal(x as Uint32Array, field?.type?.scale || 0)
     }
@@ -1134,34 +1203,10 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
   /** The DataFrame's dimensions. */
   public get dimensions(): DataFrameDimensions {
-    // TODO(lukasmasuch): this._index[0].length can be 0 if there are rows
-    // but only an empty index. Probably not the best way to cross check the number
-    // of rows.
-    const [headerColumns, dataRowsCheck] = this._index.length
-      ? [this._index.length, this._index[0].length]
-      : [1, 0]
-
-    const [headerRows, dataColumnsCheck] = this._columns.length
-      ? [this._columns.length, this._columns[0].length]
-      : [1, 0]
-
-    const [dataRows, dataColumns] = this._data.numRows
-      ? [this._data.numRows, this._data.numCols]
-      : // If there is no data, default to the number of header columns.
-        [0, dataColumnsCheck]
-
-    // Sanity check: ensure the schema is not messed up. If this happens,
-    // something screwy probably happened in addRows.
-    if (
-      (dataRows !== 0 && dataRows !== dataRowsCheck) ||
-      (dataColumns !== 0 && dataColumns !== dataColumnsCheck)
-    ) {
-      throw new Error(
-        "Dataframe dimensions don't align: " +
-          `rows(${dataRows} != ${dataRowsCheck}) OR ` +
-          `cols(${dataColumns} != ${dataColumnsCheck})`
-      )
-    }
+    const headerColumns = this._index.length || this.types.index.length || 1
+    const headerRows = this._columns.length || 1
+    const dataRows = this._data.numRows || 0
+    const dataColumns = this._data.numCols || this._columns?.[0]?.length || 0
 
     const rows = headerRows + dataRows
     const columns = headerColumns + dataColumns
@@ -1234,8 +1279,11 @@ but was expecting \`${JSON.stringify(expectedIndexTypes)}\`.
 
       const contentType = this._types.index[columnIndex]
       const content = this.getIndexValue(dataRowIndex, columnIndex)
-      const field = this._fields[`__index_level_${String(columnIndex)}__`]
-
+      let field = this._fields[`__index_level_${String(columnIndex)}__`]
+      if (field === undefined) {
+        // If the index column has a name, we need to get it differently:
+        field = this._fields[String(columns - headerColumns)]
+      }
       return {
         type: DataFrameCellType.INDEX,
         cssId,
@@ -1362,6 +1410,8 @@ st.add_rows(my_styler.data)
   }
 
   private static parseFields(schema: ArrowSchema): Record<string, Field> {
+    // None-index data columns are listed first, and all index columns listed last
+    // within the fields array in arrow.
     return Object.fromEntries(
       (schema.fields || []).map((field, index) => [
         field.name.startsWith("__index_level_") ? field.name : String(index),

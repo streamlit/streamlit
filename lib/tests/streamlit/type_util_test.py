@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,11 +23,15 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
+import pyarrow as pa
 import pytest
 from pandas.api.types import infer_dtype
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit import errors, type_util
+from streamlit.errors import StreamlitAPIException
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import (
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
@@ -247,6 +251,41 @@ class TypeUtilTest(unittest.TestCase):
         self.assertNotEqual(id(original_df), id(out))
         pd.testing.assert_frame_equal(original_df, out)
 
+    @parameterized.expand(
+        [
+            ([1, 2, 3],),
+            (["foo", "bar", "baz"],),
+            (np.array([1, 2, 3, 4]),),
+            (pd.Series([1, 2, 3]),),
+        ]
+    )
+    def test_check_python_comparable(self, sequence):
+        """Test that `check_python_comparable` not raises exception
+        when elements of sequence returns bool when compared."""
+
+        # Just check that it should not raise any exception
+        type_util.check_python_comparable(sequence)
+
+    @parameterized.expand(
+        [
+            (np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]), "ndarray"),
+            ([pd.Series([1, 2, 3]), pd.Series([4, 5, 6])], "Series"),
+        ]
+    )
+    def test_check_python_comparable_exception(self, sequence, type_str):
+        """Test that `check_python_comparable` raises an exception if ndarray."""
+        with pytest.raises(StreamlitAPIException) as exception_message:
+            type_util.check_python_comparable(sequence)
+        self.assertEqual(
+            (
+                "Invalid option type provided. Options must be comparable, returning a "
+                f"boolean when used with *==*. \n\nGot **{type_str}**, which cannot be "
+                "compared. Refactor your code to use elements of comparable types as "
+                "options, e.g. use indices instead."
+            ),
+            str(exception_message.value),
+        )
+
     def test_convert_anything_to_df_calls_to_pandas_when_available(self):
         class DataFrameIsh:
             def to_pandas(self):
@@ -261,14 +300,10 @@ class TypeUtilTest(unittest.TestCase):
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex64), True),
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j], dtype=np.complex128), True),
-            # Timedelta:
-            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
             (pd.Series([1, 2.1, "3", True]), True),
-            # timedelta64
-            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
             # Frozenset:
             (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
             # Dicts:
@@ -285,6 +320,8 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), False),
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), False),
         ]
     )
     def test_is_colum_type_arrow_incompatible(
@@ -300,15 +337,10 @@ class TypeUtilTest(unittest.TestCase):
         [
             # Complex numbers:
             (pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j]), True),
-            # Timedelta:
-            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), True),
             # Mixed-integer types:
             (pd.Series([1, 2, "3"]), True),
             # Mixed:
-            (pd.Series([1, 2.1, "3", True]), True),
-            # timedelta64
-            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), True),
-            # Frozenset:
+            (pd.Series([1, 2.1, "3", True]), True),  # Frozenset:
             (pd.Series([frozenset([1, 2]), frozenset([3, 4])]), True),
             # Dicts:
             (pd.Series([{"a": 1}, {"b": 2}]), True),
@@ -324,6 +356,8 @@ class TypeUtilTest(unittest.TestCase):
             (pd.Series(["a", "b", "c", "a"], dtype="category"), False),
             (pd.Series([date(2020, 1, 1), date(2020, 1, 2)]), False),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), False),
+            (pd.Series([pd.Timedelta("1 days"), pd.Timedelta("2 days")]), False),
+            (pd.Series([np.timedelta64(1, "D"), np.timedelta64(2, "D")]), False),
         ]
     )
     def test_fix_arrow_incompatible_column_types(
@@ -679,6 +713,128 @@ class TypeUtilTest(unittest.TestCase):
             ),
             {0: None, 1: None, 2: None, 3: None},
         )
+
+    def test_ensure_indexable_object_is_indexable(self):
+        l1 = ["a", "b", "c"]
+        l2 = type_util.ensure_indexable(l1)
+
+        # Assert that l1 was shallow copied into l2.
+        self.assertFalse(l1 is l2)
+        self.assertEqual(l1, l2)
+
+    def test_ensure_indexable_object_not_indexable(self):
+        l = type_util.ensure_indexable({"a", "b", "c"})
+        self.assertIn("a", l)
+        self.assertIn("b", l)
+        self.assertIn("c", l)
+
+
+class TestArrowTruncation(DeltaGeneratorTestCase):
+    """Test class for the automatic arrow truncation feature."""
+
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
+    def test_truncate_larger_table(self):
+        """Test that `_maybe_truncate_table` correctly truncates a table that is
+        larger than the max message size.
+        """
+        col_data = list(range(200000))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
+        # Should be under the configured 3MB limit:
+        self.assertLess(truncated_table.nbytes, 3 * int(1e6))
+
+        # Test that the table should have been truncated
+        self.assertLess(truncated_table.nbytes, original_table.nbytes)
+        self.assertLess(truncated_table.num_rows, original_table.num_rows)
+
+        # Test that it prints out a caption test:
+        el = self.get_delta_from_queue().new_element
+        self.assertIn("due to data size limitations", el.markdown.body)
+        self.assertTrue(el.markdown.is_caption)
+
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
+    def test_dont_truncate_smaller_table(self):
+        """Test that `_maybe_truncate_table` doesn't truncate smaller tables."""
+        col_data = list(range(100))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
+
+        # Test that the tables are the same:
+        self.assertEqual(truncated_table.nbytes, original_table.nbytes)
+        self.assertEqual(truncated_table.num_rows, original_table.num_rows)
+
+    @patch_config_options({"server.enableArrowTruncation": False})
+    def test_dont_truncate_if_deactivated(self):
+        """Test that `_maybe_truncate_table` doesn't do anything
+        when server.enableArrowTruncation is decatived
+        """
+        col_data = list(range(200000))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+
+        original_table = pa.Table.from_pandas(original_df)
+        truncated_table = type_util._maybe_truncate_table(
+            pa.Table.from_pandas(original_df)
+        )
+
+        # Test that the tables are the same:
+        self.assertEqual(truncated_table.nbytes, original_table.nbytes)
+        self.assertEqual(truncated_table.num_rows, original_table.num_rows)
+
+    @patch_config_options(
+        {"server.maxMessageSize": 3, "server.enableArrowTruncation": True}
+    )
+    def test_st_dataframe_truncates_data(self):
+        """Test that `st.dataframe` truncates the data if server.enableArrowTruncation==True."""
+        col_data = list(range(200000))
+        original_df = pd.DataFrame(
+            {
+                "col 1": col_data,
+                "col 2": col_data,
+                "col 3": col_data,
+            }
+        )
+        original_table = pa.Table.from_pandas(original_df)
+        st.dataframe(original_df)
+        el = self.get_delta_from_queue().new_element
+        # Test that table bytes should be smaller than the full table
+        self.assertLess(len(el.arrow_data_frame.data), original_table.nbytes)
+        # Should be under the configured 3MB limit:
+        self.assertLess(len(el.arrow_data_frame.data), 3 * int(1e6))
+
+        # Test that it prints out a caption test:
+        el = self.get_delta_from_queue(-2).new_element
+        self.assertIn("due to data size limitations", el.markdown.body)
+        self.assertTrue(el.markdown.is_caption)
 
 
 class TestEnumCoercion:

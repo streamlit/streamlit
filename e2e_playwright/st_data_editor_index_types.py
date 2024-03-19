@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,6 +86,14 @@ st.data_editor(
 # st.subheader("Multi Index (pd.MultiIndex)")
 # st.data_editor(
 #     BASE_TYPES_DF.set_index(["string", "int64"]),
+#     use_container_width=True,
+#     num_rows="dynamic",
+# )
+
+# Timedelta Index are currently not supported for editing:
+# st.subheader("Timedelta Index (pd.TimedeltaIndex)")
+# st.data_editor(
+#     SPECIAL_TYPES_DF.set_index("timedelta"),
 #     use_container_width=True,
 #     num_rows="dynamic",
 # )

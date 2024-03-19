@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import inspect
 import os
@@ -21,17 +23,14 @@ import time
 import uuid
 from collections.abc import Sized
 from functools import wraps
-from timeit import default_timer as timer
-from typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast, overload
-
-from typing_extensions import Final
+from typing import Any, Callable, Final, TypeVar, cast, overload
 
 from streamlit import config, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
 # since Segment allows only a maximum of 32kb per event.
@@ -88,6 +87,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "xarray",
     "ray",
     # ML & LLM Tools:
+    "mistralai",
     "openai",
     "langchain",
     "llama_index",
@@ -160,11 +160,11 @@ def _get_machine_id_v3() -> str:
 
     machine_id = str(uuid.getnode())
     if os.path.isfile(_ETC_MACHINE_ID_PATH):
-        with open(_ETC_MACHINE_ID_PATH, "r") as f:
+        with open(_ETC_MACHINE_ID_PATH) as f:
             machine_id = f.read()
 
     elif os.path.isfile(_DBUS_MACHINE_ID_PATH):
-        with open(_DBUS_MACHINE_ID_PATH, "r") as f:
+        with open(_DBUS_MACHINE_ID_PATH) as f:
             machine_id = f.read()
 
     return machine_id
@@ -172,10 +172,10 @@ def _get_machine_id_v3() -> str:
 
 class Installation:
     _instance_lock = threading.Lock()
-    _instance: Optional["Installation"] = None
+    _instance: Installation | None = None
 
     @classmethod
-    def instance(cls) -> "Installation":
+    def instance(cls) -> Installation:
         """Returns the singleton Installation"""
         # We use a double-checked locking optimization to avoid the overhead
         # of acquiring the lock in the common case:
@@ -227,7 +227,7 @@ def _get_top_level_module(func: Callable[..., Any]) -> str:
     return module.__name__.split(".")[0]
 
 
-def _get_arg_metadata(arg: object) -> Optional[str]:
+def _get_arg_metadata(arg: object) -> str | None:
     """Get metadata information related to the value of the given object."""
     with contextlib.suppress(Exception):
         if isinstance(arg, (bool)):
@@ -244,8 +244,8 @@ def _get_command_telemetry(
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
     arg_keywords = inspect.getfullargspec(_command_func).args
-    self_arg: Optional[Any] = None
-    arguments: List[Argument] = []
+    self_arg: Any | None = None
+    arguments: list[Argument] = []
     is_method = inspect.ismethod(_command_func)
     name = _command_name
 
@@ -314,7 +314,7 @@ def gather_metrics(
     ...
 
 
-def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F], F]:
+def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
     """Function decorator to add telemetry tracking to commands.
 
     Parameters
@@ -350,11 +350,13 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
 
         return wrapper
     else:
-        # To make mypy type narrow Optional[F] -> F
+        # To make mypy type narrow F | None -> F
         non_optional_func = func
 
     @wraps(non_optional_func)
     def wrapped_func(*args, **kwargs):
+        from timeit import default_timer as timer
+
         exec_start = timer()
         # Local imports to prevent circular dependencies
         from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -370,8 +372,7 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
-        deferred_exception: Optional[RerunException] = None
-        command_telemetry: Optional[Command] = None
+        command_telemetry: Command | None = None
 
         if ctx and tracking_activated:
             try:
@@ -420,10 +421,10 @@ def gather_metrics(name: str, func: Optional[F] = None) -> Union[Callable[[F], F
 
 
 def create_page_profile_message(
-    commands: List[Command],
+    commands: list[Command],
     exec_time: int,
     prep_time: int,
-    uncaught_exception: Optional[str] = None,
+    uncaught_exception: str | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
     msg = ForwardMsg()
@@ -434,7 +435,7 @@ def create_page_profile_message(
     msg.page_profile.headless = config.get_option("server.headless")
 
     # Collect all config options that have been manually set
-    config_options: Set[str] = set()
+    config_options: set[str] = set()
     if config._config_options:
         for option_name in config._config_options.keys():
             if not config.is_manually_set(option_name):
@@ -449,7 +450,7 @@ def create_page_profile_message(
     msg.page_profile.config.extend(config_options)
 
     # Check the predefined set of modules for attribution
-    attributions: Set[str] = {
+    attributions: set[str] = {
         attribution
         for attribution in _ATTRIBUTIONS_TO_CHECK
         if attribution in sys.modules

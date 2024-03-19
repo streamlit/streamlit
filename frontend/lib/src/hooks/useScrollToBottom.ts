@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ export function useScrollToBottom<T extends HTMLElement>(): RefObject<T> {
   }, [ignoreScrollEventBeforeRef, isAnimatingRef, setIsAnimating, setIsSticky])
 
   const handleScroll = useCallback(
-    ({ timeStampLow }) => {
+    ({ timeStampLow }: { timeStampLow: number }) => {
       const { current: target } = scrollableRef
       const animating = isAnimatingRef.current
 

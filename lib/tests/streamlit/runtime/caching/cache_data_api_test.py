@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -565,12 +565,10 @@ class CacheDataStatsProviderTest(unittest.TestCase):
             CacheStat(
                 category_name="st_cache_data",
                 cache_name=foo_cache_name,
-                byte_length=get_byte_length(as_cached_result([3.14])),
-            ),
-            CacheStat(
-                category_name="st_cache_data",
-                cache_name=foo_cache_name,
-                byte_length=get_byte_length(as_cached_result([3.14] * 53)),
+                byte_length=(
+                    get_byte_length(as_cached_result([3.14] * 53))
+                    + get_byte_length(as_cached_result([3.14]))
+                ),
             ),
             CacheStat(
                 category_name="st_cache_data",

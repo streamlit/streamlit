@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import itertools
 from abc import abstractmethod
-from typing import List, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, Protocol, runtime_checkable
 
-from typing_extensions import Protocol, runtime_checkable
-
-from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
+if TYPE_CHECKING:
+    from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
 
 
 class CacheStat(NamedTuple):
@@ -42,11 +44,7 @@ class CacheStat(NamedTuple):
     byte_length: int
 
     def to_metric_str(self) -> str:
-        return 'cache_memory_bytes{cache_type="%s",cache="%s"} %s' % (
-            self.category_name,
-            self.cache_name,
-            self.byte_length,
-        )
+        return f'cache_memory_bytes{{cache_type="{self.category_name}",cache="{self.cache_name}"}} {self.byte_length}'
 
     def marshall_metric_proto(self, metric: MetricProto) -> None:
         """Fill an OpenMetrics `Metric` protobuf object."""
@@ -62,16 +60,38 @@ class CacheStat(NamedTuple):
         metric_point.gauge_value.int_value = self.byte_length
 
 
+def group_stats(stats: list[CacheStat]) -> list[CacheStat]:
+    """Group a list of CacheStats by category_name and cache_name and sum byte_length"""
+
+    def key_function(individual_stat):
+        return individual_stat.category_name, individual_stat.cache_name
+
+    result: list[CacheStat] = []
+
+    sorted_stats = sorted(stats, key=key_function)
+    grouped_stats = itertools.groupby(sorted_stats, key=key_function)
+
+    for (category_name, cache_name), single_group_stats in grouped_stats:
+        result.append(
+            CacheStat(
+                category_name=category_name,
+                cache_name=cache_name,
+                byte_length=sum(map(lambda item: item.byte_length, single_group_stats)),
+            )
+        )
+    return result
+
+
 @runtime_checkable
 class CacheStatsProvider(Protocol):
     @abstractmethod
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         raise NotImplementedError
 
 
 class StatsManager:
     def __init__(self):
-        self._cache_stats_providers: List[CacheStatsProvider] = []
+        self._cache_stats_providers: list[CacheStatsProvider] = []
 
     def register_provider(self, provider: CacheStatsProvider) -> None:
         """Register a CacheStatsProvider with the manager.
@@ -80,9 +100,10 @@ class StatsManager:
         """
         self._cache_stats_providers.append(provider)
 
-    def get_stats(self) -> List[CacheStat]:
+    def get_stats(self) -> list[CacheStat]:
         """Return a list containing all stats from each registered provider."""
-        all_stats: List[CacheStat] = []
+        all_stats: list[CacheStat] = []
         for provider in self._cache_stats_providers:
             all_stats.extend(provider.get_stats())
+
         return all_stats
