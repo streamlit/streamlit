@@ -33,6 +33,4 @@ def test_magic_shows_correct_text(app: Page):
         "ASYNC WITH",
     ]
     for i in range(len(expected)):
-        expect(app.get_by_test_id("stMarkdown").nth(i).locator("p")).to_have_text(
-            expected[i]
-        )
+        expect(app.get_by_test_id("stMarkdown").nth(i)).to_have_text(expected[i])
