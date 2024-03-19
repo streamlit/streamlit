@@ -34,7 +34,7 @@ hypothesis==6.99.9
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.0.2
-importlib_resources==6.3.1
+importlib_resources==6.3.2
 iniconfig==2.0.0
 jaraco.classes==3.3.1
 jeepney==0.8.0
