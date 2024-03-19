@@ -18,5 +18,5 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 
 def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    expect(app.locator(".element-container .stMarkdown hr")).to_be_visible()
-    assert_snapshot(app.get_by_test_id("stMarkdown"), "st_divider")
+    expect(themed_app.locator(".element-container .stMarkdown hr")).to_be_visible()
+    assert_snapshot(themed_app.get_by_test_id("stMarkdown"), name="st_divider")
