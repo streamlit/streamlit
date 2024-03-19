@@ -159,6 +159,7 @@ def register_widget(
         callback=on_change_handler,
         callback_args=args,
         callback_kwargs=kwargs,
+        fragment_id=ctx.current_fragment_id if ctx else None,
     )
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
 
