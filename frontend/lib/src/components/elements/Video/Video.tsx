@@ -18,7 +18,7 @@ import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
-import { sessionStorageAvailable } from "@streamlit/lib"
+import { sessionStorageAvailable } from "@streamlit/lib/src/util/storageUtils"
 
 const DEFAULT_HEIGHT = 528
 

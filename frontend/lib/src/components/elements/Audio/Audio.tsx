@@ -17,7 +17,7 @@
 import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { sessionStorageAvailable } from "@streamlit/lib"
+import { sessionStorageAvailable } from "@streamlit/lib/src/util/storageUtils"
 
 export interface AudioProps {
   endpoints: StreamlitEndpoints
