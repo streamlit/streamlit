@@ -45,8 +45,6 @@ from streamlit.type_util import Key, to_key
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-# altair_stable_ids={}
-
 
 def replace_values_in_dict(d, old_value, new_value):
     """
@@ -309,72 +307,76 @@ def marshall(
 
     if on_select:
         regex = re.compile(r"^param_\d+$")
-        params_counter = 0
-        views_counter = 0
+        param_counter = 0
+        view_counter = 0
 
         for param in spec["params"]:
             name = param["name"]
             if regex.match(name):
-                param["name"] = f"selection_{params_counter}"
+                param["name"] = f"selection_{param_counter}"
                 if "hconcat" in spec:
                     for hconcat in spec["hconcat"]:
                         replace_values_in_dict(
-                            hconcat, name, f"selection_{params_counter}"
+                            hconcat, name, f"selection_{param_counter}"
                         )
                 if "vconcat" in spec:
                     for vconcat in spec["vconcat"]:
                         replace_values_in_dict(
-                            vconcat, name, f"selection_{params_counter}"
+                            vconcat, name, f"selection_{param_counter}"
                         )
                 if "layer" in spec:
                     for item in spec["layer"]:
-                        replace_values_in_dict(
-                            item, name, f"selection_{params_counter}"
-                        )
+                        replace_values_in_dict(item, name, f"selection_{param_counter}")
                 if "encoding" in spec:
                     if isinstance(spec["encoding"], List):
                         for item in spec["encoding"]:
                             replace_values_in_dict(
-                                item, name, f"selection_{params_counter}"
+                                item, name, f"selection_{param_counter}"
                             )
-                    # Assume dictionary
                     else:
                         replace_values_in_dict(
-                            spec["encoding"], name, f"selection_{params_counter}"
+                            spec["encoding"], name, f"selection_{param_counter}"
                         )
-                params_counter += 1
+                param_counter += 1
             if "views" in param:
                 for view_index, view in enumerate(param["views"]):
-                    param["views"][view_index] = f"views_{views_counter}"
+                    param["views"][view_index] = f"view_{view_counter}"
                     if "hconcat" in spec:
                         for hconcat in spec["hconcat"]:
                             if "vconcat" in hconcat:
                                 for vconcat in hconcat["vconcat"]:
                                     replace_values_in_dict(
-                                        vconcat, view, f"views_{views_counter}"
+                                        vconcat, view, f"view_{view_counter}"
                                     )
                             else:
                                 replace_values_in_dict(
-                                    hconcat, view, f"views_{views_counter}"
+                                    hconcat, view, f"view_{view_counter}"
                                 )
                     if "vconcat" in spec:
                         for vconcat in spec["vconcat"]:
                             if "hconcat" in vconcat:
                                 for hconcat in vconcat["hconcat"]:
                                     replace_values_in_dict(
-                                        hconcat, view, f"views_{views_counter}"
+                                        hconcat, view, f"view_{view_counter}"
                                     )
                             else:
                                 replace_values_in_dict(
-                                    vconcat, view, f"views_{views_counter}"
+                                    vconcat, view, f"view_{view_counter}"
                                 )
                     if "layer" in spec:
                         for item in spec["layer"]:
-                            replace_values_in_dict(item, view, f"views_{views_counter}")
+                            replace_values_in_dict(item, view, f"view_{view_counter}")
                     if "encoding" in spec:
-                        for item in spec["encoding"]:
-                            replace_values_in_dict(item, view, f"views_{views_counter}")
-                    views_counter += 1
+                        if isinstance(spec["encoding"], List):
+                            for item in spec["encoding"]:
+                                replace_values_in_dict(
+                                    item, name, f"selection_{param_counter}"
+                                )
+                        else:
+                            replace_values_in_dict(
+                                spec["encoding"], name, f"selection_{param_counter}"
+                            )
+                    view_counter += 1
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
