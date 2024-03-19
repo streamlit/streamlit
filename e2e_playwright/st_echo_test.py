@@ -14,9 +14,18 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import ImageCompareFunction
+
 
 def test_echo_msg(app: Page):
-    """Test that st.expander may not be nested inside other expanders."""
-    echo_msg = app.locator(".element-container pre")
+    """Test that st.echo shows that the correct message."""
+    echo_msg = app.locator(".element-container pre").nth(0)
 
-    expect(echo_msg).to_have_text('print("This code is awesome!")')
+    expect(echo_msg).to_have_text('st.write("This code is awesome!")')
+
+
+def test_echo_msg_code_location(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test that st.echo shows the correct location below"""
+    echo_msg = app.locator(".element-container pre").nth(1)
+
+    assert_snapshot(echo_msg, name="st_echo-code_location_below")
