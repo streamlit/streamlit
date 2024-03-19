@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
+import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
+import { sessionStorageAvailable } from "@streamlit/lib"
 
 const DEFAULT_HEIGHT = 528
 
@@ -42,6 +43,39 @@ export default function Video({
   /* Element may contain "url" or "data" property. */
 
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
+
+  const [shouldAutoplay, setShouldAutoplay] = useState(autoplay)
+
+  useEffect(() => {
+    if (!sessionStorageAvailable()) return
+    // Initialize or update autoplay based on session storage
+    const hasInteracted = window.sessionStorage.getItem(
+      "streamlitVideoInteracted"
+    )
+    setShouldAutoplay(autoplay && !hasInteracted)
+  }, [autoplay])
+
+  useEffect(() => {
+    if (!sessionStorageAvailable()) return
+    const videoNode = videoRef.current
+    if (!videoNode) return
+
+    const onInteraction = () => {
+      window.sessionStorage.setItem("streamlitVideoInteracted", "true")
+      // Update shouldAutoplay state to reflect the interaction
+      setShouldAutoplay(false)
+    }
+
+    videoNode.addEventListener("play", onInteraction)
+    videoNode.addEventListener("pause", onInteraction)
+    videoNode.addEventListener("ended", onInteraction)
+
+    return () => {
+      videoNode.removeEventListener("play", onInteraction)
+      videoNode.removeEventListener("pause", onInteraction)
+      videoNode.removeEventListener("ended", onInteraction)
+    }
+  }, [])
 
   // Handle startTime changes
   useEffect(() => {
@@ -174,7 +208,7 @@ export default function Video({
         height={height}
         style={{ colorScheme: "normal" }}
         frameBorder="0"
-        allow="autoplay; encrypted-media"
+        allow="autoplay encrypted-media"
         allowFullScreen
       />
     )
@@ -187,7 +221,7 @@ export default function Video({
       data-testid="stVideo"
       ref={videoRef}
       controls
-      autoPlay={autoplay}
+      {...(shouldAutoplay ? { autoPlay: true } : {})} // Conditionally apply autoplay
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}

@@ -41,3 +41,17 @@ export const localStorageAvailable = (): boolean => {
   }
   return true
 }
+
+export const sessionStorageAvailable = (): boolean => {
+  const testData = "testData"
+
+  try {
+    const { sessionStorage } = window
+    sessionStorage.setItem(testData, testData)
+    sessionStorage.getItem(testData)
+    sessionStorage.removeItem(testData)
+  } catch (e) {
+    return false
+  }
+  return true
+}

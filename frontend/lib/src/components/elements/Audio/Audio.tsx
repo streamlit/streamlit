@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
+import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { sessionStorageAvailable } from "@streamlit/lib"
 
 export interface AudioProps {
   endpoints: StreamlitEndpoints
@@ -31,7 +32,45 @@ export default function Audio({
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { startTime, endTime, loop } = element
+  const { startTime, endTime, loop, autoplay } = element
+
+  // Define a state to manage the autoplay attribute
+  const [shouldAutoplay, setShouldAutoplay] = useState(autoplay)
+
+  useEffect(() => {
+    if (!sessionStorageAvailable()) return
+    // Check session storage to determine if autoplay should be enabled
+    const hasInteracted = window.sessionStorage.getItem(
+      "streamlitAudioInteracted"
+    )
+    if (hasInteracted) {
+      setShouldAutoplay(false)
+    }
+  }, []) // Empty dependency array to run only once on mount
+
+  // Interaction handlers
+  useEffect(() => {
+    if (!sessionStorageAvailable()) return
+    const audioNode = audioRef.current
+    if (!audioNode) return
+
+    const onInteraction = () => {
+      window.sessionStorage.setItem("streamlitAudioInteracted", "true")
+      // Disable autoplay for subsequent renders
+      setShouldAutoplay(false)
+    }
+
+    // Listeners to flag interaction
+    audioNode.addEventListener("play", onInteraction)
+    audioNode.addEventListener("pause", onInteraction)
+    audioNode.addEventListener("ended", onInteraction)
+
+    return () => {
+      audioNode.removeEventListener("play", onInteraction)
+      audioNode.removeEventListener("pause", onInteraction)
+      audioNode.removeEventListener("ended", onInteraction)
+    }
+  }, [])
 
   // Handle startTime changes
   useEffect(() => {
@@ -122,7 +161,7 @@ export default function Audio({
       id="audio"
       ref={audioRef}
       controls
-      autoPlay={element.autoplay}
+      {...(shouldAutoplay && { autoPlay: true })}
       src={uri}
       className="stAudio"
       style={{ width }}
