@@ -473,7 +473,7 @@ export function getDataArray(
 
       if (
         typeName !== "datetimetz" &&
-        Number.isFinite(dataValue) &&
+        (dataValue instanceof Date || Number.isFinite(dataValue)) &&
         (typeName.startsWith("datetime") || typeName === "date")
       ) {
         // For dates that do not contain timezone information.
