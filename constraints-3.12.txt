@@ -22,7 +22,7 @@ gitdb==4.0.11
 GitPython==3.1.42
 graphviz==0.20.2
 greenlet==3.0.3
-hypothesis==6.99.8
+hypothesis==6.99.9
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.0.2
@@ -62,7 +62,7 @@ pre-commit==3.6.2
 protobuf==3.20.3
 psycopg2-binary==2.9.9
 py4j==0.10.9.7
-pyarrow==15.0.1
+pyarrow==15.0.2
 pycparser==2.21
 pydantic==1.10.14
 pydeck==0.8.1b0
