@@ -294,21 +294,20 @@ def marshall(
     if "datasets" in spec:
         for k, v in spec["datasets"].items():
             dataset = proto.datasets.add()
-            stable_data_ids[k] = str(data_id_counter)
-            dataset.name = str(data_id_counter)
-            data_id_counter += 1
+            if on_select:
+                stable_data_ids[k] = str(data_id_counter)
+                dataset.name = str(data_id_counter)
+                data_id_counter += 1
+            else:
+                dataset.name = str(k)
             dataset.has_name = True
             arrow.marshall(dataset.data, v)
         del spec["datasets"]
     for dataset_key, stable_id in stable_data_ids.items():
         keys = ["hconcat", "vconcat", "layer", "data"]
-        for key in keys:
-            if key in spec:
-                if isinstance(spec[key], List):
-                    for item in spec[key]:
-                        replace_values_in_dict(item, dataset_key, stable_id)
-                else:
-                    replace_values_in_dict(spec[key], dataset_key, stable_id)
+        for k in keys:
+            if k in spec:
+                replace_values_in_dict(spec[k], dataset_key, stable_id)
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     #   marshall(proto, {data: df})
