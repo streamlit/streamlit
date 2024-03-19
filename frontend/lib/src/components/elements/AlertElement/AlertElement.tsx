@@ -18,15 +18,11 @@ import React, { ReactElement } from "react"
 
 import { Alert as AlertProto } from "@streamlit/lib/src/proto"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
-import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import AlertContainer, {
   Kind,
 } from "@streamlit/lib/src/components/shared/AlertContainer"
 import { StyledAlertContent } from "./styled-components"
-// import { MaterialIcon } from "@streamlit/lib/src/components/shared/Icon/MaterialIcon"
-const LazyMaterialIcon = React.lazy(
-  () => import("@streamlit/lib/src/components/shared/Icon/MaterialIcon")
-)
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {
   switch (format) {
@@ -68,17 +64,12 @@ export default function AlertElement({
     <div className="stAlert" data-testid="stAlert">
       <AlertContainer width={width} kind={kind}>
         <StyledAlertContent>
-          {icon && !icon.startsWith(":material") && (
-            <EmojiIcon testid="stAlertEmojiIcon" size="lg">
-              {icon}
-            </EmojiIcon>
-          )}
-          {icon && icon.startsWith(":material") && (
-            <LazyMaterialIcon
+          {icon && (
+            <DynamicIcon
+              iconValue={icon}
               size="lg"
-              testid="stAlertMaterialIcon"
-              iconName={icon}
-            ></LazyMaterialIcon>
+              testid="stAlertEmojiIcon"
+            />
           )}
 
           <StreamlitMarkdown
