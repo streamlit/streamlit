@@ -161,7 +161,10 @@ function PlotlyFigure({
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
       if (parsedStoreValue.select) {
-        const { data, selections } = widgetMgr.getExtraWidgetInfo(element)
+        const { data, selections } = widgetMgr.getExtraWidgetInfo(
+          element,
+          "selections"
+        )
         spec.data = data
         spec.layout.selections = selections
       }
@@ -301,7 +304,7 @@ function PlotlyFigure({
         }
       })
 
-      widgetMgr.setExtraWidgetInfo(element, {
+      widgetMgr.setExtraWidgetInfo(element, "selections", {
         data: data,
         // @ts-expect-error
         selections: event.selections,
