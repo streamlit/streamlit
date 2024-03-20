@@ -67,9 +67,11 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
 
-# TODO(vdonato): Have this class implement a get_stats method, then add a new
-# MemoryFragmentStorageStatProvider class to register with the StatsManager in
-# runtime.py (see SessionState and SessionStateStatProvider for an example).
+# NOTE: Ideally we'd like to add a MemoryFragmentStorageStatProvider implementation to
+# keep track of memory usage due to fragments, but doing something like this ends up
+# being difficult in practice as measuring the memory usage of a closure is hard to
+# measure (for example, the vendored implementation of pympler.asizeof that we use
+# elsewhere is unable to measure the size of a function).
 class MemoryFragmentStorage(FragmentStorage):
     """A simple, memory-backed implementation of FragmentStorage.
 
@@ -119,7 +121,44 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
 ) -> Callable[[F], F] | F:
-    """TODO(vdonato): Write a docstring for this function."""
+    """Allow a function to be run independently of the full script.
+
+    Functions decorated with ``@st.experimental_fragment`` are handled specially within
+    an app: when a widget created within an invocation of the function (a fragment) is
+    interacted with, then only that fragment is rerun rather than the full streamlit app.
+
+    Parameters
+    ----------
+    run_every: int, float, timedelta, str, or None
+        If set, fragments created from this function rerun periodically at the specified
+        time interval.
+
+    Example
+    -------
+    The following example demonstrates basic usage of ``@st.experimental_fragment``. In
+    this app, clicking on the "rerun full script" button will increment both counters,
+    but the "rerun fragment" button will only increment the counter within the fragment.
+
+    ```python3
+    import streamlit as st
+
+    if "script_runs" not in st.session_state:
+        st.session_state.script_runs = 0
+        st.session_state.fragment_runs = 0
+
+    @st.experimental_fragment
+    def fragment():
+        st.button("rerun fragment")
+        st.write(f"fragment runs: {st.session_state.fragment_runs}")
+        st.session_state.fragment_runs += 1
+
+    fragment()
+
+    st.button("rerun full script")
+    st.write(f"full script runs: {st.session_state.script_runs}")
+    st.session_state.script_runs += 1
+    ```
+    """
 
     if func is None:
         # Support passing the params via function decorator
@@ -144,7 +183,6 @@ def fragment(
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(dg_stack.get())
         active_dg = dg_stack_snapshot[-1]
-        # TODO(vdonato): Maybe improve how we construct fragment_id hashes.
         h = hashlib.new("md5")
         h.update(
             f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(
