@@ -71,7 +71,7 @@ def email_prompt() -> str:
 
 
 _TELEMETRY_HEADLESS_TEXT = """
-Collecting usage statistics. To deactivate, set browser.gatherUsageStats to False.
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
 """
 
 
