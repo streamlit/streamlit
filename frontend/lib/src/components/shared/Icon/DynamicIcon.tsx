@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import React, { Suspense } from "react"
 
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
@@ -65,7 +65,7 @@ interface DynamicIconProps {
   color?: ThemeColor
 }
 
-export const DynamicIcon = ({
+const DynamicIconDispatcher = ({
   iconValue,
   ...props
 }: DynamicIconProps): React.ReactElement => {
@@ -82,3 +82,9 @@ export const DynamicIcon = ({
       return <EmojiIcon {...props}>{icon}</EmojiIcon>
   }
 }
+
+export const DynamicIcon = (props: DynamicIconProps): React.ReactElement => (
+  <Suspense fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}>
+    <DynamicIconDispatcher {...props} />
+  </Suspense>
+)
