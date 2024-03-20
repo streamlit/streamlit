@@ -35,6 +35,7 @@ const MaterialRounded = ({
   if (!(iconName in MaterialRoundedIcons)) {
     throw new Error(`Invalid Material Rounded Icon: ${iconName}`)
   }
+  // eslint-disable-next-line import/namespace
   const content =
     MaterialRoundedIcons[iconName as keyof typeof MaterialRoundedIcons]
 

@@ -35,6 +35,7 @@ const MaterialFilled = ({
   if (!(iconName in MaterialIcons)) {
     throw new Error(`Invalid Material Icon: ${iconName}`)
   }
+  // eslint-disable-next-line import/namespace
   const content = MaterialIcons[iconName as keyof typeof MaterialIcons]
 
   return <Icon content={content} {...props} />
