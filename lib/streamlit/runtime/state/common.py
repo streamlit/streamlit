@@ -35,7 +35,7 @@ from typing import (
 from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
-from streamlit import util
+from streamlit import config, util
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.Button_pb2 import Button
@@ -61,6 +61,7 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from builtins import ellipsis
 
+    from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
     from streamlit.runtime.state.widgets import NoValue
 
 
@@ -87,6 +88,7 @@ WidgetProto: TypeAlias = Union[
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
+TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
 
 
 T = TypeVar("T")
@@ -230,3 +232,11 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_WIDGET_ID_PREFIX} are reserved."
         )
+
+
+def save_for_app_testing(ctx: ScriptRunContext, k: str, v: Any):
+    if config.get_option("global.appTest"):
+        try:
+            ctx.session_state[TESTING_KEY][k] = v
+        except KeyError:
+            ctx.session_state[TESTING_KEY] = {k: v}

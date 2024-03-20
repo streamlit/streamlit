@@ -317,7 +317,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use test `with` notation to insert any element into a tab:
+        You can use the `with` notation to insert any element into a tab:
 
         >>> import streamlit as st
         >>>
@@ -489,6 +489,10 @@ class LayoutsMixin:
         Inserts a multi-element container as a popover. It consists of a button-like
         element and a container that opens when the button is clicked.
 
+        Opening and closing the popover will not trigger a rerun. Interacting
+        with widgets inside of an open popover will rerun the app while keeping
+        the popover open. Clicking outside of the popover will close it.
+
         To add elements to the returned container, you can use the "with"
         notation (preferred) or just call methods directly on the returned object.
         See examples below.
@@ -537,7 +541,7 @@ class LayoutsMixin:
 
         Examples
         --------
-        You can use the `with` notation to insert any element into a popover
+        You can use the `with` notation to insert any element into a popover:
 
         >>> import streamlit as st
         >>>
@@ -555,14 +559,17 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> popover = st.popover("Open popover")
-        >>> popover.markdown("Hello World 👋")
-        >>> name = popover.text_input("What's your name?")
+        >>> popover = st.popover("Filter items")
+        >>> red = popover.checkbox("Show red items.", True)
+        >>> blue = popover.checkbox("Show blue items.", True)
         >>>
-        >>> st.write("Your name:", name)
+        >>> if red:
+        ...     st.write(":red[This is a red item.]")
+        >>> if blue:
+        ...     st.write(":blue[This is a blue item.]")
 
         .. output ::
-            https://doc-popover.streamlit.app/
+            https://doc-popover2.streamlit.app/
             height: 400px
         """
         if label is None:

@@ -193,7 +193,6 @@ def register_widget_from_metadata(
     if user_key is not None:
         if user_key not in ctx.widget_user_keys_this_run:
             ctx.widget_user_keys_this_run.add(user_key)
-            print(f"{ctx.widget_user_keys_this_run=}")
         else:
             raise DuplicateWidgetID(
                 _build_duplicate_widget_message(

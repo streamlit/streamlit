@@ -151,19 +151,22 @@ function PlotlyFigure({
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
-  const getInitialValue = () => {
+  const getInitialValue = (): any => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
     const storedValue = widgetMgr.getJsonValue(element)
-    const selections: any[] = []
 
     if (storedValue !== undefined) {
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
       if (parsedStoreValue.select) {
-        spec.data = parsedStoreValue.select._data
-        spec.layout.selections = parsedStoreValue.select._selections
+        const { data, selections } = widgetMgr.getExtraWidgetInfo(
+          element,
+          "selections"
+        )
+        spec.data = data
+        spec.layout.selections = selections
       }
 
       const hasSelectedPoints: boolean = spec.data.some(
@@ -183,7 +186,6 @@ function PlotlyFigure({
         data: [...spec.data],
         layout: {
           ...spec.layout,
-          selections: selections.length ? selections : undefined,
         },
         frames: spec.frames ? { ...spec.frames } : [],
       }
@@ -192,7 +194,7 @@ function PlotlyFigure({
     return spec
   }
 
-  const [spec, setSpec] = useState(getInitialValue())
+  const [spec] = useState(getInitialValue())
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
@@ -208,6 +210,8 @@ function PlotlyFigure({
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
+    // TODO(willhuang1997): Regression where swapping themes will not change chart colors properly
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useLayoutEffect(() => {
@@ -223,7 +227,6 @@ function PlotlyFigure({
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
-    setSpec(spec)
   }, [
     height,
     width,
@@ -300,18 +303,15 @@ function PlotlyFigure({
         }
       })
 
-      returnValue.select._data = data
-
-      // @ts-expect-error
-      returnValue.select._selections = event.selections
+      widgetMgr.setExtraWidgetInfo(element, "selections", {
+        data: data,
+        // @ts-expect-error
+        selections: event.selections,
+      })
     }
 
-    // select_box to replicate pythonic return value
     returnValue.select.box = selectedBoxes
-
-    // lasso_points to replicate pythonic return value
     returnValue.select.lasso = selectedLassos
-
     returnValue.select.points = returnValue.select.points.map((point: any) =>
       keysToSnakeCase(point)
     )
@@ -320,7 +320,7 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
-  const reset = () => {
+  const reset = (): void => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
@@ -334,7 +334,6 @@ function PlotlyFigure({
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
-    setSpec(spec)
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
   }
 
@@ -348,20 +347,8 @@ function PlotlyFigure({
       config={config}
       frames={frames}
       onSelected={element.isSelectEnabled ? handleSelect : () => {}}
-      onDoubleClick={
-        element.isSelectEnabled
-          ? () => {
-              reset()
-            }
-          : () => {}
-      }
-      onDeselect={
-        element.isSelectEnabled
-          ? () => {
-              reset()
-            }
-          : () => {}
-      }
+      onDoubleClick={element.isSelectEnabled ? reset : () => {}}
+      onDeselect={element.isSelectEnabled ? reset : () => {}}
     />
   )
 }
