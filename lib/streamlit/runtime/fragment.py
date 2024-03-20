@@ -121,7 +121,44 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
 ) -> Callable[[F], F] | F:
-    """TODO(vdonato): Write a docstring for this function."""
+    """Allow a function to be run independently of the full script.
+
+    Functions decorated with ``@st.experimental_fragment`` are handled specially within
+    an app: when a widget created within an invocation of the function (a fragment) is
+    interacted with, then only that fragment is rerun rather than the full streamlit app.
+
+    Parameters
+    ----------
+    run_every: int, float, timedelta, str, or None
+        If set, fragments created from this function rerun periodically at the specified
+        time interval.
+
+    Example
+    -------
+    The following example demonstrates basic usage of ``@st.experimental_fragment``. In
+    this app, clicking on the "rerun full script" button will increment both counters,
+    but the "rerun fragment" button will only increment the counter within the fragment.
+
+    ```python3
+    import streamlit as st
+
+    if "script_runs" not in st.session_state:
+        st.session_state.script_runs = 0
+        st.session_state.fragment_runs = 0
+
+    @st.experimental_fragment
+    def fragment():
+        st.button("rerun fragment")
+        st.write(f"fragment runs: {st.session_state.fragment_runs}")
+        st.session_state.fragment_runs += 1
+
+    fragment()
+
+    st.button("rerun full script")
+    st.write(f"full script runs: {st.session_state.script_runs}")
+    st.session_state.script_runs += 1
+    ```
+    """
 
     if func is None:
         # Support passing the params via function decorator
