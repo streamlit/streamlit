@@ -179,6 +179,13 @@ class PlotlyMixin:
         if current_form_id(self.dg):
             # TODO(willhuang1997): double check the message of this
             raise StreamlitAPIException("st.plotly_chart cannot be used inside forms!")
+
+        is_select_enabled = (
+            on_select != None
+            and on_select != False
+            and on_select != ON_SELECTION_IGNORE
+        )
+
         marshall(
             plotly_chart_proto,
             figure_or_data,
@@ -186,7 +193,7 @@ class PlotlyMixin:
             sharing,
             theme,
             key,
-            on_select,
+            is_select_enabled,
             **kwargs,
         )
 
@@ -201,21 +208,8 @@ class PlotlyMixin:
         ctx = get_script_run_ctx()
 
         widget_callback = None
-        if (
-            isinstance(on_select, bool)
-            or on_select == ON_SELECTION_RERUN
-            or on_select == ON_SELECTION_IGNORE
-        ):
-            # Set specifically to None because register_widget does not accept booleans or strings
-            widget_callback = None
-        else:
+        if not isinstance(on_select, bool) and not isinstance(on_select, str):
             widget_callback = on_select
-
-        is_select_enabled = (
-            on_select != None
-            and on_select != False
-            and on_select != ON_SELECTION_IGNORE
-        )
 
         widget_state = {}
         if is_select_enabled:
@@ -250,7 +244,7 @@ def marshall(
     sharing: SharingMode,
     theme: Literal["streamlit"] | None,
     key: Key | None,
-    on_select: bool | str | WidgetCallback | None,
+    is_select_enabled: bool,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -293,10 +287,7 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
-    if on_select == False or on_select is None or on_select == ON_SELECTION_IGNORE:
-        proto.is_select_enabled = False
-    else:
-        proto.is_select_enabled = True
+    proto.is_select_enabled = is_select_enabled
     ctx = get_script_run_ctx()
     id = compute_widget_id(
         "plotly_chart",
