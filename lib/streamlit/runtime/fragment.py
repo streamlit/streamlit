@@ -67,9 +67,11 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
 
-# TODO(vdonato): Have this class implement a get_stats method, then add a new
-# MemoryFragmentStorageStatProvider class to register with the StatsManager in
-# runtime.py (see SessionState and SessionStateStatProvider for an example).
+# NOTE: Ideally we'd like to add a MemoryFragmentStorageStatProvider implementation to
+# keep track of memory usage due to fragments, but doing something like this ends up
+# being difficult in practice as measuring the memory usage of a closure is hard to
+# measure (for example, the vendored implementation of pympler.asizeof that we use
+# elsewhere is unable to measure the size of a function).
 class MemoryFragmentStorage(FragmentStorage):
     """A simple, memory-backed implementation of FragmentStorage.
 
@@ -144,7 +146,6 @@ def fragment(
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(dg_stack.get())
         active_dg = dg_stack_snapshot[-1]
-        # TODO(vdonato): Maybe improve how we construct fragment_id hashes.
         h = hashlib.new("md5")
         h.update(
             f"{non_optional_func.__module__}.{non_optional_func.__qualname__}{active_dg._get_delta_path_str()}".encode(

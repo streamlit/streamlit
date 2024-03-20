@@ -536,7 +536,6 @@ class ScriptRunner:
             # places in the app during the rerun (without this, ctx.cursors and dg_stack
             # will still be set to the snapshots they were restored from when running
             # the fragment).
-            # TODO(vdonato): See if there's a cleaner way of doing this.
             original_cursors = ctx.cursors
             original_dg_stack = dg_stack.get()
 
@@ -547,14 +546,6 @@ class ScriptRunner:
             try:
                 # Create fake module. This gives us a name global namespace to
                 # execute the code in.
-                # TODO(vdonato): Double-check that we're okay with naming the
-                # module for every page `__main__`. I'm pretty sure this is
-                # necessary given that people will likely often write
-                #     ```
-                #     if __name__ == "__main__":
-                #         ...
-                #     ```
-                # in their scripts.
                 module = self._new_module("__main__")
 
                 # Install the fake module as the __main__ module. This allows
