@@ -96,7 +96,11 @@ export function shortenMessage(fullMessage: string): string {
     let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
-      message = message.substring(0, characterLimit)
+      message = message
+        .substring(0, characterLimit)
+        .split(" ")
+        .slice(0, -1)
+        .join(" ")
     }
 
     return message.trim()
