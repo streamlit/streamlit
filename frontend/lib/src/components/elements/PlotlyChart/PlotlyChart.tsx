@@ -194,7 +194,7 @@ function PlotlyFigure({
     return spec
   }
 
-  const [spec, setSpec] = useState(getInitialValue())
+  const [spec] = useState(getInitialValue())
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
@@ -227,7 +227,6 @@ function PlotlyFigure({
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
-    setSpec(spec)
   }, [
     height,
     width,
@@ -335,7 +334,6 @@ function PlotlyFigure({
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
-    setSpec(spec)
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
   }
 
