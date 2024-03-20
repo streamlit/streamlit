@@ -26,6 +26,6 @@ def test_echo_msg(app: Page):
 
 def test_echo_msg_code_location(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.echo shows the correct location below"""
-    echo_msg = app.locator(".element-container pre").nth(1)
+    echo_msg = app.locator(".element-container").nth(1)
 
     assert_snapshot(echo_msg, name="st_echo-code_location_below")
