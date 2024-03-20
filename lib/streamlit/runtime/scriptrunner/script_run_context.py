@@ -17,7 +17,7 @@ from __future__ import annotations
 import collections
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, Final, Union
+from typing import TYPE_CHECKING, Callable, Counter, Dict, Final, Union
 from urllib import parse
 
 from typing_extensions import TypeAlias
@@ -30,6 +30,9 @@ from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+if TYPE_CHECKING:
+    from streamlit.commands.pages import Page
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -71,6 +74,8 @@ class ScriptRunContext:
     form_ids_this_run: set[str] = field(default_factory=set)
     cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
+    pages: dict[str, Page] = field(default_factory=dict)
+    yield_callback: Callable = lambda: None
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False

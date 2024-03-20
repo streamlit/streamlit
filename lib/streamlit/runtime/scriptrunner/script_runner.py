@@ -20,12 +20,14 @@ import threading
 import types
 from contextlib import contextmanager
 from enum import Enum
+from pathlib import Path
 from timeit import default_timer as timer
 from typing import Callable, Final
 
 from blinker import Signal
 
 from streamlit import config, runtime, source_util, util
+from streamlit.commands.pages import Page
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
@@ -77,6 +79,8 @@ class ScriptRunnerEvent(Enum):
 
     # The script has a ForwardMsg to send to the frontend.
     ENQUEUE_FORWARD_MSG = "ENQUEUE_FORWARD_MSG"
+
+    PAGE_RUN_STARTED = "PAGE_RUN_STARTED"
 
 
 """
@@ -277,6 +281,7 @@ class ScriptRunner:
             page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
+            yield_callback=self._maybe_handle_execution_control_request,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -355,6 +360,10 @@ class ScriptRunner:
 
         if request.type == ScriptRequestType.RERUN:
             raise RerunException(request.rerun_data)
+
+        if request.type == ScriptRequestType.RUN_PAGE:
+            self._run_page(request.page)
+            return
 
         assert request.type == ScriptRequestType.STOP
         raise StopException()
@@ -528,6 +537,8 @@ class ScriptRunner:
                 # assume is the main script directory.
                 module.__dict__["__file__"] = script_path
 
+                self._module = module
+
                 with modified_sys_path(
                     self._main_script_path
                 ), self._set_execing_flag():
@@ -629,6 +640,67 @@ class ScriptRunner:
     def _new_module(self, name: str) -> types.ModuleType:
         """Create a new module with the given name."""
         return types.ModuleType(name)
+
+    def _run_page(self, page: Page) -> None:
+        """Run our script.
+
+        Parameters
+        ----------
+        rerun_data: RerunData
+            The RerunData to use.
+
+        """
+        assert self._is_in_script_thread()
+        assert self._execing, "_run_page can only be called when a script is running"
+
+        _LOGGER.debug("Running page %s", page)
+
+        # self.on_event.send(
+        #     self,
+        #     event=ScriptRunnerEvent.PAGE_RUN_STARTED,
+        #     page_script_hash=page_script_hash,
+        # )
+
+        # Compile the script. Any errors thrown here will be surfaced
+        # to the user via a modal dialog in the frontend, and won't result
+        # in their previous script elements disappearing.
+        try:
+            if isinstance(page.page, str):
+                code = self._script_cache.get_bytecode(page.page)
+            elif isinstance(page.page, Path):
+                code = self._script_cache.get_bytecode(str(page.page))
+            else:
+                code = page.page.__code__
+
+        except Exception as ex:
+            # We got a compile error. Send an error event and bail immediately.
+            _LOGGER.debug("Fatal script error: %s", ex)
+            self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
+            self.on_event.send(
+                self,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                exception=ex,
+            )
+            return
+
+        # If we get here, we've successfully compiled our script. The next step
+        # is to run it. Errors thrown during execution will be shown to the
+        # user as ExceptionElements.
+
+        # Get the module the script is already executing in
+        module = self._module
+
+        # Add special variables to the module's globals dict.
+        # Note: The following is a requirement for the CodeHasher to
+        # work correctly. The CodeHasher is scoped to
+        # files contained in the directory of __main__.__file__, which we
+        # assume is the main script directory.
+        # module.__dict__["__file__"] = script_path
+
+        with modified_sys_path(self._main_script_path):
+            # Run callbacks for widgets whose values have changed.
+
+            exec(code, module.__dict__)
 
 
 class ScriptControlException(BaseException):

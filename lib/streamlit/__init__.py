@@ -107,6 +107,7 @@ from streamlit.commands.execution_control import (
     experimental_rerun as _experimental_rerun,
     switch_page as switch_page,
 )
+from streamlit.commands.pages import Page as Page, navigation as navigation
 
 # We add the metrics tracking for caching here,
 # since the actual cache function calls itself recursively
