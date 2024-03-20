@@ -90,8 +90,7 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: bool | str | WidgetCallback = False,
         **kwargs: Any,
-        # What we return will be an json dictionary and will need to fix this type after
-    ) -> Union["DeltaGenerator", Dict]:
+    ) -> Union["DeltaGenerator", AttributeDictionary]:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
