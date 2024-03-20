@@ -35,9 +35,9 @@ const MaterialOutlined = ({
   if (!(iconName in MaterialOutlinedIcons)) {
     throw new Error(`Invalid Material Outlined Icon: ${iconName}`)
   }
+  const knownIconName = iconName as keyof typeof MaterialOutlinedIcons
   // eslint-disable-next-line import/namespace
-  const content =
-    MaterialOutlinedIcons[iconName as keyof typeof MaterialOutlinedIcons]
+  const content = MaterialOutlinedIcons[knownIconName]
 
   return <Icon content={content} {...props} />
 }
