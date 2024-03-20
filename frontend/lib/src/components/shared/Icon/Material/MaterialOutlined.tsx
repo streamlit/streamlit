@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode } from "react"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import React, { ReactElement } from "react"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
-import { StyledIcon, StyledEmojiIcon } from "./styled-components"
-import * as MaterialIcons from "@emotion-icons/material"
-import * as MaterialIconsOutlined from "@emotion-icons/material-outlined"
+import { StyledIcon } from "../styled-components"
+import * as MaterialOutlinedIcons from "@emotion-icons/material-outlined"
 
 interface DefaultProps {
   size: IconSize
@@ -49,36 +47,19 @@ interface MaterialIconProps {
   testid?: string
 }
 
-export const MaterialIcon = ({
+const MaterialOutlined = ({
   size,
   margin,
   padding,
   testid,
   iconName,
 }: MaterialIconProps): ReactElement => {
-  console.log("MAMA MAMA JAN")
-  const re = /^:(.*):(.*):$/
-  const matchResult = iconName.match(re)
-  let packName = ""
-  let icon = ""
-  if (matchResult !== null) {
-    packName = matchResult[1]
-    icon = matchResult[2]
+  if (!(iconName in MaterialOutlinedIcons)) {
+    throw new Error(`Invalid Material Outlined Icon: ${iconName}`)
+  }
+  const content =
+    MaterialOutlinedIcons[iconName as keyof typeof MaterialOutlinedIcons]
 
-    console.log("BBBBBBB")
-    console.log(packName)
-    console.log(icon)
-  }
-  let content: EmotionIcon
-  if (packName === "material") {
-    content = MaterialIcons[icon as keyof typeof MaterialIcons]
-  } else if (packName === "material-outlined") {
-    content = MaterialIconsOutlined[icon as keyof typeof MaterialIconsOutlined]
-  } else {
-    throw new Error(`Unexpected icon pack: ${packName}`)
-  }
-  console.log("JJJJJJJJJ")
-  console.log(content)
   return (
     <StyledIcon
       as={content}
@@ -89,4 +70,4 @@ export const MaterialIcon = ({
   )
 }
 
-export default MaterialIcon
+export default MaterialOutlined

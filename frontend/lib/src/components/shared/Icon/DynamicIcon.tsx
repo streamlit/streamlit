@@ -19,11 +19,42 @@ import React, { ReactElement } from "react"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
 
-const MaterialIcon = React.lazy(
-  () => import("@streamlit/lib/src/components/shared/Icon/MaterialIcon")
+const MaterialFilled = React.lazy(
+  () =>
+    import("@streamlit/lib/src/components/shared/Icon/Material/MaterialFilled")
 )
 
-// TODO: Think about writing this type with omit / type combinators
+const MaterialOutlined = React.lazy(
+  () =>
+    import(
+      "@streamlit/lib/src/components/shared/Icon/Material/MaterialOutlined"
+    )
+)
+
+const MaterialRounded = React.lazy(
+  () =>
+    import(
+      "@streamlit/lib/src/components/shared/Icon/Material/MaterialRounded"
+    )
+)
+
+interface IconPackEntry {
+  pack: string
+  icon: string
+}
+
+function parseIconPackEntry(iconName: string): IconPackEntry {
+  // This is a regex to match icon pack and icon name from the strings of format
+  // :pack:icon: like :material:SettingsSuggest:
+  const iconRegexp = /^:(.*):(.*):$/
+  const matchResult = iconName.match(iconRegexp)
+  if (matchResult === null) {
+    return { pack: "emoji", icon: iconName }
+  }
+  return { pack: matchResult[1], icon: matchResult[2] }
+}
+
+// TODO(kajarenc): Think about writing this type with omit / type combinators
 // based on IconProps and EmojiIconProps
 interface DynamicIconProps {
   iconValue: string
@@ -38,9 +69,16 @@ export const DynamicIcon = ({
   iconValue,
   ...props
 }: DynamicIconProps): React.ReactElement => {
-  if (!iconValue.startsWith(":")) {
-    return <EmojiIcon {...props}>{iconValue}</EmojiIcon>
-  } else {
-    return <MaterialIcon iconName={iconValue} {...props} />
+  const { pack, icon } = parseIconPackEntry(iconValue)
+  switch (pack) {
+    case "material":
+      return <MaterialFilled iconName={icon} {...props} />
+    case "material-outlined":
+      return <MaterialOutlined iconName={icon} {...props} />
+    case "material-rounded":
+      return <MaterialRounded iconName={icon} {...props} />
+    case "emoji":
+    default:
+      return <EmojiIcon {...props}>{icon}</EmojiIcon>
   }
 }
