@@ -16,27 +16,8 @@
 
 import React, { ReactElement } from "react"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
-import { StyledIcon } from "../styled-components"
+import Icon from "@streamlit/lib/src/components/shared/Icon/Icon"
 import * as MaterialRoundedIcons from "@emotion-icons/material-rounded"
-
-interface DefaultProps {
-  size: IconSize
-  margin: string
-  padding: string
-  color: ThemeColor
-}
-
-const getDefaultProps = ({
-  size,
-  margin,
-  padding,
-  color,
-}: Partial<DefaultProps>): DefaultProps => ({
-  size: size || "md",
-  margin: margin || "",
-  padding: padding || "",
-  color: color || "inherit",
-})
 
 interface MaterialIconProps {
   iconName: string
@@ -48,11 +29,8 @@ interface MaterialIconProps {
 }
 
 const MaterialRounded = ({
-  size,
-  margin,
-  padding,
-  testid,
   iconName,
+  ...props
 }: MaterialIconProps): ReactElement => {
   if (!(iconName in MaterialRoundedIcons)) {
     throw new Error(`Invalid Material Rounded Icon: ${iconName}`)
@@ -60,14 +38,7 @@ const MaterialRounded = ({
   const content =
     MaterialRoundedIcons[iconName as keyof typeof MaterialRoundedIcons]
 
-  return (
-    <StyledIcon
-      as={content}
-      data-testid={testid}
-      aria-hidden="true"
-      {...getDefaultProps({ size, margin, padding })}
-    ></StyledIcon>
-  )
+  return <Icon content={content} {...props} />
 }
 
 export default MaterialRounded
