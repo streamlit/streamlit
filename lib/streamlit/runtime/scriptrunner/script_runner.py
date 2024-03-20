@@ -463,7 +463,9 @@ class ScriptRunner:
 
             ctx = self._get_script_run_ctx()
             ctx.reset(
-                query_string=rerun_data.query_string, page_script_hash=page_script_hash
+                query_string=rerun_data.query_string,
+                page_script_hash=page_script_hash,
+                fragment_ids_this_run=set(rerun_data.fragment_id_queue),
             )
 
             # TODO(vdonato): Changes to take into account multiple fragments running

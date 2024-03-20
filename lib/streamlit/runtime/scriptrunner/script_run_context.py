@@ -76,6 +76,7 @@ class ScriptRunContext:
     cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
+    fragment_ids_this_run: set[str] | None = None
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
@@ -85,6 +86,7 @@ class ScriptRunContext:
         self,
         query_string: str = "",
         page_script_hash: str = "",
+        fragment_ids_this_run: set[str] | None = None,
     ) -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
@@ -99,6 +101,7 @@ class ScriptRunContext:
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
         self.current_fragment_id = None
+        self.fragment_ids_this_run = fragment_ids_this_run
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
