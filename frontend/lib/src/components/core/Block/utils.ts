@@ -37,7 +37,7 @@ export function isElementStale(
   node: AppNode,
   scriptRunState: ScriptRunState,
   scriptRunId: string,
-  currentFragmentId?: string
+  fragmentIdsThisRun?: Array<string>
 ): boolean {
   if (scriptRunState === ScriptRunState.RERUN_REQUESTED) {
     // If a rerun was just requested, all of our current elements
@@ -46,8 +46,10 @@ export function isElementStale(
   }
 
   if (scriptRunState === ScriptRunState.RUNNING) {
-    if (currentFragmentId) {
-      return node.fragmentId === currentFragmentId
+    if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
+      return Boolean(
+        node.fragmentId && fragmentIdsThisRun.includes(node.fragmentId)
+      )
     }
     return node.scriptRunId !== scriptRunId
   }
@@ -60,11 +62,11 @@ export function isComponentStale(
   node: AppNode,
   scriptRunState: ScriptRunState,
   scriptRunId: string,
-  currentFragmentId?: string
+  fragmentIdsThisRun?: Array<string>
 ): boolean {
   return (
     !enable ||
-    isElementStale(node, scriptRunState, scriptRunId, currentFragmentId)
+    isElementStale(node, scriptRunState, scriptRunId, fragmentIdsThisRun)
   )
 }
 

@@ -461,30 +461,20 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
+            fragment_ids_this_run = set(rerun_data.fragment_id_queue)
+
             ctx = self._get_script_run_ctx()
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
-                fragment_ids_this_run=set(rerun_data.fragment_id_queue),
+                fragment_ids_this_run=fragment_ids_this_run,
             )
 
-            # TODO(vdonato): Changes to take into account multiple fragments running
-            # in a single script run. This will probably either involve:
-            #   * Sending a *set* of fragment_ids to the frontend (probably the easier
-            #     option)
-            #   * Sending events to update the currently running fragment_id to the
-            #     frontend as the script is running (probably the option with nicer UX)
-            # Until one of these changes is implemented, some weirdness with elements
-            # being marked as stale when multiple fragments are being run in a single
-            # script run is expected.
-            fragment_id = (
-                rerun_data.fragment_id_queue[0] if rerun_data.fragment_id_queue else ""
-            )
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
-                fragment_id=fragment_id,
+                fragment_ids_this_run=fragment_ids_this_run,
             )
 
             # Compile the script. Any errors thrown here will be surfaced

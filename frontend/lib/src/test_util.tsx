@@ -79,7 +79,7 @@ export const customRenderLibContext = (
     onPageChange: jest.fn(),
     currentPageScriptHash: "",
     libConfig: {},
-    currentFragmentId: "",
+    fragmentIdsThisRun: [],
   }
 
   return reactTestingLibraryRender(component, {

@@ -25,7 +25,12 @@ describe("isElementStale", () => {
 
   it("returns true if scriptRunState is RERUN_REQUESTED", () => {
     expect(
-      isElementStale(node, ScriptRunState.RERUN_REQUESTED, "someScriptRunId")
+      isElementStale(
+        node,
+        ScriptRunState.RERUN_REQUESTED,
+        "someScriptRunId",
+        []
+      )
     ).toBe(true)
   })
 
@@ -33,21 +38,16 @@ describe("isElementStale", () => {
   // are those belonging to the fragment that's currently running.
   it("if running and currentFragmentId is set, compares with node's fragmentId", () => {
     expect(
-      isElementStale(
-        node,
-        ScriptRunState.RUNNING,
-        "myScriptRunId",
-        "myFragmentId"
-      )
+      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
+        "myFragmentId",
+      ])
     ).toBe(true)
 
     expect(
-      isElementStale(
-        node,
-        ScriptRunState.RUNNING,
-        "myScriptRunId",
-        "someOtherFragmentId"
-      )
+      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [
+        "someFragmentId",
+        "someOtherFragmentId",
+      ])
     ).toBe(false)
   })
 
@@ -55,12 +55,12 @@ describe("isElementStale", () => {
   // the current one should be set to stale.
   it("if running and currentFragmentId is not set, compares with node's scriptRunId", () => {
     expect(
-      isElementStale(node, ScriptRunState.RUNNING, "someOtherScriptRunId")
+      isElementStale(node, ScriptRunState.RUNNING, "someOtherScriptRunId", [])
     ).toBe(true)
 
-    expect(isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId")).toBe(
-      false
-    )
+    expect(
+      isElementStale(node, ScriptRunState.RUNNING, "myScriptRunId", [])
+    ).toBe(false)
   })
 
   it("returns false for all other script run states", () => {
@@ -70,7 +70,7 @@ describe("isElementStale", () => {
       ScriptRunState.COMPILATION_ERROR,
     ]
     states.forEach(s => {
-      expect(isElementStale(node, s, "someOtherScriptRunId")).toBe(false)
+      expect(isElementStale(node, s, "someOtherScriptRunId", [])).toBe(false)
     })
   })
 })

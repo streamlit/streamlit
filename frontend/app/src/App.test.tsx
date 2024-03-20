@@ -240,6 +240,7 @@ const NEW_SESSION_JSON: INewSession = {
   pageScriptHash: "page_script_hash",
   mainScriptPath: "path/to/file.py",
   scriptRunId: "script_run_id",
+  fragmentIdsThisRun: [],
 }
 
 // Prevent "moment-timezone requires moment" exception when mocking "moment".
@@ -1079,7 +1080,7 @@ describe("App", () => {
 
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        fragmentId: undefined,
+        fragmentIdsThisRun: [],
       })
 
       expect(document.title).toBe("streamlit_app · Streamlit")
@@ -1092,7 +1093,7 @@ describe("App", () => {
 
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
-        fragmentId: "myFragmentId",
+        fragmentIdsThisRun: ["myFragmentId"],
       })
 
       expect(document.title).toBe("some title")
@@ -1187,6 +1188,7 @@ describe("App", () => {
         { pageScriptHash: "sub_hash", pageName: "page2" },
       ],
       pageScriptHash: "top_hash",
+      fragmentIdsThisRun: [],
     }
 
     beforeEach(() => {

@@ -704,7 +704,7 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen, currentFragmentId } = React.useContext(LibContext)
+  const { isFullScreen, fragmentIdsThisRun } = React.useContext(LibContext)
   const { node, width } = props
 
   const elementType = node.element.type || ""
@@ -714,7 +714,7 @@ const ElementNodeRenderer = (
     node,
     props.scriptRunState,
     props.scriptRunId,
-    currentFragmentId
+    fragmentIdsThisRun
   )
 
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
