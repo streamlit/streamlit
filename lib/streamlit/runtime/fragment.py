@@ -67,11 +67,11 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
 
-# NOTE: Ideally we'd like to add a MemoryFragmentStorageStatProvider implementation to
+# NOTE: Ideally, we'd like to add a MemoryFragmentStorageStatProvider implementation to
 # keep track of memory usage due to fragments, but doing something like this ends up
-# being difficult in practice as measuring the memory usage of a closure is hard to
-# measure (for example, the vendored implementation of pympler.asizeof that we use
-# elsewhere is unable to measure the size of a function).
+# being difficult in practice as the memory usage of a closure is hard to measure (the
+# vendored implementation of pympler.asizeof that we use elsewhere is unable to measure
+# the size of a function).
 class MemoryFragmentStorage(FragmentStorage):
     """A simple, memory-backed implementation of FragmentStorage.
 
