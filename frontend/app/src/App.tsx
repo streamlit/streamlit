@@ -104,6 +104,7 @@ import {
   IHostConfigResponse,
   LibConfig,
   AppConfig,
+  Navigation,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -618,6 +619,8 @@ export class App extends PureComponent<Props, State> {
           this.handlePageInfoChanged(pageInfo),
         pagesChanged: (pagesChangedMsg: PagesChanged) =>
           this.handlePagesChanged(pagesChangedMsg),
+        navigation: (navigationMsg: Navigation) =>
+          this.handleNavigation(navigationMsg),
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -710,6 +713,19 @@ export class App extends PureComponent<Props, State> {
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
     const { appPages } = pagesChangedMsg
+    this.setState({ appPages }, () => {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_APP_PAGES",
+        appPages,
+      })
+    })
+  }
+
+  handleNavigation = (navigationMsg: Navigation): void => {
+    const { sections } = navigationMsg
+    const appPages = sections.flatMap(
+      section => section.appPages
+    ) as IAppPage[] // TODO do without the cast
     this.setState({ appPages }, () => {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "SET_APP_PAGES",

@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal
 
-import streamlit as st
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.util import calc_md5
 
@@ -68,19 +68,38 @@ class Page:
 
 
 def navigation(
-    pages: list[Page],  # | dict[str, list[Page]],
+    pages: list[Page] | dict[str, list[Page]],
     *,
     position: Literal["sidebar"] | Literal["hidden"] = "sidebar",
 ) -> Page:
     ctx = get_script_run_ctx()
     assert ctx
 
-    page_dict = {page._script_hash: page for page in pages}
+    if isinstance(pages, list):
+        pages: dict[str, list[Page]] = {"": pages}
+
+    msg = ForwardMsg()
+    for section in pages:
+        nav_section = msg.navigation.sections.add()
+        nav_section.header = section
+        for page in pages[section]:
+            p = nav_section.app_pages.add()
+            p.page_script_hash = page._script_hash
+            p.page_name = page.title or ""
+            p.icon = page.icon or ""
+
+    ctx.enqueue(msg)
+
+    page_dict = {}
+    for section in pages:
+        for page in pages[section]:
+            page_dict[page._script_hash] = page
     ctx.pages = page_dict
     try:
         page = page_dict[ctx.page_script_hash]
     except KeyError:
-        page = pages[0]
+        print("falling back to default page")
+        page = list(page_dict.values())[0]
     # psh = ctx.page_script_hash
     # idx = [page._script_hash for page in pages].index(psh)
     # page = pages[idx]
