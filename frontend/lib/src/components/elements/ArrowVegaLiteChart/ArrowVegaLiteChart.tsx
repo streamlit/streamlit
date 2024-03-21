@@ -274,37 +274,27 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
               param.select.encodings = Object.keys(spec.encoding)
             }
           })
-        } else if ("hconcat" in spec) {
-          try {
-            spec.params.forEach((param: any) => {
-              if (
-                "select" in param &&
-                "type" in param.select &&
-                param.select.type === "point" &&
-                param.select.encodings === undefined
-              ) {
-                param.select.encodings = Object.keys(spec.hconcat[0].encoding)
-              }
-            })
-          } catch (e) {
-            logMessage(e)
-          }
-        } else if ("vconcat" in spec) {
-          try {
-            spec.params.forEach((param: any) => {
-              if (
-                "select" in param &&
-                "type" in param.select &&
-                param.select.type === "point" &&
-                param.select.encodings === undefined
-              ) {
-                param.select.encodings = Object.keys(spec.vconcat[0].encoding)
-              }
-            })
-          } catch (e) {
-            logMessage(e)
-          }
         }
+        const concatenationKeys = ["hconcat", "vconcat", "layer"]
+
+        concatenationKeys.forEach(key => {
+          if (key in spec) {
+            try {
+              spec.params.forEach((param: any) => {
+                if (
+                  "select" in param &&
+                  "type" in param.select &&
+                  param.select.type === "point" &&
+                  param.select.encodings === undefined
+                ) {
+                  param.select.encodings = Object.keys(spec[key][0].encoding)
+                }
+              })
+            } catch (e) {
+              logMessage(e)
+            }
+          }
+        })
       }
     }
 
