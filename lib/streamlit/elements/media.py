@@ -47,7 +47,7 @@ SubtitleData: TypeAlias = Union[
     str, Path, bytes, io.BytesIO, Dict[str, Union[str, Path, bytes, io.BytesIO]], None
 ]
 
-MediaTime: TypeAlias = Union[int, float, timedelta, str]
+MediaTime: TypeAlias = Union[int, timedelta, str]
 
 TIMEDELTA_PARSE_ERROR_MESSAGE: Final = (
     "Failed to convert '{param_name}' to a timedelta. "
@@ -64,10 +64,10 @@ class MediaMixin:
         self,
         data: MediaData,
         format: str = "audio/wav",
-        start_time: int = 0,
+        start_time: MediaTime = 0,
         *,
         sample_rate: int | None = None,
-        end_time: int | None = None,
+        end_time: MediaTime | None = None,
         loop: bool = False,
     ) -> DeltaGenerator:
         """Display an audio player.
@@ -157,10 +157,10 @@ class MediaMixin:
         self,
         data: MediaData,
         format: str = "video/mp4",
-        start_time: int = 0,
+        start_time: MediaTime = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
-        end_time: int | None = None,
+        end_time: MediaTime | None = None,
         loop: bool = False,
     ) -> DeltaGenerator:
         """Display a video player.
