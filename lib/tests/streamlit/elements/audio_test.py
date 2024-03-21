@@ -305,8 +305,8 @@ class AudioTest(DeltaGeneratorTestCase):
             (5, "INVALID_VALUE", "Failed to convert 'end_time' to a timedelta"),
         ]
     )
-    def test_time_delta_to_seconds_success(self, start_time, end_time, exception_text):
-        """Test that _timedelta_to_seconds works with correct exception text."""
+    def test_parse_start_time_end_time_fail(self, start_time, end_time, exception_text):
+        """Test that _parse_start_time_end_time works with correct exception text."""
 
         with self.assertRaises(StreamlitAPIException) as e:
             _parse_start_time_end_time(start_time, end_time)
