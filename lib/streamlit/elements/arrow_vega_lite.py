@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Union, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
@@ -71,9 +71,9 @@ def replace_values_in_dict(d, old_value, new_value):
 
 def _on_select(
     proto: ArrowVegaLiteChartProto,
-    on_select: Union[str, Callable[..., None], None] = None,
+    on_select: Union[str, Callable[..., None], bool, None] = None,
     key: str | None = None,
-):
+) -> AttributeDictionary:
     if on_select is not None and on_select != False:
         # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
         if isinstance(on_select, bool) or isinstance(on_select, str):
@@ -102,6 +102,7 @@ def _on_select(
             ctx=get_script_run_ctx(),
         )
         return AttributeDictionary(current_value.value)
+    return AttributeDictionary({})
 
 
 class ArrowVegaLiteMixin:
@@ -112,10 +113,10 @@ class ArrowVegaLiteMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_select: Union[str, Callable[..., None], None] = None,
+        on_select: Union[str, Callable[..., None], bool, None] = None,
         key: str | None = None,
         **kwargs: Any,
-    ) -> DeltaGenerator:
+    ) -> Union[DeltaGenerator, Dict[Any, Any]]:
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -188,8 +189,13 @@ class ArrowVegaLiteMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
+        on_select_callback = on_select
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        if isinstance(on_select_callback, bool) or isinstance(on_select_callback, str):
+            on_select_callback = None
+
         key = to_key(key)
-        check_callback_rules(self.dg, on_select)
+        check_callback_rules(self.dg, on_select_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "vega_lite_chart")
         if current_form_id(self.dg):
@@ -202,7 +208,7 @@ class ArrowVegaLiteMixin:
         # TODO(willhuang1997): This needs to be cleaned up probably
         if on_select == ON_SELECTION_IGNORE:
             on_select = False
-        if on_select:
+        if on_select and spec is not None:
             # TODO(willhuang1997): This seems like a hack so should fix this
             if "params" not in spec:
                 raise StreamlitAPIException(
@@ -249,7 +255,7 @@ def marshall(
     spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
-    on_select: Union[str, Callable[..., None], None] = None,
+    on_select: Union[str, Callable[..., None], bool, None] = None,
     key: str | None = None,
     **kwargs,
 ):
@@ -361,8 +367,8 @@ def marshall(
     id = compute_widget_id(
         "arrow_vega_lite",
         user_key=key,
-        data=data,
-        spec=spec,
+        data=data,  # type: ignore
+        spec=spec,  # type: ignore
         use_container_width=use_container_width,
         key=key,
         theme=theme,

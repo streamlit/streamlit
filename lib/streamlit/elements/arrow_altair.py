@@ -21,7 +21,17 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Collection, Literal, Sequence, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Literal,
+    Sequence,
+    Union,
+    cast,
+)
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
@@ -759,9 +769,9 @@ class ArrowAltairMixin:
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
         # TODO(willhuang1997): This will need to be finalized to "rerun" / "ignore" or True / False
-        on_select: Union[str, Callable[..., None], True, False, None] = None,
+        on_select: Union[str, Callable[..., None], bool, None] = None,
         key: str | None = None,
-    ) -> Union["DeltaGenerator", Dict]:
+    ) -> Union["DeltaGenerator", Dict[Any, Any]]:
         """Display a chart using the Altair library.
 
         Parameters
@@ -822,8 +832,13 @@ class ArrowAltairMixin:
             )
         proto = ArrowVegaLiteChartProto()
 
+        on_select_callback = on_select
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        if isinstance(on_select_callback, bool) or isinstance(on_select_callback, str):
+            on_select_callback = None
+
         key = to_key(key)
-        check_callback_rules(self.dg, on_select)
+        check_callback_rules(self.dg, on_select_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "altair_chart")
         if current_form_id(self.dg):

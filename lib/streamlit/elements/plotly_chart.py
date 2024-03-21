@@ -37,7 +37,7 @@ from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -165,6 +165,9 @@ class PlotlyMixin:
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
+        widget_callback = None
+        if not isinstance(on_select, bool) and not isinstance(on_select, str):
+            widget_callback = on_select
 
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
@@ -172,7 +175,7 @@ class PlotlyMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         key = to_key(key)
-        check_callback_rules(self.dg, on_select)
+        check_callback_rules(self.dg, widget_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "plotly_chart")
         if current_form_id(self.dg):
@@ -206,11 +209,7 @@ class PlotlyMixin:
 
         ctx = get_script_run_ctx()
 
-        widget_callback = None
-        if not isinstance(on_select, bool) and not isinstance(on_select, str):
-            widget_callback = on_select
-
-        widget_state = {}
+        widget_state = cast(RegisterWidgetResult[Any], {})
         if is_select_enabled:
             widget_state = register_widget(
                 "plotly_chart",
@@ -290,8 +289,7 @@ def marshall(
     ctx = get_script_run_ctx()
     id = compute_widget_id(
         "plotly_chart",
-        user_key=key,
-        figure_or_data=figure_or_data,
+        figure_or_data=figure_or_data,  # type: ignore
         use_container_width=use_container_width,
         sharing=sharing,
         key=key,
