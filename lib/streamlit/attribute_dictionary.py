@@ -24,5 +24,4 @@ class AttributeDictionary(Dict[Any, Any]):
                 f"'{type(self).__name__}' object has no attribute '{key}'"
             )
 
-    # https://github.com/python/mypy/issues/11046
-    __setattr__ = dict.__setitem__  # type: ignore
+    __setattr__ = dict.__setitem__
