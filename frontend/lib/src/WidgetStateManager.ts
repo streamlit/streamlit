@@ -175,7 +175,7 @@ export class WidgetStateManager {
   // Internal state for each form we're managing.
   private readonly forms = new Map<string, FormState>()
 
-  private readonly extraWidgetInfo = new Map<string, any>()
+  private readonly extraWidgetInfo = new Map<string, Map<string, any>>()
 
   // External data about all forms.
   private formsData: FormsData
@@ -264,12 +264,31 @@ export class WidgetStateManager {
     }
   }
 
-  public setExtraWidgetInfo(widget: WidgetInfo, value: any): void {
-    this.extraWidgetInfo.set(widget.id, value)
+  public setExtraWidgetInfo(
+    widget: WidgetInfo,
+    key: string,
+    value: any
+  ): void {
+    if (!this.extraWidgetInfo.has(widget.id)) {
+      this.extraWidgetInfo.set(widget.id, new Map<string, any>())
+    }
+
+    const currentMap = this.extraWidgetInfo.get(widget.id)
+
+    if (currentMap) {
+      currentMap.set(key, value)
+    }
   }
 
-  public getExtraWidgetInfo(widget: WidgetInfo): any {
-    return this.extraWidgetInfo.get(widget.id)
+  public getExtraWidgetInfo(widget: WidgetInfo, key: string): any {
+    if (this.extraWidgetInfo.has(widget.id)) {
+      const widgetInfoMap = this.extraWidgetInfo.get(widget.id)
+      if (widgetInfoMap) {
+        return widgetInfoMap.get(key)
+      }
+    }
+
+    return undefined
   }
 
   /**
