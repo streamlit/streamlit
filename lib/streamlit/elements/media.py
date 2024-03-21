@@ -112,7 +112,7 @@ class MediaMixin:
            height: 865px
 
         """
-        start_time = _timedelta_to_seconds(start_time, "start_time")
+        start_time = int(_timedelta_to_seconds(start_time, "start_time"))
         end_time = _timedelta_to_seconds(end_time, "end_time")
 
         audio_proto = AudioProto()
@@ -251,7 +251,7 @@ class MediaMixin:
 
         """
 
-        start_time = _timedelta_to_seconds(start_time, "start_time")
+        start_time = int(_timedelta_to_seconds(start_time, "start_time"))
         end_time = _timedelta_to_seconds(end_time, "end_time")
 
         video_proto = VideoProto()
