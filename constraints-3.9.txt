@@ -28,13 +28,13 @@ fonttools==4.50.0
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.42
-graphviz==0.20.2
+graphviz==0.20.3
 greenlet==3.0.3
 hypothesis==6.99.11
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.1.0
-importlib_resources==6.3.2
+importlib_resources==6.4.0
 iniconfig==2.0.0
 jaraco.classes==3.3.1
 jeepney==0.8.0
