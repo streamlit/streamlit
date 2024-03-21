@@ -47,7 +47,7 @@ SubtitleData: TypeAlias = Union[
     str, Path, bytes, io.BytesIO, Dict[str, Union[str, Path, bytes, io.BytesIO]], None
 ]
 
-MediaTime: TypeAlias = Union[int, timedelta, str]
+MediaTime: TypeAlias = Union[int, float, timedelta, str]
 
 TIMEDELTA_PARSE_ERROR_MESSAGE: Final = (
     "Failed to convert '{param_name}' to a timedelta. "
