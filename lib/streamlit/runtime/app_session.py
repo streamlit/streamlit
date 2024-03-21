@@ -475,7 +475,7 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
-        fragment_id: str | None = None,
+        fragment_ids_this_run: set[str] | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -491,7 +491,7 @@ class AppSession:
                 exception,
                 client_state,
                 page_script_hash,
-                fragment_id,
+                fragment_ids_this_run,
             )
         )
 
@@ -503,7 +503,7 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
-        fragment_id: str | None = None,
+        fragment_ids_this_run: set[str] | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -535,8 +535,10 @@ class AppSession:
             A hash of the script path corresponding to the page currently being
             run. Set only for the SCRIPT_STARTED event.
 
-        fragment_id : str | None
-            The fragment ID if this script run was triggered by a fragment.
+        fragment_ids_this_run : set[str] | None
+            The fragment IDs of the fragments being executed in this script run. Only
+            set for the SCRIPT_STARTED event. If this value is falsy, this script run
+            must be for the full script.
         """
 
         assert (
@@ -568,11 +570,13 @@ class AppSession:
             # as the ForwardMsgs in the queue may not correspond to the running
             # fragment, so dropping the messages may result in the app missing
             # information.
-            if not fragment_id:
+            if not fragment_ids_this_run:
                 self._clear_queue()
 
             self._enqueue_forward_msg(
-                self._create_new_session_message(page_script_hash, fragment_id)
+                self._create_new_session_message(
+                    page_script_hash, fragment_ids_this_run
+                )
             )
 
         elif (
@@ -665,7 +669,7 @@ class AppSession:
         return msg
 
     def _create_new_session_message(
-        self, page_script_hash: str, fragment_id: str | None = None
+        self, page_script_hash: str, fragment_ids_this_run: set[str] | None = None
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
@@ -674,7 +678,9 @@ class AppSession:
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._script_data.main_script_path
         msg.new_session.page_script_hash = page_script_hash
-        msg.new_session.fragment_id = fragment_id or ""
+
+        if fragment_ids_this_run:
+            msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
         _populate_app_pages(msg.new_session, self._script_data.main_script_path)
         _populate_config_msg(msg.new_session.config)

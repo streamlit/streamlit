@@ -964,7 +964,7 @@ describe("AppRoot.clearStaleNodes", () => {
       "new_session_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
-    ).clearStaleNodes("new_session_id")
+    ).clearStaleNodes("new_session_id", [])
 
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
@@ -1024,7 +1024,7 @@ describe("AppRoot.clearStaleNodes", () => {
         forwardMsgMetadata([0, 1, 1])
       )
 
-    const pruned = root.clearStaleNodes("new_session_id", "my_fragment_id")
+    const pruned = root.clearStaleNodes("new_session_id", ["my_fragment_id"])
 
     expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
     expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(2)

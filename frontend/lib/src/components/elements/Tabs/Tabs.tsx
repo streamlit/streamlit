@@ -41,7 +41,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
 
 function Tabs(props: TabProps): ReactElement {
   const { widgetsDisabled, node, isStale, scriptRunState, scriptRunId } = props
-  const { currentFragmentId } = useContext(LibContext)
+  const { fragmentIdsThisRun } = useContext(LibContext)
 
   let allTabLabels: string[] = []
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
@@ -152,7 +152,7 @@ function Tabs(props: TabProps): ReactElement {
             appNode,
             scriptRunState,
             scriptRunId,
-            currentFragmentId
+            fragmentIdsThisRun
           )
 
           // Ensure stale tab's elements are also marked stale/disabled

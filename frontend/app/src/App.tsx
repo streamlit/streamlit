@@ -153,7 +153,7 @@ interface State {
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
-  currentFragmentId: string
+  fragmentIdsThisRun: Array<string>
   // host communication info
   isOwner: boolean
   hostMenuItems: IMenuItem[]
@@ -269,7 +269,7 @@ export class App extends PureComponent<Props, State> {
       hideSidebarNav: true,
       toolbarMode: Config.ToolbarMode.MINIMAL,
       latestRunTime: performance.now(),
-      currentFragmentId: "",
+      fragmentIdsThisRun: [],
       // Information sent from the host
       isOwner: false,
       hostMenuItems: [],
@@ -861,7 +861,7 @@ export class App extends PureComponent<Props, State> {
       scriptRunId,
       name: scriptName,
       mainScriptPath,
-      fragmentId,
+      fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
     } = newSessionProto
 
@@ -877,7 +877,7 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-    if (!fragmentId) {
+    if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
       this.state.autoReruns.forEach((value: NodeJS.Timer) => {
         clearInterval(value)
@@ -950,7 +950,7 @@ export class App extends PureComponent<Props, State> {
       )
     } else {
       this.setState({
-        currentFragmentId: fragmentId,
+        fragmentIdsThisRun,
         latestRunTime: performance.now(),
       })
     }
@@ -1106,11 +1106,11 @@ export class App extends PureComponent<Props, State> {
         // (We don't do this if our script had a compilation error and didn't
         // finish successfully.)
         this.setState(
-          ({ scriptRunId, currentFragmentId }) => ({
+          ({ scriptRunId, fragmentIdsThisRun }) => ({
             // Apply any pending elements that haven't been applied.
             elements: this.pendingElementsBuffer.clearStaleNodes(
               scriptRunId,
-              currentFragmentId
+              fragmentIdsThisRun
             ),
           }),
           () => {
@@ -1757,7 +1757,7 @@ export class App extends PureComponent<Props, State> {
             onPageChange: this.onPageChange,
             currentPageScriptHash,
             libConfig,
-            currentFragmentId: this.state.currentFragmentId ?? "",
+            fragmentIdsThisRun: this.state.fragmentIdsThisRun,
           }}
         >
           <HotKeys

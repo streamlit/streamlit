@@ -66,7 +66,7 @@ interface BlockPropsWithWidth extends BaseBlockProps {
 // Render BlockNodes (i.e. container nodes).
 const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   const { node } = props
-  const { currentFragmentId } = useContext(LibContext)
+  const { fragmentIdsThisRun } = useContext(LibContext)
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
@@ -78,7 +78,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
     node,
     props.scriptRunState,
     props.scriptRunId,
-    currentFragmentId
+    fragmentIdsThisRun
   )
 
   const childProps = { ...props, ...{ node } }

@@ -713,7 +713,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         "streamlit.runtime.app_session._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
-    async def test_new_session_message_includes_fragment_id(self):
+    async def test_new_session_message_includes_fragment_ids(self):
         session = _create_test_session(asyncio.get_running_loop())
 
         orig_ctx = get_script_run_ctx()
@@ -739,7 +739,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
-            fragment_id="my_fragment_id",
+            fragment_ids_this_run={"my_fragment_id"},
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -750,7 +750,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         session._clear_queue.assert_not_called()
 
         new_session_msg = sent_messages[0].new_session
-        self.assertEqual(new_session_msg.fragment_id, "my_fragment_id")
+        self.assertEqual(new_session_msg.fragment_ids_this_run, ["my_fragment_id"])
 
         add_script_run_ctx(ctx=orig_ctx)
 

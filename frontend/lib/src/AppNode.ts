@@ -114,7 +114,7 @@ export interface AppNode {
    */
   clearStaleNodes(
     currentScriptRunId: string,
-    currentFragmentId?: string
+    fragmentIdsThisRun?: Array<string>
   ): AppNode | undefined
 
   /**
@@ -214,11 +214,15 @@ export class ElementNode implements AppNode {
 
   public clearStaleNodes(
     currentScriptRunId: string,
-    currentFragmentId?: string
+    fragmentIdsThisRun?: Array<string>
   ): ElementNode | undefined {
     // If we're currently running a fragment, nodes unrelated to the fragment
     // shouldn't be cleared.
-    if (currentFragmentId && currentFragmentId != this.fragmentId) {
+    if (
+      fragmentIdsThisRun &&
+      fragmentIdsThisRun.length &&
+      (!this.fragmentId || !fragmentIdsThisRun.includes(this.fragmentId))
+    ) {
       return this
     }
     return this.scriptRunId === currentScriptRunId ? this : undefined
@@ -395,9 +399,9 @@ export class BlockNode implements AppNode {
 
   public clearStaleNodes(
     currentScriptRunId: string,
-    currentFragmentId?: string
+    fragmentIdsThisRun?: Array<string>
   ): BlockNode | undefined {
-    if (!currentFragmentId) {
+    if (!fragmentIdsThisRun || !fragmentIdsThisRun.length) {
       // If we're not currently running a fragment, then we can remove any blocks
       // that don't correspond to currentScriptRunId.
       if (this.scriptRunId !== currentScriptRunId) {
@@ -408,7 +412,7 @@ export class BlockNode implements AppNode {
       // depends on the fragmentId of this BlockNode.
 
       if (this.fragmentId) {
-        if (this.fragmentId != currentFragmentId) {
+        if (!fragmentIdsThisRun.includes(this.fragmentId)) {
           // This BlockNode corresponds to a different fragment, so we know we
           // won't be modifying it and can return early.
           return this
@@ -425,7 +429,7 @@ export class BlockNode implements AppNode {
     // Recursively clear our children.
     const newChildren = this.children
       .map(child =>
-        child.clearStaleNodes(currentScriptRunId, currentFragmentId)
+        child.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun)
       )
       .filter(notUndefined)
 
@@ -608,19 +612,19 @@ export class AppRoot {
 
   public clearStaleNodes(
     currentScriptRunId: string,
-    currentFragmentId?: string
+    fragmentIdsThisRun?: Array<string>
   ): AppRoot {
     const main =
-      this.main.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      this.main.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode()
     const sidebar =
-      this.sidebar.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      this.sidebar.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode()
     const event =
-      this.event.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      this.event.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode()
     const bottom =
-      this.bottom.clearStaleNodes(currentScriptRunId, currentFragmentId) ||
+      this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
       new BlockNode()
 
     return new AppRoot(

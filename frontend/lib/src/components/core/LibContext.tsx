@@ -89,10 +89,10 @@ export interface LibContextProps {
   libConfig: LibConfig
 
   /**
-   * The ID of the fragment that the current script run corresponds to. If the
+   * The IDs of the fragments that the current script run corresponds to. If the
    * current script run isn't due to a fragment, this field is falsy.
    */
-  currentFragmentId: string
+  fragmentIdsThisRun: Array<string>
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -107,5 +107,5 @@ export const LibContext = React.createContext<LibContextProps>({
   onPageChange: () => {},
   currentPageScriptHash: "",
   libConfig: {},
-  currentFragmentId: "",
+  fragmentIdsThisRun: [],
 })
