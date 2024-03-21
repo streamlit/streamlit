@@ -66,18 +66,18 @@ def is_cacheable_msg(msg: ForwardMsg) -> bool:
 
 
 @overload
-def ttl_to_seconds(
+def duration_to_seconds(
     ttl: float | timedelta | str | None, *, coerce_none_to_inf: Literal[False]
 ) -> float | None:
     ...
 
 
 @overload
-def ttl_to_seconds(ttl: float | timedelta | str | None) -> float:
+def duration_to_seconds(ttl: float | timedelta | str | None) -> float:
     ...
 
 
-def ttl_to_seconds(
+def duration_to_seconds(
     ttl: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
 ) -> float | None:
     """
