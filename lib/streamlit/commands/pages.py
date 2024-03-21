@@ -20,6 +20,7 @@ from typing import Callable, Literal
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+from streamlit.source_util import page_icon_and_name
 from streamlit.util import calc_md5
 
 
@@ -48,9 +49,20 @@ class Page:
             page = Path(page)
         if isinstance(page, Path):
             page = (main_path / page).resolve()
+
+        inferred_name = ""
+        inferred_icon = ""
+        if isinstance(page, Path):
+            inferred_icon, inferred_name = page_icon_and_name(page)
+        else:
+            inferred_name = page.__name__
+
+        name = title or inferred_name
+        assert name
+
         self.page = page
-        self.title = title
-        self.icon = icon
+        self.title = title or inferred_name
+        self.icon = icon or inferred_icon
         self.default = default
         self.key = key
 
