@@ -30,10 +30,10 @@ gitdb==4.0.11
 GitPython==3.1.42
 graphviz==0.20.2
 greenlet==3.0.3
-hypothesis==6.99.9
+hypothesis==6.99.11
 identify==2.5.35
 idna==3.6
-importlib_metadata==7.0.2
+importlib_metadata==7.1.0
 importlib_resources==6.3.2
 iniconfig==2.0.0
 jaraco.classes==3.3.1
@@ -45,9 +45,9 @@ jsonschema==4.21.1
 jsonschema-specifications==2023.12.1
 keyring==24.3.1
 kiwisolver==1.4.5
-langchain==0.1.12
-langchain-community==0.0.28
-langchain-core==0.1.32
+langchain==0.1.13
+langchain-community==0.0.29
+langchain-core==0.1.33
 langchain-text-splitters==0.0.1
 langsmith==0.1.31
 markdown-it-py==3.0.0
