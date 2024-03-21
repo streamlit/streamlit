@@ -23,6 +23,8 @@ def test_pydeck_chart_has_consistent_visuals(
 ):
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
     expect(pydeck_charts).to_have_count(3)
+    # Extra time for the pydeck charts to load
+    wait_for_app_run(3000)
 
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-countries")
     assert_snapshot(pydeck_charts.nth(1), name="st_pydeck_chart-san_francisco")
