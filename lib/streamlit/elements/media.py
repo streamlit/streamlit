@@ -29,6 +29,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
+from streamlit.runtime.caching.cache_utils import ttl_to_seconds
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -45,6 +46,16 @@ MediaData: TypeAlias = Union[
 SubtitleData: TypeAlias = Union[
     str, Path, bytes, io.BytesIO, Dict[str, Union[str, Path, bytes, io.BytesIO]], None
 ]
+
+MediaTime: TypeAlias = Union[int, float, timedelta, str]
+
+TIMEDELTA_PARSE_ERROR_MESSAGE: Final = (
+    "Failed to convert '{param_name}' to a timedelta. "
+    "Please use a string in a format supported by "
+    "[Pandas Timedelta constructor]"
+    "(https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html), "
+    'e.g. `"10s"`, `"15 seconds"`, or `"1h23s"`. Got: {param_value}'
+)
 
 
 class MediaMixin:
@@ -112,8 +123,7 @@ class MediaMixin:
            height: 865px
 
         """
-        start_time = int(_timedelta_to_seconds(start_time, "start_time"))
-        end_time = _timedelta_to_seconds(end_time, "end_time")
+        start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
@@ -251,8 +261,7 @@ class MediaMixin:
 
         """
 
-        start_time = int(_timedelta_to_seconds(start_time, "start_time"))
-        end_time = _timedelta_to_seconds(end_time, "end_time")
+        start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
@@ -469,41 +478,32 @@ def marshall_video(
                 ) from original_err
 
 
-def _timedelta_to_seconds(
-    media_time: timedelta | str | int | None,
-    media_time_param_name: str,
-) -> int | None:
-    """Convert a start_time / end_time value to an int representing "number of seconds"."""
-    if isinstance(media_time, timedelta):
-        return int(media_time.total_seconds())
+def _parse_start_time_end_time(
+    start_time: MediaTime, end_time: MediaTime | None
+) -> tuple[int, int | None]:
+    """Parse start_time and end_time and return them as int."""
+    try:
+        maybe_start_time = ttl_to_seconds(start_time, coerce_none_to_inf=False)
+        if maybe_start_time is None:
+            raise ValueError
+        start_time = int(maybe_start_time)
+    except (StreamlitAPIException, ValueError):
+        error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
+            param_name="start_time", param_value=start_time
+        )
+        raise StreamlitAPIException(error_msg) from None
 
-    if isinstance(media_time, str):
-        import numpy as np
-        import pandas as pd
+    try:
+        end_time = ttl_to_seconds(end_time, coerce_none_to_inf=False)
+        if end_time is not None:
+            end_time = int(end_time)
+    except StreamlitAPIException:
+        error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
+            param_name="end_time", param_value=end_time
+        )
+        raise StreamlitAPIException(error_msg) from None
 
-        try:
-            out: int = int(pd.Timedelta(media_time).total_seconds())
-        except ValueError as ex:
-            raise StreamlitAPIException(
-                f"""Failed to convert '{media_time_param_name}' to a timedelta.
-                Please use a string in a format supported by
-                [Pandas's Timedelta constructor](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html),
-                e.g. `"10s"`, `"15 seconds"`, or `"1h23s"`. Got: {media_time}
-                """
-            ) from ex
-
-        if np.isnan(out):
-            raise StreamlitAPIException(
-                f"""Failed to convert '{media_time_param_name}' to a timedelta.
-                Please use a string in a format supported by
-                [Pandas's Timedelta constructor](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html),
-                e.g. `"10s"`, `"15 seconds"`, or `"1h23s"`. Got: {media_time}
-                """
-            )
-
-        return out
-
-    return media_time
+    return start_time, end_time
 
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:

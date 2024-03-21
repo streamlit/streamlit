@@ -23,7 +23,10 @@ from parameterized import parameterized
 from scipy.io import wavfile
 
 import streamlit as st
-from streamlit.elements.media import _maybe_convert_to_wav_bytes, _timedelta_to_seconds
+from streamlit.elements.media import (
+    _maybe_convert_to_wav_bytes,
+    _parse_start_time_end_time,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
@@ -278,34 +281,35 @@ class AudioTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("1s", 1),
-            ("1m", 60),
-            ("1m2s", 62),
-            ("1h2m3s", 3723),
-            ("10 seconds", 10),
-            ("3 minutes 10 seconds", 190),
+            ("1s", None, (1, None)),
+            ("1m", None, (60, None)),
+            ("1m2s", None, (62, None)),
+            (0, "1m", (0, 60)),
+            ("1h2m3s", None, (3723, None)),
+            ("10 seconds", "15 seconds", (10, 15)),
+            ("3 minutes 10 seconds", "3 minutes 20 seconds", (190, 200)),
         ]
     )
-    def test_time_delta_to_seconds_success(self, input_value, expected_value):
-        """Test that _timedelta_to_seconds works correctly."""
+    def test_parse_start_time_end_time_success(
+        self, input_start_time, input_end_time, expected_value
+    ):
+        """Test that _parse_start_time_end_time works correctly."""
         self.assertEqual(
-            _timedelta_to_seconds(input_value, media_time_param_name="start_time"),
+            _parse_start_time_end_time(input_start_time, input_end_time),
             expected_value,
         )
 
     @parameterized.expand(
         [
-            ("AAA", "start_time", "Failed to convert 'start_time' to a timedelta."),
-            ("BBB", "end_time", "Failed to convert 'end_time' to a timedelta."),
+            ("INVALID_VALUE", None, "Failed to convert 'start_time' to a timedelta"),
+            (5, "INVALID_VALUE", "Failed to convert 'end_time' to a timedelta"),
         ]
     )
-    def test_time_delta_to_seconds_success(
-        self, input_value, param_name, exception_text
-    ):
+    def test_time_delta_to_seconds_success(self, start_time, end_time, exception_text):
         """Test that _timedelta_to_seconds works with correct exception text."""
 
         with self.assertRaises(StreamlitAPIException) as e:
-            _timedelta_to_seconds(input_value, media_time_param_name=param_name)
+            _parse_start_time_end_time(start_time, end_time)
 
         self.assertIn(exception_text, str(e.exception))
-        self.assertIn(input_value, str(e.exception))
+        self.assertIn("INVALID_VALUE", str(e.exception))
