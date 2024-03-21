@@ -20,7 +20,7 @@ from typing import Any
 from parameterized import parameterized
 
 from streamlit.runtime.caching.cache_errors import BadTTLStringError
-from streamlit.runtime.caching.cache_utils import ttl_to_seconds
+from streamlit.runtime.runtime_util import ttl_to_seconds
 
 NORMAL_PARAMS = [
     ("float", 3.5, 3.5),

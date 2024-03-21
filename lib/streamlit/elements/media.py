@@ -30,6 +30,7 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.runtime_util import ttl_to_seconds
 
 if TYPE_CHECKING:
     from typing import Any
@@ -481,8 +482,6 @@ def _parse_start_time_end_time(
     start_time: MediaTime, end_time: MediaTime | None
 ) -> tuple[int, int | None]:
     """Parse start_time and end_time and return them as int."""
-    # Importing ttl_to_seconds here to avoid circular import
-    from streamlit.runtime.caching.cache_utils import ttl_to_seconds
 
     try:
         maybe_start_time = ttl_to_seconds(start_time, coerce_none_to_inf=False)
