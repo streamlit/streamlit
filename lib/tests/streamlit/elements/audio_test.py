@@ -286,6 +286,7 @@ class AudioTest(DeltaGeneratorTestCase):
             ("1m2s", None, (62, None)),
             (0, "1m", (0, 60)),
             ("1h2m3s", None, (3723, None)),
+            ("1m2s", "1m10s", (62, 70)),
             ("10 seconds", "15 seconds", (10, 15)),
             ("3 minutes 10 seconds", "3 minutes 20 seconds", (190, 200)),
         ]
