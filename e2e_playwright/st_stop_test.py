@@ -18,4 +18,4 @@ from playwright.sync_api import Page, expect
 def test_st_stop_stops_script(app: Page):
     expect(app.get_by_test_id("stText")).to_have_count(1)
 
-    expect(app.get_by_test_id("stText")).to_have_text("Text after stop")
+    expect(app.get_by_test_id("stText")).to_have_text("Text before stop")
