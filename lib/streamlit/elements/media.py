@@ -47,44 +47,6 @@ SubtitleData: TypeAlias = Union[
 ]
 
 
-def timedelta_to_seconds(
-    media_time: timedelta | str | int | None,
-    media_time_param_name: str,
-) -> int | None:
-    """Convert a start_time / end_time value to an int representing "number of seconds"."""
-    if isinstance(media_time, timedelta):
-        return int(media_time.total_seconds())
-
-    if isinstance(media_time, str):
-        import numpy as np
-        import pandas as pd
-
-        try:
-            out: int = int(pd.Timedelta(media_time).total_seconds())
-        except ValueError as ex:
-            # raise StreamlitAPIException(ttl) from ex
-            raise StreamlitAPIException(
-                f"""Failed to convert '{media_time_param_name}' to a timedelta.
-                Please use a valid timedelta string.{media_time} string doesn't look
-                right. It should be formatted as `'1h34m'` or `14 seconds`, for example.
-                Got: {media_time}
-                """
-            ) from ex
-
-        if np.isnan(out):
-            raise StreamlitAPIException(
-                f"""Failed to convert '{media_time_param_name}' to a timedelta. Please
-                use a valid timedelta string.{media_time} string doesn't look right.
-                It should be formatted as `'1h34m'` or `14 seconds`, for example.
-                Got: {media_time}
-                """
-            )
-
-        return out
-
-    return media_time
-
-
 class MediaMixin:
     @gather_metrics("audio")
     def audio(
@@ -150,8 +112,8 @@ class MediaMixin:
            height: 865px
 
         """
-        start_time = timedelta_to_seconds(start_time, "start_time")
-        end_time = timedelta_to_seconds(end_time, "end_time")
+        start_time = _timedelta_to_seconds(start_time, "start_time")
+        end_time = _timedelta_to_seconds(end_time, "end_time")
 
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
@@ -289,8 +251,8 @@ class MediaMixin:
 
         """
 
-        start_time = timedelta_to_seconds(start_time, "start_time")
-        end_time = timedelta_to_seconds(end_time, "end_time")
+        start_time = _timedelta_to_seconds(start_time, "start_time")
+        end_time = _timedelta_to_seconds(end_time, "end_time")
 
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
@@ -505,6 +467,44 @@ def marshall_video(
                 raise StreamlitAPIException(
                     f"Failed to process the provided subtitle: {label}"
                 ) from original_err
+
+
+def _timedelta_to_seconds(
+    media_time: timedelta | str | int | None,
+    media_time_param_name: str,
+) -> int | None:
+    """Convert a start_time / end_time value to an int representing "number of seconds"."""
+    if isinstance(media_time, timedelta):
+        return int(media_time.total_seconds())
+
+    if isinstance(media_time, str):
+        import numpy as np
+        import pandas as pd
+
+        try:
+            out: int = int(pd.Timedelta(media_time).total_seconds())
+        except ValueError as ex:
+            # raise StreamlitAPIException(ttl) from ex
+            raise StreamlitAPIException(
+                f"""Failed to convert '{media_time_param_name}' to a timedelta.
+                Please use a valid timedelta string. {media_time} string doesn't look
+                right. It should be formatted as `'1h34m'` or `14 seconds`, for example.
+                Got: {media_time}
+                """
+            ) from ex
+
+        if np.isnan(out):
+            raise StreamlitAPIException(
+                f"""Failed to convert '{media_time_param_name}' to a timedelta. Please
+                use a valid timedelta string.{media_time} string doesn't look right.
+                It should be formatted as `'1h34m'` or `14 seconds`, for example.
+                Got: {media_time}
+                """
+            )
+
+        return out
+
+    return media_time
 
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
