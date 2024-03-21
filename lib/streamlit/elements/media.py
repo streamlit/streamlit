@@ -486,17 +486,19 @@ def _timedelta_to_seconds(
         except ValueError as ex:
             raise StreamlitAPIException(
                 f"""Failed to convert '{media_time_param_name}' to a timedelta.
-                Please use a valid timedelta string. {media_time} string doesn't look
-                right. It should be formatted as `'1h34m'` or `14 seconds`, for example.
+                Please use a string in a format supported by  # noqa: W291
+                [Pandas's Timedelta constructor](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html),
+                e.g. `"10s"`, `"15 seconds"`, or `"1h23s"`.
                 Got: {media_time}
                 """
             ) from ex
 
         if np.isnan(out):
             raise StreamlitAPIException(
-                f"""Failed to convert '{media_time_param_name}' to a timedelta. Please
-                use a valid timedelta string.{media_time} string doesn't look right.
-                It should be formatted as `'1h34m'` or `14 seconds`, for example.
+                f"""Failed to convert '{media_time_param_name}' to a timedelta.
+                Please use a string in a format supported by
+                [Pandas's Timedelta constructor](https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html),
+                e.g. `"10s"`, `"15 seconds"`, or `"1h23s"`.
                 Got: {media_time}
                 """
             )
