@@ -161,7 +161,10 @@ function PlotlyFigure({
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
       if (parsedStoreValue.select) {
-        const { data, selections } = widgetMgr.getExtraWidgetInfo(element)
+        const { data, selections } = widgetMgr.getExtraWidgetInfo(
+          element,
+          "selections"
+        )
         spec.data = data
         spec.layout.selections = selections
       }
@@ -191,7 +194,7 @@ function PlotlyFigure({
     return spec
   }
 
-  const [spec, setSpec] = useState(getInitialValue())
+  const [spec] = useState(getInitialValue())
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
@@ -224,7 +227,6 @@ function PlotlyFigure({
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
     }
-    setSpec(spec)
   }, [
     height,
     width,
@@ -301,19 +303,15 @@ function PlotlyFigure({
         }
       })
 
-      widgetMgr.setExtraWidgetInfo(element, {
+      widgetMgr.setExtraWidgetInfo(element, "selections", {
         data: data,
         // @ts-expect-error
         selections: event.selections,
       })
     }
 
-    // select_box to replicate pythonic return value
     returnValue.select.box = selectedBoxes
-
-    // lasso_points to replicate pythonic return value
     returnValue.select.lasso = selectedLassos
-
     returnValue.select.points = returnValue.select.points.map((point: any) =>
       keysToSnakeCase(point)
     )
@@ -336,7 +334,6 @@ function PlotlyFigure({
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
-    setSpec(spec)
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
   }
 

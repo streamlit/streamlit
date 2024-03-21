@@ -12813,11 +12813,6 @@ plist@^3.0.1:
     base64-js "^1.5.1"
     xmlbuilder "^9.0.7"
 
-plotly.js-dist@^2.29.1:
-  version "2.29.1"
-  resolved "https://registry.yarnpkg.com/plotly.js-dist/-/plotly.js-dist-2.29.1.tgz#8e67dcc3050e732f44cb8a23e063a4e5bcbfe892"
-  integrity sha512-jEdUhk9brzzleuJP1vTxk1ECfm896bld78elG6YRPdywyUYAAO0rd+JUNv56hZu4uqUftvKU6xfjSwjm0R3LUw==
-
 plotly.js@^2.30.0:
   version "2.30.0"
   resolved "https://registry.yarnpkg.com/plotly.js/-/plotly.js-2.30.0.tgz#6188c77204adc703997265089259eab1d2f5aaa9"
