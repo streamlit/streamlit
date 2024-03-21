@@ -484,7 +484,6 @@ def _timedelta_to_seconds(
         try:
             out: int = int(pd.Timedelta(media_time).total_seconds())
         except ValueError as ex:
-            # raise StreamlitAPIException(ttl) from ex
             raise StreamlitAPIException(
                 f"""Failed to convert '{media_time_param_name}' to a timedelta.
                 Please use a valid timedelta string. {media_time} string doesn't look
