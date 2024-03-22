@@ -1758,6 +1758,7 @@ export class App extends PureComponent<Props, State> {
                       sendMessageToHost={
                         this.hostCommunicationMgr.sendMessageToHost
                       }
+                      metricsMgr={this.metricsMgr}
                     />
                   </>
                 )}

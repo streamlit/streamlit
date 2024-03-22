@@ -132,7 +132,7 @@ function AppView(props: AppViewProps): ReactElement {
     toastAdjustment,
   } = React.useContext(AppContext)
 
-  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
+  const { addScriptFinishedHandler, removeScriptFinishedHandler, libConfig } =
     React.useContext(LibContext)
 
   const layout = wideMode ? "wide" : "narrow"
@@ -229,6 +229,7 @@ function AppView(props: AppViewProps): ReactElement {
           hasBottom={hasBottomElements}
           isEmbedded={embedded}
           hasSidebar={showSidebar}
+          disableFullscreenMode={Boolean(libConfig.disableFullscreenMode)}
         >
           {renderBlock(elements.main)}
         </StyledAppViewBlockContainer>
