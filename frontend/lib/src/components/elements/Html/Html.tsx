@@ -15,10 +15,13 @@
  */
 
 import React, { ReactElement, useState, useEffect, useRef } from "react"
-import { Html as HtmlProto } from "@streamlit/lib/src/proto"
 import DOMPurify from "dompurify"
 
+import { Html as HtmlProto } from "@streamlit/lib/src/proto"
+import { StyledHtml } from "./styled-components"
+
 export interface HtmlProps {
+  width: number
   element: HtmlProto
 }
 
@@ -42,7 +45,7 @@ const checkForRenderedContent = (htmlElement: HTMLDivElement | null): void => {
 /**
  * HTML code to insert into the page.
  */
-export default function Html({ element }: HtmlProps): ReactElement {
+export default function Html({ element, width }: HtmlProps): ReactElement {
   const { body } = element
   const [sanitizedHtml, setSanitizedHtml] = useState(sanitizeString(body))
   const htmlRef = useRef(null)
@@ -61,10 +64,11 @@ export default function Html({ element }: HtmlProps): ReactElement {
   return (
     <>
       {sanitizedHtml && (
-        <div
+        <StyledHtml
           className="stHtml"
           data-testid="stHtml"
           ref={htmlRef}
+          width={width}
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
       )}
