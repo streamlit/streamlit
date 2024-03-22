@@ -105,6 +105,7 @@ import {
   LibConfig,
   AppConfig,
   Navigation,
+  INavSection,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -151,6 +152,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
+  navPages: INavSection[]
   currentPageScriptHash: string
   latestRunTime: number
   // host communication info
@@ -256,6 +258,7 @@ export class App extends PureComponent<Props, State> {
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
+      navPages: [],
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
@@ -723,15 +726,14 @@ export class App extends PureComponent<Props, State> {
 
   handleNavigation = (navigationMsg: Navigation): void => {
     const { sections } = navigationMsg
-    const appPages = sections.flatMap(
-      section => section.appPages
-    ) as IAppPage[] // TODO do without the cast
-    this.setState({ appPages }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_APP_PAGES",
-        appPages,
-      })
-    })
+    const navPages = sections
+    this.setState({ navPages })
+    // this.setState({ navPages }, () => {
+    //   this.hostCommunicationMgr.sendMessageToHost({
+    //     type: "SET_APP_PAGES",
+    //     appPages,
+    //   })
+    // })
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -1797,6 +1799,7 @@ export class App extends PureComponent<Props, State> {
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
                 appPages={this.state.appPages}
+                navPages={this.state.navPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}

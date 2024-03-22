@@ -112,7 +112,4 @@ def navigation(
     except KeyError:
         print("falling back to default page")
         page = list(page_dict.values())[0]
-    # psh = ctx.page_script_hash
-    # idx = [page._script_hash for page in pages].index(psh)
-    # page = pages[idx]
     return page

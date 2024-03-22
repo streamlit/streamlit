@@ -31,6 +31,7 @@ import {
   isColoredLineDisplayed,
   IAppPage,
   PageConfig,
+  INavSection,
 } from "@streamlit/lib"
 
 import {
@@ -51,6 +52,7 @@ export interface SidebarProps {
   theme: EmotionTheme
   hasElements: boolean
   appPages: IAppPage[]
+  navPages: INavSection[]
   onPageChange: (pageName: string) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean
@@ -221,6 +223,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
     const {
       appPages,
+      navPages,
       chevronDownshift,
       children,
       hasElements,
@@ -298,6 +301,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               <SidebarNav
                 endpoints={this.props.endpoints}
                 appPages={appPages}
+                navPages={navPages}
                 collapseSidebar={this.toggleCollapse}
                 currentPageScriptHash={currentPageScriptHash}
                 hasSidebarElements={hasElements}

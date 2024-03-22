@@ -30,6 +30,7 @@ import {
   IGuestToHostMessage,
   StreamlitEndpoints,
   LibContext,
+  INavSection,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -77,6 +78,7 @@ export interface AppViewProps {
   formsData: FormsData
 
   appPages: IAppPage[]
+  navPages: INavSection[]
 
   onPageChange: (pageName: string) => void
 
@@ -100,6 +102,7 @@ function AppView(props: AppViewProps): ReactElement {
     componentRegistry,
     formsData,
     appPages,
+    navPages,
     onPageChange,
     currentPageScriptHash,
     hideSidebarNav,
@@ -200,6 +203,7 @@ function AppView(props: AppViewProps): ReactElement {
           endpoints={endpoints}
           initialSidebarState={initialSidebarState}
           appPages={appPages}
+          navPages={navPages}
           hasElements={hasSidebarElements}
           onPageChange={onPageChange}
           currentPageScriptHash={currentPageScriptHash}

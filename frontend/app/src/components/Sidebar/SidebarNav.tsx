@@ -27,6 +27,7 @@ import {
   useIsOverflowing,
   StreamlitEndpoints,
   IAppPage,
+  INavSection,
 } from "@streamlit/lib"
 
 import {
@@ -41,6 +42,7 @@ import {
 export interface Props {
   endpoints: StreamlitEndpoints
   appPages: IAppPage[]
+  navPages: INavSection[]
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
@@ -52,6 +54,7 @@ export interface Props {
 const SidebarNav = ({
   endpoints,
   appPages,
+  navPages,
   collapseSidebar,
   currentPageScriptHash,
   hasSidebarElements,
@@ -82,9 +85,9 @@ const SidebarNav = ({
     }
   }, [expanded, isOverflowing])
 
-  if (appPages.length < 2) {
-    return null
-  }
+  // if (appPages.length < 2) {
+  //   return null
+  // }
 
   return (
     <StyledSidebarNavContainer data-testid="stSidebarNav">
@@ -97,43 +100,54 @@ const SidebarNav = ({
         onMouseOut={onMouseOut}
         data-testid="stSidebarNavItems"
       >
-        {appPages.map((page: IAppPage, pageIndex: number) => {
-          const pageUrl = endpoints.buildAppPageURL(
-            pageLinkBaseUrl,
-            page,
-            pageIndex
-          )
+        {appPages.length > 1
+          ? appPages.map((page: IAppPage, pageIndex: number) => {
+              const pageUrl = endpoints.buildAppPageURL(
+                pageLinkBaseUrl,
+                page,
+                pageIndex
+              )
 
-          const pageName = page.pageName as string
-          const tooltipContent = pageName.replace(/_/g, " ")
-          const isActive = page.pageScriptHash === currentPageScriptHash
+              const pageName = page.pageName as string
+              const tooltipContent = pageName.replace(/_/g, " ")
+              const isActive = page.pageScriptHash === currentPageScriptHash
 
-          return (
-            <li key={pageName}>
-              <StyledSidebarNavLinkContainer>
-                <StyledSidebarNavLink
-                  data-testid="stSidebarNavLink"
-                  isActive={isActive}
-                  href={pageUrl}
-                  onClick={e => {
-                    e.preventDefault()
-                    onPageChange(page.pageScriptHash as string)
-                    if (reactDeviceDetect.isMobile) {
-                      collapseSidebar()
-                    }
-                  }}
-                >
-                  {page.icon && page.icon.length && (
-                    <EmojiIcon size="lg">{page.icon}</EmojiIcon>
-                  )}
-                  <StyledSidebarLinkText isActive={isActive}>
-                    {tooltipContent}
-                  </StyledSidebarLinkText>
-                </StyledSidebarNavLink>
-              </StyledSidebarNavLinkContainer>
-            </li>
-          )
-        })}
+              return (
+                <li key={pageName}>
+                  <StyledSidebarNavLinkContainer>
+                    <StyledSidebarNavLink
+                      data-testid="stSidebarNavLink"
+                      isActive={isActive}
+                      href={pageUrl}
+                      onClick={e => {
+                        e.preventDefault()
+                        onPageChange(page.pageScriptHash as string)
+                        if (reactDeviceDetect.isMobile) {
+                          collapseSidebar()
+                        }
+                      }}
+                    >
+                      {page.icon && page.icon.length && (
+                        <EmojiIcon size="lg">{page.icon}</EmojiIcon>
+                      )}
+                      <StyledSidebarLinkText isActive={isActive}>
+                        {tooltipContent}
+                      </StyledSidebarLinkText>
+                    </StyledSidebarNavLink>
+                  </StyledSidebarNavLinkContainer>
+                </li>
+              )
+            })
+          : navPages.map((section: INavSection) => {
+              return (
+                <NavSection
+                  navSection={section}
+                  currentPageScriptHash={currentPageScriptHash}
+                  onPageChange={onPageChange}
+                  collapseSidebar={collapseSidebar}
+                ></NavSection>
+              )
+            })}
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
@@ -160,6 +174,59 @@ const SidebarNav = ({
         </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>
+  )
+}
+
+export interface NavSectionProps {
+  navSection: INavSection
+  currentPageScriptHash: string
+  onPageChange: (pageName: string) => void
+  collapseSidebar: () => void
+}
+
+const NavSection = ({
+  navSection,
+  currentPageScriptHash,
+  onPageChange,
+  collapseSidebar,
+}: NavSectionProps): ReactElement | null => {
+  const { header, appPages } = navSection
+  return (
+    <>
+      {header}
+      {appPages &&
+        appPages.map((page: IAppPage, pageIndex: number) => {
+          const pageName = page.pageName as string
+          const tooltipContent = pageName.replace(/_/g, " ")
+          const isActive = page.pageScriptHash === currentPageScriptHash
+
+          return (
+            <li key={pageName}>
+              <StyledSidebarNavLinkContainer>
+                <StyledSidebarNavLink
+                  data-testid="stSidebarNavLink"
+                  isActive={isActive}
+                  // href={pageUrl}
+                  onClick={e => {
+                    e.preventDefault()
+                    onPageChange(page.pageScriptHash as string)
+                    if (reactDeviceDetect.isMobile) {
+                      collapseSidebar()
+                    }
+                  }}
+                >
+                  {page.icon && page.icon.length && (
+                    <EmojiIcon size="lg">{page.icon}</EmojiIcon>
+                  )}
+                  <StyledSidebarLinkText isActive={isActive}>
+                    {tooltipContent}
+                  </StyledSidebarLinkText>
+                </StyledSidebarNavLink>
+              </StyledSidebarNavLinkContainer>
+            </li>
+          )
+        })}
+    </>
   )
 }
 
