@@ -84,7 +84,10 @@ class ToastMixin:
         """
         toast_proto = ToastProto()
         toast_proto.body = clean_text(validate_text(body))
-        toast_proto.icon = validate_emoji(icon)
+        if icon is not None and icon.startswith(":material"):
+            toast_proto.icon = icon
+        else:
+            toast_proto.icon = validate_emoji(icon)
         return self.dg._enqueue("toast", toast_proto)
 
     @property

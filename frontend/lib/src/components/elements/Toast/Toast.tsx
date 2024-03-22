@@ -33,6 +33,7 @@ import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
 import { StyledViewButton, StyledToastMessage } from "./styled-components"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 export interface ToastProps {
   theme: EmotionTheme
@@ -106,7 +107,7 @@ function shortenMessage(fullMessage: string): string {
 }
 
 export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
-  const fullMessage = icon ? `${icon}&ensp;${body}` : body
+  const fullMessage = body
   const displayMessage = shortenMessage(fullMessage)
   const shortened = fullMessage !== displayMessage
 
@@ -126,6 +127,13 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     () => (
       <>
         <StyledToastMessage expanded={expanded}>
+          {icon && (
+            <DynamicIcon
+              iconValue={icon}
+              size="md"
+              testid="stToastEmojiIcon"
+            />
+          )}
           <StreamlitMarkdown
             source={expanded ? fullMessage : displayMessage}
             allowHTML={false}
