@@ -39,6 +39,67 @@ import {
   StyledSidebarNavSeparatorContainer,
 } from "./styled-components"
 
+export interface NavSectionProps {
+  endpoints: StreamlitEndpoints
+  navSection: INavSection
+  currentPageScriptHash: string
+  onPageChange: (pageName: string) => void
+  collapseSidebar: () => void
+}
+
+const NavSection = ({
+  navSection,
+  currentPageScriptHash,
+  onPageChange,
+  collapseSidebar,
+  endpoints,
+}: NavSectionProps): ReactElement | null => {
+  const { header, appPages } = navSection
+  const { pageLinkBaseUrl } = React.useContext(AppContext)
+  return (
+    <>
+      {header}
+      {appPages &&
+        appPages.map((page: IAppPage, pageIndex: number) => {
+          const pageUrl = endpoints.buildAppPageURL(
+            pageLinkBaseUrl,
+            page,
+            pageIndex
+          )
+          const pageName = page.pageName as string
+          const tooltipContent = pageName.replace(/_/g, " ")
+          const isActive = page.pageScriptHash === currentPageScriptHash
+
+          return (
+            <li key={pageName}>
+              <StyledSidebarNavLinkContainer>
+                <StyledSidebarNavLink
+                  data-testid="stSidebarNavLink"
+                  isActive={isActive}
+                  href={pageUrl}
+                  onClick={e => {
+                    e.preventDefault()
+                    onPageChange(page.pageScriptHash as string)
+                    if (reactDeviceDetect.isMobile) {
+                      collapseSidebar()
+                    }
+                  }}
+                >
+                  {page.icon && page.icon.length && (
+                    <EmojiIcon size="lg">{page.icon}</EmojiIcon>
+                  )}
+                  <StyledSidebarLinkText isActive={isActive}>
+                    {tooltipContent}
+                  </StyledSidebarLinkText>
+                </StyledSidebarNavLink>
+              </StyledSidebarNavLinkContainer>
+            </li>
+          )
+        })}
+    </>
+  )
+}
+
 export interface Props {
   endpoints: StreamlitEndpoints
   appPages: IAppPage[]
@@ -145,6 +206,7 @@ const SidebarNav = ({
                   currentPageScriptHash={currentPageScriptHash}
                   onPageChange={onPageChange}
                   collapseSidebar={collapseSidebar}
+                  endpoints={endpoints}
                 ></NavSection>
               )
             })}
@@ -174,59 +236,6 @@ const SidebarNav = ({
         </StyledSidebarNavSeparatorContainer>
       )}
     </StyledSidebarNavContainer>
-  )
-}
-
-export interface NavSectionProps {
-  navSection: INavSection
-  currentPageScriptHash: string
-  onPageChange: (pageName: string) => void
-  collapseSidebar: () => void
-}
-
-const NavSection = ({
-  navSection,
-  currentPageScriptHash,
-  onPageChange,
-  collapseSidebar,
-}: NavSectionProps): ReactElement | null => {
-  const { header, appPages } = navSection
-  return (
-    <>
-      {header}
-      {appPages &&
-        appPages.map((page: IAppPage, pageIndex: number) => {
-          const pageName = page.pageName as string
-          const tooltipContent = pageName.replace(/_/g, " ")
-          const isActive = page.pageScriptHash === currentPageScriptHash
-
-          return (
-            <li key={pageName}>
-              <StyledSidebarNavLinkContainer>
-                <StyledSidebarNavLink
-                  data-testid="stSidebarNavLink"
-                  isActive={isActive}
-                  // href={pageUrl}
-                  onClick={e => {
-                    e.preventDefault()
-                    onPageChange(page.pageScriptHash as string)
-                    if (reactDeviceDetect.isMobile) {
-                      collapseSidebar()
-                    }
-                  }}
-                >
-                  {page.icon && page.icon.length && (
-                    <EmojiIcon size="lg">{page.icon}</EmojiIcon>
-                  )}
-                  <StyledSidebarLinkText isActive={isActive}>
-                    {tooltipContent}
-                  </StyledSidebarLinkText>
-                </StyledSidebarNavLink>
-              </StyledSidebarNavLinkContainer>
-            </li>
-          )
-        })}
-    </>
   )
 }
 
