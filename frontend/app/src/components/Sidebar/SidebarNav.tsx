@@ -42,7 +42,7 @@ import {
 export interface Props {
   endpoints: StreamlitEndpoints
   appPages: IAppPage[]
-  navPages: INavSection[]
+  navPageSections: INavSection[]
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
@@ -54,7 +54,7 @@ export interface Props {
 const SidebarNav = ({
   endpoints,
   appPages,
-  navPages,
+  navPageSections,
   collapseSidebar,
   currentPageScriptHash,
   hasSidebarElements,
@@ -138,7 +138,7 @@ const SidebarNav = ({
                 </li>
               )
             })
-          : navPages.map((section: INavSection) => {
+          : navPageSections.map((section: INavSection) => {
               return (
                 <NavSection
                   navSection={section}

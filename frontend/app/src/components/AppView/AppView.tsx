@@ -78,7 +78,7 @@ export interface AppViewProps {
   formsData: FormsData
 
   appPages: IAppPage[]
-  navPages: INavSection[]
+  navPageSections: INavSection[]
 
   onPageChange: (pageName: string) => void
 
@@ -102,7 +102,7 @@ function AppView(props: AppViewProps): ReactElement {
     componentRegistry,
     formsData,
     appPages,
-    navPages,
+    navPageSections,
     onPageChange,
     currentPageScriptHash,
     hideSidebarNav,
@@ -203,7 +203,7 @@ function AppView(props: AppViewProps): ReactElement {
           endpoints={endpoints}
           initialSidebarState={initialSidebarState}
           appPages={appPages}
-          navPages={navPages}
+          navPageSections={navPageSections}
           hasElements={hasSidebarElements}
           onPageChange={onPageChange}
           currentPageScriptHash={currentPageScriptHash}

@@ -152,7 +152,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
-  navPages: INavSection[]
+  navPageSections: INavSection[]
   currentPageScriptHash: string
   latestRunTime: number
   // host communication info
@@ -258,7 +258,7 @@ export class App extends PureComponent<Props, State> {
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
-      navPages: [],
+      navPageSections: [],
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
@@ -726,9 +726,9 @@ export class App extends PureComponent<Props, State> {
 
   handleNavigation = (navigationMsg: Navigation): void => {
     const { sections } = navigationMsg
-    const navPages = sections
-    this.setState({ navPages })
-    // this.setState({ navPages }, () => {
+    const navPageSections = sections
+    this.setState({ navPageSections })
+    // this.setState({ navPageSections }, () => {
     //   this.hostCommunicationMgr.sendMessageToHost({
     //     type: "SET_APP_PAGES",
     //     appPages,
@@ -1799,7 +1799,7 @@ export class App extends PureComponent<Props, State> {
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
                 appPages={this.state.appPages}
-                navPages={this.state.navPages}
+                navPageSections={this.state.navPageSections}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}
