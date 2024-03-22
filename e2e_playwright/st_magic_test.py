@@ -11,12 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from playwright.sync_api import Page, expect
 
-import streamlit as st
 
-# Create a big ol' dataframe, and send it twice.
-# The second one should be cached.
-df = list(range(100000))
-st.dataframe(df)
-st.dataframe(df)
-st.write("hello!")
+def test_magic_shows_correct_text(app: Page):
+    expected = [
+        "no block",
+        "This should be printed",
+        "IF",
+        "ELIF",
+        "ELSE",
+        "FOR",
+        "WHILE",
+        "WITH",
+        "TRY",
+        "EXCEPT",
+        "FINALLY",
+        "FUNCTION",
+        "ASYNC FUNCTION",
+        "ASYNC FOR",
+        "ASYNC WITH",
+    ]
+    for i in range(len(expected)):
+        expect(app.get_by_test_id("stMarkdown").nth(i)).to_have_text(expected[i])

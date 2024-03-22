@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+from playwright.sync_api import Page, expect
 
-with st.echo():
-    print("This code is awesome!")
+
+def test_st_rerun_restarts_the_session_when_invoked(app: Page):
+    expect(app.get_by_test_id("stText")).to_have_text(
+        "Being able to rerun a session is awesome!"
+    )
