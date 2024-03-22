@@ -15,7 +15,6 @@
 import asyncio
 import gc
 import threading
-import time
 import unittest
 from asyncio import AbstractEventLoop
 from typing import Any, Callable, List, Optional, cast
@@ -516,8 +515,6 @@ class AppSessionTest(unittest.TestCase):
         session.disconnect_file_watchers()
         # Ensure that we don't count refs to session from an object that would have been
         # garbage collected along with it.
-        gc.collect(2)
-        time.sleep(0.1)
         gc.collect(2)
         self.assertEqual(len(gc.get_referrers(session)), 0)
 
