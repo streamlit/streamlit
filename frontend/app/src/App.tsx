@@ -925,6 +925,9 @@ export class App extends PureComponent<Props, State> {
           appPages: newSessionProto.appPages,
           currentPageScriptHash: newPageScriptHash,
           latestRunTime: performance.now(),
+          // If we're here, the fragmentIdsThisRun variable is always the
+          // empty array.
+          fragmentIdsThisRun,
         },
         () => {
           this.hostCommunicationMgr.sendMessageToHost({
