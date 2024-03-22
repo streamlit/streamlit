@@ -15,4 +15,7 @@
 import streamlit as st
 
 with st.echo():
-    print("This code is awesome!")
+    st.write("This code is awesome!")
+
+with st.echo(code_location="below"):
+    st.write("This code is awesome!")
