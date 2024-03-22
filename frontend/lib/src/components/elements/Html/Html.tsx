@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useEffect } from "react"
+import React, { ReactElement, useState, useEffect, useRef } from "react"
 import { Html as HtmlProto } from "@streamlit/lib/src/proto"
 import DOMPurify from "dompurify"
 
@@ -32,12 +32,20 @@ const sanitizeString = (html: string): string => {
   return DOMPurify.sanitize(html, sanitizationOptions)
 }
 
+const checkForRenderedContent = (htmlElement: HTMLDivElement | null): void => {
+  if (htmlElement?.clientHeight === 0) {
+    // div has no rendered content - hide to avoid unnecessary spacing
+    htmlElement.parentElement?.style.setProperty("display", "none")
+  }
+}
+
 /**
  * HTML code to insert into the page.
  */
 export default function Html({ element }: HtmlProps): ReactElement {
   const { body } = element
   const [sanitizedHtml, setSanitizedHtml] = useState(sanitizeString(body))
+  const htmlRef = useRef(null)
 
   useEffect(() => {
     if (sanitizeString(body) !== sanitizedHtml) {
@@ -46,13 +54,20 @@ export default function Html({ element }: HtmlProps): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [body])
 
-  return sanitizedHtml ? (
-    <div
-      className="stHtml"
-      data-testid="stHtml"
-      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-    />
-  ) : (
-    <></>
+  useEffect(() => {
+    checkForRenderedContent(htmlRef.current)
+  }, [htmlRef, sanitizedHtml])
+
+  return (
+    <>
+      {sanitizedHtml && (
+        <div
+          className="stHtml"
+          data-testid="stHtml"
+          ref={htmlRef}
+          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+        />
+      )}
+    </>
   )
 }
