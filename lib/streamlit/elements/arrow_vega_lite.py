@@ -215,7 +215,7 @@ class ArrowVegaLiteMixin:
                     "In order to make VegaLite work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
                 )
             has_selection_object = False
-            for param in chart_json["params"]:
+            for param in spec["params"]:
                 if "name" in param and "select" in param and "type" in param["select"]:
                     has_selection_object = True
             if not has_selection_object:
