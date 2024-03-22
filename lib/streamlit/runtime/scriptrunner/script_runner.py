@@ -189,6 +189,8 @@ class ScriptRunner:
         # This is initialized in start()
         self._script_thread: threading.Thread | None = None
 
+        self._module: types.ModuleType | None = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -665,9 +667,7 @@ class ScriptRunner:
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous script elements disappearing.
         try:
-            if isinstance(page.page, str):
-                code = self._script_cache.get_bytecode(page.page)
-            elif isinstance(page.page, Path):
+            if isinstance(page.page, Path):
                 code = self._script_cache.get_bytecode(str(page.page))
             else:
                 code = page.page.__code__
@@ -688,6 +688,7 @@ class ScriptRunner:
         # user as ExceptionElements.
 
         # Get the module the script is already executing in
+        assert self._module
         module = self._module
 
         # Add special variables to the module's globals dict.

@@ -26,7 +26,7 @@ from streamlit.util import calc_md5
 
 @dataclass
 class Page:
-    page: Path | Callable
+    page: Path | Callable[[], None]
     title: str | None = None
     icon: str | None = None
     default: bool = False
@@ -34,7 +34,7 @@ class Page:
 
     def __init__(
         self,
-        page: str | Path | Callable,
+        page: str | Path | Callable[[], None],
         *,
         title: str | None = None,
         icon: str | None = None,
@@ -88,13 +88,15 @@ def navigation(
     assert ctx
 
     if isinstance(pages, list):
-        pages: dict[str, list[Page]] = {"": pages}
+        pgs: dict[str, list[Page]] = {"": pages}
+    else:
+        pgs = pages
 
     msg = ForwardMsg()
-    for section in pages:
+    for section in pgs:
         nav_section = msg.navigation.sections.add()
         nav_section.header = section
-        for page in pages[section]:
+        for page in pgs[section]:
             p = nav_section.app_pages.add()
             p.page_script_hash = page._script_hash
             p.page_name = page.title or ""
@@ -103,8 +105,8 @@ def navigation(
     ctx.enqueue(msg)
 
     page_dict = {}
-    for section in pages:
-        for page in pages[section]:
+    for section in pgs:
+        for page in pgs[section]:
             page_dict[page._script_hash] = page
     ctx.pages = page_dict
     try:
