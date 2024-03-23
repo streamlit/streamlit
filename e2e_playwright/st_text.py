@@ -15,3 +15,11 @@
 import streamlit as st
 
 st.text("This text is awesome!")
+st.text(
+    """
+|\---/|
+| o_o |
+ \_^_/
+"""
+)
+st.text("_This text is **awesome**!_")
