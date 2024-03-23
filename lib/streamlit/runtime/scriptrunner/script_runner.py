@@ -423,6 +423,9 @@ class ScriptRunner:
             current_page_info = None
             uncaught_exception = None
 
+            mpav1 = len(pages) > 1
+            print(f"{mpav1=}")
+
             if rerun_data.page_script_hash:
                 current_page_info = pages.get(rerun_data.page_script_hash, None)
             elif not rerun_data.page_script_hash and rerun_data.page_name:
@@ -446,11 +449,19 @@ class ScriptRunner:
                 # running the main page.
                 current_page_info = main_page_info
 
-            page_script_hash = (
-                current_page_info["page_script_hash"]
-                if current_page_info is not None
-                else main_page_info["page_script_hash"]
-            )
+            if mpav1:
+                page_script_hash = (
+                    current_page_info["page_script_hash"]
+                    if current_page_info is not None
+                    else main_page_info["page_script_hash"]
+                )
+            else:
+                # TODO: handle only having rerun_data.page_name
+                if rerun_data.page_script_hash:
+                    page_script_hash = rerun_data.page_script_hash
+                else:
+                    page_script_hash = main_page_info["page_script_hash"]
+                print(page_script_hash)
 
             ctx = self._get_script_run_ctx()
             ctx.reset(
@@ -468,21 +479,24 @@ class ScriptRunner:
             # to the user via a modal dialog in the frontend, and won't result
             # in their previous script elements disappearing.
             try:
-                if current_page_info:
-                    script_path = current_page_info["script_path"]
+                if mpav1:
+                    if current_page_info:
+                        script_path = current_page_info["script_path"]
+                    else:
+                        script_path = main_script_path
+
+                        # At this point, we know that either
+                        #   * the script corresponding to the hash requested no longer
+                        #     exists, or
+                        #   * we were not able to find a script with the requested page
+                        #     name.
+                        # In both of these cases, we want to send a page_not_found
+                        # message to the frontend.
+                        msg = ForwardMsg()
+                        msg.page_not_found.page_name = rerun_data.page_name
+                        ctx.enqueue(msg)
                 else:
                     script_path = main_script_path
-
-                    # At this point, we know that either
-                    #   * the script corresponding to the hash requested no longer
-                    #     exists, or
-                    #   * we were not able to find a script with the requested page
-                    #     name.
-                    # In both of these cases, we want to send a page_not_found
-                    # message to the frontend.
-                    msg = ForwardMsg()
-                    msg.page_not_found.page_name = rerun_data.page_name
-                    ctx.enqueue(msg)
 
                 code = self._script_cache.get_bytecode(script_path)
 
@@ -660,7 +674,7 @@ class ScriptRunner:
         # self.on_event.send(
         #     self,
         #     event=ScriptRunnerEvent.PAGE_RUN_STARTED,
-        #     page_script_hash=page_script_hash,
+        #     page_script_hash=page._script_hash,
         # )
 
         # Compile the script. Any errors thrown here will be surfaced

@@ -75,7 +75,12 @@ class Page:
 
     @property
     def _script_hash(self) -> str:
-        h = calc_md5(str(self.page))
+        if isinstance(self.page, Page):
+            h = calc_md5(str(self.page))
+        else:
+            assert self.title
+            h = calc_md5(self.title)
+        print(f"{self.title=} {h}")
         return h
 
 
@@ -112,6 +117,9 @@ def navigation(
     try:
         page = page_dict[ctx.page_script_hash]
     except KeyError:
-        print("falling back to default page")
+        print(f"{page_dict=}")
+        print(
+            f"could not find page for {ctx.page_script_hash}, falling back to default page"
+        )
         page = list(page_dict.values())[0]
     return page
