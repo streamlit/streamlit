@@ -91,10 +91,10 @@ function generateToastOverrides(
 
 // Function used to truncate toast messages that are longer than three lines.
 function shortenMessage(fullMessage: string): string {
-  const characterLimit = 114
+  const characterLimit = 104
 
   if (fullMessage.length > characterLimit) {
-    let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
+    let message = fullMessage.replace(/^(.{104}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
       message = message.split(" ").slice(0, -1).join(" ")
@@ -151,7 +151,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
         )}
       </>
     ),
-    [shortened, expanded, fullMessage, displayMessage, handleClick]
+    [shortened, expanded, fullMessage, displayMessage, icon, handleClick]
   )
 
   useEffect(() => {
