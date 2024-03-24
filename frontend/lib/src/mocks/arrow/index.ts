@@ -17,7 +17,7 @@
 import { CATEGORICAL } from "./types/categorical"
 import { CATEGORICAL_COLUMN } from "./types/categoricalColumn"
 import { CATEGORICAL_INTERVAL } from "./types/categoricalInterval"
-import { DATETIME } from "./types/datetime"
+import { DATE, DATETIME, DATETIMETZ } from "./types/datetime"
 import { DECIMAL } from "./types/decimal"
 import { DICTIONARY } from "./types/dictionary"
 import { FLOAT64 } from "./types/float64"
@@ -47,7 +47,9 @@ export {
   CATEGORICAL,
   CATEGORICAL_COLUMN,
   CATEGORICAL_INTERVAL,
+  DATE,
   DATETIME,
+  DATETIMETZ,
   DECIMAL,
   DICTIONARY,
   FLOAT64,
