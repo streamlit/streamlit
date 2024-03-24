@@ -83,13 +83,3 @@ export const StyledDetailsPanel = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.lg,
   paddingRight: theme.spacing.lg,
 }))
-
-export const StyledEmptyDetailsPanel = styled.div(({ theme }) => ({
-  color: theme.colors.darkGray,
-  fontStyle: "italic",
-  fontSize: theme.fontSizes.sm,
-  textAlign: "center",
-  paddingBottom: theme.spacing.lg,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
-}))
