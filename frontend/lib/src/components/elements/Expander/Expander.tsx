@@ -37,7 +37,6 @@ import {
   StyledSummary,
   StyledSummaryHeading,
   StyledDetailsPanel,
-  StyledEmptyDetailsPanel,
   StyledDetails,
 } from "./styled-components"
 
@@ -183,6 +182,9 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
 
   const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
     e.preventDefault()
+    if (empty) {
+      return
+    }
 
     setExpanded(!expanded)
     const detailsEl = detailsRef.current
@@ -243,27 +245,26 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             {element.icon && <ExpanderIcon icon={element.icon} />}
             <StreamlitMarkdown source={label} allowHTML={false} isLabel />
           </StyledSummaryHeading>
-          <StyledIcon
-            as={expanded ? ExpandLess : ExpandMore}
-            color={"inherit"}
-            aria-hidden="true"
-            data-testid="stExpanderToggleIcon"
-            size="lg"
-            margin=""
-            padding=""
-          />
+          {!empty ? (
+            <StyledIcon
+              as={expanded ? ExpandLess : ExpandMore}
+              color={"inherit"}
+              aria-hidden="true"
+              data-testid="stExpanderToggleIcon"
+              size="lg"
+              margin=""
+              padding=""
+            />
+          ) : (
+            <></>
+          )}
         </StyledSummary>
         {!empty ? (
           <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
             {children}
           </StyledDetailsPanel>
         ) : (
-          <StyledEmptyDetailsPanel
-            data-testid="stExpanderDetails"
-            ref={contentRef}
-          >
-            empty
-          </StyledEmptyDetailsPanel>
+          <></>
         )}
       </StyledDetails>
     </StyledExpandableContainer>
