@@ -52,10 +52,9 @@ describe("HTML element", () => {
     expect(html).toHaveTextContent("Test Html")
     // Check that the style tag is applied to the div
     expect(screen.getByText("Test Html")).toHaveStyle("color: orange")
-    // eslint-disable-next-line testing-library/no-node-access
-    const elementNodeRenderer = html.parentElement
     // Check that the unnecessary spacing handling by hiding parent
-    expect(elementNodeRenderer).toHaveStyle("display: none")
+    // eslint-disable-next-line testing-library/no-node-access
+    expect(html.parentElement).toHaveClass("empty-html")
   })
 
   it("sanitizes <script> tags", () => {
