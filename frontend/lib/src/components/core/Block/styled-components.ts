@@ -69,6 +69,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
     },
 
+    ":is(.empty-html)": {
+      display: "none",
+    },
+
     ":has(> .cacheSpinner)": {
       height: 0,
       overflow: "visible",
@@ -143,6 +147,10 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     flex: 1,
     flexDirection: "column",
     gap: theme.spacing.lg,
+
+    ".stHtmlParent": {
+      display: "none",
+    },
   })
 )
 

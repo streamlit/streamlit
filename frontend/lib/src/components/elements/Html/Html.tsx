@@ -35,20 +35,13 @@ const sanitizeString = (html: string): string => {
   return DOMPurify.sanitize(html, sanitizationOptions)
 }
 
-const checkForRenderedContent = (htmlElement: HTMLDivElement | null): void => {
-  if (htmlElement?.clientHeight === 0) {
-    // div has no rendered content - hide to avoid unnecessary spacing
-    htmlElement.parentElement?.style.setProperty("display", "none")
-  }
-}
-
 /**
  * HTML code to insert into the page.
  */
 export default function Html({ element, width }: HtmlProps): ReactElement {
   const { body } = element
   const [sanitizedHtml, setSanitizedHtml] = useState(sanitizeString(body))
-  const htmlRef = useRef(null)
+  const htmlRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (sanitizeString(body) !== sanitizedHtml) {
@@ -58,8 +51,14 @@ export default function Html({ element, width }: HtmlProps): ReactElement {
   }, [body])
 
   useEffect(() => {
-    checkForRenderedContent(htmlRef.current)
-  }, [htmlRef, sanitizedHtml])
+    if (
+      htmlRef.current?.clientHeight === 0 &&
+      htmlRef.current.parentElement?.childElementCount === 1
+    ) {
+      // div has no rendered content - hide to avoid unnecessary spacing
+      htmlRef.current.parentElement.classList.add("empty-html")
+    }
+  })
 
   return (
     <>
