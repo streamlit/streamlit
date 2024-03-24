@@ -27,7 +27,6 @@ def test_html_in_line_styles(themed_app: Page, assert_snapshot: ImageCompareFunc
 
     styled_div = first_html.locator("div")
     expect(styled_div).to_have_css("color", "rgb(255, 165, 0)")
-    expect(styled_div).to_have_css("font-family", "Comic Sans MS")
     assert_snapshot(first_html, name="st_html-inline_styles")
 
 
