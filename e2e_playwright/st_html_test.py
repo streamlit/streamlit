@@ -26,7 +26,7 @@ def test_html_in_line_styles(themed_app: Page, assert_snapshot: ImageCompareFunc
     expect(first_html).to_have_text("This is a div with some inline styles.")
 
     styled_div = first_html.locator("div")
-    expect(styled_div).to_have_css("color", "orange")
+    expect(styled_div).to_have_css("color", "rgb(255, 165, 0)")
     expect(styled_div).to_have_css("font-family", "Comic Sans MS")
     assert_snapshot(first_html, name="st_html-inline_styles")
 
@@ -37,8 +37,8 @@ def test_html_sanitization(themed_app: Page, assert_snapshot: ImageCompareFuncti
     expect(html_elements).to_have_count(4)
     second_html = html_elements.nth(1)
 
-    expect(second_html).to_have_text("This is a i tag")
-    expect(second_html).to_have_text("This is a strong tag")
+    expect(second_html).to_contain_text("This is a i tag")
+    expect(second_html).to_contain_text("This is a strong tag")
     expect(second_html.locator("script")).to_have_count(0)
     assert_snapshot(second_html, name="st_html-script_tags")
 
@@ -50,7 +50,7 @@ def test_html_style_tags(themed_app: Page, assert_snapshot: ImageCompareFunction
     third_html = html_elements.nth(2)
 
     expect(third_html).to_have_text("This text should be blue")
-    expect(third_html.locator("div")).to_have_css("color", "blue")
+    expect(third_html.locator("div")).to_have_css("color", "rgb(0, 0, 255)")
     assert_snapshot(third_html, name="st_html-style_tags")
 
 
@@ -60,6 +60,7 @@ def test_html_style_tag_spacing(
     """Test that non-rendered html doesn't cause unnecessary spacing."""
     html_elements = themed_app.get_by_test_id("stHtml")
     expect(html_elements).to_have_count(4)
-    fourth_html = html_elements.nth(3)
 
-    assert_snapshot(fourth_html, name="st_html-style_tag_spacing")
+    assert_snapshot(
+        themed_app.get_by_test_id("stVerticalBlock"), name="st_html-style_tag_spacing"
+    )
