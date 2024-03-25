@@ -29,7 +29,7 @@ import { Toast as ToastProto } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
-import { Toast, ToastProps } from "./Toast"
+import { Toast, ToastProps, shortenMessage } from "./Toast"
 
 // A Toaster Container is required to render Toasts
 // Don't import the actual one from EventContainer as that lives on app side
@@ -154,5 +154,68 @@ describe("Toast Component", () => {
     const toastError = screen.getByRole("alert")
     expect(toastError).toBeInTheDocument()
     expect(toastError).toHaveTextContent("Streamlit API Error")
+  })
+
+  test("shortenMessage does not truncate messages under the character limit", () => {
+    const shortMessage = "This message should not be truncated."
+    const props = getProps({ body: shortMessage })
+    renderComponent(props)
+
+    const toast = screen.getByRole("alert")
+    expect(toast).toHaveTextContent(shortMessage)
+  })
+
+  test("shortenMessage truncates messages over the character limit without cutting words", () => {
+    const longMessage =
+      "This is a very long message meant to test the functionality of the shortenMessage function, ensuring it truncates properly without cutting words and respects the character limit."
+    const expectedTruncatedMessage = shortenMessage(longMessage)
+    const props = getProps({ icon: "", body: longMessage })
+    renderComponent(props)
+
+    // Get the text content of the toast, excluding the "view more" and "Close" buttons
+    const toastText = screen
+      .getByRole("alert")
+      ?.textContent?.replace("view moreClose", "")
+
+    expect(toastText).toEqual(expectedTruncatedMessage)
+    expect(toastText).toHaveLength(expectedTruncatedMessage.length)
+  })
+
+  test("shortenMessage handles explicit line breaks correctly", () => {
+    const messageWithBreaks =
+      "First line of the message.\nSecond line of the message, which is meant to test how explicit line breaks are handled.\nThird line, which should not be visible."
+    const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
+    const props = getProps({ icon: "", body: messageWithBreaks })
+    renderComponent(props)
+
+    const toastText = screen
+      .getByRole("alert")
+      ?.textContent?.replace("view moreClose", "")
+    expect(toastText).toEqual(expectedTruncatedMessage)
+    expect(toastText).toHaveLength(expectedTruncatedMessage.length)
+  })
+
+  test("expands and collapses long messages with explicit line breaks correctly", () => {
+    const messageWithBreaks =
+      "First line of the message.\nSecond line of the message, which is very long and meant to test the expand and collapse functionality.\nThird line, which should initially be hidden."
+    const expectedTruncatedMessage = shortenMessage(messageWithBreaks)
+    const props = getProps({ icon: "", body: messageWithBreaks })
+    renderComponent(props)
+
+    const expandButton = screen.getByRole("button", { name: "view more" })
+    fireEvent.click(expandButton) // Expand
+
+    const toastExpanded = screen
+      .getByRole("alert")
+      ?.textContent?.replace("view lessClose", "")
+    expect(toastExpanded).toEqual(messageWithBreaks) // Check full message is displayed
+
+    const collapseButton = screen.getByRole("button", { name: "view less" })
+    fireEvent.click(collapseButton) // Collapse
+
+    const toastCollapsed = screen
+      .getByRole("alert")
+      ?.textContent?.replace("view moreClose", "")
+    expect(toastCollapsed).toEqual(expectedTruncatedMessage) // Check message is truncated again
   })
 })
