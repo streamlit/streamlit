@@ -21,9 +21,7 @@ from abc import abstractmethod
 from copy import deepcopy
 from datetime import timedelta
 from functools import wraps
-from typing import Any, Callable, TypeVar, overload
-
-from typing_extensions import Protocol
+from typing import Any, Callable, Protocol, TypeVar, overload
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics

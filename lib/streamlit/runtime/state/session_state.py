@@ -706,6 +706,9 @@ def _is_stale_widget(
         return True
     elif metadata.id in active_widget_ids:
         return False
+    # If we're running 1 or more fragments, but this widget is unrelated to any of the
+    # fragments that we're running, then it should not be marked as stale as its value
+    # may still be needed for a future fragment run or full script run.
     elif fragment_ids_this_run and metadata.fragment_id not in fragment_ids_this_run:
         return False
     return True

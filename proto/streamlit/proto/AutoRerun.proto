@@ -20,6 +20,6 @@
    // The interval of reruns in seconds
    float interval = 1;
 
-   // Optional: the fragment ID to rerun
+   // The fragment ID to rerun
    string fragment_id = 2;
  }
