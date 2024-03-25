@@ -156,17 +156,6 @@ function PlotlyFigure({
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
-
     const storedValue = widgetMgr.getJsonValue(element)
 
     if (storedValue !== undefined && storedValue !== "{}") {
@@ -210,6 +199,21 @@ function PlotlyFigure({
   const [initialWidth] = useState(spec.layout.width)
 
   useLayoutEffect(() => {
+    if (element.theme === "streamlit") {
+      applyStreamlitTheme(spec, theme)
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    }
+    if (element.isSelectEnabled) {
+      spec.layout.clickmode = "event+select"
+      spec.layout.hovermode = "closest"
+    }
+    // TODO(willhuang1997): Regression where swapping themes will not change chart colors properly
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useLayoutEffect(() => {
     if (isFullScreen(height)) {
       spec.layout.width = width
       spec.layout.height = height
@@ -221,12 +225,6 @@ function PlotlyFigure({
     } else {
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
-    }
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
   }, [
     height,
