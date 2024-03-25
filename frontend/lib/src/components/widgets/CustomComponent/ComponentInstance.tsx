@@ -381,7 +381,7 @@ function ComponentInstance(props: Props): ReactElement {
         // for undefined height we set the height to 0 to avoid inconsistent behavior
         height={frameHeight ?? 0}
         style={{
-          colorScheme: "light dark",
+          colorScheme: "normal",
           display: isReadyRef.current ? "initial" : "none",
         }}
         scrolling="no"

@@ -225,12 +225,21 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
           spec.params.forEach((param: any) => {
             if (param.name && param.name === selector) {
               if (param.select.type && param.select.type === "point") {
-                const values = parsedStoredValue.select[selector].vlPoint.or
-                param.select.fields = Object.keys(values[0])
-                param.value = values
-              } else if (param.select.type === "interval") {
-                const values = parsedStoredValue.select[selector]
-                param.value = values
+                try {
+                  const values = parsedStoredValue.select[selector].vlPoint.or
+                  param.select.fields = Object.keys(values[0])
+                  param.value = values
+                } catch (e) {
+                  logMessage(e)
+                }
+              }
+              if (param.select.type === "interval") {
+                try {
+                  const values = parsedStoredValue.select[selector]
+                  param.value = values
+                } catch (e) {
+                  logMessage(e)
+                }
               }
             }
           })

@@ -21,7 +21,7 @@ from setuptools.command.install import install
 
 THIS_DIRECTORY = Path(__file__).parent
 
-VERSION = "1.32.0"  # PEP-440
+VERSION = "1.32.2"  # PEP-440
 
 # IMPORTANT: We should try very hard *not* to add dependencies to Streamlit.
 # And if you do add one, make the required version as general as possible:
@@ -34,7 +34,7 @@ INSTALL_REQUIRES = [
     "cachetools>=4.0, <6",
     "click>=7.0, <9",
     "numpy>=1.19.3, <2",
-    "packaging>=16.8, <24",
+    "packaging>=16.8, <25",
     # Lowest version with available wheel for 3.7 + amd64 + linux
     "pandas>=1.3.0, <3",
     "pillow>=7.1.0, <11",

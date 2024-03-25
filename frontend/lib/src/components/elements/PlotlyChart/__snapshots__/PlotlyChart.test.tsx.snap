@@ -3,7 +3,7 @@
 exports[`PlotlyChart Element Render iframe should render an iframe 1`] = `
 <iframe
   src="http://url.test"
-  style="width: 0px; height: 450px; color-scheme: light dark;"
+  style="width: 0px; height: 450px; color-scheme: normal;"
   title="Plotly"
 />
 `;

@@ -31,6 +31,10 @@ def test_components_iframe_rendering(
     # does not use a valid URL.
     assert_snapshot(elements.nth(0), name="st_components-html")
 
+    # Emulate dark theme OS setting:
+    themed_app.emulate_media(color_scheme="dark")
+    assert_snapshot(elements.nth(0), name="st_components-html")
+
 
 def test_html_correctly_sets_attr(app: Page):
     """Test that html correctly sets attributes."""
