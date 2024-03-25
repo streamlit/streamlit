@@ -25,10 +25,14 @@ def test_pydeck_chart_has_consistent_visuals(
     expect(pydeck_charts).to_have_count(3)
 
     assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty")
+
+    wait_for_app_run(10000)
     assert_snapshot(
         pydeck_charts.nth(1).locator("canvas").nth(0),
         name="st_pydeck_chart-san_francisco",
     )
+
+    wait_for_app_run(10000)
     assert_snapshot(
         pydeck_charts.nth(2).locator("canvas").nth(1), name="st_pydeck_chart-continents"
     )
