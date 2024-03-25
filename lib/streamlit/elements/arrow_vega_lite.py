@@ -367,8 +367,8 @@ def marshall(
     id = compute_widget_id(
         "arrow_vega_lite",
         user_key=key,
-        data=data,  # type: ignore
-        spec=spec,  # type: ignore
+        data=data,
+        spec=spec,
         use_container_width=use_container_width,
         key=key,
         theme=theme,

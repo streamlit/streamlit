@@ -289,7 +289,7 @@ def marshall(
     ctx = get_script_run_ctx()
     id = compute_widget_id(
         "plotly_chart",
-        figure_or_data=figure_or_data,  # type: ignore
+        figure_or_data=figure_or_data,
         use_container_width=use_container_width,
         sharing=sharing,
         key=key,
