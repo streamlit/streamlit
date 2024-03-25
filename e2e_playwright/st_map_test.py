@@ -23,7 +23,7 @@ def test_displays_maps_properly(
 ):
     map_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
     expect(map_charts).to_have_count(7)
-    expect(map_charts.locator(".zoomButton")).to_have_count(7)
+    expect(themed_app.locator(".zoomButton")).to_have_count(7)
 
     data_warning_caps = themed_app.get_by_test_id("stCaptionContainer")
     expect(data_warning_caps).to_have_count(2)
