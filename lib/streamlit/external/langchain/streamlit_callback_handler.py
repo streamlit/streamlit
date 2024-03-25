@@ -189,11 +189,13 @@ class LLMThought:
         # If we're receiving streaming tokens from `on_llm_new_token`, this response
         # data is redundant
         self._reset_llm_token_stream()
+        # set the container status to complete
+        self.complete(self._labeler.get_final_agent_thought_label())
 
     def on_llm_error(self, error: BaseException, *args: Any, **kwargs: Any) -> None:
-        self._container.markdown("**LLM encountered an error...**")
         self._container.exception(error)
         self._state = LLMThoughtState.ERROR
+        self.complete("LLM encountered an error...")
 
     def on_tool_start(
         self, serialized: dict[str, Any], input_str: str, **kwargs: Any
