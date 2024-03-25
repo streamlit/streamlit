@@ -165,9 +165,9 @@ class PlotlyMixin:
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
-        widget_callback = None
+        on_select_callback = None
         if not isinstance(on_select, bool) and not isinstance(on_select, str):
-            widget_callback = on_select
+            on_select_callback = on_select
 
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
@@ -175,7 +175,7 @@ class PlotlyMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         key = to_key(key)
-        check_callback_rules(self.dg, widget_callback)
+        check_callback_rules(self.dg, on_select_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "plotly_chart")
         if current_form_id(self.dg):
@@ -215,7 +215,7 @@ class PlotlyMixin:
                 "plotly_chart",
                 plotly_chart_proto,
                 user_key=key,
-                on_change_handler=widget_callback,
+                on_change_handler=on_select_callback,
                 args=None,
                 kwargs=None,
                 deserializer=deserialize,
