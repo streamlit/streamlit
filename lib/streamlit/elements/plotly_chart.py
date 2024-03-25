@@ -287,6 +287,8 @@ def marshall(
     proto.theme = theme or ""
     proto.is_select_enabled = is_select_enabled
     ctx = get_script_run_ctx()
+    if key is not None:
+        key = str(key)
     id = compute_widget_id(
         "plotly_chart",
         user_key=key,
