@@ -24,12 +24,11 @@ def test_pydeck_chart_has_consistent_visuals(
     pydeck_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
     expect(pydeck_charts).to_have_count(3)
 
+    assert_snapshot(pydeck_charts.nth(0), name="st_pydeck_chart-empty")
     assert_snapshot(
-        pydeck_charts.nth(0).locator("canvas"), name="st_pydeck_chart-countries"
+        pydeck_charts.nth(1).locator("canvas").nth(0),
+        name="st_pydeck_chart-san_francisco",
     )
     assert_snapshot(
-        pydeck_charts.nth(1).locator("canvas"), name="st_pydeck_chart-san_francisco"
-    )
-    assert_snapshot(
-        pydeck_charts.nth(2).locator("canvas"), name="st_pydeck_chart-continents"
+        pydeck_charts.nth(2).locator("canvas").nth(1), name="st_pydeck_chart-continents"
     )
