@@ -74,7 +74,9 @@ def replace_values_in_dict(d, old_value, new_value):
 
 def _on_select(
     proto: ArrowVegaLiteChartProto,
-    on_select: Union[str, Callable[..., None], bool, None] = None,
+    on_select: Union[
+        Literal["rerun", "ignore"], Callable[..., None], bool, None
+    ] = None,
     key: str | None = None,
 ) -> AttributeDictionary:
     if on_select is not None and on_select != False:
@@ -116,7 +118,9 @@ class ArrowVegaLiteMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_select: Union[str, Callable[..., None], bool, None] = None,
+        on_select: Union[
+            Literal["rerun", "ignore"], Callable[..., None], bool, None
+        ] = None,
         key: str | None = None,
         **kwargs: Any,
     ) -> Union[DeltaGenerator, Dict[Any, Any]]:
@@ -253,7 +257,9 @@ def marshall(
     spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
-    on_select: Union[str, Callable[..., None], bool, None] = None,
+    on_select: Union[
+        Literal["rerun", "ignore"], Callable[..., None], bool, None
+    ] = None,
     key: str | None = None,
     **kwargs,
 ):
@@ -365,8 +371,8 @@ def marshall(
     id = compute_widget_id(
         "arrow_vega_lite",
         user_key=key,
-        data=data,  # type: ignore
-        spec=spec,  # type: ignore
+        data=data,
+        spec=spec,
         use_container_width=use_container_width,
         key=key,
         theme=theme,
