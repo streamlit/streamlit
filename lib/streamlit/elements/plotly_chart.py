@@ -25,7 +25,7 @@ from typing_extensions import TypeAlias
 from streamlit import type_util
 from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.chart_util import check_on_select_str
-from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
+from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
@@ -88,7 +88,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: bool | str | WidgetCallback = False,
+        on_select: bool | Literal["rerun", "ignore"] | WidgetCallback = False,
         **kwargs: Any,
     ) -> Union["DeltaGenerator", AttributeDictionary]:
         """Display an interactive Plotly chart.

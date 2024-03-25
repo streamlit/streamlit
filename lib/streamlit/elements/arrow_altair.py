@@ -769,7 +769,9 @@ class ArrowAltairMixin:
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
         # TODO(willhuang1997): This will need to be finalized to "rerun" / "ignore" or True / False
-        on_select: Union[str, Callable[..., None], bool, None] = None,
+        on_select: Union[
+            Literal["rerun", "ignore"], Callable[..., None], bool, None
+        ] = None,
         key: str | None = None,
     ) -> Union["DeltaGenerator", Dict[Any, Any]]:
         """Display a chart using the Altair library.
