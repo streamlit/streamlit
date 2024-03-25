@@ -147,10 +147,6 @@ export const StyledVerticalBlock = styled.div<StyledVerticalBlockProps>(
     flex: 1,
     flexDirection: "column",
     gap: theme.spacing.lg,
-
-    ".stHtmlParent": {
-      display: "none",
-    },
   })
 )
 

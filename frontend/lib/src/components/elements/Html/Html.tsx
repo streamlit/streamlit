@@ -18,7 +18,6 @@ import React, { ReactElement, useState, useEffect, useRef } from "react"
 import DOMPurify from "dompurify"
 
 import { Html as HtmlProto } from "@streamlit/lib/src/proto"
-import { StyledHtml } from "./styled-components"
 
 export interface HtmlProps {
   width: number
@@ -63,11 +62,11 @@ export default function Html({ element, width }: HtmlProps): ReactElement {
   return (
     <>
       {sanitizedHtml && (
-        <StyledHtml
+        <div
           className="stHtml"
           data-testid="stHtml"
           ref={htmlRef}
-          width={width}
+          style={{ width: width }}
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
       )}
