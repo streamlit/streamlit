@@ -46,27 +46,21 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-def replace_values_in_dict(d, old_value, new_value):
-    """
-    Recursively replaces old_value with new_value in string values of the dictionary,
-    including nested dictionaries and lists.
-
-    :param d: The dictionary or list to process.
-    :param old_value: The string value to be replaced.
-    :param new_value: The new string value to replace with.
-    """
+def replace_values_in_dict(
+    d: Union[Dict[Any, Any], List[Any]], old_to_new_map: Dict[str, str]
+) -> None:
     if isinstance(d, dict):
         for key, value in d.items():
-            if isinstance(value, str) and value == old_value:
-                d[key] = new_value
+            if isinstance(value, str) and value in old_to_new_map:
+                d[key] = old_to_new_map[value]
             elif isinstance(value, dict):
-                replace_values_in_dict(value, old_value, new_value)
+                replace_values_in_dict(value, old_to_new_map)
             elif isinstance(value, list):
                 for item in value:
-                    replace_values_in_dict(item, old_value, new_value)
+                    replace_values_in_dict(item, old_to_new_map)
     elif isinstance(d, list):
         for item in d:
-            replace_values_in_dict(item, old_value, new_value)
+            replace_values_in_dict(item, old_to_new_map)
 
 
 def _on_select(
@@ -287,15 +281,14 @@ def marshall(
 
     data_id_counter = 0
 
-    # Mapping of dataset name to new stable id
-    stable_data_ids = {}
+    stable_ids = {}
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
     if "datasets" in spec:
         for k, v in spec["datasets"].items():
             dataset = proto.datasets.add()
             if on_select:
-                stable_data_ids[k] = str(data_id_counter)
+                stable_ids[k] = str(data_id_counter)
                 dataset.name = str(data_id_counter)
                 data_id_counter += 1
             else:
@@ -303,11 +296,6 @@ def marshall(
             dataset.has_name = True
             arrow.marshall(dataset.data, v)
         del spec["datasets"]
-    for dataset_key, stable_id in stable_data_ids.items():
-        keys = ["hconcat", "vconcat", "layer", "data"]
-        for k in keys:
-            if k in spec:
-                replace_values_in_dict(spec[k], dataset_key, stable_id)
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     #   marshall(proto, {data: df})
@@ -331,28 +319,22 @@ def marshall(
         regex = re.compile(r"^param_\d+$")
         param_counter = 0
 
-        views_visited = []
         for param in spec["params"]:
             view_counter = 0
             name = param["name"]
             if regex.match(name):
                 param["name"] = f"selection_{param_counter}"
-                for k in ["hconcat", "vconcat", "layer", "encoding"]:
-                    if k in spec:
-                        replace_values_in_dict(
-                            spec[k], name, f"selection_{param_counter}"
-                        )
+                stable_ids[name] = f"selection_{param_counter}"
                 param_counter += 1
             if "views" in param:
                 for view_index, view in enumerate(param["views"]):
                     param["views"][view_index] = f"view_{view_counter}"
-                    for k in ["hconcat", "vconcat", "layer", "encoding"]:
-                        if k in spec and view not in views_visited:
-                            replace_values_in_dict(
-                                spec[k], view, f"view_{view_counter}"
-                            )
-                            views_visited.append(view)
+                    stable_ids[view] = f"view_{view_counter}"
                     view_counter += 1
+        keys = ["hconcat", "vconcat", "layer", "encoding", "data"]
+        for k in keys:
+            if k in spec:
+                replace_values_in_dict(spec[k], stable_ids)
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
