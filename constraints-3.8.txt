@@ -33,7 +33,7 @@ gitdb==4.0.11
 GitPython==3.1.42
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.99.12
+hypothesis==6.99.13
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.1.0
@@ -101,7 +101,7 @@ pyparsing==3.1.2
 pyspark==3.5.1
 pytest==8.1.1
 pytest-base-url==2.1.0
-pytest-cov==4.1.0
+pytest-cov==5.0.0
 pytest-github-actions-annotate-failures==0.2.0
 pytest-playwright==0.4.4
 pytest-rerunfailures==14.0
