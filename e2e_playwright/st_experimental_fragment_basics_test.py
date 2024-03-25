@@ -228,8 +228,6 @@ def test_full_app_rerun(app: Page):
     app.keyboard.press("r")
     wait_for_app_run(app)
 
-    new_text_in_fragment, new_text_outside_fragment = get_uuids(app)
-
     expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(
         old_text_in_fragment
     )
