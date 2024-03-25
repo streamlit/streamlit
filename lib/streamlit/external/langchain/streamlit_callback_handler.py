@@ -258,7 +258,7 @@ class LLMThought:
 
         self._container.update(
             label=final_label,
-            expanded=False if self._collapse_on_complete else True,
+            expanded=False if self._collapse_on_complete else None,
             state="error" if self._state == LLMThoughtState.ERROR else "complete",
         )
 
