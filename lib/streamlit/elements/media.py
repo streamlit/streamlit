@@ -495,6 +495,8 @@ def _parse_start_time_end_time(
         raise StreamlitAPIException(error_msg) from None
 
     try:
+        # TODO[kajarenc]: Replace `duration_to_seconds` with `time_to_seconds`
+        #  when PR #8343 is merged.
         end_time = duration_to_seconds(end_time, coerce_none_to_inf=False)
         if end_time is not None:
             end_time = int(end_time)
