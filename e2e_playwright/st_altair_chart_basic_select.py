@@ -14,15 +14,14 @@
 
 import altair as alt
 import pandas as pd
-from altair.expr import datum
-from vega_datasets import data
 
 import streamlit as st
 
 # SCATTER CHART
 st.header("Altair Chart with point and interval selection")
-cars = data.cars()
 
+# taken from vega_datasets cars example
+cars = alt.UrlData("https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/cars.json")
 interval = alt.selection_interval()
 
 point = alt.selection_point()
@@ -34,7 +33,6 @@ base = (
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(point, "Origin:N", alt.value("lightgray")),
-        tooltip=["Name", "Origin", "Horsepower", "Miles_per_Gallon"],
     )
 )
 
@@ -51,7 +49,6 @@ base = (
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(interval, "Origin:N", alt.value("lightgray")),
-        tooltip=["Name", "Origin", "Horsepower", "Miles_per_Gallon"],
     )
 )
 chart_interval = base.add_params(interval)
@@ -84,7 +81,9 @@ if st.session_state.bar_interval:
     st.dataframe(st.session_state.bar_interval)
 
 # STACKED AREA CHART
-source = data.iowa_electricity()
+source = alt.UrlData(
+    "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iowa-electricity.csv"
+)
 
 base = (
     alt.Chart(source)
@@ -119,7 +118,9 @@ if len(area_interval_selection) > 0:
     st.dataframe(area_interval_selection)
 
 # HISTOGRAM CHART
-source = data.movies.url
+source = alt.UrlData(
+    "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/movies.json"
+)
 
 base = (
     alt.Chart(source)
