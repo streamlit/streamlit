@@ -29,10 +29,6 @@ export interface AudioProps {
   widgetMgr: WidgetStateManager
 }
 
-interface State {
-  id: string
-}
-
 export default function Audio({
   element,
   width,
@@ -40,7 +36,9 @@ export default function Audio({
   widgetMgr,
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [id, setId] = useState(() => widgetMgr.getStringValue(element) || "")
+  const [id, setId] = useState<string>(
+    () => widgetMgr.getStringValue(element) || ""
+  )
 
   useEffect(() => {
     if (element.setValue) {

@@ -37,10 +37,6 @@ export interface Subtitle {
   url: string
 }
 
-interface State {
-  id: string
-}
-
 export default function Video({
   element,
   width,
@@ -50,7 +46,9 @@ export default function Video({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
-  const [id, setId] = useState(() => widgetMgr.getStringValue(element) || "")
+  const [id, setId] = useState<string>(
+    () => widgetMgr.getStringValue(element) || ""
+  )
 
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
 
