@@ -46,12 +46,14 @@ export default function Video({
 }: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  /* Element may contain "url" or "data" property. */
   const elementInfo: ElementInfo = { id: element.id }
+  // If ElementStateManager knew an id for this element, initialize to that.
+  // Otherwise, use the default id from the element protobuf.
   const [state] = useState<string>(
     () => elementMgr.getStringValue(elementInfo) || elementInfo.id
   )
 
+  /* Element may contain "url" or "data" property. */
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
 
   useEffect(() => {

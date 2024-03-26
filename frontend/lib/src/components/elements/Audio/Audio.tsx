@@ -39,6 +39,8 @@ export default function Audio({
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const elementInfo: ElementInfo = { id: element.id }
+  // If ElementStateManager knew an id for this element, initialize to that.
+  // Otherwise, use the default id from the element protobuf.
   const [state] = useState<string>(
     () => elementMgr.getStringValue(elementInfo) || elementInfo.id
   )
