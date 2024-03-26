@@ -33,6 +33,7 @@ WIDGETS = [
     "time_input",
     "date_input",
     "plotly_chart",
+    "arrow_vega_lite_chart",
 ]
 NONWIDGET_ELEMENTS = [
     "alert",
@@ -41,7 +42,6 @@ NONWIDGET_ELEMENTS = [
     "arrow_data_frame",
     "arrow_line_chart",
     "arrow_table",
-    "arrow_vega_lite_chart",
     "audio",
     "balloons",
     "bokeh_chart",
