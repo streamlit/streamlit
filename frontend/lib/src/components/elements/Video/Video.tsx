@@ -21,6 +21,7 @@ import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
 import {
   WidgetStateManager,
   Source,
+  WidgetInfo,
 } from "@streamlit/lib/src/WidgetStateManager"
 
 const DEFAULT_HEIGHT = 528
@@ -46,16 +47,17 @@ export default function Video({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
-  const [id] = useState<string>(() => widgetMgr.getStringValue(element) || "")
+  const widgetInfo: WidgetInfo = { id: element.id }
+  const [state] = useState<WidgetInfo>(() => widgetInfo || undefined)
 
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
 
   useEffect(() => {
     commitWidgetValue({ fromUi: false })
-  }, [element, id])
+  }, [element, state.id])
 
   const commitWidgetValue = (source: Source) => {
-    widgetMgr.setStringValue(element, id, source)
+    widgetMgr.setStringValue(element, state.id, source)
   }
 
   // Handle startTime changes

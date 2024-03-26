@@ -26,13 +26,13 @@ import streamlit as st
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.runtime_util import duration_to_seconds
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
@@ -51,6 +51,8 @@ SubtitleData: TypeAlias = Union[
 ]
 
 MediaTime: TypeAlias = Union[int, float, timedelta, str]
+
+logg = get_logger(__name__)
 
 TIMEDELTA_PARSE_ERROR_MESSAGE: Final = (
     "Failed to convert '{param_name}' to a timedelta. "
@@ -679,6 +681,8 @@ def marshall_audio(
         autoplay=autoplay,
         page=ctx.page_script_hash if ctx else None,
     )
+
+    logg.debug("Computed widget id: %s", id)
 
     proto.id = id
 

@@ -20,6 +20,7 @@ import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import {
   WidgetStateManager,
   Source,
+  WidgetInfo,
 } from "@streamlit/lib/src/WidgetStateManager"
 
 export interface AudioProps {
@@ -36,14 +37,16 @@ export default function Audio({
   widgetMgr,
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [id] = useState<string>(() => widgetMgr.getStringValue(element) || "")
+
+  const widgetInfo: WidgetInfo = { id: element.id }
+  const [state] = useState<WidgetInfo>(() => widgetInfo || undefined)
 
   useEffect(() => {
     commitWidgetValue({ fromUi: false })
-  }, [element, id])
+  }, [element, state.id])
 
   const commitWidgetValue = (source: Source) => {
-    widgetMgr.setStringValue(element, id, source)
+    widgetMgr.setStringValue(element, state.id, source)
   }
 
   const { startTime, endTime, loop, autoplay } = element
