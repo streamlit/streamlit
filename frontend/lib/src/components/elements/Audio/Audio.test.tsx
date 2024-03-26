@@ -22,7 +22,7 @@ import { render } from "@streamlit/lib/src/test_util"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
 import Audio, { AudioProps } from "./Audio"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 describe("Audio Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
@@ -35,7 +35,7 @@ describe("Audio Element", () => {
     }),
     endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
     width: 0,
-    widgetMgr: new WidgetStateManager({
+    elementMgr: new ElementStateManager({
       sendRerunBackMsg: jest.fn(),
       formsDataChanged: jest.fn(),
     }),
