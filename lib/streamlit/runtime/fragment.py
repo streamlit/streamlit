@@ -192,13 +192,10 @@ def fragment(
         def wrapped_fragment():
             import streamlit as st
 
-            ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
-            if ctx.current_fragment_id:
-                # If ctx.current_fragment_id is already set, this script run is a run
-                # of only this fragment (we set ctx.current_fragment_id for fragment-
-                # specific script runs at the start of the script run). We restore the
+            if ctx.fragment_ids_this_run:
+                # This script run is a run of one or more fragments. We restore the
                 # state of ctx.cursors and dg_stack to the snapshots we took when this
                 # fragment was declared.
                 ctx.cursors = deepcopy(cursors_snapshot)

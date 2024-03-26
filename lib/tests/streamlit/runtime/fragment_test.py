@@ -138,6 +138,7 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
+        ctx.fragment_ids_this_run = {"my_fragment_id"}
         ctx.current_fragment_id = "my_fragment_id"
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -187,6 +188,7 @@ class FragmentTest(unittest.TestCase):
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_current_fragment_id_if_not_set(self, patched_get_script_run_ctx):
         ctx = MagicMock()
+        ctx.fragment_ids_this_run = {}
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
