@@ -204,7 +204,7 @@ export default function Video({
         height={height}
         style={{ colorScheme: "normal" }}
         frameBorder="0"
-        allow="autoplay encrypted-media"
+        allow="autoplay; encrypted-media"
         allowFullScreen
       />
     )
