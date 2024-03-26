@@ -36,24 +36,11 @@ export default function Audio({
   widgetMgr,
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [id, setId] = useState<string>(
-    () => widgetMgr.getStringValue(element) || ""
-  )
+  const [id] = useState<string>(() => widgetMgr.getStringValue(element) || "")
 
   useEffect(() => {
-    if (element.setValue) {
-      updateFromProtobuf()
-    } else {
-      commitWidgetValue({ fromUi: false })
-    }
-  }, [element, id])
-
-  const updateFromProtobuf = () => {
-    const { id } = element
-    element.setValue = false
-    setId(id)
     commitWidgetValue({ fromUi: false })
-  }
+  }, [element, id])
 
   const commitWidgetValue = (source: Source) => {
     widgetMgr.setStringValue(element, id, source)

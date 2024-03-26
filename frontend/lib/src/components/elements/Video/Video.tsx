@@ -46,26 +46,13 @@ export default function Video({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
-  const [id, setId] = useState<string>(
-    () => widgetMgr.getStringValue(element) || ""
-  )
+  const [id] = useState<string>(() => widgetMgr.getStringValue(element) || "")
 
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
 
   useEffect(() => {
-    if (element.setValue) {
-      updateFromProtobuf()
-    } else {
-      commitWidgetValue({ fromUi: false })
-    }
-  }, [element, id])
-
-  const updateFromProtobuf = () => {
-    const { id } = element
-    element.setValue = false
-    setId(id)
     commitWidgetValue({ fromUi: false })
-  }
+  }, [element, id])
 
   const commitWidgetValue = (source: Source) => {
     widgetMgr.setStringValue(element, id, source)
