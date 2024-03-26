@@ -63,7 +63,7 @@ function renderIFrame({
     <iframe
       title="Plotly"
       src={url}
-      style={{ width, height, colorScheme: "light dark" }}
+      style={{ width, height, colorScheme: "normal" }}
     />
   )
 }

@@ -10,7 +10,7 @@ exports[`Video Element YouTube renders a youtube iframe 1`] = `
       frameborder="0"
       height="528"
       src="https://www.w3schools.com/html/mov_bbb.mp4"
-      style="color-scheme: light dark;"
+      style="color-scheme: normal;"
       title="https://www.w3schools.com/html/mov_bbb.mp4"
       width="0"
     />
@@ -28,7 +28,7 @@ exports[`Video Element YouTube renders a youtube iframe with an starting time 1`
       frameborder="0"
       height="528"
       src="https://www.w3schools.com/html/mov_bbb.mp4?start=10"
-      style="color-scheme: light dark;"
+      style="color-scheme: normal;"
       title="https://www.w3schools.com/html/mov_bbb.mp4"
       width="0"
     />
