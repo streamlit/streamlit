@@ -48,16 +48,18 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
   const elementInfo: ElementInfo = { id: element.id }
-  const [state] = useState<ElementInfo>(() => elementInfo || undefined)
+  const [state] = useState<string>(
+    () => elementMgr.getStringValue(elementInfo) || elementInfo.id
+  )
 
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
 
   useEffect(() => {
     commitElementValue({ fromUi: false })
-  }, [element, state.id])
+  }, [element, state])
 
   const commitElementValue = (source: Source) => {
-    elementMgr.setStringValue(element, state.id, source)
+    elementMgr.setStringValue(element, state, source)
   }
 
   // Handle startTime changes

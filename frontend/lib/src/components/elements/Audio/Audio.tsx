@@ -39,14 +39,16 @@ export default function Audio({
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const elementInfo: ElementInfo = { id: element.id }
-  const [state] = useState<ElementInfo>(() => elementInfo || undefined)
+  const [state] = useState<string>(
+    () => elementMgr.getStringValue(elementInfo) || elementInfo.id
+  )
 
   useEffect(() => {
     commitElementValue({ fromUi: false })
-  }, [element, state.id])
+  }, [element, state])
 
   const commitElementValue = (source: Source) => {
-    elementMgr.setStringValue(element, state.id, source)
+    elementMgr.setStringValue(element, state, source)
   }
 
   const { startTime, endTime, loop, autoplay } = element
