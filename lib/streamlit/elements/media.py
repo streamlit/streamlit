@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import io
 import re
+from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Final, Union, cast
 
@@ -29,6 +30,7 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.runtime_util import duration_to_seconds
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id
@@ -48,6 +50,16 @@ SubtitleData: TypeAlias = Union[
     str, Path, bytes, io.BytesIO, Dict[str, Union[str, Path, bytes, io.BytesIO]], None
 ]
 
+MediaTime: TypeAlias = Union[int, float, timedelta, str]
+
+TIMEDELTA_PARSE_ERROR_MESSAGE: Final = (
+    "Failed to convert '{param_name}' to a timedelta. "
+    "Please use a string in a format supported by "
+    "[Pandas Timedelta constructor]"
+    "(https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html), "
+    'e.g. `"10s"`, `"15 seconds"`, or `"1h23s"`. Got: {param_value}'
+)
+
 
 class MediaMixin:
     @gather_metrics("audio")
@@ -55,10 +67,10 @@ class MediaMixin:
         self,
         data: MediaData,
         format: str = "audio/wav",
-        start_time: int = 0,
+        start_time: MediaTime = 0,
         *,
         sample_rate: int | None = None,
-        end_time: int | None = None,
+        end_time: MediaTime | None = None,
         loop: bool = False,
         autoplay: bool = False,
     ) -> DeltaGenerator:
@@ -119,6 +131,7 @@ class MediaMixin:
 
         """
         ctx = get_script_run_ctx()
+        start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
@@ -154,10 +167,10 @@ class MediaMixin:
         self,
         data: MediaData,
         format: str = "video/mp4",
-        start_time: int = 0,
+        start_time: MediaTime = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
-        end_time: int | None = None,
+        end_time: MediaTime | None = None,
         loop: bool = False,
         autoplay: bool = False,
     ) -> DeltaGenerator:
@@ -262,6 +275,9 @@ class MediaMixin:
 
         """
         ctx = get_script_run_ctx()
+
+        start_time, end_time = _parse_start_time_end_time(start_time, end_time)
+
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_video(
@@ -497,6 +513,37 @@ def marshall_video(
     )
 
     proto.id = id
+
+
+def _parse_start_time_end_time(
+    start_time: MediaTime, end_time: MediaTime | None
+) -> tuple[int, int | None]:
+    """Parse start_time and end_time and return them as int."""
+
+    try:
+        maybe_start_time = duration_to_seconds(start_time, coerce_none_to_inf=False)
+        if maybe_start_time is None:
+            raise ValueError
+        start_time = int(maybe_start_time)
+    except (StreamlitAPIException, ValueError):
+        error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
+            param_name="start_time", param_value=start_time
+        )
+        raise StreamlitAPIException(error_msg) from None
+
+    try:
+        # TODO[kajarenc]: Replace `duration_to_seconds` with `time_to_seconds`
+        #  when PR #8343 is merged.
+        end_time = duration_to_seconds(end_time, coerce_none_to_inf=False)
+        if end_time is not None:
+            end_time = int(end_time)
+    except StreamlitAPIException:
+        error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
+            param_name="end_time", param_value=end_time
+        )
+        raise StreamlitAPIException(error_msg) from None
+
+    return start_time, end_time
 
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
