@@ -21,10 +21,10 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 def test_displays_maps_properly(
     app: Page, app_port: str, assert_snapshot: ImageCompareFunction
 ):
-    map_charts = themed_app.get_by_test_id("stDeckGlJsonChart")
+    map_charts = app.get_by_test_id("stDeckGlJsonChart")
     expect(map_charts).to_have_count(7)
 
-    data_warning_caps = themed_app.get_by_test_id("stCaptionContainer")
+    data_warning_caps = app.get_by_test_id("stCaptionContainer")
     expect(data_warning_caps).to_have_count(2)
     expect(data_warning_caps.nth(0)).to_have_text(
         "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more."
@@ -34,7 +34,7 @@ def test_displays_maps_properly(
     )
 
     assert_snapshot(map_charts.nth(5).locator("canvas").nth(0), name="st_map-basic")
-    wait_for_app_run(themed_app, 10000)
+    wait_for_app_run(app, 10000)
     assert_snapshot(map_charts.nth(6).locator("canvas").nth(0), name="st_map-complex")
 
     app.goto(f"http://localhost:{app_port}/?embed_options='dark_theme'")
@@ -43,7 +43,7 @@ def test_displays_maps_properly(
     assert_snapshot(
         map_charts.nth(5).locator("canvas").nth(0), name="st_map-basic_dark"
     )
-    wait_for_app_run(themed_app, 10000)
+    wait_for_app_run(app, 10000)
     assert_snapshot(
         map_charts.nth(6).locator("canvas").nth(0), name="st_map-complex_dark"
     )
