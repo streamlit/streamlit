@@ -19,20 +19,17 @@ from __future__ import annotations
 import functools
 import hashlib
 import inspect
-import math
 import threading
 import time
 import types
 from abc import abstractmethod
 from collections import defaultdict
-from datetime import timedelta
-from typing import Any, Callable, Final, Literal, overload
+from typing import Any, Callable, Final
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
-    BadTTLStringError,
     CacheError,
     CacheKeyNotFoundError,
     UnevaluatedDataFrameError,
@@ -56,45 +53,6 @@ _LOGGER: Final = get_logger(__name__)
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
-
-
-@overload
-def ttl_to_seconds(
-    ttl: float | timedelta | str | None, *, coerce_none_to_inf: Literal[False]
-) -> float | None:
-    ...
-
-
-@overload
-def ttl_to_seconds(ttl: float | timedelta | str | None) -> float:
-    ...
-
-
-def ttl_to_seconds(
-    ttl: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
-) -> float | None:
-    """
-    Convert a ttl value to a float representing "number of seconds".
-    """
-    if coerce_none_to_inf and ttl is None:
-        return math.inf
-    if isinstance(ttl, timedelta):
-        return ttl.total_seconds()
-    if isinstance(ttl, str):
-        import numpy as np
-        import pandas as pd
-
-        try:
-            out: float = pd.Timedelta(ttl).total_seconds()
-        except ValueError as ex:
-            raise BadTTLStringError(ttl) from ex
-
-        if np.isnan(out):
-            raise BadTTLStringError(ttl)
-
-        return out
-
-    return ttl
 
 
 # We show a special "UnevaluatedDataFrame" warning for cached funcs

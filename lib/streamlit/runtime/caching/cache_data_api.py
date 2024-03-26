@@ -35,7 +35,6 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFuncInfo,
     make_cached_func_wrapper,
-    ttl_to_seconds,
 )
 from streamlit.runtime.caching.cached_message_replay import (
     CachedMessageReplayContext,
@@ -59,6 +58,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.runtime_util import duration_to_seconds
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
 
@@ -154,7 +154,7 @@ class DataCaches(CacheStatsProvider):
         If it doesn't exist, create a new one with the given params.
         """
 
-        ttl_seconds = ttl_to_seconds(ttl, coerce_none_to_inf=False)
+        ttl_seconds = duration_to_seconds(ttl, coerce_none_to_inf=False)
 
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
@@ -254,7 +254,7 @@ class DataCaches(CacheStatsProvider):
             CacheStorageContext.
         """
 
-        ttl_seconds = ttl_to_seconds(ttl, coerce_none_to_inf=False)
+        ttl_seconds = duration_to_seconds(ttl, coerce_none_to_inf=False)
 
         cache_context = self.create_cache_storage_context(
             function_key="DUMMY_KEY",
