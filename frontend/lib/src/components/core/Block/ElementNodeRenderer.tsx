@@ -267,7 +267,7 @@ const RawElementNodeRenderer = (
           element={node.element.audio as AudioProto}
           endpoints={props.endpoints}
           {...elementProps}
-          widgetMgr={props.widgetMgr}
+          elementMgr={props.widgetMgr}
         />
       )
 
@@ -425,7 +425,7 @@ const RawElementNodeRenderer = (
           element={node.element.video as VideoProto}
           endpoints={props.endpoints}
           {...elementProps}
-          widgetMgr={props.widgetMgr}
+          elementMgr={props.widgetMgr}
         />
       )
 

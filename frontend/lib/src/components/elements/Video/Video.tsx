@@ -19,9 +19,9 @@ import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
 import {
-  WidgetStateManager,
+  WidgetStateManager as ElementStateManager,
   Source,
-  WidgetInfo,
+  WidgetInfo as ElementInfo,
 } from "@streamlit/lib/src/WidgetStateManager"
 
 const DEFAULT_HEIGHT = 528
@@ -30,7 +30,7 @@ export interface VideoProps {
   endpoints: StreamlitEndpoints
   width: number
   element: VideoProto
-  widgetMgr: WidgetStateManager
+  elementMgr: ElementStateManager
 }
 
 export interface Subtitle {
@@ -42,22 +42,22 @@ export default function Video({
   element,
   width,
   endpoints,
-  widgetMgr,
+  elementMgr,
 }: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
-  const widgetInfo: WidgetInfo = { id: element.id }
-  const [state] = useState<WidgetInfo>(() => widgetInfo || undefined)
+  const elementInfo: ElementInfo = { id: element.id }
+  const [state] = useState<ElementInfo>(() => elementInfo || undefined)
 
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
 
   useEffect(() => {
-    commitWidgetValue({ fromUi: false })
+    commitElementValue({ fromUi: false })
   }, [element, state.id])
 
-  const commitWidgetValue = (source: Source) => {
-    widgetMgr.setStringValue(element, state.id, source)
+  const commitElementValue = (source: Source) => {
+    elementMgr.setStringValue(element, state.id, source)
   }
 
   // Handle startTime changes

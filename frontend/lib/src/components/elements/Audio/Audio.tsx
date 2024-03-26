@@ -18,35 +18,35 @@ import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import {
-  WidgetStateManager,
+  WidgetStateManager as ElementStateManager,
   Source,
-  WidgetInfo,
+  WidgetInfo as ElementInfo,
 } from "@streamlit/lib/src/WidgetStateManager"
 
 export interface AudioProps {
   endpoints: StreamlitEndpoints
   width: number
   element: AudioProto
-  widgetMgr: WidgetStateManager
+  elementMgr: ElementStateManager
 }
 
 export default function Audio({
   element,
   width,
   endpoints,
-  widgetMgr,
+  elementMgr,
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const widgetInfo: WidgetInfo = { id: element.id }
-  const [state] = useState<WidgetInfo>(() => widgetInfo || undefined)
+  const elementInfo: ElementInfo = { id: element.id }
+  const [state] = useState<ElementInfo>(() => elementInfo || undefined)
 
   useEffect(() => {
-    commitWidgetValue({ fromUi: false })
+    commitElementValue({ fromUi: false })
   }, [element, state.id])
 
-  const commitWidgetValue = (source: Source) => {
-    widgetMgr.setStringValue(element, state.id, source)
+  const commitElementValue = (source: Source) => {
+    elementMgr.setStringValue(element, state.id, source)
   }
 
   const { startTime, endTime, loop, autoplay } = element
