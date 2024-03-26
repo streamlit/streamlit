@@ -20,6 +20,7 @@ import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import Video, { VideoProps } from "./Video"
 
@@ -35,6 +36,10 @@ describe("Video Element", () => {
     }),
     endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
     width: 0,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg: jest.fn(),
+      formsDataChanged: jest.fn(),
+    }),
   })
 
   beforeEach(() => {
