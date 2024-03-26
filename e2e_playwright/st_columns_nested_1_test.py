@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import streamlit as st
+from playwright.sync_api import Page
 
-st.text("This text is awesome!")
+from e2e_playwright.conftest import ImageCompareFunction
+
+
+def test_shows_nested_columns_correctly(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    assert_snapshot(
+        themed_app.get_by_test_id("stVerticalBlock").nth(0),
+        name="st_columns-widget_layout_left_graph_right",
+    )
