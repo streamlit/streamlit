@@ -117,3 +117,21 @@ def test_interval_histogram_chart_displays_dataframe(app: Page):
     app.mouse.up()
 
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+
+
+def test_shift_click_point_selection_scatter_chart_displays_dataframe(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = themed_app.get_by_test_id("stArrowVegaLiteChart").nth(0)
+    expect(chart).to_be_visible()
+    themed_app.mouse.move(450, 410)
+    themed_app.mouse.down()
+    themed_app.mouse.up()
+
+    themed_app.keyboard.down("Shift")
+    themed_app.mouse.move(445, 375)
+    themed_app.mouse.down()
+    themed_app.mouse.up()
+
+    expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
+    assert_snapshot(chart, name="st_altair_chart-scatter_double_selection_greyed")
