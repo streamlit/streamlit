@@ -72,6 +72,7 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
+# TODO(willhuang1997): Readd choropleth charts and add a working test
 # This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
 # def test_click_on_choroleth_chart_displays_a_df(app: Page):
 #     chart = app.locator(".stPlotlyChart").nth(4)
