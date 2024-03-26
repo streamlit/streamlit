@@ -27,6 +27,8 @@ import useTimeout from "@streamlit/lib/src/hooks/useTimeout"
 import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
+  SkeletonStyle,
+  Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -336,11 +338,12 @@ function ComponentInstance(props: Props): ReactElement {
   // but while we also have not waited until the ready timeout
   const loadingSkeleton = !isReadyRef.current &&
     !isReadyTimeout &&
-    // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
-      // Skeletons will have a default height if no frameHeight was specified
       <Skeleton
-        height={frameHeight === undefined ? undefined : `${frameHeight}px`}
+        element={SkeletonProto.create({
+          height: frameHeight,
+          style: SkeletonStyle.APP,
+        })}
       />
     )
 

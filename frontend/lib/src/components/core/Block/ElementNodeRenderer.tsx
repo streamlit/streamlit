@@ -32,6 +32,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   Radio as RadioProto,
+  Skeleton as SkeletonProto,
   Selectbox as SelectboxProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
@@ -55,6 +56,7 @@ import {
   Toast as ToastProto,
   Video as VideoProto,
   Heading as HeadingProto,
+  SkeletonStyle,
 } from "@streamlit/lib/src/proto"
 
 import React, { ReactElement, Suspense } from "react"
@@ -612,7 +614,11 @@ const RawElementNodeRenderer = (
     }
 
     case "skeleton": {
-      return <AppSkeleton />
+      const skeletonProto = node.element.skeleton as SkeletonProto
+      if (skeletonProto.style == SkeletonStyle.APP) {
+        return <AppSkeleton /> // internal-only, does not use any of the width/height properties
+      }
+      return <Skeleton element={skeletonProto} />
     }
 
     case "slider": {

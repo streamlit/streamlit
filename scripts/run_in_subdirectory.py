@@ -92,10 +92,9 @@ def try_as_shell(fixed_args: List[str], subdirectory: str):
     # Yarn happens to be the only thing currently run with this patching script,
     # so add a fall-back which tries to run the requested command in a shell
     # if directly calling the process doesn't work.
-    import shlex
 
     print("Direct call failed, trying as shell command:")
-    shell_cmd = shlex.join(fixed_args)
+    shell_cmd = " ".join(fixed_args)
     print(shell_cmd)
     try:
         subprocess.run(shell_cmd, cwd=subdirectory, check=True, shell=True)

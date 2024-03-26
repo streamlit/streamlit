@@ -19,6 +19,7 @@ import contextlib
 import errno
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -399,6 +400,7 @@ class SslServerTest(unittest.TestCase):
         )
 
     @parameterized.expand(["server.sslCertFile", "server.sslKeyFile"])
+    @unittest.skipIf("win32" in sys.platform, "Windows does not natively have openssl")
     def test_invalid_file_content(self, option_name):
         """
         The test checks the behavior whenever one of the two requires file is corrupted.
@@ -473,6 +475,7 @@ class UnixSocketTest(unittest.TestCase):
 
         return httpserver
 
+    @unittest.skipIf("win32" in sys.platform, "Windows does not have unit sockets")
     def test_unix_socket(self):
         app = mock.MagicMock()
 

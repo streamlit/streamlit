@@ -16,14 +16,25 @@
 
 import React, { FC, memo } from "react"
 
+import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
+
 import { SquareSkeleton } from "./styled-components"
 
-interface Props {
-  height?: string
-}
-
-const RawSkeleton: FC<React.PropsWithChildren<Props>> = props => {
-  return <SquareSkeleton data-testid="stSkeleton" {...props} />
+const RawSkeleton: FC<
+  React.PropsWithChildren<{ element?: SkeletonProto }>
+> = ({ element }) => {
+  let cssHeight, cssWidth
+  if (element != undefined) {
+    cssHeight = element.height != null ? element.height + "px" : undefined
+    cssWidth = element.width != null ? element.width + "px" : undefined
+  }
+  return (
+    <SquareSkeleton
+      data-testid="stSkeleton"
+      height={cssHeight}
+      width={cssWidth}
+    />
+  )
 }
 
 export const Skeleton = memo(RawSkeleton)

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os.path
 import unittest
 from dataclasses import FrozenInstanceError
 
@@ -27,9 +28,13 @@ class ScriptDataTest(unittest.TestCase):
             False,
         )
 
-        assert script_data.main_script_path == "/path/to/some/script.py"
+        assert os.path.realpath(script_data.main_script_path) == os.path.realpath(
+            "/path/to/some/script.py"
+        )
         assert script_data.is_hello == False
-        assert script_data.script_folder == "/path/to/some"
+        assert os.path.realpath(script_data.script_folder) == os.path.realpath(
+            "/path/to/some"
+        )
         assert script_data.name == "script"
 
     def test_is_frozen(self):

@@ -21,6 +21,8 @@ import "@testing-library/jest-dom"
 
 import { Skeleton } from "./Skeleton"
 
+import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
+
 describe("Skeleton element", () => {
   it("renders without delay", () => {
     render(<Skeleton />)
@@ -31,11 +33,23 @@ describe("Skeleton element", () => {
     expect(screen.getByTestId("stSkeleton")).toBeVisible()
   })
 
-  it("renders with height property", () => {
-    const height = "100px"
-    render(<Skeleton height={height} />)
+  it("converts properties appropriately", () => {
+    const props = SkeletonProto.create({ height: 5, width: 10 })
 
-    const style = getComputedStyle(screen.getByTestId("stSkeleton"))
-    expect(style.height).toBe(height)
+    render(<Skeleton element={props} />)
+
+    const testSkeleton = screen.getByTestId("stSkeleton")
+    expect(testSkeleton).toHaveAttribute("height", "5px")
+    expect(testSkeleton).toHaveAttribute("width", "10px")
+  })
+
+  it("accepts null/undefined properties", () => {
+    const props = SkeletonProto.create({ height: 5 })
+
+    render(<Skeleton element={props} />)
+
+    const testSkeleton = screen.getByTestId("stSkeleton")
+    expect(testSkeleton).toHaveAttribute("height")
+    expect(testSkeleton).not.toHaveAttribute("width")
   })
 })
