@@ -17,60 +17,51 @@
 import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { sessionStorageAvailable } from "@streamlit/lib/src/util/storageUtils"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
 
 export interface AudioProps {
   endpoints: StreamlitEndpoints
   width: number
   element: AudioProto
+  widgetMgr: WidgetStateManager
+}
+
+interface State {
+  id: string
 }
 
 export default function Audio({
   element,
   width,
   endpoints,
+  widgetMgr,
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [id, setId] = useState(() => widgetMgr.getStringValue(element) || "")
+
+  useEffect(() => {
+    if (element.setValue) {
+      updateFromProtobuf()
+    } else {
+      commitWidgetValue({ fromUi: false })
+    }
+  }, [element, id])
+
+  const updateFromProtobuf = () => {
+    const { id } = element
+    element.setValue = false
+    setId(id)
+    commitWidgetValue({ fromUi: false })
+  }
+
+  const commitWidgetValue = (source: Source) => {
+    widgetMgr.setStringValue(element, id, source)
+  }
 
   const { startTime, endTime, loop, autoplay } = element
-
-  // Define a state to manage the autoplay attribute
-  const [shouldAutoplay, setShouldAutoplay] = useState(autoplay)
-
-  useEffect(() => {
-    if (!sessionStorageAvailable()) return
-    // Check session storage to determine if autoplay should be enabled
-    const hasInteracted = window.sessionStorage.getItem(
-      "streamlitAudioInteracted"
-    )
-    if (hasInteracted) {
-      setShouldAutoplay(false)
-    }
-  }, []) // Empty dependency array to run only once on mount
-
-  // Interaction handlers
-  useEffect(() => {
-    if (!sessionStorageAvailable()) return
-    const audioNode = audioRef.current
-    if (!audioNode) return
-
-    const onInteraction = () => {
-      window.sessionStorage.setItem("streamlitAudioInteracted", "true")
-      // Disable autoplay for subsequent renders
-      setShouldAutoplay(false)
-    }
-
-    // Listeners to flag interaction
-    audioNode.addEventListener("play", onInteraction)
-    audioNode.addEventListener("pause", onInteraction)
-    audioNode.addEventListener("ended", onInteraction)
-
-    return () => {
-      audioNode.removeEventListener("play", onInteraction)
-      audioNode.removeEventListener("pause", onInteraction)
-      audioNode.removeEventListener("ended", onInteraction)
-    }
-  }, [])
 
   // Handle startTime changes
   useEffect(() => {
@@ -155,13 +146,14 @@ export default function Audio({
   }, [loop, startTime])
 
   const uri = endpoints.buildMediaURL(element.url)
+
   return (
     <audio
       data-testid="stAudio"
       id="audio"
       ref={audioRef}
       controls
-      {...(shouldAutoplay && { autoPlay: true })}
+      autoPlay={autoplay}
       src={uri}
       className="stAudio"
       style={{ width }}

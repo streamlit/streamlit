@@ -18,7 +18,10 @@ import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
-import { sessionStorageAvailable } from "@streamlit/lib/src/util/storageUtils"
+import {
+  WidgetStateManager,
+  Source,
+} from "@streamlit/lib/src/WidgetStateManager"
 
 const DEFAULT_HEIGHT = 528
 
@@ -26,6 +29,7 @@ export interface VideoProps {
   endpoints: StreamlitEndpoints
   width: number
   element: VideoProto
+  widgetMgr: WidgetStateManager
 }
 
 export interface Subtitle {
@@ -33,49 +37,41 @@ export interface Subtitle {
   url: string
 }
 
+interface State {
+  id: string
+}
+
 export default function Video({
   element,
   width,
   endpoints,
+  widgetMgr,
 }: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
+  const [id, setId] = useState(() => widgetMgr.getStringValue(element) || "")
 
   const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
 
-  const [shouldAutoplay, setShouldAutoplay] = useState(autoplay)
-
   useEffect(() => {
-    if (!sessionStorageAvailable()) return
-    // Initialize or update autoplay based on session storage
-    const hasInteracted = window.sessionStorage.getItem(
-      "streamlitVideoInteracted"
-    )
-    setShouldAutoplay(autoplay && !hasInteracted)
-  }, [autoplay])
-
-  useEffect(() => {
-    if (!sessionStorageAvailable()) return
-    const videoNode = videoRef.current
-    if (!videoNode) return
-
-    const onInteraction = () => {
-      window.sessionStorage.setItem("streamlitVideoInteracted", "true")
-      // Update shouldAutoplay state to reflect the interaction
-      setShouldAutoplay(false)
+    if (element.setValue) {
+      updateFromProtobuf()
+    } else {
+      commitWidgetValue({ fromUi: false })
     }
+  }, [element, id])
 
-    videoNode.addEventListener("play", onInteraction)
-    videoNode.addEventListener("pause", onInteraction)
-    videoNode.addEventListener("ended", onInteraction)
+  const updateFromProtobuf = () => {
+    const { id } = element
+    element.setValue = false
+    setId(id)
+    commitWidgetValue({ fromUi: false })
+  }
 
-    return () => {
-      videoNode.removeEventListener("play", onInteraction)
-      videoNode.removeEventListener("pause", onInteraction)
-      videoNode.removeEventListener("ended", onInteraction)
-    }
-  }, [])
+  const commitWidgetValue = (source: Source) => {
+    widgetMgr.setStringValue(element, id, source)
+  }
 
   // Handle startTime changes
   useEffect(() => {
@@ -221,7 +217,7 @@ export default function Video({
       data-testid="stVideo"
       ref={videoRef}
       controls
-      {...(shouldAutoplay ? { autoPlay: true } : {})} // Conditionally apply autoplay
+      autoPlay={autoplay}
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}

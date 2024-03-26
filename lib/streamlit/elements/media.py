@@ -29,6 +29,9 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
+from streamlit.runtime.state import register_widget
+from streamlit.runtime.state.common import compute_widget_id
 
 if TYPE_CHECKING:
     from typing import Any
@@ -115,6 +118,8 @@ class MediaMixin:
            height: 865px
 
         """
+        ctx = get_script_run_ctx()
+
         audio_proto = AudioProto()
         coordinates = self.dg._get_delta_path_str()
 
@@ -140,6 +145,7 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            ctx,
         )
         return self.dg._enqueue("audio", audio_proto)
 
@@ -255,6 +261,7 @@ class MediaMixin:
            for more information.
 
         """
+        ctx = get_script_run_ctx()
         video_proto = VideoProto()
         coordinates = self.dg._get_delta_path_str()
         marshall_video(
@@ -267,6 +274,7 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            ctx,
         )
         return self.dg._enqueue("video", video_proto)
 
@@ -374,6 +382,7 @@ def marshall_video(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    ctx: ScriptRunContext | None = None,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -475,6 +484,20 @@ def marshall_video(
                     f"Failed to process the provided subtitle: {label}"
                 ) from original_err
 
+    id = compute_widget_id(
+        "video",
+        data=data,
+        mimetype=mimetype,
+        start_time=start_time,
+        subtitles=subtitles,
+        end_time=end_time,
+        loop=loop,
+        autoplay=autoplay,
+        page=ctx.page_script_hash if ctx else None,
+    )
+
+    proto.id = id
+
 
 def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
     """Validates and normalizes numpy array data.
@@ -563,6 +586,7 @@ def marshall_audio(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    ctx: ScriptRunContext | None = None,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -596,6 +620,20 @@ def marshall_audio(
     if end_time is not None:
         proto.end_time = end_time
     proto.loop = loop
+
+    id = compute_widget_id(
+        "audio",
+        data=data,
+        mimetype=mimetype,
+        start_time=start_time,
+        sample_rate=sample_rate,
+        end_time=end_time,
+        loop=loop,
+        autoplay=autoplay,
+        page=ctx.page_script_hash if ctx else None,
+    )
+
+    proto.id = id
 
     if isinstance(data, str) and url_util.is_url(
         data, allowed_schemas=("http", "https", "data")

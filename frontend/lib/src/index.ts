@@ -49,11 +49,7 @@ export {
   ModalButton,
 } from "./components/shared/Modal"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
-export {
-  LocalStore,
-  localStorageAvailable,
-  sessionStorageAvailable,
-} from "./util/storageUtils"
+export { LocalStore, localStorageAvailable } from "./util/storageUtils"
 export {
   createAutoTheme,
   createPresetThemes,

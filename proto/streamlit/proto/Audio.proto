@@ -33,6 +33,9 @@ message Audio {
 
   bool autoplay = 8;
 
+  string id = 9;
+  bool set_value = 10;
+
   reserved 1, 2, 4;
   reserved "data", "format";
 }

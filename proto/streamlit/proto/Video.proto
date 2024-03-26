@@ -51,6 +51,10 @@ message Video {
 
   bool autoplay = 10;
 
+  string id = 11;
+
+  bool set_value = 12;
+
   reserved 1,2,4;
   reserved "format", "data";
 }
