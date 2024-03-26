@@ -33,6 +33,6 @@ def test_displays_maps_properly(
         "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more."
     )
 
-    assert_snapshot(map_charts.nth(5), name="st_map-basic")
+    assert_snapshot(map_charts.nth(5).locator("canvas"), name="st_map-basic")
     wait_for_app_run(themed_app, 10000)
-    assert_snapshot(map_charts.nth(6), name="st_map-complex")
+    assert_snapshot(map_charts.nth(6).locator("canvas"), name="st_map-complex")
