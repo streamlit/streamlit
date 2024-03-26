@@ -15,7 +15,11 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 
 
 def test_displays_maps_properly(
@@ -34,16 +38,15 @@ def test_displays_maps_properly(
     )
 
     assert_snapshot(map_charts.nth(5).locator("canvas").nth(0), name="st_map-basic")
-    wait_for_app_run(app, 10000)
     assert_snapshot(map_charts.nth(6).locator("canvas").nth(0), name="st_map-complex")
 
     app.goto(f"http://localhost:{app_port}/?embed_options='dark_theme'")
-    wait_for_app_loaded(page)
+    wait_for_app_loaded(app)
+    wait_for_app_run(app, 10000)
 
     assert_snapshot(
         map_charts.nth(5).locator("canvas").nth(0), name="st_map-basic_dark"
     )
-    wait_for_app_run(app, 10000)
     assert_snapshot(
         map_charts.nth(6).locator("canvas").nth(0), name="st_map-complex_dark"
     )
