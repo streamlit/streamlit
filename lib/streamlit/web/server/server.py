@@ -47,6 +47,7 @@ from streamlit.web.server.routes import (
     HealthHandler,
     HostConfigHandler,
     MessageCacheHandler,
+    MetadataWebManifestHandler,
     StaticFileHandler,
 )
 from streamlit.web.server.server_util import DEVELOPMENT_PORT, make_url_path_regex
@@ -81,6 +82,7 @@ MAX_PORT_SEARCH_RETRIES: Final = 100
 # to an unix socket.
 UNIX_SOCKET_PREFIX: Final = "unix://"
 
+METADATA_MANIFEST_ENDPOINT: Final = "/manifest.webmanifest"
 MEDIA_ENDPOINT: Final = "/media"
 UPLOAD_FILE_ENDPOINT: Final = "/_stcore/upload_file"
 STREAM_ENDPOINT: Final = r"_stcore/stream"
@@ -327,6 +329,11 @@ class Server:
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
                 dict(registry=self._runtime.component_registry),
+            ),
+            (
+                make_url_path_regex(base, METADATA_MANIFEST_ENDPOINT),
+                MetadataWebManifestHandler,
+                {"path": self.main_script_path, "base": base},
             ),
         ]
 
