@@ -119,6 +119,7 @@ if st.session_state.StackedBar_chart:
 else:
     st.write("Nothing is selected")
 
+# TODO(willhuang1997): Readd choropleth charts
 # st.header("Selections on Choropleth Chart with a callback")
 
 
