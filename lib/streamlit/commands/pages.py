@@ -31,7 +31,7 @@ class Page:
     title: str | None = None
     icon: str | None = None
     default: bool = False
-    key: str | None = None
+    url_path: str | None = None
 
     def __init__(
         self,
@@ -40,7 +40,7 @@ class Page:
         title: str | None = None,
         icon: str | None = None,
         default: bool = False,
-        key: str | None = None,
+        url_path: str | None = None,
     ):
         ctx = get_script_run_ctx()
         assert ctx
@@ -65,7 +65,10 @@ class Page:
         self.title = title or inferred_name
         self.icon = icon or inferred_icon
         self.default = default
-        self.key = key
+        if default:
+            self.url_path = ""
+        else:
+            self.url_path = url_path or inferred_name
 
     def run(self) -> None:
         ctx = get_script_run_ctx()
@@ -128,10 +131,13 @@ def navigation(
     return page
 
 
+@dataclass
 class Pages:
+    _pages: dict[str, list[Page]]
+
     def __init__(self, pages: list[Page] | dict[str, list[Page]]):
         if isinstance(pages, list):
-            self._pages: dict[str, list[Page]] = {"": pages}
+            self._pages = {"": pages}
         else:
             self._pages = pages
 

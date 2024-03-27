@@ -28,11 +28,13 @@ class PagesTest(DeltaGeneratorTestCase):
         assert p1.title == "foo"
         assert p1.icon == ""
         assert p1.default == False
+        assert p1.url_path == "foo"
 
         p2 = Page(Path("foo.py"))
         assert p2.title == "foo"
         assert p2.icon == ""
         assert p2.default == False
+        assert p2.url_path == "foo"
 
         def foo():
             st.text("foo")
@@ -41,11 +43,16 @@ class PagesTest(DeltaGeneratorTestCase):
         assert p3.title == "foo"
         assert p3.icon == ""
         assert p3.default == False
+        assert p3.url_path == "foo"
 
     def test_inferred_attributes(self):
         p1 = Page("😰_123.py")
         assert p1.title == "123"
         assert p1.icon == "😰"
+        assert p1.url_path == "123"
+
+        p2 = Page("foobar.py", default=True)
+        assert p2.url_path == ""
 
     def test_navigation_explicit_default(self):
         p1 = Page("foo.py")
