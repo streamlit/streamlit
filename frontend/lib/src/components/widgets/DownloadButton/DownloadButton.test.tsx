@@ -89,11 +89,26 @@ describe("DownloadButton widget", () => {
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
-        { fromUi: true }
+        { fromUi: true },
+        undefined
       )
 
       expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
         "/media/mockDownloadURL"
+      )
+    })
+
+    it("can set fragmentId on click", () => {
+      const props = getProps(undefined, { fragmentId: "myFragmentId" })
+      render(<DownloadButton {...props} />)
+
+      const downloadButton = screen.getByRole("button")
+      fireEvent.click(downloadButton)
+
+      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        { fromUi: true },
+        "myFragmentId"
       )
     })
 

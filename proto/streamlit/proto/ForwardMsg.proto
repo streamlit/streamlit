@@ -19,6 +19,7 @@ syntax = "proto3";
 option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "ForwardMsgProto";
 
+import "streamlit/proto/AutoRerun.proto";
 import "streamlit/proto/Common.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/GitInfo.proto";
@@ -51,6 +52,9 @@ message ForwardMsg {
 
     // Script was interrupted by rerun
     FINISHED_EARLY_FOR_RERUN = 2;
+
+    // A fragment of the script ran successfully.
+    FINISHED_FRAGMENT_RUN_SUCCESSFULLY = 3;
   }
 
   oneof type {
@@ -71,6 +75,7 @@ message ForwardMsg {
     PageNotFound page_not_found = 15;
     PagesChanged pages_changed = 16;
     FileURLsResponse file_urls_response = 19;
+    AutoRerun auto_rerun = 21;
 
     // Platform - message to host
     ParentMessage parent_message = 20;
@@ -88,7 +93,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 21
+  // Next: 22
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

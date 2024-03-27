@@ -31,7 +31,10 @@ const originalDate = "1970/1/20"
 const fullOriginalDate = "1970/01/20"
 const newDate = "2020/02/06"
 
-const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<DateInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: DateInputProto.create({
     id: "1",
     label: "Label",
@@ -47,6 +50,7 @@ const getProps = (elementProps: Partial<DateInputProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("DateInput widget", () => {
@@ -103,7 +107,23 @@ describe("DateInput widget", () => {
       [fullOriginalDate],
       {
         fromUi: false,
-      }
+      },
+      undefined
+    )
+  })
+
+  it("can pass a fragmentId to setStringArrayValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<DateInput {...props} />)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [fullOriginalDate],
+      {
+        fromUi: false,
+      },
+      "myFragmentId"
     )
   })
 
@@ -145,7 +165,8 @@ describe("DateInput widget", () => {
       [newDate],
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -228,7 +249,8 @@ describe("DateInput widget", () => {
       [newDate],
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
 
     // "Submit" the form
@@ -241,7 +263,8 @@ describe("DateInput widget", () => {
       [fullOriginalDate],
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })

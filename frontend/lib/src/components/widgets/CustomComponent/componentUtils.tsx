@@ -59,6 +59,7 @@ export interface IframeMessageHandlerProps {
   setComponentError: (error: Error) => void
   componentReadyCallback: () => void
   frameHeightCallback: (height: number | undefined) => void
+  fragmentId?: string
 }
 
 export interface Args {
@@ -104,6 +105,7 @@ export function createIframeMessageHandler(
       setComponentError,
       componentReadyCallback,
       frameHeightCallback,
+      fragmentId,
     } = callbacks.current
 
     switch (type) {
@@ -138,7 +140,8 @@ export function createIframeMessageHandler(
             (data as ComponentValueMessage).dataType,
             { fromUi: true },
             element,
-            widgetMgr
+            widgetMgr,
+            fragmentId
           )
         }
         break
@@ -276,7 +279,8 @@ function handleSetComponentValue(
   dataType: ValueType,
   source: Source,
   element: ComponentInstanceProto,
-  widgetMgr: WidgetStateManager
+  widgetMgr: WidgetStateManager,
+  fragmentId?: string
 ): void {
   if (value === undefined) {
     logWarning(`handleSetComponentValue: missing 'value' prop`)
@@ -285,13 +289,13 @@ function handleSetComponentValue(
 
   switch (dataType) {
     case "dataframe":
-      widgetMgr.setArrowValue(element, value, source)
+      widgetMgr.setArrowValue(element, value, source, fragmentId)
       break
     case "bytes":
-      widgetMgr.setBytesValue(element, value, source)
+      widgetMgr.setBytesValue(element, value, source, fragmentId)
       break
     default:
-      widgetMgr.setJsonValue(element, value, source)
+      widgetMgr.setJsonValue(element, value, source, fragmentId)
   }
 }
 

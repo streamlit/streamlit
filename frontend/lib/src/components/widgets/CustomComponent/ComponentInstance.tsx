@@ -65,6 +65,7 @@ export interface Props {
   element: ComponentInstanceProto
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 /**
@@ -169,7 +170,8 @@ function compareDataframeArgs(
 function ComponentInstance(props: Props): ReactElement {
   const [componentError, setComponentError] = useState<Error>()
 
-  const { disabled, element, registry, theme, widgetMgr, width } = props
+  const { disabled, element, registry, theme, widgetMgr, width, fragmentId } =
+    props
   const { componentName, jsonArgs, specialArgs, url } = element
 
   const [parsedNewArgs, parsedDataframeArgs] = tryParseArgs(
@@ -285,6 +287,7 @@ function ComponentInstance(props: Props): ReactElement {
       setComponentError,
       componentReadyCallback,
       frameHeightCallback: handleSetFrameHeight,
+      fragmentId,
     }
   }, [
     componentName,
@@ -298,6 +301,7 @@ function ComponentInstance(props: Props): ReactElement {
     widgetMgr,
     clearTimeoutWarningElement,
     clearTimeoutLog,
+    fragmentId,
   ])
 
   useEffect(() => {

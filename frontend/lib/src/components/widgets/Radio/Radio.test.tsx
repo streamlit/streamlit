@@ -63,7 +63,21 @@ describe("Radio widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setIntValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setIntValue")
+    render(<Radio {...props} />)
+
+    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -163,7 +177,8 @@ describe("Radio widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
     expect(secondOption).toBeChecked()
   })
@@ -186,7 +201,8 @@ describe("Radio widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     // "Submit" the form
@@ -202,7 +218,8 @@ describe("Radio widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })

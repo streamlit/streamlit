@@ -159,6 +159,7 @@ def register_widget(
         callback=on_change_handler,
         callback_args=args,
         callback_kwargs=kwargs,
+        fragment_id=ctx.current_fragment_id if ctx else None,
     )
     return register_widget_from_metadata(metadata, ctx, widget_func_name, element_type)
 
@@ -217,8 +218,8 @@ def register_widget_from_metadata(
 
 
 def coalesce_widget_states(
-    old_states: WidgetStates, new_states: WidgetStates
-) -> WidgetStates:
+    old_states: WidgetStates | None, new_states: WidgetStates | None
+) -> WidgetStates | None:
     """Coalesce an older WidgetStates into a newer one, and return a new
     WidgetStates containing the result.
 
@@ -228,6 +229,13 @@ def coalesce_widget_states(
     `old_states` will be set to True in the coalesced result, so that button
     presses don't go missing.
     """
+    if not old_states and not new_states:
+        return None
+    elif not old_states:
+        return new_states
+    elif not new_states:
+        return old_states
+
     states_by_id: dict[str, WidgetState] = {
         wstate.id: wstate for wstate in new_states.widgets
     }

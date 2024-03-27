@@ -61,7 +61,7 @@ class MetricsUtilTest(unittest.TestCase):
             side_effect=lambda path: path == "/etc/machine-id",
         ):
             machine_id = metrics_util._get_machine_id_v3()
-        self.assertEqual(machine_id, file_data)
+        assert machine_id == file_data
 
     def test_machine_id_v3_from_dbus(self):
         """Test getting the machine id from /var/lib/dbus"""
@@ -78,7 +78,7 @@ class MetricsUtilTest(unittest.TestCase):
             side_effect=lambda path: path == "/var/lib/dbus/machine-id",
         ):
             machine_id = metrics_util._get_machine_id_v3()
-        self.assertEqual(machine_id, file_data)
+        assert machine_id == file_data
 
     def test_machine_id_v3_from_node(self):
         """Test getting the machine id as the mac address"""
@@ -87,7 +87,7 @@ class MetricsUtilTest(unittest.TestCase):
             "streamlit.runtime.metrics_util.uuid.getnode", return_value=MAC
         ), patch("streamlit.runtime.metrics_util.os.path.isfile", return_value=False):
             machine_id = metrics_util._get_machine_id_v3()
-        self.assertEqual(machine_id, MAC)
+        assert machine_id == MAC
 
 
 class PageTelemetryTest(DeltaGeneratorTestCase):
@@ -121,7 +121,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     )
     def test_get_type_name(self, obj: object, expected_type: str):
         """Test getting the type name via _get_type_name"""
-        self.assertEqual(metrics_util._get_type_name(obj), expected_type)
+        assert metrics_util._get_type_name(obj) == expected_type
 
     def test_get_command_telemetry(self):
         """Test getting command telemetry via _get_command_telemetry."""
@@ -130,35 +130,30 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             st.dataframe, "dataframe", pd.DataFrame(), width=250
         )
 
-        self.assertEqual(command_metadata.name, "dataframe")
-        self.assertEqual(len(command_metadata.args), 2)
-        self.assertEqual(
-            str(command_metadata.args[0]).strip(),
-            'k: "data"\nt: "DataFrame"\nm: "len:0"',
+        assert command_metadata.name == "dataframe"
+        assert len(command_metadata.args) == 2
+        assert (
+            str(command_metadata.args[0]).strip()
+            == 'k: "data"\nt: "DataFrame"\nm: "len:0"'
         )
-        self.assertEqual(
-            str(command_metadata.args[1]).strip(),
-            'k: "width"\nt: "int"',
-        )
+        assert str(command_metadata.args[1]).strip() == 'k: "width"\nt: "int"'
 
         # Test with text_input command:
         command_metadata = metrics_util._get_command_telemetry(
             st.text_input, "text_input", label="text input", value="foo", disabled=True
         )
 
-        self.assertEqual(command_metadata.name, "text_input")
-        self.assertEqual(len(command_metadata.args), 3)
-        self.assertEqual(
-            str(command_metadata.args[0]).strip(),
-            'k: "label"\nt: "str"\nm: "len:10"',
+        assert command_metadata.name == "text_input"
+        assert len(command_metadata.args) == 3
+        assert (
+            str(command_metadata.args[0]).strip() == 'k: "label"\nt: "str"\nm: "len:10"'
         )
-        self.assertEqual(
-            str(command_metadata.args[1]).strip(),
-            'k: "value"\nt: "str"\nm: "len:3"',
+        assert (
+            str(command_metadata.args[1]).strip() == 'k: "value"\nt: "str"\nm: "len:3"'
         )
-        self.assertEqual(
-            str(command_metadata.args[2]).strip(),
-            'k: "disabled"\nt: "bool"\nm: "val:True"',
+        assert (
+            str(command_metadata.args[2]).strip()
+            == 'k: "disabled"\nt: "bool"\nm: "val:True"'
         )
 
     def test_create_page_profile_message(self):
@@ -173,10 +168,27 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             prep_time=2000,
         )
 
-        self.assertEqual(len(forward_msg.page_profile.commands), 1)
-        self.assertEqual(forward_msg.page_profile.exec_time, 1000)
-        self.assertEqual(forward_msg.page_profile.prep_time, 2000)
-        self.assertEqual(forward_msg.page_profile.commands[0].name, "dataframe")
+        assert len(forward_msg.page_profile.commands) == 1
+        assert forward_msg.page_profile.exec_time == 1000
+        assert forward_msg.page_profile.prep_time == 2000
+        assert forward_msg.page_profile.commands[0].name == "dataframe"
+        assert not forward_msg.page_profile.is_fragment_run
+
+    def test_create_page_profile_message_is_fragment_run(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "some_fragment_id"
+
+        forward_msg = metrics_util.create_page_profile_message(
+            commands=[
+                metrics_util._get_command_telemetry(
+                    st.dataframe, "dataframe", pd.DataFrame(), width=250
+                )
+            ],
+            exec_time=1000,
+            prep_time=2000,
+        )
+
+        assert forward_msg.page_profile.is_fragment_run
 
     def test_gather_metrics_decorator(self):
         """The gather_metrics decorator works as expected."""
@@ -190,24 +202,24 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
         test_function(param1=10, param2="foobar")
 
-        self.assertEqual(len(ctx.tracked_commands), 1)
-        self.assertTrue(ctx.tracked_commands[0].name.endswith("test_function"))
-        self.assertTrue(ctx.tracked_commands[0].name.startswith("external:"))
+        assert len(ctx.tracked_commands) == 1
+        assert ctx.tracked_commands[0].name.endswith("test_function")
+        assert ctx.tracked_commands[0].name.startswith("external:")
 
         st.markdown("This function should be tracked")
 
-        self.assertEqual(len(ctx.tracked_commands), 2)
-        self.assertTrue(ctx.tracked_commands[0].name.endswith("test_function"))
-        self.assertTrue(ctx.tracked_commands[0].name.startswith("external:"))
-        self.assertEqual(ctx.tracked_commands[1].name, "markdown")
+        assert len(ctx.tracked_commands) == 2
+        assert ctx.tracked_commands[0].name.endswith("test_function")
+        assert ctx.tracked_commands[0].name.startswith("external:")
+        assert ctx.tracked_commands[1].name == "markdown"
 
         ctx.reset()
         # Deactivate usage stats gathering
         ctx.gather_usage_stats = False
 
-        self.assertEqual(len(ctx.tracked_commands), 0)
+        assert len(ctx.tracked_commands) == 0
         test_function(param1=10, param2="foobar")
-        self.assertEqual(len(ctx.tracked_commands), 0)
+        assert len(ctx.tracked_commands) == 0
 
     @parameterized.expand(
         [
@@ -243,19 +255,13 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         with contextlib.suppress(Exception):
             command()
 
-        self.assertGreater(
-            len(ctx.tracked_commands),
-            0,
-            f"No command tracked for {expected_name}",
-        )
+        assert len(ctx.tracked_commands) > 0, f"No command tracked for {expected_name}"
 
         # Sometimes multiple commands are executed
         # so we check the full list of tracked commands
-        self.assertIn(
-            expected_name,
-            [tracked_commands.name for tracked_commands in ctx.tracked_commands],
-            f"Command {expected_name} was not tracked.",
-        )
+        assert expected_name in [
+            tracked_commands.name for tracked_commands in ctx.tracked_commands
+        ], f"Command {expected_name} was not tracked."
 
     def test_public_api_commands(self):
         """All commands of the public API should be tracked with the correct name."""
@@ -304,13 +310,9 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # Assert that the API name is in the list of tracked commands.
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
-            self.assertIn(
-                api_name,
-                [cmd.name for cmd in ctx.tracked_commands],
-                (
-                    f"When executing `st.{api_name}()`, we expect the string "
-                    f'"{api_name}" to be in the list of tracked commands.',
-                ),
+            assert api_name in [cmd.name for cmd in ctx.tracked_commands], (
+                f"When executing `st.{api_name}()`, we expect the string "
+                f'"{api_name}" to be in the list of tracked commands.',
             )
 
     def test_column_config_commands(self):
@@ -344,13 +346,11 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             # Assert that the API name is in the list of tracked commands.
             # (It's possible for multiple tracked commands to be issued as
             # the result of a single API call.)
-            self.assertIn(
-                "column_config." + api_name,
-                [cmd.name for cmd in ctx.tracked_commands],
-                (
-                    f"When executing `st.{api_name}()`, we expect the string "
-                    f'"{api_name}" to be in the list of tracked commands.',
-                ),
+            assert f"column_config.{api_name}" in [
+                cmd.name for cmd in ctx.tracked_commands
+            ], (
+                f"When executing `st.{api_name}()`, we expect the string "
+                f'"{api_name}" to be in the list of tracked commands.',
             )
 
     def test_command_tracking_limits(self):
@@ -377,14 +377,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             for func in funcs:
                 func()
 
-        self.assertLessEqual(
-            len(ctx.tracked_commands), metrics_util._MAX_TRACKED_COMMANDS
-        )
+        assert len(ctx.tracked_commands) <= metrics_util._MAX_TRACKED_COMMANDS
 
         # Test that no individual command is tracked more than _MAX_TRACKED_PER_COMMAND
         command_counts = Counter(
             [command.name for command in ctx.tracked_commands]
         ).most_common()
-        self.assertLessEqual(
-            command_counts[0][1], metrics_util._MAX_TRACKED_PER_COMMAND
-        )
+        assert command_counts[0][1] <= metrics_util._MAX_TRACKED_PER_COMMAND

@@ -298,6 +298,17 @@ class WidgetManagerTests(unittest.TestCase):
         # be coalesced
         self.assertEqual(3, session_state["shape_changing_trigger"])
 
+    def coalesce_widget_states_returns_None_if_both_inputs_None(self):
+        assert coalesce_widget_states(None, None) is None
+
+    def coalesce_widget_states_returns_old_states_if_new_states_None(self):
+        old_states = WidgetStates()
+        assert coalesce_widget_states(old_states, None) is old_states
+
+    def coalesce_widget_states_returns_new_states_if_old_states_None(self):
+        new_states = WidgetStates()
+        assert coalesce_widget_states(None, new_states) is new_states
+
 
 class WidgetHelperTests(unittest.TestCase):
     def test_get_widget_with_generated_key(self):

@@ -38,6 +38,7 @@ from streamlit.proto.NewSession_pb2 import (
 from streamlit.proto.PagesChanged_pb2 import PagesChanged
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
@@ -160,6 +161,8 @@ class AppSession:
         self._user_info = user_info
 
         self._debug_last_backmsg_id: str | None = None
+
+        self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
@@ -353,26 +356,33 @@ class AppSession:
             return
 
         if client_state:
+            fragment_id = client_state.fragment_id
+
             rerun_data = RerunData(
                 client_state.query_string,
                 client_state.widget_states,
                 client_state.page_script_hash,
                 client_state.page_name,
+                fragment_id_queue=[fragment_id] if fragment_id else [],
             )
         else:
             rerun_data = RerunData()
 
         if self._scriptrunner is not None:
-            if bool(config.get_option("runner.fastReruns")):
-                # If fastReruns is enabled, we don't send rerun requests to our
-                # existing ScriptRunner. Instead, we tell it to shut down. We'll
-                # then spin up a new ScriptRunner, below, to handle the rerun
-                # immediately.
+            if (
+                bool(config.get_option("runner.fastReruns"))
+                and not rerun_data.fragment_id_queue
+            ):
+                # If fastReruns is enabled and this is *not* a rerun of a fragment,
+                # we don't send rerun requests to our existing ScriptRunner. Instead, we
+                # tell it to shut down. We'll then spin up a new ScriptRunner, below, to
+                # handle the rerun immediately.
                 self._scriptrunner.request_stop()
                 self._scriptrunner = None
             else:
-                # fastReruns is not enabled. Send our ScriptRunner a rerun
-                # request. If the request is accepted, we're done.
+                # Either fastReruns is not enabled or this RERUN request is a request to
+                # run a fragment. We send our current ScriptRunner a rerun request, and
+                # if it's accepted, we're done.
                 success = self._scriptrunner.request_rerun(rerun_data)
                 if success:
                     return
@@ -400,6 +410,7 @@ class AppSession:
             script_cache=self._script_cache,
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
+            fragment_storage=self._fragment_storage,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -464,6 +475,7 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
+        fragment_ids_this_run: set[str] | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -473,7 +485,13 @@ class AppSession:
         """
         self._event_loop.call_soon_threadsafe(
             lambda: self._handle_scriptrunner_event_on_event_loop(
-                sender, event, forward_msg, exception, client_state, page_script_hash
+                sender,
+                event,
+                forward_msg,
+                exception,
+                client_state,
+                page_script_hash,
+                fragment_ids_this_run,
             )
         )
 
@@ -485,6 +503,7 @@ class AppSession:
         exception: BaseException | None = None,
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
+        fragment_ids_this_run: set[str] | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -515,6 +534,11 @@ class AppSession:
         page_script_hash : str | None
             A hash of the script path corresponding to the page currently being
             run. Set only for the SCRIPT_STARTED event.
+
+        fragment_ids_this_run : set[str] | None
+            The fragment IDs of the fragments being executed in this script run. Only
+            set for the SCRIPT_STARTED event. If this value is falsy, this script run
+            must be for the full script.
         """
 
         assert (
@@ -540,30 +564,43 @@ class AppSession:
                 page_script_hash is not None
             ), "page_script_hash must be set for the SCRIPT_STARTED event"
 
-            self._clear_queue()
+            # When running the full script, we clear the browser ForwardMsg queue since
+            # anything from a previous script run that has yet to be sent to the browser
+            # will be overwritten. For fragment runs, however, we don't want to do this
+            # as the ForwardMsgs in the queue may not correspond to the running
+            # fragment, so dropping the messages may result in the app missing
+            # information.
+            if not fragment_ids_this_run:
+                self._clear_queue()
+
             self._enqueue_forward_msg(
-                self._create_new_session_message(page_script_hash)
+                self._create_new_session_message(
+                    page_script_hash, fragment_ids_this_run
+                )
             )
 
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
             or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
+            or event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
         ):
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_NOT_RUNNING
 
-            script_succeeded = event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            if event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS:
+                status = ForwardMsg.FINISHED_SUCCESSFULLY
+            elif event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS:
+                status = ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+            else:
+                status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
-            script_finished_msg = self._create_script_finished_message(
-                ForwardMsg.FINISHED_SUCCESSFULLY
-                if script_succeeded
-                else ForwardMsg.FINISHED_WITH_COMPILE_ERROR
-            )
-            self._enqueue_forward_msg(script_finished_msg)
-
+            self._enqueue_forward_msg(self._create_script_finished_message(status))
             self._debug_last_backmsg_id = None
 
-            if script_succeeded:
+            if (
+                event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+                or event == ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
+            ):
                 # The script completed successfully: update our
                 # LocalSourcesWatcher to account for any source code changes
                 # that change which modules should be watched.
@@ -582,11 +619,12 @@ class AppSession:
                 self._enqueue_forward_msg(msg)
 
         elif event == ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN:
-            script_finished_msg = self._create_script_finished_message(
-                ForwardMsg.FINISHED_EARLY_FOR_RERUN
-            )
             self._state = AppSessionState.APP_NOT_RUNNING
-            self._enqueue_forward_msg(script_finished_msg)
+            self._enqueue_forward_msg(
+                self._create_script_finished_message(
+                    ForwardMsg.FINISHED_EARLY_FOR_RERUN
+                )
+            )
             if self._local_sources_watcher:
                 self._local_sources_watcher.update_watched_modules()
 
@@ -630,7 +668,9 @@ class AppSession:
         msg.session_event.script_changed_on_disk = True
         return msg
 
-    def _create_new_session_message(self, page_script_hash: str) -> ForwardMsg:
+    def _create_new_session_message(
+        self, page_script_hash: str, fragment_ids_this_run: set[str] | None = None
+    ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
@@ -638,6 +678,9 @@ class AppSession:
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._script_data.main_script_path
         msg.new_session.page_script_hash = page_script_hash
+
+        if fragment_ids_this_run:
+            msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
         _populate_app_pages(msg.new_session, self._script_data.main_script_path)
         _populate_config_msg(msg.new_session.config)

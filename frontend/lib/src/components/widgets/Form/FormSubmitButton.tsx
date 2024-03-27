@@ -30,10 +30,18 @@ export interface Props {
   hasInProgressUpload: boolean
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 export function FormSubmitButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, hasInProgressUpload, width } = props
+  const {
+    disabled,
+    element,
+    widgetMgr,
+    hasInProgressUpload,
+    width,
+    fragmentId,
+  } = props
   const { formId } = element
   const style = { width }
   const kind =
@@ -63,7 +71,7 @@ export function FormSubmitButton(props: Props): ReactElement {
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
           disabled={disabled || hasInProgressUpload}
           onClick={() => {
-            widgetMgr.submitForm(element.formId, element)
+            widgetMgr.submitForm(element.formId, element, fragmentId)
           }}
         >
           <StreamlitMarkdown

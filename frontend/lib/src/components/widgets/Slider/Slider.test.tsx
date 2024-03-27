@@ -101,7 +101,7 @@ describe("Slider widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
-  it("sets widget value on mount", async () => {
+  it("sets widget value on mount", () => {
     const props = getProps()
     jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
 
@@ -113,7 +113,25 @@ describe("Slider widget", () => {
     expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
       props.element,
       [5],
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setDoubleArrayValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+    render(<Slider {...props} />)
+
+    // We need to do this as we are using a debounce when the widget value is set
+    jest.runAllTimers()
+
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [5],
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -170,7 +188,8 @@ describe("Slider widget", () => {
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
         props.element,
         [6],
-        { fromUi: true }
+        { fromUi: true },
+        undefined
       )
 
       expect(slider).toHaveAttribute("aria-valuenow", "6")
@@ -193,7 +212,8 @@ describe("Slider widget", () => {
       expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
         props.element,
         [6],
-        { fromUi: true }
+        { fromUi: true },
+        undefined
       )
 
       expect(slider).toHaveAttribute("aria-valuenow", "6")
@@ -207,7 +227,8 @@ describe("Slider widget", () => {
         props.element.default,
         {
           fromUi: true,
-        }
+        },
+        undefined
       )
 
       expect(slider).toHaveAttribute("aria-valuenow", "5")
@@ -336,7 +357,8 @@ describe("Slider widget", () => {
         [1, 10],
         {
           fromUi: true,
-        }
+        },
+        undefined
       )
       expect(sliders[0]).toHaveAttribute("aria-valuenow", "1")
       expect(sliders[1]).toHaveAttribute("aria-valuenow", "10")

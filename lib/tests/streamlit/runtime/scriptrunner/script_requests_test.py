@@ -163,12 +163,65 @@ class ScriptRequestsTest(unittest.TestCase):
         self.assertEqual(True, _get_widget("trigger", result_states).trigger_value)
         self.assertEqual(123, _get_widget("int", result_states).int_value)
 
+    def test_request_rerun_appends_new_fragment_ids_to_queue(self):
+        reqs = ScriptRequests()
+
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+
+        # Sanity check
+        self.assertEqual(reqs._rerun_data.fragment_id_queue, ["my_fragment1"])
+
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+        # Test that duplicate fragment_id isn't appended to queue.
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+
+        self.assertEqual(
+            reqs._rerun_data.fragment_id_queue,
+            [
+                "my_fragment1",
+                "my_fragment2",
+                "my_fragment3",
+            ],
+        )
+
+    def test_request_rerun_appends_clears_fragment_queue_on_full_rerun(self):
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment1"]))
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment2"]))
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment3"]))
+
+        # Sanity check
+        self.assertEqual(
+            reqs._rerun_data.fragment_id_queue,
+            [
+                "my_fragment1",
+                "my_fragment2",
+                "my_fragment3",
+            ],
+        )
+
+        reqs.request_rerun(RerunData(fragment_id_queue=[]))
+        self.assertEqual(reqs._rerun_data.fragment_id_queue, [])
+
     def test_on_script_yield_with_no_request(self):
         """Return None; remain in the CONTINUE state."""
         reqs = ScriptRequests()
         result = reqs.on_scriptrunner_yield()
         self.assertEqual(None, result)
         self.assertEqual(ScriptRequestType.CONTINUE, reqs._state)
+
+    def test_on_script_yield_with_fragment_rerun_request(self):
+        """Return None; remain in the RERUN state."""
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData(fragment_id_queue=["my_fragment_id"]))
+
+        result = reqs.on_scriptrunner_yield()
+        self.assertEqual(None, result)
+        self.assertEqual(ScriptRequestType.RERUN, reqs._state)
+        self.assertEqual(
+            reqs._rerun_data, RerunData(fragment_id_queue=["my_fragment_id"])
+        )
 
     def test_on_script_yield_with_stop_request(self):
         """Return STOP; remain in the STOP state."""

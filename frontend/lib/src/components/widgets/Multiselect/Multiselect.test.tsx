@@ -68,7 +68,23 @@ describe("Multiselect widget", () => {
       props.element.default,
       {
         fromUi: false,
-      }
+      },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setIntArrayValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setIntArrayValue")
+
+    render(<Multiselect {...props} />)
+    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      {
+        fromUi: false,
+      },
+      "myFragmentId"
     )
   })
 
@@ -243,7 +259,8 @@ describe("Multiselect widget", () => {
       [0, 1],
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
 
     // "Submit" the form
@@ -263,7 +280,8 @@ describe("Multiselect widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 

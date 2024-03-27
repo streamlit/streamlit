@@ -40,4 +40,6 @@ message Delta {
     NamedDataSet add_rows = 5;
     ArrowNamedDataSet arrow_add_rows = 7;
   }
+
+  string fragment_id = 8;
 }

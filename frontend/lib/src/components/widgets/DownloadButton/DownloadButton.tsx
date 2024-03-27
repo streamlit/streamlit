@@ -31,10 +31,11 @@ export interface Props {
   element: DownloadButtonProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width, endpoints } = props
+  const { disabled, element, widgetMgr, width, endpoints, fragmentId } = props
   const style = { width }
 
   const kind =
@@ -45,7 +46,7 @@ function DownloadButton(props: Props): ReactElement {
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
-    widgetMgr.setTriggerValue(element, { fromUi: true })
+    widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
     const link = document.createElement("a")
     const uri = endpoints.buildMediaURL(element.url)
     link.setAttribute("href", uri)
