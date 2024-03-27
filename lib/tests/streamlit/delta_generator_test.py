@@ -41,7 +41,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.widgets import _build_duplicate_widget_message
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -347,7 +347,9 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         self.assertEqual(1, dg._cursor.index)
         self.assertEqual(container, new_dg._root_container)
 
-        element = self.get_delta_from_queue().new_element
+        delta = self.get_delta_from_queue()
+        element = delta.new_element
+        self.assertEqual(delta.fragment_id, "")
         self.assertEqual(element.text.body, test_data)
 
     def test_enqueue_same_id(self):
@@ -368,6 +370,16 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
             make_delta_path(RootContainer.MAIN, (), 123), msg.metadata.delta_path
         )
         self.assertEqual(msg.delta.new_element.text.body, test_data)
+
+    def test_enqueue_adds_fragment_id_to_delta_if_set(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "my_fragment_id"
+
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+        dg._enqueue("text", TextProto())
+
+        delta = self.get_delta_from_queue()
+        self.assertEqual(delta.fragment_id, "my_fragment_id")
 
 
 class DeltaGeneratorContainerTest(DeltaGeneratorTestCase):

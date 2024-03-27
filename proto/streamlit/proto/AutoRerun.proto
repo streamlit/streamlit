@@ -14,18 +14,12 @@
  * limitations under the License.
  */
 
-syntax = "proto3";
+ syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ClientStateProto";
+ message AutoRerun {
+   // The interval of reruns in seconds
+   float interval = 1;
 
-import "streamlit/proto/WidgetStates.proto";
-
-
-message ClientState {
-  string query_string = 1;
-  WidgetStates widget_states = 2;
-  string page_script_hash = 3;
-  string page_name = 4;
-  string fragment_id = 5;
-}
+   // The fragment ID to rerun
+   string fragment_id = 2;
+ }

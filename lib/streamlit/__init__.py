@@ -81,6 +81,7 @@ from streamlit.runtime.caching import (
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
 )
+from streamlit.runtime.fragment import fragment as _fragment
 from streamlit.runtime.metrics_util import gather_metrics as _gather_metrics
 from streamlit.runtime.secrets import secrets_singleton as _secrets_singleton
 from streamlit.runtime.state import (
@@ -230,9 +231,10 @@ column_config = _column_config
 connection = _connection
 
 # Experimental APIs
-experimental_user = _UserInfoProxy()
-experimental_singleton = _experimental_singleton
+experimental_fragment = _fragment
 experimental_memo = _experimental_memo
+experimental_singleton = _experimental_singleton
+experimental_user = _UserInfoProxy()
 
 _EXPERIMENTAL_QUERY_PARAMS_DEPRECATE_MSG = "Refer to our [docs page](https://docs.streamlit.io/library/api-reference/utilities/st.query_params) for more information."
 

@@ -897,4 +897,7 @@ def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
+    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = ctx.current_fragment_id
+
     ctx.enqueue(msg)
