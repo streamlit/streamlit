@@ -51,7 +51,7 @@ def test_point_bar_chart_displays_dataframe(app: Page):
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
     chart.hover()
-    app.mouse.move(135, 110)
+    app.mouse.move(445, 375)
     app.mouse.down()
     app.mouse.up()
 
@@ -63,9 +63,9 @@ def test_interval_bar_chart_displays_dataframe(app: Page):
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
-    app.mouse.move(500, 500)
+    app.mouse.move(445, 375)
     app.mouse.down()
-    app.mouse.move(700, 700)
+    app.mouse.move(500, 500)
     app.mouse.up()
 
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
