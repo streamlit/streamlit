@@ -51,7 +51,9 @@ message Video {
 
   bool autoplay = 10;
 
-  string id = 11;
+  bool muted = 11;
+
+  string id = 12;
 
   reserved 1,2,4;
   reserved "format", "data";

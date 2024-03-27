@@ -173,6 +173,7 @@ class MediaMixin:
         end_time: MediaTime | None = None,
         loop: bool = False,
         autoplay: bool = False,
+        muted: bool = False,
     ) -> DeltaGenerator:
         """Display a video player.
 
@@ -222,7 +223,13 @@ class MediaMixin:
             Whether the video should loop playback.
         autoplay: bool
             Whether the video should start playing automatically.
-            Browsers will not autoplay video files if the user has not interacted with the page yet.
+            Browsers will not autoplay video files if the user has not interacted with
+            the page yet, for example by clicking on the page while it loads.
+            To enable autoplay without user interaction, you can set muted=True.
+            Defaults to False.
+        muted: bool
+            Whether the video should play with the audio silenced. This can be used to
+            enable autoplay without user interaction. Defaults to False.
 
         Example
         -------
@@ -290,6 +297,7 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            muted,
             ctx,
         )
         return self.dg._enqueue("video", video_proto)
@@ -398,6 +406,7 @@ def marshall_video(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    muted: bool = False,
     ctx: ScriptRunContext | None = None,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
@@ -432,9 +441,15 @@ def marshall_video(
             The time at which this element should stop playing
     loop: bool
         Whether the video should loop playback.
-    autoplay : bool
+    autoplay: bool
         Whether the video should start playing automatically.
-        Browsers will not autoplay video files if the user has not interacted with the page yet.
+        Browsers will not autoplay video files if the user has not interacted with
+        the page yet, for example by clicking on the page while it loads.
+        To enable autoplay without user interaction, you can set muted=True.
+        Defaults to False.
+    muted: bool
+        Whether the video should play with the audio silenced. This can be used to
+        enable autoplay without user interaction. Defaults to False.
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
@@ -442,6 +457,7 @@ def marshall_video(
 
     proto.start_time = start_time
     proto.autoplay = autoplay
+    proto.muted = muted
 
     if end_time is not None:
         proto.end_time = end_time
@@ -509,6 +525,7 @@ def marshall_video(
         end_time=end_time,
         loop=loop,
         autoplay=autoplay,
+        muted=muted,
         page=ctx.page_script_hash if ctx else None,
     )
 

@@ -54,7 +54,8 @@ export default function Video({
   )
 
   /* Element may contain "url" or "data" property. */
-  const { type, url, startTime, subtitles, endTime, loop, autoplay } = element
+  const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
+    element
 
   useEffect(() => {
     commitElementValue({ fromUi: false })
@@ -146,7 +147,7 @@ export default function Video({
   }, [loop, startTime])
 
   const getYoutubeSrc = (url: string): string => {
-    const { startTime, endTime, loop, autoplay } = element
+    const { startTime, endTime, loop, autoplay, muted } = element
     const youtubeUrl = new URL(url)
 
     if (startTime && !isNaN(startTime)) {
@@ -169,6 +170,10 @@ export default function Video({
 
     if (autoplay) {
       youtubeUrl.searchParams.append("autoplay", "1")
+    }
+
+    if (muted) {
+      youtubeUrl.searchParams.append("mute", "1")
     }
 
     return youtubeUrl.toString()
@@ -208,6 +213,7 @@ export default function Video({
       data-testid="stVideo"
       ref={videoRef}
       controls
+      muted={muted}
       autoPlay={autoplay}
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
