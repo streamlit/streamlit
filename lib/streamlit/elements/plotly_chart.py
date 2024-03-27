@@ -23,13 +23,22 @@ from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
 from typing_extensions import TypeAlias
 
 from streamlit import type_util
+from streamlit.attribute_dictionary import AttributeDictionary
+from streamlit.chart_util import check_on_select_str
+from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
+from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state.common import compute_widget_id
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import matplotlib
@@ -78,8 +87,10 @@ class PlotlyMixin:
         use_container_width: bool = False,
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: bool | str | WidgetCallback = False,
         **kwargs: Any,
-    ) -> DeltaGenerator:
+    ) -> Union["DeltaGenerator", AttributeDictionary]:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -109,6 +120,13 @@ class PlotlyMixin:
         theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
+
+        on_select: bool or str or callable
+            Controls the behavior in response to selection events in the chart. Can be one of:
+
+            - “ignore” (default): Streamlit will not react to any selection events in the chart.
+            - “rerun”: Streamlit will rerun the app when the user selects data points in the chart (by clicking on them or using the box/lasso tool). In this case, st.plotly_chart will return the selection data (i.e. the selected points plus metadata for the box/lasso tool) as a dictionary.
+            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a callback function before the rest of the app. The selection data can be retrieved through session state by setting the key parameter.
 
         **kwargs
             Any argument accepted by Plotly's `plot()` function.
@@ -153,15 +171,64 @@ class PlotlyMixin:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
+        key = to_key(key)
+        check_callback_rules(self.dg, on_select)
+        check_session_state_rules(default_value={}, key=key, writes_allowed=False)
+        check_on_select_str(on_select, "plotly_chart")
+        if current_form_id(self.dg):
+            # TODO(willhuang1997): double check the message of this
+            raise StreamlitAPIException("st.plotly_chart cannot be used inside forms!")
+
+        is_select_enabled = (
+            on_select != None
+            and on_select != False
+            and on_select != ON_SELECTION_IGNORE
+        )
+
         marshall(
             plotly_chart_proto,
             figure_or_data,
             use_container_width,
             sharing,
             theme,
+            key,
+            is_select_enabled,
             **kwargs,
         )
-        return self.dg._enqueue("plotly_chart", plotly_chart_proto)
+
+        def deserialize(ui_value, widget_id=""):
+            if ui_value is None:
+                return {}
+            return AttributeDictionary(ui_value)
+
+        def serialize(v):
+            return json.dumps(v, default=str)
+
+        ctx = get_script_run_ctx()
+
+        widget_callback = None
+        if not isinstance(on_select, bool) and not isinstance(on_select, str):
+            widget_callback = on_select
+
+        widget_state = {}
+        if is_select_enabled:
+            widget_state = register_widget(
+                "plotly_chart",
+                plotly_chart_proto,
+                user_key=key,
+                on_change_handler=widget_callback,
+                args=None,
+                kwargs=None,
+                deserializer=deserialize,
+                serializer=serialize,
+                ctx=ctx,
+            )
+
+        self.dg._enqueue("plotly_chart", plotly_chart_proto)
+        if is_select_enabled:
+            return AttributeDictionary(widget_state.value)
+        else:
+            return self.dg
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -175,6 +242,8 @@ def marshall(
     use_container_width: bool,
     sharing: SharingMode,
     theme: Literal["streamlit"] | None,
+    key: Key | None,
+    is_select_enabled: bool,
     **kwargs: Any,
 ) -> None:
     """Marshall a proto with a Plotly spec.
@@ -217,6 +286,19 @@ def marshall(
         )
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
+    proto.is_select_enabled = is_select_enabled
+    ctx = get_script_run_ctx()
+    id = compute_widget_id(
+        "plotly_chart",
+        user_key=key,
+        figure_or_data=figure_or_data,
+        use_container_width=use_container_width,
+        sharing=sharing,
+        key=key,
+        theme=theme,
+        page=ctx.page_script_hash if ctx else None,
+    )
+    proto.id = id
 
 
 @caching.cache

@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
 
-EMBED_QUERY_PARAM = "embed"
-EMBED_OPTIONS_QUERY_PARAM = "embed_options"
-EMBED_QUERY_PARAMS_KEYS = [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
-ON_SELECTION_IGNORE = "ignore"
-ON_SELECTION_RERUN = "rerun"
+class AttributeDictionary(dict):
+    def __getattr__(self, key):
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            )
+
+    __setattr__ = dict.__setitem__

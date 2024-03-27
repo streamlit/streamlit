@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import plotly.express as px
 from parameterized import parameterized
@@ -107,3 +108,47 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.HasField("figure"), False)
         self.assertNotEqual(el.plotly_chart.url, "the_url")
         self.assertEqual(el.plotly_chart.use_container_width, False)
+
+    def callback():
+        pass
+
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+            ("rerun", True),
+            ("ignore", False),
+            (callback, True),
+        ]
+    )
+    def test_st_plotly_chart_valid_on_select(self, on_select, proto_value):
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+        data = [trace0]
+
+        st.plotly_chart(data, on_select=on_select)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.is_select_enabled, proto_value)
+
+    def test_st_plotly_chart_invalid_on_select(self):
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+        data = [trace0]
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.plotly_chart(data, on_select="invalid")
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_plotly_chart_with_select_throws_exception_inside_form(self):
+        import plotly.graph_objs as go
+
+        with st.form("form"):
+            trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+            data = [trace0]
+            with self.assertRaises(StreamlitAPIException) as exc:
+                st.plotly_chart(data, on_select=True)
