@@ -33,6 +33,7 @@ base = (
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(point, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
     )
 )
 
@@ -49,6 +50,7 @@ base = (
         x="Horsepower:Q",
         y="Miles_per_Gallon:Q",
         color=alt.condition(interval, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
     )
 )
 chart_interval = base.add_params(interval)
@@ -66,7 +68,15 @@ source = pd.DataFrame(
     }
 )
 
-bar_graph = alt.Chart(source).mark_bar().encode(x="a", y="b")
+bar_graph = (
+    alt.Chart(source)
+    .mark_bar()
+    .encode(
+        x="a",
+        y="b",
+        tooltip=alt.value(None),
+    )
+)
 bar_graph_point = bar_graph.add_params(point)
 
 st.subheader("Bar chart with selection_point")
@@ -92,6 +102,7 @@ base = (
         x="year:T",
         y="net_generation:Q",
         color=alt.condition(point, "source:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
     )
 )
 area_chart_point = base.add_params(point)
@@ -107,6 +118,7 @@ base = (
         x="year:T",
         y="net_generation:Q",
         color=alt.condition(interval, "source:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
     )
 )
 area_chart_interval = base.add_params(interval)
@@ -129,6 +141,7 @@ base = (
         alt.X("IMDB_Rating:Q", bin=True),
         y="count()",
         color=alt.condition(point, "IMDB_Rating:Q", alt.value("lightgray")),
+        tooltip=alt.value(None),
     )
 )
 histogram_point = base.add_params(point)
@@ -144,6 +157,7 @@ base = (
         alt.X("IMDB_Rating:Q", bin=True),
         y="count()",
         color=alt.condition(interval, "IMDB_Rating:Q", alt.value("lightgray")),
+        tooltip=alt.value(None),
     )
 )
 histogram_interval = base.add_params(interval)
