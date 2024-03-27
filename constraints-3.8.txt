@@ -51,9 +51,9 @@ keyring==25.0.0
 kiwisolver==1.4.5
 langchain==0.1.13
 langchain-community==0.0.29
-langchain-core==0.1.34
+langchain-core==0.1.35
 langchain-text-splitters==0.0.1
-langsmith==0.1.33
+langsmith==0.1.34
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -112,7 +112,7 @@ PyYAML==6.0.1
 readme_renderer==43.0
 referencing==0.34.0
 requests==2.31.0
-requests-mock==1.11.0
+requests-mock==1.12.0
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
