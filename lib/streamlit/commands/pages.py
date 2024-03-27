@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal
 
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
@@ -92,16 +93,19 @@ def navigation(
     ctx = get_script_run_ctx()
     assert ctx
 
-    if isinstance(pages, list):
-        pgs: dict[str, list[Page]] = {"": pages}
-    else:
-        pgs = pages
+    pgs = Pages(pages)
+
+    defaults = [page for page in pgs.page_list if page.default]
+    if len(defaults) > 1:
+        raise StreamlitAPIException("At most one page can be the default")
+    if len(defaults) == 0:
+        pgs.page_list[0].default = True
 
     msg = ForwardMsg()
-    for section in pgs:
+    for section in pgs.page_dict:
         nav_section = msg.navigation.sections.add()
         nav_section.header = section
-        for page in pgs[section]:
+        for page in pgs.page_dict[section]:
             p = nav_section.app_pages.add()
             p.page_script_hash = page._script_hash
             p.page_name = page.title or ""
@@ -110,9 +114,8 @@ def navigation(
     ctx.enqueue(msg)
 
     page_dict = {}
-    for section in pgs:
-        for page in pgs[section]:
-            page_dict[page._script_hash] = page
+    for page in pgs.page_list:
+        page_dict[page._script_hash] = page
     ctx.pages = page_dict
     try:
         page = page_dict[ctx.page_script_hash]
@@ -121,5 +124,30 @@ def navigation(
         print(
             f"could not find page for {ctx.page_script_hash}, falling back to default page"
         )
-        page = list(page_dict.values())[0]
+        page = pgs.default
     return page
+
+
+class Pages:
+    def __init__(self, pages: list[Page] | dict[str, list[Page]]):
+        if isinstance(pages, list):
+            self._pages: dict[str, list[Page]] = {"": pages}
+        else:
+            self._pages = pages
+
+    @property
+    def page_dict(self) -> dict[str, list[Page]]:
+        return self._pages
+
+    @property
+    def page_list(self) -> list[Page]:
+        page_list = []
+        for pgs in self._pages.values():
+            for page in pgs:
+                page_list.append(page)
+
+        return page_list
+
+    @property
+    def default(self) -> Page:
+        return [page for page in self.page_list if page.default][0]
