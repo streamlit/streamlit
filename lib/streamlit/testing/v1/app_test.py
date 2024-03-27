@@ -31,6 +31,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
@@ -53,6 +54,7 @@ from streamlit.testing.v1.element_tree import (
     Error,
     Exception,
     Expander,
+    FileUploader,
     Header,
     Info,
     Json,
@@ -163,6 +165,8 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+
+        self._mufm = MemoryUploadedFileManager("/mock/upload")
 
         tree = ElementTree()
         tree._runner = self
@@ -319,6 +323,7 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime.uploaded_file_mgr = self._mufm
         Runtime._instance = mock_runtime
         with source_util._pages_cache_lock:
             saved_cached_pages = source_util._cached_pages
@@ -332,7 +337,11 @@ class AppTest:
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(
-            self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
+            self._script_path,
+            self.session_state,
+            uploaded_file_manager=self._mufm,
+            args=self.args,
+            kwargs=self.kwargs,
         )
         with patch_config_options({"global.appTest": True}):
             self._tree = script_runner.run(
@@ -625,6 +634,10 @@ class AppTest:
             extension of the Block class.
         """
         return self._tree.expander
+
+    @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        return self._tree.file_uploader
 
     @property
     def header(self) -> ElementList[Header]:

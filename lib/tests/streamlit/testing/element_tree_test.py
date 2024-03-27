@@ -19,6 +19,7 @@ import pandas as pd
 import pytest
 
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit.testing.v1.app_test import AppTest
 
 
@@ -238,6 +239,20 @@ def test_expander():
 
     at = AppTest.from_function(script).run()
     assert at.markdown[0].value == "some text"
+
+
+def test_file_uploader():
+    def script():
+        import streamlit as st
+
+        st.file_uploader("give me something", key="f")
+
+    at = AppTest.from_function(script).run()
+    f = b"filecontent"
+    at.file_uploader("f").upload(
+        f, file_id="someid", name="file1.txt", type="text/plain"
+    ).run()
+    assert isinstance(at.file_uploader[0].value, UploadedFile)
 
 
 def test_markdown_exception():
