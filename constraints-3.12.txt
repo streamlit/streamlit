@@ -45,7 +45,7 @@ mypy==1.6.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
 mysqlclient==2.2.4
-nh3==0.2.15
+nh3==0.2.17
 nodeenv==1.8.0
 numpy==1.26.4
 opencv-python==4.9.0.80
