@@ -22,6 +22,7 @@ option java_outer_classname = "ForwardMsgProto";
 import "streamlit/proto/Common.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/GitInfo.proto";
+import "streamlit/proto/Navigation.proto";
 import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
@@ -70,6 +71,7 @@ message ForwardMsg {
     // Other messages.
     PageNotFound page_not_found = 15;
     PagesChanged pages_changed = 16;
+    Navigation navigation = 21;
     FileURLsResponse file_urls_response = 19;
 
     // Platform - message to host
@@ -88,7 +90,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 21
+  // Next: 22
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

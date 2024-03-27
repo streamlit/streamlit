@@ -104,6 +104,8 @@ import {
   IHostConfigResponse,
   LibConfig,
   AppConfig,
+  Navigation,
+  INavSection,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -150,6 +152,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
+  navPageSections: INavSection[]
   currentPageScriptHash: string
   latestRunTime: number
   // host communication info
@@ -255,6 +258,7 @@ export class App extends PureComponent<Props, State> {
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
+      navPageSections: [],
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
@@ -618,6 +622,8 @@ export class App extends PureComponent<Props, State> {
           this.handlePageInfoChanged(pageInfo),
         pagesChanged: (pagesChangedMsg: PagesChanged) =>
           this.handlePagesChanged(pagesChangedMsg),
+        navigation: (navigationMsg: Navigation) =>
+          this.handleNavigation(navigationMsg),
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -716,6 +722,18 @@ export class App extends PureComponent<Props, State> {
         appPages,
       })
     })
+  }
+
+  handleNavigation = (navigationMsg: Navigation): void => {
+    const { sections } = navigationMsg
+    const navPageSections = sections
+    this.setState({ navPageSections })
+    // this.setState({ navPageSections }, () => {
+    //   this.hostCommunicationMgr.sendMessageToHost({
+    //     type: "SET_APP_PAGES",
+    //     appPages,
+    //   })
+    // })
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -869,7 +887,7 @@ export class App extends PureComponent<Props, State> {
       // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
       // e.g. the case where the user clicks the back button.
       // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
-      if (prevPageName !== newPageName) {
+      if (newPageName && prevPageName !== newPageName) {
         // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
         const queryString = preserveEmbedQueryParams()
         const qs = queryString ? `?${queryString}` : ""
@@ -970,7 +988,16 @@ export class App extends PureComponent<Props, State> {
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
         // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
         document.location.pathname.endsWith("/" + appPage.pageName)
-      ) ?? this.state.appPages[0]
+      ) ??
+      this.state.navPageSections
+        .flatMap(section => section.appPages)
+        .filter(appPage => appPage)
+        .find(appPage =>
+          document.location.pathname.endsWith(
+            "/" + (appPage as IAppPage).pageName
+          )
+        ) ??
+      this.state.appPages[0]
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
@@ -1277,6 +1304,29 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
+    console.log(pageScriptHash)
+    const newPageName = this.state.navPageSections
+      .flatMap(section => section.appPages)
+      .filter(p => p)
+      .find(p => (p as IAppPage).pageScriptHash === pageScriptHash)?.pageName
+    const baseUriParts = this.getBaseUriParts()
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+
+      const prevPageNameInPath = extractPageNameFromPathName(
+        document.location.pathname,
+        basePath
+      )
+
+      if (newPageName && prevPageNameInPath !== newPageName) {
+        // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
+        const queryString = preserveEmbedQueryParams()
+        const qs = queryString ? `?${queryString}` : ""
+        const basePathPrefix = basePath ? `/${basePath}` : ""
+        const pageUrl = `${basePathPrefix}/${newPageName}${qs}`
+        window.history.pushState({}, "", pageUrl)
+      }
+    }
     this.sendRerunBackMsg(undefined, pageScriptHash)
   }
 
@@ -1782,6 +1832,7 @@ export class App extends PureComponent<Props, State> {
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
                 appPages={this.state.appPages}
+                navPageSections={this.state.navPageSections}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}

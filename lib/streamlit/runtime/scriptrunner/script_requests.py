@@ -14,14 +14,18 @@
 
 from __future__ import annotations
 
+import dataclasses
 import threading
 from dataclasses import dataclass
 from enum import Enum
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from streamlit import util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.state import coalesce_widget_states
+
+if TYPE_CHECKING:
+    from streamlit.commands.pages import Page
 
 
 class ScriptRequestType(Enum):
@@ -36,6 +40,8 @@ class ScriptRequestType(Enum):
     # A script rerun has been requested. The ScriptRunner should
     # handle this request as soon as it reaches an interrupt point.
     RERUN = "RERUN"
+
+    RUN_PAGE = "RUN_PAGE"
 
 
 @dataclass(frozen=True)
@@ -57,12 +63,20 @@ class ScriptRequest:
 
     type: ScriptRequestType
     _rerun_data: RerunData | None = None
+    _page: Page | None = None
 
     @property
     def rerun_data(self) -> RerunData:
         if self.type is not ScriptRequestType.RERUN:
             raise RuntimeError("RerunData is only set for RERUN requests.")
         return cast(RerunData, self._rerun_data)
+
+    @property
+    def page(self) -> Page:
+        if self.type is not ScriptRequestType.RUN_PAGE:
+            raise RuntimeError("Page is only set for RUN_PAGE requests.")
+        assert self._page
+        return self._page
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -79,6 +93,7 @@ class ScriptRequests:
         self._lock = threading.Lock()
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
+        self._page: Page | None = None
 
     def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
@@ -143,6 +158,21 @@ class ScriptRequests:
             # We'll never get here
             raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
 
+    def request_page_run(self, page: Page) -> bool:
+        with self._lock:
+            if self._state == ScriptRequestType.STOP:
+                return False
+
+            elif self._state == ScriptRequestType.CONTINUE:
+                self._state = ScriptRequestType.RUN_PAGE
+                self._rerun_data = dataclasses.replace(
+                    self._rerun_data, page_script_hash=page._script_hash
+                )
+                self._page = page
+                return True
+            else:
+                return False
+
     def on_scriptrunner_yield(self) -> ScriptRequest | None:
         """Called by the ScriptRunner when it's at a yield point.
 
@@ -153,6 +183,7 @@ class ScriptRequests:
 
         If we have a STOP request, return the request and remain stopped.
         """
+        print(f"on_scriptrunner_yield {self._state=}")
         if self._state == ScriptRequestType.CONTINUE:
             # We avoid taking a lock in the common case. If a STOP or RERUN
             # request is received between the `if` and `return`, it will be
@@ -164,6 +195,11 @@ class ScriptRequests:
             if self._state == ScriptRequestType.RERUN:
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
+            elif self._state == ScriptRequestType.RUN_PAGE:
+                self._state = ScriptRequestType.CONTINUE
+                return ScriptRequest(
+                    ScriptRequestType.RUN_PAGE, self._rerun_data, self._page
+                )
 
             assert self._state == ScriptRequestType.STOP
             return ScriptRequest(ScriptRequestType.STOP)
@@ -179,7 +215,10 @@ class ScriptRequests:
         to STOP.
         """
         with self._lock:
-            if self._state == ScriptRequestType.RERUN:
+            if (
+                self._state == ScriptRequestType.RERUN
+                or self._state == ScriptRequestType.RUN_PAGE
+            ):
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 
