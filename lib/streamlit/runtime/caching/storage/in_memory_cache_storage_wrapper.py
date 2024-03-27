@@ -16,8 +16,6 @@ from __future__ import annotations
 import math
 import threading
 
-from cachetools import TTLCache
-
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
@@ -26,6 +24,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageKeyNotFoundError,
 )
 from streamlit.runtime.stats import CacheStat
+from streamlit.util import TimedCleanupCache
 
 _LOGGER = get_logger(__name__)
 
@@ -62,7 +61,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
-        self._mem_cache: TTLCache[str, bytes] = TTLCache(
+        self._mem_cache: TimedCleanupCache[str, bytes] = TimedCleanupCache(
             maxsize=self.max_entries,
             ttl=self.ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,

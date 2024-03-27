@@ -92,6 +92,7 @@ class CacheDataTest(unittest.TestCase):
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
 
     def tearDown(self):
@@ -270,6 +271,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         super().setUp()
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = LocalDiskCacheStorageManager()
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
 
     def tearDown(self) -> None:
@@ -532,6 +534,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         add_script_run_ctx(threading.current_thread(), create_mock_script_run_ctx())
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
 
         # Guard against external tests not properly cache-clearing
@@ -591,6 +594,7 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         super().setUp()
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = AlwaysFailingTestCacheStorageManager()
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
 
     def test_error_logged_and_raised_on_improperly_configured_cache_data(self):

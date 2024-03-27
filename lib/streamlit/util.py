@@ -16,13 +16,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import functools
 import hashlib
 import os
 import subprocess
 import sys
+import time
+from concurrent.futures import Future
 from typing import Any, Callable, Final, Iterable, Mapping, TypeVar
+
+from cachetools import TTLCache
 
 from streamlit import env_util
 
@@ -199,3 +204,52 @@ def extract_key_query_params(
         ]
         for item in sublist
     }
+
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class TimedCleanupCache(TTLCache[K, V]):
+    """A TTLCache that asynchronously expires its entries."""
+
+    def __init__(
+        self,
+        maxsize: float,
+        ttl: float,
+        timer: Callable[[], float] = time.monotonic,
+    ):
+        super().__init__(
+            maxsize=maxsize,
+            ttl=ttl,
+            timer=timer,
+        )
+        self._task: Future[None] | None = None
+
+    def __setitem__(self, key: K, value: V) -> None:
+        # Set an expiration task to run periodically
+        # Can't be created in init because that only runs once and
+        # the runtime might not exist yet.
+        if self._task is None:
+            try:
+                from streamlit.runtime.runtime import Runtime
+
+                runtime = Runtime.instance()
+                if (a_objs := runtime._async_objs) is not None:
+                    self._task = asyncio.run_coroutine_threadsafe(
+                        expire_cache(self), a_objs.eventloop
+                    )
+            except RuntimeError:
+                # Just continue if the runtime isn't started yet.
+                pass
+        super().__setitem__(key, value)
+
+    def __del__(self):
+        if self._task is not None:
+            self._task.cancel()
+
+
+async def expire_cache(cache: TTLCache[K, V]) -> None:
+    while True:
+        await asyncio.sleep(30)
+        cache.expire()

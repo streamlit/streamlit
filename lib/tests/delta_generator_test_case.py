@@ -68,6 +68,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         mock_runtime.media_file_mgr = MediaFileManager(self.media_file_storage)
         mock_runtime.uploaded_file_mgr = self.script_run_ctx.uploaded_file_mgr
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
 
     def tearDown(self):

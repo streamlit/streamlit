@@ -31,6 +31,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.runtime import AsyncObjects
 from streamlit.runtime.secrets import Secrets
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
@@ -319,6 +320,7 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime._async_objs = None
         Runtime._instance = mock_runtime
         with source_util._pages_cache_lock:
             saved_cached_pages = source_util._cached_pages
