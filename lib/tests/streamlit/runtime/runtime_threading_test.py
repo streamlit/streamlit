@@ -47,7 +47,6 @@ class RuntimeThreadingTest(IsolatedAsyncioTestCase):
                 config = RuntimeConfig(
                     "mock/script/path.py",
                     "",
-                    component_registry=MagicMock(),
                     media_file_storage=MagicMock(),
                     uploaded_file_manager=MagicMock(),
                     session_manager_class=MagicMock,
