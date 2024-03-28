@@ -1613,6 +1613,14 @@
     "@babel/runtime" "^7.14.0"
     "@emotion-icons/emotion-icon" "4.1.0"
 
+"@emotion-icons/material@^3.14.0":
+  version "3.14.0"
+  resolved "https://registry.yarnpkg.com/@emotion-icons/material/-/material-3.14.0.tgz#7575c7c11671a78790413da63bb6e1884e74fff7"
+  integrity sha512-VQrlJReCLpdntuMhRFTEGNQUVHgCorpyXpiYvXTlNHZXlgiDg5qKTPl5JwHz+LLcDazTN5ND8SieG62BTq+mxg==
+  dependencies:
+    "@babel/runtime" "^7.14.0"
+    "@emotion-icons/emotion-icon" "4.1.0"
+
 "@emotion-icons/open-iconic@^3.14.0":
   version "3.14.0"
   resolved "https://registry.yarnpkg.com/@emotion-icons/open-iconic/-/open-iconic-3.14.0.tgz#c266cfd3503f9c1fda0dbdbe2ce0eaf7e9191d84"

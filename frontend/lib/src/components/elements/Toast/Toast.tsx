@@ -33,6 +33,7 @@ import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
 import { StyledViewButton, StyledToastMessage } from "./styled-components"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 export interface ToastProps {
   theme: EmotionTheme
@@ -90,10 +91,10 @@ function generateToastOverrides(
 
 // Function used to truncate toast messages that are longer than three lines.
 export function shortenMessage(fullMessage: string): string {
-  const characterLimit = 114
+  const characterLimit = 104
 
   if (fullMessage.length > characterLimit) {
-    let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
+    let message = fullMessage.replace(/^(.{104}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
       message = message
@@ -110,7 +111,7 @@ export function shortenMessage(fullMessage: string): string {
 }
 
 export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
-  const fullMessage = icon ? `${icon}&ensp;${body}` : body
+  const fullMessage = body
   const displayMessage = shortenMessage(fullMessage)
   const shortened = fullMessage !== displayMessage
 
@@ -130,6 +131,13 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     () => (
       <>
         <StyledToastMessage expanded={expanded}>
+          {icon && (
+            <DynamicIcon
+              iconValue={icon}
+              size="md"
+              testid="stToastEmojiIcon"
+            />
+          )}
           <StreamlitMarkdown
             source={expanded ? fullMessage : displayMessage}
             allowHTML={false}
@@ -147,7 +155,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
         )}
       </>
     ),
-    [shortened, expanded, fullMessage, displayMessage, handleClick]
+    [shortened, expanded, fullMessage, displayMessage, icon, handleClick]
   )
 
   useEffect(() => {

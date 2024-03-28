@@ -40,6 +40,18 @@ interface StyledToastMessageProps {
 
 export const StyledToastMessage = styled.div<StyledToastMessageProps>(
   ({ theme, expanded }) => ({
+    display: "flex",
+    gap: theme.spacing.sm,
+    justifyContent: "space-between",
+    alignItems: "start",
     maxHeight: expanded ? "none" : theme.breakpoints.toast,
+
+    "> svg": {
+      marginTop: "0.25rem",
+    },
+
+    "> span": {
+      marginTop: "0.25rem",
+    },
   })
 )
