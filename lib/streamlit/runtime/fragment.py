@@ -192,6 +192,11 @@ def fragment(
         def wrapped_fragment():
             import streamlit as st
 
+            # NOTE: We need to call get_script_run_ctx here again and can't just use the
+            # value of ctx from above captured by the closure because subsequent
+            # fragment runs will generally run in a new script run, thus we'll have a
+            # new ctx.
+            ctx = get_script_run_ctx(suppress_warning=True)
             assert ctx is not None
 
             if ctx.fragment_ids_this_run:
