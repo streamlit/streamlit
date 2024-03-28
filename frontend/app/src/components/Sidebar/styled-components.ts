@@ -17,6 +17,7 @@
 import styled from "@emotion/styled"
 import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
+import { getWrappedHeadersStyle } from "@streamlit/lib/src/theme/utils"
 
 export interface StyledSidebarProps {
   isCollapsed: boolean
@@ -251,35 +252,7 @@ export const StyledSidebarUserContent =
       paddingTop: `1rem`,
     },
 
-    "& h1": {
-      fontSize: theme.fontSizes.xl,
-      fontWeight: 600,
-    },
-
-    "& h2": {
-      fontSize: theme.fontSizes.lg,
-      fontWeight: 600,
-    },
-
-    "& h3": {
-      fontSize: theme.fontSizes.mdLg,
-      fontWeight: 600,
-    },
-
-    "& h4": {
-      fontSize: theme.fontSizes.md,
-      fontWeight: 600,
-    },
-
-    "& h5": {
-      fontSize: theme.fontSizes.sm,
-      fontWeight: 600,
-    },
-
-    "& h6": {
-      fontSize: theme.fontSizes.twoSm,
-      fontWeight: 600,
-    },
+    ...getWrappedHeadersStyle(theme),
   }))
 
 export interface StyledSidebarContentProps {
