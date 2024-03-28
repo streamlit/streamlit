@@ -63,7 +63,7 @@ base = (
 )
 
 # This layering must be in an exact order, otherwise this code will not work
-chart = base.mark_point() + base.mark_line()
+chart = base.mark_line() + base.mark_point()
 chart = chart.add_params(point)
 st.altair_chart(chart, on_select=True, key="layered_chart")
 if st.session_state.layered_chart:
