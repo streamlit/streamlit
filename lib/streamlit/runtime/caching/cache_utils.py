@@ -102,14 +102,17 @@ class Cache:
         with self._value_locks_lock:
             return self._value_locks[value_key]
 
-    def clear(self):
-        """Clear all values from this cache."""
+    def clear(self, key: str | None = None):
+        """Clear values from this cache."""
         with self._value_locks_lock:
-            self._value_locks.clear()
-        self._clear()
+            if not key:
+                self._value_locks.clear()
+            elif key in self._value_locks:
+                del self._value_locks[key]
+        self._clear(key=key)
 
     @abstractmethod
-    def _clear(self) -> None:
+    def _clear(self, key: str | None = None) -> None:
         """Subclasses must implement this to perform cache-clearing logic."""
         raise NotImplementedError
 
@@ -303,10 +306,20 @@ class CachedFunc:
                     return_value=computed_value, func=self._info.func
                 )
 
-    def clear(self):
+    def clear(self, *args, **kwargs):
         """Clear the wrapped function's associated cache."""
         cache = self._info.get_function_cache(self._function_key)
-        cache.clear()
+        if args or kwargs:
+            key = _make_value_key(
+                cache_type=self._info.cache_type,
+                func=self._info.func,
+                func_args=args,
+                func_kwargs=kwargs,
+                hash_funcs=self._info.hash_funcs,
+            )
+        else:
+            key = None
+        cache.clear(key=key)
 
 
 def _make_value_key(

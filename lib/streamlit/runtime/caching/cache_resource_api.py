@@ -549,7 +549,9 @@ class ResourceCache(Cache):
             multi_results.results[widget_key] = result
             self._mem_cache[key] = multi_results
 
-    def _clear(self) -> None:
+    def _clear(self, key: str | None = None) -> None:
+        if key:
+            raise NotImplementedError
         with self._mem_cache_lock:
             self._mem_cache.clear()
 
