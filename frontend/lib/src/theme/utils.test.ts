@@ -45,7 +45,6 @@ import {
   setCachedTheme,
   hasLightBackgroundColor,
 } from "./utils"
-import { he } from "date-fns/locale"
 
 const matchMediaFillers = {
   onchange: null,
