@@ -40,8 +40,7 @@ def dialog_decorator(
             dialog = st._main.dialog(title=title, dismissible=True, width=width)
             dialog.open()
 
-            # TODO: here we add the @st.fragment annotation:
-            # @st.experimental_fragment
+            @st.experimental_fragment
             def dialog_content() -> None:
                 # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
                 _ = fn(*args, **kwargs)
