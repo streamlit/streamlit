@@ -29,6 +29,7 @@ import {
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
   FileUploader as FileUploaderProto,
+  Html as HtmlProto,
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   Radio as RadioProto,
@@ -173,6 +174,9 @@ const ColorPicker = React.lazy(
 )
 const DateInput = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/DateInput")
+)
+const Html = React.lazy(
+  () => import("@streamlit/lib/src/components/elements/Html")
 )
 const Multiselect = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/Multiselect")
@@ -385,6 +389,11 @@ const RawElementNodeRenderer = (
 
     case "metric":
       return <Metric element={node.element.metric as MetricProto} />
+
+    case "html":
+      return (
+        <Html element={node.element.html as HtmlProto} {...elementProps} />
+      )
 
     case "pageLink": {
       const pageLinkProto = node.element.pageLink as PageLinkProto

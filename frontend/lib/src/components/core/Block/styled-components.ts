@@ -69,6 +69,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
     },
 
+    ":is(.empty-html)": {
+      display: "none",
+    },
+
     ":has(> .cacheSpinner)": {
       height: 0,
       overflow: "visible",

@@ -114,6 +114,7 @@ class StreamlitTest(unittest.TestCase):
                 "graphviz_chart",
                 "header",
                 "help",
+                "html",
                 "image",
                 "info",
                 "json",
