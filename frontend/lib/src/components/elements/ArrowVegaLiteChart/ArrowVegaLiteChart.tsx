@@ -200,6 +200,39 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     return selectors
   }
 
+  public getSubKeysForMatchedKey(
+    obj: any,
+    keyToFind: string
+  ): string[] | undefined {
+    let queue = [obj]
+
+    while (queue.length > 0) {
+      const current = queue.shift()
+
+      if (!current) continue
+
+      if (keyToFind in current) {
+        return Object.keys(current[keyToFind])
+      }
+
+      // Enqueue all objects in the current object
+      for (const key of Object.keys(current)) {
+        const value = current[key]
+        console.log(value)
+        if (value !== null && Array.isArray(value)) {
+          value.forEach(item => {
+            queue.unshift(item)
+          })
+        }
+        if (value !== null && typeof value === "object") {
+          queue.push(value)
+        }
+      }
+    }
+
+    return undefined
+  }
+
   public generateSpec = (): any => {
     const { element: el, theme } = this.props
     const spec = JSON.parse(el.spec)
@@ -288,20 +321,12 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
         concatenationKeys.forEach(key => {
           if (key in spec) {
-            try {
-              spec.params.forEach((param: any) => {
-                if (
-                  "select" in param &&
-                  "type" in param.select &&
-                  param.select.type === "point" &&
-                  param.select.encodings === undefined
-                ) {
-                  param.select.encodings = Object.keys(spec[key][0].encoding)
-                }
-              })
-            } catch (e) {
-              logMessage(e)
-            }
+            spec.params.forEach((param: any) => {
+              param.select.encodings = this.getSubKeysForMatchedKey(
+                spec[key],
+                "encoding"
+              )
+            })
           }
         })
       }
