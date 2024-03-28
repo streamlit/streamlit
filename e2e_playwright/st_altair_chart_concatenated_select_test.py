@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_point_selection_repeat_scatter_chart_displays_dataframe(
@@ -54,6 +54,7 @@ def test_point_layered_chart_displays_dataframe_and_can_reset(
     themed_app.mouse.move(455, 295)
     themed_app.mouse.down()
     themed_app.mouse.up()
+    wait_for_app_run(themed_app)
 
     assert_snapshot(chart, name="st_altair_chart-layered_chart_point_selection_greyed")
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
