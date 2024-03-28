@@ -30,6 +30,7 @@ import {
   IGuestToHostMessage,
   StreamlitEndpoints,
   LibContext,
+  Logo,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -76,6 +77,8 @@ export interface AppViewProps {
 
   formsData: FormsData
 
+  appLogo: Logo | null
+
   appPages: IAppPage[]
 
   onPageChange: (pageName: string) => void
@@ -99,6 +102,7 @@ function AppView(props: AppViewProps): ReactElement {
     uploadClient,
     componentRegistry,
     formsData,
+    appLogo,
     appPages,
     onPageChange,
     currentPageScriptHash,
@@ -198,6 +202,7 @@ function AppView(props: AppViewProps): ReactElement {
         <ThemedSidebar
           endpoints={endpoints}
           initialSidebarState={initialSidebarState}
+          appLogo={appLogo}
           appPages={appPages}
           hasElements={hasSidebarElements}
           onPageChange={onPageChange}

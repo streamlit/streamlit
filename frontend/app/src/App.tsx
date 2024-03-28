@@ -83,6 +83,7 @@ import {
   IAppPage,
   IGitInfo,
   Initialize,
+  Logo,
   NewSession,
   PageConfig,
   PageInfo,
@@ -150,6 +151,7 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
+  appLogo: Logo | null
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
@@ -257,6 +259,7 @@ export class App extends PureComponent<Props, State> {
       themeHash: this.createThemeHash(),
       gitInfo: null,
       formsData: createFormsData(),
+      appLogo: null,
       appPages: [],
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
@@ -590,6 +593,14 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleLogo = (logo: Logo): void => {
+    if (logo.image) {
+      this.setState({ appLogo: logo }, () => {
+        console.log("appLogo: ", this.state.appLogo)
+      })
+    }
+  }
+
   /**
    * Callback when we get a message from the server.
    */
@@ -636,6 +647,7 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
+        logo: (logo: Logo) => this.handleLogo(logo),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1835,6 +1847,7 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
+                appLogo={this.state.appLogo}
                 appPages={this.state.appPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}

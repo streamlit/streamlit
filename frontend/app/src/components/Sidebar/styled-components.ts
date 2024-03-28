@@ -241,10 +241,8 @@ export interface StyledSidebarUserContentProps {
 
 export const StyledSidebarUserContent =
   styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
-    paddingTop: hasPageNavAbove
-      ? theme.spacing.lg
-      : theme.sizes.sidebarTopSpace,
-    paddingBottom: theme.sizes.sidebarTopSpace,
+    paddingTop: hasPageNavAbove ? theme.spacing.lg : theme.sizes.headerHeight,
+    paddingBottom: theme.sizes.headerHeight,
     paddingLeft: theme.spacing.twoXL,
     paddingRight: theme.spacing.twoXL,
 
@@ -321,4 +319,27 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   "&:hover": {
     backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.fadedText20} 28%, transparent 36%)`,
   },
+}))
+
+export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "start",
+  padding: `${theme.spacing.twoXL} ${theme.spacing.twoXL} 0 ${theme.spacing.twoXL}`,
+}))
+
+export interface StyledLogoProps {
+  size: string
+}
+
+export const StyledLogo = styled.img<StyledLogoProps>(({ size }) => {
+  const logoHeight = size === "fixed" ? "1.5rem" : "auto"
+
+  return {
+    height: logoHeight,
+  }
+})
+
+export const StyledNoLogoSpacer = styled.div(({}) => ({
+  height: "1.5rem",
 }))

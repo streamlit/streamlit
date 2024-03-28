@@ -31,6 +31,7 @@ import {
   isColoredLineDisplayed,
   IAppPage,
   PageConfig,
+  Logo,
 } from "@streamlit/lib"
 
 import {
@@ -40,6 +41,9 @@ import {
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
+  StyledSidebarHeaderContainer,
+  StyledLogo,
+  StyledNoLogoSpacer,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 
@@ -50,6 +54,7 @@ export interface SidebarProps {
   initialSidebarState?: PageConfig.SidebarState
   theme: EmotionTheme
   hasElements: boolean
+  appLogo: Logo | null
   appPages: IAppPage[]
   onPageChange: (pageName: string) => void
   currentPageScriptHash: string
@@ -220,6 +225,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   public render(): ReactNode {
     const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
     const {
+      appLogo,
       appPages,
       chevronDownshift,
       children,
@@ -286,14 +292,25 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
-            <StyledSidebarCloseButton>
-              <BaseButton
-                kind={BaseButtonKind.HEADER_BUTTON}
-                onClick={this.toggleCollapse}
-              >
-                <Icon content={Close} size="lg" />
-              </BaseButton>
-            </StyledSidebarCloseButton>
+            <StyledSidebarHeaderContainer>
+              {appLogo ? (
+                <StyledLogo
+                  src={this.props.endpoints.buildMediaURL(appLogo.image)}
+                  size={appLogo.size}
+                  alt="Streamlit"
+                />
+              ) : (
+                <StyledNoLogoSpacer />
+              )}
+              <StyledSidebarCloseButton>
+                <BaseButton
+                  kind={BaseButtonKind.HEADER_BUTTON}
+                  onClick={this.toggleCollapse}
+                >
+                  <Icon content={Close} size="lg" />
+                </BaseButton>
+              </StyledSidebarCloseButton>
+            </StyledSidebarHeaderContainer>
             {!hideSidebarNav && (
               <SidebarNav
                 endpoints={this.props.endpoints}
