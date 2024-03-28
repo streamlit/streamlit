@@ -47,7 +47,7 @@ langchain==0.1.13
 langchain-community==0.0.29
 langchain-core==0.1.35
 langchain-text-splitters==0.0.1
-langsmith==0.1.34
+langsmith==0.1.36
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -63,7 +63,7 @@ nh3==0.2.17
 nodeenv==1.8.0
 numpy==1.26.4
 opencv-python==4.9.0.80
-orjson==3.9.15
+orjson==3.10.0
 packaging==23.2
 pandas==2.2.1
 parameterized==0.9.0
