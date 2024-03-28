@@ -14,18 +14,10 @@
 
 import altair as alt
 import pandas as pd
-from altair.expr import datum
-from vega_datasets import data
 
 import streamlit as st
 
 st.header("Altair Chart with point and interval selection")
-cars = data.cars()
-
-interval = alt.selection_interval()
-
-# Point selection for selecting individual points
-point = alt.selection_point()
 
 # REPEAT CHEAT
 iris = alt.UrlData("https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json")
@@ -56,7 +48,9 @@ if st.session_state.repeat_chart:
     st.dataframe(st.session_state.repeat_chart.select)
 
 # LAYERED CHART
-stocks = data.stocks.url
+stocks = alt.UrlData(
+    "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/stocks.csv"
+)
 base = (
     alt.Chart(stocks)
     .encode(
@@ -76,8 +70,6 @@ if st.session_state.layered_chart:
     st.dataframe(st.session_state.layered_chart)
 
 # FACET CHART
-iris = data.iris.url
-
 base = (
     alt.Chart(iris)
     .mark_point()
@@ -100,7 +92,9 @@ if len(facet_selection) > 0:
     st.dataframe(facet_selection)
 
 # VCONCAT CHART
-source = data.sp500.url
+source = alt.UrlData(
+    "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/sp500.csv"
+)
 
 brush = alt.selection_interval(encodings=["x"])
 
@@ -129,10 +123,6 @@ def callback():
     st.write("Hello world")
 
 
-iris = data.iris.url
-
-brush = alt.selection_interval()
-
 chart1 = (
     alt.Chart(iris)
     .mark_point()
@@ -143,7 +133,7 @@ chart1 = (
         tooltip=alt.value(None),
     )
     .properties(height=300, width=300)
-    .add_params(brush)
+    .add_params(interval)
 )
 
 chart2 = (
@@ -156,7 +146,7 @@ chart2 = (
         tooltip=alt.value(None),
     )
     .properties(height=300, width=100)
-    .add_params(brush)
+    .add_params(interval)
 )
 
 chart = chart1 | chart2
