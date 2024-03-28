@@ -215,7 +215,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         return Object.keys(current[keyToFind])
       }
 
-      // Enqueue all objects in the current object
       for (const key of Object.keys(current)) {
         const value = current[key]
         console.log(value)
