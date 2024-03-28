@@ -29,6 +29,7 @@ import tornado.websocket
 from tornado.httpserver import HTTPServer
 
 from streamlit import cli_util, config, file_util, source_util, util
+from streamlit.components.v1.components import ComponentRegistry
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
@@ -326,7 +327,7 @@ class Server:
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
-                dict(registry=self._runtime.component_registry),
+                dict(registry=ComponentRegistry.instance()),
             ),
         ]
 

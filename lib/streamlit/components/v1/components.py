@@ -14,13 +14,17 @@
 
 from __future__ import annotations
 
+import inspect
 import json
-from typing import TYPE_CHECKING, Any
+import os
+import threading
+from typing import TYPE_CHECKING, Any, Final
 
-from streamlit import _main, type_util
-from streamlit.components.types.base_custom_component import BaseCustomComponent
+import streamlit
+from streamlit import type_util, util
 from streamlit.elements.form import current_form_id
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
 from streamlit.proto.Element_pb2 import Element
@@ -33,6 +37,8 @@ from streamlit.type_util import to_bytes
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
+_LOGGER: Final = get_logger(__name__)
+
 
 class MarshallComponentException(StreamlitAPIException):
     """Class for exceptions generated during custom component marshalling."""
@@ -40,8 +46,33 @@ class MarshallComponentException(StreamlitAPIException):
     pass
 
 
-class CustomComponent(BaseCustomComponent):
+class CustomComponent:
     """A Custom Component declaration."""
+
+    def __init__(
+        self,
+        name: str,
+        path: str | None = None,
+        url: str | None = None,
+    ):
+        if (path is None and url is None) or (path is not None and url is not None):
+            raise StreamlitAPIException(
+                "Either 'path' or 'url' must be set, but not both."
+            )
+
+        self.name = name
+        self.path = path
+        self.url = url
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    @property
+    def abspath(self) -> str | None:
+        """The absolute path that the component is served from."""
+        if self.path is None:
+            return None
+        return os.path.abspath(self.path)
 
     def __call__(
         self,
@@ -158,7 +189,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
             if key is None:
                 marshall_element_args()
-                computed_id = compute_widget_id(
+                id = compute_widget_id(
                     "component_instance",
                     user_key=key,
                     name=self.name,
@@ -170,7 +201,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     page=ctx.page_script_hash if ctx else None,
                 )
             else:
-                computed_id = compute_widget_id(
+                id = compute_widget_id(
                     "component_instance",
                     user_key=key,
                     name=self.name,
@@ -179,7 +210,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     key=key,
                     page=ctx.page_script_hash if ctx else None,
                 )
-            element.component_instance.id = computed_id
+            element.component_instance.id = id
 
             def deserialize_component(ui_value, widget_id=""):
                 # ui_value is an object from json, an ArrowTable proto, or a bytearray
@@ -211,7 +242,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
-        dg = _main
+        dg = streamlit._main
 
         element = Element()
         return_value = marshall_component(dg, element)
@@ -228,14 +259,131 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             and self.name == other.name
             and self.path == other.path
             and self.url == other.url
-            and self.module_name == other.module_name
         )
 
     def __ne__(self, other) -> bool:
         """Inequality operator."""
-
-        # we have to use "not X == Y"" here because if we use "X != Y" we call __ne__ again and end up in recursion
         return not self == other
 
     def __str__(self) -> str:
         return f"'{self.name}': {self.path if self.path is not None else self.url}"
+
+
+def declare_component(
+    name: str,
+    path: str | None = None,
+    url: str | None = None,
+) -> CustomComponent:
+    """Create and register a custom component.
+
+    Parameters
+    ----------
+    name: str
+        A short, descriptive name for the component. Like, "slider".
+    path: str or None
+        The path to serve the component's frontend files from. Either
+        `path` or `url` must be specified, but not both.
+    url: str or None
+        The URL that the component is served from. Either `path` or `url`
+        must be specified, but not both.
+
+    Returns
+    -------
+    CustomComponent
+        A CustomComponent that can be called like a function.
+        Calling the component will create a new instance of the component
+        in the Streamlit app.
+
+    """
+
+    # Get our stack frame.
+    current_frame = inspect.currentframe()
+    assert current_frame is not None
+
+    # Get the stack frame of our calling function.
+    caller_frame = current_frame.f_back
+    assert caller_frame is not None
+
+    # Get the caller's module name. `__name__` gives us the module's
+    # fully-qualified name, which includes its package.
+    module = inspect.getmodule(caller_frame)
+    assert module is not None
+    module_name = module.__name__
+
+    # If the caller was the main module that was executed (that is, if the
+    # user executed `python my_component.py`), then this name will be
+    # "__main__" instead of the actual package name. In this case, we use
+    # the main module's filename, sans `.py` extension, as the component name.
+    if module_name == "__main__":
+        file_path = inspect.getfile(caller_frame)
+        filename = os.path.basename(file_path)
+        module_name, _ = os.path.splitext(filename)
+
+    # Build the component name.
+    component_name = f"{module_name}.{name}"
+
+    # Create our component object, and register it.
+    component = CustomComponent(name=component_name, path=path, url=url)
+    ComponentRegistry.instance().register_component(component)
+
+    return component
+
+
+class ComponentRegistry:
+    _instance_lock: threading.Lock = threading.Lock()
+    _instance: ComponentRegistry | None = None
+
+    @classmethod
+    def instance(cls) -> ComponentRegistry:
+        """Returns the singleton ComponentRegistry"""
+        # We use a double-checked locking optimization to avoid the overhead
+        # of acquiring the lock in the common case:
+        # https://en.wikipedia.org/wiki/Double-checked_locking
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = ComponentRegistry()
+        return cls._instance
+
+    def __init__(self):
+        self._components: dict[str, CustomComponent] = {}
+        self._lock = threading.Lock()
+
+    def __repr__(self) -> str:
+        return util.repr_(self)
+
+    def register_component(self, component: CustomComponent) -> None:
+        """Register a CustomComponent.
+
+        Parameters
+        ----------
+        component : CustomComponent
+            The component to register.
+        """
+
+        # Validate the component's path
+        abspath = component.abspath
+        if abspath is not None and not os.path.isdir(abspath):
+            raise StreamlitAPIException(f"No such component directory: '{abspath}'")
+
+        with self._lock:
+            existing = self._components.get(component.name)
+            self._components[component.name] = component
+
+        if existing is not None and component != existing:
+            _LOGGER.warning(
+                "%s overriding previously-registered %s",
+                component,
+                existing,
+            )
+
+        _LOGGER.debug("Registered component %s", component)
+
+    def get_component_path(self, name: str) -> str | None:
+        """Return the filesystem path for the component with the given name.
+
+        If no such component is registered, or if the component exists but is
+        being served from a URL, return None instead.
+        """
+        component = self._components.get(name, None)
+        return component.abspath if component is not None else None
