@@ -51,7 +51,7 @@ keyring==25.0.0
 kiwisolver==1.4.5
 langchain==0.1.13
 langchain-community==0.0.29
-langchain-core==0.1.35
+langchain-core==0.1.36
 langchain-text-splitters==0.0.1
 langsmith==0.1.36
 markdown-it-py==3.0.0
