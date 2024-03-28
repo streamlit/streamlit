@@ -105,7 +105,6 @@ import {
   LibConfig,
   AppConfig,
   Navigation,
-  INavSection,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -152,7 +151,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   appPages: IAppPage[]
-  navPageSections: INavSection[]
+  navPageSections: Map<string, { start: number; length: number }>
   currentPageScriptHash: string
   latestRunTime: number
   // host communication info
@@ -258,7 +257,7 @@ export class App extends PureComponent<Props, State> {
       gitInfo: null,
       formsData: createFormsData(),
       appPages: [],
-      navPageSections: [],
+      navPageSections: new Map(),
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
@@ -726,14 +725,23 @@ export class App extends PureComponent<Props, State> {
 
   handleNavigation = (navigationMsg: Navigation): void => {
     const { sections } = navigationMsg
-    const navPageSections = sections
-    this.setState({ navPageSections })
-    // this.setState({ navPageSections }, () => {
-    //   this.hostCommunicationMgr.sendMessageToHost({
-    //     type: "SET_APP_PAGES",
-    //     appPages,
-    //   })
-    // })
+    const navPageSections = new Map()
+    let idx = 0
+    for (const section of sections) {
+      const sectionLength = (section.appPages || []).length
+      navPageSections.set(section.header || "", {
+        start: idx,
+        length: sectionLength,
+      })
+      idx += sectionLength
+    }
+    const appPages = sections.flatMap(section => section.appPages || [])
+    this.setState({ appPages, navPageSections }, () => {
+      this.hostCommunicationMgr.sendMessageToHost({
+        type: "SET_APP_PAGES",
+        appPages,
+      })
+    })
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -988,16 +996,7 @@ export class App extends PureComponent<Props, State> {
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
         // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
         document.location.pathname.endsWith("/" + appPage.pageName)
-      ) ??
-      this.state.navPageSections
-        .flatMap(section => section.appPages)
-        .filter(appPage => appPage)
-        .find(appPage =>
-          document.location.pathname.endsWith(
-            "/" + (appPage as IAppPage).pageName
-          )
-        ) ??
-      this.state.appPages[0]
+      ) ?? this.state.appPages[0]
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
@@ -1305,10 +1304,9 @@ export class App extends PureComponent<Props, State> {
 
   onPageChange = (pageScriptHash: string): void => {
     console.log(pageScriptHash)
-    const newPageName = this.state.navPageSections
-      .flatMap(section => section.appPages)
-      .filter(p => p)
-      .find(p => (p as IAppPage).pageScriptHash === pageScriptHash)?.pageName
+    const newPageName = this.state.appPages.find(
+      p => p.pageScriptHash === pageScriptHash
+    )?.pageName
     const baseUriParts = this.getBaseUriParts()
     if (baseUriParts) {
       const { basePath } = baseUriParts

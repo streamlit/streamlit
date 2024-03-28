@@ -31,7 +31,6 @@ import {
   isColoredLineDisplayed,
   IAppPage,
   PageConfig,
-  INavSection,
 } from "@streamlit/lib"
 
 import {
@@ -52,7 +51,7 @@ export interface SidebarProps {
   theme: EmotionTheme
   hasElements: boolean
   appPages: IAppPage[]
-  navPageSections: INavSection[]
+  navPageSections: Map<string, { start: number; length: number }>
   onPageChange: (pageName: string) => void
   currentPageScriptHash: string
   hideSidebarNav: boolean

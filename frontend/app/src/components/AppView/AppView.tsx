@@ -30,7 +30,6 @@ import {
   IGuestToHostMessage,
   StreamlitEndpoints,
   LibContext,
-  INavSection,
 } from "@streamlit/lib"
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
@@ -78,7 +77,7 @@ export interface AppViewProps {
   formsData: FormsData
 
   appPages: IAppPage[]
-  navPageSections: INavSection[]
+  navPageSections: Map<string, { start: number; length: number }>
 
   onPageChange: (pageName: string) => void
 
