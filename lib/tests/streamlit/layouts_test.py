@@ -335,3 +335,92 @@ class TabsTest(DeltaGeneratorTestCase):
         self.assertEqual(len(tabs_block), 5)
         for index, tabs_block in enumerate(tabs_block):
             self.assertEqual(tabs_block.add_block.tab.label, f"tab {index}")
+
+
+class DialogTest(DeltaGeneratorTestCase):
+    """Run unit tests for the non-public delta-generator dialog and also the dialog decorator."""
+
+    title = "Test Dialog"
+
+    def test_dialog_deltagenerator_usage_with_context_manager(self):
+        """Test that the delta-generator dialog works as a context manager"""
+
+        dialog = st._main.dialog(DialogTest.title)
+
+        with dialog:
+            """No content so that 'get_delta_from_queue' returns the dialog."""
+            pass
+
+        dialog_block = self.get_delta_from_queue()
+        self.assertEqual(dialog_block.add_block.dialog.title, DialogTest.title)
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
+        self.assertTrue(dialog_block.add_block.dialog.dismissible)
+
+    def test_dialog_deltagenerator_opens_and_closes(self):
+        """Test that dialog opens and closes"""
+        dialog = st._main.dialog("Test Dialog")
+
+        self.assertIsNotNone(dialog)
+        dialog_block = self.get_delta_from_queue()
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
+
+        dialog.open()
+        dialog_block = self.get_delta_from_queue()
+        self.assertTrue(dialog_block.add_block.dialog.is_open)
+
+        dialog.close()
+        dialog_block = self.get_delta_from_queue()
+        self.assertFalse(dialog_block.add_block.dialog.is_open)
+
+    def test_dialog_decorator_title_required(self):
+        """Test that the title is required"""
+        with self.assertRaises(StreamlitAPIException) as e:
+
+            @st.experimental_dialog()
+            def dialog():
+                return None
+
+            dialog()
+
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
+
+        with self.assertRaises(StreamlitAPIException) as e:
+
+            @st.experimental_dialog()
+            def dialog_with_arguments(a, b):
+                return None
+
+            dialog_with_arguments("", "")
+
+        self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
+
+    def test_dialog_decorator_must_be_called_like_a_function(self):
+        """Test that the decorator must be called like a function.
+        Note that if this happens in context of an app, a StreamlitAPIException is thrown
+        instead of a TypeError. This seems to be due to how a Streamlit App is executed by the Streamlit Runtime.
+        """
+        with self.assertRaises(TypeError):
+
+            @st.experimental_dialog
+            def dialog():
+                return None
+
+            dialog()
+
+    def test_nested_dialog_raises_errors(self):
+        """Test that dialogs cannot be called nested."""
+
+        @st.experimental_dialog("Level2 dialog")
+        def level2_dialog():
+            st.empty()
+
+        @st.experimental_dialog("Level1 dialog")
+        def level1_dialog():
+            level2_dialog()
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            level1_dialog()
+
+        self.assertEqual(
+            e.exception.args[0], "Dialogs may not be nested inside other dialogs."
+        )

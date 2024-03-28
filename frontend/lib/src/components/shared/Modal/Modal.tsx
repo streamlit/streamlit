@@ -44,12 +44,10 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         marginLeft: spacing.none,
         marginRight: spacing.none,
         marginBottom: spacing.none,
-        paddingTop: spacing.twoXL,
+        padding: spacing.twoXL,
         paddingBottom: spacing.md,
-        paddingLeft: spacing.threeXL,
-        paddingRight: spacing.threeXL,
         fontFamily: genericFonts.bodyFont,
-        fontSize: fontSizes.lg,
+        fontSize: fontSizes.xl,
         fontWeight: 600,
         margin: spacing.none,
         lineHeight: 1.5,
@@ -80,9 +78,9 @@ function ModalBody({ children }: ModalBodyProps): ReactElement {
         marginRight: spacing.none,
         marginBottom: spacing.none,
         paddingTop: spacing.md,
-        paddingRight: spacing.threeXL,
-        paddingBottom: spacing.threeXL,
-        paddingLeft: spacing.threeXL,
+        paddingRight: spacing.twoXL,
+        paddingBottom: spacing.twoXL,
+        paddingLeft: spacing.twoXL,
         color: colors.bodyText,
         fontSize: fontSizes.md,
         overflowY: "auto",
@@ -154,7 +152,7 @@ function Modal(props: ModalProps): ReactElement {
     },
     Close: {
       style: {
-        top: `calc(${spacing.twoXL} + .125rem)`, // Trying to center the button on the available space.
+        top: `calc(${spacing.twoXL} + .375rem)`, // Trying to center the button on the available space.
         right: spacing.twoXL,
       },
     },
