@@ -36,6 +36,7 @@ import {
   fontToEnum,
   getDefaultTheme,
   getSystemTheme,
+  getWrappedHeadersStyle,
   isColor,
   isPresetTheme,
   toThemeInput,
@@ -44,6 +45,7 @@ import {
   setCachedTheme,
   hasLightBackgroundColor,
 } from "./utils"
+import { he } from "date-fns/locale"
 
 const matchMediaFillers = {
   onchange: null,
@@ -634,6 +636,22 @@ describe("hasLightBackgroundColor", () => {
   testCases.forEach(({ description, theme, expectedResult }) => {
     it(`${description}`, () => {
       expect(hasLightBackgroundColor(theme.emotion)).toBe(expectedResult)
+    })
+  })
+})
+
+describe("getWrappedHeadersStyle", () => {
+  const headersStyle = getWrappedHeadersStyle(lightTheme.emotion)
+
+  const headers = ["h1", "h2", "h3", "h4", "h5", "h6"]
+  const themeFontSizes = Object.values(baseTheme.emotion.fontSizes)
+
+  headers.forEach(header => {
+    it(`test header '${header}'`, () => {
+      const headerStyle = headersStyle[`& ${header}`]
+      expect(headerStyle).toBeDefined()
+      expect(themeFontSizes).toContain(headerStyle.fontSize)
+      expect(headerStyle.fontWeight).toBe(600)
     })
   })
 })
