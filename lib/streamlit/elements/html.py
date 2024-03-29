@@ -31,23 +31,42 @@ class HtmlMixin:
         self,
         body: str,
     ) -> DeltaGenerator:
-        """Insert HTML into your app. We *strongly advise against it*. It is hard to write
-            secure HTML, so by using this command you may be compromising your users' security.
+        """Insert HTML into your app.
+
+        Adding custom HTML to your app impacts safety, styling, and
+        maintainability. By using this command, you may be compromising your
+        users' security. ``st.html`` content is **not** iframed.
+
+        Executing JavaScript is not supported at this time.
+
         Parameters
         ----------
         body : str
-            The HTML code to insert, or pointer to an HTML code file which is loaded and inserted.
+            The HTML code to insert, or path to an HTML code file which is
+            loaded and inserted.
+
+            If the provided string is the path of a local file, Streamlit will
+            load the file and render its contents as HTML. Otherwise, Streamlit
+            will render the string directly as HTML.
 
         Example
         -------
         >>> import streamlit as st
         >>>
-        >>> code = '''<style>
+        >>> code = \"""
+        ... <style>
         ...     p {
         ...         color: red;
         ...     }
-        ... </style>'''
+        ... </style>
+        ... \"""
         >>> st.html(code)
+        >>> st.markdown("Lorem ipsum")
+
+        .. output::
+           https://doc-html.streamlit.app/
+           height: 300px
+
         """
         html_proto = HtmlProto()
         # Check if the body is a file path
