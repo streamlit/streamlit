@@ -36,6 +36,7 @@ import {
   StyledSidebarLinkText,
   StyledSidebarNavLinkContainer,
   StyledSidebarNavSeparatorContainer,
+  StyledViewButton,
 } from "./styled-components"
 
 export interface Props {
@@ -137,27 +138,23 @@ const SidebarNav = ({
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
-        <StyledSidebarNavSeparatorContainer
-          data-testid="stSidebarNavSeparator"
-          isExpanded={expanded}
-          isOverflowing={isOverflowing}
-          onClick={toggleExpanded}
-        >
+        <>
           {isOverflowing && !expanded && (
-            <Icon
-              content={ExpandMore}
-              size="md"
-              testid="stSidebarNavExpandIcon"
-            />
+            <StyledViewButton onClick={toggleExpanded}>
+              view more
+            </StyledViewButton>
           )}
           {expanded && (
-            <Icon
-              content={ExpandLess}
-              size="md"
-              testid="stSidebarNavCollapseIcon"
-            />
+            <StyledViewButton onClick={toggleExpanded}>
+              view less
+            </StyledViewButton>
           )}
-        </StyledSidebarNavSeparatorContainer>
+          <StyledSidebarNavSeparatorContainer
+            data-testid="stSidebarNavSeparator"
+            isExpanded={expanded}
+            isOverflowing={isOverflowing}
+          />
+        </>
       )}
     </StyledSidebarNavContainer>
   )

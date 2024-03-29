@@ -85,7 +85,8 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
       listStyle: "none",
       overflow: ["auto", "overlay"],
       margin: 0,
-      paddingTop: theme.sizes.sidebarTopSpace,
+      // paddingTop: "0",
+      paddingTop: theme.spacing.lg,
       paddingBottom: theme.spacing.lg,
 
       "@media print": {
@@ -153,16 +154,16 @@ export const StyledSidebarNavSeparatorContainer =
       borderBottom: `1px solid ${theme.colors.fadedText10}`,
       transition: "color 500ms",
 
-      ...((isExpanded || isOverflowing) && {
-        "&:hover": {
-          color: theme.colors.bodyText,
-          background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
+      // ...((isExpanded || isOverflowing) && {
+      //   "&:hover": {
+      //     color: theme.colors.bodyText,
+      //     background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
 
-          "& > *": {
-            animation: `${bounceAnimation} 0.5s ease infinite`,
-          },
-        },
-      }),
+      //     "& > *": {
+      //       animation: `${bounceAnimation} 0.5s ease infinite`,
+      //     },
+      //   },
+      // }),
     })
   )
 
@@ -241,8 +242,8 @@ export interface StyledSidebarUserContentProps {
 
 export const StyledSidebarUserContent =
   styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
-    paddingTop: hasPageNavAbove ? theme.spacing.lg : theme.sizes.headerHeight,
-    paddingBottom: theme.sizes.headerHeight,
+    paddingTop: hasPageNavAbove ? theme.spacing.lg : "0",
+    paddingBottom: theme.sizes.sidebarTopSpace,
     paddingLeft: theme.spacing.twoXL,
     paddingRight: theme.spacing.twoXL,
 
@@ -321,25 +322,71 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   },
 }))
 
+export const StyledSidebarOpenContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "start",
+  padding: `${theme.spacing.twoXL} 0 0 ${theme.spacing.twoXL}`,
+}))
+
+export const StyledSidebarOpenButtonContainer = styled.div(({ theme }) => ({
+  zIndex: theme.zIndices.header,
+  marginLeft: theme.spacing.sm,
+  height: "5rem",
+}))
+
 export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "start",
-  padding: `${theme.spacing.twoXL} ${theme.spacing.twoXL} 0 ${theme.spacing.twoXL}`,
+  padding: `${theme.spacing.twoXL}`,
 }))
 
 export interface StyledLogoProps {
   size: string
 }
 
-export const StyledLogo = styled.img<StyledLogoProps>(({ size }) => {
+export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => {
   const logoHeight = size === "fixed" ? "1.5rem" : "auto"
 
   return {
     height: logoHeight,
+    margin: "0.5rem 0 0.5rem 0",
+    zIndex: theme.zIndices.header,
   }
 })
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
-  height: "1.5rem",
+  height: "2rem",
+}))
+
+export interface StyledCollapseSidebarButtonProps {
+  showSidebarCollapse: boolean
+}
+
+export const StyledCollapseSidebarButton =
+  styled.div<StyledCollapseSidebarButtonProps>(({ showSidebarCollapse }) => ({
+    display: showSidebarCollapse ? "auto" : "none",
+    transition: "left 300ms",
+    transitionDelay: "left 300ms",
+  }))
+
+export const StyledViewButton = styled.button(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  lineHeight: "1.4rem",
+  color: theme.colors.gray60,
+  backgroundColor: theme.colors.transparent,
+  border: "none",
+  boxShadow: "none",
+  position: "relative",
+  bottom: "12px",
+  left: "12px",
+  "&:hover, &:active, &:focus": {
+    border: "none",
+    outline: "none",
+    boxShadow: "none",
+  },
+  "&:hover": {
+    color: theme.colors.primary,
+  },
 }))

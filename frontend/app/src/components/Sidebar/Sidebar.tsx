@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, Close } from "@emotion-icons/material-outlined"
+import { ChevronRight, ChevronLeft } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
@@ -36,7 +36,6 @@ import {
 
 import {
   StyledSidebar,
-  StyledSidebarCloseButton,
   StyledSidebarContent,
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
@@ -44,6 +43,9 @@ import {
   StyledSidebarHeaderContainer,
   StyledLogo,
   StyledNoLogoSpacer,
+  StyledCollapseSidebarButton,
+  StyledSidebarOpenContainer,
+  StyledSidebarOpenButtonContainer,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 
@@ -68,6 +70,8 @@ interface State {
 
   // When hovering the nav
   hideScrollbar: boolean
+  // When hovering sidebar header
+  showSidebarCollapse: boolean
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -97,6 +101,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
       hideScrollbar: false,
+      showSidebarCollapse: false,
     }
   }
 
@@ -208,6 +213,14 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ hideScrollbar: newValue })
   }
 
+  onMouseOver = (): void => {
+    this.setState({ showSidebarCollapse: true })
+  }
+
+  onMouseOut = (): void => {
+    this.setState({ showSidebarCollapse: false })
+  }
+
   // Additional safeguard for sidebar height sizing
   headerDecorationVisible(): boolean {
     let coloredLineExists = false
@@ -223,7 +236,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   public render(): ReactNode {
-    const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
+    const {
+      collapsedSidebar,
+      sidebarWidth,
+      hideScrollbar,
+      showSidebarCollapse,
+    } = this.state
     const {
       appLogo,
       appPages,
@@ -245,18 +263,29 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     return (
       <>
         {collapsedSidebar && (
-          <StyledSidebarCollapsedControl
-            chevronDownshift={chevronDownshift}
-            isCollapsed={collapsedSidebar}
-            data-testid="collapsedControl"
-          >
-            <BaseButton
-              kind={BaseButtonKind.HEADER_NO_PADDING}
-              onClick={this.toggleCollapse}
-            >
-              <Icon content={ChevronRight} size="lg" />
-            </BaseButton>
-          </StyledSidebarCollapsedControl>
+          <StyledSidebarOpenContainer>
+            {appLogo && (
+              <StyledLogo
+                src={this.props.endpoints.buildMediaURL(appLogo.image)}
+                size={appLogo.size}
+                alt="Streamlit"
+              />
+            )}
+            {/* <StyledSidebarCollapsedControl
+              chevronDownshift={chevronDownshift}
+              isCollapsed={collapsedSidebar}
+              data-testid="collapsedControl"
+            > */}
+            <StyledSidebarOpenButtonContainer>
+              <BaseButton
+                kind={BaseButtonKind.HEADER_NO_PADDING}
+                onClick={this.toggleCollapse}
+              >
+                <Icon content={ChevronRight} size="lg" />
+              </BaseButton>
+            </StyledSidebarOpenButtonContainer>
+            {/* </StyledSidebarCollapsedControl> */}
+          </StyledSidebarOpenContainer>
         )}
         <Resizable
           data-testid="stSidebar"
@@ -292,7 +321,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
-            <StyledSidebarHeaderContainer>
+            <StyledSidebarHeaderContainer
+              onMouseOver={this.onMouseOver}
+              onMouseOut={this.onMouseOut}
+            >
               {appLogo ? (
                 <StyledLogo
                   src={this.props.endpoints.buildMediaURL(appLogo.image)}
@@ -302,14 +334,16 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               ) : (
                 <StyledNoLogoSpacer />
               )}
-              <StyledSidebarCloseButton>
+              <StyledCollapseSidebarButton
+                showSidebarCollapse={showSidebarCollapse}
+              >
                 <BaseButton
                   kind={BaseButtonKind.HEADER_BUTTON}
                   onClick={this.toggleCollapse}
                 >
-                  <Icon content={Close} size="lg" />
+                  <Icon content={ChevronLeft} size="lg" />
                 </BaseButton>
-              </StyledSidebarCloseButton>
+              </StyledCollapseSidebarButton>
             </StyledSidebarHeaderContainer>
             {!hideSidebarNav && (
               <SidebarNav
