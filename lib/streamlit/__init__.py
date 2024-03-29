@@ -211,9 +211,9 @@ status = _main.status
 toast = _event.toast
 
 # Config
-get_option = _config.get_option
 # We add the metrics tracking here, since importing
 # gather_metrics in config causes a circular dependency
+get_option = _gather_metrics("get_option", _config.get_option)
 set_option = _gather_metrics("set_option", _config.set_user_option)
 
 # Session State
