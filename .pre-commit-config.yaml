@@ -128,6 +128,7 @@ repos:
           |^vendor/
           |^component-lib/declarations/apache-arrow
           |^frontend/app/src/assets/css/variables\.scss
+          |^lib/tests/streamlit/elements/test_html\.js
       - id: insert-license
         name: Add license for all Proto files
         files: \.proto$
