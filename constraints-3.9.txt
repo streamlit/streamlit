@@ -50,7 +50,7 @@ langchain==0.1.13
 langchain-community==0.0.29
 langchain-core==0.1.36
 langchain-text-splitters==0.0.1
-langsmith==0.1.36
+langsmith==0.1.37
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -106,7 +106,7 @@ PyYAML==6.0.1
 readme_renderer==43.0
 referencing==0.34.0
 requests==2.31.0
-requests-mock==1.12.0
+requests-mock==1.12.1
 requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
