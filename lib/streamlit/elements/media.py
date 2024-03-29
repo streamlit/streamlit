@@ -84,17 +84,17 @@ class MediaMixin:
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
 
         format : str
-            The mime type for the audio file. Defaults to 'audio/wav'.
+            The mime type for the audio file. Defaults to ``"audio/wav"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
         start_time: int
-            The time from which this element should start playing.
+            The time (in seconds) from which this element should start playing.
 
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
         end_time: int
-            The time at which this element should stop playing.
+            The time (in seconds) at which this element should stop playing.
         loop: bool
             Whether the audio should loop playback.
 
@@ -178,7 +178,7 @@ class MediaMixin:
             See https://tools.ietf.org/html/rfc4281 for more info.
 
         start_time: int
-            The time from which this element should start playing.
+            The time (in seconds) from which this element should start playing.
 
         subtitles: str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
@@ -206,7 +206,7 @@ class MediaMixin:
             Not supported for YouTube videos.
 
         end_time: int or None
-            The time at which this element should stop playing
+            The time (in seconds) at which this element should stop playing.
         loop: bool
             Whether the video should loop playback.
 
