@@ -116,10 +116,10 @@ class MediaMixin:
         >>> import streamlit as st
         >>> import numpy as np
         >>>
-        >>> audio_file = open('myaudio.ogg', 'rb')
+        >>> audio_file = open("myaudio.ogg", "rb")
         >>> audio_bytes = audio_file.read()
         >>>
-        >>> st.audio(audio_bytes, format='audio/ogg')
+        >>> st.audio(audio_bytes, format="audio/ogg")
         >>>
         >>> sample_rate = 44100  # 44100 samples per second
         >>> seconds = 2  # Note duration of 2 seconds
