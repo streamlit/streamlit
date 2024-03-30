@@ -98,8 +98,21 @@ class MediaMixin:
         loop: bool
             Whether the audio should loop playback.
 
-        Example
-        -------
+        Examples
+        --------
+        To display an audio player for a local file, specify the file's string
+        path and format.
+
+        >>> import streamlit as st
+        >>>
+        >>> st.audio("cat-purr.mp3", format="audio/mpeg")
+
+        .. output::
+           https://doc-audio-purr.streamlit.app/
+           height: 250px
+
+        You can also pass ``bytes`` or ``numpy.ndarray`` objects to ``st.audio``.
+
         >>> import streamlit as st
         >>> import numpy as np
         >>>
