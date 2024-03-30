@@ -145,6 +145,9 @@ def fragment(
 
     Parameters
     ----------
+    func: callable
+        The function to turn into a fragment.
+
     run_every: int, float, timedelta, str, or None
         The time interval between automatic fragment reruns. This can be one of
         the following:

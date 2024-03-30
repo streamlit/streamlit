@@ -744,7 +744,7 @@ class Multiselect(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (Callable)"""
+        """The widget's formatting function for displaying options. (callable)"""
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
@@ -889,7 +889,7 @@ class Radio(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (Callable)"""
+        """The widget's formatting function for displaying options. (callable)"""
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
@@ -951,7 +951,7 @@ class Selectbox(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (Callable)"""
+        """The widget's formatting function for displaying options. (callable)"""
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
@@ -1035,7 +1035,7 @@ class SelectSlider(Widget, Generic[T]):
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
-        """The widget's formatting function for displaying options. (Callable)"""
+        """The widget's formatting function for displaying options. (callable)"""
         ss = self.root.session_state
         return cast(Callable[[Any], Any], ss[TESTING_KEY][self.id])
 
