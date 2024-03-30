@@ -53,6 +53,7 @@ import {
   StyledVerticalBlockBorderWrapper,
   StyledVerticalBlockBorderWrapperProps,
 } from "./styled-components"
+import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
@@ -213,7 +214,11 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
                 node: node as BlockNode,
               }
 
-              return <BlockNodeRenderer key={index} {...childProps} />
+              return (
+                <ErrorBoundary>
+                  <BlockNodeRenderer key={index} {...childProps} />
+                </ErrorBoundary>
+              )
             }
 
             // We don't have any other node types!
