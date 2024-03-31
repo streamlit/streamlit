@@ -28,6 +28,8 @@ import {
   hasLightBackgroundColor,
   EmotionTheme,
 } from "@streamlit/lib/src/theme"
+
+import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
@@ -130,29 +132,31 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
   const toastContent = useMemo(
     () => (
       <>
-        <StyledToastMessage expanded={expanded}>
-          {icon && (
-            <DynamicIcon
-              iconValue={icon}
-              size="md"
-              testid="stToastEmojiIcon"
+        <ErrorBoundary>
+          <StyledToastMessage expanded={expanded}>
+            {icon && (
+              <DynamicIcon
+                iconValue={icon}
+                size="md"
+                testid="stToastEmojiIcon"
+              />
+            )}
+            <StreamlitMarkdown
+              source={expanded ? fullMessage : displayMessage}
+              allowHTML={false}
+              isToast
             />
+          </StyledToastMessage>
+          {shortened && (
+            <StyledViewButton
+              data-testid="toastViewButton"
+              className="toastViewButton"
+              onClick={handleClick}
+            >
+              {expanded ? "view less" : "view more"}
+            </StyledViewButton>
           )}
-          <StreamlitMarkdown
-            source={expanded ? fullMessage : displayMessage}
-            allowHTML={false}
-            isToast
-          />
-        </StyledToastMessage>
-        {shortened && (
-          <StyledViewButton
-            data-testid="toastViewButton"
-            className="toastViewButton"
-            onClick={handleClick}
-          >
-            {expanded ? "view less" : "view more"}
-          </StyledViewButton>
-        )}
+        </ErrorBoundary>
       </>
     ),
     [shortened, expanded, fullMessage, displayMessage, icon, handleClick]
