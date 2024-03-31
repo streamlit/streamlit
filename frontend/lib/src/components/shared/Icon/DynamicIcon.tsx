@@ -18,6 +18,7 @@ import React, { Suspense } from "react"
 
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
+import { camelCase, capitalize, startCase } from "lodash"
 
 const MaterialFilled = React.lazy(
   () =>
@@ -51,6 +52,9 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   if (matchResult === null) {
     return { pack: "emoji", icon: iconName }
   }
+
+  // Convert the icon name to CamelCase
+  matchResult[2] = startCase(camelCase(matchResult[2])).replace(/ /g, "")
   return { pack: matchResult[1], icon: matchResult[2] }
 }
 

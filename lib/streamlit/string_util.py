@@ -67,6 +67,31 @@ def validate_emoji(maybe_emoji: str | None) -> str:
         )
 
 
+def validate_material_icon(maybe_material_icon: str | None) -> str:
+    if maybe_material_icon is None:
+        return ""
+
+    split_parts = maybe_material_icon.split(":")
+
+    if len(split_parts) != 4 or split_parts[0] != "" or split_parts[3] != "":
+        raise StreamlitAPIException(
+            f'The value "{maybe_material_icon}" is not a valid Material icon. '
+            f"Please use a Material icon shortcode."
+        )
+    pack_name, icon_name = split_parts[1], split_parts[2]
+    if pack_name not in ["material", "material-outlined", "material-rounded"]:
+        raise StreamlitAPIException(
+            f'The value "{maybe_material_icon}" is not a valid Material icon.'
+            f" Please use a Material icon shortcode."
+        )
+    if not icon_name:
+        raise StreamlitAPIException(
+            f'The value "{maybe_material_icon}" is not a valid Material icon.'
+            f" Please use a Material icon shortcode."
+        )
+    return maybe_material_icon
+
+
 def extract_leading_emoji(text: str) -> tuple[str, str]:
     """Return a tuple containing the first emoji found in the given string and
     the rest of the string (minus an optional separator between the two).
