@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useLayoutEffect, useState } from "react"
+import React, {
+  ReactElement,
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from "react"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -28,7 +33,7 @@ import {
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
-import { PlotSelectionEvent } from "plotly.js"
+import { PlotRelayoutEvent, PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
 
@@ -58,6 +63,7 @@ export interface Selection extends SelectionRange {
 
 export const DEFAULT_HEIGHT = 450
 const SELECTIONS_KEY = "selections"
+const RELAYOUT_KEY = "relayout"
 
 function isFullScreen(height: number | undefined): boolean {
   return !!height
@@ -128,12 +134,18 @@ function PlotlyFigure({
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
-  const getInitialValue = (): any => {
-    const spec = JSON.parse(
+  const getInitialValue = useCallback((): any => {
+    let spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
     const storedValue = widgetMgr.getJsonValue(element)
 
+    if (storedValue === "{}") {
+      spec.data.forEach((trace: any) => {
+        trace.selectedpoints = undefined
+      })
+      spec.layout.selections = undefined
+    }
     if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
@@ -144,50 +156,47 @@ function PlotlyFigure({
         )
         spec.data = data
         spec.layout.selections = selections
-      }
 
-      const hasSelectedPoints: boolean = spec.data.some(
-        (trace: any) =>
-          "selectedpoints" in trace && trace.selectedpoints.length > 0
-      )
-      if (hasSelectedPoints) {
-        // make all other points opaque
-        spec.data.forEach((trace: any) => {
-          if (!trace.selectedpoints) {
-            trace.selectedpoints = []
-          }
-        })
-      }
-
-      return {
-        data: spec.data,
-        layout: spec.layout,
-        frames: spec.frames ? { ...spec.frames } : [],
+        const hasSelectedPoints: boolean = spec.data.some(
+          (trace: any) =>
+            "selectedpoints" in trace &&
+            trace.selectedpoints &&
+            trace.selectedpoints.length > 0
+        )
+        if (hasSelectedPoints) {
+          // make all other points opaque
+          spec.data.forEach((trace: any) => {
+            if (!trace.selectedpoints) {
+              trace.selectedpoints = []
+            }
+          })
+        }
       }
     }
-
+    let zoom = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
+    if (zoom && zoom[RELAYOUT_KEY]) {
+      if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
+        spec.layout.xaxis.range = [
+          zoom[RELAYOUT_KEY]["xaxis.range[0]"],
+          zoom[RELAYOUT_KEY]["xaxis.range[1]"],
+        ]
+        spec.layout.yaxis.range = [
+          zoom[RELAYOUT_KEY]["yaxis.range[0]"],
+          zoom[RELAYOUT_KEY]["yaxis.range[1]"],
+        ]
+      } else if (zoom[RELAYOUT_KEY]["xaxis.autorange"]) {
+        spec.layout.xaxis.autorange = true
+        spec.layout.yaxis.autorange = true
+      }
+      console.log(zoom[RELAYOUT_KEY])
+    }
     return spec
-  }
+  }, [])
 
-  const [spec] = useState(getInitialValue())
+  const spec = getInitialValue()
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
-
-  useLayoutEffect(() => {
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
-    // TODO(willhuang1997): Regression where swapping themes will not change chart colors properly
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   useLayoutEffect(() => {
     if (isFullScreen(height)) {
@@ -201,6 +210,16 @@ function PlotlyFigure({
     } else {
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
+    }
+    if (element.theme === "streamlit") {
+      applyStreamlitTheme(spec, theme)
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    }
+    if (element.isSelectEnabled) {
+      spec.layout.clickmode = "event+select"
+      spec.layout.hovermode = "closest"
     }
   }, [
     height,
@@ -295,22 +314,23 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
-  const reset = (): void => {
-    const spec = JSON.parse(
-      replaceTemporaryColors(figure.spec, theme, element.theme)
-    )
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
+  const reset = React.useCallback((): void => {
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
+  }, [])
+
+  const handleRelayout = (event: PlotRelayoutEvent): void => {
+    const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
+
+    if (event["xaxis.range[0]"] || event["xaxis.autorange"]) {
+      widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
+        relayout: event,
+      })
+    } else {
+      widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
+        relayout: storedEvent[RELAYOUT_KEY],
+      })
+    }
   }
 
   return (
@@ -325,6 +345,7 @@ function PlotlyFigure({
       onSelected={element.isSelectEnabled ? handleSelect : () => {}}
       onDoubleClick={element.isSelectEnabled ? reset : () => {}}
       onDeselect={element.isSelectEnabled ? reset : () => {}}
+      onRelayout={element.isSelectEnabled ? handleRelayout : () => {}}
     />
   )
 }
