@@ -427,12 +427,17 @@ def create_page_profile_message(
     uncaught_exception: str | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
-    msg = ForwardMsg()
-    msg.page_profile.commands.extend(commands)
-    msg.page_profile.exec_time = exec_time
-    msg.page_profile.prep_time = prep_time
+    # Local import to prevent circular dependencies
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-    msg.page_profile.headless = config.get_option("server.headless")
+    msg = ForwardMsg()
+    page_profile = msg.page_profile
+
+    page_profile.commands.extend(commands)
+    page_profile.exec_time = exec_time
+    page_profile.prep_time = prep_time
+
+    page_profile.headless = config.get_option("server.headless")
 
     # Collect all config options that have been manually set
     config_options: set[str] = set()
@@ -447,7 +452,7 @@ def create_page_profile_message(
                 option_name = f"{option_name}:default"
             config_options.add(option_name)
 
-    msg.page_profile.config.extend(config_options)
+    page_profile.config.extend(config_options)
 
     # Check the predefined set of modules for attribution
     attributions: set[str] = {
@@ -456,11 +461,14 @@ def create_page_profile_message(
         if attribution in sys.modules
     }
 
-    msg.page_profile.os = str(sys.platform)
-    msg.page_profile.timezone = str(time.tzname)
-    msg.page_profile.attributions.extend(attributions)
+    page_profile.os = str(sys.platform)
+    page_profile.timezone = str(time.tzname)
+    page_profile.attributions.extend(attributions)
 
     if uncaught_exception:
-        msg.page_profile.uncaught_exception = uncaught_exception
+        page_profile.uncaught_exception = uncaught_exception
+
+    if ctx := get_script_run_ctx():
+        page_profile.is_fragment_run = bool(ctx.current_fragment_id)
 
     return msg

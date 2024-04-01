@@ -123,6 +123,8 @@ class WidgetMetadata(Generic[T]):
     callback_args: WidgetArgs | None = None
     callback_kwargs: WidgetKwargs | None = None
 
+    fragment_id: str | None = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

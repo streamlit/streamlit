@@ -52,6 +52,7 @@ export interface Props {
   theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -130,10 +131,12 @@ class Slider extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setDoubleArrayValue(
-      this.props.element,
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setDoubleArrayValue(
+      element,
       this.state.value,
-      source
+      source,
+      fragmentId
     )
   }
 

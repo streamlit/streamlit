@@ -24,7 +24,10 @@ import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
 
-const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<SelectboxProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: SelectboxProto.create({
     id: "1",
     label: "Label",
@@ -39,6 +42,7 @@ const getProps = (elementProps: Partial<SelectboxProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 const pickOption = (selectbox: HTMLElement, value: string): void => {
@@ -62,7 +66,21 @@ describe("Selectbox widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setIntValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<Selectbox {...props} />)
+    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -78,7 +96,8 @@ describe("Selectbox widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
     expect(screen.queryByText("a")).not.toBeInTheDocument()
     expect(screen.getByText("b")).toBeInTheDocument()
@@ -99,7 +118,8 @@ describe("Selectbox widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     // "Submit" the form
@@ -113,7 +133,8 @@ describe("Selectbox widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })
