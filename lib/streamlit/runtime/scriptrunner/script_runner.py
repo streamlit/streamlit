@@ -461,7 +461,7 @@ class ScriptRunner:
                     page_script_hash = rerun_data.page_script_hash
                 else:
                     page_script_hash = main_page_info["page_script_hash"]
-                print(page_script_hash)
+                print(f"script runner {page_script_hash=}")
 
             ctx = self._get_script_run_ctx()
             ctx.reset(
@@ -671,11 +671,11 @@ class ScriptRunner:
 
         _LOGGER.debug("Running page %s", page)
 
-        # self.on_event.send(
-        #     self,
-        #     event=ScriptRunnerEvent.PAGE_RUN_STARTED,
-        #     page_script_hash=page._script_hash,
-        # )
+        self.on_event.send(
+            self,
+            event=ScriptRunnerEvent.PAGE_RUN_STARTED,
+            page_script_hash=page._script_hash,
+        )
 
         # Compile the script. Any errors thrown here will be surfaced
         # to the user via a modal dialog in the frontend, and won't result

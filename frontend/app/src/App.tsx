@@ -105,6 +105,7 @@ import {
   LibConfig,
   AppConfig,
   Navigation,
+  PageRun,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -623,6 +624,7 @@ export class App extends PureComponent<Props, State> {
           this.handlePagesChanged(pagesChangedMsg),
         navigation: (navigationMsg: Navigation) =>
           this.handleNavigation(navigationMsg),
+        pageRun: (pageRunMsg: PageRun) => this.handlePageRun(pageRunMsg),
         pageNotFound: (pageNotFound: PageNotFound) =>
           this.handlePageNotFound(pageNotFound),
         gitInfoChanged: (gitInfo: GitInfo) =>
@@ -909,6 +911,7 @@ export class App extends PureComponent<Props, State> {
       }
     }
 
+    // TODO: only set appPages if there are some, to prevent some flickers
     this.processThemeInput(themeInput)
     this.setState(
       {
@@ -985,6 +988,61 @@ export class App extends PureComponent<Props, State> {
     })
 
     this.handleSessionStatusChanged(initialize.sessionStatus)
+  }
+
+  handlePageRun = (pageRunProto: PageRun): void => {
+    const { currentPageScriptHash: prevPageScriptHash } = this.state
+    const newPageScriptHash = pageRunProto.pageScriptHash
+
+    // mainPage must be a string as we're guaranteed at this point that
+    // newSessionProto.appPages is nonempty and has a truthy pageName.
+    // Otherwise, we'd either have no main script or a nameless main script,
+    // neither of which can happen.
+    const mainPage = this.state.appPages[0] as AppPage
+    // We're similarly guaranteed that newPageName will be found / truthy
+    // here.
+    const newPage = this.state.appPages.find(
+      p => p.pageScriptHash === newPageScriptHash
+    )
+    console.log(JSON.stringify(this.state.appPages))
+    const newPageName = newPage?.pageName as string
+    const newUrlPath = newPage?.urlPath || ""
+    const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
+    console.log(viewingMainPage)
+
+    const baseUriParts = this.getBaseUriParts()
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+      console.log(`changing page url to ${newUrlPath}`)
+
+      // It is important to compare `newPageName` with the previous one encoded in the URL
+      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+      // e.g. the case where the user clicks the back button.
+      // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
+      // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
+      const queryString = preserveEmbedQueryParams()
+      const qs = queryString ? `?${queryString}` : ""
+
+      const basePathPrefix = basePath ? `/${basePath}` : ""
+
+      const pagePath = newUrlPath
+      const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
+      window.history.pushState({}, "", pageUrl)
+    }
+    this.hostCommunicationMgr.sendMessageToHost({
+      type: "SET_CURRENT_PAGE_NAME",
+      currentPageName: viewingMainPage ? "" : newPageName,
+      currentPageScriptHash: newPageScriptHash,
+    })
+
+    // Set the title and favicon to their default values
+    document.title = `${newPageName} · Streamlit`
+    handleFavicon(
+      `${process.env.PUBLIC_URL}/favicon.png`,
+      this.hostCommunicationMgr.sendMessageToHost,
+      this.endpoints
+    )
   }
 
   /**
@@ -1303,28 +1361,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    console.log(pageScriptHash)
-    const newPageName = this.state.appPages.find(
-      p => p.pageScriptHash === pageScriptHash
-    )?.pageName
-    const baseUriParts = this.getBaseUriParts()
-    if (baseUriParts) {
-      const { basePath } = baseUriParts
-
-      const prevPageNameInPath = extractPageNameFromPathName(
-        document.location.pathname,
-        basePath
-      )
-
-      if (newPageName && prevPageNameInPath !== newPageName) {
-        // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
-        const queryString = preserveEmbedQueryParams()
-        const qs = queryString ? `?${queryString}` : ""
-        const basePathPrefix = basePath ? `/${basePath}` : ""
-        const pageUrl = `${basePathPrefix}/${newPageName}${qs}`
-        window.history.pushState({}, "", pageUrl)
-      }
-    }
     this.sendRerunBackMsg(undefined, pageScriptHash)
   }
 

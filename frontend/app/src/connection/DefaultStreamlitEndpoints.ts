@@ -90,7 +90,9 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     page: IAppPage,
     pageIndex: number
   ): string {
-    const pageName = page.pageName as string
+    const pageName = page.urlPath
+      ? (page.urlPath as string)
+      : (page.pageName as string)
     const navigateTo = pageIndex === 0 ? "" : pageName
 
     if (pageLinkBaseURL != null && pageLinkBaseURL.length > 0) {

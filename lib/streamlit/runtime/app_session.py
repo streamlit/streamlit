@@ -545,6 +545,12 @@ class AppSession:
                 self._create_new_session_message(page_script_hash)
             )
 
+        elif event == ScriptRunnerEvent.PAGE_RUN_STARTED:
+            assert (
+                page_script_hash is not None
+            ), "page_script_hash must be set for the PAGE_RUN event"
+            self._enqueue_forward_msg(self._create_page_run_message(page_script_hash))
+
         elif (
             event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
             or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
@@ -661,6 +667,12 @@ class AppSession:
 
         imsg.is_hello = self._script_data.is_hello
         imsg.session_id = self.id
+
+        return msg
+
+    def _create_page_run_message(self, page_script_hash: str) -> ForwardMsg:
+        msg = ForwardMsg()
+        msg.page_run.page_script_hash = page_script_hash
 
         return msg
 

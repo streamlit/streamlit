@@ -29,4 +29,5 @@ message AppPage {
   string page_script_hash = 1;
   string page_name = 2;
   string icon = 3;
+  string url_path = 4;
 }

@@ -31,7 +31,7 @@ class Page:
     title: str | None = None
     icon: str | None = None
     default: bool = False
-    url_path: str | None = None
+    _url_path: str | None = None
 
     def __init__(
         self,
@@ -66,9 +66,9 @@ class Page:
         self.icon = icon or inferred_icon
         self.default = default
         if default:
-            self.url_path = ""
+            self._url_path = ""
         else:
-            self.url_path = url_path or inferred_name
+            self._url_path = url_path or inferred_name
 
     def run(self) -> None:
         ctx = get_script_run_ctx()
@@ -86,6 +86,13 @@ class Page:
             h = calc_md5(self.title)
         print(f"{self.title=} {h}")
         return h
+
+    @property
+    def url_path(self) -> str:
+        if self.default:
+            return ""
+        else:
+            return self._url_path or ""
 
 
 def navigation(
@@ -112,6 +119,7 @@ def navigation(
             p = nav_section.app_pages.add()
             p.page_script_hash = page._script_hash
             p.page_name = page.title or ""
+            p.url_path = page.url_path
             p.icon = page.icon or ""
 
     ctx.enqueue(msg)

@@ -72,6 +72,7 @@ message ForwardMsg {
     PageNotFound page_not_found = 15;
     PagesChanged pages_changed = 16;
     Navigation navigation = 21;
+    PageRun page_run = 22;
     FileURLsResponse file_urls_response = 19;
 
     // Platform - message to host
@@ -90,7 +91,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 22
+  // Next: 23
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

@@ -29,3 +29,7 @@ message NavSection {
   string header = 1;
   repeated AppPage app_pages = 2;
 }
+
+message PageRun {
+  string page_script_hash = 1;
+}
