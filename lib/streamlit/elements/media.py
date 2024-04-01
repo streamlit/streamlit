@@ -99,7 +99,7 @@ class MediaMixin:
               e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
             * A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
-              e.g. ``timedelta(seconds=1)``.
+              e.g. ``timedelta(seconds=70)``.
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
@@ -115,7 +115,7 @@ class MediaMixin:
               e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
             * A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
-              e.g. ``timedelta(seconds=1)``.
+              e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the audio should loop playback.
 
@@ -223,7 +223,7 @@ class MediaMixin:
               e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
             * A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
-              e.g. ``timedelta(seconds=1)``.
+              e.g. ``timedelta(seconds=70)``.
         subtitles: str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
 
@@ -260,7 +260,7 @@ class MediaMixin:
               e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
             * A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
-              e.g. ``timedelta(seconds=1)``.
+              e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the video should loop playback.
 
