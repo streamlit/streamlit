@@ -567,7 +567,13 @@ const RawElementNodeRenderer = (
     case "dateInput": {
       const dateInputProto = node.element.dateInput as DateInputProto
       widgetProps.disabled = widgetProps.disabled || dateInputProto.disabled
-      return <DateInput element={dateInputProto} {...widgetProps} />
+      return (
+        <DateInput
+          key={dateInputProto.id}
+          element={dateInputProto}
+          {...widgetProps}
+        />
+      )
     }
 
     case "fileUploader": {
