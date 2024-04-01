@@ -991,7 +991,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageRun = (pageRunProto: PageRun): void => {
-    const { currentPageScriptHash: prevPageScriptHash } = this.state
     const newPageScriptHash = pageRunProto.pageScriptHash
 
     // mainPage must be a string as we're guaranteed at this point that

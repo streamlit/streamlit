@@ -172,6 +172,7 @@ const SidebarNav = ({
         {entries.map(([header, section]) => {
           return (
             <NavSection
+              key={header}
               appPages={appPages}
               navSection={section}
               header={header}
