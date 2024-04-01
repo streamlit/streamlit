@@ -14,44 +14,24 @@
  * limitations under the License.
  */
 import React from "react"
-import { flushSync } from "react-dom"
-import { createRoot } from "react-dom/client"
 
 import nodeEmoji from "node-emoji"
 import { grabTheRightIcon } from "@streamlit/lib/src/vendor/twemoji"
 import { IGuestToHostMessage } from "@streamlit/lib/src/hostComm/types"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon/DynamicIcon"
-import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
+import { snakeCase } from "lodash"
 
-function iconToDataUrl(icon: string): string {
-  const iconRoot = document.createElement("div")
-  flushSync(() => {
-    createRoot(iconRoot).render(
-      <EmotionThemeProvider
-        theme={{
-          colors: {
-            inherit: "red",
-          },
-          iconSizes: {
-            xs: "12px",
-            sm: "16px",
-            md: "24px",
-            lg: "32px",
-            xl: "48px",
-            twoXL: "64px",
-            threeXL: "96px",
-          },
-        }}
-      >
-        <DynamicIcon iconValue={icon} />
-      </EmotionThemeProvider>
-    )
-  })
-
-  const base64svg = btoa(iconRoot.innerHTML)
-  console.log("BASE64", base64svg)
-  return `data:image/svg+xml;base64,${base64svg}`
+function iconToUrl(icon: string): string {
+  const iconRegexp = /^:(.*):(.*):$/
+  const matchResult = icon.match(iconRegexp)
+  let snakeIconName = ""
+  if (matchResult === null) {
+    return snakeIconName
+  } else {
+    snakeIconName = snakeCase(matchResult[2])
+  }
+  const iconUrl = `https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/${snakeIconName}/baseline.svg`
+  return iconUrl
 }
 
 /**
@@ -77,7 +57,7 @@ export function handleFavicon(
     imageUrl = emojiUrl
   } else if (favicon.startsWith(":material")) {
     console.log("FAVICON", favicon)
-    imageUrl = iconToDataUrl(favicon)
+    imageUrl = iconToUrl(favicon)
   } else {
     imageUrl = endpoints.buildMediaURL(favicon)
   }
