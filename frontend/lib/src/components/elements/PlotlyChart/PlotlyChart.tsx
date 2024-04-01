@@ -30,7 +30,7 @@ import {
 } from "./CustomTheme"
 import { PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import decamelize from "decamelize"
+import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
 
 export interface PlotlyChartProps {
   width: number
@@ -98,28 +98,6 @@ export function parseBoxSelection(selection: any): SelectionRange {
   const x: number[] = [selection.x0, selection.x1]
   const y: number[] = [selection.y0, selection.y1]
   return { x, y }
-}
-
-function keysToSnakeCase(obj: Record<string, any>): Record<string, any> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const newKey = decamelize(key, {
-      preserveConsecutiveUppercase: true,
-    }).replace(".", "_")
-    let value = obj[key]
-
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      value = keysToSnakeCase(value)
-    }
-
-    if (Array.isArray(value)) {
-      value = value.map(item =>
-        typeof item === "object" ? keysToSnakeCase(item) : item
-      )
-    }
-
-    acc[newKey] = value
-    return acc
-  }, {} as Record<string, any>)
 }
 
 /** Render an iframed Plotly chart from a URL */
