@@ -266,6 +266,20 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "arrowTable":
+      return (
+        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
+      )
+
+    case "arrowVegaLiteChart":
+      return (
+        <ArrowVegaLiteChart
+          element={node.vegaLiteChartElement as VegaLiteChartElement}
+          {...elementProps}
+          widgetMgr={widgetProps.widgetMgr}
+        />
+      )
+
     case "audio":
       return (
         <Audio
@@ -279,20 +293,6 @@ const RawElementNodeRenderer = (
       return hideIfStale(
         props.isStale,
         <Balloons scriptRunId={props.scriptRunId} />
-      )
-
-    case "arrowTable":
-      return (
-        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
-      )
-
-    case "arrowVegaLiteChart":
-      return (
-        <ArrowVegaLiteChart
-          element={node.vegaLiteChartElement as VegaLiteChartElement}
-          {...elementProps}
-          widgetMgr={widgetProps.widgetMgr}
-        />
       )
 
     case "bokehChart":
