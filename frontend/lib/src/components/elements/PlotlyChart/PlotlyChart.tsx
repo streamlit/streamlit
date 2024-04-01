@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useLayoutEffect, useState } from "react"
+import React, {
+  ReactElement,
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from "react"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -128,11 +133,18 @@ function PlotlyFigure({
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
-  const getInitialValue = (): any => {
-    const spec = JSON.parse(
+  const getInitialValue = useCallback((): any => {
+    let spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
     const storedValue = widgetMgr.getJsonValue(element)
+
+    if (storedValue === "{}") {
+      spec.data.forEach((trace: any) => {
+        trace.selectedpoints = undefined
+      })
+      spec.layout.selections = undefined
+    }
 
     if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
@@ -144,19 +156,19 @@ function PlotlyFigure({
         )
         spec.data = data
         spec.layout.selections = selections
-      }
 
-      const hasSelectedPoints: boolean = spec.data.some(
-        (trace: any) =>
-          "selectedpoints" in trace && trace.selectedpoints.length > 0
-      )
-      if (hasSelectedPoints) {
-        // make all other points opaque
-        spec.data.forEach((trace: any) => {
-          if (!trace.selectedpoints) {
-            trace.selectedpoints = []
-          }
-        })
+        const hasSelectedPoints: boolean = spec.data.some(
+          (trace: any) =>
+            "selectedpoints" in trace && trace.selectedpoints.length > 0
+        )
+        if (hasSelectedPoints) {
+          // make all other points opaque
+          spec.data.forEach((trace: any) => {
+            if (!trace.selectedpoints) {
+              trace.selectedpoints = []
+            }
+          })
+        }
       }
 
       return {
@@ -167,9 +179,9 @@ function PlotlyFigure({
     }
 
     return spec
-  }
+  }, [])
 
-  const [spec] = useState(getInitialValue())
+  const spec = getInitialValue()
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
@@ -201,6 +213,16 @@ function PlotlyFigure({
     } else {
       spec.layout.width = initialWidth
       spec.layout.height = initialHeight
+    }
+    if (element.theme === "streamlit") {
+      applyStreamlitTheme(spec, theme)
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    }
+    if (element.isSelectEnabled) {
+      spec.layout.clickmode = "event+select"
+      spec.layout.hovermode = "closest"
     }
   }, [
     height,
