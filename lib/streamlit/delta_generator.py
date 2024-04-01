@@ -59,6 +59,7 @@ from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormData, FormMixin, current_form_id
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
+from streamlit.elements.html import HtmlMixin
 from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
@@ -169,6 +170,7 @@ class DeltaGenerator(
     GraphvizMixin,
     HeadingMixin,
     HelpMixin,
+    HtmlMixin,
     IframeMixin,
     ImageMixin,
     LayoutsMixin,
@@ -896,5 +898,8 @@ def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
 
     if ctx is None:
         raise NoSessionContext()
+
+    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = ctx.current_fragment_id
 
     ctx.enqueue(msg)

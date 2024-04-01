@@ -45,7 +45,7 @@ export default function IFrame({
     style = { overflow: "hidden" }
   }
 
-  style.colorScheme = "light dark"
+  style.colorScheme = "normal"
 
   // Either 'src' or 'srcDoc' will be set in our element. If 'src'
   // is set, we're loading a remote URL in the iframe.

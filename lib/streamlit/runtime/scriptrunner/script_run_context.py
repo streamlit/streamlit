@@ -17,7 +17,7 @@ from __future__ import annotations
 import collections
 import threading
 from dataclasses import dataclass, field
-from typing import Callable, Counter, Dict, Final, Union
+from typing import TYPE_CHECKING, Callable, Counter, Dict, Final, Union
 from urllib import parse
 
 from typing_extensions import TypeAlias
@@ -30,6 +30,9 @@ from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.scriptrunner.script_requests import ScriptRequests
 from streamlit.runtime.state import SafeSessionState
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+if TYPE_CHECKING:
+    from streamlit.runtime.fragment import FragmentStorage
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -59,6 +62,7 @@ class ScriptRunContext:
     main_script_path: str
     page_script_hash: str
     user_info: UserInfo
+    fragment_storage: "FragmentStorage"
 
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
@@ -71,12 +75,19 @@ class ScriptRunContext:
     form_ids_this_run: set[str] = field(default_factory=set)
     cursors: dict[int, "streamlit.cursor.RunningCursor"] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
+    current_fragment_id: str | None = None
+    fragment_ids_this_run: set[str] | None = None
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
     _production_query_params_used = False
 
-    def reset(self, query_string: str = "", page_script_hash: str = "") -> None:
+    def reset(
+        self,
+        query_string: str = "",
+        page_script_hash: str = "",
+        fragment_ids_this_run: set[str] | None = None,
+    ) -> None:
         self.cursors = {}
         self.widget_ids_this_run = set()
         self.widget_user_keys_this_run = set()
@@ -89,6 +100,8 @@ class ScriptRunContext:
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
+        self.current_fragment_id = None
+        self.fragment_ids_this_run = fragment_ids_this_run
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:
