@@ -45,6 +45,7 @@ export interface Props {
   element: ChatInputProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 // We want to show easily that there's scrolling so we deliberately choose
@@ -68,7 +69,12 @@ const isEnterKeyPressed = (
   )
 }
 
-function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
+function ChatInput({
+  width,
+  element,
+  widgetMgr,
+  fragmentId,
+}: Props): React.ReactElement {
   const theme = useTheme()
   // True if the user-specified state.value has not yet been synced to the WidgetStateManager.
   const [dirty, setDirty] = useState(false)
@@ -99,7 +105,12 @@ function ChatInput({ width, element, widgetMgr }: Props): React.ReactElement {
       return
     }
 
-    widgetMgr.setStringTriggerValue(element, value, { fromUi: true })
+    widgetMgr.setStringTriggerValue(
+      element,
+      value,
+      { fromUi: true },
+      fragmentId
+    )
     setDirty(false)
     setValue("")
     setScrollHeight(0)

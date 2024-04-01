@@ -49,6 +49,7 @@ export interface Props {
   theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -132,11 +133,8 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setIntArrayValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setIntArrayValue(element, this.state.value, source, fragmentId)
   }
 
   /**

@@ -143,7 +143,21 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setStringValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -178,7 +192,8 @@ describe("TextInput widget", () => {
       "testing",
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -199,7 +214,8 @@ describe("TextInput widget", () => {
       "testing",
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -243,9 +259,14 @@ describe("TextInput widget", () => {
       await screen.findByText("Press Enter to submit form")
     ).toBeInTheDocument()
 
-    expect(setStringValueSpy).toHaveBeenCalledWith(props.element, "TEST", {
-      fromUi: true,
-    })
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element,
+      "TEST",
+      {
+        fromUi: true,
+      },
+      undefined
+    )
   })
 
   it("does not update widget value on text changes when outside of a form", async () => {
@@ -265,7 +286,8 @@ describe("TextInput widget", () => {
       props.element.default,
       {
         fromUi: false,
-      }
+      },
+      undefined
     )
   })
 
@@ -291,7 +313,8 @@ describe("TextInput widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
