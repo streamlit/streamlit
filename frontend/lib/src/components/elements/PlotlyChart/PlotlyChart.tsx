@@ -30,6 +30,8 @@ import {
 } from "./CustomTheme"
 import { PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import decamelize from "decamelize"
+
 export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
@@ -98,15 +100,11 @@ export function parseBoxSelection(selection: any): SelectionRange {
   return { x, y }
 }
 
-function toSnakeCase(str: string): string {
-  return str.replace(/[\dA-Z\.]/g, letter =>
-    letter === "." ? "_" : `_${letter.toLowerCase()}`
-  )
-}
-
 function keysToSnakeCase(obj: Record<string, any>): Record<string, any> {
   return Object.keys(obj).reduce((acc, key) => {
-    const newKey = toSnakeCase(key)
+    const newKey = decamelize(key, {
+      preserveConsecutiveUppercase: true,
+    }).replace(".", "_")
     let value = obj[key]
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
