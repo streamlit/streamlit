@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from streamlit.web.server.asgi_server import Server, server_address_is_unix_socket
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.routes import allow_cross_origin_requests
-from streamlit.web.server.server import Server, server_address_is_unix_socket
 from streamlit.web.server.stats_request_handler import StatsRequestHandler
 
 __all__ = [

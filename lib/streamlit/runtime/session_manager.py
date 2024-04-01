@@ -33,7 +33,7 @@ class SessionClient(Protocol):
     """Interface for sending data to a session's client."""
 
     @abstractmethod
-    def write_forward_msg(self, msg: ForwardMsg) -> None:
+    async def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Deliver a ForwardMsg to the client.
 
         If the SessionClient has been disconnected, it should raise a
