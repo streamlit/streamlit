@@ -519,7 +519,6 @@ const RawElementNodeRenderer = (
       return (
         <DownloadButton
           endpoints={props.endpoints}
-          key={downloadButtonProto.id}
           element={downloadButtonProto}
           {...widgetProps}
         />
@@ -531,7 +530,6 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || cameraInputProto.disabled
       return (
         <CameraInput
-          key={cameraInputProto.id}
           element={cameraInputProto}
           uploadClient={props.uploadClient}
           {...widgetProps}
@@ -542,37 +540,19 @@ const RawElementNodeRenderer = (
     case "chatInput": {
       const chatInputProto = node.element.chatInput as ChatInputProto
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
-      return (
-        <ChatInput
-          key={chatInputProto.id}
-          element={chatInputProto}
-          {...widgetProps}
-        />
-      )
+      return <ChatInput element={chatInputProto} {...widgetProps} />
     }
 
     case "checkbox": {
       const checkboxProto = node.element.checkbox as CheckboxProto
       widgetProps.disabled = widgetProps.disabled || checkboxProto.disabled
-      return (
-        <Checkbox
-          key={checkboxProto.id}
-          element={checkboxProto}
-          {...widgetProps}
-        />
-      )
+      return <Checkbox element={checkboxProto} {...widgetProps} />
     }
 
     case "colorPicker": {
       const colorPickerProto = node.element.colorPicker as ColorPickerProto
       widgetProps.disabled = widgetProps.disabled || colorPickerProto.disabled
-      return (
-        <ColorPicker
-          key={colorPickerProto.id}
-          element={colorPickerProto}
-          {...widgetProps}
-        />
-      )
+      return <ColorPicker element={colorPickerProto} {...widgetProps} />
     }
 
     case "componentInstance":
@@ -587,13 +567,7 @@ const RawElementNodeRenderer = (
     case "dateInput": {
       const dateInputProto = node.element.dateInput as DateInputProto
       widgetProps.disabled = widgetProps.disabled || dateInputProto.disabled
-      return (
-        <DateInput
-          key={dateInputProto.id}
-          element={dateInputProto}
-          {...widgetProps}
-        />
-      )
+      return <DateInput element={dateInputProto} {...widgetProps} />
     }
 
     case "fileUploader": {
@@ -601,7 +575,6 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || fileUploaderProto.disabled
       return (
         <FileUploader
-          key={fileUploaderProto.id}
           element={fileUploaderProto}
           uploadClient={props.uploadClient}
           {...widgetProps}
@@ -618,89 +591,49 @@ const RawElementNodeRenderer = (
     case "multiselect": {
       const multiSelectProto = node.element.multiselect as MultiSelectProto
       widgetProps.disabled = widgetProps.disabled || multiSelectProto.disabled
-      return (
-        <Multiselect
-          key={multiSelectProto.id}
-          element={multiSelectProto}
-          {...widgetProps}
-        />
-      )
+      return <Multiselect element={multiSelectProto} {...widgetProps} />
     }
 
     case "numberInput": {
       const numberInputProto = node.element.numberInput as NumberInputProto
       widgetProps.disabled = widgetProps.disabled || numberInputProto.disabled
-      return (
-        <NumberInput
-          key={numberInputProto.id}
-          element={numberInputProto}
-          {...widgetProps}
-        />
-      )
+      return <NumberInput element={numberInputProto} {...widgetProps} />
     }
 
     case "radio": {
       const radioProto = node.element.radio as RadioProto
       widgetProps.disabled = widgetProps.disabled || radioProto.disabled
-      return (
-        <Radio key={radioProto.id} element={radioProto} {...widgetProps} />
-      )
+      return <Radio element={radioProto} {...widgetProps} />
     }
 
     case "selectbox": {
       const selectboxProto = node.element.selectbox as SelectboxProto
       widgetProps.disabled = widgetProps.disabled || selectboxProto.disabled
-      return (
-        <Selectbox
-          key={selectboxProto.id}
-          element={selectboxProto}
-          {...widgetProps}
-        />
-      )
+      return <Selectbox element={selectboxProto} {...widgetProps} />
     }
 
     case "slider": {
       const sliderProto = node.element.slider as SliderProto
       widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
-      return (
-        <Slider key={sliderProto.id} element={sliderProto} {...widgetProps} />
-      )
+      return <Slider element={sliderProto} {...widgetProps} />
     }
 
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
       widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
-      return (
-        <TextArea
-          key={textAreaProto.id}
-          element={textAreaProto}
-          {...widgetProps}
-        />
-      )
+      return <TextArea element={textAreaProto} {...widgetProps} />
     }
 
     case "textInput": {
       const textInputProto = node.element.textInput as TextInputProto
       widgetProps.disabled = widgetProps.disabled || textInputProto.disabled
-      return (
-        <TextInput
-          key={textInputProto.id}
-          element={textInputProto}
-          {...widgetProps}
-        />
-      )
+      return <TextInput element={textInputProto} {...widgetProps} />
     }
 
     case "timeInput": {
       const timeInputProto = node.element.timeInput as TimeInputProto
       widgetProps.disabled = widgetProps.disabled || timeInputProto.disabled
-      return (
-        <TimeInput
-          key={timeInputProto.id}
-          element={timeInputProto}
-          {...widgetProps}
-        />
-      )
+      return <TimeInput element={timeInputProto} {...widgetProps} />
     }
 
     default:
