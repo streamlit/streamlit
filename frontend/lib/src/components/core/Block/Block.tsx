@@ -26,10 +26,7 @@ import { useTheme } from "@emotion/react"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { BlockNode, AppNode, ElementNode } from "@streamlit/lib/src/AppNode"
-import {
-  getElementWidgetID,
-  notNullOrUndefined,
-} from "@streamlit/lib/src/util/utils"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Form } from "@streamlit/lib/src/components/widgets/Form"
 import Tabs, { TabProps } from "@streamlit/lib/src/components/elements/Tabs"
 import Popover from "@streamlit/lib/src/components/elements/Popover"
