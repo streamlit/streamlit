@@ -508,13 +508,13 @@ describe("getLoadingScreenType", () => {
 })
 
 describe("keysToSnakeCase", () => {
-  it("should return marker_size for marker.size", () => {
+  it("should remove . with _", () => {
     expect(keysToSnakeCase({ "marker.size": "bob" })).toEqual({
       marker_size: "bob",
     })
   })
 
-  it("should return marker_size for marker.size", () => {
+  it("should return decamelized keys for regular keys", () => {
     expect(keysToSnakeCase({ aliceName: "alice", bobName: "bob" })).toEqual({
       alice_name: "alice",
       bob_name: "bob",
