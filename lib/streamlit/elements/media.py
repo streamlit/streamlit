@@ -30,7 +30,7 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.runtime_util import duration_to_seconds
+from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from typing import Any
@@ -484,7 +484,7 @@ def _parse_start_time_end_time(
     """Parse start_time and end_time and return them as int."""
 
     try:
-        maybe_start_time = duration_to_seconds(start_time, coerce_none_to_inf=False)
+        maybe_start_time = time_to_seconds(start_time, coerce_none_to_inf=False)
         if maybe_start_time is None:
             raise ValueError
         start_time = int(maybe_start_time)
@@ -495,9 +495,7 @@ def _parse_start_time_end_time(
         raise StreamlitAPIException(error_msg) from None
 
     try:
-        # TODO[kajarenc]: Replace `duration_to_seconds` with `time_to_seconds`
-        #  when PR #8343 is merged.
-        end_time = duration_to_seconds(end_time, coerce_none_to_inf=False)
+        end_time = time_to_seconds(end_time, coerce_none_to_inf=False)
         if end_time is not None:
             end_time = int(end_time)
     except StreamlitAPIException:
