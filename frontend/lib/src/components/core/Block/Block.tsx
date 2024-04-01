@@ -197,7 +197,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
                 node: node as ElementNode,
               }
 
-              return <ElementNodeRenderer {...childProps} />
+              return <ElementNodeRenderer key={index} {...childProps} />
             }
 
             // Recursive case: render a block, which can contain other blocks
