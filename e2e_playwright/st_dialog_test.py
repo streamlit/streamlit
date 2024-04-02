@@ -37,7 +37,7 @@ def open_sidebar_dialog(app: Page):
 
 def click_to_dismiss(app: Page):
     # Click somewhere outside the close popover container:
-    app.get_by_test_id("stModal").click(position={"x": 0, "y": 0})
+    app.get_by_test_id(modal_test_id).click(position={"x": 0, "y": 0})
 
 
 def test_displays_dialog_properly(app: Page):
@@ -71,8 +71,6 @@ def test_dialog_dismisses_properly(app: Page):
 
     click_to_dismiss(app)
     expect(main_dialog).not_to_be_visible()
-
-    wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
     expect(main_dialog).to_have_count(0)
 
@@ -95,7 +93,6 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
 
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
-        wait_for_app_run(app)
 
 
 def test_dialog_reopens_properly_after_close(app: Page):
