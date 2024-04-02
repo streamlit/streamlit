@@ -17,8 +17,8 @@ from playwright.sync_api import Page, expect
 
 def test_nested_dialogs(app: Page):
     """Test that st.dialog may not be nested inside other dialogs."""
-    exception_message = app.locator(".stException .message")
+    exception_message = app.get_by_test_id("stException")
 
-    expect(exception_message).to_have_text(
+    expect(exception_message).to_contain_text(
         "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
     )
