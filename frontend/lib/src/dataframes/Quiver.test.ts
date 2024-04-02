@@ -22,7 +22,7 @@ import {
   // Types
   CATEGORICAL,
   CATEGORICAL_COLUMN,
-  DATETIME,
+  DATE,
   DECIMAL,
   DICTIONARY,
   FLOAT64,
@@ -288,8 +288,8 @@ describe("Quiver", () => {
           )
         })
 
-        test("datetime", () => {
-          const mockElement = { data: DATETIME }
+        test("date", () => {
+          const mockElement = { data: DATE }
           const q = new Quiver(mockElement)
           const indexType = q.types.index[0]
 
@@ -691,8 +691,8 @@ describe("Quiver", () => {
         })
       })
 
-      test("datetime", () => {
-        const mockElement = { data: DATETIME }
+      test("date", () => {
+        const mockElement = { data: DATE }
         const q = new Quiver(mockElement)
 
         expect(q.index).toEqual([
@@ -1211,8 +1211,8 @@ describe("Quiver", () => {
         })
       })
 
-      test("datetime", () => {
-        const mockElement = { data: DATETIME }
+      test("date", () => {
+        const mockElement = { data: DATE }
         const q = new Quiver(mockElement)
 
         const qq = q.addRows(q)

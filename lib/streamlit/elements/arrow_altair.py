@@ -1171,20 +1171,6 @@ def _get_opacity_encoding(
     return None
 
 
-def _get_scale(df: pd.DataFrame, column_name: str | None) -> alt.Scale:
-    import altair as alt
-
-    # Set the X and Y axes' scale to "utc" if they contain date values.
-    # This causes time data to be displayed in UTC, rather the user's local
-    # time zone. (By default, vega-lite displays time data in the browser's
-    # local time zone, regardless of which time zone the data specifies:
-    # https://vega.github.io/vega-lite/docs/timeunit.html#output).
-    if _is_date_column(df, column_name):
-        return alt.Scale(type="utc")
-
-    return alt.Scale()
-
-
 def _get_axis_config(df: pd.DataFrame, column_name: str | None, grid: bool) -> alt.Axis:
     import altair as alt
     from pandas.api.types import is_integer_dtype
@@ -1266,7 +1252,7 @@ def _get_x_encoding(
         x_field,
         title=x_title,
         type=_get_x_encoding_type(df, chart_type, x_column),
-        scale=_get_scale(df, x_column),
+        scale=alt.Scale(),
         axis=_get_axis_config(df, x_column, grid=False),
     )
 
@@ -1305,7 +1291,7 @@ def _get_y_encoding(
         field=y_field,
         title=y_title,
         type=_get_y_encoding_type(df, y_column),
-        scale=_get_scale(df, y_column),
+        scale=alt.Scale(),
         axis=_get_axis_config(df, y_column, grid=True),
     )
 
