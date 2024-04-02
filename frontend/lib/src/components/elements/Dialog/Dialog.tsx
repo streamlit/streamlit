@@ -32,8 +32,9 @@ import Modal, {
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
+import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import { StyledDialogContent } from "./styled-components"
@@ -121,14 +122,6 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
           widgetMgr.releaseDialogLock()
         }}
         size={size}
-        overrides={{
-          Dialog: {
-            style: {
-              // make sure the modal is not too small on mobile
-              minWidth: "20rem",
-            },
-          },
-        }}
       >
         <ModalHeader>{title}</ModalHeader>
         <ModalBody>
@@ -139,4 +132,14 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   )
 }
 
-export default Dialog
+function DialogWithProvider(
+  props: React.PropsWithChildren<Props>
+): ReactElement {
+  return (
+    <IsDialogContext.Provider value={true}>
+      <Dialog {...props} />
+    </IsDialogContext.Provider>
+  )
+}
+
+export default DialogWithProvider
