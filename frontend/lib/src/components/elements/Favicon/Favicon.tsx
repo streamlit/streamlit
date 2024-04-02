@@ -30,7 +30,18 @@ function iconToUrl(icon: string): string {
   } else {
     snakeIconName = snakeCase(matchResult[2])
   }
-  const iconUrl = `https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/${snakeIconName}/baseline.svg`
+  let iconType = "baseline"
+  if (matchResult[1] === "material") {
+    iconType = "baseline"
+  } else if (matchResult[1] === "material-outlined") {
+    iconType = "outline"
+  } else if (matchResult[1] === "material-rounded") {
+    iconType = "round"
+  } else {
+    iconType = "baseline"
+  }
+
+  const iconUrl = `https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/${snakeIconName}/${iconType}.svg`
   return iconUrl
 }
 
