@@ -136,13 +136,12 @@ def fragment(
     elements are redrawn on each full-script rerun. The rest of the app is
     persisted during a fragment rerun. When a fragment renders elements into
     externally created containers, the elements will not be cleared with each
-    fragment rerun. In this case, elements will be drawn accumulatively in
-    those containers with each fragment rerun, until the next full-script
-    rerun.
+    fragment rerun. In this case, elements will accumulate in those containers
+    with each fragment rerun, until the next full-script rerun.
 
     Calling `st.sidebar` in a fragment is not supported. To write elements to
-    the sidebar with a fragment, use `with st.sidebar` outside of the fragment
-    function call.
+    the sidebar with a fragment, call your fragment funciton inside a
+    `with st.sidebar` context manager.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
