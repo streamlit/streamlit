@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ const checkboxInsideForm = {
   form_6: true,
   form_7: true,
   form_8: true,
-  form_9: true
+  form_9: true,
 };
 
 describe("Form/column association", () => {

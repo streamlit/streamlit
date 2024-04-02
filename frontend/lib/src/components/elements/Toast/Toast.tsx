@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,17 +89,21 @@ function generateToastOverrides(
 }
 
 // Function used to truncate toast messages that are longer than three lines.
-function shortenMessage(fullMessage: string): string {
+export function shortenMessage(fullMessage: string): string {
   const characterLimit = 114
 
   if (fullMessage.length > characterLimit) {
     let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
-      message = message.split(" ").slice(0, -1).join(" ")
+      message = message
+        .substring(0, characterLimit)
+        .split(" ")
+        .slice(0, -1)
+        .join(" ")
     }
 
-    return message
+    return message.trim()
   }
 
   return fullMessage
@@ -133,7 +137,11 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
           />
         </StyledToastMessage>
         {shortened && (
-          <StyledViewButton className="toastViewButton" onClick={handleClick}>
+          <StyledViewButton
+            data-testid="toastViewButton"
+            className="toastViewButton"
+            onClick={handleClick}
+          >
             {expanded ? "view less" : "view more"}
           </StyledViewButton>
         )}

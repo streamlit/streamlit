@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 import React, { ReactElement, useEffect, useRef } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
 
 const DEFAULT_HEIGHT = 528
 
@@ -24,6 +25,11 @@ export interface VideoProps {
   endpoints: StreamlitEndpoints
   width: number
   element: VideoProto
+}
+
+export interface Subtitle {
+  label: string
+  url: string
 }
 
 export default function Video({
@@ -35,7 +41,7 @@ export default function Video({
 
   /* Element may contain "url" or "data" property. */
 
-  const { type, url, startTime } = element
+  const { type, url, startTime, subtitles, endTime, loop } = element
 
   // Handle startTime changes
   useEffect(() => {
@@ -49,7 +55,6 @@ export default function Video({
 
     const setStartTime: () => void = () => {
       if (videoNode) {
-        // setStartTime
         videoNode.currentTime = element.startTime
       }
     }
@@ -65,12 +70,82 @@ export default function Video({
     }
   }, [element])
 
-  const getYoutubeSrc = (url: string): string => {
-    const { startTime } = element
-    if (startTime) {
-      return `${url}?start=${startTime}`
+  // Stop the video at 'endTime' and handle loop
+  useEffect(() => {
+    const videoNode = videoRef.current
+    if (!videoNode) return
+
+    // Flag to avoid calling 'videoNode.pause()' multiple times
+    let stoppedByEndTime = false
+
+    const handleTimeUpdate = (): void => {
+      if (endTime > 0 && videoNode.currentTime >= endTime) {
+        if (loop) {
+          // If loop is true and we reached 'endTime', reset to 'startTime'
+          videoNode.currentTime = startTime || 0
+          videoNode.play()
+        } else if (!stoppedByEndTime) {
+          stoppedByEndTime = true
+          videoNode.pause()
+        }
+      }
     }
-    return url
+
+    if (endTime > 0) {
+      videoNode.addEventListener("timeupdate", handleTimeUpdate)
+    }
+
+    return () => {
+      if (videoNode && endTime > 0) {
+        videoNode.removeEventListener("timeupdate", handleTimeUpdate)
+      }
+    }
+  }, [endTime, loop, startTime])
+
+  // Handle looping the video
+  useEffect(() => {
+    const videoNode = videoRef.current
+    if (!videoNode) return
+
+    // Loop the video when it has ended
+    const handleVideoEnd = (): void => {
+      if (loop) {
+        videoNode.currentTime = startTime || 0 // Reset to startTime or to the start if not specified
+        videoNode.play()
+      }
+    }
+
+    videoNode.addEventListener("ended", handleVideoEnd)
+
+    return () => {
+      if (videoNode) {
+        videoNode.removeEventListener("ended", handleVideoEnd)
+      }
+    }
+  }, [loop, startTime])
+
+  const getYoutubeSrc = (url: string): string => {
+    const { startTime, endTime, loop } = element
+    const youtubeUrl = new URL(url)
+
+    if (startTime && !isNaN(startTime)) {
+      youtubeUrl.searchParams.append("start", startTime.toString())
+    }
+
+    if (endTime && !isNaN(endTime)) {
+      youtubeUrl.searchParams.append("end", endTime.toString())
+    }
+
+    if (loop) {
+      youtubeUrl.searchParams.append("loop", "1")
+      // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
+      const videoId = youtubeUrl.pathname.split("/").pop()
+
+      if (videoId) {
+        youtubeUrl.searchParams.append("playlist", videoId)
+      }
+    }
+    return youtubeUrl.toString()
   }
 
   /* Is this a YouTube link? If so we need a fancier tag.
@@ -92,6 +167,7 @@ export default function Video({
         src={getYoutubeSrc(url)}
         width={width}
         height={height}
+        style={{ colorScheme: "normal" }}
         frameBorder="0"
         allow="autoplay; encrypted-media"
         allowFullScreen
@@ -99,6 +175,8 @@ export default function Video({
     )
   }
 
+  // Only in dev mode we set crossOrigin to "anonymous" to avoid CORS issues
+  // when streamlit frontend and backend are running on different ports
   return (
     <video
       data-testid="stVideo"
@@ -107,6 +185,20 @@ export default function Video({
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
-    />
+      crossOrigin={
+        IS_DEV_ENV && subtitles.length > 0 ? "anonymous" : undefined
+      }
+    >
+      {subtitles &&
+        subtitles.map((subtitle: Subtitle, idx: number) => (
+          <track
+            key={idx}
+            kind="captions"
+            src={endpoints.buildMediaURL(subtitle.url)}
+            label={subtitle.label}
+            default={idx === 0}
+          />
+        ))}
+    </video>
   )
 }

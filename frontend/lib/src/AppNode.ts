@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,6 +91,12 @@ export interface AppNode {
   readonly scriptRunId: string
 
   /**
+   * The ID of the fragment that sent the Delta creating this AppNode. If this
+   * AppNode was not created by a fragment, this field is falsy.
+   */
+  readonly fragmentId?: string
+
+  /**
    * Return the AppNode for the given index path, or undefined if the path
    * is invalid.
    */
@@ -106,7 +112,10 @@ export interface AppNode {
    * Recursively remove children nodes whose scriptRunId is no longer current.
    * If this node should no longer exist, return undefined.
    */
-  clearStaleNodes(currentScriptRunId: string): AppNode | undefined
+  clearStaleNodes(
+    currentScriptRunId: string,
+    fragmentIdsThisRun?: Array<string>
+  ): AppNode | undefined
 
   /**
    * Return a Set of all the Elements contained in the tree.
@@ -126,6 +135,8 @@ export class ElementNode implements AppNode {
 
   public readonly scriptRunId: string
 
+  public readonly fragmentId?: string
+
   private lazyQuiverElement?: Quiver
 
   private lazyVegaLiteChartElement?: VegaLiteChartElement
@@ -134,11 +145,13 @@ export class ElementNode implements AppNode {
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
-    scriptRunId: string
+    scriptRunId: string,
+    fragmentId?: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
+    this.fragmentId = fragmentId
   }
 
   public get quiverElement(): Quiver {
@@ -199,7 +212,19 @@ export class ElementNode implements AppNode {
     throw new Error("'setIn' cannot be called on an ElementNode")
   }
 
-  public clearStaleNodes(currentScriptRunId: string): ElementNode | undefined {
+  public clearStaleNodes(
+    currentScriptRunId: string,
+    fragmentIdsThisRun?: Array<string>
+  ): ElementNode | undefined {
+    // If we're currently running a fragment, nodes unrelated to the fragment
+    // shouldn't be cleared.
+    if (
+      fragmentIdsThisRun &&
+      fragmentIdsThisRun.length &&
+      (!this.fragmentId || !fragmentIdsThisRun.includes(this.fragmentId))
+    ) {
+      return this
+    }
     return this.scriptRunId === currentScriptRunId ? this : undefined
   }
 
@@ -308,14 +333,18 @@ export class BlockNode implements AppNode {
 
   public readonly scriptRunId: string
 
+  public readonly fragmentId?: string
+
   public constructor(
     children?: AppNode[],
     deltaBlock?: BlockProto,
-    scriptRunId?: string
+    scriptRunId?: string,
+    fragmentId?: string
   ) {
     this.children = children ?? []
     this.deltaBlock = deltaBlock ?? new BlockProto({})
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
+    this.fragmentId = fragmentId
   }
 
   /** True if this Block has no children. */
@@ -368,21 +397,41 @@ export class BlockNode implements AppNode {
     return new BlockNode(newChildren, this.deltaBlock, scriptRunId)
   }
 
-  public clearStaleNodes(currentScriptRunId: string): BlockNode | undefined {
-    if (this.scriptRunId !== currentScriptRunId) {
-      return undefined
+  public clearStaleNodes(
+    currentScriptRunId: string,
+    fragmentIdsThisRun?: Array<string>
+  ): BlockNode | undefined {
+    if (!fragmentIdsThisRun || !fragmentIdsThisRun.length) {
+      // If we're not currently running a fragment, then we can remove any blocks
+      // that don't correspond to currentScriptRunId.
+      if (this.scriptRunId !== currentScriptRunId) {
+        return undefined
+      }
+    } else {
+      // Otherwise, we are currently running a fragment, and our behavior
+      // depends on the fragmentId of this BlockNode.
+
+      if (this.fragmentId) {
+        if (!fragmentIdsThisRun.includes(this.fragmentId)) {
+          // This BlockNode corresponds to a different fragment, so we know we
+          // won't be modifying it and can return early.
+          return this
+        }
+
+        // If this BlockNode *does* correspond to the current fragment, we
+        // recurse into it below.
+      }
+
+      // If this BlockNode doesn't correspond to a fragment at all, we recurse
+      // into it below as one of its children might.
     }
 
     // Recursively clear our children.
     const newChildren = this.children
-      .map(child => child.clearStaleNodes(currentScriptRunId))
+      .map(child =>
+        child.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun)
+      )
       .filter(notUndefined)
-
-    // If we have no children and our `allowEmpty` flag is not set, prune
-    // ourselves!
-    if (newChildren.length === 0 && !this.deltaBlock.allowEmpty) {
-      return undefined
-    }
 
     return new BlockNode(newChildren, this.deltaBlock, currentScriptRunId)
   }
@@ -409,7 +458,10 @@ export class AppRoot {
   /**
    * Create an empty AppRoot with a placeholder "skeleton" element.
    */
-  public static empty(isInitialRender = true): AppRoot {
+  public static empty(
+    isInitialRender = true,
+    sidebarElements?: BlockNode | undefined
+  ): AppRoot {
     const mainNodes: AppNode[] = []
 
     let waitElement: Element | undefined
@@ -447,11 +499,9 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    const sidebar = new BlockNode(
-      [],
-      new BlockProto({ allowEmpty: true }),
-      NO_SCRIPT_RUN_ID
-    )
+    const sidebar =
+      sidebarElements ||
+      new BlockNode([], new BlockProto({ allowEmpty: true }), NO_SCRIPT_RUN_ID)
 
     const event = new BlockNode(
       [],
@@ -459,26 +509,33 @@ export class AppRoot {
       NO_SCRIPT_RUN_ID
     )
 
-    return new AppRoot(new BlockNode([main, sidebar, event]))
+    const bottom = new BlockNode(
+      [],
+      new BlockProto({ allowEmpty: true }),
+      NO_SCRIPT_RUN_ID
+    )
+
+    return new AppRoot(new BlockNode([main, sidebar, event, bottom]))
   }
 
   public constructor(root: BlockNode) {
     this.root = root
 
-    // Verify that our root node has exactly 3 children: a 'main' block,
-    // a 'sidebar' block, and an 'event' block.
+    // Verify that our root node has exactly 4 children: a 'main' block,
+    // a 'sidebar' block, a `bottom` block and an 'event' block.
     if (
-      this.root.children.length !== 3 ||
+      this.root.children.length !== 4 ||
       this.main == null ||
       this.sidebar == null ||
-      this.event == null
+      this.event == null ||
+      this.bottom == null
     ) {
       throw new Error(`Invalid root node children! ${root}`)
     }
   }
 
   public get main(): BlockNode {
-    const [main, ,] = this.root.children
+    const [main] = this.root.children
     return main as BlockNode
   }
 
@@ -490,6 +547,11 @@ export class AppRoot {
   public get event(): BlockNode {
     const [, , event] = this.root.children
     return event as BlockNode
+  }
+
+  public get bottom(): BlockNode {
+    const [, , , bottom] = this.root.children
+    return bottom as BlockNode
   }
 
   public applyDelta(
@@ -504,14 +566,21 @@ export class AppRoot {
     switch (delta.type) {
       case "newElement": {
         const element = delta.newElement as Element
-        return this.addElement(deltaPath, scriptRunId, element, metadata)
+        return this.addElement(
+          deltaPath,
+          scriptRunId,
+          element,
+          metadata,
+          delta.fragmentId
+        )
       }
 
       case "addBlock": {
         return this.addBlock(
           deltaPath,
           delta.addBlock as BlockProto,
-          scriptRunId
+          scriptRunId,
+          delta.fragmentId
         )
       }
 
@@ -541,17 +610,26 @@ export class AppRoot {
     }
   }
 
-  public clearStaleNodes(currentScriptRunId: string): AppRoot {
+  public clearStaleNodes(
+    currentScriptRunId: string,
+    fragmentIdsThisRun?: Array<string>
+  ): AppRoot {
     const main =
-      this.main.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      this.main.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
+      new BlockNode()
     const sidebar =
-      this.sidebar.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      this.sidebar.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
+      new BlockNode()
     const event =
-      this.event.clearStaleNodes(currentScriptRunId) || new BlockNode()
+      this.event.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
+      new BlockNode()
+    const bottom =
+      this.bottom.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun) ||
+      new BlockNode()
 
     return new AppRoot(
       new BlockNode(
-        [main, sidebar, event],
+        [main, sidebar, event, bottom],
         new BlockProto({ allowEmpty: true }),
         currentScriptRunId
       )
@@ -564,6 +642,7 @@ export class AppRoot {
     this.main.getElements(elements)
     this.sidebar.getElements(elements)
     this.event.getElements(elements)
+    this.bottom.getElements(elements)
     return elements
   }
 
@@ -571,16 +650,23 @@ export class AppRoot {
     deltaPath: number[],
     scriptRunId: string,
     element: Element,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    fragmentId?: string
   ): AppRoot {
-    const elementNode = new ElementNode(element, metadata, scriptRunId)
+    const elementNode = new ElementNode(
+      element,
+      metadata,
+      scriptRunId,
+      fragmentId
+    )
     return new AppRoot(this.root.setIn(deltaPath, elementNode, scriptRunId))
   }
 
   private addBlock(
     deltaPath: number[],
     block: BlockProto,
-    scriptRunId: string
+    scriptRunId: string,
+    fragmentId?: string
   ): AppRoot {
     const existingNode = this.root.getIn(deltaPath)
 
@@ -590,7 +676,7 @@ export class AppRoot {
     const children: AppNode[] =
       existingNode instanceof BlockNode ? existingNode.children : []
 
-    const blockNode = new BlockNode(children, block, scriptRunId)
+    const blockNode = new BlockNode(children, block, scriptRunId, fragmentId)
     return new AppRoot(this.root.setIn(deltaPath, blockNode, scriptRunId))
   }
 

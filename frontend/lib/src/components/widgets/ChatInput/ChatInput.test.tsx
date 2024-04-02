@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,15 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import ChatInput, { Props } from "./ChatInput"
 
-const getProps = (elementProps: Partial<ChatInputProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<ChatInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: ChatInputProto.create({
     id: "123",
     placeholder: "Enter Text Here",
     disabled: false,
     default: "",
-    position: ChatInputProto.Position.BOTTOM,
     ...elementProps,
   }),
   width: 300,
@@ -38,6 +40,7 @@ const getProps = (elementProps: Partial<ChatInputProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("ChatInput widget", () => {
@@ -49,7 +52,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).toBeInTheDocument()
   })
 
@@ -57,7 +60,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).toHaveAttribute("placeholder", props.element.placeholder)
   })
 
@@ -65,7 +68,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).toHaveAttribute("aria-label", props.element.placeholder)
   })
 
@@ -73,7 +76,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).toHaveTextContent(props.element.default)
   })
 
@@ -81,7 +84,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     fireEvent.change(chatInput, { target: { value: "Sample text" } })
     expect(chatInput).toHaveTextContent("Sample text")
   })
@@ -90,7 +93,7 @@ describe("ChatInput widget", () => {
     const props = getProps({ maxChars: 10 })
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     fireEvent.change(chatInput, { target: { value: "1234567890" } })
     expect(chatInput).toHaveTextContent("1234567890")
     fireEvent.change(chatInput, { target: { value: "12345678901" } })
@@ -102,14 +105,37 @@ describe("ChatInput widget", () => {
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     fireEvent.change(chatInput, { target: { value: "1234567890" } })
     expect(chatInput).toHaveTextContent("1234567890")
     fireEvent.keyDown(chatInput, { key: "Enter" })
-    expect(spy).toHaveBeenCalledWith(props.element, "1234567890", {
-      fromUi: true,
-    })
+    expect(spy).toHaveBeenCalledWith(
+      props.element,
+      "1234567890",
+      {
+        fromUi: true,
+      },
+      undefined
+    )
     expect(chatInput).toHaveTextContent("")
+  })
+
+  it("can set fragmentId when sending value", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInputTextArea")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    fireEvent.keyDown(chatInput, { key: "Enter" })
+    expect(spy).toHaveBeenCalledWith(
+      props.element,
+      "1234567890",
+      {
+        fromUi: true,
+      },
+      "myFragmentId"
+    )
   })
 
   it("will not send an empty value on enter if empty", () => {
@@ -117,7 +143,7 @@ describe("ChatInput widget", () => {
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     fireEvent.keyDown(chatInput, { key: "Enter" })
     expect(spy).not.toHaveBeenCalledWith(props.element, "", {
       fromUi: true,
@@ -129,7 +155,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     const instructions = screen.getByTestId("InputInstructions")
     expect(instructions).toHaveTextContent("")
 
@@ -141,7 +167,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
     render(<ChatInput {...props} />)
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
 
     fireEvent.change(chatInput, { target: { value: "1234567890" } })
     expect(chatInput).toHaveTextContent("1234567890")
@@ -157,7 +183,7 @@ describe("ChatInput widget", () => {
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     fireEvent.change(chatInput, { target: { value: "1234567890" } })
     expect(chatInput).toHaveTextContent("1234567890")
     fireEvent.keyDown(chatInput, { key: "Enter", ctrlKey: true })
@@ -172,7 +198,7 @@ describe("ChatInput widget", () => {
     const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     fireEvent.change(chatInput, { target: { value: "1234567890" } })
     expect(chatInput).toHaveTextContent("1234567890")
     fireEvent.keyDown(chatInput, { key: "Enter", metaKey: true })
@@ -186,7 +212,7 @@ describe("ChatInput widget", () => {
     const props = getProps({ value: "12345", setValue: true })
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).toHaveTextContent("12345")
   })
 
@@ -194,7 +220,7 @@ describe("ChatInput widget", () => {
     const props = getProps({ value: "12345", setValue: false })
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).toHaveTextContent("")
   })
 
@@ -202,7 +228,7 @@ describe("ChatInput widget", () => {
     const props = getProps({ disabled: true })
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).toBeDisabled()
 
     const button = screen.getByRole("button")
@@ -213,7 +239,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     expect(chatInput).not.toBeDisabled()
 
     const button = screen.getByRole("button")
@@ -232,7 +258,7 @@ describe("ChatInput widget", () => {
     const props = getProps()
     render(<ChatInput {...props} />)
 
-    const chatInput = screen.getByTestId("stChatInput")
+    const chatInput = screen.getByTestId("stChatInputTextArea")
     fireEvent.change(chatInput, { target: { value: "Sample text" } })
 
     const button = screen.getByRole("button")

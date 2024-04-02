@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 
 import React from "react"
+import uniqueId from "lodash/uniqueId"
 import { Input as UIInput } from "baseui/input"
 import { TextInput as TextInputProto } from "@streamlit/lib/src/proto"
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -41,6 +42,7 @@ export interface Props {
   element: TextInputProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -59,9 +61,16 @@ interface State {
 class TextInput extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  private readonly id: string
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
+  }
+
+  constructor(props: Props) {
+    super(props)
+    this.id = uniqueId("text_input_")
   }
 
   private get initialValue(): string | null {
@@ -111,11 +120,8 @@ class TextInput extends React.PureComponent<Props, State> {
    *                      By default, this is true, meaning the state WILL be updated.
    */
   private commitWidgetValue = (source: Source, updateState = true): void => {
-    this.props.widgetMgr.setStringValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setStringValue(element, this.state.value, source, fragmentId)
     if (updateState) {
       this.setState({ dirty: false })
     }
@@ -213,6 +219,7 @@ class TextInput extends React.PureComponent<Props, State> {
           labelVisibility={labelVisibilityProtoValueToEnum(
             element.labelVisibility?.value
           )}
+          htmlFor={this.id}
         >
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -231,6 +238,7 @@ class TextInput extends React.PureComponent<Props, State> {
           onKeyPress={this.onKeyPress}
           aria-label={element.label}
           disabled={disabled}
+          id={this.id}
           type={this.getTypeString()}
           autoComplete={element.autocomplete}
           overrides={{

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ export interface OwnProps {
   element: CheckboxProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface ThemeProps {
@@ -108,11 +109,8 @@ class Checkbox extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setBoolValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setBoolValue(element, this.state.value, source, fragmentId)
   }
 
   /**
@@ -203,12 +201,10 @@ class Checkbox extends React.PureComponent<Props, State> {
                 $checked: boolean
                 $isHovered: boolean
               }) => {
-                let backgroundColor = lightTheme
-                  ? colors.gray50
-                  : colors.gray80
+                let backgroundColor = colors.fadedText40
 
                 if ($isHovered && !disabled) {
-                  backgroundColor = lightTheme ? colors.gray60 : colors.gray70
+                  backgroundColor = colors.fadedText20
                 }
 
                 if ($checked && !disabled) {

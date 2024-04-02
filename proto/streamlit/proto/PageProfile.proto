@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "PageProfileProto";
+
 
 message PageProfile {
   repeated Command commands = 1;
@@ -27,6 +30,7 @@ message PageProfile {
   string os = 8;
   string timezone = 9;
   bool headless = 10;
+  bool is_fragment_run = 11;
 }
 
 // The field names are used as part of the event json sent

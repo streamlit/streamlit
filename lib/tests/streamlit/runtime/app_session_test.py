@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import streamlit.runtime.app_session as app_session
 from streamlit import config
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import Runtime
@@ -35,6 +36,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.script_data import ScriptData
@@ -73,7 +75,7 @@ def _create_test_session(
         return_value=event_loop,
     ):
         return AppSession(
-            script_data=ScriptData("/fake/script_path.py", "fake_command_line"),
+            script_data=ScriptData("/fake/script_path.py", is_hello=False),
             uploaded_file_manager=MagicMock(),
             script_cache=MagicMock(),
             message_enqueued_callback=None,
@@ -177,7 +179,15 @@ class AppSessionTest(unittest.TestCase):
 
     def test_creates_session_state_on_init(self):
         session = _create_test_session()
-        self.assertTrue(isinstance(session.session_state, SessionState))
+        self.assertIsInstance(session.session_state, SessionState)
+
+    def test_creates_fragment_storage_on_init(self):
+        session = _create_test_session()
+        # NOTE: We only call assertIsNotNone here because protocols can't be used with
+        # isinstance (there's no need to as the static type checker already ensures
+        # the field has the correct type), and we don't want to mark
+        # MemoryFragmentStorage as @runtime_checkable.
+        self.assertIsNotNone(session._fragment_storage)
 
     def test_clear_cache_resets_session_state(self):
         session = _create_test_session()
@@ -271,6 +281,25 @@ class AppSessionTest(unittest.TestCase):
         # And a new ScriptRunner should be created.
         mock_create_scriptrunner.assert_called_once()
 
+    @patch_config_options({"runner.fastReruns": True})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_fragment_requests_existing_scriptrunner(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        session = _create_test_session()
+
+        mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_active_scriptrunner
+
+        session.request_rerun(ClientState(fragment_id="my_fragment_id"))
+
+        # The active ScriptRunner should *not* be shut down or stopped.
+        mock_active_scriptrunner.request_rerun.assert_called_once()
+        mock_active_scriptrunner.request_stop.assert_not_called()
+
+        # And a new ScriptRunner should *not* be created.
+        mock_create_scriptrunner.assert_not_called()
+
     @patch("streamlit.runtime.app_session.ScriptRunner")
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
         """Test that _create_scriptrunner does what it should."""
@@ -288,6 +317,7 @@ class AppSessionTest(unittest.TestCase):
             script_cache=session._script_cache,
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
+            fragment_storage=session._fragment_storage,
         )
 
         self.assertIsNotNone(session._scriptrunner)
@@ -349,6 +379,25 @@ class AppSessionTest(unittest.TestCase):
             )
 
             self.assertIsNone(session._debug_last_backmsg_id)
+
+    @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
+    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
+    def test_sets_state_to_not_running_on_rerun_event(self):
+        session = _create_test_session()
+        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._state = AppSessionState.APP_IS_RUNNING
+
+        with patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=session._event_loop,
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                forward_msg=ForwardMsg(),
+            )
+
+            self.assertEqual(session._state, AppSessionState.APP_NOT_RUNNING)
 
     def test_passes_client_state_on_run_on_save(self):
         session = _create_test_session()
@@ -607,13 +656,16 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             query_string="",
             session_state=MagicMock(),
             uploaded_file_mgr=MagicMock(),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
         )
         add_script_run_ctx(ctx=ctx)
 
         mock_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
 
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
@@ -627,6 +679,7 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
 
         sent_messages = session._browser_queue._queue
         self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
+        session._clear_queue.assert_called_once()
 
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
@@ -653,6 +706,51 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
                 AppPage(page_script_hash="hash2", page_name="page2", icon="🎉"),
             ],
         )
+
+        add_script_run_ctx(ctx=orig_ctx)
+
+    @patch(
+        "streamlit.runtime.app_session._generate_scriptrun_id",
+        MagicMock(return_value="mock_scriptrun_id"),
+    )
+    async def test_new_session_message_includes_fragment_ids(self):
+        session = _create_test_session(asyncio.get_running_loop())
+
+        orig_ctx = get_script_run_ctx()
+        ctx = ScriptRunContext(
+            session_id="TestSessionID",
+            _enqueue=session._enqueue_forward_msg,
+            query_string="",
+            session_state=MagicMock(),
+            uploaded_file_mgr=MagicMock(),
+            main_script_path="",
+            page_script_hash="",
+            user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
+        )
+        add_script_run_ctx(ctx=ctx)
+
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        # Send a mock SCRIPT_STARTED event.
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run={"my_fragment_id"},
+        )
+
+        # Yield to let the AppSession's callbacks run.
+        await asyncio.sleep(0)
+
+        sent_messages = session._browser_queue._queue
+        self.assertEqual(2, len(sent_messages))  # NewApp and SessionState messages
+        session._clear_queue.assert_not_called()
+
+        new_session_msg = sent_messages[0].new_session
+        self.assertEqual(new_session_msg.fragment_ids_this_run, ["my_fragment_id"])
 
         add_script_run_ctx(ctx=orig_ctx)
 
@@ -801,6 +899,22 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
         session.handle_backmsg(msg)
         self.assertEqual(session._debug_last_backmsg_id, "some backmsg")
 
+    @patch("streamlit.runtime.app_session._LOGGER")
+    async def test_handles_app_heartbeat_backmsg(self, patched_logger):
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(
+            session, "handle_backmsg_exception"
+        ) as handle_backmsg_exception, patch.object(
+            session, "_handle_app_heartbeat_request"
+        ) as handle_app_heartbeat_request:
+            msg = BackMsg()
+            msg.app_heartbeat = True
+            session.handle_backmsg(msg)
+
+            handle_app_heartbeat_request.assert_called_once()
+            handle_backmsg_exception.assert_not_called()
+            patched_logger.warning.assert_not_called()
+
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.config")
@@ -860,7 +974,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         self.assertEqual(new_session_msg.custom_theme.primary_color, "coral")
         self.assertEqual(new_session_msg.custom_theme.background_color, "white")
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_base_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (
@@ -876,7 +990,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             " Allowed values include ['light', 'dark']. Setting theme.base to \"light\"."
         )
 
-    @patch("streamlit.runtime.app_session.LOGGER")
+    @patch("streamlit.runtime.app_session._LOGGER")
     @patch("streamlit.runtime.app_session.config")
     def test_logs_warning_if_font_invalid(self, patched_config, patched_logger):
         patched_config.get_options_for_section.side_effect = (

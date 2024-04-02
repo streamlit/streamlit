@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,8 @@ const calculateNumPages = (items: any[], pageSize: number): number =>
   Math.ceil(items.length / pageSize)
 
 const withPagination = (
-  WrappedComponent: ComponentType<any>
-): ComponentType<any> => {
+  WrappedComponent: ComponentType<React.PropsWithChildren<any>>
+): ComponentType<React.PropsWithChildren<any>> => {
   const WithPagination = ({
     pageSize,
     items,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import {
   IGuestToHostMessage,
   IToolbarItem,
 } from "@streamlit/lib"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+
 import {
   StyledActionButtonContainer,
   StyledActionButtonIcon,
@@ -59,11 +61,13 @@ export function ActionButton({
 export interface ToolbarActionsProps {
   sendMessageToHost: (message: IGuestToHostMessage) => void
   hostToolbarItems: IToolbarItem[]
+  metricsMgr: SegmentMetricsManager
 }
 
 function ToolbarActions({
   sendMessageToHost,
   hostToolbarItems,
+  metricsMgr,
 }: ToolbarActionsProps): ReactElement {
   return (
     <StyledToolbarActions data-testid="stToolbarActions">
@@ -72,12 +76,15 @@ function ToolbarActions({
           key={key}
           label={label}
           icon={icon}
-          onClick={() =>
+          onClick={() => {
+            metricsMgr.enqueue("menuClick", {
+              key,
+            })
             sendMessageToHost({
               type: "TOOLBAR_ITEM_CALLBACK",
               key,
             })
-          }
+          }}
         />
       ))}
     </StyledToolbarActions>

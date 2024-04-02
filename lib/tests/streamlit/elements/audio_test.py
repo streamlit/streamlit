@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,10 @@ from parameterized import parameterized
 from scipy.io import wavfile
 
 import streamlit as st
-from streamlit.elements.media import _maybe_convert_to_wav_bytes
+from streamlit.elements.media import (
+    _maybe_convert_to_wav_bytes,
+    _parse_start_time_end_time,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
@@ -261,9 +264,53 @@ class AudioTest(DeltaGeneratorTestCase):
     def test_st_audio_options(self):
         """Test st.audio with options."""
         fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
-        st.audio(fake_audio_data, format="audio/mp3", start_time=10)
+        st.audio(
+            fake_audio_data,
+            format="audio/mp3",
+            start_time=10,
+            end_time=21,
+            loop=True,
+        )
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.audio.start_time, 10)
+        self.assertEqual(el.audio.end_time, 21)
+        self.assertEqual(el.audio.loop, True)
         self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
         self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
+
+    @parameterized.expand(
+        [
+            ("1s", None, (1, None)),
+            ("1m", None, (60, None)),
+            ("1m2s", None, (62, None)),
+            (0, "1m", (0, 60)),
+            ("1h2m3s", None, (3723, None)),
+            ("1m2s", "1m10s", (62, 70)),
+            ("10 seconds", "15 seconds", (10, 15)),
+            ("3 minutes 10 seconds", "3 minutes 20 seconds", (190, 200)),
+        ]
+    )
+    def test_parse_start_time_end_time_success(
+        self, input_start_time, input_end_time, expected_value
+    ):
+        """Test that _parse_start_time_end_time works correctly."""
+        self.assertEqual(
+            _parse_start_time_end_time(input_start_time, input_end_time),
+            expected_value,
+        )
+
+    @parameterized.expand(
+        [
+            ("INVALID_VALUE", None, "Failed to convert 'start_time' to a timedelta"),
+            (5, "INVALID_VALUE", "Failed to convert 'end_time' to a timedelta"),
+        ]
+    )
+    def test_parse_start_time_end_time_fail(self, start_time, end_time, exception_text):
+        """Test that _parse_start_time_end_time works with correct exception text."""
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            _parse_start_time_end_time(start_time, end_time)
+
+        self.assertIn(exception_text, str(e.exception))
+        self.assertIn("INVALID_VALUE", str(e.exception))

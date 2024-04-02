@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,11 @@ export interface Props {
   element: ButtonProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 function Button(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width } = props
+  const { disabled, element, widgetMgr, width, fragmentId } = props
   const style = { width }
 
   const kind =
@@ -52,7 +53,9 @@ function Button(props: Props): ReactElement {
           size={BaseButtonSize.SMALL}
           disabled={disabled}
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
-          onClick={() => widgetMgr.setTriggerValue(element, { fromUi: true })}
+          onClick={() =>
+            widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
+          }
         >
           <StreamlitMarkdown
             source={element.label}

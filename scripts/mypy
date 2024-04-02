@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,11 @@ import click
 import mypy.main as mypy_main
 
 PATHS = ["lib/streamlit/", "scripts/*", "e2e/scripts/*"]
-EXCLUDE_FILES = {"scripts/add_license_headers.py", "e2e/scripts/st_reuse_label.py", "scripts/license-template.txt"}
+EXCLUDE_FILES = {
+    os.path.join("scripts", "add_license_headers.py"),
+    os.path.join("e2e", "scripts", "st_reuse_label.py"),
+    os.path.join("scripts", "license-template.txt"),
+}
 
 
 def shlex_join(split_command: Iterable[str]):

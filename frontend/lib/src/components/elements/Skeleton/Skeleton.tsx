@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,12 @@ import React, { FC, memo } from "react"
 
 import { SquareSkeleton } from "./styled-components"
 
-const RawSkeleton: FC = () => {
-  return <SquareSkeleton data-testid="stSkeleton" />
+interface Props {
+  height?: string
+}
+
+const RawSkeleton: FC<React.PropsWithChildren<Props>> = props => {
+  return <SquareSkeleton data-testid="stSkeleton" {...props} />
 }
 
 export const Skeleton = memo(RawSkeleton)

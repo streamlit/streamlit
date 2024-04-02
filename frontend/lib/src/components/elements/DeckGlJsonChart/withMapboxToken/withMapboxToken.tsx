@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,9 @@ const MAPBOX = "mapbox"
 
 const withMapboxToken =
   (deltaType: string) =>
-  <P extends InjectedProps>(WrappedComponent: ComponentType<P>) => {
+  <P extends InjectedProps>(
+    WrappedComponent: ComponentType<React.PropsWithChildren<P>>
+  ) => {
     // Return a wrapper that accepts the wrapped component's props, minus
     // "mapboxToken". The wrapper will fetch the mapboxToken and inject it into
     // the wrapped component automatically.
@@ -76,6 +78,8 @@ const withMapboxToken =
       })`
 
       static contextType = LibContext
+
+      context!: React.ContextType<typeof LibContext>
 
       public constructor(props: WrappedMapboxProps<P>) {
         super(props)

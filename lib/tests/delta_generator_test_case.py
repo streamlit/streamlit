@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -53,9 +54,11 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             query_string="",
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
+            main_script_path="",
             page_script_hash="",
             user_info={"email": "test@test.com"},
             script_requests=ScriptRequests(),
+            fragment_storage=MemoryFragmentStorage(),
         )
         add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
 

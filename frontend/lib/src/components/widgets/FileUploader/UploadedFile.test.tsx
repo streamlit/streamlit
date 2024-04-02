@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ describe("FileStatus widget", () => {
       errorMessage: "Everything is terrible",
     })
     render(<UploadedFileStatus {...props} />)
-    const errorMessage = screen.getByTestId("stUploadedFileErrorMessage")
+    const errorMessage = screen.getByTestId("stFileUploaderFileErrorMessage")
     expect(errorMessage).toHaveTextContent("Everything is terrible")
   })
 
@@ -68,7 +68,7 @@ describe("UploadedFile widget", () => {
       fileUrls: {},
     })
     render(<UploadedFile {...props} />)
-    expect(screen.getByTestId("stUploadedFile")).toBeInTheDocument()
+    expect(screen.getByTestId("stFileUploaderFile")).toBeInTheDocument()
     const deleteBtn = screen.getByRole("button")
     fireEvent.click(deleteBtn)
     expect(props.onDelete).toHaveBeenCalledWith(1)

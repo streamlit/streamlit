@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useRef, useState, useEffect } from "react"
+import React, {
+  ReactElement,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { useTheme } from "@emotion/react"
 import { Tabs as UITabs, Tab as UITab } from "baseui/tabs-motion"
 
 import { BlockNode, AppNode } from "@streamlit/lib/src/AppNode"
 import { BlockPropsWithoutWidth } from "@streamlit/lib/src/components/core/Block"
 import { isElementStale } from "@streamlit/lib/src/components/core/Block/utils"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 
 import { StyledTabContainer } from "./styled-components"
@@ -34,6 +41,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
 
 function Tabs(props: TabProps): ReactElement {
   const { widgetsDisabled, node, isStale, scriptRunState, scriptRunId } = props
+  const { fragmentIdsThisRun } = useContext(LibContext)
 
   let allTabLabels: string[] = []
   const [activeTabKey, setActiveTabKey] = useState<React.Key>(0)
@@ -83,6 +91,7 @@ function Tabs(props: TabProps): ReactElement {
       isOverflowing={isOverflowing}
       tabHeight={TAB_HEIGHT}
       className="stTabs"
+      data-testid="stTabs"
     >
       <UITabs
         activateOnFocus
@@ -142,15 +151,15 @@ function Tabs(props: TabProps): ReactElement {
           const isStaleTab = isElementStale(
             appNode,
             scriptRunState,
-            scriptRunId
+            scriptRunId,
+            fragmentIdsThisRun
           )
-          const disabled = widgetsDisabled || isStaleTab
 
           // Ensure stale tab's elements are also marked stale/disabled
           const childProps = {
             ...props,
             isStale: isStale || isStaleTab,
-            widgetsDisabled: disabled,
+            widgetsDisabled,
             node: appNode as BlockNode,
           }
           let nodeLabel = index.toString()
@@ -159,8 +168,7 @@ function Tabs(props: TabProps): ReactElement {
           }
           allTabLabels[index] = nodeLabel
 
-          const isSelected =
-            activeTabKey.toString() === index.toString() && !isStaleTab
+          const isSelected = activeTabKey.toString() === index.toString()
           const isLast = index === node.children.length - 1
 
           return (
@@ -173,7 +181,7 @@ function Tabs(props: TabProps): ReactElement {
                 />
               }
               key={index}
-              disabled={disabled}
+              disabled={widgetsDisabled}
               overrides={{
                 TabPanel: {
                   style: () => ({
@@ -193,25 +201,25 @@ function Tabs(props: TabProps): ReactElement {
                     paddingBottom: theme.spacing.none,
                     fontSize: theme.fontSizes.sm,
                     background: "transparent",
-                    color: disabled
+                    color: widgetsDisabled
                       ? theme.colors.fadedText40
                       : theme.colors.bodyText,
                     ":focus": {
                       outline: "none",
-                      color: disabled
+                      color: widgetsDisabled
                         ? theme.colors.fadedText40
                         : theme.colors.primary,
                       background: "none",
                     },
                     ":hover": {
-                      color: disabled
+                      color: widgetsDisabled
                         ? theme.colors.fadedText40
                         : theme.colors.primary,
                       background: "none",
                     },
                     ...(isSelected
                       ? {
-                          color: disabled
+                          color: widgetsDisabled
                             ? theme.colors.fadedText40
                             : theme.colors.primary,
                         }
@@ -220,6 +228,14 @@ function Tabs(props: TabProps): ReactElement {
                       ? {
                           // Add minimal required padding to hide the overscroll gradient
                           paddingRight: "0.6rem",
+                        }
+                      : {}),
+                    ...(!isStale && isStaleTab
+                      ? {
+                          // Apply stale effect if only this specific
+                          // tab is stale but not the entire tab container.
+                          opacity: 0.33,
+                          transition: "opacity 1s ease-in 0.5s",
                         }
                       : {}),
                   }),

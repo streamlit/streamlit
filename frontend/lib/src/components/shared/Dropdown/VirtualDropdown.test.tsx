@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,6 @@ describe("VirtualDropdown element", () => {
     expect(screen.getByTestId("stVirtualDropdown")).toBeInTheDocument()
 
     // each option will have a tooltip attached to it
-    expect(screen.getAllByTestId("tooltipHoverTarget")).toHaveLength(1)
+    expect(screen.getAllByTestId("stTooltipHoverTarget")).toHaveLength(1)
   })
 })

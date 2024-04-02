@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from streamlit import config
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
@@ -51,8 +52,10 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
         query_string="mock_query_string",
         session_state=SafeSessionState(SessionState(), lambda: None),
         uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+        main_script_path="",
         page_script_hash="mock_page_script_hash",
         user_info={"email": "mock@test.com"},
+        fragment_storage=MemoryFragmentStorage(),
     )
 
 

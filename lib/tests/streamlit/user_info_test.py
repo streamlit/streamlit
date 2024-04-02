@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ import threading
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -102,8 +103,10 @@ class UserInfoProxyTest(DeltaGeneratorTestCase):
                     query_string="",
                     session_state=SafeSessionState(SessionState(), lambda: None),
                     uploaded_file_mgr=None,
+                    main_script_path="",
                     page_script_hash="",
                     user_info={"email": "something@else.com"},
+                    fragment_storage=MemoryFragmentStorage(),
                 ),
             )
 

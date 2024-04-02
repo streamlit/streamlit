@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ export interface Props {
   theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -132,11 +133,8 @@ class Multiselect extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setIntArrayValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setIntArrayValue(element, this.state.value, source, fragmentId)
   }
 
   /**

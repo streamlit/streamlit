@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 import React from "react"
-import { pick } from "lodash"
+import pick from "lodash/pick"
 import { StyleProps, Slider as UISlider } from "baseui/slider"
 import { withTheme } from "@emotion/react"
 import { sprintf } from "sprintf-js"
@@ -52,6 +52,7 @@ export interface Props {
   theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -130,10 +131,12 @@ class Slider extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setDoubleArrayValue(
-      this.props.element,
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setDoubleArrayValue(
+      element,
       this.state.value,
-      source
+      source,
+      fragmentId
     )
   }
 
@@ -361,7 +364,12 @@ class Slider extends React.PureComponent<Props, State> {
     this.thumbValueAlignment()
 
     return (
-      <div ref={this.sliderRef} className="stSlider" style={style}>
+      <div
+        ref={this.sliderRef}
+        className="stSlider"
+        data-testid="stSlider"
+        style={style}
+      >
         <WidgetLabel
           label={element.label}
           disabled={disabled}

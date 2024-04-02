@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
 
 """Runtime-related utility functions"""
 
-from typing import Any, Optional
+from __future__ import annotations
+
+from typing import Any
 
 from streamlit import config
-from streamlit.errors import MarkdownFormattedException
+from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 
@@ -27,7 +29,7 @@ class MessageSizeError(MarkdownFormattedException):
 
     def __init__(self, failed_msg_str: Any):
         msg = self._get_message(failed_msg_str)
-        super(MessageSizeError, self).__init__(msg)
+        super().__init__(msg)
 
     def _get_message(self, failed_msg_str: Any) -> str:
         # This needs to have zero indentation otherwise the markdown will render incorrectly.
@@ -49,6 +51,17 @@ of the client's browser and the Streamlit server._
                 message_size_limit_mb=(get_max_message_size_bytes() / 1e6),
             )
             .strip("\n")
+        )
+
+
+class BadDurationStringError(StreamlitAPIException):
+    """Raised when a bad duration argument string is passed."""
+
+    def __init__(self, duration: str):
+        MarkdownFormattedException.__init__(
+            self,
+            "TTL string doesn't look right. It should be formatted as"
+            f"`'1d2h34m'` or `2 days`, for example. Got: {duration}",
         )
 
 
@@ -82,7 +95,7 @@ def serialize_forward_msg(msg: ForwardMsg) -> bytes:
 
 # This needs to be initialized lazily to avoid calling config.get_option() and
 # thus initializing config options when this file is first imported.
-_max_message_size_bytes: Optional[int] = None
+_max_message_size_bytes: int | None = None
 
 
 def get_max_message_size_bytes() -> int:

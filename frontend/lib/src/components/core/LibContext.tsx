@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,10 +70,29 @@ export interface LibContextProps {
    */
   addThemes: (themes: ThemeConfig[]) => void
 
-  /** The lib-specific configuration from the apps host which is requested via the
+  /**
+   * Change the page in a multi-page app.
+   * @see PageLink
+   */
+  onPageChange: (pageScriptHash: string) => void
+
+  /**
+   * The current page of a multi-page app.
+   * @see PageLink
+   */
+  currentPageScriptHash: string
+
+  /**
+   * The lib-specific configuration from the apps host which is requested via the
    * _stcore/host-config endpoint.
    */
   libConfig: LibConfig
+
+  /**
+   * The IDs of the fragments that the current script run corresponds to. If the
+   * current script run isn't due to a fragment, this field is falsy.
+   */
+  fragmentIdsThisRun: Array<string>
 }
 
 export const LibContext = React.createContext<LibContextProps>({
@@ -85,5 +104,8 @@ export const LibContext = React.createContext<LibContextProps>({
   setTheme: () => {},
   availableThemes: [],
   addThemes: () => {},
+  onPageChange: () => {},
+  currentPageScriptHash: "",
   libConfig: {},
+  fragmentIdsThisRun: [],
 })

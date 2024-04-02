@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,23 @@ describe("FormSubmitButton", () => {
     fireEvent.click(formSubmitButton)
     expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
       props.element.formId,
-      props.element
+      props.element,
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to submitForm", async () => {
+    const props = getProps({ fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "submitForm")
+    render(<FormSubmitButton {...props} />)
+
+    const formSubmitButton = screen.getByRole("button")
+
+    fireEvent.click(formSubmitButton)
+    expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+      props.element.formId,
+      props.element,
+      "myFragmentId"
     )
   })
 

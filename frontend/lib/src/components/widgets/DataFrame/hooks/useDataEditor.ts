@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -249,6 +249,7 @@ function useDataEditor(
           // Only add to columns that are editable:
           if (column.isEditable) {
             const newCell = column.getCell(pasteDataValue, true)
+
             // We are not editing cells if the pasted value leads to an error:
             if (notNullOrUndefined(newCell) && !isErrorCell(newCell)) {
               const originalCol = column.indexNumber

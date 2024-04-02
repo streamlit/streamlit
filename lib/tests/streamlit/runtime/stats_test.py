@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,12 @@
 import unittest
 from typing import List
 
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, StatsManager
+from streamlit.runtime.stats import (
+    CacheStat,
+    CacheStatsProvider,
+    StatsManager,
+    group_stats,
+)
 
 
 class MockStatsProvider(CacheStatsProvider):
@@ -50,3 +55,55 @@ class StatsManagerTest(unittest.TestCase):
         ]
 
         self.assertEqual(provider1.stats + provider2.stats, manager.get_stats())
+
+    def test_group_stats(self):
+        """Should return stats grouped by category_name and cache_name.
+        byte_length should be summed."""
+
+        # Similar stats sequential
+        stats1 = [
+            CacheStat("provider1", "foo", 1),
+            CacheStat("provider1", "bar", 2),
+            CacheStat("provider1", "bar", 5),
+        ]
+
+        # Similar stats not sequential
+        stats2 = [
+            CacheStat("provider2", "baz", 3),
+            CacheStat("provider2", "qux", 4),
+            CacheStat("provider2", "baz", 28),
+        ]
+
+        # All the same stats
+        stats3 = [
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+            CacheStat("provider3", "boo", 1),
+        ]
+
+        self.assertEqual(
+            set(group_stats(stats1)),
+            {
+                CacheStat("provider1", "foo", 1),
+                CacheStat("provider1", "bar", 7),
+            },
+        )
+
+        self.assertEqual(
+            set(group_stats(stats2)),
+            {
+                CacheStat("provider2", "baz", 31),
+                CacheStat("provider2", "qux", 4),
+            },
+        )
+
+        self.assertEqual(
+            set(group_stats(stats3)),
+            {
+                CacheStat("provider3", "boo", 7),
+            },
+        )

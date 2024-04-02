@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ import {
   StyledInputControls,
   StyledInstructionsContainer,
 } from "./styled-components"
+import uniqueId from "lodash/uniqueId"
 
 export interface Props {
   disabled: boolean
@@ -57,6 +58,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 export interface State {
@@ -85,6 +87,8 @@ export interface State {
 export class NumberInput extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  private readonly id: string
+
   private inputRef = React.createRef<HTMLInputElement | HTMLTextAreaElement>()
 
   constructor(props: Props) {
@@ -96,6 +100,8 @@ export class NumberInput extends React.PureComponent<Props, State> {
       formattedValue: this.formatValue(this.initialValue),
       isFocused: false,
     }
+
+    this.id = uniqueId("number_input_")
   }
 
   get initialValue(): number | null {
@@ -191,7 +197,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
     const { value } = this.state
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
     const data = this.props.element
 
     const min = this.getMin()
@@ -206,9 +212,9 @@ export class NumberInput extends React.PureComponent<Props, State> {
       const valueToBeSaved = value ?? data.default ?? null
 
       if (this.isIntData()) {
-        widgetMgr.setIntValue(element, valueToBeSaved, source)
+        widgetMgr.setIntValue(element, valueToBeSaved, source, fragmentId)
       } else {
-        widgetMgr.setDoubleValue(element, valueToBeSaved, source)
+        widgetMgr.setDoubleValue(element, valueToBeSaved, source, fragmentId)
       }
 
       this.setState({
@@ -385,6 +391,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
           labelVisibility={labelVisibilityProtoValueToEnum(
             element.labelVisibility?.value
           )}
+          htmlFor={this.id}
         >
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -413,6 +420,7 @@ export class NumberInput extends React.PureComponent<Props, State> {
             clearOnEscape={clearable}
             disabled={disabled}
             aria-label={element.label}
+            id={this.id}
             overrides={{
               ClearIcon: {
                 props: {

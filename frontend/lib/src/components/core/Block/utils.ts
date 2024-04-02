@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,16 +36,24 @@ export function shouldComponentBeEnabled(
 export function isElementStale(
   node: AppNode,
   scriptRunState: ScriptRunState,
-  scriptRunId: string
+  scriptRunId: string,
+  fragmentIdsThisRun?: Array<string>
 ): boolean {
   if (scriptRunState === ScriptRunState.RERUN_REQUESTED) {
     // If a rerun was just requested, all of our current elements
     // are about to become stale.
     return true
   }
+
   if (scriptRunState === ScriptRunState.RUNNING) {
+    if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
+      return Boolean(
+        node.fragmentId && fragmentIdsThisRun.includes(node.fragmentId)
+      )
+    }
     return node.scriptRunId !== scriptRunId
   }
+
   return false
 }
 
@@ -53,9 +61,13 @@ export function isComponentStale(
   enable: boolean,
   node: AppNode,
   scriptRunState: ScriptRunState,
-  scriptRunId: string
+  scriptRunId: string,
+  fragmentIdsThisRun?: Array<string>
 ): boolean {
-  return !enable || isElementStale(node, scriptRunState, scriptRunId)
+  return (
+    !enable ||
+    isElementStale(node, scriptRunState, scriptRunId, fragmentIdsThisRun)
+  )
 }
 
 export function assignDividerColor(
@@ -149,4 +161,10 @@ export interface BaseBlockProps {
    * from that callback.
    */
   formsData: FormsData
+
+  /**
+   * If true , the element should not allow going into fullscreen. Right now we plan
+   * to use it, for example, in Dialogs to prevent fullscreen issues.
+   */
+  disableFullscreenMode?: boolean
 }

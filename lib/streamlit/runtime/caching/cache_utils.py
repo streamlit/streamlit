@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,22 +19,17 @@ from __future__ import annotations
 import functools
 import hashlib
 import inspect
-import math
 import threading
 import time
 import types
 from abc import abstractmethod
 from collections import defaultdict
-from datetime import timedelta
-from typing import Any, Callable, overload
-
-from typing_extensions import Literal
+from typing import Any, Callable, Final
 
 from streamlit import type_util
 from streamlit.elements.spinner import spinner
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_errors import (
-    BadTTLStringError,
     CacheError,
     CacheKeyNotFoundError,
     UnevaluatedDataFrameError,
@@ -53,50 +48,11 @@ from streamlit.runtime.caching.cached_message_replay import (
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
 from streamlit.util import HASHLIB_KWARGS
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
-
-
-@overload
-def ttl_to_seconds(
-    ttl: float | timedelta | str | None, *, coerce_none_to_inf: Literal[False]
-) -> float | None:
-    ...
-
-
-@overload
-def ttl_to_seconds(ttl: float | timedelta | str | None) -> float:
-    ...
-
-
-def ttl_to_seconds(
-    ttl: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
-) -> float | None:
-    """
-    Convert a ttl value to a float representing "number of seconds".
-    """
-    if coerce_none_to_inf and ttl is None:
-        return math.inf
-    if isinstance(ttl, timedelta):
-        return ttl.total_seconds()
-    if isinstance(ttl, str):
-        import numpy as np
-        import pandas as pd
-
-        try:
-            out: float = pd.Timedelta(ttl).total_seconds()
-        except ValueError as ex:
-            raise BadTTLStringError(ttl) from ex
-
-        if np.isnan(out):
-            raise BadTTLStringError(ttl)
-
-        return out
-
-    return ttl
 
 
 # We show a special "UnevaluatedDataFrame" warning for cached funcs
@@ -237,7 +193,7 @@ class CachedFunc:
             message = self._info.show_spinner
 
         if self._info.show_spinner or isinstance(self._info.show_spinner, str):
-            with spinner(message, cache=True):
+            with spinner(message, _cache=True):
                 return self._get_or_create_cached_value(args, kwargs)
         else:
             return self._get_or_create_cached_value(args, kwargs)
@@ -264,7 +220,8 @@ class CachedFunc:
             cached_result = cache.read_result(value_key)
             return self._handle_cache_hit(cached_result)
         except CacheKeyNotFoundError:
-            return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+            pass
+        return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
 
     def _handle_cache_hit(self, result: CachedResult) -> Any:
         """Handle a cache hit: replay the result's cached messages, and return its value."""
@@ -314,35 +271,37 @@ class CachedFunc:
                 return self._handle_cache_hit(cached_result)
 
             except CacheKeyNotFoundError:
-                # We acquired the lock before any other thread. Compute the value!
-                with self._info.cached_message_replay_ctx.calling_cached_function(
-                    self._info.func, self._info.allow_widgets
-                ):
-                    computed_value = self._info.func(*func_args, **func_kwargs)
+                pass
 
-                # We've computed our value, and now we need to write it back to the cache
-                # along with any "replay messages" that were generated during value computation.
-                messages = self._info.cached_message_replay_ctx._most_recent_messages
-                try:
-                    cache.write_result(value_key, computed_value, messages)
-                    return computed_value
-                except (CacheError, RuntimeError):
-                    # An exception was thrown while we tried to write to the cache. Report it to the user.
-                    # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
-                    # collect dataframe before using `st.cache_data`.)
-                    if True in [
-                        type_util.is_type(computed_value, type_name)
-                        for type_name in UNEVALUATED_DATAFRAME_TYPES
-                    ]:
-                        raise UnevaluatedDataFrameError(
-                            f"""
-                            The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
-                            of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
-                            so `st.cache_data` can serialize and cache it."""
-                        )
-                    raise UnserializableReturnValueError(
-                        return_value=computed_value, func=self._info.func
+            # We acquired the lock before any other thread. Compute the value!
+            with self._info.cached_message_replay_ctx.calling_cached_function(
+                self._info.func, self._info.allow_widgets
+            ):
+                computed_value = self._info.func(*func_args, **func_kwargs)
+
+            # We've computed our value, and now we need to write it back to the cache
+            # along with any "replay messages" that were generated during value computation.
+            messages = self._info.cached_message_replay_ctx._most_recent_messages
+            try:
+                cache.write_result(value_key, computed_value, messages)
+                return computed_value
+            except (CacheError, RuntimeError):
+                # An exception was thrown while we tried to write to the cache. Report it to the user.
+                # (We catch `RuntimeError` here because it will be raised by Apache Spark if we do not
+                # collect dataframe before using `st.cache_data`.)
+                if True in [
+                    type_util.is_type(computed_value, type_name)
+                    for type_name in UNEVALUATED_DATAFRAME_TYPES
+                ]:
+                    raise UnevaluatedDataFrameError(
+                        f"""
+                        The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
+                        of type `{type_util.get_fqn_type(computed_value)}`. Please call `collect()` or `to_pandas()` on the dataframe before returning it,
+                        so `st.cache_data` can serialize and cache it."""
                     )
+                raise UnserializableReturnValueError(
+                    return_value=computed_value, func=self._info.func
+                )
 
     def clear(self):
         """Clear the wrapped function's associated cache."""

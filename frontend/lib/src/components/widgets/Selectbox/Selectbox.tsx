@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 interface State {
@@ -93,11 +94,8 @@ export class Selectbox extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setIntValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setIntValue(element, this.state.value, source, fragmentId)
   }
 
   /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,11 +89,26 @@ describe("DownloadButton widget", () => {
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
-        { fromUi: true }
+        { fromUi: true },
+        undefined
       )
 
       expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
         "/media/mockDownloadURL"
+      )
+    })
+
+    it("can set fragmentId on click", () => {
+      const props = getProps(undefined, { fragmentId: "myFragmentId" })
+      render(<DownloadButton {...props} />)
+
+      const downloadButton = screen.getByRole("button")
+      fireEvent.click(downloadButton)
+
+      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        { fromUi: true },
+        "myFragmentId"
       )
     })
 

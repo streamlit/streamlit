@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -190,7 +190,8 @@ describe("NumberInput widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -223,7 +224,8 @@ describe("NumberInput widget", () => {
         props.element.default,
         {
           fromUi: false,
-        }
+        },
+        undefined
       )
     })
 
@@ -268,7 +270,8 @@ describe("NumberInput widget", () => {
         props.element.default,
         {
           fromUi: false,
-        }
+        },
+        undefined
       )
     })
 
@@ -300,6 +303,27 @@ describe("NumberInput widget", () => {
       })
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalled()
+    })
+
+    it("can pass fragmentId to setIntValue", () => {
+      const props = {
+        ...getIntProps({ default: 10 }),
+        fragmentId: "myFragmentId",
+      }
+      jest.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+
+      fireEvent.keyPress(screen.getByTestId("stNumberInput-Input"), {
+        key: "Enter",
+      })
+
+      expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+        expect.anything(),
+        10,
+        { fromUi: false },
+        "myFragmentId"
+      )
     })
 
     it("sets initialValue from widgetMgr", () => {
@@ -453,5 +477,37 @@ describe("NumberInput widget", () => {
         "Press Enter to apply"
       )
     })
+  })
+
+  it("focuses input when clicking label", async () => {
+    const props = getProps()
+    render(<NumberInput {...props} />)
+    const numberInput = screen.getByTestId("stNumberInput-Input")
+    expect(numberInput).not.toHaveFocus()
+    const label = screen.getByText(props.element.label)
+    const user = userEvent.setup()
+    await user.click(label)
+    expect(numberInput).toHaveFocus()
+  })
+
+  it("ensures id doesn't change on rerender", () => {
+    const props = getProps()
+    render(<NumberInput {...props} />)
+
+    const numberInputLabel1 = screen.getByTestId("stWidgetLabel")
+    const forId1 = numberInputLabel1.getAttribute("for")
+
+    // Make some change to cause a rerender
+    const numberInput = screen.getByTestId("stNumberInput-Input")
+    // Change the widget value
+    fireEvent.change(numberInput, {
+      target: { value: 15 },
+    })
+    expect(screen.getByTestId("stNumberInput-Input")).toHaveValue(15)
+
+    const numberInputLabel2 = screen.getByTestId("stWidgetLabel")
+    const forId2 = numberInputLabel2.getAttribute("for")
+
+    expect(forId2).toBe(forId1)
   })
 })

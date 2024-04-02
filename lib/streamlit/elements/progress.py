@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TYPE_CHECKING, Optional, Union, cast
+from __future__ import annotations
+
+import math
+from typing import TYPE_CHECKING, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -29,6 +32,32 @@ if TYPE_CHECKING:
 FloatOrInt: TypeAlias = Union[int, float]
 
 
+def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> bool:
+    """
+    Checks given value is 'between' the bounds of [low, high],
+    considering close values around bounds are acceptable input
+
+    Notes
+    -----
+    This check is required for handling values that are slightly above or below the
+    acceptable range, for example -0.0000000000021, 1.0000000000000013.
+    These values are little off the conventional 0.0 <= x <= 1.0 condition
+    due to floating point operations, but should still be considered acceptable input.
+
+    Parameters
+    ----------
+    value : float
+    low : float
+    high : float
+
+    """
+    return (
+        (low <= value <= high)
+        or math.isclose(value, low, rel_tol=1e-9, abs_tol=1e-9)
+        or math.isclose(value, high, rel_tol=1e-9, abs_tol=1e-9)
+    )
+
+
 def _get_value(value):
     if isinstance(value, int):
         if 0 <= value <= 100:
@@ -39,7 +68,7 @@ def _get_value(value):
             )
 
     elif isinstance(value, float):
-        if 0.0 <= value <= 1.0:
+        if _check_float_between(value, low=0.0, high=1.0):
             return int(value * 100)
         else:
             raise StreamlitAPIException(
@@ -51,7 +80,7 @@ def _get_value(value):
         )
 
 
-def _get_text(text: Optional[str]) -> Optional[str]:
+def _get_text(text: str | None) -> str | None:
     if text is None:
         return None
     if isinstance(text, str):
@@ -63,9 +92,7 @@ def _get_text(text: Optional[str]) -> Optional[str]:
 
 
 class ProgressMixin:
-    def progress(
-        self, value: FloatOrInt, text: Optional[str] = None
-    ) -> "DeltaGenerator":
+    def progress(self, value: FloatOrInt, text: str | None = None) -> DeltaGenerator:
         r"""Display a progress bar.
 
         Parameters
@@ -130,6 +157,6 @@ class ProgressMixin:
         return self.dg._enqueue("progress", progress_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import threading
-from typing import Any, Callable, Dict, List, Optional, Set
+from contextlib import contextmanager
+from typing import Any, Callable, Iterator
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
+from streamlit.runtime.state.query_params import QueryParams
 from streamlit.runtime.state.session_state import SessionState
 
 
@@ -45,7 +49,7 @@ class SafeSessionState:
         object.__setattr__(self, "_yield_callback", yield_callback)
 
     def register_widget(
-        self, metadata: WidgetMetadata[T], user_key: Optional[str]
+        self, metadata: WidgetMetadata[T], user_key: str | None
     ) -> RegisterWidgetResult[T]:
         self._yield_callback()
         with self._lock:
@@ -60,7 +64,7 @@ class SafeSessionState:
             #  to a Lock.)
             self._state.on_script_will_rerun(latest_widget_states)
 
-    def on_script_finished(self, widget_ids_this_run: Set[str]) -> None:
+    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
         with self._lock:
             self._state.on_script_finished(widget_ids_this_run)
 
@@ -68,7 +72,7 @@ class SafeSessionState:
         with self._lock:
             self._state.maybe_check_serializable()
 
-    def get_widget_states(self) -> List[WidgetStateProto]:
+    def get_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         with self._lock:
             return self._state.get_widget_states()
@@ -78,7 +82,7 @@ class SafeSessionState:
             return self._state.is_new_state_value(user_key)
 
     @property
-    def filtered_state(self) -> Dict[str, Any]:
+    def filtered_state(self) -> dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
         with self._lock:
             return self._state.filtered_state
@@ -123,3 +127,9 @@ class SafeSessionState:
         kv = ((k, self._state[k]) for k in self._state._keys())
         s = ", ".join(f"{k}: {v!r}" for k, v in kv)
         return f"{{{s}}}"
+
+    @contextmanager
+    def query_params(self) -> Iterator[QueryParams]:
+        self._yield_callback()
+        with self._lock:
+            yield self._state.query_params

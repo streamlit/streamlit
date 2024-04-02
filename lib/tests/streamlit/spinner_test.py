@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class SpinnerTest(DeltaGeneratorTestCase):
 
     def test_spinner_for_caching(self):
         """Test st.spinner in cache functions."""
-        with spinner("some text", cache=True):
+        with spinner("some text", _cache=True):
             # Without the timeout, the spinner is sometimes not available
             time.sleep(0.7)
             el = self.get_delta_from_queue().new_element

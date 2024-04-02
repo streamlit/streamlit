@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 
 import React from "react"
 
-import { render } from "@streamlit/lib"
+import { render, mockSessionInfo } from "@streamlit/lib"
+import { SegmentMetricsManager } from "@streamlit/app/src/SegmentMetricsManager"
+
 import "@testing-library/jest-dom"
 import { fireEvent, screen } from "@testing-library/react"
 
@@ -66,6 +68,7 @@ describe("ToolbarActions", () => {
       { key: "share", label: "Share" },
     ],
     sendMessageToHost: jest.fn(),
+    metricsMgr: new SegmentMetricsManager(mockSessionInfo()),
     ...extended,
   })
 

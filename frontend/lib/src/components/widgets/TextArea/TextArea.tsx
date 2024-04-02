@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,12 +36,14 @@ import {
 } from "@streamlit/lib/src/util/utils"
 import { breakpoints } from "@streamlit/lib/src/theme/primitives"
 import { StyledTextAreaContainer } from "./styled-components"
+import uniqueId from "lodash/uniqueId"
 
 export interface Props {
   disabled: boolean
   element: TextAreaProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -60,6 +62,8 @@ interface State {
 class TextArea extends React.PureComponent<Props, State> {
   private readonly formClearHelper = new FormClearHelper()
 
+  private readonly id: string
+
   public state: State = {
     dirty: false,
     value: this.initialValue,
@@ -70,6 +74,11 @@ class TextArea extends React.PureComponent<Props, State> {
     // Otherwise, use the default value from the widget protobuf.
     const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
     return storedValue ?? this.props.element.default ?? null
+  }
+
+  constructor(props: Props) {
+    super(props)
+    this.id = uniqueId("text_area_")
   }
 
   public componentDidMount(): void {
@@ -105,11 +114,8 @@ class TextArea extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setStringValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setStringValue(element, this.state.value, source, fragmentId)
     this.setState({ dirty: false })
   }
 
@@ -196,6 +202,7 @@ class TextArea extends React.PureComponent<Props, State> {
           labelVisibility={labelVisibilityProtoValueToEnum(
             element.labelVisibility?.value
           )}
+          htmlFor={this.id}
         >
           {element.help && (
             <StyledWidgetLabelHelp>
@@ -215,6 +222,7 @@ class TextArea extends React.PureComponent<Props, State> {
             onKeyDown={this.onKeyDown}
             aria-label={element.label}
             disabled={disabled}
+            id={this.id}
             overrides={{
               Input: {
                 style: {

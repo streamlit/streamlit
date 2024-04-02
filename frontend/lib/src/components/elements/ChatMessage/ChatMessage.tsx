@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ export interface ChatMessageProps {
   element: BlockProto.ChatMessage
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({
+const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
   endpoints,
   element,
   children,

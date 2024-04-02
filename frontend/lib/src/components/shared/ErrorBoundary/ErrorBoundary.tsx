@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,10 @@ export interface State {
  * A component that catches errors that take place when React is asynchronously
  * rendering child components.
  */
-class ErrorBoundary extends React.PureComponent<Props, State> {
+class ErrorBoundary extends React.PureComponent<
+  React.PropsWithChildren<Props>,
+  State
+> {
   public state: State = {
     error: null,
   }

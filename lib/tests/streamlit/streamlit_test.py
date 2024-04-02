@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+import matplotlib
 
 import streamlit as st
 from streamlit import __version__
@@ -47,6 +49,25 @@ class StreamlitTest(unittest.TestCase):
         """Test streamlit.get_option."""
         # This is set in lib/tests/conftest.py to False
         self.assertEqual(False, st.get_option("browser.gatherUsageStats"))
+
+    def test_matplotlib_uses_agg(self):
+        """Test that Streamlit uses the 'Agg' backend for matplotlib."""
+        ORIG_PLATFORM = sys.platform
+
+        for platform in ["darwin", "linux2"]:
+            sys.platform = platform
+
+            self.assertEqual(matplotlib.get_backend().lower(), "agg")
+            self.assertEqual(os.environ.get("MPLBACKEND").lower(), "agg")
+
+            # Force matplotlib to use a different backend
+            matplotlib.use("pdf", force=True)
+            self.assertEqual(matplotlib.get_backend().lower(), "pdf")
+
+            # Reset the backend to 'Agg'
+            matplotlib.use("agg", force=True)
+            self.assertEqual(matplotlib.get_backend().lower(), "agg")
+        sys.platform = ORIG_PLATFORM
 
     def test_public_api(self):
         """Test that we don't accidentally remove (or add) symbols
@@ -93,6 +114,7 @@ class StreamlitTest(unittest.TestCase):
                 "graphviz_chart",
                 "header",
                 "help",
+                "html",
                 "image",
                 "info",
                 "json",
@@ -104,7 +126,9 @@ class StreamlitTest(unittest.TestCase):
                 "metric",
                 "multiselect",
                 "number_input",
+                "page_link",
                 "plotly_chart",
+                "popover",
                 "progress",
                 "pyplot",
                 "radio",
@@ -128,18 +152,20 @@ class StreamlitTest(unittest.TestCase):
                 "video",
                 "warning",
                 "write",
+                "write_stream",
                 "color_picker",
                 "sidebar",
-                "event",
                 # Other modules the user should have access to:
                 "echo",
                 "spinner",
                 "set_page_config",
                 "stop",
                 "rerun",
+                "switch_page",
                 "cache",
                 "secrets",
                 "session_state",
+                "query_params",
                 "cache_data",
                 "cache_resource",
                 # Experimental APIs:
@@ -151,6 +177,7 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_rerun",
                 "experimental_data_editor",
                 "experimental_connection",
+                "experimental_fragment",
                 "get_option",
                 "set_option",
                 "connection",

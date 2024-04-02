@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,7 +144,11 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
       <StyledCardContainer>
         <Card>
           <StyledBody>
-            <img src={StreamlitLogo} alt={"Streamlit Logo"} />
+            <img
+              src={StreamlitLogo}
+              alt={"Streamlit Logo"}
+              data-testid={"stDeployDialogCommunityCloudIcon"}
+            />
             <StyledSubheader>Streamlit Community Cloud</StyledSubheader>
             <ListElement extraSpacing={true}>For the community</ListElement>
             <ListElement extraSpacing={true}>
@@ -179,7 +183,11 @@ export function DeployDialog(props: DeployDialogProps): ReactElement {
         </Card>
         <Card>
           <StyledBody>
-            <img src={Rocket} alt={"Rocket"} />
+            <img
+              src={Rocket}
+              alt={"Rocket"}
+              data-testid={"stDeployDialogCustomDeploymentIcon"}
+            />
             <StyledSubheader>Custom deployment</StyledSubheader>
             <ListElement>For companies</ListElement>
             <ListElement>

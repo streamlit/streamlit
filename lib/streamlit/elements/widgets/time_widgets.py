@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
-    List,
+    Final,
     Literal,
     Sequence,
     Tuple,
@@ -29,7 +29,6 @@ from typing import (
     overload,
 )
 
-from dateutil import relativedelta
 from typing_extensions import TypeAlias
 
 from streamlit.elements.form import current_form_id
@@ -47,9 +46,11 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
+from streamlit.time_util import adjust_years
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -61,20 +62,22 @@ DateWidgetReturn: TypeAlias = Union[
     date, Tuple[()], Tuple[date], Tuple[date, date], None
 ]
 
-DEFAULT_STEP_MINUTES = 15
-ALLOWED_DATE_FORMATS = re.compile(
+DEFAULT_STEP_MINUTES: Final = 15
+ALLOWED_DATE_FORMATS: Final = re.compile(
     r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
 )
 
 
 def _parse_date_value(
-    value: DateValue | Literal["today"],
-) -> Tuple[List[date] | None, bool]:
-    parsed_dates: List[date]
+    value: DateValue | Literal["today"] | Literal["default_value_today"],
+) -> tuple[list[date] | None, bool]:
+    parsed_dates: list[date]
     range_value: bool = False
     if value is None:
         return None, range_value
     if value == "today":
+        parsed_dates = [datetime.now().date()]
+    elif value == "default_value_today":
         # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
@@ -109,9 +112,9 @@ def _parse_min_date(
         parsed_min_date = min_value
     elif min_value is None:
         if parsed_dates:
-            parsed_min_date = parsed_dates[0] - relativedelta.relativedelta(years=10)
+            parsed_min_date = adjust_years(parsed_dates[0], years=-10)
         else:
-            parsed_min_date = date.today() - relativedelta.relativedelta(years=10)
+            parsed_min_date = adjust_years(date.today(), years=-10)
     else:
         raise StreamlitAPIException(
             "DateInput min should either be a date/datetime or None"
@@ -130,9 +133,9 @@ def _parse_max_date(
         parsed_max_date = max_value
     elif max_value is None:
         if parsed_dates:
-            parsed_max_date = parsed_dates[-1] + relativedelta.relativedelta(years=10)
+            parsed_max_date = adjust_years(parsed_dates[-1], years=10)
         else:
-            parsed_max_date = date.today() + relativedelta.relativedelta(years=10)
+            parsed_max_date = adjust_years(date.today(), years=10)
     else:
         raise StreamlitAPIException(
             "DateInput max should either be a date/datetime or None"
@@ -150,10 +153,10 @@ class _DateInputValues:
     @classmethod
     def from_raw_values(
         cls,
-        value: DateValue | Literal["today"],
+        value: DateValue | Literal["today"] | Literal["default_value_today"],
         min_value: SingleDateValue,
         max_value: SingleDateValue,
-    ) -> "_DateInputValues":
+    ) -> _DateInputValues:
         parsed_value, is_range = _parse_date_value(value=value)
         return cls(
             value=parsed_value,
@@ -230,7 +233,7 @@ class DateInputSerde:
             return return_value[0]
         return cast(DateWidgetReturn, tuple(return_value))
 
-    def serialize(self, v: DateWidgetReturn) -> List[str]:
+    def serialize(self, v: DateWidgetReturn) -> list[str]:
         if v is None:
             return []
 
@@ -252,7 +255,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time:
         pass
 
@@ -269,7 +272,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time | None:
         pass
 
@@ -286,7 +289,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
     ) -> time | None:
         r"""Display a time input widget.
 
@@ -406,7 +409,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        step: Union[int, timedelta] = timedelta(minutes=DEFAULT_STEP_MINUTES),
+        step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
@@ -494,7 +497,7 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: DateValue | Literal["today"] = "today",
+        value: DateValue | Literal["today"] = "default_value_today",  # type: ignore[assignment]
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -648,7 +651,9 @@ class TimeWidgetsMixin:
     def _date_input(
         self,
         label: str,
-        value: DateValue | Literal["today"] = "today",
+        value: (
+            DateValue | Literal["today"] | Literal["default_value_today"]
+        ) = "default_value_today",
         min_value: SingleDateValue = None,
         max_value: SingleDateValue = None,
         key: Key | None = None,
@@ -665,13 +670,13 @@ class TimeWidgetsMixin:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
-            default_value=value if value != "today" else None, key=key
+            default_value=value if value != "default_value_today" else None, key=key
         )
 
         maybe_raise_label_warnings(label, label_visibility)
 
         def parse_date_deterministic(
-            v: SingleDateValue | Literal["today"],
+            v: SingleDateValue | Literal["today"] | Literal["default_value_today"],
         ) -> str | None:
             if isinstance(v, datetime):
                 return date.strftime(v.date(), "%Y/%m/%d")
@@ -682,8 +687,8 @@ class TimeWidgetsMixin:
         parsed_min_date = parse_date_deterministic(min_value)
         parsed_max_date = parse_date_deterministic(max_value)
 
-        parsed: str | None | List[str | None]
-        if value == "today" or value is None:
+        parsed: str | None | list[str | None]
+        if value == "today" or value == "default_value_today" or value is None:
             parsed = None
         elif isinstance(value, (datetime, date)):
             parsed = parse_date_deterministic(value)
@@ -717,6 +722,23 @@ class TimeWidgetsMixin:
             min_value=min_value,
             max_value=max_value,
         )
+
+        if value == "default_value_today":
+            # We need to know if this is a single or range date_input, but don't have
+            # a default value, so we check if session_state can tell us.
+            # We already calculated the id, so there is no risk of this causing
+            # the id to change.
+
+            session_state = get_session_state().filtered_state
+
+            if key is not None and key in session_state:
+                state_value = session_state[key]
+                parsed_values = _DateInputValues.from_raw_values(
+                    value=state_value,
+                    min_value=min_value,
+                    max_value=max_value,
+                )
+
         del value, min_value, max_value
 
         date_input_proto = DateInputProto()
@@ -766,6 +788,6 @@ class TimeWidgetsMixin:
         return widget_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

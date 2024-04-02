@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,13 @@ import {
   getLoadingScreenType,
   isEmbed,
   setCookie,
+  preserveEmbedQueryParams,
+  isColoredLineDisplayed,
+  isToolbarDisplayed,
+  isPaddingDisplayed,
+  isScrollingHidden,
+  isLightTheme,
+  isDarkTheme,
 } from "./utils"
 
 describe("getCookie", () => {
@@ -112,7 +119,6 @@ describe("embedParamValues", () => {
     "show_toolbar",
     "show_padding",
     "disable_scrolling",
-    "show_footer",
     "light_theme",
     "dark_theme",
     "hide_loading_screen",
@@ -234,6 +240,129 @@ describe("isEmbed", () => {
     expect(isEmbed()).toBe(true)
   })
 
+  it("embed Options should return false even if ?embed=true", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true",
+      },
+    }))
+
+    expect(isColoredLineDisplayed()).toBe(false)
+    expect(isToolbarDisplayed()).toBe(false)
+    expect(isPaddingDisplayed()).toBe(false)
+    expect(isScrollingHidden()).toBe(false)
+    expect(isLightTheme()).toBe(false)
+    expect(isDarkTheme()).toBe(false)
+  })
+
+  it("embed Options should return false even if ?embed=false", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search:
+          "?embed=false&embed_options=show_colored_line,show_toolbar,show_padding,disable_scrolling",
+      },
+    }))
+
+    expect(isColoredLineDisplayed()).toBe(false)
+    expect(isToolbarDisplayed()).toBe(false)
+    expect(isPaddingDisplayed()).toBe(false)
+    expect(isScrollingHidden()).toBe(false)
+  })
+
+  it("embed Options should return false even if ?embed is not set", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search:
+          "?embed_options=show_colored_line,show_toolbar,show_padding,disable_scrolling",
+      },
+    }))
+
+    expect(isColoredLineDisplayed()).toBe(false)
+    expect(isToolbarDisplayed()).toBe(false)
+    expect(isPaddingDisplayed()).toBe(false)
+    expect(isScrollingHidden()).toBe(false)
+  })
+
+  it("should specify light theme if in embed options", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=light_theme",
+      },
+    }))
+
+    expect(isLightTheme()).toBe(true)
+  })
+
+  it("should specify dark theme if in embed options", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed_options=dark_theme",
+      },
+    }))
+
+    expect(isDarkTheme()).toBe(true)
+  })
+
+  it("should disable scrolling if in embed options", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true&embed_options=disable_scrolling",
+      },
+    }))
+
+    expect(isColoredLineDisplayed()).toBe(false)
+    expect(isToolbarDisplayed()).toBe(false)
+    expect(isPaddingDisplayed()).toBe(false)
+    expect(isScrollingHidden()).toBe(true)
+    expect(isLightTheme()).toBe(false)
+    expect(isDarkTheme()).toBe(false)
+  })
+
+  it("should show padding if in embed options", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true&embed_options=show_padding",
+      },
+    }))
+
+    expect(isColoredLineDisplayed()).toBe(false)
+    expect(isToolbarDisplayed()).toBe(false)
+    expect(isPaddingDisplayed()).toBe(true)
+    expect(isScrollingHidden()).toBe(false)
+    expect(isLightTheme()).toBe(false)
+    expect(isDarkTheme()).toBe(false)
+  })
+
+  it("should show the toolbar if in embed options", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true&embed_options=show_toolbar",
+      },
+    }))
+
+    expect(isColoredLineDisplayed()).toBe(false)
+    expect(isToolbarDisplayed()).toBe(true)
+    expect(isPaddingDisplayed()).toBe(false)
+    expect(isScrollingHidden()).toBe(false)
+    expect(isLightTheme()).toBe(false)
+    expect(isDarkTheme()).toBe(false)
+  })
+
+  it("should show the colored line if in embed options", () => {
+    windowSpy.mockImplementation(() => ({
+      location: {
+        search: "?embed=true&embed_options=show_colored_line",
+      },
+    }))
+
+    expect(isColoredLineDisplayed()).toBe(true)
+    expect(isToolbarDisplayed()).toBe(false)
+    expect(isPaddingDisplayed()).toBe(false)
+    expect(isScrollingHidden()).toBe(false)
+    expect(isLightTheme()).toBe(false)
+    expect(isDarkTheme()).toBe(false)
+  })
+
   it("isEmbed is case insensitive, so should return true when ?embed=TrUe", () => {
     windowSpy.mockImplementation(() => ({
       location: {
@@ -331,5 +460,48 @@ describe("getLoadingScreenType", () => {
     }))
 
     expect(getLoadingScreenType()).toBe(LoadingScreenType.V2)
+  })
+
+  describe("preserveEmbedQueryParams", () => {
+    let prevWindowLocation: Location
+    afterEach(() => {
+      window.location = prevWindowLocation
+    })
+
+    it("should return an empty string if not in embed mode", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search: "foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe("")
+    })
+
+    it("should preserve embed query string even with no embed options and remove foo=bar", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search: "embed=true&foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe("embed=true")
+    })
+
+    it("should preserve embed query string with embed options and remove foo=bar", () => {
+      // @ts-expect-error
+      delete window.location
+      // @ts-expect-error
+      window.location = {
+        assign: jest.fn(),
+        search:
+          "embed=true&embed_options=option1&embed_options=option2&foo=bar",
+      }
+      expect(preserveEmbedQueryParams()).toBe(
+        "embed=true&embed_options=option1&embed_options=option2"
+      )
+    })
   })
 })

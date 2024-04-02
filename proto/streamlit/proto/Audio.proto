@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,20 @@
 
 syntax = "proto3";
 
+option java_package = "com.snowflake.apps.streamlit";
+option java_outer_classname = "AudioProto";
+
 message Audio {
   string url = 5;
 
   // The currentTime attribute of the HTML <audio> tag's <source> subtag.
   int32 start_time = 3;
+
+  // The time at which the audio should stop playing. If not specified, plays to the end.
+  int32 end_time = 6;
+
+  // Indicates whether the audio should start over from the beginning once it ends.
+  bool loop = 7;
 
   reserved 1, 2, 4;
   reserved "data", "format";

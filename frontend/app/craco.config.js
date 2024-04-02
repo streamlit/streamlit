@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,8 +91,7 @@ module.exports = {
         // turn off sourcemaps
         webpackConfig.devtool = "eval"
       } else {
-        // TODO: Trace/Test this for update to GITHUB_ACTION instead
-        const parallel = process.env.CIRCLECI ? false : true
+        const parallel = true
         minimizerPlugins[terserPluginIndex].options.parallel = parallel
       }
 

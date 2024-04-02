@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -269,11 +269,14 @@ const ThemeCreatorDialog = (props: Props): ReactElement => {
   return (
     <Modal animate={false} isOpen onClose={props.onClose}>
       <ModalHeader>
-        <StyledBackButton onClick={onClickedBack} />
+        <StyledBackButton
+          onClick={onClickedBack}
+          data-testid="stThemeCreatorBack"
+        />
         Edit active theme
       </ModalHeader>
       <ModalBody>
-        <StyledDialogBody>
+        <StyledDialogBody data-testid="stThemeCreatorDialog">
           <StyledFullRow>
             <StyledSmall>
               Changes made to the active theme will exist for the duration of a

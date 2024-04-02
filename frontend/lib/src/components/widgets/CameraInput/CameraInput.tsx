@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import { X } from "@emotion-icons/open-iconic"
 import axios from "axios"
-import _ from "lodash"
+import isEqual from "lodash/isEqual"
 import React from "react"
 
 import {
@@ -51,7 +51,7 @@ import {
   StyledSpan,
   StyledImg,
 } from "./styled-components"
-import WebcamComponent from "./WebcamComponent"
+import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
 
 export interface Props {
   element: CameraInputProto
@@ -59,6 +59,9 @@ export interface Props {
   uploadClient: FileUploadClient
   disabled: boolean
   width: number
+  fragmentId?: string
+  // Allow for unit testing
+  testOverride?: WebcamPermission
 }
 
 type FileUploaderStatus =
@@ -262,20 +265,25 @@ class CameraInput extends React.PureComponent<Props, State> {
     // undefined, and we can early-out of the state update.
     const newWidgetValue = this.createWidgetValue()
 
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
-    if (!_.isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: true,
-      })
+    if (!isEqual(newWidgetValue, prevWidgetValue)) {
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: true,
+        },
+        fragmentId
+      )
     }
   }
 
   public componentDidMount(): void {
     const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Set the state value on mount, to avoid triggering an extra rerun after
     // the first rerun.
@@ -283,9 +291,14 @@ class CameraInput extends React.PureComponent<Props, State> {
     // since simanticly camera_input is just a special case of file uploader.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: false,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: false,
+        },
+        fragmentId
+      )
     }
   }
 
@@ -320,10 +333,12 @@ class CameraInput extends React.PureComponent<Props, State> {
         imgSrc: null,
       })
 
-      this.props.widgetMgr.setFileUploaderStateValue(
-        this.props.element,
+      const { widgetMgr, element, fragmentId } = this.props
+      widgetMgr.setFileUploaderStateValue(
+        element,
         newWidgetValue,
-        { fromUi: true }
+        { fromUi: true },
+        fragmentId
       )
     })
   }
@@ -400,6 +415,7 @@ class CameraInput extends React.PureComponent<Props, State> {
             setClearPhotoInProgress={this.setClearPhotoInProgress}
             facingMode={this.state.facingMode}
             setFacingMode={this.setFacingMode}
+            testOverride={this.props.testOverride}
           />
         )}
       </StyledCameraInput>

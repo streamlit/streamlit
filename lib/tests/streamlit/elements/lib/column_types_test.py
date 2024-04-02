@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -444,6 +444,7 @@ class ColumnTypesTest(unittest.TestCase):
                     default="https://streamlit.io/",
                     max_chars=100,
                     validate="^[a-zA-Z]+$",
+                    display_text="streamlit",
                 )
             ),
             {
@@ -457,6 +458,7 @@ class ColumnTypesTest(unittest.TestCase):
                     "type": "link",
                     "max_chars": 100,
                     "validate": "^[a-zA-Z]+$",
+                    "display_text": "streamlit",
                 },
             },
             "Should have all the properties defined.",

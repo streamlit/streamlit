@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, cast
+from typing import cast
 
 from streamlit import util
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
@@ -41,9 +43,10 @@ class RerunData:
     """Data attached to RERUN requests. Immutable."""
 
     query_string: str = ""
-    widget_states: Optional[WidgetStates] = None
+    widget_states: WidgetStates | None = None
     page_script_hash: str = ""
     page_name: str = ""
+    fragment_id_queue: list[str] = field(default_factory=list)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -54,7 +57,7 @@ class ScriptRequest:
     """A STOP or RERUN request and associated data."""
 
     type: ScriptRequestType
-    _rerun_data: Optional[RerunData] = None
+    _rerun_data: RerunData | None = None
 
     @property
     def rerun_data(self) -> RerunData:
@@ -101,65 +104,80 @@ class ScriptRequests:
                 return False
 
             if self._state == ScriptRequestType.CONTINUE:
-                # If we're running, we can handle a rerun request
-                # unconditionally.
+                # The script is currently running, and we haven't received a request to
+                # rerun it as of yet. We can handle a rerun request unconditionally so
+                # just change self._state and set self._rerun_data.
                 self._state = ScriptRequestType.RERUN
                 self._rerun_data = new_data
                 return True
 
             if self._state == ScriptRequestType.RERUN:
-                # If we have an existing Rerun request, we coalesce this
-                # new request into it.
-                if self._rerun_data.widget_states is None:
-                    # The existing request's widget_states is None, which
-                    # means it wants to rerun with whatever the most
-                    # recent script execution's widget state was.
-                    # We have no meaningful state to merge with, and
-                    # so we simply overwrite the existing request.
-                    self._rerun_data = new_data
-                    return True
+                # We already have an existing Rerun request, so we can coalesce the new
+                # rerun request into the existing one.
 
-                if new_data.widget_states is not None:
-                    # Both the existing and the new request have
-                    # non-null widget_states. Merge them together.
-                    coalesced_states = coalesce_widget_states(
-                        self._rerun_data.widget_states, new_data.widget_states
-                    )
-                    self._rerun_data = RerunData(
-                        query_string=new_data.query_string,
-                        widget_states=coalesced_states,
-                        page_script_hash=new_data.page_script_hash,
-                        page_name=new_data.page_name,
-                    )
-                    return True
+                coalesced_states = coalesce_widget_states(
+                    self._rerun_data.widget_states, new_data.widget_states
+                )
 
-                # If old widget_states is NOT None, and new widget_states IS
-                # None, then this new request is entirely redundant. Leave
-                # our existing rerun_data as is.
+                if new_data.fragment_id_queue:
+                    # This RERUN request corresponds to a fragment run. We append the
+                    # new fragment ID to the end of the current fragment_id_queue if it
+                    # isn't already contained in it.
+                    fragment_id_queue = [*self._rerun_data.fragment_id_queue]
+                    if (
+                        # new_data.fragment_id_queue is always a singleton
+                        (new_fragment_id := new_data.fragment_id_queue[0])
+                        not in fragment_id_queue
+                    ):
+                        fragment_id_queue.append(new_fragment_id)
+                else:
+                    # Otherwise, this is a request to rerun the full script, so we want
+                    # to clear out any fragments we have queued to run since they'll all
+                    # be run with the full script anyway.
+                    fragment_id_queue = []
+
+                self._rerun_data = RerunData(
+                    query_string=new_data.query_string,
+                    widget_states=coalesced_states,
+                    page_script_hash=new_data.page_script_hash,
+                    page_name=new_data.page_name,
+                    fragment_id_queue=fragment_id_queue,
+                )
+
                 return True
 
             # We'll never get here
             raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
 
-    def on_scriptrunner_yield(self) -> Optional[ScriptRequest]:
+    def on_scriptrunner_yield(self) -> ScriptRequest | None:
         """Called by the ScriptRunner when it's at a yield point.
 
-        If we have no request, return None.
+        If we have no request or a RERUN request corresponding to one or more fragments,
+        return None.
 
-        If we have a RERUN request, return the request and set our internal
+        If we have a (full script) RERUN request, return the request and set our internal
         state to CONTINUE.
 
         If we have a STOP request, return the request and remain stopped.
         """
-        if self._state == ScriptRequestType.CONTINUE:
-            # We avoid taking a lock in the common case. If a STOP or RERUN
-            # request is received between the `if` and `return`, it will be
-            # handled at the next `on_scriptrunner_yield`, or when
+        if self._state == ScriptRequestType.CONTINUE or (
+            # Reruns corresponding to fragments should *not* cancel the current script
+            # run as doing so will affect elements outside of the fragment.
+            self._state == ScriptRequestType.RERUN
+            and self._rerun_data.fragment_id_queue
+        ):
+            # We avoid taking the lock in the common cases of having no request and
+            # having a RERUN request corresponding to >=1 fragments. If a STOP or
+            # (full script) RERUN request is received between the `if` and `return`, it
+            # will be handled at the next `on_scriptrunner_yield`, or when
             # `on_scriptrunner_ready` is called.
             return None
 
         with self._lock:
             if self._state == ScriptRequestType.RERUN:
+                if self._rerun_data.fragment_id_queue:
+                    return None
+
                 self._state = ScriptRequestType.CONTINUE
                 return ScriptRequest(ScriptRequestType.RERUN, self._rerun_data)
 

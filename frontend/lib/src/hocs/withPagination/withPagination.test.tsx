@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ import { render } from "@streamlit/lib/src/test_util"
 
 import withPagination, { Props as HocProps } from "./withPagination"
 
-const TestComponent: React.ComponentType = () => <div>test</div>
+const TestComponent: React.ComponentType<
+  React.PropsWithChildren<unknown>
+> = () => <div>test</div>
 
 const getProps = (props: Partial<HocProps> = {}): HocProps => ({
   items: [{}, {}, {}, {}],

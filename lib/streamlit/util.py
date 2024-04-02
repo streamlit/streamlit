@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,9 +22,7 @@ import hashlib
 import os
 import subprocess
 import sys
-from typing import Any, Dict, Iterable, List, Mapping, Set, TypeVar, Union
-
-from typing_extensions import Final
+from typing import Any, Callable, Final, Iterable, Mapping, TypeVar
 
 from streamlit import env_util
 
@@ -34,14 +32,14 @@ FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 
 # Due to security issue in md5 and sha1, usedforsecurity
 # argument is added to hashlib for python versions higher than 3.8
-HASHLIB_KWARGS: Dict[str, Any] = (
+HASHLIB_KWARGS: dict[str, Any] = (
     {"usedforsecurity": False} if sys.version_info >= (3, 9) else {}
 )
 
 
-def memoize(func):
+def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to memoize the result of a no-args func."""
-    result: List[Any] = []
+    result: list[Any] = []
 
     @functools.wraps(func)
     def wrapped_func():
@@ -52,7 +50,7 @@ def memoize(func):
     return wrapped_func
 
 
-def open_browser(url):
+def open_browser(url: str) -> None:
     """Open a web browser pointing to a given URL.
 
     We use this function instead of Python's `webbrowser` module because this
@@ -94,13 +92,13 @@ def open_browser(url):
     raise Error('Cannot open browser in platform "%s"' % platform.system())
 
 
-def _open_browser_with_webbrowser(url):
+def _open_browser_with_webbrowser(url: str) -> None:
     import webbrowser
 
     webbrowser.open(url)
 
 
-def _open_browser_with_command(command, url):
+def _open_browser_with_command(command: str, url: str) -> None:
     cmd_line = [command, url]
     with open(os.devnull, "w") as devnull:
         subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)
@@ -154,13 +152,13 @@ def index_(iterable: Iterable[_Value], x: _Value) -> int:
         elif isinstance(value, float) and isinstance(x, float):
             if abs(x - value) < FLOAT_EQUALITY_EPSILON:
                 return i
-    raise ValueError("{} is not in iterable".format(str(x)))
+    raise ValueError(f"{str(x)} is not in iterable")
 
 
 _Key = TypeVar("_Key", bound=str)
 
 
-def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> Dict[str, _Value]:
+def lower_clean_dict_keys(dict: Mapping[_Key, _Value]) -> dict[str, _Value]:
     return {k.lower().strip(): v for k, v in dict.items()}
 
 
@@ -169,7 +167,7 @@ class Error(Exception):
     pass
 
 
-def calc_md5(s: Union[bytes, str]) -> str:
+def calc_md5(s: bytes | str) -> str:
     """Return the md5 hash of the given string."""
     h = hashlib.new("md5", **HASHLIB_KWARGS)
 
@@ -179,29 +177,25 @@ def calc_md5(s: Union[bytes, str]) -> str:
     return h.hexdigest()
 
 
-def exclude_key_query_params(
-    query_params: Dict[str, List[str]], keys_to_exclude: List[str]
-) -> Dict[str, List[str]]:
-    """Returns new object query_params : Dict[str, List[str]], but without keys defined with keys_to_drop : List[str]."""
+def exclude_keys_in_dict(
+    d: dict[str, Any], keys_to_exclude: list[str]
+) -> dict[str, Any]:
+    """Returns new object but without keys defined in keys_to_exclude"""
     return {
-        key: value
-        for key, value in query_params.items()
-        if key.lower() not in keys_to_exclude
+        key: value for key, value in d.items() if key.lower() not in keys_to_exclude
     }
 
 
 def extract_key_query_params(
-    query_params: Dict[str, List[str]], param_key: str
-) -> Set[str]:
+    query_params: dict[str, list[str]], param_key: str
+) -> set[str]:
     """Extracts key (case-insensitive) query params from Dict, and returns them as Set of str."""
-    return set(
-        [
-            item.lower()
-            for sublist in [
-                [value.lower() for value in query_params[key]]
-                for key in query_params.keys()
-                if key.lower() == param_key and query_params.get(key)
-            ]
-            for item in sublist
+    return {
+        item.lower()
+        for sublist in [
+            [value.lower() for value in query_params[key]]
+            for key in query_params.keys()
+            if key.lower() == param_key and query_params.get(key)
         ]
-    )
+        for item in sublist
+    }

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import time
+import types
 from typing import Any
 from urllib import parse
 
@@ -22,6 +23,7 @@ from streamlit import runtime
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -37,6 +39,8 @@ class LocalScriptRunner(ScriptRunner):
         self,
         script_path: str,
         session_state: SafeSessionState,
+        args=None,
+        kwargs=None,
     ):
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -45,6 +49,8 @@ class LocalScriptRunner(ScriptRunner):
         self.forward_msg_queue = ForwardMsgQueue()
         self.script_path = script_path
         self.session_state = session_state
+        self.args = args if args is not None else tuple()
+        self.kwargs = kwargs if kwargs is not None else dict()
 
         super().__init__(
             session_id="test session id",
@@ -54,6 +60,7 @@ class LocalScriptRunner(ScriptRunner):
             script_cache=ScriptCache(),
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
+            fragment_storage=MemoryFragmentStorage(),
         )
 
         # Accumulates all ScriptRunnerEvents emitted by us.
@@ -93,6 +100,7 @@ class LocalScriptRunner(ScriptRunner):
         widget_state: WidgetStates | None = None,
         query_params=None,
         timeout: float = 3,
+        page_hash: str = "",
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction.
@@ -104,7 +112,11 @@ class LocalScriptRunner(ScriptRunner):
         if query_params:
             query_string = parse.urlencode(query_params, doseq=True)
 
-        rerun_data = RerunData(widget_states=widget_state, query_string=query_string)
+        rerun_data = RerunData(
+            widget_states=widget_state,
+            query_string=query_string,
+            page_script_hash=page_hash,
+        )
         self.request_rerun(rerun_data)
         if not self._script_thread:
             self.start()
@@ -122,10 +134,8 @@ class LocalScriptRunner(ScriptRunner):
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
-        # Only call `_remove_stale_widgets`, so that the state of triggers is still
-        # visible in the element tree.
         if not premature_stop:
-            self._session_state._state._remove_stale_widgets(ctx.widget_ids_this_run)
+            self._session_state.on_script_finished(ctx.widget_ids_this_run)
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
@@ -134,6 +144,12 @@ class LocalScriptRunner(ScriptRunner):
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
         runtime.get_instance().media_file_mgr.remove_orphaned_files()
+
+    def _new_module(self, name: str) -> types.ModuleType:
+        module = types.ModuleType(name)
+        module.__dict__["__args"] = self.args
+        module.__dict__["__kwargs"] = self.kwargs
+        return module
 
 
 def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> None:
@@ -149,7 +165,7 @@ def require_widgets_deltas(runner: LocalScriptRunner, timeout: float = 3) -> Non
 
     # If we get here, the runner hasn't yet completed before our
     # timeout. Create an error string for debugging.
-    err_string = f"AppTest script run timed out after {timeout}s)"
+    err_string = f"AppTest script run timed out after {timeout}(s)"
 
     # Shutdown the runner before throwing an error, so that the script
     # doesn't hang forever.

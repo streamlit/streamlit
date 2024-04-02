@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,6 +60,14 @@ class HealthHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
         self._is_healthy = False
         response = self.fetch("/_stcore/health")
+        self.assertEqual(503, response.code)
+
+    def test_health_head(self):
+        response = self.fetch("/_stcore/health", method="HEAD")
+        self.assertEqual(200, response.code)
+
+        self._is_healthy = False
+        response = self.fetch("/_stcore/health", method="HEAD")
         self.assertEqual(503, response.code)
 
     @patch_config_options({"server.enableXsrfProtection": False})

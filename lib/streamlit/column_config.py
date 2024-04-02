@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,10 @@
 
 """Column types that can be configured via the ``column_config`` parameter of ``st.dataframe`` and ``st.data_editor``."""
 
+from __future__ import annotations
+
 __all__ = [
+    "AreaChartColumn",
     "Column",
     "TextColumn",
     "NumberColumn",
@@ -33,6 +36,7 @@ __all__ = [
 
 
 from streamlit.elements.lib.column_types import (
+    AreaChartColumn,
     BarChartColumn,
     CheckboxColumn,
     Column,

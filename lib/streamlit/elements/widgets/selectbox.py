@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,12 +34,13 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.type_util import (
     Key,
     LabelVisibility,
     OptionSequence,
     T,
+    check_python_comparable,
     ensure_indexable,
     maybe_raise_label_warnings,
     to_key,
@@ -234,6 +235,7 @@ class SelectboxMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)
+        check_python_comparable(opt)
 
         id = compute_widget_id(
             "selectbox",
@@ -295,10 +297,12 @@ class SelectboxMixin:
                 selectbox_proto.value = serialized_value
             selectbox_proto.set_value = True
 
+        if ctx:
+            save_for_app_testing(ctx, id, format_func)
         self.dg._enqueue("selectbox", selectbox_proto)
         return widget_state.value
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)

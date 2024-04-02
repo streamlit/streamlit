@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import {
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Element,
 } from "@streamlit/lib/src/proto"
-import _ from "lodash"
+import get from "lodash/get"
 import xxhash from "xxhashjs"
 
 /**
@@ -53,7 +53,6 @@ export const EMBED_SHOW_COLORED_LINE = "show_colored_line"
 export const EMBED_SHOW_TOOLBAR = "show_toolbar"
 export const EMBED_SHOW_PADDING = "show_padding"
 export const EMBED_DISABLE_SCROLLING = "disable_scrolling"
-export const EMBED_SHOW_FOOTER = "show_footer"
 export const EMBED_LIGHT_THEME = "light_theme"
 export const EMBED_DARK_THEME = "dark_theme"
 export const EMBED_TRUE = "true"
@@ -65,7 +64,6 @@ export const EMBED_QUERY_PARAM_VALUES = [
   EMBED_SHOW_TOOLBAR,
   EMBED_SHOW_PADDING,
   EMBED_DISABLE_SCROLLING,
-  EMBED_SHOW_FOOTER,
   EMBED_LIGHT_THEME,
   EMBED_DARK_THEME,
   EMBED_HIDE_LOADING_SCREEN,
@@ -101,6 +99,31 @@ export function getEmbedUrlParams(embedKey: string): Set<string> {
 }
 
 /**
+ * Returns "embed" and "embed_options" query param options in the url. Returns empty string if not embedded.
+ * Example:
+ *  returns "embed=true&embed_options=show_loading_screen_v2" if the url is
+ *  http://localhost:3000/test?embed=true&embed_options=show_loading_screen_v2
+ */
+export function preserveEmbedQueryParams(): string {
+  if (!isEmbed()) {
+    return ""
+  }
+
+  const embedOptionsValues = new URLSearchParams(
+    window.location.search
+  ).getAll(EMBED_OPTIONS_QUERY_PARAM_KEY)
+
+  // instantiate multiple key values with an array of string pairs
+  // https://stackoverflow.com/questions/72571132/urlsearchparams-with-multiple-values
+  const embedUrlMap: string[][] = []
+  embedUrlMap.push([EMBED_QUERY_PARAM_KEY, EMBED_TRUE])
+  embedOptionsValues.forEach((embedValue: string) => {
+    embedUrlMap.push([EMBED_OPTIONS_QUERY_PARAM_KEY, embedValue])
+  })
+  return new URLSearchParams(embedUrlMap).toString()
+}
+
+/**
  * Returns true if the URL parameters contain ?embed=true (case insensitive).
  */
 export function isEmbed(): boolean {
@@ -133,18 +156,11 @@ export function isToolbarDisplayed(): boolean {
  * Returns true if the URL parameters contain ?embed=true&embed_options=disable_scrolling (case insensitive).
  */
 export function isScrollingHidden(): boolean {
-  return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
-    EMBED_DISABLE_SCROLLING
-  )
-}
-
-/**
- * Returns true if the URL parameters contain ?embed=true&embed_options=show_footer (case insensitive).
- */
-export function isFooterDisplayed(): boolean {
   return (
     isEmbed() &&
-    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_SHOW_FOOTER)
+    getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
+      EMBED_DISABLE_SCROLLING
+    )
   )
 }
 
@@ -162,6 +178,8 @@ export function isPaddingDisplayed(): boolean {
  * Returns true if the URL parameters contain ?embed_options=light_theme (case insensitive).
  */
 export function isLightTheme(): boolean {
+  // NOTE: We don't check for ?embed=true here, because we want to allow display without any
+  // other embed options (for example in our e2e tests).
   return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(
     EMBED_LIGHT_THEME
   )
@@ -171,6 +189,8 @@ export function isLightTheme(): boolean {
  * Returns true if the URL parameters contain ?embed_options=dark_theme (case insensitive).
  */
 export function isDarkTheme(): boolean {
+  // NOTE: We don't check for ?embed=true here, because we want to allow display without any
+  // other embed options (for example in our e2e tests).
   return getEmbedUrlParams(EMBED_OPTIONS_QUERY_PARAM_KEY).has(EMBED_DARK_THEME)
 }
 
@@ -322,7 +342,7 @@ export function setCookie(
 
 /** Return an Element's widget ID if it's a widget, and undefined otherwise. */
 export function getElementWidgetID(element: Element): string | undefined {
-  return _.get(element as any, [requireNonNull(element.type), "id"])
+  return get(element as any, [requireNonNull(element.type), "id"])
 }
 
 /** True if the given form ID is non-null and non-empty. */

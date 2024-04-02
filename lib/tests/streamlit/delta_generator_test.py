@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import logging
 import re
 import threading
 import unittest
+from copy import deepcopy
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -40,7 +41,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.widgets import _build_duplicate_widget_message
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -124,6 +125,7 @@ class RunWarningTest(unittest.TestCase):
                 "graphviz_chart",
                 "header",
                 "help",
+                "html",
                 "id",
                 "image",
                 "info",
@@ -136,7 +138,9 @@ class RunWarningTest(unittest.TestCase):
                 "metric",
                 "multiselect",
                 "number_input",
+                "page_link",
                 "plotly_chart",
+                "popover",
                 "progress",
                 "pydeck_chart",
                 "pyplot",
@@ -162,6 +166,7 @@ class RunWarningTest(unittest.TestCase):
                 "video",
                 "warning",
                 "write",
+                "write_stream",
             },
         )
 
@@ -301,6 +306,27 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         self.assertTrue(dg._cursor.is_locked)
         self.assertEqual(dg._cursor.index, 1234)
 
+    def test_can_deepcopy_delta_generators(self):
+        cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)
+        dg1 = DeltaGenerator(root_container=RootContainer.MAIN, cursor=cursor)
+        dg2 = deepcopy(dg1)
+
+        self.assertEqual(dg1._root_container, dg2._root_container)
+        self.assertIsNone(dg1._parent)
+        self.assertIsNone(dg2._parent)
+        self.assertEqual(dg1._block_type, dg2._block_type)
+
+        # Check that the internals of the Cursors look the same. Note the cursors
+        # themselves will be different objects so won't compare equal.
+        c1 = dg1._cursor
+        c2 = dg2._cursor
+        self.assertIsInstance(c1, LockedCursor)
+        self.assertIsInstance(c2, LockedCursor)
+        self.assertEqual(c1._root_container, c2._root_container)
+        self.assertEqual(c1._index, c2._index)
+        self.assertEqual(c1._parent_path, c2._parent_path)
+        self.assertEqual(c1._props, c2._props)
+
     def test_enqueue_null(self):
         # Test "Null" Delta generators
         dg = DeltaGenerator(root_container=None)
@@ -322,7 +348,9 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         self.assertEqual(1, dg._cursor.index)
         self.assertEqual(container, new_dg._root_container)
 
-        element = self.get_delta_from_queue().new_element
+        delta = self.get_delta_from_queue()
+        element = delta.new_element
+        self.assertEqual(delta.fragment_id, "")
         self.assertEqual(element.text.body, test_data)
 
     def test_enqueue_same_id(self):
@@ -343,6 +371,16 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
             make_delta_path(RootContainer.MAIN, (), 123), msg.metadata.delta_path
         )
         self.assertEqual(msg.delta.new_element.text.body, test_data)
+
+    def test_enqueue_adds_fragment_id_to_delta_if_set(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "my_fragment_id"
+
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+        dg._enqueue("text", TextProto())
+
+        delta = self.get_delta_from_queue()
+        self.assertEqual(delta.fragment_id, "my_fragment_id")
 
 
 class DeltaGeneratorContainerTest(DeltaGeneratorTestCase):

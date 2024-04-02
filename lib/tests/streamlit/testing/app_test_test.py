@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -178,6 +178,83 @@ def test_query_narrowing():
         st.text("4")
 
     at = AppTest.from_function(script).run()
-    assert len(at.text) == 4
+    assert at.text.len == 4
     # querying elements via a block only returns the elements in that block
-    assert len(at.get("expandable")[0].text) == 2
+    assert at.expander[0].text.len == 2
+
+
+def test_out_of_order_blocks() -> None:
+    # Regression test for #7711
+    def script():
+        import streamlit as st
+
+        container = st.container()
+        with container:
+            st.markdown("BarFoo")
+
+            def button_one_clicked(cont):
+                cont.info("Hi!")
+                cont.markdown("FooBar")
+
+            st.button("one", on_click=button_one_clicked, args=[container])
+
+    at = AppTest.from_function(script).run()
+
+    at.button[0].click().run()
+
+    assert at.markdown.len == 2
+    assert at.info[0].value == "Hi!"
+    assert at.markdown.values == ["FooBar", "BarFoo"]
+
+
+def test_from_function_kwargs():
+    def script(foo, baz):
+        import streamlit as st
+
+        st.text(foo)
+        st.text(baz)
+        return foo
+
+    at = AppTest.from_function(script, args=("bar",), kwargs={"baz": "baz"}).run()
+    assert at.text.values == ["bar", "baz"]
+
+
+def test_trigger_recursion():
+    # Regression test for #7768
+    def code():
+        import time
+
+        import streamlit as st
+
+        if st.button(label="Submit"):
+            print("CLICKED!")
+            time.sleep(1)
+            st.rerun()
+
+    at = AppTest.from_function(code).run()
+    # The script run should finish instead of recurring and timing out
+    at.button[0].click().run()
+
+
+def test_switch_page():
+    at = AppTest.from_file("test_data/main.py").run()
+    assert at.text[0].value == "main page"
+
+    at.switch_page("pages/page1.py").run()
+    assert at.text[0].value == "page 1"
+
+    with pytest.raises(ValueError) as e:
+        # Pages must be relative to main script path
+        at.switch_page("test_data/pages/page1.py")
+        assert "relative to the main script path" in str(e.value)
+
+
+def test_switch_page_widgets():
+    at = AppTest.from_file("test_data/main.py").run()
+    at.slider[0].set_value(5).run()
+    assert at.slider[0].value == 5
+
+    at.switch_page("pages/page1.py").run()
+    assert not at.slider
+    at.switch_page("main.py").run()
+    assert at.slider[0].value == 0

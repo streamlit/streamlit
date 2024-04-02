@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import collections
 import os
 import sys
 import types
-from typing import Callable, Dict, List, Optional, Set
+from pathlib import Path
+from typing import Callable, Final
 
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
@@ -27,7 +30,7 @@ from streamlit.watcher.path_watcher import (
     get_default_path_watcher_class,
 )
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 WatchedModule = collections.namedtuple("WatchedModule", ["watcher", "module_name"])
 
@@ -40,29 +43,44 @@ class LocalSourcesWatcher:
     def __init__(self, main_script_path: str):
         self._main_script_path = os.path.abspath(main_script_path)
         self._script_folder = os.path.dirname(self._main_script_path)
-        self._on_file_changed: List[Callable[[str], None]] = []
+        self._on_file_changed: list[Callable[[str], None]] = []
         self._is_closed = False
-        self._cached_sys_modules: Set[str] = set()
+        self._cached_sys_modules: set[str] = set()
 
         # Blacklist for folders that should not be watched
         self._folder_black_list = FolderBlackList(
             config.get_option("server.folderWatchBlacklist")
         )
 
-        self._watched_modules: Dict[str, WatchedModule] = {}
+        self._watched_modules: dict[str, WatchedModule] = {}
+        self._watched_pages: set[str] = set()
+
+        self.update_watched_pages()
+
+    def update_watched_pages(self) -> None:
+        old_watched_pages = self._watched_pages
+        new_pages_paths: set[str] = set()
 
         for page_info in get_pages(self._main_script_path).values():
-            self._register_watcher(
-                page_info["script_path"],
-                module_name=None,  # Only root scripts have their modules set to None
-            )
+            new_pages_paths.add(page_info["script_path"])
+            if page_info["script_path"] not in old_watched_pages:
+                self._register_watcher(
+                    page_info["script_path"],
+                    module_name=None,
+                )
+
+        for old_page_path in old_watched_pages:
+            if old_page_path not in new_pages_paths:
+                self._deregister_watcher(old_page_path)
+
+        self._watched_pages = new_pages_paths
 
     def register_file_change_callback(self, cb: Callable[[str], None]) -> None:
         self._on_file_changed.append(cb)
 
     def on_file_changed(self, filepath):
         if filepath not in self._watched_modules:
-            LOGGER.error("Received event for non-watched file: %s", filepath)
+            _LOGGER.error("Received event for non-watched file: %s", filepath)
             return
 
         # Workaround:
@@ -88,6 +106,7 @@ class LocalSourcesWatcher:
         for wm in self._watched_modules.values():
             wm.watcher.close()
         self._watched_modules = {}
+        self._watched_pages = set()
         self._is_closed = True
 
     def _register_watcher(self, filepath, module_name):
@@ -143,17 +162,17 @@ class LocalSourcesWatcher:
             self._cached_sys_modules = set(sys.modules)
             self._register_necessary_watchers(modules_paths)
 
-    def _register_necessary_watchers(self, module_paths: Dict[str, Set[str]]) -> None:
+    def _register_necessary_watchers(self, module_paths: dict[str, set[str]]) -> None:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
-                    self._register_watcher(path, name)
+                    self._register_watcher(str(Path(path).resolve()), name)
 
-    def _exclude_blacklisted_paths(self, paths: Set[str]) -> Set[str]:
+    def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
-def get_module_paths(module: types.ModuleType) -> Set[str]:
+def get_module_paths(module: types.ModuleType) -> set[str]:
     paths_extractors = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded
@@ -186,7 +205,7 @@ def get_module_paths(module: types.ModuleType) -> Set[str]:
             # Some modules might not have __file__ or __spec__ attributes.
             pass
         except Exception as e:
-            LOGGER.warning(f"Examining the path of {module.__name__} raised: {e}")
+            _LOGGER.warning(f"Examining the path of {module.__name__} raised: {e}")
 
         all_paths.update(
             [os.path.abspath(str(p)) for p in potential_paths if _is_valid_path(p)]
@@ -194,5 +213,5 @@ def get_module_paths(module: types.ModuleType) -> Set[str]:
     return all_paths
 
 
-def _is_valid_path(path: Optional[str]) -> bool:
+def _is_valid_path(path: str | None) -> bool:
     return isinstance(path, str) and (os.path.isfile(path) or os.path.isdir(path))

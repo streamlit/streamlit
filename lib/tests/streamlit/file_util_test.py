@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -270,3 +270,66 @@ class FileInPythonPathTest(unittest.TestCase):
                     self._make_it_absolute("../something_else/module")
                 )
             )
+
+    def test_get_main_script_directory(self):
+        """Test file_util.get_main_script_directory."""
+        with patch("os.getcwd", return_value="/some/random"):
+            self.assertEqual(
+                file_util.get_main_script_directory("app.py"),
+                "/some/random",
+            )
+            self.assertEqual(
+                file_util.get_main_script_directory("./app.py"),
+                "/some/random",
+            )
+            self.assertEqual(
+                file_util.get_main_script_directory("../app.py"),
+                "/some",
+            )
+            self.assertEqual(
+                file_util.get_main_script_directory("/path/to/my/app.py"),
+                "/path/to/my",
+            )
+
+    def test_normalize_path_join(self):
+        """Test file_util.normalize_path_join."""
+        self.assertEqual(
+            file_util.normalize_path_join("/some", "random", "path"),
+            "/some/random/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("some", "random", "path"),
+            "some/random/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("/some", "random", "./path"),
+            "/some/random/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("some", "random", "./path"),
+            "some/random/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("/some", "random", "../path"),
+            "/some/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("some", "random", "../path"),
+            "some/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("/some", "random", "/path"),
+            "/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("some", "random", "/path"),
+            "/path",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("some", "random", "path", ".."),
+            "some/random",
+        )
+        self.assertEqual(
+            file_util.normalize_path_join("some", "random", "path", "../.."),
+            "some",
+        )

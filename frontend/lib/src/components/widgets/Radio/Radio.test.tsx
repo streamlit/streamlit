@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,21 @@ describe("Radio widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setIntValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setIntValue")
+    render(<Radio {...props} />)
+
+    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -163,7 +177,8 @@ describe("Radio widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
     expect(secondOption).toBeChecked()
   })
@@ -186,7 +201,8 @@ describe("Radio widget", () => {
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
       props.element,
       1,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     // "Submit" the form
@@ -202,7 +218,8 @@ describe("Radio widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,17 @@
 import styled from "@emotion/styled"
 import { StyledEmojiIcon } from "@streamlit/lib/src/components/shared/Icon/styled-components"
 
-export const StyledIconAlertContent = styled.div(({ theme }) => ({
+export const StyledAlertContent = styled.div(({ theme }) => ({
   display: "flex",
   gap: theme.spacing.sm,
+  width: "100%",
 
   [StyledEmojiIcon as any]: {
     position: "relative",
     top: "2px",
+  },
+
+  ".stCodeBlock code": {
+    paddingRight: "1rem",
   },
 }))

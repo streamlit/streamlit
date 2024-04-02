@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 describe("Host communication", () => {
     before(() => {
         cy.visit("hostframe.html");
-        cy.get("#toolbar button").should("have.length", 9);
+        cy.get("#toolbar button").should("have.length", 10);
         cy.get("iframe")
             .iframe(() => {
                 cy.waitForScriptFinish()

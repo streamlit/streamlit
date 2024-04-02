@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,21 +19,18 @@
 
 """Image marshalling."""
 
-import base64
+from __future__ import annotations
+
 import io
-import mimetypes
+import os
 import re
 from enum import IntEnum
-from typing import TYPE_CHECKING, List, Optional, Sequence, Union, cast
-from urllib.parse import urlparse
+from typing import TYPE_CHECKING, Final, List, Literal, Sequence, Union, cast
 
-import numpy as np
-from PIL import GifImagePlugin, Image, ImageFile
-from typing_extensions import Final, Literal, TypeAlias
+from typing_extensions import TypeAlias
 
-from streamlit import runtime
+from streamlit import runtime, url_util
 from streamlit.errors import StreamlitAPIException
-from streamlit.logger import get_logger
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
@@ -42,10 +39,9 @@ if TYPE_CHECKING:
     from typing import Any
 
     import numpy.typing as npt
+    from PIL import GifImagePlugin, Image, ImageFile
 
     from streamlit.delta_generator import DeltaGenerator
-
-LOGGER: Final = get_logger(__name__)
 
 # This constant is related to the frontend maximum content width specified
 # in App.jsx main container
@@ -54,11 +50,11 @@ LOGGER: Final = get_logger(__name__)
 MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 
 PILImage: TypeAlias = Union[
-    ImageFile.ImageFile, Image.Image, GifImagePlugin.GifImageFile
+    "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
 ]
 AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
-UseColumnWith: TypeAlias = Optional[Union[Literal["auto", "always", "never"], bool]]
+UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]
 ImageFormat: TypeAlias = Literal["JPEG", "PNG", "GIF"]
 ImageFormatOrAuto: TypeAlias = Literal[ImageFormat, "auto"]
@@ -91,13 +87,13 @@ class ImageMixin:
         image: ImageOrImageList,
         # TODO: Narrow type of caption, dependent on type of image,
         #  by way of overload
-        caption: Optional[Union[str, List[str]]] = None,
-        width: Optional[int] = None,
+        caption: str | list[str] | None = None,
+        width: int | None = None,
         use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
-    ) -> "DeltaGenerator":
+    ) -> DeltaGenerator:
         """Display an image or list of images.
 
         Parameters
@@ -175,7 +171,7 @@ class ImageMixin:
         return self.dg._enqueue("imgs", image_list_proto)
 
     @property
-    def dg(self) -> "DeltaGenerator":
+    def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
@@ -192,7 +188,7 @@ def _image_is_gif(image: PILImage) -> bool:
 
 
 def _validate_image_format_string(
-    image_data: Union[bytes, PILImage], format: str
+    image_data: bytes | PILImage, format: str
 ) -> ImageFormat:
     """Return either "JPEG", "PNG", or "GIF", based on the input `format` string.
 
@@ -210,6 +206,8 @@ def _validate_image_format_string(
         return "JPEG"
 
     if isinstance(image_data, bytes):
+        from PIL import Image
+
         pil_image = Image.open(io.BytesIO(image_data))
     else:
         pil_image = image_data
@@ -245,18 +243,21 @@ def _BytesIO_to_bytes(data: io.BytesIO) -> bytes:
     return data.getvalue()
 
 
-def _np_array_to_bytes(array: "npt.NDArray[Any]", output_format="JPEG") -> bytes:
+def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str = "JPEG") -> bytes:
+    import numpy as np
+    from PIL import Image
+
     img = Image.fromarray(array.astype(np.uint8))
     format = _validate_image_format_string(img, output_format)
 
     return _PIL_to_bytes(img, format)
 
 
-def _4d_to_list_3d(array: "npt.NDArray[Any]") -> List["npt.NDArray[Any]"]:
+def _4d_to_list_3d(array: npt.NDArray[Any]) -> list[npt.NDArray[Any]]:
     return [array[i, :, :, :] for i in range(0, array.shape[0])]
 
 
-def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
+def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
     if len(array.shape) not in (2, 3):
         raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
     if len(array.shape) == 3 and array.shape[-1] not in (1, 3, 4):
@@ -284,6 +285,8 @@ def _ensure_image_size_and_format(
     MAXIMUM_CONTENT_WIDTH. Ensure the image's format corresponds to the given
     ImageFormat. Return the (possibly resized and reformatted) image bytes.
     """
+    from PIL import Image
+
     pil_image = Image.open(io.BytesIO(image_data))
     actual_width, actual_height = pil_image.size
 
@@ -304,7 +307,9 @@ def _ensure_image_size_and_format(
     return image_data
 
 
-def _clip_image(image: "npt.NDArray[Any]", clamp: bool) -> "npt.NDArray[Any]":
+def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
+    import numpy as np
+
     data = image
     if issubclass(image.dtype.type, np.floating):
         if clamp:
@@ -337,13 +342,21 @@ def image_to_url(
     (When running in "raw" mode, we won't actually load data into the
     MediaFileManager, and we'll return an empty URL.)
     """
+    import numpy as np
+    from PIL import Image, ImageFile
 
     image_data: bytes
 
     # Strings
     if isinstance(image, str):
-        # Unpack local SVG image file to an SVG string
-        if image.endswith(".svg") and not image.startswith(("http://", "https://")):
+        if not os.path.isfile(image) and url_util.is_url(
+            image, allowed_schemas=("http", "https", "data")
+        ):
+            # If it's a url, return it directly.
+            return image
+
+        if image.endswith(".svg") and os.path.isfile(image):
+            # Unpack local SVG image file to an SVG string
             with open(image) as textfile:
                 image = textfile.read()
 
@@ -357,18 +370,11 @@ def image_to_url(
                     "<svg", '<svg xmlns="http://www.w3.org/2000/svg" ', 1
                 )
             # Convert to base64 to prevent issues with encoding:
+            import base64
+
             image_b64_encoded = base64.b64encode(image.encode("utf-8")).decode("utf-8")
             # Return SVG as data URI:
             return f"data:image/svg+xml;base64,{image_b64_encoded}"
-
-        # If it's a url, return it directly.
-        try:
-            p = urlparse(image)
-            if p.scheme:
-                return image
-        except UnicodeDecodeError:
-            # If the string runs into a UnicodeDecodeError, we assume it is not a valid URL.
-            pass
 
         # Otherwise, try to open it as a file.
         try:
@@ -378,6 +384,8 @@ def image_to_url(
             # When we aren't able to open the image file, we still pass the path to
             # the MediaFileManager - its storage backend may have access to files
             # that Streamlit does not.
+            import mimetypes
+
             mimetype, _ = mimetypes.guess_type(image)
             if mimetype is None:
                 mimetype = "application/octet-stream"
@@ -443,8 +451,8 @@ def image_to_url(
 def marshall_images(
     coordinates: str,
     image: ImageOrImageList,
-    caption: Optional[Union[str, "npt.NDArray[Any]", List[str]]],
-    width: Union[int, WidthBehaviour],
+    caption: str | npt.NDArray[Any] | list[str] | None,
+    width: int | WidthBehaviour,
     proto_imgs: ImageListProto,
     clamp: bool,
     channels: Channels = "RGB",
@@ -488,6 +496,8 @@ def marshall_images(
         Defaults to 'auto' which identifies the compression type based
         on the type and format of the image argument.
     """
+    import numpy as np
+
     channels = cast(Channels, channels.upper())
 
     # Turn single image and caption into one element list.
@@ -500,7 +510,7 @@ def marshall_images(
         images = [image]
 
     if type(caption) is list:
-        captions: Sequence[Optional[str]] = caption
+        captions: Sequence[str | None] = caption
     else:
         if isinstance(caption, str):
             captions = [caption]

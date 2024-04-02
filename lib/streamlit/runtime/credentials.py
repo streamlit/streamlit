@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,22 +14,21 @@
 
 """Manage the user's Streamlit credentials."""
 
+from __future__ import annotations
+
 import json
 import os
 import sys
 import textwrap
 from collections import namedtuple
 from datetime import datetime
-from typing import Optional
+from typing import Final, NoReturn
 from uuid import uuid4
 
-import click
-import toml
-
-from streamlit import env_util, file_util, util
+from streamlit import cli_util, env_util, file_util, util
 from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 if env_util.IS_WINDOWS:
@@ -66,43 +65,14 @@ def email_prompt() -> str:
       %(email)s""".format(
         "👋 " if show_emoji else ""
     ) % {
-        "welcome": click.style("Welcome to Streamlit!", bold=True),
-        "email": click.style("Email: ", fg="blue"),
+        "welcome": cli_util.style_for_cli("Welcome to Streamlit!", bold=True),
+        "email": cli_util.style_for_cli("Email: ", fg="blue"),
     }
 
 
-# IMPORTANT: Break the text below at 80 chars.
-_TELEMETRY_TEXT = """
-  You can find our privacy policy at %(link)s
-
-  Summary:
-  - This open source library collects usage statistics.
-  - We cannot see and do not store information contained inside Streamlit apps,
-    such as text, charts, images, etc.
-  - Telemetry data is stored in servers in the United States.
-  - If you'd like to opt out, add the following to %(config)s,
-    creating that file if necessary:
-
-    [browser]
-    gatherUsageStats = false
-""" % {
-    "link": click.style("https://streamlit.io/privacy-policy", underline=True),
-    "config": click.style(_CONFIG_FILE_PATH),
-}
-
 _TELEMETRY_HEADLESS_TEXT = """
-Collecting usage statistics. To deactivate, set browser.gatherUsageStats to False.
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
 """
-
-# IMPORTANT: Break the text below at 80 chars.
-_INSTRUCTIONS_TEXT = """
-  %(start)s
-  %(prompt)s %(hello)s
-""" % {
-    "start": click.style("Get started by typing:", fg="blue", bold=True),
-    "prompt": click.style("$", fg="blue"),
-    "hello": click.style("streamlit hello", bold=True),
-}
 
 
 def _send_email(email: str) -> None:
@@ -152,7 +122,7 @@ def _send_email(email: str) -> None:
 class Credentials(object):
     """Credentials class."""
 
-    _singleton: Optional["Credentials"] = None
+    _singleton: "Credentials" | None = None
 
     @classmethod
     def get_current(cls):
@@ -177,11 +147,13 @@ class Credentials(object):
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def load(self, auto_resolve=False) -> None:
+    def load(self, auto_resolve: bool = False) -> None:
         """Load from toml file."""
         if self.activation is not None:
-            LOGGER.error("Credentials already loaded. Not rereading file.")
+            _LOGGER.error("Credentials already loaded. Not rereading file.")
             return
+
+        import toml
 
         try:
             with open(self._conf_file, "r") as f:
@@ -211,7 +183,7 @@ class Credentials(object):
                 % (self._conf_file)
             )
 
-    def _check_activated(self, auto_resolve=True):
+    def _check_activated(self, auto_resolve: bool = True) -> None:
         """Check if streamlit is activated.
 
         Used by `streamlit run script.py`
@@ -225,7 +197,7 @@ class Credentials(object):
             _exit("Activation email not valid.")
 
     @classmethod
-    def reset(cls):
+    def reset(cls) -> None:
         """Reset credentials by removing file.
 
         This is used by `streamlit activate reset` in case a user wants
@@ -237,9 +209,9 @@ class Credentials(object):
         try:
             os.remove(c._conf_file)
         except OSError as e:
-            LOGGER.error("Error removing credentials file: %s" % e)
+            _LOGGER.error("Error removing credentials file: %s" % e)
 
-    def save(self):
+    def save(self) -> None:
         """Save to toml file and send email."""
         from requests.exceptions import RequestException
 
@@ -251,13 +223,16 @@ class Credentials(object):
 
         # Write the file
         data = {"email": self.activation.email}
+
+        import toml
+
         with open(self._conf_file, "w") as f:
             toml.dump({"general": data}, f)
 
         try:
             _send_email(self.activation.email)
         except RequestException as e:
-            LOGGER.error(f"Error saving email: {e}")
+            _LOGGER.error(f"Error saving email: {e}")
 
     def activate(self, show_instructions: bool = True) -> None:
         """Activate Streamlit.
@@ -283,6 +258,8 @@ class Credentials(object):
             activated = False
 
             while not activated:
+                import click
+
                 email = click.prompt(
                     text=email_prompt(),
                     prompt_suffix="",
@@ -293,12 +270,47 @@ class Credentials(object):
                 self.activation = _verify_email(email)
                 if self.activation.is_valid:
                     self.save()
-                    click.secho(_TELEMETRY_TEXT)
+                    # IMPORTANT: Break the text below at 80 chars.
+                    TELEMETRY_TEXT = """
+  You can find our privacy policy at %(link)s
+
+  Summary:
+  - This open source library collects usage statistics.
+  - We cannot see and do not store information contained inside Streamlit apps,
+    such as text, charts, images, etc.
+  - Telemetry data is stored in servers in the United States.
+  - If you'd like to opt out, add the following to %(config)s,
+    creating that file if necessary:
+
+    [browser]
+    gatherUsageStats = false
+""" % {
+                        "link": cli_util.style_for_cli(
+                            "https://streamlit.io/privacy-policy", underline=True
+                        ),
+                        "config": cli_util.style_for_cli(_CONFIG_FILE_PATH),
+                    }
+
+                    cli_util.print_to_cli(TELEMETRY_TEXT)
                     if show_instructions:
-                        click.secho(_INSTRUCTIONS_TEXT)
+                        # IMPORTANT: Break the text below at 80 chars.
+                        INSTRUCTIONS_TEXT = """
+  %(start)s
+  %(prompt)s %(hello)s
+""" % {
+                            "start": cli_util.style_for_cli(
+                                "Get started by typing:", fg="blue", bold=True
+                            ),
+                            "prompt": cli_util.style_for_cli("$", fg="blue"),
+                            "hello": cli_util.style_for_cli(
+                                "streamlit hello", bold=True
+                            ),
+                        }
+
+                        cli_util.print_to_cli(INSTRUCTIONS_TEXT)
                     activated = True
                 else:  # pragma: nocover
-                    LOGGER.error("Please try again.")
+                    _LOGGER.error("Please try again.")
 
 
 def _verify_email(email: str) -> _Activation:
@@ -323,27 +335,27 @@ def _verify_email(email: str) -> _Activation:
     # We deliberately use simple email validation here
     # since we do not use email address anywhere to send emails.
     if len(email) > 0 and email.count("@") != 1:
-        LOGGER.error("That doesn't look like an email :(")
+        _LOGGER.error("That doesn't look like an email :(")
         return _Activation(None, False)
 
     return _Activation(email, True)
 
 
-def _exit(message):  # pragma: nocover
+def _exit(message: str) -> NoReturn:
     """Exit program with error."""
-    LOGGER.error(message)
+    _LOGGER.error(message)
     sys.exit(-1)
 
 
-def _get_credential_file_path():
+def _get_credential_file_path() -> str:
     return file_util.get_streamlit_file_path("credentials.toml")
 
 
-def _check_credential_file_exists():
+def _check_credential_file_exists() -> bool:
     return os.path.exists(_get_credential_file_path())
 
 
-def check_credentials():
+def check_credentials() -> None:
     """Check credentials and potentially activate.
 
     Note
@@ -357,6 +369,6 @@ def check_credentials():
     if not _check_credential_file_exists() and config.get_option("server.headless"):
         if not config.is_manually_set("browser.gatherUsageStats"):
             # If not manually defined, show short message about usage stats gathering.
-            click.secho(_TELEMETRY_HEADLESS_TEXT)
+            cli_util.print_to_cli(_TELEMETRY_HEADLESS_TEXT)
         return
     Credentials.get_current()._check_activated()

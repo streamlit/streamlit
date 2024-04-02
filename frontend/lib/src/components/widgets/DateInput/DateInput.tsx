@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ export interface Props {
   theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -134,10 +135,12 @@ class DateInput extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setStringArrayValue(
-      this.props.element,
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setStringArrayValue(
+      element,
       datesToStrings(this.state.values),
-      source
+      source,
+      fragmentId
     )
   }
 

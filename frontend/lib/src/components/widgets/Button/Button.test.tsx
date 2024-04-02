@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,24 @@ describe("Button widget", () => {
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
         props.element,
-        { fromUi: true }
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("passes fragmentId to onClick prop", () => {
+      const props = getProps(undefined, {
+        fragmentId: "myFragmentId",
+      })
+      render(<Button {...props} />)
+
+      const buttonWidget = screen.getByRole("button")
+      fireEvent.click(buttonWidget)
+
+      expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+        props.element,
+        { fromUi: true },
+        "myFragmentId"
       )
     })
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +13,12 @@
 # limitations under the License.
 from __future__ import annotations
 
-import ast
 import hashlib
 import inspect
-import pathlib
 import tempfile
 import textwrap
 import traceback
+from pathlib import Path
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
@@ -33,6 +32,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
@@ -52,6 +52,7 @@ from streamlit.testing.v1.element_tree import (
     ElementTree,
     Error,
     Exception,
+    Expander,
     Header,
     Info,
     Json,
@@ -65,6 +66,7 @@ from streamlit.testing.v1.element_tree import (
     Selectbox,
     SelectSlider,
     Slider,
+    Status,
     Subheader,
     Success,
     Tab,
@@ -81,12 +83,10 @@ from streamlit.testing.v1.element_tree import (
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
-from streamlit.util import HASHLIB_KWARGS
-from streamlit.web.bootstrap import _fix_matplotlib_crash
+from streamlit.testing.v1.util import patch_config_options
+from streamlit.util import HASHLIB_KWARGS, calc_md5
 
 TMP_DIR = tempfile.TemporaryDirectory()
-
-_fix_matplotlib_crash()
 
 
 class AppTest:
@@ -145,12 +145,24 @@ class AppTest:
         dict-like syntax to set ``query_params`` values for the simulated app.
     """
 
-    def __init__(self, script_path: str, *, default_timeout: float):
+    def __init__(
+        self,
+        script_path: str,
+        *,
+        default_timeout: float,
+        args=None,
+        kwargs=None,
+    ):
         self._script_path = script_path
         self.default_timeout = default_timeout
-        self.session_state = SafeSessionState(SessionState(), lambda: None)
+        session_state = SessionState()
+        session_state[TESTING_KEY] = {}
+        self.session_state = SafeSessionState(session_state, lambda: None)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
+        self.args = args
+        self.kwargs = kwargs
+        self._page_hash = ""
 
         tree = ElementTree()
         tree._runner = self
@@ -183,17 +195,30 @@ class AppTest:
             executed via ``.run()``.
 
         """
+        return cls._from_string(script, default_timeout=default_timeout)
+
+    @classmethod
+    def _from_string(
+        cls, script: str, *, default_timeout: float = 3, args=None, kwargs=None
+    ) -> AppTest:
         hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
-        path = pathlib.Path(TMP_DIR.name, script_name)
+        path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
-        return AppTest(str(path), default_timeout=default_timeout)
+        return AppTest(
+            str(path), default_timeout=default_timeout, args=args, kwargs=kwargs
+        )
 
     @classmethod
     def from_function(
-        cls, script: Callable[[], None], *, default_timeout: float = 3
+        cls,
+        script: Callable[..., Any],
+        *,
+        default_timeout: float = 3,
+        args=None,
+        kwargs=None,
     ) -> AppTest:
         """
         Create an instance of ``AppTest`` to simulate an app page defined\
@@ -213,6 +238,12 @@ class AppTest:
             Default time in seconds before a script run is timed out. Can be
             overridden for individual ``.run()`` calls.
 
+        args: tuple
+            An optional tuple of args to pass to the script function.
+
+        kwargs: dict
+            An optional dict of kwargs to pass to the script function.
+
         Returns
         -------
         AppTest
@@ -220,14 +251,12 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        # TODO: Simplify this using `ast.unparse()` once we drop 3.8 support
         source_lines, _ = inspect.getsourcelines(script)
         source = textwrap.dedent("".join(source_lines))
-        module = ast.parse(source)
-        fn_def = module.body[0]
-        body_lines = source_lines[fn_def.lineno :]
-        body = textwrap.dedent("".join(body_lines))
-        return cls.from_string(body, default_timeout=default_timeout)
+        module = source + f"\n{script.__name__}(*__args, **__kwargs)"
+        return cls._from_string(
+            module, default_timeout=default_timeout, args=args, kwargs=kwargs
+        )
 
     @classmethod
     def from_file(cls, script_path: str, *, default_timeout: float = 3) -> AppTest:
@@ -256,14 +285,14 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        if pathlib.Path.is_file(pathlib.Path(script_path)):
+        if Path.is_file(Path(script_path)):
             path = script_path
         else:
             # TODO: Make this not super fragile
             # Attempt to find the test file calling this method, so the
             # path can be relative to there.
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-            filepath = pathlib.Path(stack[1].filename)
+            filepath = Path(stack[1].filename)
             path = str(filepath.parent / script_path)
         return AppTest(path, default_timeout=default_timeout)
 
@@ -302,9 +331,14 @@ class AppTest:
             new_secrets._secrets = self.secrets
             st.secrets = new_secrets
 
-        script_runner = LocalScriptRunner(self._script_path, self.session_state)
-        self._tree = script_runner.run(widget_state, self.query_params, timeout)
-        self._tree._runner = self
+        script_runner = LocalScriptRunner(
+            self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
+        )
+        with patch_config_options({"global.appTest": True}):
+            self._tree = script_runner.run(
+                widget_state, self.query_params, timeout, self._page_hash
+            )
+            self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = parse.parse_qs(query_string)
@@ -341,6 +375,30 @@ class AppTest:
             self
         """
         return self._tree.run(timeout=timeout)
+
+    def switch_page(self, page_path: str) -> AppTest:
+        """Switch to another page of the app.
+
+        Parameters
+        ----------
+        page_path: str
+            Path of the page to switch to. The path must be relative to the
+            location of the main script (e.g. ``"pages/my_page.py"``).
+
+        Returns
+        -------
+        AppTest
+            self
+        """
+        main_dir = Path(self._script_path).parent
+        full_page_path = main_dir / page_path
+        if not full_page_path.is_file():
+            raise ValueError(
+                f"Unable to find script at {page_path}, make sure the page given is relative to the main script."
+            )
+        page_path_str = str(full_page_path.resolve())
+        self._page_hash = calc_md5(page_path_str)
+        return self
 
     @property
     def main(self) -> Block:
@@ -555,6 +613,20 @@ class AppTest:
         return self._tree.exception
 
     @property
+    def expander(self) -> Sequence[Expander]:
+        """Sequence of all ``st.expander`` elements.
+
+        Returns
+        -------
+        Sequence of Expandable
+            Sequence of all ``st.expander`` elements. Individual elements can be
+            accessed from a Sequence by index (order on the page). For
+            example, ``at.expander[0]`` for the first element. Expandable is an
+            extension of the Block class.
+        """
+        return self._tree.expander
+
+    @property
     def header(self) -> ElementList[Header]:
         """Sequence of all ``st.header`` elements.
 
@@ -749,6 +821,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.success
+
+    @property
+    def status(self) -> Sequence[Status]:
+        """Sequence of all ``st.status`` elements.
+
+        Returns
+        -------
+        Sequence of Status
+            Sequence of all ``st.status`` elements. Individual elements can be
+            accessed from a Sequence by index (order on the page). For
+            example, ``at.status[0]`` for the first element. Status is an
+            extension of the Block class.
+        """
+        return self._tree.status
 
     @property
     def table(self) -> ElementList[Table]:
