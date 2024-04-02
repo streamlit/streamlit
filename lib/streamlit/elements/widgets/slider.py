@@ -618,6 +618,12 @@ class SliderMixin:
             max_value = _datetime_to_micros(max_value)
             step = _delta_to_micros(cast(timedelta, step))
 
+        if min_value == max_value:
+            raise StreamlitAPIException(
+                "Slider `min_value` must be less than the `max_value`."
+                f"The values were {min_value}."
+            )
+
         # It would be great if we could guess the number of decimal places from
         # the `step` argument, but this would only be meaningful if step were a
         # decimal. As a possible improvement we could make this function accept
