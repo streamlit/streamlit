@@ -52,7 +52,7 @@ MAXIMUM_CONTENT_WIDTH: Final[int] = 2 * 730
 PILImage: TypeAlias = Union[
     "ImageFile.ImageFile", "Image.Image", "GifImagePlugin.GifImageFile"
 ]
-AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str]
+AtomicImage: TypeAlias = Union[PILImage, "npt.NDArray[Any]", io.BytesIO, str, bytes]
 ImageOrImageList: TypeAlias = Union[AtomicImage, List[AtomicImage]]
 UseColumnWith: TypeAlias = Union[Literal["auto", "always", "never"], bool, None]
 Channels: TypeAlias = Literal["RGB", "BGR"]
@@ -296,7 +296,9 @@ def _ensure_image_size_and_format(
     if width > 0 and actual_width > width:
         # We need to resize the image.
         new_height = int(1.0 * actual_height * width / actual_width)
-        pil_image = pil_image.resize((width, new_height), resample=Image.BILINEAR)
+        pil_image = pil_image.resize(
+            (width, new_height), resample=Image.Resampling.BILINEAR
+        )
         return _PIL_to_bytes(pil_image, format=image_format, quality=90)
 
     if pil_image.format != image_format:
