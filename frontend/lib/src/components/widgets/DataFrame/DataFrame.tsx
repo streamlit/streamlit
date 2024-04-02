@@ -97,6 +97,7 @@ export interface DataFrameProps {
   expand?: () => void
   collapse?: () => void
   disableFullscreenMode?: boolean
+  fragmentId?: string
 }
 
 /**
@@ -121,6 +122,7 @@ function DataFrame({
   disableFullscreenMode,
   expand,
   collapse,
+  fragmentId,
 }: DataFrameProps): ReactElement {
   const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
@@ -335,7 +337,8 @@ function DataFrame({
             currentEditingState,
             {
               fromUi: triggerRerun,
-            }
+            },
+            fragmentId
           )
         }
       })()

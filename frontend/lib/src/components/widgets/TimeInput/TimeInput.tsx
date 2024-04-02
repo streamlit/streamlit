@@ -46,6 +46,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 interface State {
@@ -103,11 +104,8 @@ class TimeInput extends PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setStringValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setStringValue(element, this.state.value, source, fragmentId)
   }
 
   /**
