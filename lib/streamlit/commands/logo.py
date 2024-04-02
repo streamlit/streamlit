@@ -22,7 +22,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
 def logo(
-    image: string | Image.Image | AtomicImage,
+    image: str | Image.Image | AtomicImage,
     size: Literal["fixed", "full"] = "fixed",
     *,  # keyword-only args:
     url: str | None = None,

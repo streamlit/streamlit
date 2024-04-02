@@ -322,12 +322,26 @@ export const StyledResizeHandle = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledSidebarOpenContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "start",
-  padding: `${theme.spacing.twoXL} 0 0 ${theme.spacing.twoXL}`,
-}))
+export interface StyledSidebarOpenContainerProps {
+  chevronDownshift: number
+  isCollapsed: boolean
+}
+
+export const StyledSidebarOpenContainer =
+  styled.div<StyledSidebarOpenContainerProps>(
+    ({ theme, chevronDownshift, isCollapsed }) => ({
+      position: "absolute",
+      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.twoXL,
+      left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
+      zIndex: theme.zIndices.header,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "start",
+
+      transition: "left 300ms",
+      transitionDelay: "left 300ms",
+    })
+  )
 
 export const StyledSidebarOpenButtonContainer = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.header,
@@ -390,3 +404,5 @@ export const StyledViewButton = styled.button(({ theme }) => ({
     color: theme.colors.primary,
   },
 }))
+
+export const StyledLogoLink = styled.a(({ theme }) => ({}))

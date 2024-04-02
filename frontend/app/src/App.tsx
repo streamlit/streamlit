@@ -595,9 +595,7 @@ export class App extends PureComponent<Props, State> {
 
   handleLogo = (logo: Logo): void => {
     if (logo.image) {
-      this.setState({ appLogo: logo }, () => {
-        console.log("appLogo: ", this.state.appLogo)
-      })
+      this.setState({ appLogo: logo })
     }
   }
 

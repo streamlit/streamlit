@@ -46,6 +46,7 @@ import {
   StyledCollapseSidebarButton,
   StyledSidebarOpenContainer,
   StyledSidebarOpenButtonContainer,
+  StyledLogoLink,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 
@@ -221,6 +222,13 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ showSidebarCollapse: false })
   }
 
+  logoClick = (): void => {
+    // const { appLogo } = this.props
+    // if (appLogo && appLogo.url) {
+    //   window.open(appLogo.url, "_blank")
+    // }
+  }
+
   // Additional safeguard for sidebar height sizing
   headerDecorationVisible(): boolean {
     let coloredLineExists = false
@@ -233,6 +241,41 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         decorationStyles.display !== "none"
     }
     return coloredLineExists
+  }
+
+  renderLogo(collapsed: boolean): ReactElement {
+    const { appLogo } = this.props
+
+    if (!appLogo) {
+      return <StyledNoLogoSpacer />
+    } else if (appLogo.url) {
+      return (
+        <StyledLogoLink
+          onClick={this.logoClick}
+          href={appLogo.url}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <StyledLogo
+            src={this.props.endpoints.buildMediaURL(
+              collapsed ? appLogo.collapsedVersion : appLogo.image
+            )}
+            size={appLogo.size}
+            alt="Streamlit"
+          />
+        </StyledLogoLink>
+      )
+    } else {
+      return (
+        <StyledLogo
+          src={this.props.endpoints.buildMediaURL(
+            collapsed ? appLogo.collapsedVersion : appLogo.image
+          )}
+          size={appLogo.size}
+          alt="Streamlit"
+        />
+      )
+    }
   }
 
   public render(): ReactNode {
@@ -253,29 +296,26 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       hideSidebarNav,
     } = this.props
 
+    console.log("========= URL: ", appLogo?.url)
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
     // Handles checking the URL params
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
     // If header decoration visible, move sidebar down so decoration doesn't go below it
     const sidebarAdjust = !isEmbedded && this.headerDecorationVisible()
 
+    const renderLogo =
+      appLogo && appLogo.url ? "logoLink" : appLogo ? "logo" : null
+
     // The tabindex is required to support scrolling by arrow keys.
     return (
       <>
         {collapsedSidebar && (
-          <StyledSidebarOpenContainer>
-            {appLogo && (
-              <StyledLogo
-                src={this.props.endpoints.buildMediaURL(appLogo.image)}
-                size={appLogo.size}
-                alt="Streamlit"
-              />
-            )}
-            {/* <StyledSidebarCollapsedControl
-              chevronDownshift={chevronDownshift}
-              isCollapsed={collapsedSidebar}
-              data-testid="collapsedControl"
-            > */}
+          <StyledSidebarOpenContainer
+            chevronDownshift={chevronDownshift}
+            isCollapsed={collapsedSidebar}
+            data-testid="collapsedControl"
+          >
+            {this.renderLogo(true)}
             <StyledSidebarOpenButtonContainer>
               <BaseButton
                 kind={BaseButtonKind.HEADER_NO_PADDING}
@@ -284,7 +324,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 <Icon content={ChevronRight} size="lg" />
               </BaseButton>
             </StyledSidebarOpenButtonContainer>
-            {/* </StyledSidebarCollapsedControl> */}
           </StyledSidebarOpenContainer>
         )}
         <Resizable
@@ -325,15 +364,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
               onMouseOver={this.onMouseOver}
               onMouseOut={this.onMouseOut}
             >
-              {appLogo ? (
-                <StyledLogo
-                  src={this.props.endpoints.buildMediaURL(appLogo.image)}
-                  size={appLogo.size}
-                  alt="Streamlit"
-                />
-              ) : (
-                <StyledNoLogoSpacer />
-              )}
+              {this.renderLogo(false)}
               <StyledCollapseSidebarButton
                 showSidebarCollapse={showSidebarCollapse}
               >
