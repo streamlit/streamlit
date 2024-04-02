@@ -146,6 +146,8 @@ function PlotlyFigure({
       })
       spec.layout.selections = undefined
     }
+
+    // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
     if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
@@ -159,9 +161,7 @@ function PlotlyFigure({
 
         const hasSelectedPoints: boolean = spec.data.some(
           (trace: any) =>
-            "selectedpoints" in trace &&
-            trace.selectedpoints &&
-            trace.selectedpoints.length > 0
+            "selectedpoints" in trace && trace.selectedpoints.length > 0
         )
         if (hasSelectedPoints) {
           // make all other points opaque
