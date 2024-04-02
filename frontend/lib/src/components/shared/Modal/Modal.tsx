@@ -44,8 +44,10 @@ function ModalHeader({ children }: ModalHeaderProps): ReactElement {
         marginLeft: spacing.none,
         marginRight: spacing.none,
         marginBottom: spacing.none,
-        padding: spacing.twoXL,
+        paddingTop: spacing.twoXL,
+        paddingRight: spacing.twoXL,
         paddingBottom: spacing.md,
+        paddingLeft: spacing.twoXL,
         fontFamily: genericFonts.bodyFont,
         fontSize: fontSizes.xl,
         fontWeight: 600,
@@ -148,6 +150,8 @@ function Modal(props: ModalProps): ReactElement {
         borderTopRadius: radii.xl,
         borderLeftRadius: radii.xl,
         borderRightRadius: radii.xl,
+        // make sure the modal is not too small on mobile
+        minWidth: "20rem",
       },
     },
     Close: {
