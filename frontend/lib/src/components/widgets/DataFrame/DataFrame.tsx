@@ -237,10 +237,12 @@ function DataFrame({
         // We use snake case here since this is the widget state
         // that is sent and used in the backend. Therefore, it should
         // conform with the Python naming conventions.
-        selected_rows: [] as number[],
+        select: {
+          rows: [] as number[],
+        },
       }
 
-      selectionState.selected_rows = newSelection.rows.toArray().map(row => {
+      selectionState.select.rows = newSelection.rows.toArray().map(row => {
         return getOriginalIndex(row)
       })
       // Use debounce to prevent rapid updates to the widget state.
@@ -673,6 +675,7 @@ function DataFrame({
           }
           gridSelection={gridSelection}
           onSelectionCleared={() => {
+            // TODO: do we need to do something here?
             console.log("Selection cleared")
           }}
           onGridSelectionChange={(newSelection: GridSelection) => {

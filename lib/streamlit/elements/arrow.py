@@ -72,17 +72,30 @@ Data: TypeAlias = Union[
 ]
 
 
+class SelectState(TypedDict, total=False):
+    """
+    A dictionary representing the current selection state of the dataframe.
+
+    Attributes
+    ----------
+    rows
+        The selected rows in the dataframe.
+    """
+
+    rows: list[int]
+
+
 class SelectionState(TypedDict, total=False):
     """
     A dictionary representing the current selection state of the dataframe.
 
     Attributes
     ----------
-    selected_rows : List[int]
-        A list of selected rows, where each row is the numerical position of the selected row.
+    select : SelectState
+        The state of the `on_select` event.
     """
 
-    selected_rows: list[int]
+    select: SelectionState
 
 
 @dataclass
@@ -92,14 +105,18 @@ class DataframeSelectionSerde:
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> SelectionState:
         selection_state: SelectionState = (
             {
-                "selected_rows": [],
+                "select": {
+                    "rows": [],
+                },
             }
             if ui_value is None
             else json.loads(ui_value)
         )
 
-        if "selected_rows" not in selection_state:
-            selection_state["selected_rows"] = []
+        if "select" not in selection_state:
+            selection_state["select"] = {
+                "rows": [],
+            }
 
         return selection_state
 
