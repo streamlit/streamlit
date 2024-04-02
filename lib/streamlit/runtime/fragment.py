@@ -124,19 +124,25 @@ def fragment(
 
     When a user interacts with an input widget created by a fragment, Streamlit
     only reruns the fragment instead of the full script. If ``run_every`` is set,
-    Streamlit will additionally rerun the fragment at the specified interval
-    while the session is active, even if the user is not interacting with your
-    app.
+    Streamlit will also rerun the fragment at the specified interval while the
+    session is active, even if the user is not interacting with your app.
 
     To trigger a full script rerun from inside a fragment, call ``st.rerun()``
     directly. Any values from the fragment that need to be accessed from
     the wider app should generally be stored in Session State.
 
-    Streamlit elements created by a fragment are cleared and redrawn on each
-    fragment rerun, just like all elements are redrawn on each full-script rerun.
-    The rest of the app is persisted during a fragment rerun, with
-    fragment-generated elements retaining their relative position in the main
-    body of your app or sidebar.
+    When Streamlit element commands are called directly in a fragment, the
+    elements are cleared and redrawn on each fragment rerun, just like all
+    elements are redrawn on each full-script rerun. The rest of the app is
+    persisted during a fragment rerun. When a fragment renders elements into
+    externally created containers, the elements will not be cleared with each
+    fragment rerun. In this case, elements will be drawn accumulatively in
+    those containers with each fragment rerun, until the next full-script
+    rerun.
+
+    Calling `st.sidebar` in a fragment is not supported. To write elements to
+    the sidebar with a fragment, use `with st.sidebar` outside of the fragment
+    function call.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
