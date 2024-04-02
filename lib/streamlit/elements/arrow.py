@@ -14,11 +14,26 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Union, cast
+import json
+from dataclasses import dataclass
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    TypedDict,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeAlias
 
 from streamlit import type_util
+from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -28,8 +43,13 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import register_widget
+from streamlit.runtime.state.common import compute_widget_id
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -52,7 +72,76 @@ Data: TypeAlias = Union[
 ]
 
 
+class SelectionState(TypedDict, total=False):
+    """
+    A dictionary representing the current selection state of the dataframe.
+
+    Attributes
+    ----------
+    selected_rows : List[int]
+        A list of selected rows, where each row is the numerical position of the selected row.
+    """
+
+    selected_rows: list[int]
+
+
+@dataclass
+class DataframeSelectionSerde:
+    """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
+
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> SelectionState:
+        selection_state: SelectionState = (
+            {
+                "selected_rows": [],
+            }
+            if ui_value is None
+            else json.loads(ui_value)
+        )
+
+        if "selected_rows" not in selection_state:
+            selection_state["selected_rows"] = []
+
+        return selection_state
+
+    def serialize(self, editing_state: SelectionState) -> str:
+        return json.dumps(editing_state, default=str)
+
+
 class ArrowMixin:
+    @overload
+    def dataframe(
+        self,
+        data: Data = None,
+        width: int | None = None,
+        height: int | None = None,
+        *,
+        use_container_width: bool = False,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        key: Key | None = None,
+        on_select: False = False,
+        selection_mode: Literal["single-row", "multi-row"] = "single-row",
+    ) -> DeltaGenerator:
+        ...
+
+    @overload
+    def dataframe(
+        self,
+        data: Data = None,
+        width: int | None = None,
+        height: int | None = None,
+        *,
+        use_container_width: bool = False,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        key: Key | None = None,
+        on_select: Callable[..., None] | True = True,
+        selection_mode: Literal["single-row", "multi-row"] = "single-row",
+    ) -> SelectionState:
+        ...
+
     @gather_metrics("dataframe")
     def dataframe(
         self,
@@ -64,7 +153,10 @@ class ArrowMixin:
         hide_index: bool | None = None,
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
-    ) -> DeltaGenerator:
+        key: Key | None = None,
+        on_select: Callable[..., None] | bool = False,
+        selection_mode: Literal["single-row", "multi-row"] = "single-row",
+    ) -> DeltaGenerator | SelectionState:
         """Display a dataframe as an interactive table.
 
         This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
@@ -186,6 +278,12 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
+        key = to_key(key)
+        if on_select:
+            if callable(on_select):
+                check_callback_rules(self.dg, on_select)
+            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(column_config)
 
@@ -236,7 +334,48 @@ class ArrowMixin:
             )
         marshall_column_config(proto, column_config_mapping)
 
-        return self.dg._enqueue("arrow_data_frame", proto)
+        if on_select:
+            proto.row_selection_mode = (
+                ArrowProto.RowSelectionMode.MULTI
+                if selection_mode == "multi-row"
+                else ArrowProto.RowSelectionMode.SINGLE
+            )
+
+            # We want to do this as early as possible to avoid introducing nondeterminism,
+            # but it isn't clear how much processing is needed to have the data in a
+            # format that will hash consistently, so we do it late here to have it
+            # as close as possible to how it used to be.
+            ctx = get_script_run_ctx()
+            proto.id = compute_widget_id(
+                "dataframe",
+                user_key=key,
+                data=proto.data,
+                width=width,
+                height=height,
+                use_container_width=use_container_width,
+                column_order=column_order,
+                column_config_mapping=str(column_config_mapping),
+                key=key,
+                form_id=current_form_id(self.dg),
+                page=ctx.page_script_hash if ctx else None,
+            )
+            proto.form_id = current_form_id(self.dg)
+
+            serde = DataframeSelectionSerde()
+            widget_state = register_widget(
+                "dataframe",
+                proto,
+                user_key=key,
+                on_change_handler=on_select if callable(on_select) else None,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+            )
+            self.dg._enqueue("arrow_data_frame", proto)
+            return widget_state.value
+        else:
+            proto.row_selection_mode = ArrowProto.RowSelectionMode.NONE
+            return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
     def table(self, data: Data = None) -> DeltaGenerator:

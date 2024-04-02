@@ -29,6 +29,7 @@ import {
   Add,
   FileDownload,
   Search,
+  Close,
 } from "@emotion-icons/material-outlined"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
@@ -156,36 +157,6 @@ function DataFrame({
     current: undefined,
   })
 
-  // This callback is used to clear all selections (row/column/cell)
-  const clearSelection = React.useCallback(() => {
-    setGridSelection({
-      columns: CompactSelection.empty(),
-      rows: CompactSelection.empty(),
-      current: undefined,
-    })
-  }, [])
-
-  // This callback is used to clear only cell selections
-  const clearCellSelection = React.useCallback(() => {
-    setGridSelection({
-      columns: gridSelection.columns,
-      rows: gridSelection.rows,
-      current: undefined,
-    })
-  }, [gridSelection])
-
-  // This callback is used to refresh the rendering of selected cells
-  const refreshCells = React.useCallback(
-    (
-      cells: {
-        cell: [number, number]
-      }[]
-    ) => {
-      dataEditorRef.current?.updateCells(cells)
-    },
-    []
-  )
-
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
   // would still work. Those messages don't have the
@@ -260,6 +231,70 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
+  const applySelections = React.useCallback(
+    (newSelection: GridSelection, triggerRerun = true) => {
+      const selectionState = {
+        // We use snake case here since this is the widget state
+        // that is sent and used in the backend. Therefore, it should
+        // conform with the Python naming conventions.
+        selected_rows: [] as number[],
+      }
+
+      selectionState.selected_rows = newSelection.rows.toArray().map(row => {
+        return getOriginalIndex(row)
+      })
+      // Use debounce to prevent rapid updates to the widget state.
+      debounce(DEBOUNCE_TIME_MS, () => {
+        const newWidgetState = JSON.stringify(selectionState)
+        const currentWidgetState = widgetMgr.getStringValue(
+          element as WidgetInfo
+        )
+
+        // Only update if there is actually a difference to the previous selection state
+        if (
+          currentWidgetState === undefined ||
+          currentWidgetState !== newWidgetState
+        ) {
+          widgetMgr.setStringValue(element as WidgetInfo, newWidgetState, {
+            fromUi: triggerRerun,
+          })
+        }
+      })()
+    },
+    [widgetMgr, element]
+  )
+
+  // This callback is used to clear all selections (row/column/cell)
+  const clearSelection = React.useCallback(() => {
+    const emptySelection = {
+      columns: CompactSelection.empty(),
+      rows: CompactSelection.empty(),
+      current: undefined,
+    }
+    setGridSelection(emptySelection)
+    applySelections(emptySelection)
+  }, [applySelections])
+
+  // This callback is used to clear only cell selections
+  const clearCellSelection = React.useCallback(() => {
+    setGridSelection({
+      columns: gridSelection.columns,
+      rows: gridSelection.rows,
+      current: undefined,
+    })
+  }, [gridSelection])
+
+  // This callback is used to refresh the rendering of selected cells
+  const refreshCells = React.useCallback(
+    (
+      cells: {
+        cell: [number, number]
+      }[]
+    ) => {
+      dataEditorRef.current?.updateCells(cells)
+    },
+    []
+  )
   /**
    * This callback should be called after any edits have been applied to the data.
    * It will finish up the editing by updating the number of rows, clearing the selection,
@@ -382,6 +417,8 @@ function DataFrame({
 
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
+  const isRowSelectionActivated =
+    element.rowSelectionMode !== ArrowProto.RowSelectionMode.NONE
   const isRowSelected = gridSelection.rows.length > 0
   const isCellSelected = gridSelection.current !== undefined
 
@@ -485,6 +522,16 @@ function DataFrame({
         onCollapse={collapse}
         target={StyledResizableContainer}
       >
+        {isRowSelectionActivated && isRowSelected && (
+          <ToolbarAction
+            label={"Clear selection"}
+            icon={Close}
+            onClick={() => {
+              clearSelection()
+              clearTooltip()
+            }}
+          />
+        )}
         {isDynamicAndEditable && isRowSelected && (
           <ToolbarAction
             label={"Delete row(s)"}
@@ -625,6 +672,9 @@ function DataFrame({
             isEmptyTable || isLargeTable ? undefined : sortColumn
           }
           gridSelection={gridSelection}
+          onSelectionCleared={() => {
+            console.log("Selection cleared")
+          }}
           onGridSelectionChange={(newSelection: GridSelection) => {
             if (isFocused || isTouchDevice) {
               // Only allow selection changes if the grid is focused.
@@ -633,7 +683,13 @@ function DataFrame({
               // This results in the first cell being selected for a short period of time
               // But for touch devices, preventing this can cause issues to select cells.
               // So we allow selection changes for touch devices even when it is not focused.
+              const rowSelectionChanged =
+                newSelection.rows !== gridSelection.rows
               setGridSelection(newSelection)
+              if (isRowSelectionActivated && rowSelectionChanged) {
+                applySelections(newSelection)
+              }
+
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()
@@ -679,6 +735,24 @@ function DataFrame({
           validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
+          {...(!isEmptyTable &&
+            isRowSelectionActivated && {
+              rowMarkerTheme: {
+                bgCell: theme.bgHeader,
+                bgCellMedium: theme.bgHeader,
+              },
+              rowMarkers: "checkbox",
+              rowSelectionMode:
+                element.rowSelectionMode === ArrowProto.RowSelectionMode.MULTI
+                  ? "multi"
+                  : "auto",
+              rowSelect: disabled
+                ? "none"
+                : element.rowSelectionMode ===
+                  ArrowProto.RowSelectionMode.MULTI
+                ? "multi"
+                : "single",
+            })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
             element.editingMode !== READ_ONLY &&
