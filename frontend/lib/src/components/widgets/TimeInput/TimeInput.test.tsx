@@ -98,7 +98,21 @@ describe("TimeInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setStringValue", () => {
+    const props = { ...getProps(), fragmentId: "myFragmentId" }
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -161,7 +175,8 @@ describe("TimeInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       "12:30",
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     expect(timeDisplay).toHaveAttribute("value", "12:30")
@@ -193,7 +208,8 @@ describe("TimeInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       "13:15",
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     expect(timeDisplay).toHaveAttribute("value", "13:15")
@@ -210,7 +226,8 @@ describe("TimeInput widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
 
     expect(timeDisplay).toHaveAttribute("value", "12:45")
