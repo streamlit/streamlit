@@ -158,6 +158,7 @@ function PlotlyFigure({
     )
     const storedValue = widgetMgr.getJsonValue(element)
 
+    // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
     if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection

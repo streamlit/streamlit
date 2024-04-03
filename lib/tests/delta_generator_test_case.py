@@ -26,6 +26,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -57,6 +58,7 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             page_script_hash="",
             user_info={"email": "test@test.com"},
             script_requests=ScriptRequests(),
+            fragment_storage=MemoryFragmentStorage(),
         )
         add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
 

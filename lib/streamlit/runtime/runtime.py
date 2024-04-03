@@ -22,8 +22,6 @@ from enum import Enum
 from typing import TYPE_CHECKING, Awaitable, Final, NamedTuple
 
 from streamlit import config
-from streamlit.components.lib.local_component_registry import LocalComponentRegistry
-from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -98,11 +96,6 @@ class RuntimeConfig:
         default_factory=LocalDiskCacheStorageManager
     )
 
-    # The ComponentRegistry instance to use.
-    component_registry: BaseComponentRegistry = field(
-        default_factory=LocalComponentRegistry
-    )
-
     # The SessionManager class to be used.
     session_manager_class: type[SessionManager] = WebsocketSessionManager
 
@@ -111,6 +104,12 @@ class RuntimeConfig:
 
     # True if the command used to start Streamlit was `streamlit hello`.
     is_hello: bool = False
+
+    # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code
+    # creating a new Streamlit Runtime to configure the FragmentStorage instances
+    # created by each new AppSession. We choose not to do this for now to avoid adding
+    # additional complexity to RuntimeConfig/SessionManager/etc when it's unlikely
+    # we'll have a custom implementation of this class anytime soon.
 
 
 class RuntimeState(Enum):
@@ -196,7 +195,6 @@ class Runtime:
         self._state = RuntimeState.INITIAL
 
         # Initialize managers
-        self._component_registry = config.component_registry
         self._message_cache = ForwardMsgCache()
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
@@ -221,10 +219,6 @@ class Runtime:
     @property
     def state(self) -> RuntimeState:
         return self._state
-
-    @property
-    def component_registry(self) -> BaseComponentRegistry:
-        return self._component_registry
 
     @property
     def message_cache(self) -> ForwardMsgCache:

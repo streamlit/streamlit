@@ -108,7 +108,8 @@ class AppTest:
     Once initialized, Session State and widget values can be updated and the
     script can be run. Unlike an actual live-running Streamlit app, you need to
     call ``AppTest.run()`` explicitly to re-run the app after changing a widget
-    value.
+    value. Switching pages also requires an explicit, follow-up call to
+    ``AppTest.run()``.
 
     ``AppTest`` enables developers to build tests on their app as-is, in the
     familiar python test format, without major refactoring or abstracting out
@@ -360,8 +361,8 @@ class AppTest:
 
         This is equivalent to manually rerunning the app or the rerun that
         occurs upon user interaction. ``AppTest.run()`` must be manually called
-        after updating a widget value as script reruns do not occur
-        automatically as they do for live-running Streamlit apps.
+        after updating a widget value or switching pages as script reruns do
+        not occur automatically as they do for live-running Streamlit apps.
 
         Parameters
         ----------
@@ -373,22 +374,27 @@ class AppTest:
         -------
         AppTest
             self
+
         """
         return self._tree.run(timeout=timeout)
 
     def switch_page(self, page_path: str) -> AppTest:
         """Switch to another page of the app.
 
+        This method does not automatically rerun the app. Use a follow-up call
+        to ``AppTest.run()`` to obtain the elements on the selected page.
+
         Parameters
         ----------
         page_path: str
             Path of the page to switch to. The path must be relative to the
-            location of the main script (e.g. ``"pages/my_page.py"``).
+            main script's location (e.g. ``"pages/my_page.py"``).
 
         Returns
         -------
         AppTest
             self
+
         """
         main_dir = Path(self._script_path).parent
         full_page_path = main_dir / page_path
