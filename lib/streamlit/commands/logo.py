@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from streamlit.elements.image import AtomicImage, image_to_url
+from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
@@ -37,10 +37,20 @@ def logo(
 
     fwd_msg = ForwardMsg()
     # TODO: how to better handle images to send to FE
-    fwd_msg.logo.image = image
+    image_url = image_to_url(image, WidthBehaviour.AUTO, True, "RGB", "auto", "logo")
+
+    fwd_msg.logo.image = image_url
     fwd_msg.logo.size = size
     if url:
         fwd_msg.logo.url = url
     if collapsed_version:
-        fwd_msg.logo.collapsed_version = collapsed_version
+        collapsed_image_url = image_to_url(
+            collapsed_version,
+            WidthBehaviour.AUTO,
+            True,
+            "RGB",
+            "auto",
+            "collapsed-logo",
+        )
+        fwd_msg.logo.collapsed_version = collapsed_image_url
     ctx.enqueue(fwd_msg)
