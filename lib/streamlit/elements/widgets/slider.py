@@ -618,10 +618,12 @@ class SliderMixin:
             max_value = _datetime_to_micros(max_value)
             step = _delta_to_micros(cast(timedelta, step))
 
+        # The frontend will error if the values are equal, so checking here
+        # lets us produce a nicer python error message and stack trace.
         if min_value == max_value:
             raise StreamlitAPIException(
                 "Slider `min_value` must be less than the `max_value`."
-                f"The values were {min_value}."
+                f"The values were {min_value} and {max_value}."
             )
 
         # It would be great if we could guess the number of decimal places from
