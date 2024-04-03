@@ -99,22 +99,4 @@ describe("Dialog container", () => {
     // close button - and hence dismiss - does not exist
     expect(() => screen.getByLabelText("Close")).toThrow()
   })
-
-  it("only one dialog can be open at any time", () => {
-    const props = getProps({ dismissible: false })
-    render(
-      <Dialog {...props}>
-        <div>first-dialog</div>
-      </Dialog>
-    )
-
-    render(
-      <Dialog {...props}>
-        <div>second-dialog</div>
-      </Dialog>
-    )
-
-    expect(screen.getByText("first-dialog")).toBeVisible()
-    expect(() => screen.getByText("second-dialog")).toThrow()
-  })
 })

@@ -37,7 +37,7 @@ def _assert_no_nested_dialogs() -> None:
     """
     last_dg_in_current_context = get_last_dg_added_to_context_stack()
     if last_dg_in_current_context and "dialog" in set(
-        last_dg_in_current_context._parent_block_types
+        last_dg_in_current_context._ancestor_block_types
     ):
         raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
 

@@ -658,11 +658,9 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
+        **kwargs: (
+            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+        ),
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
@@ -928,13 +926,8 @@ def _check_nested_element_violation(
     """
 
     if block_type == "column":
-        num_of_parent_columns = dg._count_num_of_parent_columns(
-            ancestor_block_types
-        )
-        if (
-            dg._root_container == RootContainer.SIDEBAR
-            and num_of_parent_columns > 0
-        ):
+        num_of_parent_columns = dg._count_num_of_parent_columns(ancestor_block_types)
+        if dg._root_container == RootContainer.SIDEBAR and num_of_parent_columns > 0:
             raise StreamlitAPIException(
                 "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
             )
@@ -951,6 +944,4 @@ def _check_nested_element_violation(
             "Expanders may not be nested inside other expanders."
         )
     if block_type == "popover" and block_type in ancestor_block_types:
-        raise StreamlitAPIException(
-            "Popovers may not be nested inside other popovers."
-        )
+        raise StreamlitAPIException("Popovers may not be nested inside other popovers.")
