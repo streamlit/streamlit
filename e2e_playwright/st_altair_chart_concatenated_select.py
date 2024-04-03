@@ -44,7 +44,8 @@ for y_encoding in ["petalLength:Q", "petalWidth:Q"]:
 chart = chart.add_params(point)
 chart = chart.add_params(interval)
 st.altair_chart(chart, on_select=True, key="repeat_chart")
-st.dataframe(st.session_state.repeat_chart)
+if st.session_state.repeat_chart:
+    st.dataframe(st.session_state.repeat_chart)
 
 # LAYERED CHART
 stocks = alt.UrlData(
@@ -65,7 +66,8 @@ base = (
 chart = base.mark_line() + base.mark_point()
 chart = chart.add_params(point)
 st.altair_chart(chart, on_select=True, key="layered_chart")
-st.dataframe(st.session_state.layered_chart)
+if st.session_state.layered_chart:
+    st.dataframe(st.session_state.layered_chart)
 
 # FACET CHART
 base = (
@@ -113,7 +115,8 @@ lower = base.properties(height=60).add_params(brush)
 
 chart = alt.vconcat(upper, lower)
 st.altair_chart(chart, on_select=True, key="vconcat_chart")
-st.dataframe(st.session_state.vconcat_chart)
+if st.session_state.vconcat_chart:
+    st.dataframe(st.session_state.vconcat_chart)
 
 # HCONCAT CHART
 def callback():
@@ -148,4 +151,5 @@ chart2 = (
 
 chart = chart1 | chart2
 st.altair_chart(chart, on_select=callback, key="hconcat_chart")
-st.dataframe(st.session_state.hconcat_chart)
+if st.session_state.hconcat_chart:
+    st.dataframe(st.session_state.hconcat_chart)
