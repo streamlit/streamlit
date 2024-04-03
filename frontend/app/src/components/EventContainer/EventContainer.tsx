@@ -32,7 +32,7 @@ function EventContainer({
     // Ensure all toasts cleared on script re-run
     toaster.getRef()?.clearAll()
   }, [scriptRunId])
-
+  console.log("events", children)
   return (
     <>
       <ToasterContainer

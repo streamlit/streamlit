@@ -402,6 +402,7 @@ class AppSession:
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
+        _LOGGER.debug("DEBUG: create new thread")
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,

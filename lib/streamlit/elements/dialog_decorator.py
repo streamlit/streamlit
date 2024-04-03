@@ -16,9 +16,11 @@ from __future__ import annotations
 
 from typing import Callable
 
-import streamlit as st
+# import streamlit as st
+from streamlit.delta_generator import event_dg
 from streamlit.elements.lib.dialog import DialogWidth
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.fragment import fragment as _fragment
 
 
 def dialog_decorator(
@@ -37,10 +39,12 @@ def dialog_decorator(
             )
 
         def decorated_fn(*args, **kwargs) -> None:
-            dialog = st._main.dialog(title=title, dismissible=True, width=width)
+            # dialog = st._main.dialog(title=title, dismissible=True, width=width)
+            # TODO: this adds dialogs as siblings
+            dialog = event_dg.dialog(title=title, dismissible=True, width=width)
             dialog.open()
 
-            @st.experimental_fragment
+            @_fragment
             def dialog_content() -> None:
                 # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
                 _ = fn(*args, **kwargs)

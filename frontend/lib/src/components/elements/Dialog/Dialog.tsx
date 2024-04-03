@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  ReactNode,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import React, { ReactElement, useEffect, useMemo, useState } from "react"
 
 import { SIZE } from "baseui/modal"
 
@@ -33,8 +27,6 @@ import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
-import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import { StyledDialogContent } from "./styled-components"
@@ -84,24 +76,6 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   }, [initialIsOpen, widgetMgr])
 
   const { activeTheme } = React.useContext(LibContext)
-  const isInSidebar = React.useContext(IsSidebarContext)
-
-  const ThemedModal = useMemo(() => {
-    return function ThemedModal({ children }: { children: ReactNode }) {
-      if (isInSidebar) {
-        return (
-          <ThemeProvider
-            theme={activeTheme.emotion}
-            baseuiTheme={activeTheme.basewebTheme}
-          >
-            {children}
-          </ThemeProvider>
-        )
-      }
-
-      return <>{children}</>
-    }
-  }, [activeTheme.emotion, activeTheme.basewebTheme, isInSidebar])
 
   const size: string = useMemo(
     () =>
@@ -113,22 +87,20 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   )
 
   return (
-    <ThemedModal>
-      <Modal
-        isOpen={isOpen}
-        closeable={dismissible}
-        onClose={() => {
-          setIsOpen(false)
-          widgetMgr.releaseDialogLock()
-        }}
-        size={size}
-      >
-        <ModalHeader>{title}</ModalHeader>
-        <ModalBody>
-          <StyledDialogContent>{children}</StyledDialogContent>
-        </ModalBody>
-      </Modal>
-    </ThemedModal>
+    <Modal
+      isOpen={isOpen}
+      closeable={dismissible}
+      onClose={() => {
+        setIsOpen(false)
+        widgetMgr.releaseDialogLock()
+      }}
+      size={size}
+    >
+      <ModalHeader>{title}</ModalHeader>
+      <ModalBody>
+        <StyledDialogContent>{children}</StyledDialogContent>
+      </ModalBody>
+    </Modal>
   )
 }
 

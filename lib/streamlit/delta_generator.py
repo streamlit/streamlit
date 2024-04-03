@@ -318,6 +318,12 @@ class DeltaGenerator(
             current_stack = dg_stack.get()
             if len(current_stack) > 1:
                 return current_stack[-1]
+        # elif self == event_dg and self._main_dg == main_dg:
+        #     # We're being invoked via an `st.foo` pattern - use the current
+        #     # `with` dg (aka the top of the stack).
+        #     current_stack = dg_stack.get()
+        #     if len(current_stack) > 2:
+        #         return current_stack[-2]
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
         # current `with` dg.
@@ -329,6 +335,12 @@ class DeltaGenerator(
         DeltaGenerator that we belong to (this generally means the st._main
         DeltaGenerator).
         """
+        # if self._parent and (self != event_dg and self._parent._main_dg != main_dg):
+        # if  self._parent and self._parent._main_dg != main_dg:
+        #     return self._parent._main_dg
+
+        # return self
+
         return self._parent._main_dg if self._parent else self
 
     def __getattr__(self, name: str) -> Callable[..., NoReturn]:

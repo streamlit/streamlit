@@ -20,6 +20,7 @@ from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
@@ -721,6 +722,10 @@ class LayoutsMixin:
     ) -> "Dialog":
         # We need to import Dialog here to avoid a circular import
         from streamlit.elements.lib.dialog import Dialog
+
+        # current_dg = self.dg
+        # if self.dg._root_container != RootContainer.EVENT:
+        # current_dg = st.
 
         return Dialog._create(self.dg, title, dismissible=dismissible, width=width)
 
