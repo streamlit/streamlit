@@ -119,43 +119,114 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
 ) -> Callable[[F], F] | F:
-    """Allow a function to be run independently of the full script.
+    """Decorator to turn a function into a fragment which can rerun independently\
+    of the full script.
 
-    Functions decorated with ``@st.experimental_fragment`` are handled specially within
-    an app: when a widget created within an invocation of the function (a fragment) is
-    interacted with, then only that fragment is rerun rather than the full streamlit app.
+    When a user interacts with an input widget created by a fragment, Streamlit
+    only reruns the fragment instead of the full script. If ``run_every`` is set,
+    Streamlit will also rerun the fragment at the specified interval while the
+    session is active, even if the user is not interacting with your app.
+
+    To trigger a full script rerun from inside a fragment, call ``st.rerun()``
+    directly. Any values from the fragment that need to be accessed from
+    the wider app should generally be stored in Session State.
+
+    When Streamlit element commands are called directly in a fragment, the
+    elements are cleared and redrawn on each fragment rerun, just like all
+    elements are redrawn on each full-script rerun. The rest of the app is
+    persisted during a fragment rerun. When a fragment renders elements into
+    externally created containers, the elements will not be cleared with each
+    fragment rerun. In this case, elements will accumulate in those containers
+    with each fragment rerun, until the next full-script rerun.
+
+    Calling `st.sidebar` in a fragment is not supported. To write elements to
+    the sidebar with a fragment, call your fragment funciton inside a
+    `with st.sidebar` context manager.
+
+    Fragment code can interact with Session State, imported modules, and
+    other Streamlit elements created outside the fragment. Note that these
+    interactions are additive across multiple fragment reruns. You are
+    responsible for handling any side effects of that behavior.
 
     Parameters
     ----------
+    func: callable
+        The function to turn into a fragment.
+
     run_every: int, float, timedelta, str, or None
-        If set, fragments created from this function rerun periodically at the specified
-        time interval.
+        The time interval between automatic fragment reruns. This can be one of
+        the following:
 
-    Example
-    -------
+            * ``None`` (default).
+            * An ``int`` or ``float`` specifying the interval in seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(days=1)``.
+
+        If ``run_every`` is ``None``, the fragment will only rerun from
+        user-triggered events.
+
+    Examples
+    --------
     The following example demonstrates basic usage of ``@st.experimental_fragment``. In
-    this app, clicking on the "rerun full script" button will increment both counters,
-    but the "rerun fragment" button will only increment the counter within the fragment.
+    this app, clicking "Rerun full script" will increment both counters and
+    update all values displayed in the app. In contrast, clicking "Rerun fragment"
+    will only increment the counter within the fragment. In this case, the
+    ``st.write`` command inside the fragment will update the app's frontend,
+    but the two ``st.write`` commands outside the fragment will not update the
+    frontend.
 
-    ```python3
-    import streamlit as st
+    >>> import streamlit as st
+    >>>
+    >>> if "script_runs" not in st.session_state:
+    >>>     st.session_state.script_runs = 0
+    >>>     st.session_state.fragment_runs = 0
+    >>>
+    >>> @st.experimental_fragment
+    >>> def fragment():
+    >>>     st.session_state.fragment_runs += 1
+    >>>     st.button("Rerun fragment")
+    >>>     st.write(f"Fragment says it ran {st.session_state.fragment_runs} times.")
+    >>>
+    >>> st.session_state.script_runs += 1
+    >>> fragment()
+    >>> st.button("Rerun full script")
+    >>> st.write(f"Full script says it ran {st.session_state.script_runs} times.")
+    >>> st.write(f"Full script sees that fragment ran {st.session_state.fragment_runs} times.")
 
-    if "script_runs" not in st.session_state:
-        st.session_state.script_runs = 0
-        st.session_state.fragment_runs = 0
+    .. output::
+        https://doc-fragment.streamlit.app/
+        height: 400px
 
-    @st.experimental_fragment
-    def fragment():
-        st.button("rerun fragment")
-        st.write(f"fragment runs: {st.session_state.fragment_runs}")
-        st.session_state.fragment_runs += 1
+    You can also trigger a full-script rerun from inside a fragment by calling
+    ``st.rerun``.
 
-    fragment()
+    >>> import streamlit as st
+    >>>
+    >>> if "clicks" not in st.session_state:
+    >>>     st.session_state.clicks = 0
+    >>>
+    >>> @st.experimental_fragment
+    >>> def count_to_five():
+    >>>     if st.button("Plus one!"):
+    >>>         st.session_state.clicks += 1
+    >>>         if st.session_state.clicks % 5 == 0:
+    >>>             st.rerun()
+    >>>     return
+    >>>
+    >>> count_to_five()
+    >>> st.header(f"Multiples of five clicks: {st.session_state.clicks // 5}")
+    >>>
+    >>> if st.button("Check click count"):
+    >>>     st.toast(f"## Total clicks: {st.session_state.clicks}")
 
-    st.button("rerun full script")
-    st.write(f"full script runs: {st.session_state.script_runs}")
-    st.session_state.script_runs += 1
-    ```
+    .. output::
+        https://doc-fragment-rerun.streamlit.app/
+        height: 400px
+
     """
 
     if func is None:
