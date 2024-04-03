@@ -545,7 +545,13 @@ class AppSessionTest(unittest.TestCase):
         session.disconnect_file_watchers()
 
         # Run the gc to ensure that we don't count refs to session from an object that
-        # would have been garbage collected along with the session.
+        # would have been garbage collected along with the session. We run the gc a few
+        # times for good measure as otherwise we've previously seen weirdness in CI
+        # where this test would fail for certain Python versions (exact reasons
+        # unknown), so it seems like the first gc sweep may not always pick up the
+        # session.
+        gc.collect(2)
+        gc.collect(2)
         gc.collect(2)
 
         self.assertEqual(len(gc.get_referrers(session)), 0)
