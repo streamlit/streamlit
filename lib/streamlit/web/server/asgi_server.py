@@ -181,6 +181,9 @@ def create_uvicorn_config(app: Starlette) -> uvicorn.Config:
         # log_config=None,
         # access_log=False,
         use_colors=True,
+        # NOTE:[kajarenc] This is a temporary fix to avoid uvicorn logging
+        # cancelled error in console in development mode, when CMD + C pressed.
+        log_level="critical",
     )
 
 
@@ -353,13 +356,14 @@ class Server:
 
         _LOGGER.debug("Starting server...")
 
-        # TODO[Kajarenc]
+        # TODO[Kajarenc], DONE!
         # Idea: Prepare uvicorn config, create uvicorn server, start
-        # uvicorn server.serve as a event loop task and remember this task
-        # at this point we can return
+        # uvicorn server.serve as a event loop task and remember this task.
+        # At this point we can return we can return from this coroutine.
 
         app: Starlette = self._create_app()
         uvicorn_server = create_uvicorn_server(app)
+
         self.server_task = asyncio.create_task(uvicorn_server.serve())
 
         port = config.get_option("server.port")

@@ -34,10 +34,12 @@ from streamlit.web.server.server_util import is_url_from_allowed_origins
 _LOGGER: Final = get_logger(__name__)
 
 
-class ASGIBrowserWebSocketHandler(WebSocketEndpoint, SessionClient):
-    """Handles a WebSocket connection from the browser"""
+# TODO [kajarenc]: Move this class to a separate file
+class ASGISessionClient(SessionClient):
+    """An ASGI session client that can send messages to the browser."""
 
-    encoding = "bytes"
+    def __init__(self, websocket: WebSocket) -> None:
+        self.websocket = websocket
 
     async def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Send a ForwardMsg to the browser."""
@@ -48,6 +50,12 @@ class ASGIBrowserWebSocketHandler(WebSocketEndpoint, SessionClient):
             RuntimeError,
         ) as e:
             raise SessionClientDisconnectedError from e
+
+
+class ASGIBrowserWebSocketHandler(WebSocketEndpoint):
+    """Handles a WebSocket connection from the browser"""
+
+    encoding = "bytes"
 
     def select_subprotocol(self, subprotocols: list[str]) -> str | None:
         """Return the first subprotocol in the given list.
@@ -77,8 +85,6 @@ class ASGIBrowserWebSocketHandler(WebSocketEndpoint, SessionClient):
 
     async def on_connect(self, websocket: WebSocket) -> None:
         is_public_cloud_app = False
-        self.websocket = websocket
-
         try:
             header_content = websocket.headers["X-Streamlit-User"]
             payload = base64.b64decode(header_content)
@@ -114,8 +120,10 @@ class ASGIBrowserWebSocketHandler(WebSocketEndpoint, SessionClient):
 
         await websocket.accept(subprotocol=self.select_subprotocol(ws_protocols))
 
+        client = ASGISessionClient(websocket)
+
         _session_id = websocket.state.runtime.connect_session(
-            client=self,
+            client=client,
             user_info=user_info,
             existing_session_id=existing_session_id,
         )
