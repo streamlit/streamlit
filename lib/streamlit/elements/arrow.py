@@ -71,7 +71,7 @@ Data: TypeAlias = Union[
 ]
 
 
-class SelectState(TypedDict, total=False):
+class DataframeSelectState(TypedDict, total=False):
     """
     A dictionary representing the current selection state of the dataframe.
 
@@ -84,7 +84,7 @@ class SelectState(TypedDict, total=False):
     rows: list[int]
 
 
-class SelectionState(TypedDict, total=False):
+class DataframeState(TypedDict, total=False):
     """
     A dictionary representing the current selection state of the dataframe.
 
@@ -94,15 +94,15 @@ class SelectionState(TypedDict, total=False):
         The state of the `on_select` event.
     """
 
-    select: SelectionState
+    select: DataframeSelectState
 
 
 @dataclass
 class DataframeSelectionSerde:
     """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
 
-    def deserialize(self, ui_value: str | None, widget_id: str = "") -> SelectionState:
-        selection_state: SelectionState = (
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> DataframeState:
+        selection_state: DataframeState = (
             {
                 "select": {
                     "rows": [],
@@ -119,7 +119,7 @@ class DataframeSelectionSerde:
 
         return selection_state
 
-    def serialize(self, editing_state: SelectionState) -> str:
+    def serialize(self, editing_state: DataframeState) -> str:
         return json.dumps(editing_state, default=str)
 
 
@@ -136,8 +136,8 @@ class ArrowMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         key: Key | None = None,
-        on_select: Literal[False] = False,
-        selection_mode: Literal["single-row", "multi-row"] = "single-row",
+        on_select: Literal["ignore"] = "ignore",
+        selection_mode: Literal["single-row", "multi-row"] = "multi-row",
     ) -> DeltaGenerator:
         ...
 
@@ -153,9 +153,9 @@ class ArrowMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         key: Key | None = None,
-        on_select: Callable[..., None] | Literal[True] = True,
-        selection_mode: Literal["single-row", "multi-row"] = "single-row",
-    ) -> SelectionState:
+        on_select: Callable[..., None] | Literal["rerun"] = "rerun",
+        selection_mode: Literal["single-row", "multi-row"] = "multi-row",
+    ) -> DataframeState:
         ...
 
     @gather_metrics("dataframe")
@@ -170,9 +170,9 @@ class ArrowMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         key: Key | None = None,
-        on_select: Callable[..., None] | bool = False,
-        selection_mode: Literal["single-row", "multi-row"] = "single-row",
-    ) -> DeltaGenerator | SelectionState:
+        on_select: Callable[..., None] | Literal["ignore", "rerun"] = "ignore",
+        selection_mode: Literal["single-row", "multi-row"] = "multi-row",
+    ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
         This command works with dataframes from Pandas, PyArrow, Snowpark, and PySpark.
@@ -226,6 +226,27 @@ class ArrowMixin:
               and config options `here <https://docs.streamlit.io/library/api-reference/data/st.column_config>`_.
 
             To configure the index column(s), use ``_index`` as the column name.
+
+        key : str
+            An optional string to use as the unique key for this element when used in combination
+            with ```on_select```. If this is omitted, a key will be generated for the widget based
+            on its content. Multiple widgets of the same type may not share the same key.
+
+        on_select : "ignore" or "rerun" or callable
+            Controls the behavior in response to row selection events on the table. Can be one of:
+
+            - “ignore” (default): Streamlit will not react to any selection events in the chart.
+            - “rerun”: Streamlit will rerun the app when the user selects rows in the table. In this case,
+              ```st.dataframe``` will return the selection data as a dictionary.
+            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
+              callback function before the rest of the app. The selection data can be retrieved through
+              session state by setting the key parameter.
+
+        selection_mode : "single-row" or "multi-row"
+            The selection mode of the table. Can be one of:
+
+            - “multi-row” (default): Multiple rows can be selected at a time.
+            - “single-row”: Only one row can be selected at a time.
 
         Examples
         --------
@@ -295,7 +316,8 @@ class ArrowMixin:
         import pyarrow as pa
 
         key = to_key(key)
-        if on_select:
+
+        if on_select != "ignore":
             # Import here to avoid circular imports
             from streamlit.elements.utils import (
                 check_callback_rules,
@@ -356,10 +378,9 @@ class ArrowMixin:
             )
         marshall_column_config(proto, column_config_mapping)
 
-        if on_select:
-            # If on_select is truthy, we need to activate selection mode
-            # and register the dataframe element as a widget.
-
+        if on_select != "ignore":
+            # If selection events are activated, we need to register the dataframe
+            # element as a widget.
             proto.row_selection_mode = (
                 ArrowProto.RowSelectionMode.MULTI
                 if selection_mode == "multi-row"
