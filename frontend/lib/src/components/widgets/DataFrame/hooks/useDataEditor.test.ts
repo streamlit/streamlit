@@ -70,6 +70,7 @@ const MOCK_COLUMNS: BaseColumn[] = [
 const INITIAL_NUM_ROWS = 3
 const refreshCellsMock = jest.fn()
 const applyEditsMock = jest.fn()
+const clearSelectionMock = jest.fn()
 const getOriginalIndexMock = jest.fn().mockImplementation((index: number) => {
   return index
 })
@@ -100,7 +101,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -141,7 +143,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -181,7 +184,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -227,7 +231,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -268,7 +273,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -309,7 +315,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -337,7 +344,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -365,7 +373,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -393,7 +402,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -442,7 +452,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -483,7 +494,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -525,7 +537,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -557,7 +570,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
@@ -588,7 +602,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock
+        applyEditsMock,
+        clearSelectionMock
       )
     })
 
