@@ -79,7 +79,7 @@ import "@glideapps/glide-data-grid-cells/dist/index.css"
 
 // Debounce time for triggering a widget state update
 // This prevents to rapid updates to the widget state.
-const DEBOUNCE_TIME_MS = 100
+const DEBOUNCE_TIME_MS = 150
 // Number of rows that triggers some optimization features
 // for large tables.
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
@@ -234,7 +234,8 @@ function DataFrame({
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
   const applySelections = React.useCallback(
-    (newSelection: GridSelection, triggerRerun = true) => {
+    // Use debounce to prevent rapid updates to the widget state.
+    debounce(DEBOUNCE_TIME_MS, (newSelection: GridSelection) => {
       // If we want to support selections also with in the editable mode,
       // we would need to integrate the `applyEdits` and `applySelections` functions
       // into a single function that updates the widget state with both the editing
@@ -252,24 +253,21 @@ function DataFrame({
       selectionState.select.rows = newSelection.rows.toArray().map(row => {
         return getOriginalIndex(row)
       })
-      // Use debounce to prevent rapid updates to the widget state.
-      debounce(DEBOUNCE_TIME_MS, () => {
-        const newWidgetState = JSON.stringify(selectionState)
-        const currentWidgetState = widgetMgr.getStringValue(
-          element as WidgetInfo
-        )
+      const newWidgetState = JSON.stringify(selectionState)
+      const currentWidgetState = widgetMgr.getStringValue(
+        element as WidgetInfo
+      )
 
-        // Only update if there is actually a difference to the previous selection state
-        if (
-          currentWidgetState === undefined ||
-          currentWidgetState !== newWidgetState
-        ) {
-          widgetMgr.setStringValue(element as WidgetInfo, newWidgetState, {
-            fromUi: triggerRerun,
-          })
-        }
-      })()
-    },
+      // Only update if there is actually a difference to the previous selection state
+      if (
+        currentWidgetState === undefined ||
+        currentWidgetState !== newWidgetState
+      ) {
+        widgetMgr.setStringValue(element as WidgetInfo, newWidgetState, {
+          fromUi: true,
+        })
+      }
+    }),
     [widgetMgr, element]
   )
 
@@ -313,41 +311,33 @@ function DataFrame({
    * @param triggerRerun - Whether to trigger a rerun of the script after applying edits
    */
   const applyEdits = React.useCallback(
-    (clearSelections = false, triggerRerun = true) => {
+    // Use debounce to prevent rapid updates to the widget state.
+    debounce(DEBOUNCE_TIME_MS, () => {
       if (numRows !== editingState.current.getNumRows()) {
         // Reset the number of rows if it has been changed in the editing state
         setNumRows(editingState.current.getNumRows())
       }
 
-      if (clearSelections) {
-        clearSelection()
+      const currentEditingState = editingState.current.toJson(columns)
+      let currentWidgetState = widgetMgr.getStringValue(element as WidgetInfo)
+
+      if (currentWidgetState === undefined) {
+        // Create an empty widget state
+        currentWidgetState = new EditingState(0).toJson([])
       }
 
-      // Use debounce to prevent rapid updates to the widget state.
-      debounce(DEBOUNCE_TIME_MS, () => {
-        const currentEditingState = editingState.current.toJson(columns)
-        let currentWidgetState = widgetMgr.getStringValue(
-          element as WidgetInfo
+      // Only update if there is actually a difference between editing and widget state
+      if (currentEditingState !== currentWidgetState) {
+        widgetMgr.setStringValue(
+          element as WidgetInfo,
+          currentEditingState,
+          {
+            fromUi: true,
+          },
+          fragmentId
         )
-
-        if (currentWidgetState === undefined) {
-          // Create an empty widget state
-          currentWidgetState = new EditingState(0).toJson([])
-        }
-
-        // Only update if there is actually a difference between editing and widget state
-        if (currentEditingState !== currentWidgetState) {
-          widgetMgr.setStringValue(
-            element as WidgetInfo,
-            currentEditingState,
-            {
-              fromUi: triggerRerun,
-            },
-            fragmentId
-          )
-        }
-      })()
-    },
+      }
+    }),
     [widgetMgr, element, numRows, clearSelection, columns]
   )
 
@@ -361,7 +351,8 @@ function DataFrame({
       getCellContent,
       getOriginalIndex,
       refreshCells,
-      applyEdits
+      applyEdits,
+      clearSelection
     )
 
   const { tooltip, clearTooltip, onItemHovered } = useTooltips(

@@ -67,7 +67,8 @@ function useDataEditor(
       cell: [number, number]
     }[]
   ) => void,
-  applyEdits: (clearSelection?: boolean, triggerRerun?: boolean) => void
+  applyEdits: () => void,
+  clearSelection: () => void
 ): DataEditorReturn {
   const onCellEdited = React.useCallback(
     (
@@ -164,7 +165,8 @@ function useDataEditor(
         })
         // We need to delete all rows at once, so that the indexes work correct
         editingState.current.deleteRows(rowsToDelete)
-        applyEdits(true)
+        clearSelection()
+        applyEdits()
         return false
       }
       if (selection.current?.range) {
@@ -211,6 +213,7 @@ function useDataEditor(
       getOriginalIndex,
       applyEdits,
       onCellEdited,
+      clearSelection,
     ]
   )
 
