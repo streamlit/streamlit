@@ -33,14 +33,11 @@ pytest-github-actions-annotate-failures
 
 mypy-protobuf>=3.2, <3.4
 
-# These requirements exist only for `@st.cache` tests. st.cache is deprecated, and
-# we're not going to update its associated tests anymore. Please don't modify
-# these pinned versions!
-
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
 
+# Dependencies used in cache hashing tests:
 python-dateutil>=2.7.3
 tzlocal>=1.1
 cffi>=1.14
