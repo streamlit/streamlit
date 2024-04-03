@@ -36,6 +36,7 @@ from streamlit.runtime.state.session_state import (
     Value,
     WidgetMetadata,
     WStates,
+    _is_stale_widget,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.v1.app_test import AppTest
@@ -134,9 +135,35 @@ class WStateTests(unittest.TestCase):
         assert self.wstates.values() == {"5", 5}
 
     def test_remove_stale_widgets(self):
-        self.wstates.remove_stale_widgets({"widget_id_1"})
+        self.wstates.remove_stale_widgets({"widget_id_1"}, None)
         assert "widget_id_1" in self.wstates
         assert "widget_id_2" not in self.wstates
+
+    def test_remove_stale_widgets_fragment_run(self):
+        widget_data = [
+            ("widget_id_1", "my_fragment_id"),
+            ("widget_id_2", "my_fragment_id"),
+            ("widget_id_3", "some_other_fragment_id"),
+        ]
+        for widget_id, fragment_id in widget_data:
+            widget_state1 = WidgetStateProto()
+            widget_state1.id = widget_id
+            widget_state1.int_value = 7
+            self.wstates.set_widget_from_proto(widget_state1)
+            self.wstates.set_widget_metadata(
+                WidgetMetadata(
+                    id=widget_id,
+                    deserializer=lambda x, s: x,
+                    serializer=identity,
+                    value_type="int_value",
+                    fragment_id=fragment_id,
+                )
+            )
+
+        self.wstates.remove_stale_widgets({"widget_id_1"}, {"my_fragment_id"})
+        assert "widget_id_1" in self.wstates  # Active widget in fragment, not removed
+        assert "widget_id_2" not in self.wstates  # Stale widget in fragment, removed
+        assert "widget_id_3" in self.wstates  # Unrelated widget, not removed
 
     def test_get_serialized_nonexistent_id(self):
         assert self.wstates.get_serialized("nonexistent_id") is None
@@ -649,20 +676,37 @@ class SessionStateMethodTests(unittest.TestCase):
         assert not self.session_state._widget_changed("foo")
 
     def test_remove_stale_widgets(self):
+        existing_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-existing_widget"
         generated_widget_key = f"{GENERATED_WIDGET_ID_PREFIX}-removed_widget"
 
         self.session_state._old_state = {
-            "existing_widget": True,
+            existing_widget_key: True,
             generated_widget_key: True,
             "val_set_via_state": 5,
         }
 
         wstates = WStates()
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id=existing_widget_key,
+                deserializer=lambda x, s: str(x),
+                serializer=lambda x: bool(x),
+                value_type="bool_value",
+            )
+        )
+        wstates.set_widget_metadata(
+            WidgetMetadata(
+                id=generated_widget_key,
+                deserializer=lambda x, s: str(x),
+                serializer=lambda x: bool(x),
+                value_type="bool_value",
+            )
+        )
         self.session_state._new_widget_state = wstates
 
-        self.session_state._remove_stale_widgets({"existing_widget"})
+        self.session_state._remove_stale_widgets({existing_widget_key})
 
-        assert self.session_state["existing_widget"] == True
+        assert self.session_state[existing_widget_key] == True
         assert generated_widget_key not in self.session_state
         assert self.session_state["val_set_via_state"] == 5
 
@@ -772,6 +816,50 @@ def test_map_set_del_3837_regression():
     del m[key]
     assert key not in m
     assert len(m) == l1 - 1
+
+
+class IsStaleWidgetTests(unittest.TestCase):
+    def test_is_stale_widget_metadata_is_None(self):
+        assert _is_stale_widget(None, {}, {})
+
+    def test_is_stale_widget_active_id(self):
+        metadata = WidgetMetadata(
+            id="widget_id_1",
+            deserializer=lambda x, s: str(x),
+            serializer=lambda x: int(x),
+            value_type="int_value",
+        )
+        assert not _is_stale_widget(metadata, {"widget_id_1"}, {})
+
+    def test_is_stale_widget_unrelated_fragment(self):
+        metadata = WidgetMetadata(
+            id="widget_id_1",
+            deserializer=lambda x, s: str(x),
+            serializer=lambda x: int(x),
+            value_type="int_value",
+            fragment_id="my_fragment",
+        )
+        assert not _is_stale_widget(metadata, {"widget_id_2"}, {"some_other_fragment"})
+
+    def test_is_stale_widget_actually_stale_fragment(self):
+        metadata = WidgetMetadata(
+            id="widget_id_1",
+            deserializer=lambda x, s: str(x),
+            serializer=lambda x: int(x),
+            value_type="int_value",
+            fragment_id="my_fragment",
+        )
+        assert _is_stale_widget(metadata, {"widget_id_2"}, {"my_fragment"})
+
+    def test_is_stale_widget_actually_stale_no_fragment(self):
+        metadata = WidgetMetadata(
+            id="widget_id_1",
+            deserializer=lambda x, s: str(x),
+            serializer=lambda x: int(x),
+            value_type="int_value",
+            fragment_id="my_fragment",
+        )
+        assert _is_stale_widget(metadata, {"widget_id_2"}, {})
 
 
 class SessionStateStatProviderTests(DeltaGeneratorTestCase):

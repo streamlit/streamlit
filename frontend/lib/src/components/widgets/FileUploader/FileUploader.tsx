@@ -54,6 +54,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   width: number
+  fragmentId?: string
 }
 
 type FileUploaderStatus =
@@ -151,28 +152,38 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
 
     const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: true,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: true,
+        },
+        fragmentId
+      )
     }
   }
 
   public componentDidMount(): void {
     const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Set the state value on mount, to avoid triggering an extra rerun after
     // the first rerun.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: false,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: false,
+        },
+        fragmentId
+      )
     }
   }
 
@@ -472,10 +483,12 @@ class FileUploader extends React.PureComponent<Props, State> {
         return
       }
 
-      this.props.widgetMgr.setFileUploaderStateValue(
-        this.props.element,
+      const { widgetMgr, element, fragmentId } = this.props
+      widgetMgr.setFileUploaderStateValue(
+        element,
         newWidgetValue,
-        { fromUi: true }
+        { fromUi: true },
+        fragmentId
       )
     })
   }

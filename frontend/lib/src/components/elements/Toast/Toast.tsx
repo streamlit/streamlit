@@ -89,17 +89,21 @@ function generateToastOverrides(
 }
 
 // Function used to truncate toast messages that are longer than three lines.
-function shortenMessage(fullMessage: string): string {
+export function shortenMessage(fullMessage: string): string {
   const characterLimit = 114
 
   if (fullMessage.length > characterLimit) {
     let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
-      message = message.split(" ").slice(0, -1).join(" ")
+      message = message
+        .substring(0, characterLimit)
+        .split(" ")
+        .slice(0, -1)
+        .join(" ")
     }
 
-    return message
+    return message.trim()
   }
 
   return fullMessage

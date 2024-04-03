@@ -18,6 +18,7 @@ import collections
 import os
 import sys
 import types
+from pathlib import Path
 from typing import Callable, Final
 
 from streamlit import config, file_util
@@ -165,7 +166,7 @@ class LocalSourcesWatcher:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
-                    self._register_watcher(path, name)
+                    self._register_watcher(str(Path(path).resolve()), name)
 
     def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
