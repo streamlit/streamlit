@@ -76,18 +76,20 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
     if len(split_parts) != 4 or split_parts[0] != "" or split_parts[3] != "":
         raise StreamlitAPIException(
             f'The value "{maybe_material_icon}" is not a valid Material icon. '
-            f"Please use a Material icon shortcode."
+            f"Please use a Material icon shortcode like `:material:ThumbUp:`"
         )
     pack_name, icon_name = split_parts[1], split_parts[2]
     if pack_name not in ["material", "material-outlined", "material-rounded"]:
         raise StreamlitAPIException(
             f'The value "{maybe_material_icon}" is not a valid Material icon.'
-            f" Please use a Material icon shortcode."
+            f" Please use a Material icon shortcode like `:material:ThumbUp:`.Only "
+            f"'material', 'material-outlined' and 'material-rounded' icon packs "
+            f"are supported."
         )
     if not icon_name:
         raise StreamlitAPIException(
             f'The value "{maybe_material_icon}" is not a valid Material icon.'
-            f" Please use a Material icon shortcode."
+            f" Please use a Material icon shortcode, like`:material:ThumbUp:`."
         )
     return maybe_material_icon
 
