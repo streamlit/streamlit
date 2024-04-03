@@ -19,12 +19,10 @@ import hashlib
 import os
 import re
 import socket
-import sys
 import tempfile
 import time
 import types
 import unittest
-import urllib
 from io import BytesIO, StringIO
 from unittest.mock import MagicMock, Mock, patch
 
@@ -32,8 +30,6 @@ import altair.vegalite
 import cffi
 import numpy as np
 import pandas as pd
-import pytest
-import sqlalchemy as db
 from parameterized import parameterized
 
 import streamlit as st
