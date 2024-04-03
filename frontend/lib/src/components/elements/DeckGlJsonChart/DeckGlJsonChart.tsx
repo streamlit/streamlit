@@ -26,6 +26,12 @@ import {
 } from "@streamlit/lib/src/theme"
 // We don't have Typescript defs for these imports, which makes ESLint unhappy
 /* eslint-disable import/no-extraneous-dependencies */
+import {
+  colorBins,
+  colorCategories,
+  colorContinuous,
+  CartoLayer,
+} from "@deck.gl/carto"
 import * as layers from "@deck.gl/layers"
 import { JSONConverter } from "@deck.gl/json"
 import * as geoLayers from "@deck.gl/geo-layers"
@@ -50,7 +56,7 @@ import "mapbox-gl/dist/mapbox-gl.css"
 
 interface PickingInfo {
   object: {
-    [key: string]: string
+    [key: string]: any
   }
 }
 
@@ -64,7 +70,18 @@ interface DeckObject {
 }
 
 const configuration = {
-  classes: { ...layers, ...aggregationLayers, ...geoLayers, ...meshLayers },
+  classes: {
+    ...layers,
+    ...aggregationLayers,
+    ...geoLayers,
+    ...meshLayers,
+    CartoLayer,
+  },
+  functions: {
+    colorBins,
+    colorCategories,
+    colorContinuous,
+  },
 }
 
 registerLoaders([CSVLoader, GLTFLoader])
@@ -225,6 +242,11 @@ export class DeckGlJsonChart extends PureComponent<PropsWithHeight, State> {
 
         if (info.object.hasOwnProperty(variable)) {
           body = body.replace(match, info.object[variable])
+        } else if (
+          info.object.hasOwnProperty("properties") &&
+          info.object.properties.hasOwnProperty(variable)
+        ) {
+          body = body.replace(match, info.object.properties[variable])
         }
       })
     }
