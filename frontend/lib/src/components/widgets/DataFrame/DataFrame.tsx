@@ -517,7 +517,9 @@ function DataFrame({
         disableFullscreenMode={disableFullscreenMode}
         // Lock the toolbar in some specific situations:
         locked={
-          isRowSelected || isCellSelected || (isTouchDevice && isFocused)
+          (isRowSelected && !isRowSelectionActivated) ||
+          isCellSelected ||
+          (isTouchDevice && isFocused)
         }
         onExpand={expand}
         onCollapse={collapse}
