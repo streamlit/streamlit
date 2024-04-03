@@ -339,18 +339,18 @@ def marshall(
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
-
-    id = compute_widget_id(
-        "arrow_vega_lite",
-        user_key=key,
-        data=data,
-        spec=spec,
-        use_container_width=use_container_width,
-        key=key,
-        theme=theme,
-        page=ctx.page_script_hash if ctx else None,
-    )
-    proto.id = id
+    if on_select:
+        id = compute_widget_id(
+            "arrow_vega_lite",
+            user_key=key,
+            data=data,
+            spec=spec,
+            use_container_width=use_container_width,
+            key=key,
+            theme=theme,
+            page=ctx.page_script_hash if ctx else None,
+        )
+        proto.id = id
 
     if on_select:
         proto.is_select_enabled = True
