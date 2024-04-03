@@ -18,10 +18,8 @@ import asyncio
 import contextlib
 import errno
 import logging
-import os
 import socket
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Final
 
 import uvicorn
@@ -36,7 +34,6 @@ from streamlit.logger import get_logger
 from streamlit.runtime import Runtime, RuntimeConfig, RuntimeState
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-from streamlit.runtime.runtime_util import get_max_message_size_bytes
 from streamlit.web.cache_storage_manager_config import (
     create_default_cache_storage_manager,
 )
@@ -59,26 +56,11 @@ from streamlit.web.server.stats_request_handler import StatsRequestHandler
 from streamlit.web.server.upload_file_request_handler import UploadFileRequestHandler
 
 if TYPE_CHECKING:
-    from ssl import SSLContext
+    pass
 
 from starlette.applications import Starlette
 
 _LOGGER: Final = get_logger(__name__)
-
-TORNADO_SETTINGS = {
-    # Gzip HTTP responses.
-    "compress_response": True,
-    # Ping every 1s to keep WS alive.
-    # 2021.06.22: this value was previously 20s, and was causing
-    # connection instability for a small number of users. This smaller
-    # ping_interval fixes that instability.
-    # https://github.com/streamlit/streamlit/issues/3196
-    "websocket_ping_interval": 1,
-    # If we don't get a ping response within 30s, the connection
-    # is timed out.
-    "websocket_ping_timeout": 30,
-    "xsrf_cookie_name": "_streamlit_xsrf",
-}
 
 # When server.port is not available it will look for the next available port
 # up to MAX_PORT_SEARCH_RETRIES.
@@ -120,10 +102,7 @@ def get_available_port() -> int:
     port = None
     while call_count < MAX_PORT_SEARCH_RETRIES:
         address = config.get_option("server.address") or "localhost"
-        print("ZZZZZZ" * 20)
-        print(address)
         port = config.get_option("server.port")
-        print("XXXXXXXX" * 20)
         print(port)
 
         if int(port) == DEVELOPMENT_PORT:
@@ -172,6 +151,8 @@ def get_available_port() -> int:
 
 
 def create_uvicorn_config(app: Starlette) -> uvicorn.Config:
+    # TODO[Kajarenc] instead of searching for available port and then ask uvicorn to run
+    # on that port, we can bind uvicorn an existing socket we found in get_available_port.
     return uvicorn.Config(
         app=app,
         host=config.get_option("server.address"),
@@ -181,9 +162,10 @@ def create_uvicorn_config(app: Starlette) -> uvicorn.Config:
         # log_config=None,
         # access_log=False,
         use_colors=True,
-        # NOTE:[kajarenc] This is a temporary fix to avoid uvicorn logging
-        # cancelled error in console in development mode, when CMD + C pressed.
-        log_level="critical",
+        # NOTE:[kajarenc] Settings log_level to "critical" is a temporary fix to avoid
+        # uvicorn logging cancelled error in console in development mode,
+        # when ^C pressed.
+        log_level="info",
     )
 
 
@@ -195,124 +177,6 @@ def create_uvicorn_server(app: Starlette) -> uvicorn.Server:
         # install_signal_handlers=False,
         # install_proxy_headers=False,
     )
-
-
-def start_listening(app: tornado.web.Application) -> None:
-    """Makes the server start listening at the configured port.
-
-    In case the port is already taken it tries listening to the next available
-    port.  It will error after MAX_PORT_SEARCH_RETRIES attempts.
-
-    """
-    cert_file = config.get_option("server.sslCertFile")
-    key_file = config.get_option("server.sslKeyFile")
-    ssl_options = _get_ssl_options(cert_file, key_file)
-
-    http_server = HTTPServer(
-        app,
-        max_buffer_size=config.get_option("server.maxUploadSize") * 1024 * 1024,
-        ssl_options=ssl_options,
-    )
-
-    if server_address_is_unix_socket():
-        start_listening_unix_socket(http_server)
-    else:
-        start_listening_tcp_socket(http_server)
-
-
-def _get_ssl_options(cert_file: str | None, key_file: str | None) -> SSLContext | None:
-    if bool(cert_file) != bool(key_file):
-        _LOGGER.error(
-            "Options 'server.sslCertFile' and 'server.sslKeyFile' must "
-            "be set together. Set missing options or delete existing options."
-        )
-        sys.exit(1)
-    if cert_file and key_file:
-        # ssl_ctx.load_cert_chain raise exception as below, but it is not
-        # sufficiently user-friendly
-        # FileNotFoundError: [Errno 2] No such file or directory
-        if not Path(cert_file).exists():
-            _LOGGER.error("Cert file '%s' does not exist.", cert_file)
-            sys.exit(1)
-        if not Path(key_file).exists():
-            _LOGGER.error("Key file '%s' does not exist.", key_file)
-            sys.exit(1)
-
-        import ssl
-
-        ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        # When the SSL certificate fails to load, an exception is raised as below,
-        # but it is not sufficiently user-friendly.
-        # ssl.SSLError: [SSL] PEM lib (_ssl.c:4067)
-        try:
-            ssl_ctx.load_cert_chain(cert_file, key_file)
-        except ssl.SSLError:
-            _LOGGER.error(
-                "Failed to load SSL certificate. Make sure "
-                "cert file '%s' and key file '%s' are correct.",
-                cert_file,
-                key_file,
-            )
-            sys.exit(1)
-
-        return ssl_ctx
-    return None
-
-
-def start_listening_unix_socket(http_server: HTTPServer) -> None:
-    address = config.get_option("server.address")
-    file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
-
-    unix_socket = tornado.netutil.bind_unix_socket(file_name)
-    http_server.add_socket(unix_socket)
-
-
-def start_listening_tcp_socket(http_server: HTTPServer) -> None:
-    call_count = 0
-
-    port = None
-    while call_count < MAX_PORT_SEARCH_RETRIES:
-        address = config.get_option("server.address")
-        port = config.get_option("server.port")
-
-        if int(port) == DEVELOPMENT_PORT:
-            _LOGGER.warning(
-                "Port %s is reserved for internal development. "
-                "It is strongly recommended to select an alternative port "
-                "for `server.port`.",
-                DEVELOPMENT_PORT,
-            )
-
-        try:
-            http_server.listen(port, address)
-            break  # It worked! So let's break out of the loop.
-
-        except OSError as e:
-            if e.errno == errno.EADDRINUSE:
-                if server_port_is_manually_set():
-                    _LOGGER.error("Port %s is already in use", port)
-                    sys.exit(1)
-                else:
-                    _LOGGER.debug(
-                        "Port %s already in use, trying to use the next one.", port
-                    )
-                    port += 1
-                    # Don't use the development port here:
-                    if port == DEVELOPMENT_PORT:
-                        port += 1
-
-                    config.set_option(
-                        "server.port", port, ConfigOption.STREAMLIT_DEFINITION
-                    )
-                    call_count += 1
-            else:
-                raise
-
-    if call_count >= MAX_PORT_SEARCH_RETRIES:
-        raise RetriesExceeded(
-            f"Cannot start Streamlit server. Port {port} is already in use, and "
-            f"Streamlit was unable to find a free port after {MAX_PORT_SEARCH_RETRIES} attempts.",
-        )
 
 
 class Server:
