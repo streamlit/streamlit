@@ -37,10 +37,6 @@ mypy-protobuf>=3.2, <3.4
 # we're not going to update its associated tests anymore. Please don't modify
 # these pinned versions!
 
-
-mysqlclient>=2.0.3
-psycopg2-binary>=2.9.1
-pyodbc>=4.0.32
 # SQLAlchemy 2.0 causes hashing tests to fail (and we're deliberately
 # choosing not to support it.)
 sqlalchemy[mypy]>=1.4.25, <2.0
