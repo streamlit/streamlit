@@ -137,7 +137,7 @@ class ArrowMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         key: Key | None = None,
-        on_select: False = False,
+        on_select: Literal[False] = False,
         selection_mode: Literal["single-row", "multi-row"] = "single-row",
     ) -> DeltaGenerator:
         ...
@@ -154,7 +154,7 @@ class ArrowMixin:
         column_order: Iterable[str] | None = None,
         column_config: ColumnConfigMappingInput | None = None,
         key: Key | None = None,
-        on_select: Callable[..., None] | True = True,
+        on_select: Callable[..., None] | Literal[True] = True,
         selection_mode: Literal["single-row", "multi-row"] = "single-row",
     ) -> SelectionState:
         ...
