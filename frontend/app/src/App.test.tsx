@@ -240,6 +240,7 @@ const NEW_SESSION_JSON: INewSession = {
   pageScriptHash: "page_script_hash",
   mainScriptPath: "path/to/file.py",
   scriptRunId: "script_run_id",
+  fragmentIdsThisRun: [],
 }
 
 // Prevent "moment-timezone requires moment" exception when mocking "moment".
@@ -450,7 +451,14 @@ describe("App", () => {
       )
     }
 
+    let documentTitle: string
+
+    beforeEach(() => {
+      documentTitle = document.title
+    })
+
     afterEach(() => {
+      document.title = documentTitle
       window.localStorage.clear()
     })
 
@@ -1064,6 +1072,32 @@ describe("App", () => {
         window.history.pushState.mockClear()
       })
     })
+
+    it("resets document title if not fragment", () => {
+      renderApp(getProps())
+
+      document.title = "some title"
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        fragmentIdsThisRun: [],
+      })
+
+      expect(document.title).toBe("streamlit_app · Streamlit")
+    })
+
+    it("does *not* reset document title if fragment", () => {
+      renderApp(getProps())
+
+      document.title = "some title"
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        fragmentIdsThisRun: ["myFragmentId"],
+      })
+
+      expect(document.title).toBe("some title")
+    })
   })
 
   describe("DeployButton", () => {
@@ -1154,6 +1188,7 @@ describe("App", () => {
         { pageScriptHash: "sub_hash", pageName: "page2" },
       ],
       pageScriptHash: "top_hash",
+      fragmentIdsThisRun: [],
     }
 
     beforeEach(() => {
@@ -1364,6 +1399,27 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("some_other_page_hash")
+    })
+
+    it("sets fragmentId in BackMsg", () => {
+      renderApp(getProps())
+
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      const connectionManager = getMockConnectionManager()
+
+      widgetStateManager.sendUpdateWidgetsMessage()
+      widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
+      expect(connectionManager.sendMessage).toBeCalledTimes(2)
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.fragmentId
+      ).toBe(undefined)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[1][0].rerunScript.fragmentId
+      ).toBe("myFragmentId")
     })
 
     it("extracts the pageName as an empty string if we can't get a pageScriptHash (main page)", () => {
@@ -1592,6 +1648,44 @@ describe("App", () => {
       )
 
       expect(handleDeltaMessageSpy).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("App.handleAutoRerun and autoRerun interval handling", () => {
+    beforeEach(() => {
+      jest.useFakeTimers()
+      jest.spyOn(global, "setInterval")
+      jest.spyOn(global, "clearInterval")
+    })
+
+    it("sets interval to call sendUpdateWidgetsMessage", () => {
+      renderApp(getProps())
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+
+      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000)
+    })
+
+    it("clears intervals on handleNewSession message", () => {
+      renderApp(getProps())
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+      sendForwardMessage("autoRerun", {
+        interval: 2.0,
+        fragmentId: "myFragmentId",
+      })
+
+      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000)
+      expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 2000)
+
+      sendForwardMessage("newSession", { ...NEW_SESSION_JSON })
+
+      expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
+      expect(clearInterval).toHaveBeenCalledWith(expect.any(Number))
     })
   })
 

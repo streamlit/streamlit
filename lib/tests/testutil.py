@@ -19,6 +19,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from streamlit import config
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
 from streamlit.runtime.state import SafeSessionState, SessionState
@@ -54,6 +55,7 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
         main_script_path="",
         page_script_hash="mock_page_script_hash",
         user_info={"email": "mock@test.com"},
+        fragment_storage=MemoryFragmentStorage(),
     )
 
 

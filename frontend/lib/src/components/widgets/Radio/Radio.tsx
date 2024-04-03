@@ -29,6 +29,7 @@ export interface Props {
   element: RadioProto
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -86,11 +87,8 @@ class Radio extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setIntValue(
-      this.props.element,
-      this.state.value,
-      source
-    )
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setIntValue(element, this.state.value, source, fragmentId)
   }
 
   /**
