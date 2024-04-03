@@ -16,9 +16,11 @@ from __future__ import annotations
 
 from typing import Callable
 
-import streamlit as st
+from streamlit import logger
+from streamlit.delta_generator import dg_stack, event_dg, main_dg
 from streamlit.elements.lib.dialog import DialogWidth
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.fragment import fragment as _fragment
 
 
 def dialog_decorator(
@@ -37,10 +39,22 @@ def dialog_decorator(
             )
 
         def decorated_fn(*args, **kwargs) -> None:
-            dialog = st._main.dialog(title=title, dismissible=True, width=width)
+            parent_block_type = (
+                main_dg._active_dg._parent._block_type
+                if main_dg._active_dg._parent
+                else None
+            )
+            logger.get_logger(__name__).debug(
+                "Active DG: %s. Parent is dialog: %s. Parents contain dialog: %s. Dg stack: %s",
+                main_dg._active_dg,
+                parent_block_type == "dialog",
+                "dialog" in set(main_dg._active_dg._parent_block_types),
+                set(dg_stack.get()[-1]._parent_block_types),
+            )
+            dialog = event_dg.dialog(title=title, dismissible=True, width=width)
             dialog.open()
 
-            @st.experimental_fragment
+            @_fragment
             def dialog_content() -> None:
                 # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
                 _ = fn(*args, **kwargs)
