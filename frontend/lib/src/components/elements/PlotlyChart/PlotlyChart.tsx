@@ -171,12 +171,6 @@ function PlotlyFigure({
           })
         }
       }
-
-      return {
-        data: spec.data,
-        layout: spec.layout,
-        frames: spec.frames ? { ...spec.frames } : [],
-      }
     }
 
     return spec
@@ -187,40 +181,28 @@ function PlotlyFigure({
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
 
-  useLayoutEffect(() => {
-    if (isFullScreen(height)) {
-      spec.layout.width = width
-      spec.layout.height = height
-    } else if (element.useContainerWidth) {
-      spec.layout.width = width
-      if (!isFullScreen(height) && height !== initialHeight) {
-        spec.layout.height = initialHeight
-      }
-    } else {
-      spec.layout.width = initialWidth
+  if (isFullScreen(height)) {
+    spec.layout.width = width
+    spec.layout.height = height
+  } else if (element.useContainerWidth) {
+    spec.layout.width = width
+    if (!isFullScreen(height) && height !== initialHeight) {
       spec.layout.height = initialHeight
     }
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
-  }, [
-    height,
-    width,
-    element.useContainerWidth,
-    spec,
-    initialWidth,
-    initialHeight,
-    element.theme,
-    theme,
-    element.isSelectEnabled,
-  ])
+  } else {
+    spec.layout.width = initialWidth
+    spec.layout.height = initialHeight
+  }
+  if (element.isSelectEnabled) {
+    spec.layout.clickmode = "event+select"
+    spec.layout.hovermode = "closest"
+  }
+  if (element.theme === "streamlit") {
+    applyStreamlitTheme(spec, theme)
+  } else {
+    // Apply minor theming improvements to work better with Streamlit
+    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+  }
 
   const handleSelect = (event: PlotSelectionEvent): void => {
     const returnValue: any = { select: {} }
