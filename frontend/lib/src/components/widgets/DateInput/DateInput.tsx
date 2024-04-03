@@ -41,6 +41,7 @@ export interface Props {
   theme: EmotionTheme
   widgetMgr: WidgetStateManager
   width: number
+  fragmentId?: string
 }
 
 interface State {
@@ -134,10 +135,12 @@ class DateInput extends React.PureComponent<Props, State> {
 
   /** Commit state.value to the WidgetStateManager. */
   private commitWidgetValue = (source: Source): void => {
-    this.props.widgetMgr.setStringArrayValue(
-      this.props.element,
+    const { widgetMgr, element, fragmentId } = this.props
+    widgetMgr.setStringArrayValue(
+      element,
       datesToStrings(this.state.values),
-      source
+      source,
+      fragmentId
     )
   }
 
