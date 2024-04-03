@@ -357,11 +357,15 @@ class ArrowMixin:
         marshall_column_config(proto, column_config_mapping)
 
         if on_select:
+            # If on_select is truthy, we need to activate selection mode
+            # and register the dataframe element as a widget.
+
             proto.row_selection_mode = (
                 ArrowProto.RowSelectionMode.MULTI
                 if selection_mode == "multi-row"
                 else ArrowProto.RowSelectionMode.SINGLE
             )
+            proto.form_id = current_form_id(self.dg)
 
             # We want to do this as early as possible to avoid introducing nondeterminism,
             # but it isn't clear how much processing is needed to have the data in a
@@ -378,10 +382,10 @@ class ArrowMixin:
                 column_order=column_order,
                 column_config_mapping=str(column_config_mapping),
                 key=key,
-                form_id=current_form_id(self.dg),
+                selection_mode=selection_mode,
+                form_id=proto.form_id,
                 page=ctx.page_script_hash if ctx else None,
             )
-            proto.form_id = current_form_id(self.dg)
 
             serde = DataframeSelectionSerde()
             widget_state = register_widget(
