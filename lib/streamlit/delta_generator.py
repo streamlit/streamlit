@@ -348,7 +348,7 @@ class DeltaGenerator(
                     message = (
                         f"Method `{name}()` does not exist for "
                         "`DeltaGenerator` objects. Did you mean "
-                        "`st.{name}()`?"
+                        f"`st.{name}()`?"
                     )
             else:
                 message = f"`{name}()` is not a valid Streamlit command."
