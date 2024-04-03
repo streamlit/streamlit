@@ -315,9 +315,9 @@ class DeltaGenerator(
         if self == self._main_dg:
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
-            current_stack = dg_stack.get()
-            if len(current_stack) > 1:
-                return current_stack[-1]
+            last_context_stack_dg = get_last_dg_added_to_context_stack()
+            if last_context_stack_dg is not None:
+                return last_context_stack_dg
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
         # current `with` dg.
@@ -788,6 +788,20 @@ dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
 )
 
 
+def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
+    """Get the last added DeltaGenerator of the stack in the current context.
+
+    Returns None if the stack has only one element or is empty for whatever reason.
+    """
+    current_stack = dg_stack.get()
+    # If set to "> 0" and thus return the only delta generator in the stack - which logically makes more sense -, some unit tests
+    # fail. It looks like the reason is that they create their own main delta generator but do not populate the dg_stack correctly. However, to be on the safe-side,
+    # we keep the logic but leave the comment as shared knowledge for whoever will look into this in the future.
+    if len(current_stack) > 1:
+        return current_stack[-1]
+    return None
+
+
 def _prep_data_for_add_rows(
     data: Data,
     delta_type: str,
@@ -904,7 +918,7 @@ def _writes_directly_to_sidebar(dg: DG) -> bool:
 
 
 def _check_nested_element_violation(
-    dg: DeltaGenerator, block_type: str | None, parent_block_types: List[BlockType]
+    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: List[BlockType]
 ) -> None:
     """Check if elements are nested in a forbidden way.
 
@@ -914,11 +928,11 @@ def _check_nested_element_violation(
     """
 
     if block_type == "column":
-        num_of_parent_columns = self._count_num_of_parent_columns(
+        num_of_parent_columns = dg._count_num_of_parent_columns(
             ancestor_block_types
         )
         if (
-            self._root_container == RootContainer.SIDEBAR
+            dg._root_container == RootContainer.SIDEBAR
             and num_of_parent_columns > 0
         ):
             raise StreamlitAPIException(

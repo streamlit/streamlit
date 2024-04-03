@@ -98,10 +98,7 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
 
   if (node.deltaBlock.dialog) {
     return (
-      <Dialog
-        element={node.deltaBlock.dialog as BlockProto.Dialog}
-        widgetMgr={props.widgetMgr}
-      >
+      <Dialog element={node.deltaBlock.dialog as BlockProto.Dialog}>
         {child}
       </Dialog>
     )

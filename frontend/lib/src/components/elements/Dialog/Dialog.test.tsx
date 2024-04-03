@@ -22,7 +22,6 @@ import "@testing-library/jest-dom"
 import { render } from "@streamlit/lib/src/test_util"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import Dialog, { Props as DialogProps } from "./Dialog"
 
@@ -35,10 +34,6 @@ const getProps = (
     isOpen: true,
     dismissible: true,
     ...elementProps,
-  }),
-  widgetMgr: new WidgetStateManager({
-    sendRerunBackMsg: () => {},
-    formsDataChanged: () => {},
   }),
   ...props,
 })

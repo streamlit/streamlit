@@ -178,9 +178,6 @@ export class WidgetStateManager {
   // External data about all forms.
   private formsData: FormsData
 
-  // We allow only a single dialog to be open at any given time
-  private isDialogOpen = false
-
   constructor(props: Props) {
     this.props = props
     this.formsData = createFormsData()
@@ -699,30 +696,6 @@ export class WidgetStateManager {
     this.updateFormsData(draft => {
       draft.submitButtons.set(formId, submitButtons)
     })
-  }
-
-  /**
-   * A dialog should only open if it is able to acquire the lock first.
-   * This ensures that only a single dialog is open any given time.
-   * The dialog must call {@link releaseDialogLock} when it closes, to allow
-   * other dialogs from opening.
-   *
-   * @returns true if the lock was acquired, false otherwise
-   */
-  public tryAcquireDialogLock(): boolean {
-    if (this.isDialogOpen) {
-      return false
-    }
-    this.isDialogOpen = true
-    return true
-  }
-
-  /**
-   * Release the dialog lock.
-   * MUST be called after the lock was acquired via {@link tryAcquireDialogLock} before.
-   */
-  public releaseDialogLock(): void {
-    this.isDialogOpen = false
   }
 
   /**

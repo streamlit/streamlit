@@ -16,11 +16,30 @@ from __future__ import annotations
 
 from typing import Callable
 
-from streamlit import logger
-from streamlit.delta_generator import dg_stack, event_dg, main_dg
+from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
 from streamlit.elements.lib.dialog import DialogWidth
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import fragment as _fragment
+
+
+def _assert_no_nested_dialogs() -> None:
+    """Check the current stack for existing DeltaGenerator's of type 'dialog'.
+    Note that the check like this only works when Dialog is called as a context manager, as this populates the dg_stack in delta_generator correctly.
+
+    This does not detect the edge case in which someone calls, for example, `with st.sidebar` inside of a dialog function and opens a dialog in there,
+    as `with st.sidebar` pushes the new DeltaGenerator to the stack. In order to check for that edge case, we could try to check all DeltaGenerators in the stack,
+    and not only the last one. Since we deem this to be an edge case, we lean towards simplicity here.
+
+    Raises
+    ------
+    StreamlitAPIException
+        Raised if the user tries to nest dialogs inside of each other.
+    """
+    last_dg_in_current_context = get_last_dg_added_to_context_stack()
+    if last_dg_in_current_context and "dialog" in set(
+        last_dg_in_current_context._parent_block_types
+    ):
+        raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
 
 
 def dialog_decorator(
@@ -39,18 +58,10 @@ def dialog_decorator(
             )
 
         def decorated_fn(*args, **kwargs) -> None:
-            parent_block_type = (
-                main_dg._active_dg._parent._block_type
-                if main_dg._active_dg._parent
-                else None
-            )
-            logger.get_logger(__name__).debug(
-                "Active DG: %s. Parent is dialog: %s. Parents contain dialog: %s. Dg stack: %s",
-                main_dg._active_dg,
-                parent_block_type == "dialog",
-                "dialog" in set(main_dg._active_dg._parent_block_types),
-                set(dg_stack.get()[-1]._parent_block_types),
-            )
+            _assert_no_nested_dialogs()
+            # Call the Dialog on the event_dg because it lives outside of the normal
+            # Streamlit UI flow. For example, if it is called from the sidebar, it should not
+            # inherit the sidebar theming.
             dialog = event_dg.dialog(title=title, dismissible=True, width=width)
             dialog.open()
 

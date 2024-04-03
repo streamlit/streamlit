@@ -372,6 +372,22 @@ class DialogTest(DeltaGeneratorTestCase):
         dialog_block = self.get_delta_from_queue()
         self.assertFalse(dialog_block.add_block.dialog.is_open)
 
+    def test_dialog_deltagenerator_only_call_open_once(self):
+        """Test that dialog opens and closes"""
+        dialog = st._main.dialog("Test Dialog")
+
+        self.assertIsNotNone(dialog)
+
+        # Open first time
+        dialog.open()
+        with self.assertRaises(StreamlitAPIException):
+            # Cannot call open while the dialog is already open
+            dialog.open()
+        dialog.close()
+        with self.assertRaises(StreamlitAPIException):
+            # Close does not reset the dialog-flag as this is handled per script-run context
+            dialog.open()
+
     def test_dialog_decorator_title_required(self):
         """Test that the title is required"""
         with self.assertRaises(StreamlitAPIException) as e:
@@ -423,4 +439,22 @@ class DialogTest(DeltaGeneratorTestCase):
 
         self.assertEqual(
             e.exception.args[0], "Dialogs may not be nested inside other dialogs."
+        )
+
+    def test_only_one_dialog_can_be_opened_at_same_time(self):
+        @st.experimental_dialog("Dialog1")
+        def dialog1():
+            st.empty()
+
+        @st.experimental_dialog("Dialog2")
+        def dialog2():
+            st.empty()
+
+        with self.assertRaises(StreamlitAPIException) as e:
+            dialog1()
+            dialog2()
+
+        self.assertEqual(
+            e.exception.args[0],
+            "Only one dialog is allowed to be opened at the same time.",
         )

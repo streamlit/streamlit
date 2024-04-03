@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  ReactNode,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import React, { ReactElement, useEffect, useMemo, useState } from "react"
 
 import { SIZE } from "baseui/modal"
 
@@ -29,19 +23,15 @@ import Modal, {
   ModalHeader,
   ModalBody,
 } from "@streamlit/lib/src/components/shared/Modal"
-import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
-import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
-import ThemeProvider from "@streamlit/lib/src/components/core/ThemeProvider"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
 import { StyledDialogContent } from "./styled-components"
 
 export interface Props {
   element: BlockProto.Dialog
-  widgetMgr: WidgetStateManager
 }
 
 type DialogWidth = "small" | "large"
@@ -64,44 +54,18 @@ function isDialogWidth(str: string | null | undefined): str is DialogWidth {
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   element,
   children,
-  widgetMgr,
 }): ReactElement => {
   const { title, dismissible, width, isOpen: initialIsOpen } = element
   const [isOpen, setIsOpen] = useState<boolean>(false)
 
   useEffect(() => {
-    // release the lock properly when isOpen changed / the component unmounts
-    return () => widgetMgr.releaseDialogLock()
-  }, [widgetMgr])
-
-  useEffect(() => {
     // Only apply the open state if it was actually set in the proto.
     if (notNullOrUndefined(initialIsOpen)) {
-      // only open when the lock can be acquired
-      const lockAcquired = widgetMgr.tryAcquireDialogLock()
-      setIsOpen(initialIsOpen && lockAcquired)
+      setIsOpen(initialIsOpen)
     }
-  }, [initialIsOpen, widgetMgr])
+  }, [initialIsOpen])
 
   const { activeTheme } = React.useContext(LibContext)
-  const isInSidebar = React.useContext(IsSidebarContext)
-
-  const ThemedModal = useMemo(() => {
-    return function ThemedModal({ children }: { children: ReactNode }) {
-      if (isInSidebar) {
-        return (
-          <ThemeProvider
-            theme={activeTheme.emotion}
-            baseuiTheme={activeTheme.basewebTheme}
-          >
-            {children}
-          </ThemeProvider>
-        )
-      }
-
-      return <>{children}</>
-    }
-  }, [activeTheme.emotion, activeTheme.basewebTheme, isInSidebar])
 
   const size: string = useMemo(
     () =>
@@ -113,22 +77,17 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   )
 
   return (
-    <ThemedModal>
-      <Modal
-        isOpen={isOpen}
-        closeable={dismissible}
-        onClose={() => {
-          setIsOpen(false)
-          widgetMgr.releaseDialogLock()
-        }}
-        size={size}
-      >
-        <ModalHeader>{title}</ModalHeader>
-        <ModalBody>
-          <StyledDialogContent>{children}</StyledDialogContent>
-        </ModalBody>
-      </Modal>
-    </ThemedModal>
+    <Modal
+      isOpen={isOpen}
+      closeable={dismissible}
+      onClose={() => setIsOpen(false)}
+      size={size}
+    >
+      <ModalHeader>{title}</ModalHeader>
+      <ModalBody>
+        <StyledDialogContent>{children}</StyledDialogContent>
+      </ModalBody>
+    </Modal>
   )
 }
 
