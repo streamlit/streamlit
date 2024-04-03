@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useLayoutEffect, useState } from "react"
+import React, { ReactElement, useState, useCallback } from "react"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -152,7 +152,7 @@ function PlotlyFigure({
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
-  const getInitialValue = (): any => {
+  const getInitialValue = useCallback((): any => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
@@ -186,7 +186,7 @@ function PlotlyFigure({
     }
 
     return spec
-  }
+  }, [element, figure.spec, theme, widgetMgr])
 
   const [spec] = useState(getInitialValue())
 
