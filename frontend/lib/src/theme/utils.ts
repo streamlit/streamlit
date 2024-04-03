@@ -589,6 +589,46 @@ export function getIncreasingGreen(theme: EmotionTheme): string {
     : theme.colors.green40
 }
 
+/**
+ * Return a @emotion/styled-like css dictionary to update the styles of headers, such as h1, h2, ...
+ * Used for st.title, st.header, ... that are wrapped in the Sidebar or Dialogs.
+ */
+export function getWrappedHeadersStyle(theme: EmotionTheme): {
+  [cssSelector: string]: { fontSize: string; fontWeight: number }
+} {
+  return {
+    "& h1": {
+      fontSize: theme.fontSizes.xl,
+      fontWeight: 600,
+    },
+
+    "& h2": {
+      fontSize: theme.fontSizes.lg,
+      fontWeight: 600,
+    },
+
+    "& h3": {
+      fontSize: theme.fontSizes.mdLg,
+      fontWeight: 600,
+    },
+
+    "& h4": {
+      fontSize: theme.fontSizes.md,
+      fontWeight: 600,
+    },
+
+    "& h5": {
+      fontSize: theme.fontSizes.sm,
+      fontWeight: 600,
+    },
+
+    "& h6": {
+      fontSize: theme.fontSizes.twoSm,
+      fontWeight: 600,
+    },
+  }
+}
+
 function addPxUnit(n: number): string {
   return `${n}px`
 }
