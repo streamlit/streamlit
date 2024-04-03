@@ -42,6 +42,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
@@ -260,6 +261,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 main_script_path="",
                 page_script_hash="",
                 user_info={"email": "test@test.com"},
+                fragment_storage=MemoryFragmentStorage(),
             ),
         )
         with patch.object(call_stack, "_show_cached_st_function_warning") as warning:
