@@ -235,6 +235,11 @@ function DataFrame({
 
   const applySelections = React.useCallback(
     (newSelection: GridSelection, triggerRerun = true) => {
+      // If we want to support selections also with in the editable mode,
+      // we would need to integrate the `applyEdits` and `applySelections` functions
+      // into a single function that updates the widget state with both the editing
+      // state and the selection state.
+
       const selectionState = {
         // We use snake case here since this is the widget state
         // that is sent and used in the backend. Therefore, it should
@@ -672,10 +677,15 @@ function DataFrame({
             clearTooltip()
           }}
           // Header click is used for column sorting:
-          onHeaderClicked={
-            // Deactivate sorting for empty state and for large dataframes:
-            isEmptyTable || isLargeTable ? undefined : sortColumn
-          }
+          onHeaderClicked={(colIndex: number, _event) => {
+            console.log("Header clicked")
+            if (isEmptyTable || isLargeTable) {
+              // Deactivate sorting for empty state and for large dataframes
+              return undefined
+            }
+            clearSelection()
+            sortColumn(colIndex)
+          }}
           gridSelection={gridSelection}
           onSelectionCleared={() => {
             // TODO: do we need to do something here?
@@ -691,9 +701,23 @@ function DataFrame({
               // So we allow selection changes for touch devices even when it is not focused.
               const rowSelectionChanged =
                 newSelection.rows !== gridSelection.rows
-              setGridSelection(newSelection)
+              let updatedSelection = newSelection
+              if (
+                isRowSelectionActivated &&
+                newSelection.current !== undefined
+              ) {
+                // The default behavior is that row selections are cleared when a cell is selected.
+                // This is not desired when row selection is activated. Instead, we want to keep the
+                // row selection and only update the cell selection.
+                updatedSelection = {
+                  ...newSelection,
+                  rows: gridSelection.rows,
+                }
+              }
+              setGridSelection(updatedSelection)
+
               if (isRowSelectionActivated && rowSelectionChanged) {
-                applySelections(newSelection)
+                applySelections(updatedSelection)
               }
 
               if (tooltip !== undefined) {
@@ -747,7 +771,14 @@ function DataFrame({
                 bgCell: theme.bgHeader,
                 bgCellMedium: theme.bgHeader,
               },
-              rowMarkers: "checkbox",
+              rowMarkers: {
+                kind: "checkbox",
+                checkboxStyle:
+                  element.rowSelectionMode ===
+                  ArrowProto.RowSelectionMode.MULTI
+                    ? "square"
+                    : "circle",
+              },
               rowSelectionMode:
                 element.rowSelectionMode === ArrowProto.RowSelectionMode.MULTI
                   ? "multi"
