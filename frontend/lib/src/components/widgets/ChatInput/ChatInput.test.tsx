@@ -23,7 +23,10 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import ChatInput, { Props } from "./ChatInput"
 
-const getProps = (elementProps: Partial<ChatInputProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<ChatInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: ChatInputProto.create({
     id: "123",
     placeholder: "Enter Text Here",
@@ -37,6 +40,7 @@ const getProps = (elementProps: Partial<ChatInputProto> = {}): Props => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("ChatInput widget", () => {
@@ -105,10 +109,33 @@ describe("ChatInput widget", () => {
     fireEvent.change(chatInput, { target: { value: "1234567890" } })
     expect(chatInput).toHaveTextContent("1234567890")
     fireEvent.keyDown(chatInput, { key: "Enter" })
-    expect(spy).toHaveBeenCalledWith(props.element, "1234567890", {
-      fromUi: true,
-    })
+    expect(spy).toHaveBeenCalledWith(
+      props.element,
+      "1234567890",
+      {
+        fromUi: true,
+      },
+      undefined
+    )
     expect(chatInput).toHaveTextContent("")
+  })
+
+  it("can set fragmentId when sending value", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    const spy = jest.spyOn(props.widgetMgr, "setStringTriggerValue")
+    render(<ChatInput {...props} />)
+
+    const chatInput = screen.getByTestId("stChatInputTextArea")
+    fireEvent.change(chatInput, { target: { value: "1234567890" } })
+    fireEvent.keyDown(chatInput, { key: "Enter" })
+    expect(spy).toHaveBeenCalledWith(
+      props.element,
+      "1234567890",
+      {
+        fromUi: true,
+      },
+      "myFragmentId"
+    )
   })
 
   it("will not send an empty value on enter if empty", () => {

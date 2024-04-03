@@ -14,7 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_point_selection_scatter_chart_displays_dataframe(
@@ -25,6 +25,7 @@ def test_point_selection_scatter_chart_displays_dataframe(
     themed_app.mouse.move(450, 410)
     themed_app.mouse.down()
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-scatter_single_selection_greyed")
@@ -41,6 +42,7 @@ def test_interval_selection_scatter_chart_displays_dataframe(
     themed_app.mouse.down()
     themed_app.mouse.move(550, 550)
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection_greyed")
@@ -132,6 +134,7 @@ def test_shift_click_point_selection_scatter_chart_displays_dataframe(
     themed_app.mouse.move(445, 375)
     themed_app.mouse.down()
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-scatter_double_selection_greyed")
