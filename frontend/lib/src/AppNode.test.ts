@@ -973,13 +973,13 @@ describe("AppRoot.clearStaleNodes", () => {
 
   it("handles currentFragmentId correctly", () => {
     const root = AppRoot.empty()
-      // Block not corresponding to my_fragment_id. Should be untouched.
+      // Block not corresponding to my_fragment_id. Should be preserved.
       .applyDelta(
         "old_session_id",
         makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
         forwardMsgMetadata([0, 0])
       )
-      // Element in block unrelated to my_fragment_id. Should be untouched.
+      // Element in block unrelated to my_fragment_id. Should be preserved.
       .applyDelta(
         "old_session_id",
         makeProto(DeltaProto, {
@@ -987,7 +987,7 @@ describe("AppRoot.clearStaleNodes", () => {
         }),
         forwardMsgMetadata([0, 0, 0])
       )
-      // Another element in block unrelated to my_fragment_id. Should be untouched.
+      // Another element in block unrelated to my_fragment_id. Should be preserved.
       .applyDelta(
         "old_session_id",
         makeProto(DeltaProto, {
@@ -995,6 +995,15 @@ describe("AppRoot.clearStaleNodes", () => {
           fragmentId: "other_fragment_id",
         }),
         forwardMsgMetadata([0, 0, 1])
+      )
+      // Old element related to my_fragment_id but in an unrelated block. Should be preserved.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement4!" } },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 0, 2])
       )
       // Block corresponding to my_fragment_id
       .applyDelta(
@@ -1014,7 +1023,7 @@ describe("AppRoot.clearStaleNodes", () => {
         }),
         forwardMsgMetadata([0, 1, 0])
       )
-      // New element related to my_fragment_id. Should be untouched.
+      // New element related to my_fragment_id. Should be preserved.
       .applyDelta(
         "new_session_id",
         makeProto(DeltaProto, {
@@ -1027,9 +1036,10 @@ describe("AppRoot.clearStaleNodes", () => {
     const pruned = root.clearStaleNodes("new_session_id", ["my_fragment_id"])
 
     expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
-    expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(2)
+    expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(3)
     expect(pruned.main.getIn([0, 0])).toBeTextNode("oldElement!")
     expect(pruned.main.getIn([0, 1])).toBeTextNode("oldElement2!")
+    expect(pruned.main.getIn([0, 2])).toBeTextNode("oldElement4!")
 
     expect(pruned.main.getIn([1])).toBeInstanceOf(BlockNode)
     expect((pruned.main.getIn([1]) as BlockNode).children).toHaveLength(1)

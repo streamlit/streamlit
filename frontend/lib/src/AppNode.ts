@@ -114,7 +114,8 @@ export interface AppNode {
    */
   clearStaleNodes(
     currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>
+    fragmentIdsThisRun?: Array<string>,
+    fragmentIdOfBlock?: string
   ): AppNode | undefined
 
   /**
@@ -214,16 +215,28 @@ export class ElementNode implements AppNode {
 
   public clearStaleNodes(
     currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>
+    fragmentIdsThisRun?: Array<string>,
+    fragmentIdOfBlock?: string
   ): ElementNode | undefined {
-    // If we're currently running a fragment, nodes unrelated to the fragment
-    // shouldn't be cleared.
-    if (
-      fragmentIdsThisRun &&
-      fragmentIdsThisRun.length &&
-      (!this.fragmentId || !fragmentIdsThisRun.includes(this.fragmentId))
-    ) {
-      return this
+    if (fragmentIdsThisRun && fragmentIdsThisRun.length) {
+      // If we're currently running a fragment, nodes unrelated to the fragment
+      // shouldn't be cleared. This can happen when,
+      //   1. This element doesn't correspond to a fragment at all.
+      //   2. This element corresponds to a fragment, but not one that's
+      //      currently being run.
+      //   3. This element was added by a fragment, but the element's
+      //      *parent block* does not correspond to the same fragment. This is
+      //      possible when a fragment writes to a container defined outside of
+      //      itself. We don't clear out these types of elements in this case
+      //      as we don't want fragment runs to result in changes to externally
+      //      defined containers.
+      if (
+        !this.fragmentId ||
+        !fragmentIdsThisRun.includes(this.fragmentId) ||
+        this.fragmentId != fragmentIdOfBlock
+      ) {
+        return this
+      }
     }
     return this.scriptRunId === currentScriptRunId ? this : undefined
   }
@@ -241,7 +254,12 @@ export class ElementNode implements AppNode {
     scriptRunId: string
   ): ElementNode {
     const elementType = this.element.type
-    const newNode = new ElementNode(this.element, this.metadata, scriptRunId)
+    const newNode = new ElementNode(
+      this.element,
+      this.metadata,
+      scriptRunId,
+      this.fragmentId
+    )
 
     switch (elementType) {
       case "arrowTable":
@@ -394,12 +412,18 @@ export class BlockNode implements AppNode {
       )
     }
 
-    return new BlockNode(newChildren, this.deltaBlock, scriptRunId)
+    return new BlockNode(
+      newChildren,
+      this.deltaBlock,
+      scriptRunId,
+      this.fragmentId
+    )
   }
 
   public clearStaleNodes(
     currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>
+    fragmentIdsThisRun?: Array<string>,
+    fragmentIdOfBlock?: string
   ): BlockNode | undefined {
     if (!fragmentIdsThisRun || !fragmentIdsThisRun.length) {
       // If we're not currently running a fragment, then we can remove any blocks
@@ -418,8 +442,10 @@ export class BlockNode implements AppNode {
           return this
         }
 
-        // If this BlockNode *does* correspond to the current fragment, we
-        // recurse into it below.
+        // If this BlockNode *does* correspond to a currently running fragment,
+        // we recurse into it below and set the fragmentIdOfBlock parameter to
+        // keep track of which fragment this BlockNode belongs to.
+        fragmentIdOfBlock = this.fragmentId
       }
 
       // If this BlockNode doesn't correspond to a fragment at all, we recurse
@@ -429,11 +455,20 @@ export class BlockNode implements AppNode {
     // Recursively clear our children.
     const newChildren = this.children
       .map(child =>
-        child.clearStaleNodes(currentScriptRunId, fragmentIdsThisRun)
+        child.clearStaleNodes(
+          currentScriptRunId,
+          fragmentIdsThisRun,
+          fragmentIdOfBlock
+        )
       )
       .filter(notUndefined)
 
-    return new BlockNode(newChildren, this.deltaBlock, currentScriptRunId)
+    return new BlockNode(
+      newChildren,
+      this.deltaBlock,
+      currentScriptRunId,
+      this.fragmentId
+    )
   }
 
   public getElements(elementSet?: Set<Element>): Set<Element> {
