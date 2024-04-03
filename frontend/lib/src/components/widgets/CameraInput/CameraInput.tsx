@@ -59,6 +59,7 @@ export interface Props {
   uploadClient: FileUploadClient
   disabled: boolean
   width: number
+  fragmentId?: string
   // Allow for unit testing
   testOverride?: WebcamPermission
 }
@@ -264,20 +265,25 @@ class CameraInput extends React.PureComponent<Props, State> {
     // undefined, and we can early-out of the state update.
     const newWidgetValue = this.createWidgetValue()
 
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: true,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: true,
+        },
+        fragmentId
+      )
     }
   }
 
   public componentDidMount(): void {
     const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Set the state value on mount, to avoid triggering an extra rerun after
     // the first rerun.
@@ -285,9 +291,14 @@ class CameraInput extends React.PureComponent<Props, State> {
     // since simanticly camera_input is just a special case of file uploader.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: false,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: false,
+        },
+        fragmentId
+      )
     }
   }
 
@@ -322,10 +333,12 @@ class CameraInput extends React.PureComponent<Props, State> {
         imgSrc: null,
       })
 
-      this.props.widgetMgr.setFileUploaderStateValue(
-        this.props.element,
+      const { widgetMgr, element, fragmentId } = this.props
+      widgetMgr.setFileUploaderStateValue(
+        element,
         newWidgetValue,
-        { fromUi: true }
+        { fromUi: true },
+        fragmentId
       )
     })
   }

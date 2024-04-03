@@ -154,7 +154,7 @@ class FormState {
 
 interface Props {
   /** Callback to deliver a message to the server */
-  sendRerunBackMsg: (widgetStates: WidgetStates) => void
+  sendRerunBackMsg: (widgetStates: WidgetStates, fragmentId?: string) => void
 
   /**
    * Callback invoked whenever our FormsData changed. (Because FormsData
@@ -208,7 +208,11 @@ export class WidgetStateManager {
    * Commit pending changes for widgets that belong to the given form,
    * and send a rerunBackMsg to the server.
    */
-  public submitForm(formId: string, actualSubmitButton?: WidgetInfo): void {
+  public submitForm(
+    formId: string,
+    actualSubmitButton?: WidgetInfo,
+    fragmentId?: string
+  ): void {
     if (!isValidFormId(formId)) {
       // This should never get thrown - only FormSubmitButton calls this
       // function.
@@ -247,7 +251,7 @@ export class WidgetStateManager {
     this.widgetStates.copyFrom(form.widgetStates)
     form.widgetStates.clear()
 
-    this.sendUpdateWidgetsMessage()
+    this.sendUpdateWidgetsMessage(fragmentId)
     this.syncFormsWithPendingChanges()
 
     if (selectedSubmitButton) {
@@ -299,11 +303,12 @@ export class WidgetStateManager {
   public setStringTriggerValue(
     widget: WidgetInfo,
     value: string,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).stringTriggerValue =
       new StringTriggerValue({ data: value })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
     this.deleteWidgetState(widget.id)
   }
 
@@ -311,9 +316,13 @@ export class WidgetStateManager {
    * Sets the trigger value for the given widget ID to true, sends a rerunScript message
    * to the server, and then immediately unsets the trigger value.
    */
-  public setTriggerValue(widget: WidgetInfo, source: Source): void {
+  public setTriggerValue(
+    widget: WidgetInfo,
+    source: Source,
+    fragmentId?: string
+  ): void {
     this.createWidgetState(widget, source).triggerValue = true
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
     this.deleteWidgetState(widget.id)
   }
 
@@ -329,10 +338,11 @@ export class WidgetStateManager {
   public setBoolValue(
     widget: WidgetInfo,
     value: boolean,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).boolValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getIntValue(widget: WidgetInfo): number | undefined {
@@ -347,10 +357,11 @@ export class WidgetStateManager {
   public setIntValue(
     widget: WidgetInfo,
     value: number | null,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).intValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getDoubleValue(widget: WidgetInfo): number | undefined {
@@ -365,10 +376,11 @@ export class WidgetStateManager {
   public setDoubleValue(
     widget: WidgetInfo,
     value: number | null,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).doubleValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getStringValue(widget: WidgetInfo): string | undefined {
@@ -383,21 +395,23 @@ export class WidgetStateManager {
   public setStringValue(
     widget: WidgetInfo,
     value: string | null,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).stringValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public setStringArrayValue(
     widget: WidgetInfo,
     value: string[],
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).stringArrayValue = new StringArray({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getStringArrayValue(widget: WidgetInfo): string[] | undefined {
@@ -431,12 +445,13 @@ export class WidgetStateManager {
   public setDoubleArrayValue(
     widget: WidgetInfo,
     value: number[],
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).doubleArrayValue = new DoubleArray({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getIntArrayValue(widget: WidgetInfo): number[] | undefined {
@@ -456,12 +471,13 @@ export class WidgetStateManager {
   public setIntArrayValue(
     widget: WidgetInfo,
     value: number[],
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).intArrayValue = new SInt64Array({
       data: value,
     })
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getJsonValue(widget: WidgetInfo): string | undefined {
@@ -473,18 +489,24 @@ export class WidgetStateManager {
     return undefined
   }
 
-  public setJsonValue(widget: WidgetInfo, value: any, source: Source): void {
+  public setJsonValue(
+    widget: WidgetInfo,
+    value: any,
+    source: Source,
+    fragmentId?: string
+  ): void {
     this.createWidgetState(widget, source).jsonValue = JSON.stringify(value)
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public setArrowValue(
     widget: WidgetInfo,
     value: IArrowTable,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).arrowValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
@@ -503,10 +525,11 @@ export class WidgetStateManager {
   public setBytesValue(
     widget: WidgetInfo,
     value: Uint8Array,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).bytesValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getBytesValue(widget: WidgetInfo): Uint8Array | undefined {
@@ -521,10 +544,11 @@ export class WidgetStateManager {
   public setFileUploaderStateValue(
     widget: WidgetInfo,
     value: IFileUploaderState,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     this.createWidgetState(widget, source).fileUploaderStateValue = value
-    this.onWidgetValueChanged(widget.formId, source)
+    this.onWidgetValueChanged(widget.formId, source, fragmentId)
   }
 
   public getFileUploaderStateValue(
@@ -549,12 +573,13 @@ export class WidgetStateManager {
    */
   private onWidgetValueChanged(
     formId: string | undefined,
-    source: Source
+    source: Source,
+    fragmentId?: string
   ): void {
     if (isValidFormId(formId)) {
       this.syncFormsWithPendingChanges()
     } else if (source.fromUi) {
-      this.sendUpdateWidgetsMessage()
+      this.sendUpdateWidgetsMessage(fragmentId)
     }
   }
 
@@ -575,8 +600,11 @@ export class WidgetStateManager {
     })
   }
 
-  public sendUpdateWidgetsMessage(): void {
-    this.props.sendRerunBackMsg(this.widgetStates.createWidgetStatesMsg())
+  public sendUpdateWidgetsMessage(fragmentId?: string): void {
+    this.props.sendRerunBackMsg(
+      this.widgetStates.createWidgetStatesMsg(),
+      fragmentId
+    )
   }
 
   /**

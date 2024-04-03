@@ -121,9 +121,14 @@ describe("test componentUtils", () => {
       })
 
       expect(widgetMgr.setJsonValue).toBeCalledTimes(1)
-      expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(element, jsonValue, {
-        fromUi: true,
-      })
+      expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
+        element,
+        jsonValue,
+        {
+          fromUi: true,
+        },
+        undefined
+      )
     })
   })
 
