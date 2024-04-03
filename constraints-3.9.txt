@@ -12,7 +12,7 @@ cffi==1.16.0
 cfgv==3.4.0
 charset-normalizer==3.3.2
 click==8.1.7
-contourpy==1.2.0
+contourpy==1.2.1
 coverage==7.4.4
 cryptography==42.0.5
 cx_Oracle==7.3.0
@@ -44,13 +44,13 @@ jsonpatch==1.33
 jsonpointer==2.4
 jsonschema==4.21.1
 jsonschema-specifications==2023.12.1
-keyring==25.0.0
+keyring==25.1.0
 kiwisolver==1.4.5
 langchain==0.1.14
-langchain-community==0.0.30
-langchain-core==0.1.37
+langchain-community==0.0.31
+langchain-core==0.1.39
 langchain-text-splitters==0.0.1
-langsmith==0.1.38
+langsmith==0.1.39
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -71,7 +71,7 @@ packaging==23.2
 pandas==2.2.1
 parameterized==0.9.0
 pathspec==0.12.1
-pillow==10.2.0
+pillow==10.3.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
 platformdirs==4.2.0
@@ -111,7 +111,7 @@ requests-toolbelt==1.0.0
 rfc3986==2.0.0
 rich==13.7.1
 rpds-py==0.18.0
-scipy==1.12.0
+scipy==1.13.0
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
@@ -131,7 +131,7 @@ twine==5.0.0
 types-click==7.1.8
 types-protobuf==4.24.0.20240311
 types-pytz==2024.1.0.20240203
-types-requests==2.31.0.20240311
+types-requests==2.31.0.20240403
 types-setuptools==69.2.0.20240317
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
