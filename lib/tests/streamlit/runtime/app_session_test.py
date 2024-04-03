@@ -543,8 +543,9 @@ class AppSessionTest(unittest.TestCase):
         self.assertGreater(len(gc.get_referrers(session)), 0)
 
         session.disconnect_file_watchers()
-        # Ensure that we don't count refs to session from an object that would have been
-        # garbage collected along with it.
+
+        # Run the gc to ensure that we don't count refs to session from an object that
+        # would have been garbage collected along with the session.
         gc.collect(2)
 
         self.assertEqual(len(gc.get_referrers(session)), 0)
