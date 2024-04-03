@@ -767,10 +767,6 @@ function DataFrame({
           onPaste={false}
           {...(!isEmptyTable &&
             isRowSelectionActivated && {
-              rowMarkerTheme: {
-                bgCell: theme.bgHeader,
-                bgCellMedium: theme.bgHeader,
-              },
               rowMarkers: {
                 kind: "checkbox",
                 checkboxStyle:
@@ -778,6 +774,10 @@ function DataFrame({
                   ArrowProto.RowSelectionMode.MULTI
                     ? "square"
                     : "circle",
+                theme: {
+                  bgCell: theme.bgHeader,
+                  bgCellMedium: theme.bgHeader,
+                },
               },
               rowSelectionMode:
                 element.rowSelectionMode === ArrowProto.RowSelectionMode.MULTI
@@ -811,11 +811,14 @@ function DataFrame({
                 sticky: false,
                 tint: true,
               },
-              rowMarkerTheme: {
-                bgCell: theme.bgHeader,
-                bgCellMedium: theme.bgHeader,
+              rowMarkers: {
+                kind: "checkbox",
+                checkboxStyle: "square",
+                theme: {
+                  bgCell: theme.bgHeader,
+                  bgCellMedium: theme.bgHeader,
+                },
               },
-              rowMarkers: "checkbox",
               rowSelectionMode: "multi",
               rowSelect: disabled ? "none" : "multi",
               // Support adding rows:
