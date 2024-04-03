@@ -420,6 +420,8 @@ function DataFrame({
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
   const isRowSelectionActivated =
     element.rowSelectionMode !== ArrowProto.RowSelectionMode.NONE
+  const isMultiRowSelectionActivated =
+    element.rowSelectionMode === ArrowProto.RowSelectionMode.MULTI
   const isRowSelected = gridSelection.rows.length > 0
   const isCellSelected = gridSelection.current !== undefined
 
@@ -762,24 +764,20 @@ function DataFrame({
             isRowSelectionActivated && {
               rowMarkers: {
                 kind: "checkbox",
-                checkboxStyle:
-                  element.rowSelectionMode ===
-                  ArrowProto.RowSelectionMode.MULTI
-                    ? "square"
-                    : "circle",
+                checkboxStyle: isMultiRowSelectionActivated
+                  ? "square"
+                  : "circle",
                 theme: {
                   bgCell: theme.bgHeader,
                   bgCellMedium: theme.bgHeader,
                 },
               },
-              rowSelectionMode:
-                element.rowSelectionMode === ArrowProto.RowSelectionMode.MULTI
-                  ? "multi"
-                  : "auto",
+              rowSelectionMode: isMultiRowSelectionActivated
+                ? "multi"
+                : "auto",
               rowSelect: disabled
                 ? "none"
-                : element.rowSelectionMode ===
-                  ArrowProto.RowSelectionMode.MULTI
+                : isMultiRowSelectionActivated
                 ? "multi"
                 : "single",
             })}
