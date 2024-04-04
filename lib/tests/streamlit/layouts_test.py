@@ -423,7 +423,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
             dialog()
 
-    def test_nested_dialog_raises_errors(self):
+    def test_nested_dialog_raises_error(self):
         """Test that dialogs cannot be called nested."""
 
         @st.experimental_dialog("Level2 dialog")
