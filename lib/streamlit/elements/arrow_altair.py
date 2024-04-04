@@ -21,10 +21,22 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Collection, Literal, Sequence, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Literal,
+    Sequence,
+    Union,
+    cast,
+)
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
+from streamlit.attribute_dictionary import AttributeDictionary
+from streamlit.chart_util import check_on_select_str
 from streamlit.color_util import (
     Color,
     is_color_like,
@@ -32,14 +44,22 @@ from streamlit.color_util import (
     is_hex_color_like,
     to_css_color,
 )
+from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
-from streamlit.elements.utils import last_index_for_melted_dataframes
+from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    last_index_for_melted_dataframes,
+)
 from streamlit.errors import Error, StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     import altair as alt
@@ -748,7 +768,12 @@ class ArrowAltairMixin:
         altair_chart: alt.Chart,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-    ) -> DeltaGenerator:
+        # TODO(willhuang1997): This will need to be finalized to "rerun" / "ignore" or True / False
+        on_select: Union[
+            Literal["rerun", "ignore"], Callable[..., None], bool, None
+        ] = None,
+        key: str | None = None,
+    ) -> Union["DeltaGenerator", Dict[Any, Any]]:
         """Display a chart using the Altair library.
 
         Parameters
@@ -763,6 +788,19 @@ class ArrowAltairMixin:
         theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
+
+        on_select: Controls the behavior in response to selection events in the chart. Can be one of:
+            - False (default): Streamlit will not react to any selection events in the chart.
+            - True: Streamlit will rerun the app when the user selects data points in the chart. In this case, st.altair_chart will return the selection data as a dictionary. This requires that you add a selection event to the figure object via add_params, see here.
+            - “ignore” (default): Streamlit will not react to any selection events in the chart.
+            - “rerun”: Streamlit will rerun the app when the user selects data points in the chart. In this case, st.altair_chart will return the selection data as a dictionary. This requires that you add a selection event to the figure object via add_params, see here.
+            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a callback function before the rest of the app. The selection data can be retrieved through session state by setting the key parameter.
+
+        key : str or int
+            An optional string or integer to use as the unique key for the widget.
+            If this is omitted, a key will be generated for the widget
+            based on its content. Multiple widgets of the same type may
+            not share the same key.
 
         Example
         -------
@@ -795,14 +833,56 @@ class ArrowAltairMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         proto = ArrowVegaLiteChartProto()
+
+        on_select_callback = on_select
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        if isinstance(on_select_callback, bool) or isinstance(on_select_callback, str):
+            on_select_callback = None
+
+        key = to_key(key)
+        check_callback_rules(self.dg, on_select_callback)
+        check_session_state_rules(default_value={}, key=key, writes_allowed=False)
+        check_on_select_str(on_select, "altair_chart")
+        if current_form_id(self.dg):
+            # TODO(willhuang1997): double check the message of this
+            raise StreamlitAPIException("st.altair_chart cannot be used inside forms!")
+
+        current_widget = None
+        # TODO(willhuang1997): This needs to be cleaned up probably
+        if on_select == ON_SELECTION_IGNORE:
+            on_select = False
+        if on_select:
+            # TODO(willhuang1997): This seems like a hack so should fix this
+            chart_json = altair_chart.to_dict()
+            if "params" not in chart_json:
+                raise StreamlitAPIException(
+                    "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
+                )
+            for param in chart_json["params"]:
+                if (
+                    "name" not in param
+                    or "select" not in param
+                    or "type" not in param["select"]
+                ):
+                    raise StreamlitAPIException(
+                        "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
+                    )
+
         marshall(
             proto,
             altair_chart,
             use_container_width=use_container_width,
             theme=theme,
+            on_select=on_select,
+            key=key,
         )
+        current_widget = arrow_vega_lite._on_select(proto, on_select, key)
 
-        return self.dg._enqueue("arrow_vega_lite_chart", proto)
+        dg = self.dg._enqueue("arrow_vega_lite_chart", proto)
+        if on_select:
+            return current_widget
+        else:
+            return dg
 
     @property
     def dg(self) -> DeltaGenerator:
