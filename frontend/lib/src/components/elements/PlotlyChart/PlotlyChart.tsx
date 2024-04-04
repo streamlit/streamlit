@@ -292,23 +292,10 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
-  const reset = (): void => {
-    const spec = JSON.parse(
-      replaceTemporaryColors(figure.spec, theme, element.theme)
-    )
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
+  const reset = useCallback((): void => {
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
-  }
+  }, [])
 
   return (
     <Plot
