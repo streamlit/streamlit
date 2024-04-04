@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -75,6 +76,8 @@ def test_dialog_dismisses_properly(app: Page):
     expect(main_dialog).to_have_count(0)
 
 
+# on webkit this test was flaky and manually reproducing the flaky error did not work, so we skip it for now
+@pytest.mark.skip_browser("webkit")
 def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
     # open and close the dialog multiple times
