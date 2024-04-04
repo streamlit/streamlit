@@ -207,10 +207,13 @@ function PlotlyFigure({
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
 
-    // @ts-expect-error
     if (
       event.points.length === 0 &&
+      // event.selections doesn't show up in the PlotSelectionEvent
+      // @ts-expect-error
       event.selections &&
+      // event.selections doesn't show up in the PlotSelectionEvent
+      // @ts-expect-error
       event.selections.length === 0
     ) {
       return
