@@ -41,6 +41,7 @@ function withFullScreenWrapper<P>(
 
     public render = (): ReactNode => {
       const { width, height, disableFullscreenMode } = this.props
+
       return (
         <FullScreenWrapper
           width={width}

@@ -45,6 +45,59 @@ def _assert_no_nested_dialogs() -> None:
 def dialog_decorator(
     title: str = "", *, width: DialogWidth = "small"
 ) -> Callable[[Callable[..., None]], Callable[..., None]]:
+    r"""Decorate a function to mark it as a Streamlit dialog. When the decorated function is called, a dialog element is inserted with the function's body as the content.
+
+    The decorated function can hold multiple elements which are rendered inside of a modal when the decorated function is called.
+    The decorated function is using `st.experimental_fragment`, which means that interacting with elements inside of the dialog will
+    only re-run the dialog function.
+
+    The decorated function can accept arguments that can be passed when it is called.
+
+    Dismissing a dialog does not cause an app re-run.
+    You can close the dialog programmatically by executing `st.rerun()` explicitly inside of the decorated function.
+
+    In order to pass state from dialog widgets to the app, you can leverage `st.session_state`.
+
+    .. warning::
+        Currently, a dialog may not open another dialog.
+        Also, only one dialog-decorated function may be called in a script run, which means that only one dialog can be open at any given time.
+
+    Parameters
+    ----------
+    title : str
+        A string that will be used as the dialog's title. It cannot be empty.
+    width : "small", "large"
+        The width of the dialog. Defaults to "small".
+
+    Returns
+    -------
+    A decorated function that, when called, inserts a dialog element context container. The container itself contains the decorated function's elements.
+
+    Examples
+    --------
+    You can annotate a function to mark it as a Streamlit dialog function and pass arguments to it. You can either dismiss the dialog or close it programmatically and trigger a re-run by using `st.rerun()`.
+    Leverage `st.session_state` if you want to pass dialog widget states to the overall app:
+
+    >>> import streamlit as st
+    >>>
+    >>> @st.experimental_dialog("Streamlit Example Dialog")
+    >>> def example_dialog(some_arg: str, some_other_arg: int):
+    >>>     st.write(f"You passed following args: {some_arg} | {some_other_arg}")
+    >>>     # interacting with the text_input only re-runs `example_dialog`
+    >>>     some_text_input = st.text_input("Type something:", key="example_dialog_some_text_input")
+    >>>     # following write is updated when chaning the text_input inside the dialog
+    >>>     st.write(f"You wrote '{some_text_input}' in the dialog")
+    >>>     if st.button("Close the dialog"):
+    >>>         st.rerun()
+    >>>
+    >>> if st.button("Open dialog"):
+    >>>     example_dialog("Some string arg", 42)
+    >>>
+    >>> # following write is updated with the dialog's text input when the dialog was opened, the text input was interacted with and a re-run was triggered, e.g. by clicking the Close-button defined in `example_dialog`
+    >>> st.write(f"You wrote '{st.session_state.get('example_dialog_some_text_input', '')}' in the dialog")
+
+    """
+
     if title is None or title == "":
         raise StreamlitAPIException(
             'A non-empty `title` argument has to be provided for dialogs, for example `@st.experimental_dialog("Example Title")`.'

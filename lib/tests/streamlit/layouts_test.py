@@ -358,7 +358,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
-        dialog = st._main.dialog("Test Dialog")
+        dialog = st._main.dialog(DialogTest.title)
 
         self.assertIsNotNone(dialog)
         dialog_block = self.get_delta_from_queue()
@@ -374,7 +374,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_deltagenerator_only_call_open_once(self):
         """Test that dialog opens and closes"""
-        dialog = st._main.dialog("Test Dialog")
+        dialog = st._main.dialog(DialogTest.title)
 
         self.assertIsNotNone(dialog)
 

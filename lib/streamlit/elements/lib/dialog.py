@@ -43,6 +43,30 @@ def _process_dialog_width_input(
     return BlockProto.Dialog.DialogWidth.SMALL
 
 
+def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
+    """Check whether a dialog has already been opened in the same script run.
+
+    Only one dialog is supposed to be opened. The check is implemented in a way
+    that for a script run, the open function can only be called once.
+    One dialog at a time is a product decision and not a technical one.
+
+    Raises
+    ------
+    StreamlitAPIException
+        Raised when a dialog has already been opened in the current script run.
+    """
+    script_run_ctx = get_script_run_ctx()
+    # We don't reset the ctx.has_dialog_opened when the flag is False because
+    # it is reset in a new scriptrun anyways. If the execution model ever changes,
+    # this might need to change.
+    if should_open and script_run_ctx:
+        if script_run_ctx.has_dialog_opened:
+            raise StreamlitAPIException(
+                "Only one dialog is allowed to be opened at the same time. Please make sure to not call a dialog-decorated function more than once in a script run."
+            )
+        script_run_ctx.has_dialog_opened = True
+
+
 class Dialog(DeltaGenerator):
     @staticmethod
     def _create(
@@ -57,6 +81,8 @@ class Dialog(DeltaGenerator):
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
 
+        # We store the delta path here, because in _update we enqueue a new proto message to update the
+        # open status. Without this, the dialog content is gone when the _update message is sent
         delta_path: list[int] = (
             parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
         )
@@ -82,22 +108,16 @@ class Dialog(DeltaGenerator):
         self._current_proto: BlockProto | None = None
         self._delta_path: list[int] | None = None
 
-    def _update(self, is_open: bool):
+    def _update(self, should_open: bool):
+        """Send an updated proto message to indicate the open-status for the dialog."""
+
         assert self._current_proto is not None, "Dialog not correctly initialized!"
         assert self._delta_path is not None, "Dialog not correctly initialized!"
-
-        script_run_ctx = get_script_run_ctx()
-        if is_open and script_run_ctx:
-            if script_run_ctx.has_dialog_opened:
-                raise StreamlitAPIException(
-                    "Only one dialog is allowed to be opened at the same time. Please make sure to not call a dialog-decorated function more than once in a script run."
-                )
-            script_run_ctx.has_dialog_opened = True
-
+        _assert_first_dialog_to_be_opened(should_open)
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
-        msg.delta.add_block.dialog.is_open = is_open
+        msg.delta.add_block.dialog.is_open = should_open
 
         self._current_proto = msg.delta.add_block
 
