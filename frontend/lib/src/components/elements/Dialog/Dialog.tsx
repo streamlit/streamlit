@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement, useEffect, useMemo, useState } from "react"
-
+import { useTheme } from "@emotion/react"
 import { SIZE } from "baseui/modal"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
@@ -24,7 +24,6 @@ import Modal, {
   ModalBody,
 } from "@streamlit/lib/src/components/shared/Modal"
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import { notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 
@@ -34,10 +33,11 @@ export interface Props {
   element: BlockProto.Dialog
 }
 
-type DialogWidth = "small" | "large"
-
-function parseWidthConfig(width: DialogWidth, theme: EmotionTheme): string {
-  if (width === "large") {
+function parseWidthConfig(
+  width: BlockProto.Dialog.DialogWidth,
+  theme: EmotionTheme
+): string {
+  if (width === BlockProto.Dialog.DialogWidth.LARGE) {
     // this is the same width including padding as the AppView container is using for all inner elements
     // the padding is added to the ModalBody and subtracted from the total width here
     // As of writing this: total width=752px (47rem), padding left and right each=24px (1.5rem) => content width = 704px
@@ -45,10 +45,6 @@ function parseWidthConfig(width: DialogWidth, theme: EmotionTheme): string {
   }
 
   return SIZE.default
-}
-
-function isDialogWidth(str: string | null | undefined): str is DialogWidth {
-  return str === "small" || str === "large"
 }
 
 const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
@@ -65,15 +61,11 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     }
   }, [initialIsOpen])
 
-  const { activeTheme } = React.useContext(LibContext)
-
+  const theme = useTheme()
   const size: string = useMemo(
     () =>
-      parseWidthConfig(
-        isDialogWidth(width) ? width : "small",
-        activeTheme.emotion
-      ),
-    [width, activeTheme]
+      parseWidthConfig(width ?? BlockProto.Dialog.DialogWidth.SMALL, theme),
+    [width, theme]
   )
 
   return (

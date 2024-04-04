@@ -57,11 +57,14 @@ message Block {
   }
 
   message Dialog {
+    enum DialogWidth {
+      SMALL = 0;
+      LARGE = 1;
+    }
+
     string title = 1;
     bool dismissible = 2;
-    // we use string as width because the user is supposed to provide
-    //   predefined values (e.g. small, medium, ...)
-    optional string width = 3;
+    DialogWidth width = 3;
     optional bool is_open = 4;
   }
 
