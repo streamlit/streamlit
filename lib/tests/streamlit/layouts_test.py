@@ -454,7 +454,8 @@ class DialogTest(DeltaGeneratorTestCase):
             dialog1()
             dialog2()
 
-        self.assertEqual(
-            e.exception.args[0],
-            "Only one dialog is allowed to be opened at the same time.",
+        self.assertTrue(
+            e.exception.args[0].startswith(
+                "Only one dialog is allowed to be opened at the same time."
+            )
         )

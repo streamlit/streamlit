@@ -38,10 +38,13 @@ function parseWidthConfig(
   theme: EmotionTheme
 ): string {
   if (width === BlockProto.Dialog.DialogWidth.LARGE) {
-    // this is the same width including padding as the AppView container is using for all inner elements
-    // the padding is added to the ModalBody and subtracted from the total width here
-    // As of writing this: total width=752px (47rem), padding left and right each=24px (1.5rem) => content width = 704px
-    return `calc(${theme.sizes.contentMaxWidth} + 2*${theme.spacing.sm})`
+    // This is the same width including padding as the AppView container is using for all inner elements.
+    // As of writing this, the AppView container content has a width of 704px, which is 736px (46rem = contentMaxWidth) - 2*16px padding.
+    // The dialog has a total padding left and right of 48px. This means, for the content to have the same 704px width inside of the dialog, the total dialog widht has to be 704px + 48px = 752px (= 47rem).
+    // We don't use 47rem directly but rather use the existing paddings to make the intention of how this relates to the non-dialog app content more comprehendable.
+    // Note that a Modal has a max-width:100% set, so it looks good on mobile independent of the calculated size here.
+    const paddingDifferenceDialogAndAppView = theme.spacing.lg // the dialog has 0.5rem more padding left and right => 1rem
+    return `calc(${theme.sizes.contentMaxWidth} + ${paddingDifferenceDialogAndAppView})`
   }
 
   return SIZE.default

@@ -18,8 +18,6 @@ import styled from "@emotion/styled"
 
 import { getWrappedHeadersStyle } from "@streamlit/lib/src/theme/utils"
 
-// TODO: this is duplicated from Sidebar.StyledSidebarUserContent => create a global styled component and use that here
-// and in the Sidebar.
 // change appearance of st.title, st.subheader etc.
 export const StyledDialogContent = styled.div(({ theme }) =>
   getWrappedHeadersStyle(theme)

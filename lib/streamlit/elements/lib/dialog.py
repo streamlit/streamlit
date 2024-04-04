@@ -22,8 +22,10 @@ from typing_extensions import TypeAlias
 
 from streamlit.cursor import Cursor
 from streamlit.delta_generator import DeltaGenerator, _enqueue_message
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 DialogWidth: TypeAlias = Literal["small", "large"]
 
@@ -81,8 +83,16 @@ class Dialog(DeltaGenerator):
         self._delta_path: list[int] | None = None
 
     def _update(self, is_open: bool):
-        assert self._current_proto is not None, "Status not correctly initialized!"
-        assert self._delta_path is not None, "Status not correctly initialized!"
+        assert self._current_proto is not None, "Dialog not correctly initialized!"
+        assert self._delta_path is not None, "Dialog not correctly initialized!"
+
+        script_run_ctx = get_script_run_ctx()
+        if is_open and script_run_ctx:
+            if script_run_ctx.has_dialog_opened:
+                raise StreamlitAPIException(
+                    "Only one dialog is allowed to be opened at the same time. Please make sure to not call a dialog-decorated function more than once in a script run."
+                )
+            script_run_ctx.has_dialog_opened = True
 
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
