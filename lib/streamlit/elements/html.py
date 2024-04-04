@@ -34,10 +34,14 @@ class HtmlMixin:
         """Insert HTML into your app.
 
         Adding custom HTML to your app impacts safety, styling, and
-        maintainability. By using this command, you may be compromising your
-        users' security. ``st.html`` content is **not** iframed.
+        maintainability. We sanitize HTML with `DOMPurify
+        <https://github.com/cure53/DOMPurify>`_, but inserting HTML remains a
+        developer risk. Passing untrusted code to ``st.html`` or dynamically
+        loading external code can increase the risk of vulnerabilities in your
+        app.
 
-        Executing JavaScript is not supported at this time.
+        ``st.html`` content is **not** iframed. Executing JavaScript is not
+        supported at this time.
 
         Parameters
         ----------
