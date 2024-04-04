@@ -46,6 +46,7 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
+from streamlit.runtime.state.session_state import SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
 
@@ -464,6 +465,17 @@ class ScriptRunner:
             fragment_ids_this_run = set(rerun_data.fragment_id_queue)
 
             ctx = self._get_script_run_ctx()
+            try:
+                old_hash = self._session_state[SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY]
+            except KeyError:
+                old_hash = None
+
+            if old_hash != page_script_hash:
+                _LOGGER.debug(
+                    f"page changed, resetting widgets; {old_hash=}, {page_script_hash=}"
+                )
+                self._session_state.on_script_finished(set())
+
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
@@ -563,6 +575,9 @@ class ScriptRunner:
                             rerun_data.widget_states
                         )
 
+                    self._session_state[
+                        SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
+                    ] = page_script_hash
                     ctx.on_script_start()
                     prep_time = timer() - start_time
 
