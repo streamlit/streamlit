@@ -156,7 +156,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
         </StyledToastWrapper>
       </>
     ),
-    [shortened, expanded, body, displayMessage, handleClick]
+    [shortened, expanded, body, icon, displayMessage, handleClick]
   )
 
   useEffect(() => {
