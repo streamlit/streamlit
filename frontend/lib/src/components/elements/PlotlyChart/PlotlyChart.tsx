@@ -30,6 +30,8 @@ import {
 } from "./CustomTheme"
 import { PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+
 export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
@@ -98,32 +100,6 @@ export function parseBoxSelection(selection: any): SelectionRange {
   return { x, y }
 }
 
-function toSnakeCase(str: string): string {
-  return str.replace(/[\dA-Z\.]/g, letter =>
-    letter === "." ? "_" : `_${letter.toLowerCase()}`
-  )
-}
-
-function keysToSnakeCase(obj: Record<string, any>): Record<string, any> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const newKey = toSnakeCase(key)
-    let value = obj[key]
-
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      value = keysToSnakeCase(value)
-    }
-
-    if (Array.isArray(value)) {
-      value = value.map(item =>
-        typeof item === "object" ? keysToSnakeCase(item) : item
-      )
-    }
-
-    acc[newKey] = value
-    return acc
-  }, {} as Record<string, any>)
-}
-
 /** Render an iframed Plotly chart from a URL */
 function renderIFrame({
   url,
@@ -158,6 +134,13 @@ function PlotlyFigure({
     )
     const storedValue = widgetMgr.getJsonValue(element)
 
+    if (storedValue === "{}") {
+      spec.data.forEach((trace: any) => {
+        trace.selectedpoints = undefined
+      })
+      spec.layout.selections = undefined
+    }
+
     // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
     if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
@@ -169,26 +152,26 @@ function PlotlyFigure({
         )
         spec.data = data
         spec.layout.selections = selections
-      }
 
-      const hasSelectedPoints: boolean = spec.data.some(
-        (trace: any) =>
-          "selectedpoints" in trace && trace.selectedpoints.length > 0
-      )
-      if (hasSelectedPoints) {
-        // make all other points opaque
-        spec.data.forEach((trace: any) => {
-          if (!trace.selectedpoints) {
-            trace.selectedpoints = []
-          }
-        })
+        const hasSelectedPoints: boolean = spec.data.some(
+          (trace: any) =>
+            "selectedpoints" in trace && trace.selectedpoints.length > 0
+        )
+        if (hasSelectedPoints) {
+          // make all other points opaque
+          spec.data.forEach((trace: any) => {
+            if (!trace.selectedpoints) {
+              trace.selectedpoints = []
+            }
+          })
+        }
       }
     }
 
     return spec
   }, [element, figure.spec, theme, widgetMgr])
 
-  const [spec] = useState(getInitialValue())
+  const spec = getInitialValue()
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
