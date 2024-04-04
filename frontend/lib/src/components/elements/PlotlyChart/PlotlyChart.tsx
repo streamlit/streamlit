@@ -207,6 +207,15 @@ function PlotlyFigure({
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
 
+    // @ts-expect-error
+    if (
+      event.points.length === 0 &&
+      event.selections &&
+      event.selections.length === 0
+    ) {
+      return
+    }
+
     event.points.forEach(function (point: any) {
       selectedPoints.push({
         ...point,
