@@ -200,7 +200,7 @@ const ChildRenderer = (props: BlockPropsWithWidth): ReactElement => {
                 node: node as ElementNode,
               }
 
-              const key = getElementWidgetID(node.element) || index
+              const key = index
               return <ElementNodeRenderer key={key} {...childProps} />
             }
 

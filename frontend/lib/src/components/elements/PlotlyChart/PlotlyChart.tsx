@@ -28,9 +28,10 @@ import {
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
-import { PlotRelayoutEvent, PlotSelectionEvent } from "plotly.js"
+import { PlotMouseEvent, PlotRelayoutEvent, PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+import { logMessage } from "@streamlit/lib/src/util/log"
 
 export interface PlotlyChartProps {
   width: number
@@ -172,17 +173,26 @@ function PlotlyFigure({
     }
     const zoom = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
     if (zoom && zoom[RELAYOUT_KEY]) {
-      if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
-        spec.layout.xaxis.range = [
-          zoom[RELAYOUT_KEY]["xaxis.range[0]"],
-          zoom[RELAYOUT_KEY]["xaxis.range[1]"],
-        ]
-        spec.layout.yaxis.range = [
-          zoom[RELAYOUT_KEY]["yaxis.range[0]"],
-          zoom[RELAYOUT_KEY]["yaxis.range[1]"],
-        ]
-      } else if (zoom[RELAYOUT_KEY]["dragmode"]) {
-        spec.layout.dragmode = zoom[RELAYOUT_KEY]["dragmode"]
+      try {
+        if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
+          spec.layout.xaxis.range = [
+            zoom[RELAYOUT_KEY]["xaxis.range[0]"],
+            zoom[RELAYOUT_KEY]["xaxis.range[1]"],
+          ]
+          spec.layout.yaxis.range = [
+            zoom[RELAYOUT_KEY]["yaxis.range[0]"],
+            zoom[RELAYOUT_KEY]["yaxis.range[1]"],
+          ]
+        } else if (zoom[RELAYOUT_KEY]["dragmode"]) {
+          spec.layout.dragmode = zoom[RELAYOUT_KEY]["dragmode"]
+        } else if (zoom[RELAYOUT_KEY]['xaxis.autorange']) {
+          spec.layout.xaxis.autorange = true
+          spec.layout.yaxis.autorange = true
+        }
+      } catch (e) {
+        logMessage(e)
+        logMessage(spec)
+        logMessage(zoom)
       }
     }
     return spec
@@ -192,6 +202,8 @@ function PlotlyFigure({
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
+  const newArray: any[] = []
+  const [selectedPoints, setSelectedPoints] = useState(newArray)
 
   if (isFullScreen(height)) {
     spec.layout.width = width
@@ -205,10 +217,10 @@ function PlotlyFigure({
     spec.layout.width = initialWidth
     spec.layout.height = initialHeight
   }
-  if (element.isSelectEnabled) {
-    spec.layout.clickmode = "event+select"
-    spec.layout.hovermode = "closest"
-  }
+  // if (element.isSelectEnabled) {
+  //   spec.layout.clickmode = "event+select"
+  //   spec.layout.hovermode = "closest"
+  // }
   if (element.theme === "streamlit") {
     applyStreamlitTheme(spec, theme)
   } else {
@@ -224,6 +236,9 @@ function PlotlyFigure({
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
 
+    if (!Object.hasOwn(event, "selections")) {
+      return
+    }
     event.points.forEach(function (point: any) {
       selectedPoints.push({
         ...point,
@@ -295,6 +310,84 @@ function PlotlyFigure({
     widgetMgr.setJsonValue(element, returnValue, { fromUi: true })
   }
 
+  const handleClick = (event: PlotMouseEvent): void => {
+    console.log("handling click")
+    console.log(event)
+    let currentPoints: any[] = selectedPoints
+    const returnValue: any = { select: {} }
+    const { data } = spec
+    const pointIndices: number[] = []
+    let addedCurrentPoint = false
+    event.points.forEach(function (point: any) {
+      if (event.event.shiftKey) {
+        addedCurrentPoint = currentPoints.some((value) => {
+          return value.x === point.x && value.y === point.y
+        })
+        console.log(addedCurrentPoint)
+        if (addedCurrentPoint) {
+          return
+        }
+        else {
+          currentPoints.push({
+            ...point,
+            legendgroup: point.data.legendgroup
+              ? point.data.legendgroup
+              : undefined,
+            data: undefined,
+            fullData: undefined,
+            xaxis: undefined,
+            yaxis: undefined
+          })
+        }
+      }
+      else {
+        currentPoints = [{
+          ...point,
+          legendgroup: point.data.legendgroup
+            ? point.data.legendgroup
+            : undefined,
+          data: undefined,
+          fullData: undefined,
+          xaxis: undefined,
+          yaxis: undefined
+        }]
+      }
+      pointIndices.push(point.pointIndex)
+      setSelectedPoints(currentPoints)
+
+      // build graph representation to retain state
+      if (
+        data[point.curveNumber] &&
+        data[point.curveNumber].selectedpoints &&
+        !data[point.curveNumber].selectedpoints.includes(point.pointIndex)
+      ) {
+        data[point.curveNumber].selectedpoints.push(point.pointIndex)
+      } else {
+        data[point.curveNumber].selectedpoints = [point.pointIndex]
+      }
+    })
+    returnValue.select.points = currentPoints
+    // returnValue.select.points = returnValue.select.points.map((point: any) =>
+    //   keysToSnakeCase(point)
+    // )
+    console.log(returnValue)
+    if (addedCurrentPoint) {
+      return
+    } else {
+      // make all other points opaque if they're not selected
+      data.forEach((trace: any) => {
+        if (!trace.selectedpoints) {
+          trace.selectedpoints = []
+        }
+      })
+      widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {
+        data: data,
+      })
+      widgetMgr.setJsonValue(element, returnValue, { fromUi: true })
+    }
+    console.log("Done handling click")
+  }
+
   const { data, layout, frames } = spec
 
   const reset = (): void => {
@@ -303,11 +396,12 @@ function PlotlyFigure({
   }
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
+    console.log(event)
     const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
 
     if (
       event["xaxis.range[0]"] ||
-      event["xaxis.autorange"] ||
+      event['xaxis.autorange'] ||
       event["dragmode"]
     ) {
       widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
@@ -319,6 +413,7 @@ function PlotlyFigure({
       })
     }
   }
+  // console.log(spec)
 
   return (
     <Plot
@@ -331,7 +426,9 @@ function PlotlyFigure({
       frames={frames}
       onSelected={element.isSelectEnabled ? handleSelect : () => {}}
       onDeselect={element.isSelectEnabled ? reset : () => {}}
-      onRelayout={element.isSelectEnabled ? handleRelayout : () => {}}
+      // onRelayout={element.isSelectEnabled ? handleRelayout : () => {}}
+      onDoubleClick={element.isSelectEnabled ? reset : () => {}}
+      onClick={element.isSelectEnabled ? handleClick : () => {}}
     />
   )
 }
