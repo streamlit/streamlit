@@ -709,3 +709,52 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertNotEqual(id(output_df), id(expected_df))
 
         pd.testing.assert_frame_equal(output_df, expected_df)
+
+    def callback():
+        pass
+
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+            ("rerun", True),
+            ("ignore", False),
+            (callback, True),
+        ]
+    )
+    def test_altair_on_select(self, on_select, expected_is_select_enabled):
+        point = alt.selection_point(name="name")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        st.altair_chart(chart, on_select=on_select)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(
+            proto.is_select_enabled,
+            expected_is_select_enabled,
+        )
+
+    def test_altair_no_name_point_selection(self):
+        point = alt.selection_point()
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        st.altair_chart(chart, on_select=True)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        print(proto.spec)
+        self.assertTrue(
+            "selection_0" in proto.spec,
+        )
+        self.assertFalse("param1" in proto.spec)
