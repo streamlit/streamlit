@@ -55,6 +55,7 @@ export interface Selection extends SelectionRange {
 }
 
 export const DEFAULT_HEIGHT = 450
+const SELECTIONS_KEY = "selections"
 
 function isFullScreen(height: number | undefined): boolean {
   return !!height
@@ -157,13 +158,14 @@ function PlotlyFigure({
     )
     const storedValue = widgetMgr.getJsonValue(element)
 
-    if (storedValue !== undefined) {
+    // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
+    if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
       if (parsedStoreValue.select) {
         const { data, selections } = widgetMgr.getExtraWidgetInfo(
           element,
-          "selections"
+          SELECTIONS_KEY
         )
         spec.data = data
         spec.layout.selections = selections
@@ -183,10 +185,8 @@ function PlotlyFigure({
       }
 
       return {
-        data: [...spec.data],
-        layout: {
-          ...spec.layout,
-        },
+        data: spec.data,
+        layout: spec.layout,
         frames: spec.frames ? { ...spec.frames } : [],
       }
     }
@@ -303,7 +303,7 @@ function PlotlyFigure({
         }
       })
 
-      widgetMgr.setExtraWidgetInfo(element, "selections", {
+      widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {
         data: data,
         // @ts-expect-error
         selections: event.selections,
@@ -334,6 +334,7 @@ function PlotlyFigure({
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
+    widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
   }
 
