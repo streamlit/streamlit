@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-import math
-from datetime import timedelta
-from typing import Any, Literal, overload
+from typing import Any
 
 from streamlit import config
 from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
@@ -73,45 +71,6 @@ def is_cacheable_msg(msg: ForwardMsg) -> bool:
         # Some message types never get cached
         return False
     return msg.ByteSize() >= int(config.get_option("global.minCachedMessageSize"))
-
-
-@overload
-def duration_to_seconds(
-    ttl: float | timedelta | str | None, *, coerce_none_to_inf: Literal[False]
-) -> float | None:
-    ...
-
-
-@overload
-def duration_to_seconds(ttl: float | timedelta | str | None) -> float:
-    ...
-
-
-def duration_to_seconds(
-    ttl: float | timedelta | str | None, *, coerce_none_to_inf: bool = True
-) -> float | None:
-    """
-    Convert a ttl value to a float representing "number of seconds".
-    """
-    if coerce_none_to_inf and ttl is None:
-        return math.inf
-    if isinstance(ttl, timedelta):
-        return ttl.total_seconds()
-    if isinstance(ttl, str):
-        import numpy as np
-        import pandas as pd
-
-        try:
-            out: float = pd.Timedelta(ttl).total_seconds()
-        except ValueError as ex:
-            raise BadDurationStringError(ttl) from ex
-
-        if np.isnan(out):
-            raise BadDurationStringError(ttl)
-
-        return out
-
-    return ttl
 
 
 def serialize_forward_msg(msg: ForwardMsg) -> bytes:
