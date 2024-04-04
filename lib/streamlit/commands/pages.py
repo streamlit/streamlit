@@ -84,7 +84,6 @@ class Page:
         else:
             assert self.title
             h = calc_md5(self.title)
-        print(f"{self.title=} {h}")
         return h
 
     @property

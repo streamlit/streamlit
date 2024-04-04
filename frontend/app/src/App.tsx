@@ -1081,6 +1081,10 @@ export class App extends PureComponent<Props, State> {
       this.hostCommunicationMgr.sendMessageToHost,
       this.endpoints
     )
+
+    this.setState({
+      currentPageScriptHash: newPageScriptHash,
+    })
   }
 
   /**
