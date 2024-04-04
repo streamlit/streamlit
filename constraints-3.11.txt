@@ -51,7 +51,7 @@ langsmith==0.1.40
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
-matplotlib==3.8.3
+matplotlib==3.8.4
 mdurl==0.1.2
 more-itertools==10.2.0
 multidict==6.0.5
