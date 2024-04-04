@@ -51,9 +51,9 @@ keyring==25.1.0
 kiwisolver==1.4.5
 langchain==0.1.14
 langchain-community==0.0.31
-langchain-core==0.1.39
+langchain-core==0.1.40
 langchain-text-splitters==0.0.1
-langsmith==0.1.39
+langsmith==0.1.40
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -88,7 +88,7 @@ psycopg2-binary==2.9.9
 py4j==0.10.9.7
 pyarrow==15.0.2
 pycparser==2.22
-pydantic==1.10.14
+pydantic==1.10.15
 pydeck==0.8.1b0
 pydot==2.0.0
 pyee==11.0.1
