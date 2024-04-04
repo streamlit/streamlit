@@ -281,7 +281,7 @@ function ComponentInstance(props: Props): ReactElement {
     // Update the reference fields for the callback that we
     // passed to the componentRegistry
     onBackMsgRef.current = {
-      isReady: isReadyRef.current,
+      isReady: () => isReadyRef.current,
       element,
       widgetMgr,
       setComponentError,
