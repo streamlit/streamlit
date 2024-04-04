@@ -36,6 +36,7 @@ import {
   StyledSidebarLinkText,
   StyledSidebarNavLinkContainer,
   StyledSidebarNavSeparatorContainer,
+  StyledSidebarNavSectionHeader,
 } from "./styled-components"
 
 export interface NavSectionProps {
@@ -67,7 +68,7 @@ const NavSection = ({
   const pages = appPages.slice(start, start + length)
   return (
     <>
-      {header}
+      <StyledSidebarNavSectionHeader>{header}</StyledSidebarNavSectionHeader>
       {pages.map((page: IAppPage, pageIndex: number) => {
         const pageUrl = endpoints.buildAppPageURL(
           pageLinkBaseUrl,

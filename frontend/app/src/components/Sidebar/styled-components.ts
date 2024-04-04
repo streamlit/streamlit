@@ -69,6 +69,15 @@ export const StyledSidebarNavContainer = styled.div(() => ({
   position: "relative",
 }))
 
+export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => ({
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+  marginLeft: theme.spacing.lg,
+  marginRight: theme.spacing.lg,
+  marginTop: theme.spacing.md,
+  marginBottom: theme.spacing.md,
+}))
+
 export interface StyledSidebarNavItemsProps {
   isExpanded: boolean
   isOverflowing: boolean
