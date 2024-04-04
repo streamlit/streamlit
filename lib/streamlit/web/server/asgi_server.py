@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import errno
-import logging
 import socket
 import sys
 from typing import TYPE_CHECKING, Any, Awaitable, Final
@@ -25,7 +24,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Final
 import uvicorn
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from starlette.routing import Route, WebSocketRoute
+from starlette.routing import Mount, Route, WebSocketRoute
 
 from streamlit import cli_util, config, file_util, source_util, util
 from streamlit.components.v1.components import ComponentRegistry
@@ -41,7 +40,11 @@ from streamlit.web.server.app_static_file_handler import AppStaticFileHandler
 from streamlit.web.server.asgi_browser_websocket_handler import (
     ASGIBrowserWebSocketHandler,
 )
-from streamlit.web.server.asgi_routes import ASGIHealthHandler, ASGIHostConfigHandler
+from streamlit.web.server.asgi_routes import (
+    ASGIHealthHandler,
+    ASGIHostConfigHandler,
+    ASGIStaticFiles,
+)
 from streamlit.web.server.component_request_handler import ComponentRequestHandler
 from streamlit.web.server.media_file_handler import MediaFileHandler
 from streamlit.web.server.routes import (
@@ -170,19 +173,14 @@ def create_uvicorn_config(app: Starlette) -> uvicorn.Config:
 
 
 def create_uvicorn_server(app: Starlette) -> uvicorn.Server:
-    # TODO[Kajarenc] Check that we can reuse install_signal_handlers
-    # intead of handlers from bootstrap.py
     return uvicorn.Server(
         config=create_uvicorn_config(app),
-        # install_signal_handlers=False,
-        # install_proxy_headers=False,
     )
 
 
 class Server:
     def __init__(self, main_script_path: str, is_hello: bool):
         """Create the server. It won't be started yet."""
-        # _set_tornado_log_levels()
 
         self._main_script_path = main_script_path
 
@@ -228,7 +226,9 @@ class Server:
         app: Starlette = self._create_app()
         uvicorn_server = create_uvicorn_server(app)
 
-        self.server_task = asyncio.create_task(uvicorn_server.serve())
+        self.server_task = asyncio.create_task(
+            uvicorn_server.serve(), name="UvicornSERVER" * 10
+        )
 
         port = config.get_option("server.port")
         _LOGGER.debug("Server started on port %s", port)
@@ -249,7 +249,7 @@ class Server:
 
     def _create_app(self) -> Starlette:
         """Create our Starlette web app."""
-        base = config.get_option("server.baseUrlPath")
+        config.get_option("server.baseUrlPath")
 
         starlette_routes: list[Any] = [
             WebSocketRoute("/_stcore/stream", endpoint=ASGIBrowserWebSocketHandler),
@@ -258,102 +258,23 @@ class Server:
             Route("/_stcore/host-config", ASGIHostConfigHandler),
         ]
 
-        routes: list[Any] = [
-            # (
-            #     make_url_path_regex(base, STREAM_ENDPOINT),
-            #     ASGIBrowserWebSocketHandler,
-            #     dict(runtime=self._runtime),
-            # ),
-            # (
-            #     make_url_path_regex(base, HEALTH_ENDPOINT),
-            #     HealthHandler,
-            #     dict(callback=lambda: self._runtime.is_ready_for_browser_connection),
-            # ),
-            # (
-            #     make_url_path_regex(base, MESSAGE_ENDPOINT),
-            #     MessageCacheHandler,
-            #     dict(cache=self._runtime.message_cache),
-            # ),
-            # (
-            #     make_url_path_regex(base, METRIC_ENDPOINT),
-            #     StatsRequestHandler,
-            #     dict(stats_manager=self._runtime.stats_mgr),
-            # ),
-            # (
-            #     make_url_path_regex(base, HOST_CONFIG_ENDPOINT),
-            #     HostConfigHandler,
-            # ),
-            # (
-            #     make_url_path_regex(
-            #         base,
-            #         rf"{UPLOAD_FILE_ENDPOINT}/(?P<session_id>[^/]+)/(?P<file_id>[^/]+)",
-            #     ),
-            #     UploadFileRequestHandler,
-            #     dict(
-            #         file_mgr=self._runtime.uploaded_file_mgr,
-            #         is_active_session=self._runtime.is_active_session,
-            #     ),
-            # ),
-            # (
-            #     make_url_path_regex(base, f"{MEDIA_ENDPOINT}/(.*)"),
-            #     MediaFileHandler,
-            #     {"path": ""},
-            # ),
-            # (
-            #     make_url_path_regex(base, "component/(.*)"),
-            #     ComponentRequestHandler,
-            #     dict(registry=ComponentRegistry.instance()),
-            # ),
-        ]
-
-        if config.get_option("server.scriptHealthCheckEnabled"):
-            routes.extend(
-                [
-                    (
-                        make_url_path_regex(base, SCRIPT_HEALTH_CHECK_ENDPOINT),
-                        HealthHandler,
-                        dict(
-                            callback=lambda: self._runtime.does_script_run_without_error()
-                        ),
-                    )
-                ]
-            )
-
-        if config.get_option("server.enableStaticServing"):
-            routes.extend(
-                [
-                    (
-                        make_url_path_regex(base, "app/static/(.*)"),
-                        AppStaticFileHandler,
-                        {"path": file_util.get_app_static_dir(self.main_script_path)},
-                    ),
-                ]
-            )
-
         if config.get_option("global.developmentMode"):
             _LOGGER.debug("Serving static content from the Node dev server")
         else:
-            static_path = file_util.get_static_dir()
-            _LOGGER.debug("Serving static content from %s", static_path)
-
-            routes.extend(
-                [
-                    (
-                        make_url_path_regex(base, "(.*)"),
-                        StaticFileHandler,
-                        {
-                            "path": "%s/" % static_path,
-                            "default_filename": "index.html",
-                            "get_pages": lambda: {
-                                page_info["page_name"]
-                                for page_info in source_util.get_pages(
-                                    self.main_script_path
-                                ).values()
-                            },
+            starlette_routes.append(
+                Mount(
+                    "/",
+                    app=ASGIStaticFiles(
+                        directory=file_util.get_static_dir(),
+                        html=True,
+                        get_pages=lambda: {
+                            page_info["page_name"]
+                            for page_info in source_util.get_pages(
+                                self.main_script_path
+                            ).values()
                         },
                     ),
-                    (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
-                ]
+                ),
             )
 
         return Starlette(
@@ -379,17 +300,8 @@ class Server:
         return self._main_script_path == Hello.__file__
 
     def stop(self) -> None:
-        # TODO[Kajarenc], continuetion of IDEA
+        # TODO[Kajarenc], continuetion of IDEA, implemented
         # stop uvicorn server task here.
         cli_util.print_to_cli("  Stopping...", fg="blue")
         self.server_task.cancel()
         self._runtime.stop()
-
-
-def _set_tornado_log_levels() -> None:
-    if not config.get_option("global.developmentMode"):
-        # Hide logs unless they're super important.
-        # Example of stuff we don't care about: 404 about .js.map files.
-        logging.getLogger("tornado.access").setLevel(logging.ERROR)
-        logging.getLogger("tornado.application").setLevel(logging.ERROR)
-        logging.getLogger("tornado.general").setLevel(logging.ERROR)

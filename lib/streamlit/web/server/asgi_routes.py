@@ -11,10 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Callable, Set
 
 from starlette.endpoints import HTTPEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from streamlit import config
 
@@ -104,3 +107,25 @@ class ASGIHostConfigHandler(HTTPEndpoint):
                 "enableCustomParentMessages": False,
             }
         )
+
+
+class ASGIStaticFiles(StaticFiles):
+    def __init__(self, *, get_pages: Callable[[], Set[str]], **kwargs):
+        super().__init__(**kwargs)
+        self._get_pages = get_pages
+
+    @property
+    def pages(self) -> Set[str]:
+        return self._get_pages()
+
+    def get_path(self, scope: Scope) -> str:
+        url_parts = scope["path"].split("/")
+        url_parts = url_parts[1:]  # Remove the leading slash
+
+        maybe_page_name = url_parts[0]
+        if maybe_page_name in self.pages:
+            if len(url_parts) == 1:
+                scope["path"] = "/index.html"
+            else:
+                scope["path"] = "/" + "/".join(url_parts[1:])
+        return super().get_path(scope)
