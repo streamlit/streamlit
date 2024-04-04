@@ -156,7 +156,9 @@ function PlotlyFigure({
 
         const hasSelectedPoints: boolean = spec.data.some(
           (trace: any) =>
-            "selectedpoints" in trace && trace.selectedpoints.length > 0
+            "selectedpoints" in trace &&
+            trace.selectedpoints &&
+            trace.selectedpoints.length > 0
         )
         if (hasSelectedPoints) {
           // make all other points opaque
@@ -279,6 +281,15 @@ function PlotlyFigure({
         }
       })
 
+      // @ts-expect-error
+      if (
+        event.points.length === 0 &&
+        event.selections &&
+        event.selections.length === 0
+      ) {
+        return
+      }
+
       widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {
         data: data,
         // @ts-expect-error
@@ -297,19 +308,6 @@ function PlotlyFigure({
   const { data, layout, frames } = spec
 
   const reset = (): void => {
-    const spec = JSON.parse(
-      replaceTemporaryColors(figure.spec, theme, element.theme)
-    )
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
   }

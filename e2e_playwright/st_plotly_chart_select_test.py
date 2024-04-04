@@ -59,6 +59,9 @@ def test_click_on_bar_chart_displays_a_df(
     app.mouse.up()
 
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+    assert_snapshot(
+        app.get_by_test_id("stDataFrame"), name="st_plotly_chart-single_select_df"
+    )
     assert_snapshot(chart, name="st_plotly_chart-single_select")
 
     app.keyboard.down("Shift")
@@ -67,6 +70,9 @@ def test_click_on_bar_chart_displays_a_df(
     app.mouse.up()
     wait_for_app_run(app, wait_delay=3000)
     assert_snapshot(chart, name="st_plotly_chart-double_select")
+    assert_snapshot(
+        app.get_by_test_id("stDataFrame"), name="st_plotly_chart-double_select_df"
+    )
 
 
 def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
@@ -123,3 +129,34 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     chart.scroll_into_view_if_needed()
     wait_for_app_run(app, 3000)
     assert_snapshot(chart, name="st_plotly_chart-reset")
+
+
+@pytest.mark.only_browser("chromium")
+def test_zoom_doesnt_reset_when_double_clicked(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = app.locator(".stPlotlyChart").nth(4)
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    zoom_in_btn = chart.locator("[data-title='Zoom in']")
+    zoom_in_btn.click()
+    assert_snapshot(chart, name="st_plotly_chart-zoomed")
+
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(50, 50)
+    app.mouse.down()
+    app.mouse.move(150, 150)
+    app.mouse.up()
+    wait_for_app_run(app, 3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+
+    chart = app.locator(".stPlotlyChart").nth(4)
+    chart.scroll_into_view_if_needed()
+
+    app.mouse.dblclick(450, 450)
+    chart = app.locator(".stPlotlyChart").nth(4)
+    chart.scroll_into_view_if_needed()
+    wait_for_app_run(app, 3000)
+    assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
