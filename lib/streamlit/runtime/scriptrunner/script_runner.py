@@ -464,7 +464,9 @@ class ScriptRunner:
 
             fragment_ids_this_run = set(rerun_data.fragment_id_queue)
 
-            ctx = self._get_script_run_ctx()
+            # Clear widget state on page change. This normally happens implicitly
+            # in the script run cleanup steps, but doing it explicitly ensures
+            # it happens even if a script run was interrupted.
             try:
                 old_hash = self._session_state[SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY]
             except KeyError:
@@ -476,6 +478,7 @@ class ScriptRunner:
                 )
                 self._session_state.on_script_finished(set())
 
+            ctx = self._get_script_run_ctx()
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
