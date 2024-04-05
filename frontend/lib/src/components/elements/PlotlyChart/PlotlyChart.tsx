@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useLayoutEffect, useState } from "react"
+import React, { ReactElement, useState, useCallback } from "react"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -30,6 +30,8 @@ import {
 } from "./CustomTheme"
 import { PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+
 export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
@@ -55,6 +57,7 @@ export interface Selection extends SelectionRange {
 }
 
 export const DEFAULT_HEIGHT = 450
+const SELECTIONS_KEY = "selections"
 
 function isFullScreen(height: number | undefined): boolean {
   return !!height
@@ -97,32 +100,6 @@ export function parseBoxSelection(selection: any): SelectionRange {
   return { x, y }
 }
 
-function toSnakeCase(str: string): string {
-  return str.replace(/[\dA-Z\.]/g, letter =>
-    letter === "." ? "_" : `_${letter.toLowerCase()}`
-  )
-}
-
-function keysToSnakeCase(obj: Record<string, any>): Record<string, any> {
-  return Object.keys(obj).reduce((acc, key) => {
-    const newKey = toSnakeCase(key)
-    let value = obj[key]
-
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      value = keysToSnakeCase(value)
-    }
-
-    if (Array.isArray(value)) {
-      value = value.map(item =>
-        typeof item === "object" ? keysToSnakeCase(item) : item
-      )
-    }
-
-    acc[newKey] = value
-    return acc
-  }, {} as Record<string, any>)
-}
-
 /** Render an iframed Plotly chart from a URL */
 function renderIFrame({
   url,
@@ -151,93 +128,76 @@ function PlotlyFigure({
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
-  const getInitialValue = (): any => {
+  const getInitialValue = useCallback((): any => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
     const storedValue = widgetMgr.getJsonValue(element)
 
-    if (storedValue !== undefined) {
+    if (storedValue === "{}") {
+      spec.data.forEach((trace: any) => {
+        trace.selectedpoints = undefined
+      })
+      spec.layout.selections = undefined
+    }
+
+    // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
+    if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
       if (parsedStoreValue.select) {
         const { data, selections } = widgetMgr.getExtraWidgetInfo(
           element,
-          "selections"
+          SELECTIONS_KEY
         )
         spec.data = data
         spec.layout.selections = selections
-      }
 
-      const hasSelectedPoints: boolean = spec.data.some(
-        (trace: any) =>
-          "selectedpoints" in trace && trace.selectedpoints.length > 0
-      )
-      if (hasSelectedPoints) {
-        // make all other points opaque
-        spec.data.forEach((trace: any) => {
-          if (!trace.selectedpoints) {
-            trace.selectedpoints = []
-          }
-        })
-      }
-
-      return {
-        data: [...spec.data],
-        layout: {
-          ...spec.layout,
-        },
-        frames: spec.frames ? { ...spec.frames } : [],
+        const hasSelectedPoints: boolean = spec.data.some(
+          (trace: any) =>
+            "selectedpoints" in trace && trace.selectedpoints.length > 0
+        )
+        if (hasSelectedPoints) {
+          // make all other points opaque
+          spec.data.forEach((trace: any) => {
+            if (!trace.selectedpoints) {
+              trace.selectedpoints = []
+            }
+          })
+        }
       }
     }
 
     return spec
-  }
+  }, [element, figure.spec, theme, widgetMgr])
 
-  const [spec] = useState(getInitialValue())
+  const spec = getInitialValue()
 
   const [initialHeight] = useState(spec.layout.height)
   const [initialWidth] = useState(spec.layout.width)
 
-  useLayoutEffect(() => {
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    }
-    // TODO(willhuang1997): Regression where swapping themes will not change chart colors properly
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useLayoutEffect(() => {
-    if (isFullScreen(height)) {
-      spec.layout.width = width
-      spec.layout.height = height
-    } else if (element.useContainerWidth) {
-      spec.layout.width = width
-      if (!isFullScreen(height) && height !== initialHeight) {
-        spec.layout.height = initialHeight
-      }
-    } else {
-      spec.layout.width = initialWidth
+  if (isFullScreen(height)) {
+    spec.layout.width = width
+    spec.layout.height = height
+  } else if (element.useContainerWidth) {
+    spec.layout.width = width
+    if (!isFullScreen(height) && height !== initialHeight) {
       spec.layout.height = initialHeight
     }
-  }, [
-    height,
-    width,
-    element.useContainerWidth,
-    spec,
-    initialWidth,
-    initialHeight,
-    element.theme,
-    theme,
-    element.isSelectEnabled,
-  ])
+  } else {
+    spec.layout.width = initialWidth
+    spec.layout.height = initialHeight
+  }
+  if (element.isSelectEnabled) {
+    spec.layout.clickmode = "event+select"
+    spec.layout.hovermode = "closest"
+  }
+  if (element.theme === "streamlit") {
+    applyStreamlitTheme(spec, theme)
+  } else {
+    // Apply minor theming improvements to work better with Streamlit
+    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+  }
 
   const handleSelect = (event: PlotSelectionEvent): void => {
     const returnValue: any = { select: {} }
@@ -303,7 +263,7 @@ function PlotlyFigure({
         }
       })
 
-      widgetMgr.setExtraWidgetInfo(element, "selections", {
+      widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {
         data: data,
         // @ts-expect-error
         selections: event.selections,
@@ -334,6 +294,7 @@ function PlotlyFigure({
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     }
+    widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
   }
 

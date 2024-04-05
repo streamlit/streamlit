@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Union, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
@@ -46,34 +46,30 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 
-def replace_values_in_dict(d, old_value, new_value):
-    """
-    Recursively replaces old_value with new_value in string values of the dictionary,
-    including nested dictionaries and lists.
-
-    :param d: The dictionary or list to process.
-    :param old_value: The string value to be replaced.
-    :param new_value: The new string value to replace with.
-    """
+def replace_values_in_dict(
+    d: Union[Dict[Any, Any], List[Any]], old_to_new_map: Dict[str, str]
+) -> None:
     if isinstance(d, dict):
         for key, value in d.items():
-            if isinstance(value, str) and value == old_value:
-                d[key] = new_value
+            if isinstance(value, str) and value in old_to_new_map:
+                d[key] = old_to_new_map[value]
             elif isinstance(value, dict):
-                replace_values_in_dict(value, old_value, new_value)
+                replace_values_in_dict(value, old_to_new_map)
             elif isinstance(value, list):
                 for item in value:
-                    replace_values_in_dict(item, old_value, new_value)
+                    replace_values_in_dict(item, old_to_new_map)
     elif isinstance(d, list):
         for item in d:
-            replace_values_in_dict(item, old_value, new_value)
+            replace_values_in_dict(item, old_to_new_map)
 
 
 def _on_select(
     proto: ArrowVegaLiteChartProto,
-    on_select: Union[str, Callable[..., None], None] = None,
+    on_select: Union[
+        Literal["rerun", "ignore"], Callable[..., None], bool, None
+    ] = None,
     key: str | None = None,
-):
+) -> AttributeDictionary:
     if on_select is not None and on_select != False:
         # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
         if isinstance(on_select, bool) or isinstance(on_select, str):
@@ -102,6 +98,7 @@ def _on_select(
             ctx=get_script_run_ctx(),
         )
         return AttributeDictionary(current_value.value)
+    return AttributeDictionary({})
 
 
 class ArrowVegaLiteMixin:
@@ -112,10 +109,12 @@ class ArrowVegaLiteMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_select: Union[str, Callable[..., None], None] = None,
+        on_select: Union[
+            Literal["rerun", "ignore"], Callable[..., None], bool, None
+        ] = None,
         key: str | None = None,
         **kwargs: Any,
-    ) -> DeltaGenerator:
+    ) -> Union[DeltaGenerator, Dict[Any, Any]]:
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -188,8 +187,13 @@ class ArrowVegaLiteMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
+        on_select_callback = on_select
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        if isinstance(on_select_callback, bool) or isinstance(on_select_callback, str):
+            on_select_callback = None
+
         key = to_key(key)
-        check_callback_rules(self.dg, on_select)
+        check_callback_rules(self.dg, on_select_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "vega_lite_chart")
         if current_form_id(self.dg):
@@ -202,7 +206,7 @@ class ArrowVegaLiteMixin:
         # TODO(willhuang1997): This needs to be cleaned up probably
         if on_select == ON_SELECTION_IGNORE:
             on_select = False
-        if on_select:
+        if on_select and spec is not None:
             # TODO(willhuang1997): This seems like a hack so should fix this
             if "params" not in spec:
                 raise StreamlitAPIException(
@@ -249,7 +253,9 @@ def marshall(
     spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
-    on_select: Union[str, Callable[..., None], None] = None,
+    on_select: Union[
+        Literal["rerun", "ignore"], Callable[..., None], bool, None
+    ] = None,
     key: str | None = None,
     **kwargs,
 ):
@@ -287,15 +293,14 @@ def marshall(
 
     data_id_counter = 0
 
-    # Mapping of dataset name to new stable id
-    stable_data_ids = {}
+    stable_ids = {}
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
     if "datasets" in spec:
         for k, v in spec["datasets"].items():
             dataset = proto.datasets.add()
             if on_select:
-                stable_data_ids[k] = str(data_id_counter)
+                stable_ids[k] = str(data_id_counter)
                 dataset.name = str(data_id_counter)
                 data_id_counter += 1
             else:
@@ -303,11 +308,6 @@ def marshall(
             dataset.has_name = True
             arrow.marshall(dataset.data, v)
         del spec["datasets"]
-    for dataset_key, stable_id in stable_data_ids.items():
-        keys = ["hconcat", "vconcat", "layer", "data"]
-        for k in keys:
-            if k in spec:
-                replace_values_in_dict(spec[k], dataset_key, stable_id)
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     #   marshall(proto, {data: df})
@@ -331,44 +331,38 @@ def marshall(
         regex = re.compile(r"^param_\d+$")
         param_counter = 0
 
-        views_visited = []
         for param in spec["params"]:
             view_counter = 0
             name = param["name"]
             if regex.match(name):
                 param["name"] = f"selection_{param_counter}"
-                for k in ["hconcat", "vconcat", "layer", "encoding"]:
-                    if k in spec:
-                        replace_values_in_dict(
-                            spec[k], name, f"selection_{param_counter}"
-                        )
+                stable_ids[name] = f"selection_{param_counter}"
                 param_counter += 1
             if "views" in param:
                 for view_index, view in enumerate(param["views"]):
                     param["views"][view_index] = f"view_{view_counter}"
-                    for k in ["hconcat", "vconcat", "layer", "encoding"]:
-                        if k in spec and view not in views_visited:
-                            replace_values_in_dict(
-                                spec[k], view, f"view_{view_counter}"
-                            )
-                            views_visited.append(view)
+                    stable_ids[view] = f"view_{view_counter}"
                     view_counter += 1
+        keys = ["hconcat", "vconcat", "layer", "encoding", "data"]
+        for k in keys:
+            if k in spec:
+                replace_values_in_dict(spec[k], stable_ids)
 
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
-
-    id = compute_widget_id(
-        "arrow_vega_lite",
-        user_key=key,
-        data=data,
-        spec=spec,
-        use_container_width=use_container_width,
-        key=key,
-        theme=theme,
-        page=ctx.page_script_hash if ctx else None,
-    )
-    proto.id = id
+    if on_select:
+        id = compute_widget_id(
+            "arrow_vega_lite",
+            user_key=key,
+            data=data,
+            spec=spec,
+            use_container_width=use_container_width,
+            key=key,
+            theme=theme,
+            page=ctx.page_script_hash if ctx else None,
+        )
+        proto.id = id
 
     if on_select:
         proto.is_select_enabled = True
