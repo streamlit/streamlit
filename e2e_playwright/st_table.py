@@ -127,7 +127,7 @@ st.table(df.style.map(highlight_first))
 
 st.subheader("Pandas Styler: Background and font styling")
 
-df = pd.DataFrame(np.random.randn(20, 4), columns=["A", "B", "C", "D"])
+df = pd.DataFrame(np.random.randn(10, 4), columns=["A", "B", "C", "D"])
 
 
 def style_negative(v, props=""):
