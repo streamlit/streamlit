@@ -110,6 +110,7 @@ jobs:
           md5sum lib/min-constraints-gen.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
           md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
           md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+          md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
           date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
       - name: Restore virtualenv from cache
         id: cache-virtualenv
