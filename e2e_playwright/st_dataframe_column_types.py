@@ -15,7 +15,6 @@
 import random
 
 import numpy as np
-import pandas as pd
 
 import streamlit as st
 from tests.streamlit.data_mocks import (
@@ -55,5 +54,5 @@ st.dataframe(SPECIAL_TYPES_DF, use_container_width=True)
 st.subheader("Period dtypes in pd.DataFrame")
 st.dataframe(PERIOD_TYPES_DF, use_container_width=True)
 
-st.subheader("Unsupported types")
+st.subheader("Unsupported types (by Arrow)")
 st.dataframe(UNSUPPORTED_TYPES_DF, use_container_width=True)
