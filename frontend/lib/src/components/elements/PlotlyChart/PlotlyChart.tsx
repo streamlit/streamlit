@@ -31,6 +31,7 @@ import {
 import { PlotRelayoutEvent, PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+import { logMessage } from "@streamlit/lib/src/util/log"
 
 export interface PlotlyChartProps {
   width: number
@@ -171,20 +172,31 @@ function PlotlyFigure({
       }
     }
     const zoom = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
-    if (zoom && zoom[RELAYOUT_KEY]) {
-      if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
-        spec.layout.xaxis.range = [
-          zoom[RELAYOUT_KEY]["xaxis.range[0]"],
-          zoom[RELAYOUT_KEY]["xaxis.range[1]"],
-        ]
-        spec.layout.yaxis.range = [
-          zoom[RELAYOUT_KEY]["yaxis.range[0]"],
-          zoom[RELAYOUT_KEY]["yaxis.range[1]"],
-        ]
-      } else if (zoom[RELAYOUT_KEY]["dragmode"]) {
-        spec.layout.dragmode = zoom[RELAYOUT_KEY]["dragmode"]
+    console.log(spec)
+    try {
+      if (zoom && zoom[RELAYOUT_KEY]) {
+        if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
+          spec.layout.xaxis.range = [
+            zoom[RELAYOUT_KEY]["xaxis.range[0]"],
+            zoom[RELAYOUT_KEY]["xaxis.range[1]"],
+          ]
+          spec.layout.yaxis.range = [
+            zoom[RELAYOUT_KEY]["yaxis.range[0]"],
+            zoom[RELAYOUT_KEY]["yaxis.range[1]"],
+          ]
+        } else if (zoom[RELAYOUT_KEY].dragmode) {
+          spec.layout.dragmode = zoom[RELAYOUT_KEY].dragmode
+        } else if (zoom[RELAYOUT_KEY]["xaxis.autorange"]) {
+          spec.layout.xaxis.autorange = true
+          spec.layout.yaxis.autorange = true
+        }
       }
+    } catch (e) {
+      logMessage(e)
+      logMessage(spec)
+      logMessage(zoom)
     }
+
     return spec
   }, [element, figure.spec, theme, widgetMgr])
 
@@ -299,24 +311,28 @@ function PlotlyFigure({
 
   const reset = (): void => {
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
+    widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
   }
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
+    console.log(event)
     const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
 
     if (
       event["xaxis.range[0]"] ||
       event["xaxis.autorange"] ||
-      event["dragmode"]
+      event.dragmode
     ) {
-      widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-        relayout: event,
-      })
-    } else {
-      widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-        relayout: storedEvent[RELAYOUT_KEY],
-      })
+      if (storedEvent && storedEvent[RELAYOUT_KEY]) {
+        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
+          relayout: { ...storedEvent[RELAYOUT_KEY], ...event },
+        })
+      } else {
+        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
+          relayout: { ...event },
+        })
+      }
     }
   }
 
@@ -331,6 +347,7 @@ function PlotlyFigure({
       frames={frames}
       onSelected={element.isSelectEnabled ? handleSelect : () => {}}
       onDeselect={element.isSelectEnabled ? reset : () => {}}
+      onDoubleClick={element.isSelectEnabled ? reset : () => {}}
       onRelayout={element.isSelectEnabled ? handleRelayout : () => {}}
     />
   )
