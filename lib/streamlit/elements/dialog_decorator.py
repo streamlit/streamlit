@@ -93,12 +93,12 @@ def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F
 # The user is supposed to call it like @st.dialog("my_title") , which makes 'title' a positional arg, hence
 # this 'trick'. The overload is required to have a good type hint for the decorated function args.
 @overload
-def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F:
+def dialog_decorator(title: F | None, *, width: DialogWidth = "small") -> F:
     ...
 
 
 def dialog_decorator(
-    title: F | str = "", *, width: DialogWidth = "small"
+    title: F | None | str = "", *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
     r"""Decorate a function to mark it as a Streamlit dialog. When the decorated function is called, a dialog element is inserted with the function's body as the content.
 

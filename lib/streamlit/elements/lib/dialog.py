@@ -136,7 +136,6 @@ class Dialog(DeltaGenerator):
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
-        # self.close()
         super().__enter__()
         return self
 
