@@ -373,7 +373,7 @@ class DialogTest(DeltaGeneratorTestCase):
         self.assertFalse(dialog_block.add_block.dialog.is_open)
 
     def test_dialog_deltagenerator_only_call_open_once(self):
-        """Test that dialog opens and closes"""
+        """Test that only a single dialog can be opened"""
         dialog = st._main.dialog(DialogTest.title)
 
         self.assertIsNotNone(dialog)
@@ -388,8 +388,17 @@ class DialogTest(DeltaGeneratorTestCase):
             # Close does not reset the dialog-flag as this is handled per script-run context
             dialog.open()
 
+    def test_dialog_decorator_with_title_opens(self):
+        """Test that the dialog decorator having a title does not throw an error"""
+
+        @st.experimental_dialog("example title")
+        def dialog():
+            return None
+
+        dialog()
+
     def test_dialog_decorator_title_required(self):
-        """Test that the title is required"""
+        """Test that the title is required in decorator"""
         with self.assertRaises(StreamlitAPIException) as e:
 
             @st.experimental_dialog()
@@ -410,18 +419,31 @@ class DialogTest(DeltaGeneratorTestCase):
 
         self.assertTrue(e.exception.args[0].startswith("A non-empty `title`"))
 
-    def test_dialog_decorator_must_be_called_like_a_function(self):
-        """Test that the decorator must be called like a function.
-        Note that if this happens in context of an app, a StreamlitAPIException is thrown
-        instead of a TypeError. This seems to be due to how a Streamlit App is executed by the Streamlit Runtime.
-        """
-        with self.assertRaises(TypeError):
+    def test_dialog_decorator_must_be_called_like_a_function_with_a_title(self):
+        """Test that the decorator must be called like a function."""
+        with self.assertRaises(StreamlitAPIException):
 
             @st.experimental_dialog
             def dialog():
                 return None
 
             dialog()
+
+        with self.assertRaises(StreamlitAPIException):
+
+            @st.experimental_dialog
+            def dialog_with_arg(a):
+                return None
+
+            dialog_with_arg("a")
+
+        with self.assertRaises(StreamlitAPIException):
+
+            @st.experimental_dialog
+            def dialog_with_args(a, b):
+                return None
+
+            dialog_with_args("a", "b")
 
     def test_nested_dialog_raises_error(self):
         """Test that dialogs cannot be called nested."""

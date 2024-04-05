@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
-from typing import Callable
+import contextlib
+import inspect
+from functools import wraps
+from typing import Callable, TypeVar, cast, overload
 
 from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_stack
 from streamlit.elements.lib.dialog import DialogWidth
@@ -42,9 +45,61 @@ def _assert_no_nested_dialogs() -> None:
         raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
 
 
+F = TypeVar("F", bound=Callable[..., None])
+
+
+def _dialog_decorator(
+    non_optional_func: F, title: str, *, width: DialogWidth = "small"
+) -> F:
+    if title is None or title == "":
+        raise StreamlitAPIException(
+            'A non-empty `title` argument has to be provided for dialogs, for example `@st.experimental_dialog("Example Title")`.'
+        )
+
+    @wraps(non_optional_func)
+    def wrap(*args, **kwargs) -> None:
+        _assert_no_nested_dialogs()
+        # Call the Dialog on the event_dg because it lives outside of the normal
+        # Streamlit UI flow. For example, if it is called from the sidebar, it should not
+        # inherit the sidebar theming.
+        dialog = event_dg.dialog(title=title, dismissible=True, width=width)
+        dialog.open()
+
+        @_fragment
+        def dialog_content() -> None:
+            # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
+            _ = non_optional_func(*args, **kwargs)
+            return None
+
+        with dialog:
+            return dialog_content()
+
+    with contextlib.suppress(AttributeError):
+        # Make this a well-behaved decorator by preserving important function
+        # attributes.
+        wrap.__dict__.update(non_optional_func.__dict__)
+        wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
+
+    return cast(F, wrap)
+
+
+@overload
+def dialog_decorator(title: str, *, width: DialogWidth = "small") -> Callable[[F], F]:
+    ...
+
+
+# 'title' can be a function since `dialog_decorator` is a decorator. We just call it 'title' here though
+# to make the user-doc more friendly as we want the user to pass a title, not a function.
+# The user is supposed to call it like @st.dialog("my_title") , which makes 'title' a positional arg, hence
+# this 'trick'. The overload is required to have a good type hint for the decorated function args.
+@overload
+def dialog_decorator(title: F, *, width: DialogWidth = "small") -> F:
+    ...
+
+
 def dialog_decorator(
-    title: str = "", *, width: DialogWidth = "small"
-) -> Callable[[Callable[..., None]], Callable[..., None]]:
+    title: F | str = "", *, width: DialogWidth = "small"
+) -> F | Callable[[F], F]:
     r"""Decorate a function to mark it as a Streamlit dialog. When the decorated function is called, a dialog element is inserted with the function's body as the content.
 
     The decorated function can hold multiple elements which are rendered inside of a modal when the decorated function is called.
@@ -98,35 +153,20 @@ def dialog_decorator(
 
     """
 
-    if title is None or title == "":
-        raise StreamlitAPIException(
-            'A non-empty `title` argument has to be provided for dialogs, for example `@st.experimental_dialog("Example Title")`.'
-        )
+    func_or_title = title
+    if func_or_title is None:
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            return _dialog_decorator(non_optional_func=f, title="", width=width)
 
-    def inner_decorator(fn: Callable[..., None], *args) -> Callable[..., None]:
-        # This check is for the scenario where @st.dialog is used without parentheses
-        if fn is None or len(args) > 0:
-            raise StreamlitAPIException(
-                "The dialog decoration failed. A common error for this to happen is when the dialog decorator is used without a title, i.e. `@st.experimental_dialog` instead of `@st.experimental_dialog(”My title”)`."
-            )
+        return wrapper
+    elif type(func_or_title) is str:
+        # Support passing the params via function decorator
+        def wrapper(f: F) -> F:
+            title: str = func_or_title
+            return _dialog_decorator(non_optional_func=f, title=title, width=width)
 
-        def decorated_fn(*args, **kwargs) -> None:
-            _assert_no_nested_dialogs()
-            # Call the Dialog on the event_dg because it lives outside of the normal
-            # Streamlit UI flow. For example, if it is called from the sidebar, it should not
-            # inherit the sidebar theming.
-            dialog = event_dg.dialog(title=title, dismissible=True, width=width)
-            dialog.open()
+        return wrapper
 
-            @_fragment
-            def dialog_content() -> None:
-                # if the dialog should be closed, st.rerun() has to be called (same behavior as with st.fragment)
-                _ = fn(*args, **kwargs)
-                return None
-
-            with dialog:
-                return dialog_content()
-
-        return decorated_fn
-
-    return inner_decorator
+    func: F = cast(F, func_or_title)
+    return _dialog_decorator(func, "", width=width)
