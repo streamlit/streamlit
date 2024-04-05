@@ -225,12 +225,21 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
           spec.params.forEach((param: any) => {
             if (param.name && param.name === selector) {
               if (param.select.type && param.select.type === "point") {
-                const values = parsedStoredValue.select[selector].vlPoint.or
-                param.select.fields = Object.keys(values[0])
-                param.value = values
-              } else if (param.select.type === "interval") {
-                const values = parsedStoredValue.select[selector]
-                param.value = values
+                try {
+                  const values = parsedStoredValue.select[selector].vlPoint.or
+                  param.select.fields = Object.keys(values[0])
+                  param.value = values
+                } catch (e) {
+                  logMessage(e)
+                }
+              }
+              if (param.select.type === "interval") {
+                try {
+                  const values = parsedStoredValue.select[selector]
+                  param.value = values
+                } catch (e) {
+                  logMessage(e)
+                }
               }
             }
           })
@@ -274,37 +283,27 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
               param.select.encodings = Object.keys(spec.encoding)
             }
           })
-        } else if ("hconcat" in spec) {
-          try {
-            spec.params.forEach((param: any) => {
-              if (
-                "select" in param &&
-                "type" in param.select &&
-                param.select.type === "point" &&
-                param.select.encodings === undefined
-              ) {
-                param.select.encodings = Object.keys(spec.hconcat[0].encoding)
-              }
-            })
-          } catch (e) {
-            logMessage(e)
-          }
-        } else if ("vconcat" in spec) {
-          try {
-            spec.params.forEach((param: any) => {
-              if (
-                "select" in param &&
-                "type" in param.select &&
-                param.select.type === "point" &&
-                param.select.encodings === undefined
-              ) {
-                param.select.encodings = Object.keys(spec.vconcat[0].encoding)
-              }
-            })
-          } catch (e) {
-            logMessage(e)
-          }
         }
+        const concatenationKeys = ["hconcat", "vconcat", "layer"]
+
+        concatenationKeys.forEach(key => {
+          if (key in spec) {
+            try {
+              spec.params.forEach((param: any) => {
+                if (
+                  "select" in param &&
+                  "type" in param.select &&
+                  param.select.type === "point" &&
+                  param.select.encodings === undefined
+                ) {
+                  param.select.encodings = Object.keys(spec[key][0].encoding)
+                }
+              })
+            } catch (e) {
+              logMessage(e)
+            }
+          }
+        })
       }
     }
 
