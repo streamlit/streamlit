@@ -178,6 +178,10 @@ export class WidgetStateManager {
   // External data about all forms.
   private formsData: FormsData
 
+  // maps widget IDs to additional information that needs to be preserved across reruns
+  // mainly used for st.altair_chart and st.plotly_chart as of now
+  private readonly extraWidgetInfo = new Map<string, Map<string, any>>()
+
   constructor(props: Props) {
     this.props = props
     this.formsData = createFormsData()
@@ -708,6 +712,32 @@ export class WidgetStateManager {
       this.formsData = newData
       this.props.formsDataChanged(this.formsData)
     }
+  }
+
+  public setExtraWidgetInfo(
+    widget: WidgetInfo,
+    key: string,
+    value: any
+  ): void {
+    if (!this.extraWidgetInfo.has(widget.id)) {
+      this.extraWidgetInfo.set(widget.id, new Map<string, any>())
+    }
+
+    const currentMap = this.extraWidgetInfo.get(widget.id)
+
+    if (currentMap) {
+      currentMap.set(key, value)
+    }
+  }
+
+  public getExtraWidgetInfo(widget: WidgetInfo, key: string): any {
+    if (this.extraWidgetInfo.has(widget.id)) {
+      const widgetInfoMap = this.extraWidgetInfo.get(widget.id)
+      if (widgetInfoMap) {
+        return widgetInfoMap.get(key)
+      }
+    }
+    return undefined
   }
 }
 

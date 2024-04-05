@@ -676,6 +676,36 @@ describe("Widget State Manager", () => {
       )
     })
   })
+
+  describe("extraWidgetInfo", () => {
+    it("sets extra widget information properly", () => {
+      widgetMgr.setExtraWidgetInfo({ id: "id" }, "color", "red")
+      // @ts-expect-error
+      expect(widgetMgr.extraWidgetInfo.get("id")?.get("color")).toEqual("red")
+    })
+
+    it("returns extra widget information when id exists and key exists", () => {
+      // @ts-expect-error
+      widgetMgr.extraWidgetInfo.set("id", new Map([["color", "red"]]))
+      expect(widgetMgr.getExtraWidgetInfo({ id: "id" }, "color")).toEqual(
+        "red"
+      )
+    })
+
+    it("returns undefined when when id does not exist", () => {
+      expect(widgetMgr.getExtraWidgetInfo({ id: "id" }, "color")).toEqual(
+        undefined
+      )
+    })
+
+    it("returns undefined when when id exists and key does not exist", () => {
+      // @ts-expect-error
+      widgetMgr.extraWidgetInfo.set("id", new Map([["text", "red"]]))
+      expect(widgetMgr.getExtraWidgetInfo({ id: "id" }, "color")).toEqual(
+        undefined
+      )
+    })
+  })
 })
 
 describe("WidgetStateDict", () => {
