@@ -82,7 +82,6 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
     # open and close the dialog multiple times
     for i in range(0, 10):
-        print(f"Test run: {i}")
         # don't click indefinitely fast to give the dialog time to set the state
         app.wait_for_timeout(100)
 
