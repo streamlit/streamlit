@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
@@ -47,17 +48,25 @@ if TYPE_CHECKING:
 
 def replace_values_in_dict(d, old_value, new_value):
     """
-    Recursively replaces old_value with new_value in string values of the dictionary, including nested dictionaries.
+    Recursively replaces old_value with new_value in string values of the dictionary,
+    including nested dictionaries and lists.
 
-    :param d: The dictionary to process.
+    :param d: The dictionary or list to process.
     :param old_value: The string value to be replaced.
     :param new_value: The new string value to replace with.
     """
-    for key, value in d.items():
-        if isinstance(value, str) and value == old_value:
-            d[key] = new_value
-        elif isinstance(value, dict):
-            replace_values_in_dict(value, old_value, new_value)
+    if isinstance(d, dict):
+        for key, value in d.items():
+            if isinstance(value, str) and value == old_value:
+                d[key] = new_value
+            elif isinstance(value, dict):
+                replace_values_in_dict(value, old_value, new_value)
+            elif isinstance(value, list):
+                for item in value:
+                    replace_values_in_dict(item, old_value, new_value)
+    elif isinstance(d, list):
+        for item in d:
+            replace_values_in_dict(item, old_value, new_value)
 
 
 def _on_select(
@@ -302,11 +311,39 @@ def marshall(
             data = data_spec
             del spec["data"]
 
+    ctx = get_script_run_ctx()
+
+    if on_select:
+        regex = re.compile(r"^param_\d+$")
+        param_counter = 0
+
+        views_visited = []
+        for param in spec["params"]:
+            view_counter = 0
+            name = param["name"]
+            if regex.match(name):
+                param["name"] = f"selection_{param_counter}"
+                for k in ["hconcat", "vconcat", "layer", "encoding"]:
+                    if k in spec:
+                        replace_values_in_dict(
+                            spec[k], name, f"selection_{param_counter}"
+                        )
+                param_counter += 1
+            if "views" in param:
+                for view_index, view in enumerate(param["views"]):
+                    param["views"][view_index] = f"view_{view_counter}"
+                    for k in ["hconcat", "vconcat", "layer", "encoding"]:
+                        if k in spec and view not in views_visited:
+                            replace_values_in_dict(
+                                spec[k], view, f"view_{view_counter}"
+                            )
+                            views_visited.append(view)
+                    view_counter += 1
+
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
 
-    ctx = get_script_run_ctx()
     id = compute_widget_id(
         "arrow_vega_lite",
         user_key=key,
