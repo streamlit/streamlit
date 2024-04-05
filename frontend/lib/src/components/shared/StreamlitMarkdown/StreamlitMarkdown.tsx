@@ -319,6 +319,7 @@ export function RenderedMarkdown({
       "violet-background": `background-color: ${violetbg}`,
       "orange-background": `background-color: ${orangebg}`,
       "gray-background": `background-color: ${graybg}`,
+      "grey-background": `background-color: ${graybg}`,
       // Gradient from red, orange, yellow, green, blue, violet, purple
       "rainbow-background": `background: linear-gradient(to right,
         ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,

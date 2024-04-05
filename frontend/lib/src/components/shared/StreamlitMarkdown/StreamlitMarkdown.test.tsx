@@ -321,6 +321,31 @@ describe("StreamlitMarkdown", () => {
       cleanup()
     })
   })
+
+  it("properly adds background colors", () => {
+    const colorMapping = new Map([
+      ["red", colors.red20],
+      ["blue", colors.blue20],
+      ["green", colors.green20],
+      ["violet", colors.purple20],
+      ["orange", colors.orange20],
+      ["gray", colors.gray20],
+      ["grey", colors.gray20],
+      ["rainbow", "transparent"],
+    ])
+
+    colorMapping.forEach(function (style, color) {
+      const source = `:background-${color}[text]`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      const tagName = markdown.nodeName.toLowerCase()
+      expect(tagName).toBe("span")
+      expect(markdown).toHaveStyle(`background-color: ${style}`)
+
+      // Removes rendered StreamlitMarkdown component before next case run
+      cleanup()
+    })
+  })
 })
 
 const getCustomCodeTagProps = (

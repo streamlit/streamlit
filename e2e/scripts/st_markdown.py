@@ -88,3 +88,16 @@ st.markdown(
 - :rainbow[rainbow]
 """
 )
+
+st.markdown(
+    """
+- :blue-background[blue]
+- :green-background[green]
+- :red-background[red]
+- :violet-background[violet]
+- :orange-background[orange]
+- :gray-background[gray]
+- :grey-background[grey]
+- :rainbow-background[rainbow]
+"""
+)
