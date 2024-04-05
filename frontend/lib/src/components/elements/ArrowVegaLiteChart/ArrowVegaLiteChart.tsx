@@ -468,8 +468,24 @@ export function getDataArray(
 
     for (let colIndex = 0; colIndex < cols; colIndex++) {
       const dataValue = dataProto.getDataValue(rowIndex, colIndex)
-      row[dataProto.columns[0][colIndex]] =
-        typeof dataValue === "bigint" ? Number(dataValue) : dataValue
+      const dataType = dataProto.types.data[colIndex]
+      const typeName = Quiver.getTypeName(dataType)
+
+      if (
+        typeName !== "datetimetz" &&
+        (dataValue instanceof Date || Number.isFinite(dataValue)) &&
+        (typeName.startsWith("datetime") || typeName === "date")
+      ) {
+        // For dates that do not contain timezone information.
+        // Vega JS assumes dates in the local timezone, so we need to convert
+        // UTC date to be the same date in the local timezone.
+        const offset = new Date(dataValue).getTimezoneOffset() * 60 * 1000 // minutes to milliseconds
+        row[dataProto.columns[0][colIndex]] = dataValue.valueOf() + offset
+      } else if (typeof dataValue === "bigint") {
+        row[dataProto.columns[0][colIndex]] = Number(dataValue)
+      } else {
+        row[dataProto.columns[0][colIndex]] = dataValue
+      }
     }
     dataArr.push(row)
   }
