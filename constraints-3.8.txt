@@ -18,7 +18,6 @@ cloudpickle==2.2.1
 contourpy==1.1.1
 coverage==7.4.4
 cryptography==42.0.5
-cx-Oracle==7.3.0
 cycler==0.12.1
 dataclasses-json==0.6.4
 distlib==0.3.8
@@ -26,7 +25,7 @@ docutils==0.20.1
 exceptiongroup==1.2.0
 execnet==2.0.2
 filelock==3.13.3
-fonttools==4.50.0
+fonttools==4.51.0
 frozenlist==1.4.1
 gitdb==4.0.11
 GitPython==3.1.43
@@ -64,7 +63,6 @@ multidict==6.0.5
 mypy==1.6.1
 mypy-extensions==1.0.0
 mypy-protobuf==3.3.0
-mysqlclient==2.2.4
 nh3==0.2.17
 nodeenv==1.8.0
 numpy==1.24.4
@@ -84,7 +82,6 @@ plotly==5.20.0
 pluggy==1.4.0
 pre-commit==3.5.0
 protobuf==3.20.3
-psycopg2-binary==2.9.9
 py4j==0.10.9.7
 pyarrow==15.0.2
 pycparser==2.22
@@ -94,7 +91,6 @@ pydot==2.0.0
 pyee==11.0.1
 Pygments==2.17.2
 PyJWT==2.8.0
-pyodbc==5.1.0
 pyOpenSSL==24.1.0
 pyparsing==3.1.2
 pyspark==3.5.1
@@ -146,7 +142,7 @@ types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
 types-urllib3==1.26.25.14
 typing-inspect==0.9.0
-typing_extensions==4.10.0
+typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==1.26.18
