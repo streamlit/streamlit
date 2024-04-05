@@ -172,22 +172,30 @@ function PlotlyFigure({
       }
     }
     const zoom = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
+
     try {
-      if (zoom && zoom[RELAYOUT_KEY]) {
-        if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
+      if (zoom?.[RELAYOUT_KEY]) {
+        const zoomDetails = zoom[RELAYOUT_KEY]
+
+        // Handle xaxis and yaxis range settings
+        if (zoomDetails["xaxis.range[0]"]) {
           spec.layout.xaxis.range = [
-            zoom[RELAYOUT_KEY]["xaxis.range[0]"],
-            zoom[RELAYOUT_KEY]["xaxis.range[1]"],
+            zoomDetails["xaxis.range[0]"],
+            zoomDetails["xaxis.range[1]"],
           ]
           spec.layout.yaxis.range = [
-            zoom[RELAYOUT_KEY]["yaxis.range[0]"],
-            zoom[RELAYOUT_KEY]["yaxis.range[1]"],
+            zoomDetails["yaxis.range[0]"],
+            zoomDetails["yaxis.range[1]"],
           ]
         }
-        if (zoom[RELAYOUT_KEY].dragmode) {
-          spec.layout.dragmode = zoom[RELAYOUT_KEY].dragmode
+
+        // Handle dragmode
+        if (zoomDetails.dragmode) {
+          spec.layout.dragmode = zoomDetails.dragmode
         }
-        if (zoom[RELAYOUT_KEY]["xaxis.autorange"]) {
+
+        // Handle autorange
+        if (zoomDetails["xaxis.autorange"]) {
           spec.layout.xaxis.autorange = true
           spec.layout.yaxis.autorange = true
         }
