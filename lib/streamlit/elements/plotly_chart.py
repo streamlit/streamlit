@@ -25,7 +25,7 @@ from typing_extensions import TypeAlias
 from streamlit import type_util
 from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.chart_util import check_on_select_str
-from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
+from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
@@ -37,7 +37,7 @@ from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -88,7 +88,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: bool | str | WidgetCallback = False,
+        on_select: bool | Literal["rerun", "ignore"] | WidgetCallback = False,
         **kwargs: Any,
     ) -> Union["DeltaGenerator", AttributeDictionary]:
         """Display an interactive Plotly chart.
@@ -166,13 +166,17 @@ class PlotlyMixin:
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
 
+        on_select_callback = None
+        if not isinstance(on_select, bool) and not isinstance(on_select, str):
+            on_select_callback = on_select
+
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
         key = to_key(key)
-        check_callback_rules(self.dg, on_select)
+        check_callback_rules(self.dg, on_select_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "plotly_chart")
         if current_form_id(self.dg):
@@ -206,17 +210,16 @@ class PlotlyMixin:
 
         ctx = get_script_run_ctx()
 
-        widget_callback = None
         if not isinstance(on_select, bool) and not isinstance(on_select, str):
-            widget_callback = on_select
+            pass
 
-        widget_state = {}
+        widget_state = cast(RegisterWidgetResult[Any], {})
         if is_select_enabled:
             widget_state = register_widget(
                 "plotly_chart",
                 plotly_chart_proto,
                 user_key=key,
-                on_change_handler=widget_callback,
+                on_change_handler=on_select_callback,
                 args=None,
                 kwargs=None,
                 deserializer=deserialize,
@@ -288,17 +291,21 @@ def marshall(
     proto.theme = theme or ""
     proto.is_select_enabled = is_select_enabled
     ctx = get_script_run_ctx()
-    id = compute_widget_id(
-        "plotly_chart",
-        user_key=key,
-        figure_or_data=figure_or_data,
-        use_container_width=use_container_width,
-        sharing=sharing,
-        key=key,
-        theme=theme,
-        page=ctx.page_script_hash if ctx else None,
-    )
-    proto.id = id
+
+    if key is not None:
+        key = str(key)
+    if is_select_enabled:
+        id = compute_widget_id(
+            "plotly_chart",
+            user_key=key,
+            figure_or_data=figure_or_data,
+            use_container_width=use_container_width,
+            sharing=sharing,
+            key=key,
+            theme=theme,
+            page=ctx.page_script_hash if ctx else None,
+        )
+        proto.id = id
 
 
 @caching.cache

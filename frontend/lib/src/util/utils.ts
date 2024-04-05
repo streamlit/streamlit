@@ -21,6 +21,7 @@ import {
 } from "@streamlit/lib/src/proto"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
+import decamelize from "decamelize"
 
 /**
  * Wraps a function to allow it to be called, at most, once per interval
@@ -499,4 +500,28 @@ export function extractPageNameFromPathName(
       .replace(new RegExp("^/?"), "")
       .replace(new RegExp("/$"), "")
   )
+}
+
+export function keysToSnakeCase(
+  obj: Record<string, any>
+): Record<string, any> {
+  return Object.keys(obj).reduce((acc, key) => {
+    const newKey = decamelize(key, {
+      preserveConsecutiveUppercase: true,
+    }).replace(".", "_")
+    let value = obj[key]
+
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      value = keysToSnakeCase(value)
+    }
+
+    if (Array.isArray(value)) {
+      value = value.map(item =>
+        typeof item === "object" ? keysToSnakeCase(item) : item
+      )
+    }
+
+    acc[newKey] = value
+    return acc
+  }, {} as Record<string, any>)
 }
