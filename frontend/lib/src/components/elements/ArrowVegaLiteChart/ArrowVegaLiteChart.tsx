@@ -233,10 +233,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
                   logMessage(e)
                 }
               }
-              if (param.select.type === "interval") {
+              if (param.select.type && param.select.type === "interval") {
                 try {
-                  const values = parsedStoredValue.select[selector]
-                  param.value = values
+                  param.value = parsedStoredValue.select[selector]
                 } catch (e) {
                   logMessage(e)
                 }
@@ -488,10 +487,33 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       })
 
       const resetGraph = debounce(150, (event: ScenegraphEvent) => {
+        console.log(event)
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
         try {
           // @ts-expect-error
-          if (!event.item.datum) {
+          if (
+            !event.item.datum &&
+            Object.keys(this.state.selections).length > 0
+          ) {
+            this.setState({
+              selections: {},
+            })
+            this.props.widgetMgr?.setJsonValue(
+              this.props.element as WidgetInfo,
+              {},
+              {
+                fromUi: true,
+              }
+            )
+          }
+        } catch (e) {
+          logMessage(e)
+        }
+      })
+
+      const resetGraphDblClick = debounce(150, () => {
+        try {
+          if (Object.keys(this.state.selections).length > 0) {
             this.setState({
               selections: {},
             })
@@ -510,6 +532,10 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
       view.addEventListener("click", event => {
         resetGraph(event)
+      })
+
+      view.addEventListener("dblclick", event => {
+        resetGraphDblClick(event)
       })
     }
 

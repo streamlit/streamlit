@@ -31,6 +31,7 @@ import {
 import { PlotRelayoutEvent, PlotSelectionEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+import { logMessage } from "@streamlit/lib/src/util/log"
 
 export interface PlotlyChartProps {
   width: number
@@ -171,21 +172,37 @@ function PlotlyFigure({
       }
     }
     const zoom = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
-    if (zoom && zoom[RELAYOUT_KEY]) {
-      if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
-        spec.layout.xaxis.range = [
-          zoom[RELAYOUT_KEY]["xaxis.range[0]"],
-          zoom[RELAYOUT_KEY]["xaxis.range[1]"],
-        ]
-        spec.layout.yaxis.range = [
-          zoom[RELAYOUT_KEY]["yaxis.range[0]"],
-          zoom[RELAYOUT_KEY]["yaxis.range[1]"],
-        ]
-      } else if (zoom[RELAYOUT_KEY]["xaxis.autorange"]) {
-        spec.layout.xaxis.autorange = true
-        spec.layout.yaxis.autorange = true
+
+    try {
+      if (zoom?.[RELAYOUT_KEY]) {
+        const zoomDetails = zoom[RELAYOUT_KEY]
+
+        if (zoomDetails["xaxis.range[0]"]) {
+          spec.layout.xaxis.range = [
+            zoomDetails["xaxis.range[0]"],
+            zoomDetails["xaxis.range[1]"],
+          ]
+          spec.layout.yaxis.range = [
+            zoomDetails["yaxis.range[0]"],
+            zoomDetails["yaxis.range[1]"],
+          ]
+        }
+
+        if (zoomDetails.dragmode) {
+          spec.layout.dragmode = zoomDetails.dragmode
+        }
+
+        if (zoomDetails["xaxis.autorange"]) {
+          spec.layout.xaxis.autorange = true
+          spec.layout.yaxis.autorange = true
+        }
       }
+    } catch (e) {
+      logMessage(e)
+      logMessage(spec)
+      logMessage(zoom)
     }
+
     return spec
   }, [element, figure.spec, theme, widgetMgr])
 
@@ -224,6 +241,18 @@ function PlotlyFigure({
     const selectedBoxes: Selection[] = []
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
+
+    if (
+      event.points.length === 0 &&
+      // event.selections doesn't show up in the PlotSelectionEvent
+      // @ts-expect-error
+      event.selections &&
+      // event.selections doesn't show up in the PlotSelectionEvent
+      // @ts-expect-error
+      event.selections.length === 0
+    ) {
+      return
+    }
 
     event.points.forEach(function (point: any) {
       selectedPoints.push({
@@ -281,10 +310,11 @@ function PlotlyFigure({
         }
       })
 
-      // @ts-expect-error
       if (
         event.points.length === 0 &&
+        // @ts-expect-error
         event.selections &&
+        // @ts-expect-error
         event.selections.length === 0
       ) {
         return
@@ -307,22 +337,29 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
-  const reset = (): void => {
+  const reset = useCallback((): void => {
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
+    widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
-  }
+  }, [widgetMgr, element])
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
     const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
 
-    if (event["xaxis.range[0]"] || event["xaxis.autorange"]) {
-      widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-        relayout: event,
-      })
-    } else {
-      widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-        relayout: storedEvent[RELAYOUT_KEY],
-      })
+    if (
+      event["xaxis.range[0]"] ||
+      event["xaxis.autorange"] ||
+      event.dragmode
+    ) {
+      if (storedEvent && storedEvent[RELAYOUT_KEY]) {
+        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
+          relayout: { ...storedEvent[RELAYOUT_KEY], ...event },
+        })
+      } else {
+        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
+          relayout: { ...event },
+        })
+      }
     }
   }
 
@@ -336,8 +373,8 @@ function PlotlyFigure({
       config={config}
       frames={frames}
       onSelected={element.isSelectEnabled ? handleSelect : () => {}}
-      onDoubleClick={element.isSelectEnabled ? reset : () => {}}
       onDeselect={element.isSelectEnabled ? reset : () => {}}
+      onDoubleClick={element.isSelectEnabled ? reset : () => {}}
       onRelayout={element.isSelectEnabled ? handleRelayout : () => {}}
     />
   )
