@@ -43,11 +43,11 @@ class BokehMixin:
         """Display an interactive Bokeh chart.
 
         Bokeh is a charting library for Python. The arguments to this function
-        closely follow the ones for Bokeh's `show` function. You can find
+        closely follow the ones for Bokeh's ```show``` function. You can find
         more about Bokeh at https://bokeh.pydata.org.
 
-        To show Bokeh charts in Streamlit, call `st.bokeh_chart`
-        wherever you would call Bokeh's `show`.
+        To show Bokeh charts in Streamlit, call ```st.bokeh_chart```
+        wherever you would call Bokeh's ```show```.
 
         Parameters
         ----------
@@ -56,7 +56,7 @@ class BokehMixin:
 
         use_container_width : bool
             If True, set the chart width to the width of the parent container.
-            This takes precedence over Bokeh's native `width` value.
+            This takes precedence over Bokeh's native ```width``` value.
             Defaults to False.
 
         Example
