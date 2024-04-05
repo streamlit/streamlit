@@ -29,7 +29,9 @@ def test_default_toast_rendering(
     expect(toasts).to_have_count(2)
     toasts.nth(1).hover()
 
-    expect(toasts.nth(1)).to_have_text("🐶 This is a default toast messageClose")
+    expect(toasts.nth(1)).to_have_text("🐶")
+    expect(toasts.nth(1)).to_have_text("This is a default toast message")
+    expect(toasts.nth(1)).to_have_text("Close")
     assert_snapshot(toasts.nth(1), name="toast-default")
 
 
