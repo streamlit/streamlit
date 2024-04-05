@@ -135,7 +135,7 @@
     "@types/react": "^18.2.0",
     "@types/react-color": "^3.0.6",
     "@types/react-dom": "^18.2.0",
-    "@types/react-plotly.js": "^2.6.0",
+    "@types/react-plotly.js": "^2.6.3",
     "@types/react-syntax-highlighter": "^15.5.5",
     "@types/sprintf-js": "^1.1.2",
     "@types/testing-library__jest-dom": "^5.14.5",
