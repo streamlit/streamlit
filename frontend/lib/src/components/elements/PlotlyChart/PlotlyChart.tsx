@@ -184,9 +184,11 @@ function PlotlyFigure({
             zoom[RELAYOUT_KEY]["yaxis.range[0]"],
             zoom[RELAYOUT_KEY]["yaxis.range[1]"],
           ]
-        } else if (zoom[RELAYOUT_KEY].dragmode) {
+        }
+        if (zoom[RELAYOUT_KEY].dragmode) {
           spec.layout.dragmode = zoom[RELAYOUT_KEY].dragmode
-        } else if (zoom[RELAYOUT_KEY]["xaxis.autorange"]) {
+        }
+        if (zoom[RELAYOUT_KEY]["xaxis.autorange"]) {
           spec.layout.xaxis.autorange = true
           spec.layout.yaxis.autorange = true
         }
