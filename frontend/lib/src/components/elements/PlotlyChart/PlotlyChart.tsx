@@ -172,7 +172,6 @@ function PlotlyFigure({
       }
     }
     const zoom = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
-    console.log(spec)
     try {
       if (zoom && zoom[RELAYOUT_KEY]) {
         if (zoom[RELAYOUT_KEY]["xaxis.range[0]"]) {
@@ -318,7 +317,6 @@ function PlotlyFigure({
   }
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
-    console.log(event)
     const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
 
     if (
