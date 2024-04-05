@@ -29,6 +29,7 @@ import StreamlitMarkdown, {
   CustomCodeTag,
   CustomCodeTagProps,
 } from "./StreamlitMarkdown"
+import { color } from "d3"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -331,11 +332,14 @@ describe("StreamlitMarkdown", () => {
       ["orange", colors.orange20],
       ["gray", colors.gray20],
       ["grey", colors.gray20],
-      ["rainbow", "transparent"],
+      [
+        "rainbow",
+        `linear-gradient(to right, ${colors.red20}, ${colors.orange20}, ${colors.yellow20}, ${colors.green20}, ${colors.blue20}, ${colors.purple20}, ${colors.purple20})`,
+      ],
     ])
 
     colorMapping.forEach(function (style, color) {
-      const source = `:background-${color}[text]`
+      const source = `:${color}-background[text]`
       render(<StreamlitMarkdown source={source} allowHTML={false} />)
       const markdown = screen.getByText("text")
       const tagName = markdown.nodeName.toLowerCase()
