@@ -166,8 +166,7 @@ class MapMixin:
             https://wiki.openstreetmap.org/wiki/Zoom_levels.
 
         use_container_width: bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            If True (default), set the map width to the width of the parent container.
 
         Examples
         --------

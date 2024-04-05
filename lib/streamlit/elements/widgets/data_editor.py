@@ -621,12 +621,12 @@ class DataEditorMixin:
                   changed through column configuration.
 
         width : int or None
-            Desired width of the data editor expressed in pixels. If None, the width will
-            be automatically determined.
+            Desired width of the data editor expressed in pixels. If None (default),
+            selects the width automatically.
 
         height : int or None
-            Desired height of the data editor expressed in pixels. If None, the height will
-            be automatically determined.
+            Desired height of the data editor expressed in pixels. If None (default),
+            selects the height automatically.
 
         use_container_width : bool
             If True, set the data editor width to the width of the parent container.

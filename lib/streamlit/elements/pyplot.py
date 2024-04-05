@@ -60,7 +60,7 @@ class PyplotMixin:
               approach to matplotlib rendering.
 
         use_container_width : bool
-            If True, set the chart width to the column width. Defaults to `True`.
+            If True (default), set the chart width to the width of the parent container.
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.

@@ -99,8 +99,8 @@ class ArrowAltairMixin:
         x: str | None = None,
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display a line chart.
@@ -167,15 +167,17 @@ class ArrowAltairMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If None (default), selects
+            the width automatically.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If None (default), selects
+            the height automatically.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            If True (default), set the chart width to the width of the parent container.
+            This takes precedence over the width argument.
 
         Examples
         --------
@@ -257,8 +259,8 @@ class ArrowAltairMixin:
         x: str | None = None,
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display an area chart.
@@ -325,15 +327,17 @@ class ArrowAltairMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If None (default), selects
+            the width automatically.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If None (default), selects
+            the height automatically.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            If True (default), set the chart width to the width of the parent container.
+            This takes precedence over the width argument.
 
         Examples
         --------
@@ -416,8 +420,8 @@ class ArrowAltairMixin:
         x: str | None = None,
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display a bar chart.
@@ -484,15 +488,17 @@ class ArrowAltairMixin:
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
               for three lines).
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If None (default), selects
+            the width automatically.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If None (default), selects
+            the height automatically.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            If True (default), set the chart width to the width of the parent container.
+            This takes precedence over the width argument.
 
         Examples
         --------
@@ -578,8 +584,8 @@ class ArrowAltairMixin:
         y: str | Sequence[str] | None = None,
         color: str | Color | list[Color] | None = None,
         size: str | float | int | None = None,
-        width: int = 0,
-        height: int = 0,
+        width: int | None = None,
+        height: int | None = None,
         use_container_width: bool = True,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
@@ -655,15 +661,17 @@ class ArrowAltairMixin:
             * The name of the column to use for the size. This allows each
               datapoint to be represented by a circle of a different size.
 
-        width : int
-            The chart width in pixels. If 0, selects the width automatically.
+        width : int or None
+            Desired width of the chart expressed in pixels. If None (default), selects
+            the width automatically.
 
-        height : int
-            The chart height in pixels. If 0, selects the height automatically.
+        height : int or None
+            Desired height of the chart expressed in pixels. If None (default), selects
+            the height automatically.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the width argument.
+            If True (default), set the chart width to the width of the parent container.
+            This takes precedence over the width argument.
 
         Examples
         --------
@@ -757,8 +765,9 @@ class ArrowAltairMixin:
             The Altair chart object to display.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over Altair's native ``width`` value.
+            If True, set the chart width to the width of the parent container.
+            This takes precedence over Altair's native ``width`` value.
+            Defaults to False.
 
         theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
@@ -931,8 +940,8 @@ def _generate_chart(
     y_from_user: str | Sequence[str] | None = None,
     color_from_user: str | Color | list[Color] | None = None,
     size_from_user: str | float | None = None,
-    width: int = 0,
-    height: int = 0,
+    width: int | None = None,
+    height: int | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
@@ -978,8 +987,8 @@ def _generate_chart(
     chart = alt.Chart(
         data=df,
         mark=chart_type.value["mark_type"],
-        width=width,
-        height=height,
+        width=width or 0,
+        height=height or 0,
     ).encode(
         x=_get_x_encoding(df, x_column, x_from_user, chart_type),
         y=_get_y_encoding(df, y_column, y_from_user),

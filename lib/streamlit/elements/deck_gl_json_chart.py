@@ -72,7 +72,10 @@ class PydeckMixin:
         ----------
         pydeck_obj: pydeck.Deck or None
             Object specifying the PyDeck chart to draw.
+
         use_container_width: bool
+            If True, set the chart width to the width of the parent container.
+            Defaults to False.
 
         Example
         -------

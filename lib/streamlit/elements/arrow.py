@@ -82,12 +82,12 @@ class ArrowMixin:
             pandas styling features, like bar charts, hovering, and captions.
 
         width : int or None
-            Desired width of the dataframe expressed in pixels. If None, the width
-            will be automatically calculated based on the column content.
+            Desired width of the dataframe expressed in pixels. If None (default),
+            selects the width automatically.
 
         height : int or None
-            Desired height of the dataframe expressed in pixels. If None, a
-            default height is used.
+            Desired height of the dataframe expressed in pixels. If None (default),
+            selects the height automatically.
 
         use_container_width : bool
             If True, set the dataframe width to the width of the parent container.

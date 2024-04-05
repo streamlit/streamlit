@@ -50,8 +50,9 @@ class GraphvizMixin:
             The Graphlib graph object or dot string to display
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
+            If True, set the chart width to the width of the parent container.
+            This takes precedence over the figure's native `width` value.
+            Defaults to False.
 
         Example
         -------

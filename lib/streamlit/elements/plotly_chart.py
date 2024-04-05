@@ -97,8 +97,9 @@ class PlotlyMixin:
             See https://plot.ly/python/ for examples of graph descriptions.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over the figure's native `width` value.
+            If True, set the chart width to the width of the parent container.
+            This takes precedence over the figure's native ```width``` value.
+            Defaults to False.
 
         sharing : "streamlit", "private", "secret", or "public"
             Use "streamlit" to insert the plot and all its dependencies

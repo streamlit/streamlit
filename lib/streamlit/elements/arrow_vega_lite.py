@@ -56,8 +56,9 @@ class ArrowVegaLiteMixin:
             https://vega.github.io/vega-lite/docs/ for more info.
 
         use_container_width : bool
-            If True, set the chart width to the column width. This takes
-            precedence over Vega-Lite's native `width` value.
+            If True, set the chart width to the width of the parent container.
+            This takes precedence over Vega-Lite's native ```width``` value.
+            Defaults to False.
 
         theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
