@@ -444,7 +444,6 @@ class ScriptRunner:
             uncaught_exception = None
 
             mpav1 = len(pages) > 1
-            print(f"{mpav1=}")
 
             if rerun_data.page_script_hash:
                 current_page_info = pages.get(rerun_data.page_script_hash, None)
@@ -481,7 +480,6 @@ class ScriptRunner:
                     page_script_hash = rerun_data.page_script_hash
                 else:
                     page_script_hash = main_page_info["page_script_hash"]
-                print(f"script runner {page_script_hash=}")
 
             fragment_ids_this_run = set(rerun_data.fragment_id_queue)
 
