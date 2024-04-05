@@ -29,7 +29,6 @@ import StreamlitMarkdown, {
   CustomCodeTag,
   CustomCodeTagProps,
 } from "./StreamlitMarkdown"
-import { color } from "d3"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
