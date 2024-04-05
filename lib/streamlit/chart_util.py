@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
+from streamlit.constants import ON_SELECTION_IGNORE, ON_SELECTION_RERUN
+from streamlit.errors import StreamlitAPIException
 
-EMBED_QUERY_PARAM = "embed"
-EMBED_OPTIONS_QUERY_PARAM = "embed_options"
-EMBED_QUERY_PARAMS_KEYS = [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
-ON_SELECTION_IGNORE = "ignore"
-ON_SELECTION_RERUN = "rerun"
+
+def check_on_select_str(on_select: str, command: str):
+    if on_select != ON_SELECTION_IGNORE and on_select != ON_SELECTION_RERUN:
+        raise StreamlitAPIException(
+            f"You have passed {on_select}. `st.{command}` only accepts '{ON_SELECTION_IGNORE}' or '{ON_SELECTION_RERUN}'."
+        )
