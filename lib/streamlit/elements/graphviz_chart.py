@@ -51,7 +51,7 @@ class GraphvizMixin:
 
         use_container_width : bool
             If True, set the chart width to the width of the parent container.
-            This takes precedence over the figure's native `width` value.
+            This takes precedence over the figure's native ```width``` value.
             Defaults to False.
 
         Example
