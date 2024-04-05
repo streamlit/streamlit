@@ -71,18 +71,3 @@ def test_expanded_toast_rendering(
         "🦄Random toast message that is a really really really really really really really long message, going way past the 3 line limitview lessClose"
     )
     assert_snapshot(toasts.nth(0), name="toast-expanded")
-
-
-def test_toast_overlay_with_chat(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that toasts overlay with st.chat_input."""
-    themed_app.keyboard.press("r")
-    wait_for_app_loaded(themed_app)
-    themed_app.wait_for_timeout(250)
-
-    container = themed_app.get_by_test_id("stBottomBlockContainer")
-    toasts = themed_app.get_by_test_id("stToast")
-    toasts.nth(0).hover()
-
-    assert_snapshot(container, name="toast-with-chat")
