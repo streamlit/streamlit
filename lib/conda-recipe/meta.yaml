@@ -16,7 +16,7 @@
 
 
 package:
-  name: {{ package_data.get('name')|lower }}
+  name: streamlit
   version: {{ package_data.get('version') }}
 
 source:
@@ -25,7 +25,7 @@ source:
 build:
   number: {{ environ.get('CONDA_BUILD_NUMBER', 0)|int }}
   noarch: python
-  script: python -m pip install . -vv
+  script: {{ PYTHON }} -m pip install . -vv
   entry_points:
     {% for ep in package_data.get('entry_points').get('console_scripts') %}
       - {{ ep }}
@@ -53,6 +53,12 @@ requirements:
         - {{ req }}
       {% endif %}
     {% endfor %}
+        # We need to specify Python as a runtime requirement here, otherwise
+        # conda may try to use the system python installation rather than the
+        # python installation of the conda environment. The weird indentation
+        # is required to match the indentation of the requirements added via
+        # templating above.
+        - python {{ package_data.get('python_requires') }}
 
 test:
   imports:
