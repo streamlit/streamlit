@@ -177,7 +177,6 @@ function PlotlyFigure({
       if (zoom?.[RELAYOUT_KEY]) {
         const zoomDetails = zoom[RELAYOUT_KEY]
 
-        // Handle xaxis and yaxis range settings
         if (zoomDetails["xaxis.range[0]"]) {
           spec.layout.xaxis.range = [
             zoomDetails["xaxis.range[0]"],
@@ -189,12 +188,10 @@ function PlotlyFigure({
           ]
         }
 
-        // Handle dragmode
         if (zoomDetails.dragmode) {
           spec.layout.dragmode = zoomDetails.dragmode
         }
 
-        // Handle autorange
         if (zoomDetails["xaxis.autorange"]) {
           spec.layout.xaxis.autorange = true
           spec.layout.yaxis.autorange = true
