@@ -42,6 +42,7 @@ utc_df = pd.DataFrame(
 
 utc_df.set_index("index", inplace=True)
 
+# Dataframe to test the color parameter support:
 N = 100
 
 color_df = pd.DataFrame(
@@ -106,5 +107,6 @@ st.scatter_chart(df, x="b", y="a")
 st.scatter_chart(df, x="a", y=["b", "c"])
 st.scatter_chart(utc_df)
 st.scatter_chart(color_df, x="a", y="b", color="e")
+# Additional tests for size parameter (only for scatter_chart)
 st.scatter_chart(color_df, x="a", y="b", size="d", color="e")
 st.scatter_chart(color_df, x="a", y="b", size="d", color="c")
