@@ -86,6 +86,7 @@ runs:
         python -m venv venv
         source venv/bin/activate
         pip install --upgrade pip
+        pip install uv
         make python-init
         deactivate
       shell: bash --login -eo pipefail {0}
