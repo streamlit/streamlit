@@ -27,6 +27,7 @@ def test_box_select_on_scatter_chart_displays_a_df(app: Page):
     app.mouse.down()
     app.mouse.move(150, 150)
     app.mouse.up()
+    wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
@@ -44,6 +45,7 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
     app.mouse.down()
     app.mouse.move(435, 500)
     app.mouse.up()
+    wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
@@ -57,8 +59,12 @@ def test_click_on_bar_chart_displays_a_df(
     chart.hover()
     app.mouse.down()
     app.mouse.up()
+    wait_for_app_run(app, 3000)
 
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+    assert_snapshot(
+        app.get_by_test_id("stDataFrame"), name="st_plotly_chart-single_select_df"
+    )
     assert_snapshot(chart, name="st_plotly_chart-single_select")
 
     app.keyboard.down("Shift")
@@ -67,6 +73,9 @@ def test_click_on_bar_chart_displays_a_df(
     app.mouse.up()
     wait_for_app_run(app, wait_delay=3000)
     assert_snapshot(chart, name="st_plotly_chart-double_select")
+    assert_snapshot(
+        app.get_by_test_id("stDataFrame"), name="st_plotly_chart-double_select_df"
+    )
 
 
 def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
@@ -79,6 +88,7 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     app.mouse.down()
     app.mouse.move(150, 150)
     app.mouse.up()
+    wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 

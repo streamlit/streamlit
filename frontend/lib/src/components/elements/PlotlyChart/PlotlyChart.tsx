@@ -242,6 +242,18 @@ function PlotlyFigure({
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
 
+    if (
+      event.points.length === 0 &&
+      // event.selections doesn't show up in the PlotSelectionEvent
+      // @ts-expect-error
+      event.selections &&
+      // event.selections doesn't show up in the PlotSelectionEvent
+      // @ts-expect-error
+      event.selections.length === 0
+    ) {
+      return
+    }
+
     event.points.forEach(function (point: any) {
       selectedPoints.push({
         ...point,
@@ -315,11 +327,11 @@ function PlotlyFigure({
 
   const { data, layout, frames } = spec
 
-  const reset = (): void => {
+  const reset = useCallback((): void => {
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
     widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true })
-  }
+  }, [widgetMgr, element])
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
     const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
