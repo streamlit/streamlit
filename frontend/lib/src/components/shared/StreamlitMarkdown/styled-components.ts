@@ -79,6 +79,12 @@ export const StyledStreamlitMarkdown =
           border: `1px solid ${theme.colors.fadedText10}`,
         },
 
+        "span.has-background-color": {
+          padding: "0.2em 0.4em",
+          margin: "0",
+          borderRadius: theme.radii.md,
+        },
+
         ...(isToast
           ? {
               div: {

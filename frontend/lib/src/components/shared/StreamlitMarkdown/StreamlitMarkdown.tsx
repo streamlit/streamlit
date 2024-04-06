@@ -332,9 +332,17 @@ export function RenderedMarkdown({
           const nodeName = String(node.name)
           if (colorMapping.has(nodeName)) {
             const data = node.data || (node.data = {})
+            const style = colorMapping.get(nodeName)
             data.hName = "span"
-            data.hProperties = {
-              style: colorMapping.get(nodeName),
+            data.hProperties = data.hProperties || {}
+            data.hProperties.style = style
+            // Add class for background color for custom styling
+            if (
+              style &&
+              (/background-color:/.test(style) || /background:/.test(style))
+            ) {
+              data.hProperties.className =
+                (data.hProperties.className || "") + " has-background-color"
             }
           }
         }
