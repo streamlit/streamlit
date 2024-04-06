@@ -20,7 +20,7 @@ dataclasses-json==0.6.4
 distlib==0.3.8
 docutils==0.20.1
 exceptiongroup==1.2.0
-execnet==2.0.2
+execnet==2.1.0
 filelock==3.13.3
 fonttools==4.51.0
 frozenlist==1.4.1
@@ -126,7 +126,7 @@ twine==5.0.0
 types-click==7.1.8
 types-protobuf==4.24.0.20240311
 types-pytz==2024.1.0.20240203
-types-requests==2.31.0.20240403
+types-requests==2.31.0.20240406
 types-setuptools==69.2.0.20240317
 types-toml==0.10.8.20240310
 types-typed-ast==1.5.8.7
