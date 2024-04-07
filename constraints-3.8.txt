@@ -4,6 +4,7 @@ altair==5.3.0
 asn1crypto==1.5.1
 async-timeout==4.0.3
 attrs==23.2.0
+backports.tarfile==1.0.0
 backports.zoneinfo==0.2.1
 black==24.3.0
 blinker==1.7.0
@@ -38,7 +39,7 @@ importlib_metadata==7.1.0
 importlib_resources==6.4.0
 iniconfig==2.0.0
 jaraco.classes==3.4.0
-jaraco.context==5.1.0
+jaraco.context==5.3.0
 jaraco.functools==4.0.0
 jeepney==0.8.0
 Jinja2==3.1.3

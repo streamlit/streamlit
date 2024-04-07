@@ -32,7 +32,7 @@ idna==3.6
 importlib_metadata==7.1.0
 iniconfig==2.0.0
 jaraco.classes==3.4.0
-jaraco.context==5.1.0
+jaraco.context==5.3.0
 jaraco.functools==4.0.0
 jeepney==0.8.0
 Jinja2==3.1.3
