@@ -199,7 +199,7 @@ function PlotlyFigure({
     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
   }
 
-  const handleSelect = (event: PlotSelectionEvent): void => {
+  const handleSelect = (event: Readonly<PlotSelectionEvent>): void => {
     const returnValue: any = { select: {} }
     const { data } = spec
     const pointIndices: number[] = []
