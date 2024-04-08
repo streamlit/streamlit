@@ -324,16 +324,16 @@ describe("StreamlitMarkdown", () => {
 
   it("properly adds background colors", () => {
     const colorMapping = new Map([
-      ["red", colors.red20],
-      ["blue", colors.blue20],
-      ["green", colors.green20],
-      ["violet", colors.purple20],
-      ["orange", colors.orange20],
-      ["gray", colors.gray20],
-      ["grey", colors.gray20],
+      ["red", colors.red40],
+      ["blue", colors.blue40],
+      ["green", colors.green40],
+      ["violet", colors.purple40],
+      ["orange", colors.orange40],
+      ["gray", colors.gray40],
+      ["grey", colors.gray40],
       [
         "rainbow",
-        `linear-gradient(to right, ${colors.red20}, ${colors.orange20}, ${colors.yellow20}, ${colors.green20}, ${colors.blue20}, ${colors.purple20}, ${colors.purple20})`,
+        `linear-gradient(to right, ${colors.red40}, ${colors.orange40}, ${colors.yellow40}, ${colors.green40}, ${colors.blue40}, ${colors.purple40}, ${colors.purple40})`,
       ],
     ])
 
