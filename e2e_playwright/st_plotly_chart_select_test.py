@@ -176,5 +176,5 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     app.mouse.move(350, 350)
     app.mouse.up()
     assert_snapshot(chart, name="st_plotly_chart-panned")
-    app.mouse.dblclick(450, 450)
+    app.mouse.dblclick(675, 400)
     assert_snapshot(chart, name="st_plotly_chart-panned_reset")
