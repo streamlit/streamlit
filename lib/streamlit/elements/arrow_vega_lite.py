@@ -306,11 +306,6 @@ def marshall(
             dataset.has_name = True
             arrow.marshall(dataset.data, v)
         del spec["datasets"]
-    for dataset_key, stable_id in stable_data_ids.items():
-        keys = ["hconcat", "vconcat", "layer", "data"]
-        for k in keys:
-            if k in spec:
-                replace_values_in_dict(spec[k], dataset_key, stable_id)
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     #   marshall(proto, {data: df})

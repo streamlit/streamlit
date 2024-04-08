@@ -165,9 +165,6 @@ class PlotlyMixin:
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
-        on_select_callback = None
-        if not isinstance(on_select, bool) and not isinstance(on_select, str):
-            on_select_callback = on_select
 
         on_select_callback = None
         if not isinstance(on_select, bool) and not isinstance(on_select, str):
