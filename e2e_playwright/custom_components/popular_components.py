@@ -17,6 +17,12 @@ from typing import Callable, Dict
 import streamlit as st
 
 
+def use_components_html():
+    import streamlit.components.v1 as components
+
+    components.html("<div>Hello World!</div>")
+
+
 # Different custom components:
 def use_streamlit_ace():
     from streamlit_ace import st_ace
@@ -146,6 +152,7 @@ def use_url_fragments():
 # ---
 
 options: Dict[str, Callable] = {
+    "componentsHtml": use_components_html,
     "ace": use_streamlit_ace,
     "aggrid": use_aggrid,
     "antd": use_antd,

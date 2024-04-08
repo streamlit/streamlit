@@ -27,6 +27,14 @@ def _expect_no_exception(app: Page):
     expect(app.get_by_test_id("stException")).not_to_be_visible()
 
 
+def test_components_html(app: Page):
+    """Test that components.html can be imported and used"""
+    _select_component(app, "componentsHtml")
+    _expect_no_exception(app)
+    iframe = app.frame_locator("iframe")
+    expect(iframe.locator("div", has_text="Hello World!")).to_be_attached()
+
+
 def test_ace(app: Page):
     """Test that the ace component renders"""
     _select_component(app, "ace")
