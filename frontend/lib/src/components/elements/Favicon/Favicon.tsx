@@ -60,7 +60,7 @@ export function handleFavicon(
   const emoji = extractEmoji(favicon)
   let imageUrl
 
-  if (emoji) {
+  if (emoji && !favicon.startsWith(":material")) {
     // Find the corresponding Twitter emoji on the CDN.
     const codepoint = grabTheRightIcon(emoji)
     const emojiUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${codepoint}.png`

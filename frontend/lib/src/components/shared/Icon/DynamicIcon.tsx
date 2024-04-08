@@ -19,6 +19,7 @@ import React, { Suspense } from "react"
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
 import { camelCase, startCase } from "lodash"
+import DynamicIconErrorBoundary from "./DynamicIconErrorBoundary"
 
 const MaterialFilled = React.lazy(
   () =>
@@ -91,6 +92,8 @@ const DynamicIconDispatcher = ({
 
 export const DynamicIcon = (props: DynamicIconProps): React.ReactElement => (
   <Suspense fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}>
-    <DynamicIconDispatcher {...props} />
+    <DynamicIconErrorBoundary {...props}>
+      <DynamicIconDispatcher {...props} />
+    </DynamicIconErrorBoundary>
   </Suspense>
 )
