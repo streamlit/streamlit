@@ -408,8 +408,6 @@ function PlotlyFigure({
       layout={layout}
       config={config}
       frames={frames}
-      // TODO(willhuang1997): Resolve typing error for handleSelect
-      // @ts-expect-error
       onSelected={element.isSelectEnabled ? handleSelect : () => {}}
       onDeselect={element.isSelectEnabled ? handleDoubleClick : () => {}}
       onDoubleClick={element.isSelectEnabled ? handleDoubleClick : () => {}}
