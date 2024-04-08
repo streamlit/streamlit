@@ -133,3 +133,78 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     chart.scroll_into_view_if_needed()
     wait_for_app_run(app, 3000)
     assert_snapshot(chart, name="st_plotly_chart-reset")
+
+
+@pytest.mark.only_browser("chromium")
+def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = app.locator(".stPlotlyChart").nth(4)
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(350, 350)
+    app.mouse.down()
+    app.mouse.move(375, 375)
+    app.mouse.down()
+    app.mouse.move(400, 400)
+    app.mouse.down()
+    app.mouse.move(435, 500)
+    app.mouse.up()
+    wait_for_app_run(app, 3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+
+    chart = app.locator(".stPlotlyChart").nth(4)
+    chart.scroll_into_view_if_needed()
+
+    app.mouse.dblclick(450, 450)
+    chart = app.locator(".stPlotlyChart").nth(4)
+    chart.scroll_into_view_if_needed()
+    wait_for_app_run(app, 3000)
+    assert_snapshot(chart, name="st_plotly_chart-reset")
+
+
+def test_double_click_select_mode_doesnt_reset_zoom(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = app.locator(".stPlotlyChart").nth(0)
+    expect(chart).to_be_visible()
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(50, 50)
+    app.mouse.down()
+    app.mouse.move(150, 150)
+    app.mouse.up()
+    wait_for_app_run(app, 3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+
+    app.locator('[data-title="Zoom in"]').nth(0).click()
+    app.mouse.dblclick(350, 350)
+    wait_for_app_run(app, 3000)
+    assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
+
+
+def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = app.locator(".stPlotlyChart").nth(0)
+    expect(chart).to_be_visible()
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(50, 50)
+    app.mouse.down()
+    app.mouse.move(150, 150)
+    app.mouse.up()
+    wait_for_app_run(app, 3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+
+    app.locator('[data-title="Zoom in"]').nth(0).click()
+    app.locator('[data-title="Pan"]').nth(0).click()
+    app.mouse.down()
+    app.mouse.move(450, 450)
+    app.mouse.move(350, 350)
+    app.mouse.up()
+    assert_snapshot(chart, name="st_plotly_chart-panned")
+    app.mouse.dblclick(450, 450)
+    assert_snapshot(chart, name="st_plotly_chart-panned_reset")
