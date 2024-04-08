@@ -323,7 +323,6 @@ function PlotlyFigure({
   }
 
   const { data, layout, frames } = spec
-  console.log(spec)
 
   const handleDoubleClick = (): void => {
     const relayout = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)?.[
