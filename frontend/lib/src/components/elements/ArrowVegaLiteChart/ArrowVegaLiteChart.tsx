@@ -490,7 +490,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       const resetGraph = debounce(150, (event: ScenegraphEvent) => {
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
         try {
-          console.log(event)
           if (
             // @ts-expect-error
             !event.item ||
