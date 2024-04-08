@@ -19,7 +19,7 @@ import styled from "@emotion/styled"
 export const StyledSubheader = styled.div(({ theme }) => ({
   // We do not want to change the font for this based on theme.
   fontFamily: theme.fonts.sansSerif,
-  fontWeight: theme.fontWeights.bold,
+  fontWeight: theme.fontWeights.semibold,
   fontSize: theme.fontSizes.lg,
   color: theme.colors.grey90,
   marginTop: theme.spacing.twoXL,

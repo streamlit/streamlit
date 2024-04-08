@@ -95,7 +95,7 @@ export const StyledMenuItem = styled.ul<ItemProps>(
 
     const recordingStyles = isRecording && {
       color: theme.colors.red,
-      fontWeight: theme.fontWeights.bold,
+      fontWeight: theme.fontWeights.semibold,
     }
 
     return {

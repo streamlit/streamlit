@@ -47,10 +47,21 @@ export const fontSizes = {
   mdPx: fontSizeMedium, // med but as a number, in pixels
 }
 
+/**
+ * Aligns naming convention with mdn web docs.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-weight#common_weight_name_mapping
+ */
 export const fontWeights = {
-  normal: 400,
-  bold: 600,
-  extrabold: 700, // Use sparingly! Only h1 for now.
+  thin: 100,
+  extralight: 200,
+  light: 300,
+  normal: 400, // Default font weight for typography.
+  medium: 500,
+  semibold: 600,
+  bold: 700, // Use sparingly! Only h1 for now.
+  extrabold: 800,
+  black: 900,
 }
 
 export const lineHeights = {

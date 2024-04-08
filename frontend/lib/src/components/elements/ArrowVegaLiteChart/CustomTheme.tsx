@@ -42,7 +42,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       anchor: "start",
       color: theme.colors.headingColor,
       titleFontStyle: "normal",
-      fontWeight: theme.fontWeights.bold,
+      fontWeight: theme.fontWeights.semibold,
       fontSize: theme.fontSizes.smPx + 2,
       orient: "top",
       offset: 26,

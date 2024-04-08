@@ -38,7 +38,7 @@ export const StyledFirstColumn = styled.div(({ theme }) => ({
   paddingRight: theme.spacing.lg,
   textAlign: "right",
   color: theme.colors.gray,
-  fontWeight: theme.fontWeights.bold,
+  fontWeight: theme.fontWeights.semibold,
   width: "6em",
 }))
 

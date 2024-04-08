@@ -167,7 +167,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   h1 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: ${theme.fontWeights.extrabold};
+    font-weight: ${theme.fontWeights.semibold};
     color: ${theme.colors.headingColor};
 
     // Use rem so we can remove it when first child, knowing that the
@@ -180,7 +180,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   h2 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${theme.fontWeights.semibold};
     color: ${theme.colors.headingColor};
     letter-spacing: -0.005em;
 
@@ -194,7 +194,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   h3 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${theme.fontWeights.semibold};
     color: ${theme.colors.headingColor};
     letter-spacing: -0.005em;
 
@@ -208,7 +208,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   h4 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${theme.fontWeights.semibold};
     color: ${theme.colors.headingColor};
     padding: 0.75rem 0 1rem 0;
     margin: 0;
@@ -217,7 +217,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   h5 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${theme.fontWeights.semibold};
     color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
@@ -226,7 +226,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   h6 {
     font-family: ${theme.genericFonts.headingFont};
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${theme.fontWeights.semibold};
     color: ${theme.colors.headingColor};
     padding: 0 0 1rem 0;
     margin: 0;
@@ -299,7 +299,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
   b,
   strong {
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${theme.fontWeights.semibold};
   }
 
   // Mark
@@ -411,7 +411,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
 
     kbd {
       padding: 0;
-      font-weight: ${theme.fontWeights.bold};
+      font-weight: ${theme.fontWeights.semibold};
     }
   }
 

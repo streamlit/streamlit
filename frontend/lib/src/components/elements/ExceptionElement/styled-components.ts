@@ -24,7 +24,7 @@ export const StyledStackTraceRow = styled.div(({ theme }) => ({
 }))
 
 export const StyledMessageType = styled.span(({ theme }) => ({
-  fontWeight: theme.fontWeights.bold,
+  fontWeight: theme.fontWeights.semibold,
 }))
 
 export const StyledStackTraceTitle = styled.div(({ theme }) => ({

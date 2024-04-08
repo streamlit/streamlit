@@ -39,7 +39,7 @@ export const StyledCountdown = styled.div(({ theme }) => ({
   height: theme.sizes.full,
   fontSize: "40vh",
   color: theme.colors.red,
-  fontWeight: theme.fontWeights.bold,
+  fontWeight: theme.fontWeights.semibold,
   opacity: "0.8",
   textShadow: `1px 1px 10px ${theme.colors.darkGray}`,
   transition: "opacity 0.3s ease-in-out",
