@@ -478,14 +478,14 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
 
 export function getMarkdownBgColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
-  const red = lightTheme ? theme.colors.red20 : theme.colors.red90
-  const orange = lightTheme ? theme.colors.orange20 : theme.colors.orange90
-  const yellow = lightTheme ? theme.colors.yellow20 : theme.colors.yellow90
-  const green = lightTheme ? theme.colors.green20 : theme.colors.green90
-  const blue = lightTheme ? theme.colors.blue20 : theme.colors.blue90
-  const violet = lightTheme ? theme.colors.purple20 : theme.colors.purple90
-  const purple = lightTheme ? theme.colors.purple20 : theme.colors.purple90
-  const gray = lightTheme ? theme.colors.gray20 : theme.colors.gray90
+  const red = lightTheme ? theme.colors.red40 : theme.colors.red90
+  const orange = lightTheme ? theme.colors.orange40 : theme.colors.orange90
+  const yellow = lightTheme ? theme.colors.yellow40 : theme.colors.yellow90
+  const green = lightTheme ? theme.colors.green40 : theme.colors.green90
+  const blue = lightTheme ? theme.colors.blue40 : theme.colors.blue90
+  const violet = lightTheme ? theme.colors.purple40 : theme.colors.purple90
+  const purple = lightTheme ? theme.colors.purple40 : theme.colors.purple90
+  const gray = lightTheme ? theme.colors.gray40 : theme.colors.gray90
   return {
     redbg: red,
     orangebg: orange,
