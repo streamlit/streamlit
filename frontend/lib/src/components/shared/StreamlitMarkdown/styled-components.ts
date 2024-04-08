@@ -80,7 +80,7 @@ export const StyledStreamlitMarkdown =
         },
 
         "span.has-background-color": {
-          padding: "0.2em 0.4em",
+          padding: "0.15em 0.2em",
           margin: "0",
           borderRadius: theme.radii.md,
         },
