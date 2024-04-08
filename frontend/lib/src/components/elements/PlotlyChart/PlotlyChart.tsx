@@ -28,7 +28,7 @@ import {
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
-import { PlotRelayoutEvent, PlotSelectionEvent } from "plotly.js"
+import { PlotRelayoutEvent } from "plotly.js"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
 import { logMessage } from "@streamlit/lib/src/util/log"
@@ -232,7 +232,7 @@ function PlotlyFigure({
     spec.layout = layoutWithThemeDefaults(spec.layout, theme)
   }
 
-  const handleSelect = (event: Readonly<PlotSelectionEvent>): void => {
+  const handleSelect = (event: Readonly<Plotly.PlotSelectionEvent>): void => {
     const returnValue: any = { select: {} }
     const { data } = spec
     const pointIndices: number[] = []

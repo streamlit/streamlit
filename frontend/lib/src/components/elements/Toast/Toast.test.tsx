@@ -80,7 +80,8 @@ describe("Toast Component", () => {
     const expandButton = screen.queryByRole("button", { name: "view more" })
 
     expect(toast).toBeInTheDocument()
-    expect(toast).toHaveTextContent("🐶 This is a toast message")
+    expect(toast).toHaveTextContent("🐶")
+    expect(toast).toHaveTextContent("This is a toast message")
     expect(closeButton).toBeInTheDocument()
     expect(expandButton).not.toBeInTheDocument()
   })
