@@ -339,7 +339,7 @@ e2etest:
 
 .PHONY: playwright
 # Run playwright E2E tests (without custom component tests).
-custom_components_test_folder = ./e2e_playwright/custom_components
+custom_components_test_folder = ./custom_components
 playwright:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
