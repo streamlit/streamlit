@@ -894,6 +894,7 @@ describe("AppRoot.applyDelta", () => {
 
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.fragmentId).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
@@ -914,11 +915,42 @@ describe("AppRoot.applyDelta", () => {
 
     // Check that our new scriptRunId has been set only on the touched nodes
     expect(newRoot.main.scriptRunId).toBe("new_session_id")
+    expect(newRoot.main.fragmentId).toBe(undefined)
     expect(newRoot.main.getIn([0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.main.getIn([1, 0])?.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
     expect(newRoot.main.getIn([1, 1])?.scriptRunId).toBe("new_session_id")
     expect(newRoot.sidebar.scriptRunId).toBe(NO_SCRIPT_RUN_ID)
+  })
+
+  it("can set fragmentId in 'newElement' deltas", () => {
+    const delta = makeProto(DeltaProto, {
+      newElement: { text: { body: "newElement!" } },
+      fragmentId: "myFragmentId",
+    })
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as ElementNode
+    expect(newNode.fragmentId).toBe("myFragmentId")
+  })
+
+  it("can set fragmentId in 'addBlock' deltas", () => {
+    const delta = makeProto(DeltaProto, {
+      addBlock: {},
+      fragmentId: "myFragmentId",
+    })
+    const newRoot = ROOT.applyDelta(
+      "new_session_id",
+      delta,
+      forwardMsgMetadata([0, 1, 1])
+    )
+
+    const newNode = newRoot.main.getIn([1, 1]) as BlockNode
+    expect(newNode.fragmentId).toBe("myFragmentId")
   })
 })
 
@@ -932,11 +964,86 @@ describe("AppRoot.clearStaleNodes", () => {
       "new_session_id",
       delta,
       forwardMsgMetadata([0, 1, 1])
-    ).clearStaleNodes("new_session_id")
+    ).clearStaleNodes("new_session_id", [])
 
     // We should now only have a single element, inside a single block
     expect(newRoot.main.getIn([0, 0])).toBeTextNode("newElement!")
     expect(newRoot.getElements().size).toBe(1)
+  })
+
+  it("handles currentFragmentId correctly", () => {
+    const root = AppRoot.empty()
+      // Block not corresponding to my_fragment_id. Should be preserved.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, { addBlock: { allowEmpty: true } }),
+        forwardMsgMetadata([0, 0])
+      )
+      // Element in block unrelated to my_fragment_id. Should be preserved.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement!" } },
+        }),
+        forwardMsgMetadata([0, 0, 0])
+      )
+      // Another element in block unrelated to my_fragment_id. Should be preserved.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement2!" } },
+          fragmentId: "other_fragment_id",
+        }),
+        forwardMsgMetadata([0, 0, 1])
+      )
+      // Old element related to my_fragment_id but in an unrelated block. Should be preserved.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement4!" } },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 0, 2])
+      )
+      // Block corresponding to my_fragment_id
+      .applyDelta(
+        "new_session_id",
+        makeProto(DeltaProto, {
+          addBlock: { allowEmpty: false },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1])
+      )
+      // Old element related to my_fragment_id. Should be pruned.
+      .applyDelta(
+        "old_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "oldElement3!" } },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1, 0])
+      )
+      // New element related to my_fragment_id. Should be preserved.
+      .applyDelta(
+        "new_session_id",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "newElement!" } },
+          fragmentId: "my_fragment_id",
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+    const pruned = root.clearStaleNodes("new_session_id", ["my_fragment_id"])
+
+    expect(pruned.main.getIn([0])).toBeInstanceOf(BlockNode)
+    expect((pruned.main.getIn([0]) as BlockNode).children).toHaveLength(3)
+    expect(pruned.main.getIn([0, 0])).toBeTextNode("oldElement!")
+    expect(pruned.main.getIn([0, 1])).toBeTextNode("oldElement2!")
+    expect(pruned.main.getIn([0, 2])).toBeTextNode("oldElement4!")
+
+    expect(pruned.main.getIn([1])).toBeInstanceOf(BlockNode)
+    expect((pruned.main.getIn([1]) as BlockNode).children).toHaveLength(1)
+    expect(pruned.main.getIn([1, 0])).toBeTextNode("newElement!")
   })
 })
 

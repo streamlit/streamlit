@@ -169,6 +169,10 @@ class PlotlyMixin:
         if not isinstance(on_select, bool) and not isinstance(on_select, str):
             on_select_callback = on_select
 
+        on_select_callback = None
+        if not isinstance(on_select, bool) and not isinstance(on_select, str):
+            on_select_callback = on_select
+
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
@@ -208,6 +212,9 @@ class PlotlyMixin:
             return json.dumps(v, default=str)
 
         ctx = get_script_run_ctx()
+
+        if not isinstance(on_select, bool) and not isinstance(on_select, str):
+            pass
 
         widget_state = cast(RegisterWidgetResult[Any], {})
         if is_select_enabled:
@@ -287,19 +294,21 @@ def marshall(
     proto.theme = theme or ""
     proto.is_select_enabled = is_select_enabled
     ctx = get_script_run_ctx()
+
     if key is not None:
         key = str(key)
-    id = compute_widget_id(
-        "plotly_chart",
-        user_key=key,
-        figure_or_data=figure_or_data,
-        use_container_width=use_container_width,
-        sharing=sharing,
-        key=key,
-        theme=theme,
-        page=ctx.page_script_hash if ctx else None,
-    )
-    proto.id = id
+    if is_select_enabled:
+        id = compute_widget_id(
+            "plotly_chart",
+            user_key=key,
+            figure_or_data=figure_or_data,
+            use_container_width=use_container_width,
+            sharing=sharing,
+            key=key,
+            theme=theme,
+            page=ctx.page_script_hash if ctx else None,
+        )
+        proto.id = id
 
 
 @caching.cache

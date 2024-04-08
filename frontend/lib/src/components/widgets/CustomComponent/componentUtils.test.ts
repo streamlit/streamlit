@@ -62,7 +62,7 @@ describe("test componentUtils", () => {
       })
       ref = {
         current: {
-          isReady: true,
+          isReady: () => true,
           element,
           widgetMgr,
           setComponentError,
@@ -95,7 +95,7 @@ describe("test componentUtils", () => {
       })
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      ref.current!.isReady = false
+      ref.current!.isReady = () => false
       // when isReady = false, the callback should not be called
       iframeMessageHandler(ComponentMessageType.SET_FRAME_HEIGHT, {
         height: height,
@@ -113,7 +113,7 @@ describe("test componentUtils", () => {
       })
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      ref.current!.isReady = false
+      ref.current!.isReady = () => false
       // when isReady = false, the callback should not be called
       iframeMessageHandler(ComponentMessageType.SET_COMPONENT_VALUE, {
         value: jsonValue,
@@ -121,9 +121,14 @@ describe("test componentUtils", () => {
       })
 
       expect(widgetMgr.setJsonValue).toBeCalledTimes(1)
-      expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(element, jsonValue, {
-        fromUi: true,
-      })
+      expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
+        element,
+        jsonValue,
+        {
+          fromUi: true,
+        },
+        undefined
+      )
     })
   })
 
