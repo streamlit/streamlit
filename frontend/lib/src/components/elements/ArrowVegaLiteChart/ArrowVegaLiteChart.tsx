@@ -491,9 +491,10 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
         try {
           console.log(event)
-          // @ts-expect-error
           if (
+            // @ts-expect-error
             !event.item ||
+            // @ts-expect-error
             (!event.item.datum &&
               Object.keys(this.state.selections).length > 0)
           ) {
