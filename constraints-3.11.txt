@@ -19,7 +19,7 @@ cycler==0.12.1
 dataclasses-json==0.6.4
 distlib==0.3.8
 docutils==0.20.1
-execnet==2.1.0
+execnet==2.1.1
 filelock==3.13.3
 fonttools==4.51.0
 frozenlist==1.4.1
