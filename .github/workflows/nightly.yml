@@ -158,6 +158,8 @@ jobs:
       enable-setup: ${{ steps.exports.outputs.enable-setup }}
       s3-url: ${{ steps.exports.outputs.s3-url }}
 
+    environment: nightly
+
     steps:
       - name: Checkout Streamlit code
         uses: actions/checkout@v4
