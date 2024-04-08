@@ -37,6 +37,10 @@ lib/streamlit/proto/*_pb2.pyi
 frontend/lib/src/proto.js
 frontend/lib/src/proto.d.ts
 
+# dotenv environment variable files
+.env
+.env.*
+
 ########################################################################
 # OSX - https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 ########################################################################
