@@ -490,8 +490,33 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       const resetGraph = debounce(150, (event: ScenegraphEvent) => {
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
         try {
+          console.log(event)
           // @ts-expect-error
-          if (!event.item.datum) {
+          if (
+            !event.item ||
+            (!event.item.datum &&
+              Object.keys(this.state.selections).length > 0)
+          ) {
+            this.setState({
+              selections: {},
+            })
+            this.props.widgetMgr?.setJsonValue(
+              this.props.element as WidgetInfo,
+              {},
+              {
+                fromUi: true,
+              }
+            )
+          }
+        } catch (e) {
+          logMessage(e)
+        }
+      })
+
+      const doubleClickResetGraph = debounce(150, (event: ScenegraphEvent) => {
+        try {
+          // @ts-expect-error
+          if (!event.item && Object.keys(this.state.selections).length > 0) {
             this.setState({
               selections: {},
             })
@@ -510,6 +535,11 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
       view.addEventListener("click", event => {
         resetGraph(event)
+      })
+
+      view.addEventListener("dblclick", event => {
+        console.log(event)
+        doubleClickResetGraph(event)
       })
     }
 
