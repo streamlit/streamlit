@@ -323,11 +323,10 @@ function PlotlyFigure({
   }
 
   const { data, layout, frames } = spec
+  console.log(spec)
 
   const handleDoubleClick = (): void => {
-    widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
-
-    const relayout = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)[
+    const relayout = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)?.[
       RELAYOUT_KEY
     ]
     const dragmode = relayout?.dragmode
@@ -355,6 +354,7 @@ function PlotlyFigure({
           },
         })
       }
+      widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
       widgetMgr.setJsonValue(element, {}, { fromUi: true })
     } else {
       widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
