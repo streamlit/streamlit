@@ -945,7 +945,19 @@ export class App extends PureComponent<Props, State> {
         }
       }
 
-      // TODO: only set appPages if there are some, to prevent some flickers
+      if (newSessionProto.appPages.length > 1) {
+        this.setState(
+          {
+            appPages: newSessionProto.appPages,
+          },
+          () => {
+            this.hostCommunicationMgr.sendMessageToHost({
+              type: "SET_APP_PAGES",
+              appPages: newSessionProto.appPages,
+            })
+          }
+        )
+      }
       this.processThemeInput(themeInput)
       this.setState(
         {
@@ -953,7 +965,6 @@ export class App extends PureComponent<Props, State> {
           hideTopBar: config.hideTopBar,
           hideSidebarNav: config.hideSidebarNav,
           toolbarMode: config.toolbarMode,
-          appPages: newSessionProto.appPages,
           currentPageScriptHash: newPageScriptHash,
           latestRunTime: performance.now(),
           // If we're here, the fragmentIdsThisRun variable is always the
@@ -961,11 +972,6 @@ export class App extends PureComponent<Props, State> {
           fragmentIdsThisRun,
         },
         () => {
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_APP_PAGES",
-            appPages: newSessionProto.appPages,
-          })
-
           this.hostCommunicationMgr.sendMessageToHost({
             type: "SET_CURRENT_PAGE_NAME",
             currentPageName: viewingMainPage ? "" : newPageName,
