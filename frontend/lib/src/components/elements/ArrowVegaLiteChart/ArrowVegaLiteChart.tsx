@@ -487,6 +487,19 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         )
       })
 
+      const reset = () => {
+        this.setState({
+          selections: {},
+        })
+        this.props.widgetMgr?.setJsonValue(
+          this.props.element as WidgetInfo,
+          {},
+          {
+            fromUi: true,
+          }
+        )
+      }
+
       const resetGraph = debounce(150, (event: ScenegraphEvent) => {
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
         try {
@@ -497,16 +510,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
             !event.item.datum &&
             Object.keys(this.state.selections).length > 0
           ) {
-            this.setState({
-              selections: {},
-            })
-            this.props.widgetMgr?.setJsonValue(
-              this.props.element as WidgetInfo,
-              {},
-              {
-                fromUi: true,
-              }
-            )
+            reset()
           }
         } catch (e) {
           logMessage(e)
@@ -516,16 +520,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       const doubleClickResetGraph = debounce(150, () => {
         try {
           if (Object.keys(this.state.selections).length > 0) {
-            this.setState({
-              selections: {},
-            })
-            this.props.widgetMgr?.setJsonValue(
-              this.props.element as WidgetInfo,
-              {},
-              {
-                fromUi: true,
-              }
-            )
+            reset()
           }
         } catch (e) {
           logMessage(e)
