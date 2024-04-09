@@ -55,7 +55,11 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    current_page_hash,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -865,7 +869,7 @@ class DataEditorMixin:
             num_rows=num_rows,
             key=key,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=current_page_hash(ctx),
         )
 
         proto = ArrowProto()

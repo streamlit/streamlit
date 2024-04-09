@@ -24,7 +24,11 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    current_page_hash,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.proto.Button_pb2 import Button as ButtonProto
@@ -563,7 +567,7 @@ class ButtonMixin:
             help=help,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=current_page_hash(ctx),
         )
 
         if is_in_form(self.dg):
@@ -717,7 +721,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=current_page_hash(ctx),
         )
 
         # It doesn't make sense to create a button inside a form (except

@@ -21,7 +21,11 @@ from typing import TYPE_CHECKING, Literal, cast
 from streamlit import runtime
 from streamlit.elements.form import is_in_form
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    current_page_hash,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -299,7 +303,7 @@ class ChatMixin:
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
-            page=ctx.page_script_hash if ctx else None,
+            page=current_page_hash(ctx),
         )
 
         # It doesn't make sense to create a chat input inside a form.

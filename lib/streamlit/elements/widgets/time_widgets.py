@@ -35,6 +35,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
+    current_page_hash,
     get_label_visibility_proto_value,
 )
 from streamlit.errors import StreamlitAPIException
@@ -443,7 +444,7 @@ class TimeWidgetsMixin:
             help=help,
             step=step,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=current_page_hash(ctx),
         )
         del value
 
@@ -708,7 +709,7 @@ class TimeWidgetsMixin:
             help=help,
             format=format,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=current_page_hash(ctx),
         )
         if not bool(ALLOWED_DATE_FORMATS.match(format)):
             raise StreamlitAPIException(

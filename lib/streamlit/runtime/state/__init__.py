@@ -17,6 +17,7 @@ from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    ST_MPAV2_CURRENT_PAGE_HASH,
     SessionState,
     SessionStateStatProvider,
 )

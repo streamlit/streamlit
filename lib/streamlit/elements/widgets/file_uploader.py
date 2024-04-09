@@ -25,6 +25,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
+    current_page_hash,
     get_label_visibility_proto_value,
 )
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
@@ -411,7 +412,7 @@ class FileUploaderMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=current_page_hash(ctx),
         )
 
         if type:

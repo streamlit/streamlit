@@ -45,6 +45,7 @@ from streamlit.runtime.scriptrunner.script_run_context import (
 )
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
+    ST_MPAV2_CURRENT_PAGE_HASH,
     SafeSessionState,
     SessionState,
 )
@@ -481,6 +482,8 @@ class ScriptRunner:
                 else:
                     page_script_hash = main_page_info["page_script_hash"]
 
+                self._session_state[ST_MPAV2_CURRENT_PAGE_HASH] = None
+
             fragment_ids_this_run = set(rerun_data.fragment_id_queue)
 
             ctx = self._get_script_run_ctx()
@@ -718,6 +721,7 @@ class ScriptRunner:
 
         _LOGGER.debug("Running page %s", page)
 
+        self._session_state[ST_MPAV2_CURRENT_PAGE_HASH] = page._script_hash
         self.on_event.send(
             self,
             event=ScriptRunnerEvent.PAGE_RUN_STARTED,
@@ -763,6 +767,8 @@ class ScriptRunner:
             # Run callbacks for widgets whose values have changed.
 
             exec(code, module.__dict__)
+
+        self._session_state[ST_MPAV2_CURRENT_PAGE_HASH] = None
 
 
 class ScriptControlException(BaseException):

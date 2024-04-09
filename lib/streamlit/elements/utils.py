@@ -22,8 +22,10 @@ from streamlit import config, runtime, type_util
 from streamlit.elements.form import is_in_form
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 from streamlit.runtime.state import WidgetCallback, get_session_state
 from streamlit.runtime.state.common import RegisterWidgetResult
+from streamlit.runtime.state.session_state import ST_MPAV2_CURRENT_PAGE_HASH
 from streamlit.type_util import T
 
 if TYPE_CHECKING:
@@ -201,3 +203,13 @@ def _extract_common_class_from_iter(iterable: Iterable[Any]) -> Any:
     if all(type(item) is first_class for item in inner_iter):
         return first_class
     return None
+
+
+def current_page_hash(ctx: ScriptRunContext | None) -> str | None:
+    if ctx:
+        try:
+            return ctx.session_state[ST_MPAV2_CURRENT_PAGE_HASH]
+        except KeyError:
+            return ctx.page_script_hash
+    else:
+        return None
