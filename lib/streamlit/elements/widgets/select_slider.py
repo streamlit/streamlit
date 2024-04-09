@@ -147,7 +147,7 @@ class SelectSliderMixin:
               at https://katex.org/docs/supported.html.
 
             * Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:background-color[text to be colored]``,
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
               respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
