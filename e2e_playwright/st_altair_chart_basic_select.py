@@ -57,7 +57,7 @@ chart_interval = base.add_params(interval)
 
 st.subheader("Scatter chart with selection_interval")
 st.altair_chart(chart_interval, on_select="rerun", key="scatter_interval")
-if st.session_state.scatter_interval:
+if st.session_state.scatter_interval and len(st.session_state.scatter_interval) > 0:
     st.dataframe(st.session_state.scatter_interval)
 
 # BAR CHART
