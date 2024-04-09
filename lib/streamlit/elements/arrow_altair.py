@@ -44,7 +44,7 @@ from streamlit.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.constants import ON_SELECTION_IGNORE
+from streamlit.constants import NO_SELECTION_OBJECTS_ERROR_ALTAIR, ON_SELECTION_IGNORE
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
@@ -855,18 +855,13 @@ class ArrowAltairMixin:
             # TODO(willhuang1997): This seems like a hack so should fix this
             chart_json = altair_chart.to_dict()
             if "params" not in chart_json:
-                raise StreamlitAPIException(
-                    "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                )
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_ALTAIR)
+            has_selection_object = False
             for param in chart_json["params"]:
-                if (
-                    "name" not in param
-                    or "select" not in param
-                    or "type" not in param["select"]
-                ):
-                    raise StreamlitAPIException(
-                        "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                    )
+                if "name" in param and "select" in param and "type" in param["select"]:
+                    has_selection_object = True
+            if not has_selection_object:
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_ALTAIR)
 
         marshall(
             proto,

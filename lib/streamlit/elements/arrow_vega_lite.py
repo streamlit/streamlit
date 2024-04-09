@@ -23,7 +23,10 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Union, cas
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.chart_util import check_on_select_str
-from streamlit.constants import ON_SELECTION_IGNORE
+from streamlit.constants import (
+    NO_SELECTION_OBJECTS_ERROR_VEGA_LITE,
+    ON_SELECTION_IGNORE,
+)
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
@@ -209,18 +212,13 @@ class ArrowVegaLiteMixin:
         if on_select and spec is not None:
             # TODO(willhuang1997): This seems like a hack so should fix this
             if "params" not in spec:
-                raise StreamlitAPIException(
-                    "In order to make VegaLite work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                )
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_VEGA_LITE)
+            has_selection_object = False
             for param in spec["params"]:
-                if (
-                    "name" not in param
-                    or "select" not in param
-                    or "type" not in param["select"]
-                ):
-                    raise StreamlitAPIException(
-                        "In order to make VegaLite work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                    )
+                if "name" in param and "select" in param and "type" in param["select"]:
+                    has_selection_object = True
+            if not has_selection_object:
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_VEGA_LITE)
 
         proto = ArrowVegaLiteChartProto()
         marshall(
