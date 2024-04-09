@@ -11,21 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""
-This directory contains the files and modules for the exposed API.
-"""
-
-import streamlit
-from streamlit.components.v1.component_registry import declare_component
-
-# `html` and `iframe` are part of Custom Components, so they appear in this
-# `streamlit.components.v1` namespace.
-html = streamlit._main._html
-iframe = streamlit._main._iframe
-
-__all__ = [
-    "declare_component",
-    "html",
-    "iframe",
-]
