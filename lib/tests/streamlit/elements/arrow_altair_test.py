@@ -753,7 +753,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
 
         st.altair_chart(chart, on_select=True)
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        print(proto.spec)
         self.assertTrue(
             "selection_0" in proto.spec,
         )
