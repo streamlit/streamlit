@@ -32,7 +32,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.100.0
+hypothesis==6.100.1
 identify==2.5.35
 idna==3.6
 importlib_metadata==7.1.0
@@ -53,7 +53,7 @@ langchain==0.1.14
 langchain-community==0.0.31
 langchain-core==0.1.40
 langchain-text-splitters==0.0.1
-langsmith==0.1.40
+langsmith==0.1.41
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
