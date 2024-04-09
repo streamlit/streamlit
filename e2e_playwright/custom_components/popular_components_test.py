@@ -93,7 +93,7 @@ def test_option_menu(app: Page):
     _expect_no_exception(app)
 
 
-def test_url_fragments(app: Page):
-    """Test that the url-fragments component renders"""
-    _select_component(app, "urlFragments")
+def test_url_fragment(app: Page):
+    """Test that the url-fragment component renders"""
+    _select_component(app, "urlFragment")
     _expect_no_exception(app)

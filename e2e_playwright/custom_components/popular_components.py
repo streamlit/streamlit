@@ -12,6 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test the components logic and that custom components work.
+
+This test app includes some component actions as well as the top N most popular custom components based on our usage metrics.
+The function for the component is imported when the respective option is selected in the selection-widget.
+Also, some example action is executed on the component.
+If the component cannot be imported or the component itself has some issue, e.g. some transitive import does not work,
+an exception is shown.
+This is some guard for us to detect potential issues in case of refactorings etc.
+
+Following actions/components are tested:
+- components.html (this function and its import is popularily documented in some places)
+- extra-streamlit-components (CookieManager)
+- streamlit-ace
+- streamlit-antd-components
+- streamlit-aggrid
+- streamlit-autorefresh
+- streamlit-chat
+- streamlit-echarts
+- streamlit-folium
+- streamlit-lottie
+- streamlit-option-menu
+- streamlit-url-fragment
+"""
+
 from typing import Callable, Dict
 
 import streamlit as st
@@ -142,7 +166,7 @@ def use_option_menu():
         st.write(selected)
 
 
-def use_url_fragments():
+def use_url_fragment():
     from streamlit_url_fragment import get_fragment
 
     current_value = get_fragment()
@@ -163,7 +187,7 @@ options: Dict[str, Callable] = {
     "folium": use_folium,
     "lottie": use_lottie,
     "optionMenu": use_option_menu,
-    "urlFragments": use_url_fragments,
+    "urlFragment": use_url_fragment,
 }
 component_selection = st.selectbox("ComponentSelections", options=options.keys())
 if component_selection:
