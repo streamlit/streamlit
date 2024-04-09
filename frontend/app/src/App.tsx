@@ -732,7 +732,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleNavigation = (navigationMsg: Navigation): void => {
-    const { sections } = navigationMsg
+    const { sections, position } = navigationMsg
     const navPageSections = new Map()
     let idx = 0
     for (const section of sections) {
@@ -744,7 +744,9 @@ export class App extends PureComponent<Props, State> {
       idx += sectionLength
     }
     const appPages = sections.flatMap(section => section.appPages || [])
-    this.setState({ appPages, navPageSections }, () => {
+    const hideSidebarNav = position == "hidden"
+
+    this.setState({ appPages, navPageSections, hideSidebarNav }, () => {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "SET_APP_PAGES",
         appPages,

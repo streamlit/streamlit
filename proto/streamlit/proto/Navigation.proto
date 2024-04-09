@@ -23,6 +23,7 @@ import "streamlit/proto/AppPage.proto";
 
 message Navigation {
   repeated NavSection sections = 1;
+  string position = 2;
 }
 
 message NavSection {

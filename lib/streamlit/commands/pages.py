@@ -111,6 +111,7 @@ def navigation(
         pgs.page_list[0].default = True
 
     msg = ForwardMsg()
+    msg.navigation.position = position
     for section in pgs.page_dict:
         nav_section = msg.navigation.sections.add()
         nav_section.header = section
