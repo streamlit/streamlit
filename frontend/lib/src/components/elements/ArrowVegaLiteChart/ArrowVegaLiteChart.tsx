@@ -487,7 +487,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         )
       })
 
-      const reset = () => {
+      const reset = (): void => {
         this.setState({
           selections: {},
         })
