@@ -22,7 +22,7 @@ import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { snakeCase } from "lodash"
 
 function iconToUrl(icon: string): string {
-  const iconRegexp = /^:(.*):(.*):$/
+  const iconRegexp = /^:(.*)\/(.*):$/
   const matchResult = icon.match(iconRegexp)
   let snakeIconName = ""
   if (matchResult === null) {

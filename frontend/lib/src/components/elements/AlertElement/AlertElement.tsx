@@ -69,6 +69,8 @@ export default function AlertElement({
               iconValue={icon}
               size="lg"
               testid="stAlertEmojiIcon" // TODO[kajarenc] Disscuss, and probably change testId here
+              key={icon} // TODO[kajarenc] Discuss, and maybe remove key here,
+              //we use it to update the error state, othervise hover text still in ErrorBoundary still uses the old icon value
             />
           )}
 

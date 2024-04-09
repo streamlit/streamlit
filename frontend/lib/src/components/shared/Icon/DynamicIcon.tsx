@@ -48,17 +48,19 @@ interface IconPackEntry {
 function parseIconPackEntry(iconName: string): IconPackEntry {
   // This is a regex to match icon pack and icon name from the strings of format
   // :pack:icon: like :material:SettingsSuggest:
-  const iconRegexp = /^:(.*):(.*):$/
+  const iconRegexp = /^:(.*)\/(.*):$/
   const matchResult = iconName.match(iconRegexp)
   if (matchResult === null) {
     return { pack: "emoji", icon: iconName }
   }
+  const iconPack = matchResult[1]
+  let iconNameInPack = matchResult[2]
 
   // Convert the icon name to CamelCase
-  matchResult[2] = startCase(camelCase(matchResult[2])).replace(/ /g, "")
-  matchResult[2] = matchResult[2].replace("3X3", "3x3")
-  matchResult[2] = matchResult[2].replace("4X4", "4x4")
-  return { pack: matchResult[1], icon: matchResult[2] }
+  iconNameInPack = startCase(camelCase(iconNameInPack)).replace(/ /g, "")
+  iconNameInPack = iconNameInPack.replace("3X3", "3x3")
+  iconNameInPack = iconNameInPack.replace("4X4", "4x4")
+  return { pack: iconPack, icon: iconNameInPack }
 }
 
 // TODO(kajarenc): Think about writing this type with omit / type combinators
