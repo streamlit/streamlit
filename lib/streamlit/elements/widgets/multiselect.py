@@ -93,7 +93,8 @@ def _check_and_convert_to_indices(
     for value in default_values:
         if value not in opt:
             raise StreamlitAPIException(
-                "Every multiselect default value must exist in options. "
+                f"The default value '{value}' is part of the options. "
+                "Please make sure that every default values also exists in the options."
             )
 
     return [opt.index(value) for value in default_values]
