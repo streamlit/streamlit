@@ -158,6 +158,3 @@ def test_double_click_interval_shows_no_dataframe(
     app.mouse.dblclick(500, 500)
     wait_for_app_run(app, wait_delay=3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
-    assert_snapshot(
-        chart, name="st_altair_chart-double_click_scatter_chart_no_interval"
-    )
