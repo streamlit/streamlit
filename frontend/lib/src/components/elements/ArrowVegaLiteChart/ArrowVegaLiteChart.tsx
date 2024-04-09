@@ -532,7 +532,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       })
 
       view.addEventListener("dblclick", event => {
-        console.log(event)
         doubleClickResetGraph(event)
       })
     }
