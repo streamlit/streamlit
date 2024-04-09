@@ -164,15 +164,13 @@ class QueryParams(MutableMapping[str, str]):
 
     def from_dict(
         self,
-        _dict: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str] = (),
-        /,
-        **kwds: str,
+        _dict: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str],
     ):
         self._ensure_single_query_api_used()
         old_value = self._query_params.copy()
         self.clear_with_no_forward_msg(preserve_embed=True)
         try:
-            self.update(_dict, **kwds)
+            self.update(_dict)
         except StreamlitAPIException:
             # restore the original from before we made any changes.
             self._query_params = old_value
