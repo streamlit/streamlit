@@ -19,10 +19,10 @@ cryptography==42.0.5
 cycler==0.12.1
 dataclasses-json==0.6.4
 distlib==0.3.8
-docutils==0.20.1
+docutils==0.21
 exceptiongroup==1.2.0
 execnet==2.1.1
-filelock==3.13.3
+filelock==3.13.4
 fonttools==4.51.0
 frozenlist==1.4.1
 gitdb==4.0.11
@@ -50,7 +50,7 @@ langchain==0.1.14
 langchain-community==0.0.31
 langchain-core==0.1.40
 langchain-text-splitters==0.0.1
-langsmith==0.1.41
+langsmith==0.1.42
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
