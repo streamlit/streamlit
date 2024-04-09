@@ -67,4 +67,4 @@ jobs:
         if: always()
         with:
           name: playwright_test_results
-          path: e2e_playwright-custom_components/test-results
+          path: e2e_playwright/test-results
