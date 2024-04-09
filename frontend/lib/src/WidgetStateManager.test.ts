@@ -694,10 +694,10 @@ describe("Widget State Manager", () => {
     widgetMgr.setStringValue({ id: widgetId1 }, "widgetState1", {
       fromUi: false,
     })
-    widgetMgr.setStringValue({ id: widgetId3 }, "widgetState2", {
+    widgetMgr.setStringValue({ id: widgetId2 }, "widgetState2", {
       fromUi: false,
     })
-    widgetMgr.setStringValue({ id: widgetId2 }, "widgetState3", {
+    widgetMgr.setStringValue({ id: widgetId3 }, "widgetState3", {
       fromUi: false,
     })
     widgetMgr.setStringValue({ id: widgetId4 }, "widgetState4", {
