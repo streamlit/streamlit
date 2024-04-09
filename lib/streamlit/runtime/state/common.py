@@ -36,8 +36,10 @@ from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
 from streamlit import config, util
+from streamlit.elements.arrow import Data
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
+from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
 from streamlit.proto.Button_pb2 import Button
 from streamlit.proto.CameraInput_pb2 import CameraInput
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -49,6 +51,7 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.PlotlyChart_pb2 import PlotlyChart
 from streamlit.proto.Radio_pb2 import Radio
 from streamlit.proto.Selectbox_pb2 import Selectbox
 from streamlit.proto.Slider_pb2 import Slider
@@ -85,6 +88,8 @@ WidgetProto: TypeAlias = Union[
     TextArea,
     TextInput,
     TimeInput,
+    PlotlyChart,
+    ArrowVegaLiteChart,
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
@@ -122,6 +127,8 @@ class WidgetMetadata(Generic[T]):
     callback: WidgetCallback | None = None
     callback_args: WidgetArgs | None = None
     callback_kwargs: WidgetKwargs | None = None
+
+    fragment_id: str | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -172,6 +179,8 @@ SAFE_VALUES = Union[
     "ellipsis",
     Message,
     PROTO_SCALAR_VALUE,
+    Data,
+    Dict[Any, Any],
 ]
 
 

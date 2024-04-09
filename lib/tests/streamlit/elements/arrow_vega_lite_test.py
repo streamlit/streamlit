@@ -19,6 +19,7 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.arrow_vega_lite import replace_values_in_dict
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -210,6 +211,70 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
             json.loads(proto.spec),
             merge_dicts(autosize_spec, {"mark": "rect", "width": 200}),
         )
+
+    def callback():
+        pass
+
+    @parameterized.expand(
+        [
+            (True, True),
+            (False, False),
+            ("rerun", True),
+            ("ignore", False),
+            (callback, True),
+        ]
+    )
+    def test_vega_lite_on_select(self, on_select, expected_is_select_enabled):
+        st.vega_lite_chart(
+            df1,
+            {
+                "mark": "rect",
+                "width": 200,
+                "params": [{"name": "name", "select": {"type": "point"}}],
+            },
+            on_select=on_select,
+        )
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(
+            proto.is_select_enabled,
+            expected_is_select_enabled,
+        )
+
+    @parameterized.expand(
+        [
+            (
+                {"key1": "value1", "key2": "value2"},
+                {"value1": "newValue1", "value2": "newValue2"},
+                {"key1": "newValue1", "key2": "newValue2"},
+            ),
+            (
+                {"level1": {"level2": {"key": "value"}}},
+                {"value": "newValue"},
+                {"level1": {"level2": {"key": "newValue"}}},
+            ),
+            (
+                [{"key": "value"}, {"key": "value"}],
+                {"value": "newValue"},
+                [{"key": "newValue"}, {"key": "newValue"}],
+            ),
+            (
+                {"list": [{"key": "value"}, {"list2": [{"key": "value"}]}]},
+                {"value": "newValue"},
+                {"list": [{"key": "newValue"}, {"list2": [{"key": "newValue"}]}]},
+            ),
+            (
+                {"key": "unchangedValue"},
+                {"value": "newValue"},
+                {"key": "unchangedValue"},
+            ),
+            ({}, {"value": "newValue"}, {}),
+            ([], {"value": "newValue"}, []),
+            ({"key": "value"}, {"otherValue": "newValue"}, {"key": "value"}),
+        ]
+    )
+    def test_replace_values_in_dict(self, input_data, old_to_new_map, expected):
+        replace_values_in_dict(input_data, old_to_new_map)
+        self.assertEqual(input_data, expected)
 
 
 def merge_dicts(x, y):

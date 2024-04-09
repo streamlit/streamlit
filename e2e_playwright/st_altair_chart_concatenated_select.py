@@ -45,7 +45,7 @@ chart = chart.add_params(point)
 chart = chart.add_params(interval)
 st.altair_chart(chart, on_select=True, key="repeat_chart")
 if st.session_state.repeat_chart:
-    st.dataframe(st.session_state.repeat_chart.select)
+    st.dataframe(st.session_state.repeat_chart)
 
 # LAYERED CHART
 stocks = alt.UrlData(

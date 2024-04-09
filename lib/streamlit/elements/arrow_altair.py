@@ -21,7 +21,17 @@ from __future__ import annotations
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Collection, Literal, Sequence, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Literal,
+    Sequence,
+    Union,
+    cast,
+)
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
@@ -34,7 +44,7 @@ from streamlit.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.constants import ON_SELECTION_IGNORE
+from streamlit.constants import NO_SELECTION_OBJECTS_ERROR_ALTAIR, ON_SELECTION_IGNORE
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
@@ -759,9 +769,11 @@ class ArrowAltairMixin:
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
         # TODO(willhuang1997): This will need to be finalized to "rerun" / "ignore" or True / False
-        on_select: Union[str, Callable[..., None], True, False, None] = None,
+        on_select: Union[
+            Literal["rerun", "ignore"], Callable[..., None], bool, None
+        ] = None,
         key: str | None = None,
-    ) -> Union["DeltaGenerator", Dict]:
+    ) -> Union["DeltaGenerator", Dict[Any, Any]]:
         """Display a chart using the Altair library.
 
         Parameters
@@ -822,8 +834,13 @@ class ArrowAltairMixin:
             )
         proto = ArrowVegaLiteChartProto()
 
+        on_select_callback = on_select
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        if isinstance(on_select_callback, bool) or isinstance(on_select_callback, str):
+            on_select_callback = None
+
         key = to_key(key)
-        check_callback_rules(self.dg, on_select)
+        check_callback_rules(self.dg, on_select_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "altair_chart")
         if current_form_id(self.dg):
@@ -838,18 +855,13 @@ class ArrowAltairMixin:
             # TODO(willhuang1997): This seems like a hack so should fix this
             chart_json = altair_chart.to_dict()
             if "params" not in chart_json:
-                raise StreamlitAPIException(
-                    "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                )
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_ALTAIR)
+            has_selection_object = False
             for param in chart_json["params"]:
-                if (
-                    "name" not in param
-                    or "select" not in param
-                    or "type" not in param["select"]
-                ):
-                    raise StreamlitAPIException(
-                        "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                    )
+                if "name" in param and "select" in param and "type" in param["select"]:
+                    has_selection_object = True
+            if not has_selection_object:
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_ALTAIR)
 
         marshall(
             proto,
@@ -1234,20 +1246,6 @@ def _get_opacity_encoding(
     return None
 
 
-def _get_scale(df: pd.DataFrame, column_name: str | None) -> alt.Scale:
-    import altair as alt
-
-    # Set the X and Y axes' scale to "utc" if they contain date values.
-    # This causes time data to be displayed in UTC, rather the user's local
-    # time zone. (By default, vega-lite displays time data in the browser's
-    # local time zone, regardless of which time zone the data specifies:
-    # https://vega.github.io/vega-lite/docs/timeunit.html#output).
-    if _is_date_column(df, column_name):
-        return alt.Scale(type="utc")
-
-    return alt.Scale()
-
-
 def _get_axis_config(df: pd.DataFrame, column_name: str | None, grid: bool) -> alt.Axis:
     import altair as alt
     from pandas.api.types import is_integer_dtype
@@ -1329,7 +1327,7 @@ def _get_x_encoding(
         x_field,
         title=x_title,
         type=_get_x_encoding_type(df, chart_type, x_column),
-        scale=_get_scale(df, x_column),
+        scale=alt.Scale(),
         axis=_get_axis_config(df, x_column, grid=False),
     )
 
@@ -1368,7 +1366,7 @@ def _get_y_encoding(
         field=y_field,
         title=y_title,
         type=_get_y_encoding_type(df, y_column),
-        scale=_get_scale(df, y_column),
+        scale=alt.Scale(),
         axis=_get_axis_config(df, y_column, grid=True),
     )
 

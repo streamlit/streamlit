@@ -18,12 +18,15 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Union, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.chart_util import check_on_select_str
-from streamlit.constants import ON_SELECTION_IGNORE
+from streamlit.constants import (
+    NO_SELECTION_OBJECTS_ERROR_VEGA_LITE,
+    ON_SELECTION_IGNORE,
+)
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
@@ -65,9 +68,11 @@ def replace_values_in_dict(
 
 def _on_select(
     proto: ArrowVegaLiteChartProto,
-    on_select: Union[str, Callable[..., None], None] = None,
+    on_select: Union[
+        Literal["rerun", "ignore"], Callable[..., None], bool, None
+    ] = None,
     key: str | None = None,
-):
+) -> AttributeDictionary:
     if on_select is not None and on_select != False:
         # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
         if isinstance(on_select, bool) or isinstance(on_select, str):
@@ -96,6 +101,7 @@ def _on_select(
             ctx=get_script_run_ctx(),
         )
         return AttributeDictionary(current_value.value)
+    return AttributeDictionary({})
 
 
 class ArrowVegaLiteMixin:
@@ -106,10 +112,12 @@ class ArrowVegaLiteMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_select: Union[str, Callable[..., None], None] = None,
+        on_select: Union[
+            Literal["rerun", "ignore"], Callable[..., None], bool, None
+        ] = None,
         key: str | None = None,
         **kwargs: Any,
-    ) -> DeltaGenerator:
+    ) -> Union[DeltaGenerator, Dict[Any, Any]]:
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -182,8 +190,13 @@ class ArrowVegaLiteMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
+        on_select_callback = on_select
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        if isinstance(on_select_callback, bool) or isinstance(on_select_callback, str):
+            on_select_callback = None
+
         key = to_key(key)
-        check_callback_rules(self.dg, on_select)
+        check_callback_rules(self.dg, on_select_callback)
         check_session_state_rules(default_value={}, key=key, writes_allowed=False)
         check_on_select_str(on_select, "vega_lite_chart")
         if current_form_id(self.dg):
@@ -196,21 +209,16 @@ class ArrowVegaLiteMixin:
         # TODO(willhuang1997): This needs to be cleaned up probably
         if on_select == ON_SELECTION_IGNORE:
             on_select = False
-        if on_select:
+        if on_select and spec is not None:
             # TODO(willhuang1997): This seems like a hack so should fix this
             if "params" not in spec:
-                raise StreamlitAPIException(
-                    "In order to make VegaLite work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                )
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_VEGA_LITE)
+            has_selection_object = False
             for param in spec["params"]:
-                if (
-                    "name" not in param
-                    or "select" not in param
-                    or "type" not in param["select"]
-                ):
-                    raise StreamlitAPIException(
-                        "In order to make VegaLite work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
-                    )
+                if "name" in param and "select" in param and "type" in param["select"]:
+                    has_selection_object = True
+            if not has_selection_object:
+                raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_VEGA_LITE)
 
         proto = ArrowVegaLiteChartProto()
         marshall(
@@ -243,7 +251,9 @@ def marshall(
     spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
-    on_select: Union[str, Callable[..., None], None] = None,
+    on_select: Union[
+        Literal["rerun", "ignore"], Callable[..., None], bool, None
+    ] = None,
     key: str | None = None,
     **kwargs,
 ):
@@ -339,18 +349,18 @@ def marshall(
     proto.spec = json.dumps(spec)
     proto.use_container_width = use_container_width
     proto.theme = theme or ""
-
-    id = compute_widget_id(
-        "arrow_vega_lite",
-        user_key=key,
-        data=data,
-        spec=spec,
-        use_container_width=use_container_width,
-        key=key,
-        theme=theme,
-        page=ctx.page_script_hash if ctx else None,
-    )
-    proto.id = id
+    if on_select:
+        id = compute_widget_id(
+            "arrow_vega_lite",
+            user_key=key,
+            data=data,
+            spec=spec,
+            use_container_width=use_container_width,
+            key=key,
+            theme=theme,
+            page=ctx.page_script_hash if ctx else None,
+        )
+        proto.id = id
 
     if on_select:
         proto.is_select_enabled = True

@@ -123,11 +123,11 @@ class SliderTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (1, 1, 1, 1),
-            (np.int64(1), 1, 1, 1),
-            (1, np.int64(1), 1, 1),
-            (1, 1, np.int64(1), 1),
-            (np.single(0.5), 0.5, 0.5, 0.5),
+            (1, 2, 1, 1),
+            (np.int64(1), 2, 1, 1),
+            (1, np.int64(2), 1, 1),
+            (1, 2, np.int64(1), 1),
+            (np.single(0.5), 1.5, 0.5, 0.5),
         ]
     )
     def test_matching_types(self, min_value, max_value, value, return_value):
@@ -200,6 +200,13 @@ class SliderTest(DeltaGeneratorTestCase):
         self.assertEqual(ret, 101),
         self.assertEqual(c.min, 100)
         self.assertEqual(c.max, 101)
+
+    def test_min_equals_max(self):
+        with pytest.raises(StreamlitAPIException):
+            st.slider("oh no", min_value=10, max_value=10)
+        with pytest.raises(StreamlitAPIException) as e:
+            date = datetime(2024, 4, 3)
+            st.slider("datetime", min_value=date, max_value=date)
 
     def test_value_out_of_bounds(self):
         # Max int

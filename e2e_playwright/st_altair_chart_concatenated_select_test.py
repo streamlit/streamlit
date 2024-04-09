@@ -26,6 +26,7 @@ def test_point_selection_repeat_scatter_chart_displays_dataframe(
     themed_app.mouse.move(750, 250)
     themed_app.mouse.down()
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-repeat_scatter_single_selection")
@@ -40,6 +41,7 @@ def test_interval_selection_repeat_scatter_chart_displays_dataframe(
     themed_app.mouse.down()
     themed_app.mouse.move(500, 550)
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-repeat_scatter_interval_selection")
@@ -78,6 +80,7 @@ def test_point_facet_chart_displays_dataframe(
     themed_app.mouse.move(825, 300)
     themed_app.mouse.down()
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
 
@@ -92,6 +95,7 @@ def test_interval_vconcat_chart_displays_dataframe(
     themed_app.mouse.down()
     themed_app.mouse.move(700, 450)
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-vconcat_chart_interval")
@@ -107,6 +111,7 @@ def test_interval_hconcat_chart_displays_dataframe(
     themed_app.mouse.down()
     themed_app.mouse.move(350, 350)
     themed_app.mouse.up()
+    wait_for_app_run(themed_app, wait_delay=3000)
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     expect(themed_app.get_by_text("Hello world")).to_be_visible()
