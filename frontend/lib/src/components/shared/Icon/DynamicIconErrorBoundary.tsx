@@ -56,14 +56,12 @@ class DynamicIconErrorBoundary extends React.PureComponent<
   public render(): React.ReactNode {
     const { error } = this.state
 
-    if (error) {
-      if (error.message.startsWith("Invalid Material Icon")) {
-        return (
-          <span title={error.message}>
-            <EmojiIcon {...this.props}>❌</EmojiIcon>
-          </span>
-        )
-      }
+    if (error && error.message.startsWith("Invalid Material")) {
+      return (
+        <span title={error.message}>
+          <EmojiIcon {...this.props}>❌</EmojiIcon>
+        </span>
+      )
     }
 
     return this.props.children

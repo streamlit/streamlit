@@ -36,7 +36,6 @@ import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/Al
 import {
   StyledViewButton,
   StyledToastWrapper,
-  StyledIcon,
   StyledMessageWrapper,
 } from "./styled-components"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
@@ -141,11 +140,10 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
           {icon && (
             <DynamicIcon
               iconValue={icon}
-              size="md"
+              size="lg"
               testid="stToastEmojiIcon"
             />
           )}
-          <StyledIcon>{icon}</StyledIcon>
           <StyledMessageWrapper>
             <StreamlitMarkdown
               source={expanded ? body : displayMessage}

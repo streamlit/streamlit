@@ -43,6 +43,13 @@ export const StyledToastWrapper = styled.div<StyledToastMessageProps>(
     display: "flex",
     flexDirection: "row",
     gap: theme.spacing.lg,
+    "> svg": {
+      marginTop: "0.25rem",
+    },
+
+    "> span": {
+      marginTop: "0.25rem",
+    },
   })
 )
 
