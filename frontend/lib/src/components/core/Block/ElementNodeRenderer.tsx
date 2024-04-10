@@ -308,6 +308,7 @@ const RawElementNodeRenderer = (
         <StreamlitSyntaxHighlighter
           language={codeProto.language}
           showLineNumbers={codeProto.showLineNumbers}
+          wrapLines={codeProto.wrapLines}
         >
           {codeProto.codeText}
         </StreamlitSyntaxHighlighter>

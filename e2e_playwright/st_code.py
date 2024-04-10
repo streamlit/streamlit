@@ -28,6 +28,10 @@ st.code(code, language="python", line_numbers=True)
 
 st.code("PLAIN TEXT", language=None, line_numbers=True)
 
+st.code("foo bar baz " * 10, wrap_lines=True)
+
+st.code("foo bar baz " * 10, wrap_lines=True, line_numbers=True)
+
 st.markdown("```python\n" + code + "\n```")
 
 with st.expander("`st.code` usage", expanded=True):

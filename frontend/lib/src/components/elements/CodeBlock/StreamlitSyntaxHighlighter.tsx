@@ -26,11 +26,13 @@ export interface StreamlitSyntaxHighlighterProps {
   children: string | string[]
   language?: string | undefined
   showLineNumbers?: boolean | undefined
+  wrapLines?: boolean | undefined
 }
 
 export default function StreamlitSyntaxHighlighter({
   language,
   showLineNumbers,
+  wrapLines,
   children,
 }: StreamlitSyntaxHighlighterProps): ReactElement {
   return (
@@ -47,6 +49,7 @@ export default function StreamlitSyntaxHighlighter({
           style={{}}
           lineNumberStyle={{}}
           showLineNumbers={showLineNumbers}
+          wrapLongLines={wrapLines}
         >
           {children}
         </SyntaxHighlighter>
