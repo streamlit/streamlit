@@ -40,6 +40,7 @@ ACCEPTABLE_LICENSES = {
     "Apache-2.0",  # https://opensource.org/licenses/Apache-2.0
     "Apache-2.0 WITH LLVM-exception",  # https://spdx.org/licenses/LLVM-exception.html
     "0BSD",  # https://opensource.org/licenses/0BSD
+    "BlueOak-1.0.0",  # https://blueoakcouncil.org/license/1.0.0
     "BSD-2-Clause",  # https://opensource.org/licenses/BSD-2-Clause
     "BSD-3-Clause",  # https://opensource.org/licenses/BSD-3-Clause
     "ISC",  # https://opensource.org/licenses/ISC
