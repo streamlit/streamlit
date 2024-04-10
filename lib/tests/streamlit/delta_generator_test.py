@@ -382,6 +382,25 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         self.assertEqual(delta.fragment_id, "my_fragment_id")
 
+    def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "my_fragment_id"
+        ctx.fragment_ids_this_run = {"my_fragment_id"}
+
+        exc = "is not supported"
+        with pytest.raises(StreamlitAPIException, match=exc):
+            delta_generator.sidebar_dg._enqueue("text", TextProto())
+
+    def test_enqueue_can_write_to_container_in_sidebar(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "my_fragment_id"
+        ctx.fragment_ids_this_run = {"my_fragment_id"}
+
+        delta_generator.sidebar_dg.container().write("Hello world")
+
+        deltas = self.get_all_deltas_from_queue()
+        assert [d.fragment_id for d in deltas] == ["my_fragment_id", "my_fragment_id"]
+
 
 class DeltaGeneratorContainerTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Container."""

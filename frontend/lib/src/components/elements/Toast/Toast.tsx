@@ -33,7 +33,12 @@ import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMar
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
-import { StyledViewButton, StyledToastMessage } from "./styled-components"
+import {
+  StyledViewButton,
+  StyledToastWrapper,
+  StyledIcon,
+  StyledMessageWrapper,
+} from "./styled-components"
 import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 export interface ToastProps {
@@ -54,13 +59,20 @@ function generateToastOverrides(
         "data-testid": "stToast",
       },
       style: {
-        width: "288px",
+        display: "flex",
+        flexDirection: "row",
+        gap: theme.spacing.md,
+        width: theme.sizes.sidebar,
         marginTop: "8px",
         // Warnings logged if you use shorthand property here:
         borderTopLeftRadius: theme.radii.lg,
         borderTopRightRadius: theme.radii.lg,
         borderBottomLeftRadius: theme.radii.lg,
         borderBottomRightRadius: theme.radii.lg,
+        paddingTop: theme.spacing.lg,
+        paddingBottom: theme.spacing.lg,
+        paddingLeft: theme.spacing.twoXL,
+        paddingRight: theme.spacing.twoXL,
         backgroundColor: lightBackground
           ? theme.colors.gray10
           : theme.colors.gray90,
@@ -71,20 +83,15 @@ function generateToastOverrides(
           : "0px 4px 16px rgba(0, 0, 0, 0.7)",
       },
     },
-    InnerContainer: {
-      style: {
-        maxHeight: expanded ? "none" : "88px",
-        overflow: "hidden",
-        fontSize: theme.fontSizes.sm,
-        lineHeight: "1.4rem",
-      },
-    },
     CloseIcon: {
       style: {
-        color: theme.colors.bodyText,
-        marginRight: "-5px",
-        width: "1.2rem",
-        height: "1.2rem",
+        color: theme.colors.fadedText40,
+        width: theme.fontSizes.lg,
+        height: theme.fontSizes.lg,
+        marginRight: `calc(-1 * ${theme.spacing.lg} / 2)`,
+        ":hover": {
+          color: theme.colors.bodyText,
+        },
       },
     },
   }
@@ -112,9 +119,8 @@ export function shortenMessage(fullMessage: string): string {
 }
 
 export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
-  const fullMessage = body
-  const displayMessage = shortenMessage(fullMessage)
-  const shortened = fullMessage !== displayMessage
+  const displayMessage = shortenMessage(body)
+  const shortened = body !== displayMessage
 
   const [expanded, setExpanded] = useState(!shortened)
   const [toastKey, setToastKey] = useState<React.Key>(0)
@@ -131,7 +137,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
   const toastContent = useMemo(
     () => (
       <>
-        <StyledToastMessage expanded={expanded}>
+        <StyledToastWrapper expanded={expanded}>
           {icon && (
             <DynamicIcon
               iconValue={icon}
@@ -139,24 +145,27 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
               testid="stToastEmojiIcon"
             />
           )}
-          <StreamlitMarkdown
-            source={expanded ? fullMessage : displayMessage}
-            allowHTML={false}
-            isToast
-          />
-        </StyledToastMessage>
-        {shortened && (
-          <StyledViewButton
-            data-testid="toastViewButton"
-            className="toastViewButton"
-            onClick={handleClick}
-          >
-            {expanded ? "view less" : "view more"}
-          </StyledViewButton>
-        )}
+          <StyledIcon>{icon}</StyledIcon>
+          <StyledMessageWrapper>
+            <StreamlitMarkdown
+              source={expanded ? body : displayMessage}
+              allowHTML={false}
+              isToast
+            />
+            {shortened && (
+              <StyledViewButton
+                data-testid="toastViewButton"
+                className="toastViewButton"
+                onClick={handleClick}
+              >
+                {expanded ? "view less" : "view more"}
+              </StyledViewButton>
+            )}
+          </StyledMessageWrapper>
+        </StyledToastWrapper>
       </>
     ),
-    [shortened, expanded, fullMessage, displayMessage, icon, handleClick]
+    [shortened, expanded, body, icon, displayMessage, icon, handleClick]
   )
 
   useEffect(() => {
