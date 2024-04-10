@@ -676,6 +676,47 @@ describe("Widget State Manager", () => {
       )
     })
   })
+
+  it("manages element state values", () => {
+    widgetMgr.setElementState("elementId", "elementStateValue")
+    expect(widgetMgr.getElementState("elementId")).toBe("elementStateValue")
+    widgetMgr.deleteElementState("elementId")
+    expect(widgetMgr.getElementState("elementId")).toBeUndefined()
+  })
+
+  it("cleans up widget & element states on removeInactive", () => {
+    const widgetId1 = "TEST_ID_1"
+    const widgetId2 = "TEST_ID_2"
+    const widgetId3 = "TEST_ID_3"
+    const widgetId4 = "TEST_ID_4"
+    const elementId1 = "TEST_ID_5"
+    const elementId2 = "TEST_ID_6"
+    widgetMgr.setStringValue({ id: widgetId1 }, "widgetState1", {
+      fromUi: false,
+    })
+    widgetMgr.setStringValue({ id: widgetId2 }, "widgetState2", {
+      fromUi: false,
+    })
+    widgetMgr.setStringValue({ id: widgetId3 }, "widgetState3", {
+      fromUi: false,
+    })
+    widgetMgr.setStringValue({ id: widgetId4 }, "widgetState4", {
+      fromUi: false,
+    })
+
+    widgetMgr.setElementState(elementId1, "elementState1")
+    widgetMgr.setElementState(elementId2, "elementState2")
+
+    const activeIds = new Set([widgetId3, widgetId4, elementId2])
+    widgetMgr.removeInactive(activeIds)
+
+    expect(widgetMgr.getStringValue({ id: widgetId1 })).toBeUndefined()
+    expect(widgetMgr.getStringValue({ id: widgetId2 })).toBeUndefined()
+    expect(widgetMgr.getStringValue({ id: widgetId3 })).toEqual("widgetState3")
+    expect(widgetMgr.getStringValue({ id: widgetId4 })).toEqual("widgetState4")
+    expect(widgetMgr.getElementState(elementId1)).toBeUndefined()
+    expect(widgetMgr.getElementState(elementId2)).toEqual("elementState2")
+  })
 })
 
 describe("WidgetStateDict", () => {

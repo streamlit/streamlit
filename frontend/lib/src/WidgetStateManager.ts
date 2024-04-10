@@ -175,6 +175,11 @@ export class WidgetStateManager {
   // Internal state for each form we're managing.
   private readonly forms = new Map<string, FormState>()
 
+  // A dictionary that maps elementId -> element state value.
+  // This is used to store frontend-only state for elements.
+  // This state is not never sent to the server.
+  private readonly elementStates = new Map<string, any>()
+
   // External data about all forms.
   private formsData: FormsData
 
@@ -586,6 +591,12 @@ export class WidgetStateManager {
   public removeInactive(activeIds: Set<string>): void {
     this.widgetStates.removeInactive(activeIds)
     this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
+
+    this.elementStates.forEach((value, key) => {
+      if (!activeIds.has(key)) {
+        this.deleteElementState(key)
+      }
+    })
   }
 
   /**
@@ -708,6 +719,35 @@ export class WidgetStateManager {
       this.formsData = newData
       this.props.formsDataChanged(this.formsData)
     }
+  }
+
+  /**
+   * Get the element state value for the given element ID, if it exists.
+   * This is a frontend-only state that is never sent to the server.
+   */
+  public getElementState(elementId: string): any {
+    return this.elementStates.get(elementId)
+  }
+
+  /**
+   * Sets the state of an element identified by its ID.
+   * This is a frontend-only state that is never sent to the server.
+   * It can be used to store element state to restore the state
+   * of an element in situations where an element is removed and re-added.
+   *
+   * @param {string} elementId - The unique identifier of the element.
+   * @param {any} value - The value to set for the element's state.
+   * @returns {void}
+   */
+  public setElementState(elementId: string, value: any): void {
+    this.elementStates.set(elementId, value)
+  }
+
+  /**
+   * Remove the element state associated with a given element ID.
+   */
+  public deleteElementState(elementId: string): void {
+    this.elementStates.delete(elementId)
   }
 }
 
