@@ -502,6 +502,26 @@ export function extractPageNameFromPathName(
   )
 }
 
+/**
+ * Converts object keys from camelCase to snake_case, applied recursively to nested objects and arrays.
+ * Keys containing dots are replaced with underscores. The conversion preserves consecutive uppercase letters.
+ *
+ * @param obj - The input object with keys to be converted. Can include nested objects and arrays.
+ * @returns A new object with all keys in snake_case, maintaining the original structure and values.
+ *
+ * @example
+ * keysToSnakeCase({
+ *   userId: 1,
+ *   user.Info: { firstName: "John", lastName: "Doe" },
+ *   userActivities: [{ loginTime: "10AM", logoutTime: "5PM" }]
+ * });
+ * // Returns:
+ * // {
+ * //   user_id: 1,
+ * //   user_info: { first_name: "John", last_name: "Doe" },
+ * //   user_activities: [{ login_time: "10AM", logout_time: "5PM" }]
+ * // }
+ */
 export function keysToSnakeCase(
   obj: Record<string, any>
 ): Record<string, any> {
