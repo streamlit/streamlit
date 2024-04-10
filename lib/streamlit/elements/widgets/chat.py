@@ -86,6 +86,9 @@ def _process_avatar_input(
         )
     elif isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
+
+    elif isinstance(avatar, str) and avatar.startswith(":material"):
+        return AvatarType.ICON, avatar
     else:
         try:
             return AvatarType.IMAGE, image_to_url(

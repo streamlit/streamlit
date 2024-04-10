@@ -28,6 +28,7 @@ import {
   hasLightBackgroundColor,
   EmotionTheme,
 } from "@streamlit/lib/src/theme"
+
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { Kind } from "@streamlit/lib/src/components/shared/AlertContainer"
 import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
@@ -35,9 +36,9 @@ import AlertElement from "@streamlit/lib/src/components/elements/AlertElement/Al
 import {
   StyledViewButton,
   StyledToastWrapper,
-  StyledIcon,
   StyledMessageWrapper,
 } from "./styled-components"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 
 export interface ToastProps {
   theme: EmotionTheme
@@ -97,10 +98,10 @@ function generateToastOverrides(
 
 // Function used to truncate toast messages that are longer than three lines.
 export function shortenMessage(fullMessage: string): string {
-  const characterLimit = 114
+  const characterLimit = 104
 
   if (fullMessage.length > characterLimit) {
-    let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
+    let message = fullMessage.replace(/^(.{104}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
       message = message
@@ -136,7 +137,13 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     () => (
       <>
         <StyledToastWrapper expanded={expanded}>
-          <StyledIcon>{icon}</StyledIcon>
+          {icon && (
+            <DynamicIcon
+              iconValue={icon}
+              size="lg"
+              testid="stToastEmojiIcon"
+            />
+          )}
           <StyledMessageWrapper>
             <StreamlitMarkdown
               source={expanded ? body : displayMessage}
@@ -156,7 +163,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
         </StyledToastWrapper>
       </>
     ),
-    [shortened, expanded, body, icon, displayMessage, handleClick]
+    [shortened, expanded, body, icon, displayMessage, icon, handleClick]
   )
 
   useEffect(() => {

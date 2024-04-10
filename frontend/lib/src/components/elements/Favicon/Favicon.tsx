@@ -13,11 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import React from "react"
 
 import nodeEmoji from "node-emoji"
 import { grabTheRightIcon } from "@streamlit/lib/src/vendor/twemoji"
 import { IGuestToHostMessage } from "@streamlit/lib/src/hostComm/types"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { snakeCase } from "lodash"
+
+function iconToUrl(icon: string): string {
+  const iconRegexp = /^:(.*)\/(.*):$/
+  const matchResult = icon.match(iconRegexp)
+  let snakeIconName = ""
+  if (matchResult === null) {
+    return snakeIconName
+  } else {
+    snakeIconName = snakeCase(matchResult[2])
+  }
+  let iconType = "baseline"
+  if (matchResult[1] === "material") {
+    iconType = "baseline"
+  } else if (matchResult[1] === "material-outlined") {
+    iconType = "outline"
+  } else if (matchResult[1] === "material-rounded") {
+    iconType = "round"
+  } else {
+    iconType = "baseline"
+  }
+
+  const iconUrl = `https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/${snakeIconName}/${iconType}.svg`
+  return iconUrl
+}
 
 /**
  * Set the provided url/emoji as the page favicon.
@@ -34,12 +60,14 @@ export function handleFavicon(
   const emoji = extractEmoji(favicon)
   let imageUrl
 
-  if (emoji) {
+  if (emoji && !favicon.startsWith(":material")) {
     // Find the corresponding Twitter emoji on the CDN.
     const codepoint = grabTheRightIcon(emoji)
     const emojiUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${codepoint}.png`
 
     imageUrl = emojiUrl
+  } else if (favicon.startsWith(":material")) {
+    imageUrl = iconToUrl(favicon)
   } else {
     imageUrl = endpoints.buildMediaURL(favicon)
   }

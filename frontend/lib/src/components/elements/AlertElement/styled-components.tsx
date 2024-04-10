@@ -15,7 +15,10 @@
  */
 
 import styled from "@emotion/styled"
-import { StyledEmojiIcon } from "@streamlit/lib/src/components/shared/Icon/styled-components"
+import {
+  StyledIcon,
+  StyledEmojiIcon,
+} from "@streamlit/lib/src/components/shared/Icon/styled-components"
 
 export const StyledAlertContent = styled.div(({ theme }) => ({
   display: "flex",
@@ -23,6 +26,11 @@ export const StyledAlertContent = styled.div(({ theme }) => ({
   width: "100%",
 
   [StyledEmojiIcon as any]: {
+    position: "relative",
+    top: "2px",
+  },
+
+  [StyledIcon as any]: {
     position: "relative",
     top: "2px",
   },
