@@ -130,7 +130,7 @@ def dialog_decorator(
 
     Examples
     --------
-    You can annotate a function to mark it as a Streamlit dialog function and pass arguments to it. You can either dismiss the dialog or close it programmatically and trigger a re-run by using `st.rerun()`.
+    You can annotate a function to mark it as a Streamlit dialog function and pass arguments to it. You can either dismiss the dialog via the ESC-key or the X-button or close it programmatically and trigger a re-run by using `st.rerun()`.
     Leverage `st.session_state` if you want to pass dialog widget states to the overall app:
 
     >>> import streamlit as st
