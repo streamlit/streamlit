@@ -82,16 +82,6 @@ class ErrorBoundary extends React.PureComponent<
         )
       }
 
-      if (error.message.startsWith("Invalid Material Icon")) {
-        return (
-          <ErrorElement
-            width={this.props.width}
-            name={error.name}
-            message={error.message}
-          />
-        )
-      }
-
       return (
         <ErrorElement
           width={this.props.width}
