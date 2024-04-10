@@ -412,8 +412,7 @@ const RawElementNodeRenderer = (
         <PlotlyChart
           element={node.element.plotlyChart as PlotlyChartProto}
           height={undefined}
-          widgetMgr={widgetProps.widgetMgr}
-          {...elementProps}
+          {...widgetProps}
         />
       )
 

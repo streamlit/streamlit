@@ -48,6 +48,7 @@ const getProps = (
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  disabled: false,
 })
 
 // eslint-disable-next-line testing-library/no-node-access -- There's no other way to get the parent element
