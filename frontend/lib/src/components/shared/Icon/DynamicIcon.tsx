@@ -93,7 +93,10 @@ const DynamicIconDispatcher = ({
 }
 
 export const DynamicIcon = (props: DynamicIconProps): React.ReactElement => (
-  <Suspense fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}>
+  <Suspense
+    fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}
+    key={props.iconValue}
+  >
     <DynamicIconErrorBoundary {...props}>
       <DynamicIconDispatcher {...props} />
     </DynamicIconErrorBoundary>
