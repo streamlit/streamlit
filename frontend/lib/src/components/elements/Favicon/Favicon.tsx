@@ -67,7 +67,6 @@ export function handleFavicon(
 
     imageUrl = emojiUrl
   } else if (favicon.startsWith(":material")) {
-    console.log("FAVICON", favicon)
     imageUrl = iconToUrl(favicon)
   } else {
     imageUrl = endpoints.buildMediaURL(favicon)
