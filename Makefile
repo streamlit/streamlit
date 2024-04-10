@@ -285,6 +285,7 @@ react-init:
 
 .PHONY: react-build
 react-build:
+	rm -rf lib/streamlit/static
 	cd frontend/ ; yarn run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/

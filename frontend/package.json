@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "start": "yarn workspace @streamlit/app start",
-    "build": "yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
+    "build": "rm -rf app/build && rm -rf lib/dist && yarn workspace @streamlit/lib build && yarn workspace @streamlit/app build",
     "buildFast": "yarn buildLib && yarn workspace @streamlit/app buildFast",
     "buildLib": "yarn workspace @streamlit/lib build",
     "buildLibProd": "yarn workspace @streamlit/lib build:prod",

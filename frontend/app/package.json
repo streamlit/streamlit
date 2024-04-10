@@ -7,8 +7,8 @@
   "scripts": {
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "start": "env NODE_OPTIONS=--max_old_space_size=8192 ESLINT_NO_DEV_ERRORS=true craco start",
-    "build": "env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false craco build",
-    "buildFast": "env NODE_OPTIONS=--max_old_space_size=8192 GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true craco build",
+    "build": "GENERATE_SOURCEMAP=false craco build",
+    "buildFast": "GENERATE_SOURCEMAP=false BUILD_AS_FAST_AS_POSSIBLE=true craco build",
     "test": "env NODE_OPTIONS=\"--experimental-worker --max_old_space_size=8192\" craco test --watchAll=false --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "testWatch": "env NODE_OPTIONS=\"--experimental-worker --max_old_space_size=8192\" craco test --env=../jest/jsdom-polyfill-env.js --runTestsByPath ${TESTPATH}",
     "test:coverage": "env NODE_OPTIONS=--max_old_space_size=8192 craco test --env=../jest/jsdom-polyfill-env.js --coverage --watchAll false --watch false ./",
