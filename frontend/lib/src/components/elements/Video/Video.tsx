@@ -18,11 +18,7 @@ import React, { ReactElement, useEffect, useRef, useState } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
-import {
-  WidgetStateManager as ElementStateManager,
-  Source,
-  WidgetInfo as ElementInfo,
-} from "@streamlit/lib/src/WidgetStateManager"
+import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 const DEFAULT_HEIGHT = 528
 
@@ -46,11 +42,8 @@ export default function Video({
 }: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const elementInfo: ElementInfo = { id: element.id }
-  // If ElementStateManager knew an id for this element, initialize to that.
-  // Otherwise, use the default id from the element protobuf.
   const [state] = useState<string>(
-    () => elementMgr.getStringValue(elementInfo) || elementInfo.id
+    () => elementMgr.getElementState(element.id) || element.id
   )
 
   /* Element may contain "url" or "data" property. */
@@ -58,11 +51,11 @@ export default function Video({
     element
 
   useEffect(() => {
-    commitElementValue({ fromUi: false })
+    commitElementValue()
   }, [element, state])
 
-  const commitElementValue = (source: Source) => {
-    elementMgr.setStringValue(element, state, source)
+  const commitElementValue = (): void => {
+    elementMgr.setElementState(element.id, state)
   }
 
   // Handle startTime changes
