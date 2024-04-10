@@ -604,6 +604,14 @@ class SliderMixin:
             min_value = _date_to_datetime(min_value)
             max_value = _date_to_datetime(max_value)
 
+        # The frontend will error if the values are equal, so checking here
+        # lets us produce a nicer python error message and stack trace.
+        if min_value == max_value:
+            raise StreamlitAPIException(
+                "Slider `min_value` must be less than the `max_value`."
+                f"\nThe values were {min_value} and {max_value}."
+            )
+
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
             # Restore times/datetimes to original timezone (dates are always naive)

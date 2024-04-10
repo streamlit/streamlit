@@ -30,10 +30,7 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.runtime_util import duration_to_seconds
-from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import register_widget
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from typing import Any
@@ -88,32 +85,66 @@ class MediaMixin:
             http://msdn.microsoft.com/en-us/library/windows/hardware/dn653308(v=vs.85).aspx
 
         format : str
-            The mime type for the audio file. Defaults to 'audio/wav'.
+            The mime type for the audio file. Defaults to ``"audio/wav"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
-        start_time: int
-            The time from which this element should start playing.
+        start_time: int, float, timedelta, str, or None
+            The time from which the element should start playing. This can be
+            one of the following:
 
+            * ``None`` (default): The element plays from the beginning.
+            * An``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         sample_rate: int or None
             The sample rate of the audio data in samples per second. Only required if
             ``data`` is a numpy array.
-        end_time: int
-            The time at which this element should stop playing.
+        end_time: int, float, timedelta, str, or None
+            The time at which the element should stop playing. This can be
+            one of the following:
+
+            * ``None`` (default): The element plays through to the end.
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the audio should loop playback.
         autoplay: bool
             Whether the audio should start playing automatically.
             Browsers will not autoplay audio files if the user has not interacted with the page yet.
 
-        Example
-        -------
+        Examples
+        --------
+        To display an audio player for a local file, specify the file's string
+        path and format.
+
+        >>> import streamlit as st
+        >>>
+        >>> st.audio("cat-purr.mp3", format="audio/mpeg", loop=True)
+
+        .. output::
+           https://doc-audio-purr.streamlit.app/
+           height: 250px
+
+        You can also pass ``bytes`` or ``numpy.ndarray`` objects to ``st.audio``.
+
         >>> import streamlit as st
         >>> import numpy as np
         >>>
-        >>> audio_file = open('myaudio.ogg', 'rb')
+        >>> audio_file = open("myaudio.ogg", "rb")
         >>> audio_bytes = audio_file.read()
         >>>
-        >>> st.audio(audio_bytes, format='audio/ogg')
+        >>> st.audio(audio_bytes, format="audio/ogg")
         >>>
         >>> sample_rate = 44100  # 44100 samples per second
         >>> seconds = 2  # Note duration of 2 seconds
@@ -189,9 +220,19 @@ class MediaMixin:
             The mime type for the video file. Defaults to ``"video/mp4"``.
             See https://tools.ietf.org/html/rfc4281 for more info.
 
-        start_time: int
-            The time from which this element should start playing.
+        start_time: int, float, timedelta, str, or None
+            The time from which the element should start playing. This can be
+            one of the following:
 
+            * ``None`` (default): The element plays from the beginning.
+            * An``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         subtitles: str, bytes, Path, io.BytesIO, or dict
             Optional subtitle data for the video, supporting several input types:
 
@@ -216,9 +257,19 @@ class MediaMixin:
             in a dictrionary's first pair: ``{"None": "", "English": "path/to/english.vtt"}``
 
             Not supported for YouTube videos.
+        end_time: int, float, timedelta, str, or None
+            The time at which the element should stop playing. This can be
+            one of the following:
 
-        end_time: int or None
-            The time at which this element should stop playing
+            * ``None`` (default): The element plays through to the end.
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
+              values are rounded down to whole seconds.
+            * A string specifying the time in a format supported by `Pandas'
+              Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+              e.g. ``"2 minute"``, ``"20s"``, or ``"1m14s"``.
+            * A ``timedelta`` object from `Python's built-in datetime library
+              <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+              e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the video should loop playback.
         autoplay: bool
@@ -538,7 +589,7 @@ def _parse_start_time_end_time(
     """Parse start_time and end_time and return them as int."""
 
     try:
-        maybe_start_time = duration_to_seconds(start_time, coerce_none_to_inf=False)
+        maybe_start_time = time_to_seconds(start_time, coerce_none_to_inf=False)
         if maybe_start_time is None:
             raise ValueError
         start_time = int(maybe_start_time)
@@ -549,9 +600,7 @@ def _parse_start_time_end_time(
         raise StreamlitAPIException(error_msg) from None
 
     try:
-        # TODO[kajarenc]: Replace `duration_to_seconds` with `time_to_seconds`
-        #  when PR #8343 is merged.
-        end_time = duration_to_seconds(end_time, coerce_none_to_inf=False)
+        end_time = time_to_seconds(end_time, coerce_none_to_inf=False)
         if end_time is not None:
             end_time = int(end_time)
     except StreamlitAPIException:

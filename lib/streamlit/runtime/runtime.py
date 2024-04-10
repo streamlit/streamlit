@@ -112,6 +112,12 @@ class RuntimeConfig:
     # True if the command used to start Streamlit was `streamlit hello`.
     is_hello: bool = False
 
+    # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code
+    # creating a new Streamlit Runtime to configure the FragmentStorage instances
+    # created by each new AppSession. We choose not to do this for now to avoid adding
+    # additional complexity to RuntimeConfig/SessionManager/etc when it's unlikely
+    # we'll have a custom implementation of this class anytime soon.
+
 
 class RuntimeState(Enum):
     INITIAL = "INITIAL"
