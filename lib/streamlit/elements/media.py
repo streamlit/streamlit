@@ -567,10 +567,9 @@ def marshall_video(
         proto.autoplay = autoplay
         id = compute_widget_id(
             "video",
-            data=data,
+            url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
-            subtitles=subtitles,
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
@@ -730,12 +729,21 @@ def marshall_audio(
         proto.end_time = end_time
     proto.loop = loop
 
+    if isinstance(data, str) and url_util.is_url(
+        data, allowed_schemas=("http", "https", "data")
+    ):
+        proto.url = data
+
+    else:
+        data = _maybe_convert_to_wav_bytes(data, sample_rate)
+        _marshall_av_media(coordinates, proto, data, mimetype)
+
     if autoplay:
         ctx = get_script_run_ctx()
         proto.autoplay = autoplay
         id = compute_widget_id(
             "audio",
-            data=data,
+            url=proto.url,
             mimetype=mimetype,
             start_time=start_time,
             sample_rate=sample_rate,
@@ -745,12 +753,3 @@ def marshall_audio(
             page=ctx.page_script_hash if ctx else None,
         )
         proto.id = id
-
-    if isinstance(data, str) and url_util.is_url(
-        data, allowed_schemas=("http", "https", "data")
-    ):
-        proto.url = data
-
-    else:
-        data = _maybe_convert_to_wav_bytes(data, sample_rate)
-        _marshall_av_media(coordinates, proto, data, mimetype)
