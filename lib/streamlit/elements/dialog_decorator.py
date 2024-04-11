@@ -14,8 +14,6 @@
 
 from __future__ import annotations
 
-import contextlib
-import inspect
 from functools import wraps
 from typing import Callable, TypeVar, cast, overload
 
@@ -73,12 +71,6 @@ def _dialog_decorator(
 
         with dialog:
             return dialog_content()
-
-    with contextlib.suppress(AttributeError):
-        # Make this a well-behaved decorator by preserving important function
-        # attributes.
-        wrap.__dict__.update(non_optional_func.__dict__)
-        wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
 
     return cast(F, wrap)
 
