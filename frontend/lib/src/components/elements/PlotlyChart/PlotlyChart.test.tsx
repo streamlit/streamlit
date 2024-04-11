@@ -44,6 +44,7 @@ const getProps = (
   }),
   width: 0,
   height: 0,
+  isFullScreen: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),

@@ -218,19 +218,17 @@ class PlotlyMixin:
                 **kwargs,
             )
 
-            widget_state = cast(RegisterWidgetResult[Any], {})
-            if is_select_enabled:
-                widget_state = register_widget(
-                    "plotly_chart",
-                    plotly_chart_proto,
-                    user_key=key,
-                    on_change_handler=on_select_callback,
-                    args=None,
-                    kwargs=None,
-                    deserializer=deserialize,
-                    serializer=serialize,
-                    ctx=ctx,
-                )
+            widget_state = register_widget(
+                "plotly_chart",
+                plotly_chart_proto,
+                user_key=key,
+                on_change_handler=on_select_callback,
+                args=None,
+                kwargs=None,
+                deserializer=deserialize,
+                serializer=serialize,
+                ctx=ctx,
+            )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
             return AttributeDictionary(widget_state.value)
