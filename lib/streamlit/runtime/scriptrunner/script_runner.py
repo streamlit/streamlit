@@ -473,9 +473,7 @@ class ScriptRunner:
                 old_hash = None
 
             if old_hash != page_script_hash:
-                _LOGGER.debug(
-                    f"page changed, resetting widgets; {old_hash=}, {page_script_hash=}"
-                )
+                # Page changed, reset widget state
                 self._session_state.on_script_finished(set())
 
             ctx = self._get_script_run_ctx()
