@@ -211,7 +211,8 @@ def test_widget_state_reset_on_page_switch(app: Page):
     app.wait_for_selector("[data-testid='stMainMenu']", timeout=20000, state="attached")
 
     # Back to page 3
-    app.get_by_test_id("stSidebarNav").locator("a").nth(0).click()
+    app.get_by_test_id("stSidebarNav").locator("a").nth(2).click()
+    wait_for_app_run(app, wait_delay=500)
 
     # Slider reset
     expect(app.get_by_test_id("stMarkdown")).to_contain_text("x is 0")
