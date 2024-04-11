@@ -89,7 +89,11 @@ export {
   mockEndpoints,
 } from "./mocks/mocks"
 export { default as UISelectbox } from "./components/shared/Dropdown/Selectbox"
-export { default as Icon, EmojiIcon } from "./components/shared/Icon"
+export {
+  default as Icon,
+  EmojiIcon,
+  DynamicIcon,
+} from "./components/shared/Icon"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown"
 export {
   hashString,

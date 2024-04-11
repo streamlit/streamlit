@@ -23,7 +23,7 @@ import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import {
   Icon,
-  EmojiIcon,
+  DynamicIcon,
   useIsOverflowing,
   StreamlitEndpoints,
   IAppPage,
@@ -95,7 +95,7 @@ const NavSection = ({
                 }}
               >
                 {page.icon && page.icon.length && (
-                  <EmojiIcon size="lg">{page.icon}</EmojiIcon>
+                  <DynamicIcon size="lg" iconValue={page.icon} />
                 )}
                 <StyledSidebarLinkText isActive={isActive}>
                   {tooltipContent}
