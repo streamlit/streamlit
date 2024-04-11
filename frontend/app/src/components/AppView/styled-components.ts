@@ -30,16 +30,9 @@ export const StyledAppViewContainer = styled.div(({ theme }) => ({
   overflow: "hidden",
   "@media print": {
     "@media (orientation: portrait)": {
-      display: "block",
-      float: "none",
-      height: theme.sizes.full,
+      // sidebar should float on top
+      flexDirection: "column",
       position: "static",
-      overflow: "visible",
-    },
-    "@media (orientation: landscape)": {
-      height: theme.sizes.full,
-      position: "static",
-      overflow: "visible",
     },
   },
 }))
@@ -72,8 +65,9 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
     },
 
     "@media print": {
-      position: "relative",
-      display: "block",
+      "@media (orientation: portrait)": {
+        position: "relative",
+      },
     },
   })
 )
@@ -164,8 +158,10 @@ export const StyledAppViewBlockContainer =
         ...fullScreenButtonStyles,
 
         [`@media print`]: {
-          minWidth: "100%",
-          paddingTop: 0,
+          padding: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         },
       }
     }
