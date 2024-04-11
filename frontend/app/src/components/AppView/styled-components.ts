@@ -28,12 +28,14 @@ export const StyledAppViewContainer = styled.div(({ theme }) => ({
   right: 0,
   bottom: 0,
   overflow: "hidden",
-  "@media print": {
-    display: "block",
-    float: "none",
+  [`@media print and (min-width: ${theme.breakpoints.xl})`]: {
+    // ".landscape": {
+    // display: "block",
+    // float: "none",
     height: theme.sizes.full,
     position: "static",
     overflow: "visible",
+    // },
   },
 }))
 
