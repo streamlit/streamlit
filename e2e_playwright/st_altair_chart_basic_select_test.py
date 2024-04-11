@@ -138,3 +138,23 @@ def test_shift_click_point_selection_scatter_chart_displays_dataframe(
 
     expect(themed_app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(chart, name="st_altair_chart-scatter_double_selection_greyed")
+
+
+def test_double_click_interval_shows_no_dataframe(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(1)
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+    chart.hover()
+    app.mouse.move(450, 450)
+    app.mouse.down()
+    app.mouse.move(550, 550)
+    app.mouse.up()
+    wait_for_app_run(app, wait_delay=3000)
+
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+    chart.hover()
+    app.mouse.dblclick(500, 500)
+    wait_for_app_run(app, wait_delay=3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)

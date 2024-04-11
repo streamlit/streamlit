@@ -487,21 +487,40 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         )
       })
 
+      const reset = (): void => {
+        this.setState({
+          selections: {},
+        })
+        this.props.widgetMgr?.setJsonValue(
+          this.props.element as WidgetInfo,
+          {},
+          {
+            fromUi: true,
+          }
+        )
+      }
+
       const resetGraph = debounce(150, (event: ScenegraphEvent) => {
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
         try {
-          // @ts-expect-error
-          if (!event.item.datum) {
-            this.setState({
-              selections: {},
-            })
-            this.props.widgetMgr?.setJsonValue(
-              this.props.element as WidgetInfo,
-              {},
-              {
-                fromUi: true,
-              }
-            )
+          // TODO(willhuang1997): Figure out how to resend empty dict when clicking out of interval
+          // Problem with doing so is that doing an interval itself is a click event and thus this function will run
+          if (
+            // @ts-expect-error
+            !event.item.datum &&
+            Object.keys(this.state.selections).length > 0
+          ) {
+            reset()
+          }
+        } catch (e) {
+          logMessage(e)
+        }
+      })
+
+      const doubleClickResetGraph = debounce(150, () => {
+        try {
+          if (Object.keys(this.state.selections).length > 0) {
+            reset()
           }
         } catch (e) {
           logMessage(e)
@@ -510,6 +529,10 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
       view.addEventListener("click", event => {
         resetGraph(event)
+      })
+
+      view.addEventListener("dblclick", event => {
+        doubleClickResetGraph(event)
       })
     }
 
