@@ -24,6 +24,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
@@ -709,6 +710,24 @@ class LayoutsMixin:
         return StatusContainer._create(
             self.dg, label=label, expanded=expanded, state=state
         )
+
+    def _dialog(
+        self,
+        title: str,
+        *,
+        dismissible: bool = True,
+        width: Literal["small", "large"] = "small",
+    ) -> "Dialog":
+        """Inserts the dialog container.
+
+        Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.
+        The dialog_decorator also has a more descriptive docstring since it is user-facing.
+        """
+
+        # We need to import Dialog here to avoid a circular import
+        from streamlit.elements.lib.dialog import Dialog
+
+        return Dialog._create(self.dg, title, dismissible=dismissible, width=width)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -100,8 +100,8 @@ export function useThemeManager(): [ThemeManager, object[]] {
     // should check and update the theme after printing if necessary.
     window.addEventListener("afterprint", updateAutoTheme)
     return () => {
-      mediaMatch.removeEventListener("change", updateAutoTheme)
       window.removeEventListener("afterprint", updateAutoTheme)
+      mediaMatch.removeEventListener("change", updateAutoTheme)
     }
   }, [theme, availableThemes, updateAutoTheme])
 

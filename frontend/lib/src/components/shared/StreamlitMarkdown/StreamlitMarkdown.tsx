@@ -40,6 +40,7 @@ import { Link as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 import { getMarkdownTextColors } from "@streamlit/lib/src/theme"
@@ -149,6 +150,7 @@ export const HeadingWithAnchor: FunctionComponent<
   React.PropsWithChildren<HeadingWithAnchorProps>
 > = ({ tag, anchor: propsAnchor, hideAnchor, children, tagProps }) => {
   const isInSidebar = React.useContext(IsSidebarContext)
+  const isInDialog = React.useContext(IsDialogContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
   const [target, setTarget] = React.useState<HTMLElement | null>(null)
 
@@ -184,7 +186,7 @@ export const HeadingWithAnchor: FunctionComponent<
     },
     [propsAnchor]
   )
-  if (isInSidebar) {
+  if (isInSidebar || isInDialog) {
     return React.createElement(tag, tagProps, children)
   }
 
