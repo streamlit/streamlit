@@ -753,6 +753,13 @@ export class WidgetStateManager {
   public deleteElementState(elementId: string): void {
     this.elementStates.delete(elementId)
   }
+
+  /**
+   * Remove the element state associated with a given element ID and the key.
+   */
+  public deleteElementStateForKey(elementId: string, key: string): void {
+    this.elementStates.get(elementId)?.delete(key)
+  }
 }
 
 /**
