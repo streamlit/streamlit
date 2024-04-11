@@ -27,6 +27,14 @@ import Video, { VideoProps } from "./Video"
 describe("Video Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
 
+  const mockSetElementState = jest.fn()
+  const elementMgrMock = {
+    setElementState: mockSetElementState,
+    getElementState: jest.fn(),
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }
+
   const getProps = (elementProps: Partial<VideoProto> = {}): VideoProps => ({
     element: VideoProto.create({
       url: "https://www.w3schools.com/html/mov_bbb.mp4",
@@ -36,10 +44,7 @@ describe("Video Element", () => {
     }),
     endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
     width: 0,
-    elementMgr: new ElementStateManager({
-      sendRerunBackMsg: jest.fn(),
-      formsDataChanged: jest.fn(),
-    }),
+    elementMgr: elementMgrMock as unknown as ElementStateManager,
   })
 
   beforeEach(() => {
@@ -76,6 +81,22 @@ describe("Video Element", () => {
       "src",
       "https://mock.media.url"
     )
+  })
+
+  it("calls elementMgr.setElementState if autoplay is true", () => {
+    const props = getProps({ autoplay: true, id: "testVideoId" })
+    render(<Video {...props} />)
+    expect(mockSetElementState).toHaveBeenCalledTimes(1)
+    expect(mockSetElementState).toHaveBeenCalledWith(
+      "testVideoId",
+      "testVideoId"
+    )
+  })
+
+  it("does not call elementMgr.setElementState if autoplay is false", () => {
+    const props = getProps({ autoplay: false, id: "" })
+    render(<Video {...props} />)
+    expect(mockSetElementState).not.toHaveBeenCalled()
   })
 
   describe("YouTube", () => {

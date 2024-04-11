@@ -27,6 +27,14 @@ import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/Wi
 describe("Audio Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
 
+  const mockSetElementState = jest.fn()
+  const elementMgrMock = {
+    setElementState: mockSetElementState,
+    getElementState: jest.fn(),
+    sendRerunBackMsg: jest.fn(),
+    formsDataChanged: jest.fn(),
+  }
+
   const getProps = (elementProps: Partial<AudioProto> = {}): AudioProps => ({
     element: AudioProto.create({
       startTime: 0,
@@ -35,10 +43,7 @@ describe("Audio Element", () => {
     }),
     endpoints: mockEndpoints({ buildMediaURL: buildMediaURL }),
     width: 0,
-    elementMgr: new ElementStateManager({
-      sendRerunBackMsg: jest.fn(),
-      formsDataChanged: jest.fn(),
-    }),
+    elementMgr: elementMgrMock as unknown as ElementStateManager,
   })
 
   it("renders without crashing", () => {
@@ -56,6 +61,22 @@ describe("Audio Element", () => {
     const audioElement = screen.getByTestId("stAudio")
     expect(buildMediaURL).toHaveBeenCalledWith("/media/mockAudioFile.wav")
     expect(audioElement).toHaveAttribute("src", "https://mock.media.url")
+  })
+
+  it("does not call elementMgr.setElementState if autoplay is false", () => {
+    const props = getProps({ autoplay: false, id: "" })
+    render(<Audio {...props} />)
+    expect(mockSetElementState).not.toHaveBeenCalled()
+  })
+
+  it("calls elementMgr.setElementState if autoplay is true", () => {
+    const props = getProps({ autoplay: true, id: "testAudioId" })
+    render(<Audio {...props} />)
+    expect(mockSetElementState).toHaveBeenCalledTimes(1)
+    expect(mockSetElementState).toHaveBeenCalledWith(
+      "testAudioId",
+      "testAudioId"
+    )
   })
 
   it("updates time when the prop is changed", () => {
