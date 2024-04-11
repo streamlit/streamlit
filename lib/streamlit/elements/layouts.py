@@ -711,14 +711,19 @@ class LayoutsMixin:
             self.dg, label=label, expanded=expanded, state=state
         )
 
-    @gather_metrics("dialog")
-    def dialog(
+    def _dialog(
         self,
         title: str,
         *,
         dismissible: bool = True,
         width: Literal["small", "large"] = "small",
     ) -> "Dialog":
+        """Inserts the dialog container.
+
+        Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.
+        The dialog_decorator also has a more descriptive docstring since it is user-facing.
+        """
+
         # We need to import Dialog here to avoid a circular import
         from streamlit.elements.lib.dialog import Dialog
 

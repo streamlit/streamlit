@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/**
+ * Context to indicate to child elements that they are rendered within a dialog.
+ */
+
 import React from "react"
 
 export default React.createContext(false)

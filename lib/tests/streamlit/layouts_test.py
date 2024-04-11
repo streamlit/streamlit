@@ -345,7 +345,7 @@ class DialogTest(DeltaGeneratorTestCase):
     def test_dialog_deltagenerator_usage_with_context_manager(self):
         """Test that the delta-generator dialog works as a context manager"""
 
-        dialog = st._main.dialog(DialogTest.title)
+        dialog = st._main._dialog(DialogTest.title)
 
         with dialog:
             """No content so that 'get_delta_from_queue' returns the dialog."""
@@ -358,7 +358,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
-        dialog = st._main.dialog(DialogTest.title)
+        dialog = st._main._dialog(DialogTest.title)
 
         self.assertIsNotNone(dialog)
         dialog_block = self.get_delta_from_queue()
@@ -374,7 +374,7 @@ class DialogTest(DeltaGeneratorTestCase):
 
     def test_dialog_deltagenerator_only_call_open_once(self):
         """Test that only a single dialog can be opened"""
-        dialog = st._main.dialog(DialogTest.title)
+        dialog = st._main._dialog(DialogTest.title)
 
         self.assertIsNotNone(dialog)
 

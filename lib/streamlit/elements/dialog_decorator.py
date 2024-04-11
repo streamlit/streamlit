@@ -21,6 +21,7 @@ from streamlit.delta_generator import event_dg, get_last_dg_added_to_context_sta
 from streamlit.elements.lib.dialog import DialogWidth
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.fragment import fragment as _fragment
+from streamlit.runtime.metrics_util import gather_metrics
 
 
 def _assert_no_nested_dialogs() -> None:
@@ -60,7 +61,7 @@ def _dialog_decorator(
         # Call the Dialog on the event_dg because it lives outside of the normal
         # Streamlit UI flow. For example, if it is called from the sidebar, it should not
         # inherit the sidebar theming.
-        dialog = event_dg.dialog(title=title, dismissible=True, width=width)
+        dialog = event_dg._dialog(title=title, dismissible=True, width=width)
         dialog.open()
 
         @_fragment
@@ -89,6 +90,7 @@ def dialog_decorator(title: F | None, *, width: DialogWidth = "small") -> F:
     ...
 
 
+@gather_metrics("experimental_dialog")
 def dialog_decorator(
     title: F | None | str = "", *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
