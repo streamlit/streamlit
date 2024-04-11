@@ -123,7 +123,9 @@ class MediaMixin:
             Whether the audio should loop playback.
         autoplay: bool
             Whether the audio should start playing automatically.
-            Browsers will not autoplay audio files if the user has not interacted with the page yet.
+            Browsers will not autoplay audio files if the user has not interacted with
+            the page yet, for example by clicking on the page while it loads.
+            Defaults to False.
 
         Examples
         --------
