@@ -44,10 +44,12 @@ const getProps = (
   }),
   width: 0,
   height: 0,
+  isFullScreen: false,
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  disabled: false,
 })
 
 // eslint-disable-next-line testing-library/no-node-access -- There's no other way to get the parent element

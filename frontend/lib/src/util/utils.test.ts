@@ -508,7 +508,7 @@ describe("getLoadingScreenType", () => {
 })
 
 describe("keysToSnakeCase", () => {
-  it("should remove . with _", () => {
+  it("should replace . with _", () => {
     expect(keysToSnakeCase({ "marker.size": "bob" })).toEqual({
       marker_size: "bob",
     })

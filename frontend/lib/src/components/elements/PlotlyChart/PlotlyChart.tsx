@@ -37,7 +37,10 @@ export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
   height: number | undefined
+  isFullScreen: boolean
   widgetMgr: WidgetStateManager
+  disabled: boolean
+  fragmentId?: string
 }
 
 export interface PlotlyIFrameProps {
@@ -61,10 +64,25 @@ export const DEFAULT_HEIGHT = 450
 const SELECTIONS_KEY = "selections"
 const RELAYOUT_KEY = "relayout"
 
-function isFullScreen(height: number | undefined): boolean {
-  return !!height
-}
-
+/**
+ * Parses an SVG path string into separate x and y coordinates.
+ *
+ * The function takes a single SVG path string as input. This path string should start with 'M'
+ * (move to command), followed by pairs of x and y coordinates separated by commas, and optionally
+ * end with 'Z' to close the path. Each pair of coordinates is separated by 'L' (line to command).
+ *
+ * Example Input:
+ * "M4.016412414518674,8.071685352641575L4.020620725933719,7.8197516509841165Z"
+ *
+ * Example Output:
+ * {
+ *   x: [4.016412414518674, 4.020620725933719],
+ *   y: [8.071685352641575, 7.8197516509841165]
+ * }
+ *
+ * @param {string} pathData - The SVG path string to be parsed.
+ * @returns {SelectionRange} An object containing two arrays: `x` for all x coordinates and `y` for all y coordinates.
+ */
 export function parseLassoPath(pathData: string): SelectionRange {
   if (pathData === "") {
     return {
@@ -123,7 +141,10 @@ function PlotlyFigure({
   element,
   width,
   height,
+  isFullScreen,
   widgetMgr,
+  disabled,
+  fragmentId,
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
 
@@ -136,13 +157,6 @@ function PlotlyFigure({
     )
     const storedValue = widgetMgr.getJsonValue(element)
 
-    if (storedValue === "{}") {
-      spec.data.forEach((trace: any) => {
-        trace.selectedpoints = undefined
-      })
-      spec.layout.selections = undefined
-    }
-
     // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
     if (storedValue !== undefined && storedValue !== "{}") {
       const parsedStoreValue = JSON.parse(storedValue.toString())
@@ -152,6 +166,9 @@ function PlotlyFigure({
           element,
           SELECTIONS_KEY
         )
+
+        // https://plotly.com/javascript/reference/index/
+        // data is originalData + selectedpoints
         spec.data = data
         spec.layout.selections = selections
         if (spec.data) {
@@ -162,9 +179,10 @@ function PlotlyFigure({
               trace.selectedpoints.length > 0
           )
           if (hasSelectedPoints) {
-            // make all other points opaque
             spec.data.forEach((trace: any) => {
               if (!trace.selectedpoints) {
+                // Plotly will automatically set traces in selectedpoints with the 100% opaqueness
+                // setting selectedpoints to an empty array will set these points to be opaque, thus representing that they're unselected
                 trace.selectedpoints = []
               }
             })
@@ -206,21 +224,21 @@ function PlotlyFigure({
 
   const spec = getInitialValue()
 
-  const [initialHeight] = useState(spec.layout.height)
-  const [initialWidth] = useState(spec.layout.width)
+  const initialHeight = spec.layout.height
+  const initialWidth = spec.layout.width
 
-  if (isFullScreen(height)) {
+  if (isFullScreen) {
     spec.layout.width = width
     spec.layout.height = height
   } else if (element.useContainerWidth) {
     spec.layout.width = width
-    if (!isFullScreen(height) && height !== initialHeight) {
-      spec.layout.height = initialHeight
-    }
   } else {
     spec.layout.width = initialWidth
     spec.layout.height = initialHeight
   }
+
+  // https://plotly.com/javascript/reference/layout/#layout-clickmode
+  // This allows single selections and shift click to add / remove selections
   if (element.isSelectEnabled) {
     spec.layout.clickmode = "event+select"
     spec.layout.hovermode = "closest"
@@ -240,24 +258,18 @@ function PlotlyFigure({
     const selectedLassos: Selection[] = []
     const selectedPoints: Array<any> = []
 
-    if (
-      event.points.length === 0 &&
-      // event.selections doesn't show up in the PlotSelectionEvent
-      // @ts-expect-error
-      event.selections &&
-      // event.selections doesn't show up in the PlotSelectionEvent
-      // @ts-expect-error
-      event.selections.length === 0
-    ) {
+    // event.selections doesn't show up in the PlotSelectionEvent
+    // @ts-expect-error
+    const selections = event.selections
+    if (event.points.length === 0 && selections && selections.length === 0) {
       return
     }
 
     event.points.forEach(function (point: any) {
       selectedPoints.push({
         ...point,
-        legendgroup: point.data.legendgroup
-          ? point.data.legendgroup
-          : undefined,
+        legendgroup: point.data.legendgroup || undefined,
+        // Remove data and full data as they have been deemed to be unnecessary data overhead
         data: undefined,
         fullData: undefined,
       })
@@ -319,12 +331,12 @@ function PlotlyFigure({
       // @ts-expect-error
       selections: event.selections,
     })
-    widgetMgr.setJsonValue(element, returnValue, { fromUi: true })
+    widgetMgr.setJsonValue(element, returnValue, { fromUi: true }, fragmentId)
   }
 
   const { data, layout, frames } = spec
 
-  const handleDoubleClick = (): void => {
+  const handleDoubleClick = useCallback((): void => {
     const relayout = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)?.[
       RELAYOUT_KEY
     ]
@@ -354,7 +366,7 @@ function PlotlyFigure({
         })
       }
       widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
-      widgetMgr.setJsonValue(element, {}, { fromUi: true })
+      widgetMgr.setJsonValue(element, {}, { fromUi: true }, fragmentId)
     } else {
       widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
         [RELAYOUT_KEY]: {
@@ -364,7 +376,7 @@ function PlotlyFigure({
         },
       })
     }
-  }
+  }, [widgetMgr, element])
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
     const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
@@ -400,17 +412,24 @@ function PlotlyFigure({
 
   return (
     <Plot
-      key={isFullScreen(height) ? "fullscreen" : "original"}
+      key={isFullScreen ? "fullscreen" : "original"}
       className="stPlotlyChart"
-      divId={element.id}
       data={data}
       layout={layout}
       config={config}
       frames={frames}
-      onSelected={element.isSelectEnabled ? handleSelect : () => {}}
-      onDeselect={element.isSelectEnabled ? handleDoubleClick : () => {}}
-      onDoubleClick={element.isSelectEnabled ? handleDoubleClick : () => {}}
-      onRelayout={element.isSelectEnabled ? handleRelayout : () => {}}
+      onSelected={
+        element.isSelectEnabled || !disabled ? handleSelect : () => {}
+      }
+      onDeselect={
+        element.isSelectEnabled || !disabled ? handleDoubleClick : () => {}
+      }
+      onDoubleClick={
+        element.isSelectEnabled || !disabled ? handleDoubleClick : () => {}
+      }
+      onRelayout={
+        element.isSelectEnabled || !disabled ? handleRelayout : () => {}
+      }
     />
   )
 }
@@ -419,7 +438,9 @@ export function PlotlyChart({
   width,
   element,
   height,
+  isFullScreen,
   widgetMgr,
+  disabled,
 }: PlotlyChartProps): ReactElement {
   switch (element.chart) {
     case "url":
@@ -434,7 +455,9 @@ export function PlotlyChart({
           width={width}
           element={element}
           height={height}
+          isFullScreen={isFullScreen}
           widgetMgr={widgetMgr}
+          disabled={disabled}
         />
       )
     default:
