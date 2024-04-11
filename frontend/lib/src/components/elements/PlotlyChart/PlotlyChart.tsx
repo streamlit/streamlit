@@ -107,6 +107,7 @@ function PlotlyFigure({
     height,
     theme,
     width,
+    isFullScreen,
   ])
 
   const [config, setConfig] = useState(JSON.parse(figure.config))
