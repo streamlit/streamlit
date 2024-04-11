@@ -110,6 +110,7 @@ class VideoTest(DeltaGeneratorTestCase):
             end_time=18,
             loop=True,
             autoplay=True,
+            muted=True,
         )
 
         el = self.get_delta_from_queue().new_element
@@ -117,6 +118,21 @@ class VideoTest(DeltaGeneratorTestCase):
         self.assertEqual(el.video.end_time, 18)
         self.assertTrue(el.video.loop)
         self.assertTrue(el.video.autoplay)
+        self.assertTrue(el.video.muted)
+        self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
+        self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
+
+    def test_st_video_just_data(self):
+        """Test st.video with just data specified."""
+        fake_video_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        st.video(fake_video_data)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.video.start_time, 0)
+        self.assertEqual(el.video.end_time, 0)
+        self.assertFalse(el.video.loop)
+        self.assertFalse(el.video.autoplay)
+        self.assertFalse(el.video.muted)
         self.assertTrue(el.video.url.startswith(MEDIA_ENDPOINT))
         self.assertIn(_calculate_file_id(fake_video_data, "video/mp4"), el.video.url)
 

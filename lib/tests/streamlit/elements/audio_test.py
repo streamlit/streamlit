@@ -281,6 +281,19 @@ class AudioTest(DeltaGeneratorTestCase):
         self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
         self.assertTrue(_calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url)
 
+    def test_st_audio_just_data(self):
+        """Test st.audio with just data specified."""
+        fake_audio_data = "\x11\x22\x33\x44\x55\x66".encode("utf-8")
+        st.audio(fake_audio_data)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.audio.start_time, 0)
+        self.assertEqual(el.audio.end_time, 0)
+        self.assertFalse(el.audio.loop)
+        self.assertFalse(el.audio.autoplay)
+        self.assertTrue(el.audio.url.startswith(MEDIA_ENDPOINT))
+        self.assertTrue(_calculate_file_id(fake_audio_data, "audio/wav"), el.audio.url)
+
     @parameterized.expand(
         [
             ("1s", None, (1, None)),
