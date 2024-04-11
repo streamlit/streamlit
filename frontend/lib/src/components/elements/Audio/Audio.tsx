@@ -38,15 +38,15 @@ export default function Audio({
     () => elementMgr.getElementState(element.id) || element.id
   )
 
+  const commitElementValue = (): void => {
+    elementMgr.setElementState(element.id, state)
+  }
+
   useEffect(() => {
     if (element.id && state) {
       commitElementValue()
     }
-  }, [element, state, element.id])
-
-  const commitElementValue = (): void => {
-    elementMgr.setElementState(element.id, state)
-  }
+  }, [element, state, element.id, commitElementValue])
 
   const { startTime, endTime, loop, autoplay } = element
 
