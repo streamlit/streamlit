@@ -1742,7 +1742,6 @@ export class App extends PureComponent<Props, State> {
           // host communication manager elements
           pageLinkBaseUrl,
           sidebarChevronDownshift,
-          toastAdjustment: hostToolbarItems.length > 0,
           gitInfo: this.state.gitInfo,
           appConfig,
         }}
