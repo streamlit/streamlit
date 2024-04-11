@@ -16,7 +16,7 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 # Only do chromium as this can create a lot of screenshots
@@ -56,8 +56,51 @@ def test_plotly_has_correct_visuals(
         "st_plotly_chart-use-container-width-false-and-specified-height",
         "st_plotly_chart-none-theme-and-use-container-width",
     ]
+    plotly_indices = [13, 14, 15]
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
-            themed_app.locator(".stPlotlyChart").nth(i),
+            themed_app.locator(".stPlotlyChart").nth(plotly_indices[i]),
             name=name,
         )
+
+
+def test_plotly_use_container_width_false_fullscreen(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    themed_app.locator(".stPlotlyChart").nth(14).hover()
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    fullscreen_button.hover()
+    fullscreen_button.click()
+    assert_snapshot(
+        themed_app.locator(".stPlotlyChart").nth(),
+        name="st_plotly_chart-container_width_false_fullscreen",
+    )
+
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    fullscreen_button.hover()
+    fullscreen_button.click()
+    assert_snapshot(
+        themed_app.locator(".stPlotlyChart").nth(14),
+        name="st_plotly_chart-container_width_false_exited_fullscreen",
+    )
+
+
+def test_plotly_use_container_width_true_fullscreen(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    themed_app.locator(".stPlotlyChart").nth(15).hover()
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    fullscreen_button.hover()
+    fullscreen_button.click()
+    assert_snapshot(
+        themed_app.locator(".stPlotlyChart").nth(),
+        name="st_plotly_chart-container_width_false_fullscreen",
+    )
+
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    fullscreen_button.hover()
+    fullscreen_button.click()
+    assert_snapshot(
+        themed_app.locator(".stPlotlyChart").nth(15),
+        name="st_plotly_chart-container_width_false_exited_fullscreen",
+    )
