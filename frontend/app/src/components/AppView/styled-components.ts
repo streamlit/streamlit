@@ -28,14 +28,19 @@ export const StyledAppViewContainer = styled.div(({ theme }) => ({
   right: 0,
   bottom: 0,
   overflow: "hidden",
-  [`@media print and (min-width: ${theme.breakpoints.xl})`]: {
-    // ".landscape": {
-    // display: "block",
-    // float: "none",
-    height: theme.sizes.full,
-    position: "static",
-    overflow: "visible",
-    // },
+  "@media print": {
+    "@media (orientation: portrait)": {
+      display: "block",
+      float: "none",
+      height: theme.sizes.full,
+      position: "static",
+      overflow: "visible",
+    },
+    "@media (orientation: landscape)": {
+      height: theme.sizes.full,
+      position: "static",
+      overflow: "visible",
+    },
   },
 }))
 

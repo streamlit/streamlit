@@ -53,14 +53,16 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media print`]: {
-        // backgroundColor: "transparent",
-        // margin: "auto",
-        // boxShadow: "none",
-        // maxWidth: "none",
-        // minWidth: "100%",
-        // width: "100% !important",
-        // paddingTop: "1rem",
-        height: "auto !important",
+        "@media (orientation: portrait)": {
+          backgroundColor: "transparent",
+          margin: "auto",
+          boxShadow: "none",
+          maxWidth: "none",
+          minWidth: "100%",
+          width: "100% !important",
+          paddingTop: "1rem",
+          height: "auto !important",
+        },
         display: isCollapsed ? "none" : "flex",
       },
     }
