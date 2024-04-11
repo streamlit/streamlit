@@ -50,15 +50,11 @@ export default function Video({
   const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
     element
 
-  const commitElementValue = (): void => {
-    elementMgr.setElementState(element.id, state)
-  }
-
   useEffect(() => {
     if (element.id && state) {
-      commitElementValue()
+      elementMgr.setElementState(element.id, state)
     }
-  }, [element, state, element.id, commitElementValue])
+  }, [state, element.id, elementMgr])
 
   // Handle startTime changes
   useEffect(() => {
