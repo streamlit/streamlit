@@ -178,9 +178,10 @@ export class WidgetStateManager {
   // External data about all forms.
   private formsData: FormsData
 
-  // maps widget IDs to additional information that needs to be preserved across reruns
-  // mainly used for st.altair_chart and st.plotly_chart as of now
-  private readonly extraWidgetInfo = new Map<string, Map<string, any>>()
+  // A dictionary that maps elementId -> element state value.
+  // This is used to store frontend-only state for elements.
+  // This state is not never sent to the server.
+  private readonly elementStates = new Map<string, Map<string, any>>()
 
   constructor(props: Props) {
     this.props = props
@@ -590,6 +591,11 @@ export class WidgetStateManager {
   public removeInactive(activeIds: Set<string>): void {
     this.widgetStates.removeInactive(activeIds)
     this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
+    this.elementStates.forEach((value, key) => {
+      if (!activeIds.has(key)) {
+        this.deleteElementState(key)
+      }
+    })
   }
 
   /**
@@ -714,30 +720,38 @@ export class WidgetStateManager {
     }
   }
 
-  public setExtraWidgetInfo(
-    widget: WidgetInfo,
-    key: string,
-    value: any
-  ): void {
-    if (!this.extraWidgetInfo.has(widget.id)) {
-      this.extraWidgetInfo.set(widget.id, new Map<string, any>())
-    }
-
-    const currentMap = this.extraWidgetInfo.get(widget.id)
-
-    if (currentMap) {
-      currentMap.set(key, value)
-    }
+  /**
+   * Get the element state value for the given element ID and key, if it exists.
+   * This is a frontend-only state that is never sent to the server.
+   */
+  public getElementState(elementId: string, key: string): any {
+    return this.elementStates.get(elementId)?.get(key)
   }
 
-  public getExtraWidgetInfo(widget: WidgetInfo, key: string): any {
-    if (this.extraWidgetInfo.has(widget.id)) {
-      const widgetInfoMap = this.extraWidgetInfo.get(widget.id)
-      if (widgetInfoMap) {
-        return widgetInfoMap.get(key)
-      }
+  /**
+   * Sets the state of an element identified by its ID and its key.
+   * This is a frontend-only state that is never sent to the server.
+   * It can be used to store element state to restore the state
+   * of an element in situations where an element is removed and re-added.
+   *
+   * @param {string} elementId - The unique identifier of the element.
+   * @param {string} key - The key to set
+   * @param {any} value - The value to set for the element's state.
+   * @returns {void}
+   */
+  public setElementState(elementId: string, key: string, value: any): void {
+    if (!this.elementStates.has(elementId)) {
+      this.elementStates.set(elementId, new Map<string, any>())
     }
-    return undefined
+
+    this.elementStates.get(elementId)?.set(key, value)
+  }
+
+  /**
+   * Remove the element state associated with a given element ID.
+   */
+  public deleteElementState(elementId: string): void {
+    this.elementStates.delete(elementId)
   }
 }
 
