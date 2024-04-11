@@ -67,20 +67,21 @@ def test_plotly_has_correct_visuals(
 def test_plotly_use_container_width_false_fullscreen(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    themed_app.locator(".stPlotlyChart").nth(14).hover()
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    index = 14
+    themed_app.locator(".stPlotlyChart").nth(index).hover()
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(
-        themed_app.locator(".stPlotlyChart").nth(),
+        themed_app.locator(".stPlotlyChart").nth(index),
         name="st_plotly_chart-container_width_false_fullscreen",
     )
 
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(
-        themed_app.locator(".stPlotlyChart").nth(14),
+        themed_app.locator(".stPlotlyChart").nth(index),
         name="st_plotly_chart-container_width_false_exited_fullscreen",
     )
 
@@ -88,19 +89,20 @@ def test_plotly_use_container_width_false_fullscreen(
 def test_plotly_use_container_width_true_fullscreen(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    themed_app.locator(".stPlotlyChart").nth(15).hover()
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    index = 15
+    themed_app.locator(".stPlotlyChart").nth(index).hover()
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(
-        themed_app.locator(".stPlotlyChart").nth(),
+        themed_app.locator(".stPlotlyChart").nth(index),
         name="st_plotly_chart-container_width_false_fullscreen",
     )
 
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(0)
+    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(
-        themed_app.locator(".stPlotlyChart").nth(15),
+        themed_app.locator(".stPlotlyChart").nth(index),
         name="st_plotly_chart-container_width_false_exited_fullscreen",
     )

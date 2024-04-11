@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+import React from "react"
 import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
