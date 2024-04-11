@@ -306,7 +306,7 @@ function PlotlyFigure({
   const reset = useCallback((): void => {
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
     widgetMgr.setJsonValue(element, {}, { fromUi: true }, fragmentId)
-  }, [widgetMgr, element])
+  }, [widgetMgr, element, fragmentId])
 
   return (
     <Plot
