@@ -28,13 +28,6 @@ export const StyledAppViewContainer = styled.div(({ theme }) => ({
   right: 0,
   bottom: 0,
   overflow: "hidden",
-  "@media print": {
-    "@media (orientation: portrait)": {
-      // sidebar should float on top
-      flexDirection: "column",
-      position: "static",
-    },
-  },
 }))
 
 export interface StyledAppViewMainProps {
@@ -55,18 +48,14 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
     },
 
     // Added so sidebar overlays main app content on
-    // smaller screen sizes
-    [`@media (max-width: ${theme.breakpoints.md})`]: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
-
-    "@media print": {
-      "@media (orientation: portrait)": {
-        position: "relative",
+    // smaller screen sizes, except when printing
+    "@media not print": {
+      [`@media (max-width: ${theme.breakpoints.md})`]: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
       },
     },
   })

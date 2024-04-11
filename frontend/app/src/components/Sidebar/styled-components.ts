@@ -53,16 +53,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media print`]: {
-        "@media (orientation: portrait)": {
-          backgroundColor: "transparent",
-          margin: "auto",
-          boxShadow: "none",
-          maxWidth: "none",
-          minWidth: "100%",
-          width: "100% !important",
-          paddingTop: "1rem",
-          height: "auto !important",
-        },
+        height: "auto !important",
         display: isCollapsed ? "none" : "flex",
       },
     }
