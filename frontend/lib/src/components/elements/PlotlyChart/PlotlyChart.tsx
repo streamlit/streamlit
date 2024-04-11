@@ -38,6 +38,7 @@ export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
   height: number | undefined
+  isFullScreen: boolean
 }
 
 export interface PlotlyIFrameProps {
@@ -47,10 +48,6 @@ export interface PlotlyIFrameProps {
 }
 
 export const DEFAULT_HEIGHT = 450
-
-function isFullScreen(height: number | undefined): boolean {
-  return !!height
-}
 
 /** Render an iframed Plotly chart from a URL */
 function renderIFrame({
@@ -73,6 +70,7 @@ function PlotlyFigure({
   element,
   width,
   height,
+  isFullScreen,
 }: PlotlyChartProps): ReactElement {
   const figure = element.figure as FigureProto
 
@@ -85,7 +83,7 @@ function PlotlyFigure({
     const initialHeight = spec.layout.height
     const initialWidth = spec.layout.width
 
-    if (isFullScreen(height)) {
+    if (isFullScreen) {
       spec.layout.width = width
       spec.layout.height = height
     } else if (element.useContainerWidth) {
@@ -126,7 +124,7 @@ function PlotlyFigure({
 
   return (
     <Plot
-      key={isFullScreen(height) ? "fullscreen" : "original"}
+      key={isFullScreen ? "fullscreen" : "original"}
       className="stPlotlyChart"
       data={data}
       layout={layout}
@@ -140,6 +138,7 @@ export function PlotlyChart({
   width,
   element,
   height,
+  isFullScreen,
 }: PlotlyChartProps): ReactElement {
   switch (element.chart) {
     case "url":
@@ -149,7 +148,14 @@ export function PlotlyChart({
         width,
       })
     case "figure":
-      return <PlotlyFigure width={width} element={element} height={height} />
+      return (
+        <PlotlyFigure
+          width={width}
+          element={element}
+          height={height}
+          isFullScreen={isFullScreen}
+        />
+      )
     default:
       throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
   }
