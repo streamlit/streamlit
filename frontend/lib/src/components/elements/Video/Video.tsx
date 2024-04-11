@@ -51,8 +51,10 @@ export default function Video({
     element
 
   useEffect(() => {
-    commitElementValue()
-  }, [element, state])
+    if (element.id && state) {
+      commitElementValue()
+    }
+  }, [element, state, element.id])
 
   const commitElementValue = (): void => {
     elementMgr.setElementState(element.id, state)
