@@ -34,7 +34,7 @@ graphviz==0.20.3
 greenlet==3.0.3
 hypothesis==6.100.1
 identify==2.5.35
-idna==3.6
+idna==3.7
 importlib_metadata==7.1.0
 importlib_resources==6.4.0
 iniconfig==2.0.0
@@ -53,7 +53,7 @@ langchain==0.1.15
 langchain-community==0.0.32
 langchain-core==0.1.41
 langchain-text-splitters==0.0.1
-langsmith==0.1.42
+langsmith==0.1.45
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -135,7 +135,7 @@ toolz==0.12.1
 tornado==6.4
 twine==5.0.0
 types-click==7.1.8
-types-protobuf==4.24.0.20240408
+types-protobuf==4.25.0.20240410
 types-pytz==2024.1.0.20240203
 types-requests==2.31.0.6
 types-setuptools==69.2.0.20240317
