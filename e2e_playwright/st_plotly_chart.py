@@ -23,8 +23,6 @@ from plotly.subplots import make_subplots
 
 import streamlit as st
 
-plotly.io.json.config.default_engine = "orjson"
-
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
 
