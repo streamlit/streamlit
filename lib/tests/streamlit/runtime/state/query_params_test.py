@@ -245,7 +245,12 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
     def test_from_dict_mixed_values(self):
         result_dict = {"hello": ["world", "janice", "amy"], "snow": "flake"}
         self.query_params.from_dict(result_dict)
-        assert self.query_params.to_dict() != result_dict
+
+        # self.query_params.to_dict() has behavior consistent with fetching values using
+        # self.query_params["some_key"]. That is, if the value is an array, the last
+        # element of the array is returned rather than the array in its entirety.
+        assert self.query_params.to_dict() == {"hello": "amy", "snow": "flake"}
+
         result_as_list = {"hello": ["world", "janice", "amy"], "snow": ["flake"]}
         qp_as_list = {key: self.query_params.get_all(key) for key in self.query_params}
         assert result_as_list == qp_as_list
