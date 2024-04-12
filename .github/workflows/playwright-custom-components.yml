@@ -1,0 +1,70 @@
+name: Playwright E2E Tests - Custom Components
+
+on:
+  push:
+    branches:
+      - "develop"
+  pull_request:
+    types: [opened, synchronize, reopened]
+  # Allows workflow to be called from other workflows
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-playwright-custom-component
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash --login -eo pipefail {0}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_MAX_VERSION }}"
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+      - name: Run make develop
+        run: make develop
+      - name: Install playwright
+        run: python -m playwright install --with-deps
+      - name: Run make protobuf
+        run: make protobuf
+      - name: Run make frontend-fast
+        run: make frontend-fast
+      - name: Run make playwright-custom-components
+        run: make playwright-custom-components
+      - name: Check that all screenshot have been committed
+        run: |
+          set -x;
+
+          UNTRACKED_FILE_COUNT=$(git ls-files --others --exclude-standard | grep snapshots | wc -l | bc -l || echo '0')
+          echo "Untracked files count: ${UNTRACKED_FILE_COUNT}"
+          if [[ "${UNTRACKED_FILE_COUNT}" -gt 0 ]]; then
+            echo "Untracked files:";
+            git ls-files --others --exclude-standard | grep snapshots;
+            exit 1;
+          fi
+      - name: Upload failed test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright_test_results
+          path: e2e_playwright/test-results

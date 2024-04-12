@@ -30,6 +30,7 @@ message Block {
     Tab tab = 7;
     ChatMessage chat_message = 9;
     Popover popover = 10;
+    Dialog dialog = 11;
   }
 
   bool allow_empty = 8;
@@ -53,6 +54,18 @@ message Block {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
+  }
+
+  message Dialog {
+    enum DialogWidth {
+      SMALL = 0;
+      LARGE = 1;
+    }
+
+    string title = 1;
+    bool dismissible = 2;
+    DialogWidth width = 3;
+    optional bool is_open = 4;
   }
 
   message Form {
@@ -88,5 +101,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 11
+  // Next ID: 12
 }
