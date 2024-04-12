@@ -72,7 +72,7 @@
     "node-emoji": "^1.11.0",
     "numbro": "^2.3.6",
     "plotly.js": "^2.30.1",
-    "protobufjs": "^7.2.4",
+    "protobufjs": "^7.2.5",
     "query-string": "^8.1.0",
     "re-resizable": "^6.9.9",
     "react-color": "^2.18.1",
