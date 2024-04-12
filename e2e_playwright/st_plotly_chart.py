@@ -23,6 +23,8 @@ from plotly.subplots import make_subplots
 
 import streamlit as st
 
+plotly.io.json.config.default_engine = "orjson"
+
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
 
@@ -249,7 +251,7 @@ fig.update_layout(
     legend_title_font_color="green",
     title_font_size=30,
 )
-st.plotly_chart(fig, config=dict(displayModeBar=False), theme="streamlit")
+st.plotly_chart(fig, theme="streamlit")
 
 data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
 
