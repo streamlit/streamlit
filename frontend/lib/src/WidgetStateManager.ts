@@ -178,7 +178,7 @@ export class WidgetStateManager {
   // External data about all forms.
   private formsData: FormsData
 
-  // A dictionary that maps elementId -> element state value.
+  // A dictionary that maps elementId -> element state keys -> element state values.
   // This is used to store frontend-only state for elements.
   // This state is not never sent to the server.
   private readonly elementStates = new Map<string, Map<string, any>>()
