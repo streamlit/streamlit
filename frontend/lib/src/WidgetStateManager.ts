@@ -29,7 +29,7 @@ import {
   WidgetStates,
 } from "./proto"
 import { Signal, SignalConnection } from "typed-signals"
-import { isValidFormId } from "./util/utils"
+import { isValidFormId, notNullOrUndefined } from "./util/utils"
 
 export interface Source {
   fromUi: boolean
@@ -591,9 +591,9 @@ export class WidgetStateManager {
   public removeInactive(activeIds: Set<string>): void {
     this.widgetStates.removeInactive(activeIds)
     this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
-    this.elementStates.forEach((value, key) => {
-      if (!activeIds.has(key)) {
-        this.deleteElementState(key)
+    this.elementStates.forEach((_, elementId) => {
+      if (!activeIds.has(elementId)) {
+        this.deleteElementState(elementId)
       }
     })
   }
@@ -748,10 +748,16 @@ export class WidgetStateManager {
   }
 
   /**
-   * Remove the element state associated with a given element ID.
+   * Deletes the state associated with a specific element by ID. If a key is provided,
+   * only the state corresponding to that key is removed. If no key is specified, all states
+   * associated with the element ID are removed.
    */
-  public deleteElementState(elementId: string): void {
-    this.elementStates.delete(elementId)
+  public deleteElementState(elementId: string, key?: string): void {
+    if (notNullOrUndefined(key)) {
+      this.elementStates.get(elementId)?.delete(key)
+    } else {
+      this.elementStates.delete(elementId)
+    }
   }
 
   /**
