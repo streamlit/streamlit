@@ -21,7 +21,6 @@ import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib"
 
 export interface EventContainerProps {
-  toastAdjustment: boolean
   scriptRunId: string
   children?: ReactNode
 }
