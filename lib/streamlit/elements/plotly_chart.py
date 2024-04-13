@@ -85,8 +85,6 @@ class PlotlyChartSelectionSerde:
     def deserialize(
         self, ui_value: str | None, widget_id: str = ""
     ) -> AttributeDictionary:
-        print(f"{ui_value=}")
-        print(f"{widget_id=}")
         selection_state: AttributeDictionary = (
             AttributeDictionary(
                 {
