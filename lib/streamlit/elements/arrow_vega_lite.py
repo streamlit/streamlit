@@ -155,7 +155,10 @@ def marshall(
         raise ValueError("Vega-Lite charts require a non-empty spec dict.")
 
     if "autosize" not in spec:
-        spec["autosize"] = {"type": "fit", "contains": "padding"}
+        if "vconcat" in spec and use_container_width:
+            spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+        else:
+            spec["autosize"] = {"type": "fit", "contains": "padding"}
 
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
