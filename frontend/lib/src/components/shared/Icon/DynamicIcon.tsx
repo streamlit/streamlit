@@ -18,7 +18,8 @@ import React, { Suspense } from "react"
 
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
-import { camelCase, startCase } from "lodash"
+import camelCase from "lodash/camelCase"
+import startCase from "lodash/startCase"
 import DynamicIconErrorBoundary from "./DynamicIconErrorBoundary"
 
 const MaterialFilled = React.lazy(
