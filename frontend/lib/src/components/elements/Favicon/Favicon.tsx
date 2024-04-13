@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
 
 import nodeEmoji from "node-emoji"
 import { grabTheRightIcon } from "@streamlit/lib/src/vendor/twemoji"
@@ -26,10 +25,11 @@ function iconToUrl(icon: string): string {
   const matchResult = icon.match(iconRegexp)
   let snakeIconName = ""
   if (matchResult === null) {
+    // TODO[kajarenc]: Maybe add a warning / return specific not found icon
     return snakeIconName
-  } else {
-    snakeIconName = snakeCase(matchResult[2])
   }
+  snakeIconName = snakeCase(matchResult[2])
+
   let iconType = "baseline"
   if (matchResult[1] === "material") {
     iconType = "baseline"

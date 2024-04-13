@@ -38,10 +38,6 @@ class DynamicIconErrorBoundary extends React.PureComponent<
     error: null,
   }
 
-  constructor(props: any) {
-    super(props)
-  }
-
   public static getDerivedStateFromError = (error: Error): State => {
     // Return the state update so the next render will show the fallback UI.
     return {
