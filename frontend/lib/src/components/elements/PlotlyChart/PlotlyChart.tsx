@@ -152,11 +152,11 @@ function PlotlyFigure({
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
-    const storedValue = widgetMgr.getJsonValue(element)
+    const storedValue = widgetMgr.getStringValue(element)
 
     // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
-    if (storedValue !== undefined && storedValue !== "{}") {
-      const parsedStoreValue = JSON.parse(storedValue.toString())
+    if (storedValue !== undefined) {
+      const parsedStoreValue = JSON.parse(storedValue)
       // check if there is a selection
       if (parsedStoreValue.select) {
         const { data, selections } = widgetMgr.getExtraWidgetInfo(
@@ -298,14 +298,19 @@ function PlotlyFigure({
     returnValue.select.points = returnValue.select.points.map((point: any) =>
       keysToSnakeCase(point)
     )
-    widgetMgr.setJsonValue(element, returnValue, { fromUi: true }, fragmentId)
+    widgetMgr.setStringValue(
+      element,
+      JSON.stringify(returnValue),
+      { fromUi: true },
+      fragmentId
+    )
   }
 
   const { data, layout, frames } = spec
 
   const reset = useCallback((): void => {
     widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
-    widgetMgr.setJsonValue(element, {}, { fromUi: true }, fragmentId)
+    widgetMgr.setStringValue(element, "{}", { fromUi: true }, fragmentId)
   }, [widgetMgr, element, fragmentId])
 
   return (
