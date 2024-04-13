@@ -22,9 +22,9 @@ def test_altair_chart_displays_correctly(
 ):
     expect(
         themed_app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
-    ).to_have_count(10)
+    ).to_have_count(11)
     charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
-    expect(charts).to_have_count(10)
+    expect(charts).to_have_count(11)
     snapshot_names = [
         "st_altair_chart-scatter_chart_default_theme",
         "st_altair_chart-scatter_chart_streamlit_theme",
