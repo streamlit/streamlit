@@ -116,3 +116,20 @@ c1 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y1"))
 c2 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y2"))
 
 st.altair_chart(c1 & c2, use_container_width=True)
+
+from altair.expr import datum
+
+results = [
+    [2016, 11525, 3],
+    [2017, 11517, 2],
+    [2018, 11521, 2],
+    [2019, 11519, 4],
+]
+
+dataframe = pd.DataFrame(results, columns=["Job Number", "Test Count", "Test Failures"])
+
+base = alt.Chart(dataframe).encode(alt.X("Job Number:O"))
+chart_test_count = base.mark_line().encode(alt.Y("Test Count:N"))
+chart_test_failures = base.mark_line().encode(alt.Y("Test Failures:N"))
+
+st.altair_chart((chart_test_count + chart_test_failures).resolve_scale(y="independent"))
