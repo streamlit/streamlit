@@ -744,7 +744,7 @@ export class WidgetStateManager {
       this.elementStates.set(elementId, new Map<string, any>())
     }
 
-    this.elementStates.get(elementId)?.set(key, value)
+    this.elementStates.get(elementId)!.set(key, value)
   }
 
   /**
