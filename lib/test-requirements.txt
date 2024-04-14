@@ -14,9 +14,6 @@ setuptools>=65.5.1
 watchdog>=2.1.5
 urllib3>=1.9
 
-# needed for selection_interval / selection_point api
-altair>=5
-
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
