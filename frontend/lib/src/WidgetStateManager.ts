@@ -744,6 +744,8 @@ export class WidgetStateManager {
       this.elementStates.set(elementId, new Map<string, any>())
     }
 
+    // There is already a undefined check above but looks like typescript isn't smart enough to detect this
+    // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
     this.elementStates.get(elementId)!.set(key, value)
   }
 
