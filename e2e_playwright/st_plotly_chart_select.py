@@ -38,7 +38,7 @@ fig_bubble = px.scatter(
 fig_bubble.update_layout(dragmode="select")
 st.header("Bubble Chart with Box Select")
 st.plotly_chart(fig_bubble, on_select=True, key="bubble_chart")
-if st.session_state.bubble_chart:
+if len(st.session_state.bubble_chart.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.bubble_chart.select["points"]
     # Extract x and y values directly into lists
@@ -59,7 +59,7 @@ fig_linechart = px.line(df, x="year", y="lifeExp", color="country", markers=True
 # Update the configuration to enable lasso selection
 fig_linechart.update_layout(dragmode="lasso")
 st.plotly_chart(fig_linechart, on_select=True, key="line_chart")
-if st.session_state.line_chart:
+if len(st.session_state.line_chart.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.line_chart.select["points"]
     # Extract x and y values directly into lists
@@ -80,7 +80,7 @@ st.plotly_chart(
     on_select="rerun",
     key="bar_chart",
 )
-if st.session_state.bar_chart:
+if len(st.session_state.bar_chart.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.bar_chart.select["points"]
     # Extract x and y values directly into lists
@@ -107,7 +107,7 @@ st.plotly_chart(
     on_select=True,
     key="StackedBar_chart",
 )
-if st.session_state.StackedBar_chart:
+if len(st.session_state.StackedBar_chart.select["points"]) > 0:
     st.write("Countries and their medal data that were selected:")
     points = st.session_state.StackedBar_chart.select["points"]
     # Extract x and y values directly into lists

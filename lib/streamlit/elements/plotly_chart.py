@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import urllib.parse
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
 
 from typing_extensions import TypeAlias
@@ -26,18 +27,16 @@ from streamlit import type_util
 from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.chart_util import check_on_select_str
 from streamlit.constants import ON_SELECTION_IGNORE
-from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -79,6 +78,46 @@ FigureOrData: TypeAlias = Union[
 ]
 
 
+@dataclass
+class PlotlyChartSelectionSerde:
+    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart selection state."""
+
+    def deserialize(
+        self, ui_value: str | None, widget_id: str = ""
+    ) -> AttributeDictionary:
+        selection_state: AttributeDictionary = (
+            AttributeDictionary(
+                {
+                    "select": {
+                        "points": [],
+                        "point_indicies": [],
+                        "box": [],
+                        "lasso": [],
+                    },
+                }
+            )
+            if ui_value is None
+            else AttributeDictionary(json.loads(ui_value))
+        )
+
+        if "select" not in selection_state:
+            selection_state = AttributeDictionary(
+                {
+                    "select": {
+                        "points": [],
+                        "point_indicies": [],
+                        "box": [],
+                        "lasso": [],
+                    },
+                }
+            )
+
+        return selection_state
+
+    def serialize(self, selection_state: AttributeDictionary) -> str:
+        return json.dumps(selection_state, default=str)
+
+
 class PlotlyMixin:
     @gather_metrics("plotly_chart")
     def plotly_chart(
@@ -90,7 +129,7 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: bool | Literal["rerun", "ignore"] | WidgetCallback = False,
         **kwargs: Any,
-    ) -> Union["DeltaGenerator", AttributeDictionary]:
+    ) -> "DeltaGenerator" | AttributeDictionary:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -166,22 +205,11 @@ class PlotlyMixin:
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
 
-        on_select_callback = None
-        if not isinstance(on_select, bool) and not isinstance(on_select, str):
-            on_select_callback = on_select
-
         plotly_chart_proto = PlotlyChartProto()
         if theme != "streamlit" and theme != None:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
-        key = to_key(key)
-        check_callback_rules(self.dg, on_select_callback)
-        check_session_state_rules(default_value={}, key=key, writes_allowed=False)
-        check_on_select_str(on_select, "plotly_chart")
-        if current_form_id(self.dg):
-            # TODO(willhuang1997): double check the message of this
-            raise StreamlitAPIException("st.plotly_chart cannot be used inside forms!")
 
         is_select_enabled = (
             on_select != None
@@ -189,32 +217,47 @@ class PlotlyMixin:
             and on_select != ON_SELECTION_IGNORE
         )
 
-        marshall(
-            plotly_chart_proto,
-            figure_or_data,
-            use_container_width,
-            sharing,
-            theme,
-            key,
-            is_select_enabled,
-            **kwargs,
-        )
-
-        def deserialize(ui_value, widget_id=""):
-            if ui_value is None:
-                return {}
-            return AttributeDictionary(ui_value)
-
-        def serialize(v):
-            return json.dumps(v, default=str)
-
-        ctx = get_script_run_ctx()
-
-        if not isinstance(on_select, bool) and not isinstance(on_select, str):
-            pass
-
-        widget_state = cast(RegisterWidgetResult[Any], {})
         if is_select_enabled:
+            # import here to avoid circular import
+            from streamlit.elements.form import current_form_id
+            from streamlit.elements.utils import (
+                check_callback_rules,
+                check_session_state_rules,
+            )
+
+            if current_form_id(self.dg):
+                # TODO(willhuang1997): double check the message of this
+                raise StreamlitAPIException(
+                    "st.plotly_chart with on_select enabled cannot be used inside forms!"
+                )
+
+            on_select_callback = None
+            if not isinstance(on_select, bool) and not isinstance(on_select, str):
+                on_select_callback = on_select
+
+            key = to_key(key)
+            check_callback_rules(self.dg, on_select_callback)
+            check_session_state_rules(default_value={}, key=key, writes_allowed=False)
+            check_on_select_str(on_select, "plotly_chart")
+
+            serde = PlotlyChartSelectionSerde()
+
+            ctx = get_script_run_ctx()
+
+            if not isinstance(on_select, bool) and not isinstance(on_select, str):
+                pass
+
+            marshall(
+                plotly_chart_proto,
+                figure_or_data,
+                use_container_width,
+                sharing,
+                theme,
+                key,
+                is_select_enabled,
+                **kwargs,
+            )
+
             widget_state = register_widget(
                 "plotly_chart",
                 plotly_chart_proto,
@@ -222,16 +265,25 @@ class PlotlyMixin:
                 on_change_handler=on_select_callback,
                 args=None,
                 kwargs=None,
-                deserializer=deserialize,
-                serializer=serialize,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
                 ctx=ctx,
             )
 
-        self.dg._enqueue("plotly_chart", plotly_chart_proto)
-        if is_select_enabled:
+            self.dg._enqueue("plotly_chart", plotly_chart_proto)
             return AttributeDictionary(widget_state.value)
         else:
-            return self.dg
+            marshall(
+                plotly_chart_proto,
+                figure_or_data,
+                use_container_width,
+                sharing,
+                theme,
+                key,
+                is_select_enabled,
+                **kwargs,
+            )
+            return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
     def dg(self) -> DeltaGenerator:

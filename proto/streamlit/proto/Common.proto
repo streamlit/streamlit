@@ -79,7 +79,7 @@ message UploadedFileInfo {
   string name = 2;
 
   // The size of this file in bytes.
-  uint32 size = 3;
+  uint64 size = 3;
 
   // ID that can be used to retrieve a file.
   string file_id = 4;
