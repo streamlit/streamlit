@@ -834,25 +834,30 @@ class ArrowAltairMixin:
             )
         proto = ArrowVegaLiteChartProto()
 
-        on_select_callback = on_select
-        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
-        if isinstance(on_select_callback, bool) or isinstance(on_select_callback, str):
-            on_select_callback = None
+        is_select_enabled = (
+            on_select != None
+            and on_select != False
+            and on_select != ON_SELECTION_IGNORE
+        )
 
-        key = to_key(key)
-        check_callback_rules(self.dg, on_select_callback)
-        check_session_state_rules(default_value={}, key=key, writes_allowed=False)
-        check_on_select_str(on_select, "altair_chart")
-        if current_form_id(self.dg):
+        if not is_select_enabled and current_form_id(self.dg):
             # TODO(willhuang1997): double check the message of this
             raise StreamlitAPIException("st.altair_chart cannot be used inside forms!")
 
-        current_widget = None
-        # TODO(willhuang1997): This needs to be cleaned up probably
-        if on_select == ON_SELECTION_IGNORE:
-            on_select = False
-        if on_select:
-            # TODO(willhuang1997): This seems like a hack so should fix this
+        if is_select_enabled:
+            on_select_callback = on_select
+            # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+            if isinstance(on_select_callback, bool) or isinstance(
+                on_select_callback, str
+            ):
+                on_select_callback = None
+
+            key = to_key(key)
+            check_callback_rules(self.dg, on_select_callback)
+            check_session_state_rules(default_value={}, key=key, writes_allowed=False)
+            check_on_select_str(on_select, "altair_chart")
+
+            current_widget = None
             chart_json = altair_chart.to_dict()
             if "params" not in chart_json:
                 raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_ALTAIR)
@@ -863,21 +868,28 @@ class ArrowAltairMixin:
             if not has_selection_object:
                 raise StreamlitAPIException(NO_SELECTION_OBJECTS_ERROR_ALTAIR)
 
-        marshall(
-            proto,
-            altair_chart,
-            use_container_width=use_container_width,
-            theme=theme,
-            on_select=on_select,
-            key=key,
-        )
-        current_widget = arrow_vega_lite._on_select(proto, on_select, key)
+            marshall(
+                proto,
+                altair_chart,
+                use_container_width=use_container_width,
+                theme=theme,
+                on_select=on_select,
+                key=key,
+            )
+            current_widget = arrow_vega_lite._on_select(proto, on_select, key)
 
-        dg = self.dg._enqueue("arrow_vega_lite_chart", proto)
-        if on_select:
+            self.dg._enqueue("arrow_vega_lite_chart", proto)
             return current_widget
         else:
-            return dg
+            marshall(
+                proto,
+                altair_chart,
+                use_container_width=use_container_width,
+                theme=theme,
+                on_select=on_select,
+                key=key,
+            )
+            return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -64,6 +64,7 @@ interface Props {
   theme: EmotionTheme
   width: number
   widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 /** All of the data that makes up a VegaLite chart. */
@@ -182,22 +183,58 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     return []
   }
 
-  public getSelectorsFromCombinedChart(spec: any, type: string): string[] {
-    const selectors: string[] = []
-    if (type in spec && spec[type]) {
-      for (const chart of Object.keys(spec[type])) {
-        selectors.push(...this.getSelectorsFromChart(spec[type][chart]))
+  public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
+    const { element: prevElement, theme: prevTheme } = prevProps
+    const { element, theme } = this.props
+
+    const prevSpec = prevElement.spec
+    const { spec } = element
+
+    if (
+      !this.vegaView ||
+      prevSpec !== spec ||
+      prevTheme !== theme ||
+      prevProps.width !== this.props.width ||
+      prevProps.height !== this.props.height ||
+      prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme ||
+      prevProps.element.isSelectEnabled !== this.props.element.isSelectEnabled
+    ) {
+      logMessage("Vega spec changed.")
+      try {
+        await this.createView()
+      } catch (e) {
+        const error = ensureError(e)
+
+        this.setState({ error })
+      }
+      return
+    }
+
+    const prevData = prevElement.data
+    const { data } = element
+
+    if (prevData || data) {
+      this.updateData(this.defaultDataName, prevData, data)
+    }
+
+    const prevDataSets = getDataSets(prevElement) || {}
+    const dataSets = getDataSets(element) || {}
+
+    for (const [name, dataset] of Object.entries(dataSets)) {
+      const datasetName = name || this.defaultDataName
+      const prevDataset = prevDataSets[datasetName]
+
+      this.updateData(datasetName, prevDataset, dataset)
+    }
+
+    // Remove all datasets that are in the previous but not the current datasets.
+    for (const name of Object.keys(prevDataSets)) {
+      if (!dataSets.hasOwnProperty(name) && name !== this.defaultDataName) {
+        this.updateData(name, null, null)
       }
     }
-    return selectors
-  }
 
-  public getSelectors(spec: any): string[] {
-    const selectors: string[] = []
-    selectors.push(...this.getSelectorsFromChart(spec))
-    selectors.push(...this.getSelectorsFromCombinedChart(spec, "hconcat"))
-    selectors.push(...this.getSelectorsFromCombinedChart(spec, "vconcat"))
-    return selectors
+    this.vegaView.resize().runAsync()
   }
 
   public generateSpec = (): any => {
@@ -310,60 +347,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     return spec
   }
 
-  public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
-    const { element: prevElement, theme: prevTheme } = prevProps
-    const { element, theme } = this.props
-
-    const prevSpec = prevElement.spec
-    const { spec } = element
-
-    if (
-      !this.vegaView ||
-      prevSpec !== spec ||
-      prevTheme !== theme ||
-      prevProps.width !== this.props.width ||
-      prevProps.height !== this.props.height ||
-      prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme ||
-      prevProps.element.isSelectEnabled !== this.props.element.isSelectEnabled
-    ) {
-      logMessage("Vega spec changed.")
-      try {
-        await this.createView()
-      } catch (e) {
-        const error = ensureError(e)
-
-        this.setState({ error })
-      }
-      return
-    }
-
-    const prevData = prevElement.data
-    const { data } = element
-
-    if (prevData || data) {
-      this.updateData(this.defaultDataName, prevData, data)
-    }
-
-    const prevDataSets = getDataSets(prevElement) || {}
-    const dataSets = getDataSets(element) || {}
-
-    for (const [name, dataset] of Object.entries(dataSets)) {
-      const datasetName = name || this.defaultDataName
-      const prevDataset = prevDataSets[datasetName]
-
-      this.updateData(datasetName, prevDataset, dataset)
-    }
-
-    // Remove all datasets that are in the previous but not the current datasets.
-    for (const name of Object.keys(prevDataSets)) {
-      if (!dataSets.hasOwnProperty(name) && name !== this.defaultDataName) {
-        this.updateData(name, null, null)
-      }
-    }
-
-    this.vegaView.resize().runAsync()
-  }
-
   /**
    * Update the dataset in the Vega view. This method tried to minimize changes
    * by automatically creating and applying diffs.
@@ -461,7 +444,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     if (widgetMgr && element?.id && element.isSelectEnabled) {
       // listen for selection events
-      this.getSelectors(spec).forEach((item, _index) => {
+      this.getSelectorsFromChart(spec).forEach((item, _index) => {
         view.addSignalListener(
           item,
           debounce(150, (name: string, value: any) => {
@@ -475,12 +458,21 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
               this.setState({
                 selections: updatedSelections,
               })
+              // this.props.widgetMgr?.setStringValue(
+              //   this.props.element as WidgetInfo,
+              //   JSON.stringify(updatedSelections),
+              //   {
+              //     fromUi: true,
+              //   },
+              //   this.props.fragmentId
+              // )
               this.props.widgetMgr?.setJsonValue(
                 this.props.element as WidgetInfo,
                 updatedSelections,
                 {
                   fromUi: true,
-                }
+                },
+                this.props.fragmentId
               )
             }
           })
@@ -491,12 +483,21 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         this.setState({
           selections: {},
         })
+        // this.props.widgetMgr?.setStringValue(
+        //   this.props.element as WidgetInfo,
+        //   JSON.stringify({}),
+        //   {
+        //     fromUi: true,
+        //   },
+        //   this.props.fragmentId
+        // )
         this.props.widgetMgr?.setJsonValue(
           this.props.element as WidgetInfo,
           {},
           {
             fromUi: true,
-          }
+          },
+          this.props.fragmentId
         )
       }
 

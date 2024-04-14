@@ -275,8 +275,7 @@ const RawElementNodeRenderer = (
       return (
         <ArrowVegaLiteChart
           element={node.vegaLiteChartElement as VegaLiteChartElement}
-          {...elementProps}
-          widgetMgr={widgetProps.widgetMgr}
+          {...widgetProps}
         />
       )
 
