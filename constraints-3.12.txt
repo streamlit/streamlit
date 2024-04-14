@@ -46,7 +46,7 @@ langchain==0.1.16
 langchain-community==0.0.32
 langchain-core==0.1.42
 langchain-text-splitters==0.0.1
-langsmith==0.1.46
+langsmith==0.1.47
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -108,7 +108,7 @@ scipy==1.13.0
 seaborn==0.13.2
 SecretStorage==3.3.3
 semver==2.13.0
-setuptools==69.2.0
+setuptools==69.5.1
 six==1.16.0
 smmap==5.0.1
 sortedcontainers==2.4.0
