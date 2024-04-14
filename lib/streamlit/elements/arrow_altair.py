@@ -769,9 +769,10 @@ class ArrowAltairMixin:
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
         # TODO(willhuang1997): This will need to be finalized to "rerun" / "ignore" or True / False
-        on_select: Union[
-            Literal["rerun", "ignore"], Callable[..., None], bool, None
-        ] = None,
+        on_select: Literal["rerun", "ignore"]
+        | Callable[..., None]
+        | bool
+        | None = None,
         key: str | None = None,
     ) -> Union["DeltaGenerator", Dict[Any, Any]]:
         """Display a chart using the Altair library.
@@ -873,7 +874,7 @@ class ArrowAltairMixin:
                 altair_chart,
                 use_container_width=use_container_width,
                 theme=theme,
-                on_select=on_select,
+                is_select_enabled=is_select_enabled,
                 key=key,
             )
             current_widget = arrow_vega_lite._on_select(proto, on_select, key)
@@ -886,8 +887,6 @@ class ArrowAltairMixin:
                 altair_chart,
                 use_container_width=use_container_width,
                 theme=theme,
-                on_select=on_select,
-                key=key,
             )
             return self.dg._enqueue("arrow_vega_lite_chart", proto)
 
@@ -1576,6 +1575,11 @@ def marshall(
     altair_chart: alt.Chart,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
+    is_select_enabled: Literal["rerun", "ignore"]
+    | Callable[..., None]
+    | bool
+    | None = None,
+    key: str | None = None,
     **kwargs: Any,
 ) -> None:
     """Marshall chart's data into proto."""
@@ -1614,6 +1618,8 @@ def marshall(
                 chart_dict,
                 use_container_width=use_container_width,
                 theme=theme,
+                is_select_enabled=is_select_enabled,
+                key=key,
                 **kwargs,
             )
 

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
@@ -71,7 +71,11 @@ def _on_select(
     on_select: Literal["rerun", "ignore"] | Callable[..., None] | bool | None = None,
     key: str | None = None,
 ) -> AttributeDictionary:
-    if on_select is not None and on_select != False:
+    if (
+        on_select is not None
+        and on_select != False
+        and on_select != ON_SELECTION_IGNORE
+    ):
         # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
         if isinstance(on_select, bool) or isinstance(on_select, str):
             on_select = None
@@ -237,7 +241,7 @@ class ArrowVegaLiteMixin:
                 spec,
                 use_container_width=use_container_width,
                 theme=theme,
-                on_select=on_select,
+                is_select_enabled=is_select_enabled,
                 key=key,
                 **kwargs,
             )
@@ -252,8 +256,6 @@ class ArrowVegaLiteMixin:
                 spec,
                 use_container_width=use_container_width,
                 theme=theme,
-                on_select=on_select,
-                key=key,
                 **kwargs,
             )
             return self.dg._enqueue("arrow_vega_lite_chart", proto)
@@ -270,9 +272,10 @@ def marshall(
     spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
-    on_select: Union[
-        Literal["rerun", "ignore"], Callable[..., None], bool, None
-    ] = None,
+    is_select_enabled: Literal["rerun", "ignore"]
+    | Callable[..., None]
+    | bool
+    | None = "ignore",
     key: str | None = None,
     **kwargs,
 ):
@@ -316,7 +319,9 @@ def marshall(
     if "datasets" in spec:
         for k, v in spec["datasets"].items():
             dataset = proto.datasets.add()
-            if on_select:
+            if is_select_enabled:
+                # map data ids to our own stable ids to replace later
+                # otherwise the widget id will change and rerender a completely new chart
                 stable_ids[k] = str(data_id_counter)
                 dataset.name = str(data_id_counter)
                 data_id_counter += 1
@@ -344,7 +349,11 @@ def marshall(
 
     ctx = get_script_run_ctx()
 
-    if on_select:
+    if is_select_enabled:
+        # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
+        # altair creates names for parameters when no name is created as it's required in vega
+        # streamlit reruns will increment this counter by 1 so we need a stable name
+        # otherwise the widget id will change and rerender a completely new chart
         regex = re.compile(r"^param_\d+$")
         param_counter = 0
 
@@ -356,6 +365,10 @@ def marshall(
                 stable_ids[name] = f"selection_{param_counter}"
                 param_counter += 1
             if "views" in param:
+                # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
+                # altair creates auto generates names for views through a counter to map properties to each view
+                # streamlit reruns will increment this counter by 1 so we need a stable name
+                # otherwise the widget id will change and rerender a completely new chart
                 for view_index, view in enumerate(param["views"]):
                     param["views"][view_index] = f"view_{view_counter}"
                     stable_ids[view] = f"view_{view_counter}"
@@ -364,11 +377,6 @@ def marshall(
         for k in keys:
             if k in spec:
                 replace_values_in_dict(spec[k], stable_ids)
-
-    proto.spec = json.dumps(spec)
-    proto.use_container_width = use_container_width
-    proto.theme = theme or ""
-    if on_select:
         id = compute_widget_id(
             "arrow_vega_lite",
             user_key=key,
@@ -380,11 +388,13 @@ def marshall(
             page=ctx.page_script_hash if ctx else None,
         )
         proto.id = id
-
-    if on_select:
         proto.is_select_enabled = True
     else:
         proto.is_select_enabled = False
+
+    proto.spec = json.dumps(spec)
+    proto.use_container_width = use_container_width
+    proto.theme = theme or ""
 
     if data is not None:
         arrow.marshall(proto.data, data)
