@@ -272,10 +272,7 @@ def marshall(
     spec: dict[str, Any] | None = None,
     use_container_width: bool = False,
     theme: None | Literal["streamlit"] = "streamlit",
-    is_select_enabled: Literal["rerun", "ignore"]
-    | Callable[..., None]
-    | bool
-    | None = "ignore",
+    is_select_enabled: bool = False,
     key: str | None = None,
     **kwargs,
 ):
