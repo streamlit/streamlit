@@ -85,6 +85,8 @@ export interface VegaLiteChartElement {
 
   /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
   vegaLiteTheme: string
+
+  needsAddRows: boolean
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
@@ -186,9 +188,10 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
     const prevData = prevElement.data
     const { data } = element
+    const addRowsHint = element.needsAddRows ?? false
 
     if (prevData || data) {
-      this.updateData(this.defaultDataName, prevData, data)
+      this.updateData(this.defaultDataName, prevData, data, addRowsHint)
     }
 
     const prevDataSets = getDataSets(prevElement) || {}
@@ -198,13 +201,13 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       const datasetName = name || this.defaultDataName
       const prevDataset = prevDataSets[datasetName]
 
-      this.updateData(datasetName, prevDataset, dataset)
+      this.updateData(datasetName, prevDataset, dataset, addRowsHint)
     }
 
     // Remove all datasets that are in the previous but not the current datasets.
     for (const name of Object.keys(prevDataSets)) {
       if (!dataSets.hasOwnProperty(name) && name !== this.defaultDataName) {
-        this.updateData(name, null, null)
+        this.updateData(name, null, null, addRowsHint)
       }
     }
 
@@ -260,7 +263,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   private updateData(
     name: string,
     prevData: Quiver | null,
-    data: Quiver | null
+    data: Quiver | null,
+    addRowsHint: boolean
   ): void {
     if (!this.vegaView) {
       throw new Error("Chart has not been drawn yet")
@@ -293,7 +297,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         prevNumCols,
         data,
         numRows,
-        numCols
+        numCols,
+        addRowsHint
       )
     ) {
       if (prevNumRows < numRows) {
@@ -502,7 +507,8 @@ function dataIsAnAppendOfPrev(
   prevNumCols: number,
   data: Quiver,
   numRows: number,
-  numCols: number
+  numCols: number,
+  addRowsHint: boolean
 ): boolean {
   // Check whether dataframes have the same shape.
 
@@ -524,6 +530,10 @@ function dataIsAnAppendOfPrev(
 
   const c = numCols - 1
   const r = prevNumRows - 1
+
+  if (!addRowsHint) {
+    return false
+  }
 
   // Check if the new dataframe looks like it's a superset of the old one.
   // (this is a very light check, and not guaranteed to be right!)

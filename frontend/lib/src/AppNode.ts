@@ -197,6 +197,7 @@ export class ElementNode implements AppNode {
       datasets: modifiedDatasets,
       useContainerWidth: proto.useContainerWidth,
       vegaLiteTheme: proto.theme,
+      needsAddRows: proto.needsAddRows,
     }
 
     this.lazyVegaLiteChartElement = toReturn
@@ -319,6 +320,8 @@ export class ElementNode implements AppNode {
           ? draft.data.addRows(newDataSetQuiver)
           : newDataSetQuiver
       }
+
+      draft.needsAddRows = true
     })
   }
 }

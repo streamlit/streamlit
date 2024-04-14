@@ -190,6 +190,8 @@ def marshall(
     if data is not None:
         arrow.marshall(proto.data, data)
 
+    proto.needs_add_rows = False
+
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS = {
