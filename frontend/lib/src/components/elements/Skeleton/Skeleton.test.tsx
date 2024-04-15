@@ -34,22 +34,12 @@ describe("Skeleton element", () => {
   })
 
   it("converts properties appropriately", () => {
-    const props = SkeletonProto.create({ height: 5, width: 10 })
-
-    render(<Skeleton element={props} />)
-
-    const testSkeleton = screen.getByTestId("stSkeleton")
-    expect(testSkeleton).toHaveAttribute("height", "5px")
-    expect(testSkeleton).toHaveAttribute("width", "10px")
-  })
-
-  it("accepts null/undefined properties", () => {
     const props = SkeletonProto.create({ height: 5 })
 
     render(<Skeleton element={props} />)
 
     const testSkeleton = screen.getByTestId("stSkeleton")
-    expect(testSkeleton).toHaveAttribute("height")
+    expect(testSkeleton).toHaveAttribute("height", "5px")
     expect(testSkeleton).not.toHaveAttribute("width")
   })
 })
