@@ -218,6 +218,7 @@ _SNOWPARK_DF_TYPE_STR: Final = "snowflake.snowpark.dataframe.DataFrame"
 _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
 _PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
+_MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -593,6 +594,13 @@ def convert_anything_to_df(
                 "Call `collect()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
+
+    if is_type(data, _MODIN_DF_TYPE_STR):
+        st.caption(
+            f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+            "Use the Modin API to show more data."
+        )
+        return data.head(max_unevaluated_rows)._to_pandas()
 
     # This is inefficient when data is a pyarrow.Table as it will be converted
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
