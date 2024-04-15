@@ -89,7 +89,7 @@ class EmptyMixin:
 
         Parameters
         ----------
-        height: int
+        height: int or None
             Desired height of the skeleton expressed in pixels. If None, a
             default height is used.
         """
