@@ -86,6 +86,27 @@ def check_session_state_rules(
         _shown_default_value_warning = True
 
 
+def check_widget_usage() -> None:
+    if runtime.exists():
+        from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+
+        ctx = get_script_run_ctx()
+        if ctx.disallow_cached_widget_usage:
+            streamlit.warning(
+                """
+        Your script uses a widget command or a selection event within
+        some cached code at (via `@st.cache_data` or `@st.cache_resource`).
+        This code will only be called when we detect a cache "miss",
+        which can lead to unexpected results.
+
+        How to fix this:
+        * Move the widget command call outside the cached function.
+        * Or, if you know what you're doing, use `experimental_allow_widgets=True`
+        in the cache decorator to enable widget replay and suppress this warning.
+                    """
+            )
+
+
 def get_label_visibility_proto_value(
     label_visibility_string: type_util.LabelVisibility,
 ) -> LabelVisibilityMessage.LabelVisibilityOptions.ValueType:

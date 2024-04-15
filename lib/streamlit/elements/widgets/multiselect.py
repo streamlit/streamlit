@@ -22,6 +22,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
+    check_widget_usage,
     get_label_visibility_proto_value,
     maybe_coerce_enum_sequence,
 )
@@ -282,12 +283,14 @@ class MultiSelectMixin:
         ctx: ScriptRunContext | None = None,
     ) -> list[T]:
         key = to_key(key)
+
+        check_widget_usage()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
+        maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)
         check_python_comparable(opt)
-        maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
 

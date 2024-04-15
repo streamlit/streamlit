@@ -194,11 +194,15 @@ class FormMixin:
 
         """
         # Import this here to avoid circular imports.
-        from streamlit.elements.utils import check_session_state_rules
+        from streamlit.elements.utils import (
+            check_session_state_rules,
+            check_widget_usage,
+        )
 
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
 
+        check_widget_usage()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         # A form is uniquely identified by its key.
