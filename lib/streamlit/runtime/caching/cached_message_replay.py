@@ -235,7 +235,6 @@ class CachedMessageReplayContext(threading.local):
     """
 
     def __init__(self, cache_type: CacheType):
-        self._cached_func_stack: list[types.FunctionType] = []
         self._cached_message_stack: list[list[MsgData]] = []
         self._seen_dg_stack: list[set[str]] = []
         self._most_recent_messages: list[MsgData] = []
@@ -255,21 +254,21 @@ class CachedMessageReplayContext(threading.local):
         It allows us to track any `st.foo` messages that are generated from inside the function
         for playback during cache retrieval.
         """
-        self._cached_func_stack.append(func)
         self._cached_message_stack.append([])
         self._seen_dg_stack.append(set())
         self._allow_widgets = allow_widgets
 
         ctx = get_script_run_ctx()
-        ctx.disallow_cached_widget_usage = not allow_widgets
+        if ctx:
+            ctx.disallow_cached_widget_usage = not allow_widgets
 
         try:
             yield
         finally:
-            self._cached_func_stack.pop()
             self._most_recent_messages = self._cached_message_stack.pop()
             self._seen_dg_stack.pop()
-            ctx.disallow_cached_widget_usage = False
+            if ctx:
+                ctx.disallow_cached_widget_usage = False
 
     def save_element_message(
         self,
