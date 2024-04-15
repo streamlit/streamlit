@@ -59,7 +59,8 @@ export interface Selection extends SelectionRange {
 }
 
 export const DEFAULT_HEIGHT = 450
-const SELECTIONS_KEY = "selections"
+const SELECTIONS = "selections"
+const DATA = "data"
 
 /**
  * Parses an SVG path string into separate x and y coordinates.
@@ -159,10 +160,8 @@ function PlotlyFigure({
       const parsedStoreValue = JSON.parse(storedValue)
       // check if there is a selection
       if (parsedStoreValue.select) {
-        const { data, selections } = widgetMgr.getExtraWidgetInfo(
-          element,
-          SELECTIONS_KEY
-        )
+        const data = widgetMgr.getElementState(element.id, DATA)
+        const selections = widgetMgr.getElementState(element.id, SELECTIONS)
 
         // https://plotly.com/javascript/reference/index/
         // data is originalData + selectedpoints
@@ -286,11 +285,9 @@ function PlotlyFigure({
         }
       })
 
-      widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {
-        data: data,
-        // @ts-expect-error
-        selections: event.selections,
-      })
+      // @ts-expect-error
+      widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
+      widgetMgr.setElementState(element.id, DATA, data)
     }
 
     returnValue.select.box = selectedBoxes
@@ -309,7 +306,8 @@ function PlotlyFigure({
   const { data, layout, frames } = spec
 
   const reset = useCallback((): void => {
-    widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
+    widgetMgr.setElementState(element.id, SELECTIONS, {})
+    widgetMgr.setElementState(element.id, DATA, {})
     widgetMgr.setStringValue(element, "{}", { fromUi: true }, fragmentId)
   }, [widgetMgr, element, fragmentId])
 
