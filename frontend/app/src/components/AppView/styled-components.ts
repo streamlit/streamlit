@@ -112,7 +112,8 @@ export const StyledAppViewBlockContainer =
       disableFullscreenMode,
       theme,
     }) => {
-      let topEmbedPadding: string = showPadding ? "6rem" : "2.1rem"
+      const littlePadding = "2.1rem"
+      let topEmbedPadding: string = showPadding ? "6rem" : littlePadding
       if (
         (addPaddingForHeader && !showPadding) ||
         (isEmbedded && hasSidebar)
@@ -157,7 +158,7 @@ export const StyledAppViewBlockContainer =
         ...fullScreenButtonStyles,
 
         [`@media print`]: {
-          paddingTop: 0,
+          paddingTop: littlePadding,
         },
       }
     }

@@ -89,7 +89,7 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
       paddingBottom: theme.spacing.lg,
 
       "@media print": {
-        paddingTop: theme.spacing.sm,
+        paddingTop: theme.spacing.threeXL,
       },
 
       "&::before": isOverflowing
