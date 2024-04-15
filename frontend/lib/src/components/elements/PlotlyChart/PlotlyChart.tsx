@@ -368,7 +368,7 @@ function PlotlyFigure({
       }
       widgetMgr.setElementState(element.id, SELECTIONS, {})
       widgetMgr.setElementState(element.id, DATA, {})
-      widgetMgr.setJsonValue(element, {}, { fromUi: true }, fragmentId)
+      widgetMgr.setStringValue(element, "{}", { fromUi: true }, fragmentId)
     } else {
       // reset zoom but don't rerun
       widgetMgr.setElementState(element.id, DRAGMODE, dragmode)
