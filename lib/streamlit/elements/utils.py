@@ -95,7 +95,7 @@ def check_widget_usage() -> None:
             streamlit.warning(
                 """
         Your script uses a widget command or a selection event within
-        some cached code (via `@st.cache_data` or `@st.cache_resource`).
+        a cached function (via `@st.cache_data` or `@st.cache_resource`).
         This code will only be called when we detect a cache "miss",
         which can lead to unexpected results.
 
