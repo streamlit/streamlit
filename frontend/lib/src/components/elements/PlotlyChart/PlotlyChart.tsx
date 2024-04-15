@@ -61,8 +61,11 @@ export interface Selection extends SelectionRange {
 }
 
 export const DEFAULT_HEIGHT = 450
-const SELECTIONS_KEY = "selections"
-const RELAYOUT_KEY = "relayout"
+const DATA = "data"
+const SELECTIONS = "selections"
+const RANGE = "range"
+const AUTORANGE = "autorange"
+const DRAGMODE = "dragmode"
 
 /**
  * Parses an SVG path string into separate x and y coordinates.
@@ -162,10 +165,8 @@ function PlotlyFigure({
       const parsedStoreValue = JSON.parse(storedValue.toString())
       // check if there is a selection
       if (parsedStoreValue.select) {
-        const { data, selections } = widgetMgr.getExtraWidgetInfo(
-          element,
-          SELECTIONS_KEY
-        )
+        const data = widgetMgr.getElementState(element.id, DATA)
+        const selections = widgetMgr.getElementState(element.id, SELECTIONS)
 
         // https://plotly.com/javascript/reference/index/
         // data is originalData + selectedpoints
@@ -190,34 +191,34 @@ function PlotlyFigure({
         }
       }
     }
-    const zoom = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
+    const rangeEvent = widgetMgr.getElementState(element.id, RANGE)
+    const autoRangeEvent = widgetMgr.getElementState(element.id, AUTORANGE)
+    const dragmode = widgetMgr.getElementState(element.id, DRAGMODE)
 
     try {
-      if (zoom?.[RELAYOUT_KEY]) {
-        const zoomDetails = zoom[RELAYOUT_KEY]
+      if (rangeEvent && rangeEvent["xaxis.range[0]"]) {
+        spec.layout.xaxis.range = [
+          rangeEvent["xaxis.range[0]"],
+          rangeEvent["xaxis.range[1]"],
+        ]
+        spec.layout.yaxis.range = [
+          rangeEvent["yaxis.range[0]"],
+          rangeEvent["yaxis.range[1]"],
+        ]
+      } else if (autoRangeEvent && autoRangeEvent["xaxis.autorange"]) {
+        spec.layout.xaxis.autorange = true
+        spec.layout.yaxis.autorange = true
+      }
 
-        if (zoomDetails["xaxis.range[0]"]) {
-          spec.layout.xaxis.range = [
-            zoomDetails["xaxis.range[0]"],
-            zoomDetails["xaxis.range[1]"],
-          ]
-          spec.layout.yaxis.range = [
-            zoomDetails["yaxis.range[0]"],
-            zoomDetails["yaxis.range[1]"],
-          ]
-        } else if (zoomDetails["xaxis.autorange"]) {
-          spec.layout.xaxis.autorange = true
-          spec.layout.yaxis.autorange = true
-        }
-
-        if (zoomDetails.dragmode) {
-          spec.layout.dragmode = zoomDetails.dragmode
-        }
+      if (dragmode) {
+        spec.layout.dragmode = dragmode
       }
     } catch (e) {
       logMessage(e)
       logMessage(spec)
-      logMessage(zoom)
+      logMessage(rangeEvent)
+      logMessage(autoRangeEvent)
+      logMessage(dragmode)
     }
     return spec
   }, [element, figure.spec, theme, widgetMgr])
@@ -326,87 +327,49 @@ function PlotlyFigure({
     returnValue.select.points = returnValue.select.points.map((point: any) =>
       keysToSnakeCase(point)
     )
-    widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {
-      data: data,
-      // @ts-expect-error
-      selections: event.selections,
-    })
+    // @ts-expect-error
+    widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
+    widgetMgr.setElementState(element.id, DATA, data)
     widgetMgr.setJsonValue(element, returnValue, { fromUi: true }, fragmentId)
   }
 
   const { data, layout, frames } = spec
 
   const handleDoubleClick = useCallback((): void => {
-    const relayout = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)?.[
-      RELAYOUT_KEY
-    ]
-    const dragmode = relayout?.dragmode
+    const dragmode = widgetMgr.getElementState(element.id, DRAGMODE)
     if (dragmode === "select" || dragmode === "lasso") {
-      const xrange0 = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)[
-        RELAYOUT_KEY
-      ]?.["xaxis.range[0]"]
+      const rangeEvent = widgetMgr.getElementState(element.id, RANGE)
+      const xrange0 = rangeEvent?.["xaxis.range[0]"]
       if (xrange0) {
-        const xrange1 = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)[
-          RELAYOUT_KEY
-        ]?.["xaxis.range[1]"]
-        const yrange0 = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)[
-          RELAYOUT_KEY
-        ]?.["yaxis.range[0]"]
-        const yrange1 = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)[
-          RELAYOUT_KEY
-        ]?.["yaxis.range[1]"]
-        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-          [RELAYOUT_KEY]: {
-            ["xaxis.range[0]"]: xrange0 ?? [spec.layout.xaxis.range[0]],
-            ["xaxis.range[1]"]: xrange1 ?? [spec.layout.xaxis.range[1]],
-            ["yaxis.range[0]"]: yrange0 ?? [spec.layout.yaxis.range[0]],
-            ["yaxis.range[1]"]: yrange1 ?? [spec.layout.yaxis.range[1]],
-            dragmode: dragmode ?? spec.layout.dragmode,
-          },
-        })
+        widgetMgr.setElementState(element.id, RANGE, rangeEvent)
+        widgetMgr.setElementState(
+          element.id,
+          DRAGMODE,
+          widgetMgr.getElementState(element.id, DRAGMODE)
+        )
       }
-      widgetMgr.setExtraWidgetInfo(element, SELECTIONS_KEY, {})
+      widgetMgr.setElementState(element.id, SELECTIONS, {})
+      widgetMgr.setElementState(element.id, DATA, {})
       widgetMgr.setJsonValue(element, {}, { fromUi: true }, fragmentId)
     } else {
-      widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-        [RELAYOUT_KEY]: {
-          dragmode: dragmode ?? spec.layout.dragmode,
-          "yaxis.autorange": true,
-          "xaxis.autorange": true,
-        },
+      widgetMgr.setElementState(element.id, DRAGMODE, dragmode)
+      widgetMgr.setElementState(element.id, AUTORANGE, {
+        "xaxis.autorange": true,
+        "yaxis.autorange": true,
       })
     }
-  }, [widgetMgr, element])
+  }, [widgetMgr, element, fragmentId])
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
-    const storedEvent = widgetMgr.getExtraWidgetInfo(element, RELAYOUT_KEY)
+    if (event.dragmode) {
+      widgetMgr.setElementState(element.id, DRAGMODE, event.dragmode)
+    } else if (event["xaxis.range[0]"]) {
+      widgetMgr.setElementState(element.id, RANGE, event)
+    } else if (event["xaxis.autorange"]) {
+      widgetMgr.setElementState(element.id, AUTORANGE, event)
 
-    if (event["xaxis.range[0]"] || event.dragmode) {
-      if (storedEvent && storedEvent[RELAYOUT_KEY]) {
-        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-          [RELAYOUT_KEY]: { ...storedEvent[RELAYOUT_KEY], ...event },
-        })
-      } else {
-        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-          [RELAYOUT_KEY]: { ...event },
-        })
-      }
-    }
-    if (event["xaxis.autorange"]) {
-      if (storedEvent && storedEvent[RELAYOUT_KEY]) {
-        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-          // remove xaxis.range in order to remove zoom boundaries
-          [RELAYOUT_KEY]: {
-            ...storedEvent[RELAYOUT_KEY],
-            ...event,
-            "xaxis.range[0]": undefined,
-          },
-        })
-      } else {
-        widgetMgr.setExtraWidgetInfo(element, RELAYOUT_KEY, {
-          [RELAYOUT_KEY]: { ...event },
-        })
-      }
+      // autorange will reset the range to default
+      widgetMgr.setElementState(element.id, RANGE, {})
     }
   }
 
