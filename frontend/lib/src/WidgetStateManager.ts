@@ -744,9 +744,8 @@ export class WidgetStateManager {
       this.elementStates.set(elementId, new Map<string, any>())
     }
 
-    // There is already a undefined check above but looks like typescript isn't smart enough to detect this
-    // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-    this.elementStates.get(elementId)!.set(key, value)
+    // It's expected here that there is always an initialized map for an elementId
+    ;(this.elementStates.get(elementId) as Map<string, any>).set(key, value)
   }
 
   /**
@@ -760,13 +759,6 @@ export class WidgetStateManager {
     } else {
       this.elementStates.delete(elementId)
     }
-  }
-
-  /**
-   * Remove the element state associated with a given element ID and the key.
-   */
-  public deleteElementStateForKey(elementId: string, key: string): void {
-    this.elementStates.get(elementId)?.delete(key)
   }
 }
 

@@ -703,12 +703,12 @@ describe("Widget State Manager", () => {
     it("deletes a value for the key if set", () => {
       // @ts-expect-error
       widgetMgr.elementStates.set("id", new Map([["text", "red"]]))
-      widgetMgr.deleteElementStateForKey("id", "color")
+      widgetMgr.deleteElementState("id", "color")
       expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
     })
 
     it("does not error when deleting for the key if not set", () => {
-      widgetMgr.deleteElementStateForKey("id", "color")
+      widgetMgr.deleteElementState("id", "color")
       expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
     })
   })
