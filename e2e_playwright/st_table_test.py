@@ -19,7 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 TOTAL_TABLE_ELEMENTS = 31
 
 
-def test_built_in_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
+def test_table_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.table renders correctly via snapshot testing."""
     table_elements = app.get_by_test_id("stTable")
     expect(table_elements).to_have_count(TOTAL_TABLE_ELEMENTS)
@@ -32,8 +32,8 @@ def test_themed_table_rendering(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.table renders correctly with different theming."""
-    chart_elements = themed_app.get_by_test_id("stTable")
-    expect(chart_elements).to_have_count(TOTAL_TABLE_ELEMENTS)
+    table_elements = themed_app.get_by_test_id("stTable")
+    expect(table_elements).to_have_count(TOTAL_TABLE_ELEMENTS)
 
     # Only test a single table element to ensure theming is applied correctly:
-    assert_snapshot(chart_elements.nth(30), name=f"st_table-themed")
+    assert_snapshot(table_elements.nth(30), name=f"st_table-themed")

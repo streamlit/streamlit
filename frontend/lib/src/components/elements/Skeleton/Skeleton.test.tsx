@@ -21,9 +21,12 @@ import "@testing-library/jest-dom"
 
 import { Skeleton } from "./Skeleton"
 
+import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
+
 describe("Skeleton element", () => {
   it("renders without delay", () => {
-    render(<Skeleton />)
+    const props = SkeletonProto.create()
+    render(<Skeleton element={props} />)
 
     // Render the skeleton immediately, without any sort of delay.
     // (This is normal React behavior, but different from AppSkeleton, so I'm
@@ -31,11 +34,23 @@ describe("Skeleton element", () => {
     expect(screen.getByTestId("stSkeleton")).toBeVisible()
   })
 
-  it("renders with height property", () => {
-    const height = "100px"
-    render(<Skeleton height={height} />)
+  it("converts properties appropriately", () => {
+    const props = SkeletonProto.create({ height: 5 })
 
-    const style = getComputedStyle(screen.getByTestId("stSkeleton"))
-    expect(style.height).toBe(height)
+    render(<Skeleton element={props} />)
+
+    const testSkeleton = screen.getByTestId("stSkeleton")
+    expect(testSkeleton).toHaveAttribute("height", "5px")
+    expect(testSkeleton).not.toHaveAttribute("width")
+  })
+
+  it("renders app skeleton", async () => {
+    const props = SkeletonProto.create({
+      style: SkeletonProto.SkeletonStyle.APP,
+    })
+    render(<Skeleton element={props} />)
+
+    // Await the skeleton to appear.
+    expect(await screen.findByTestId("stAppSkeleton")).toBeVisible()
   })
 })
