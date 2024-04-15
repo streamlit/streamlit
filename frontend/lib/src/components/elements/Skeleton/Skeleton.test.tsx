@@ -25,7 +25,8 @@ import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
 describe("Skeleton element", () => {
   it("renders without delay", () => {
-    render(<Skeleton />)
+    const props = SkeletonProto.create()
+    render(<Skeleton element={props} />)
 
     // Render the skeleton immediately, without any sort of delay.
     // (This is normal React behavior, but different from AppSkeleton, so I'm

@@ -18,11 +18,16 @@ import React, { FC, memo } from "react"
 
 import { Skeleton as SkeletonProto } from "@streamlit/lib/src/proto"
 
+import { AppSkeleton } from "."
 import { SquareSkeleton } from "./styled-components"
 
-const RawSkeleton: FC<
-  React.PropsWithChildren<{ element?: SkeletonProto }>
-> = ({ element }) => {
+const RawSkeleton: FC<React.PropsWithChildren<{ element: SkeletonProto }>> = ({
+  element,
+}) => {
+  if (element.style == SkeletonProto.SkeletonStyle.APP) {
+    return <AppSkeleton /> // internal-only, does not use any of the element properties
+  }
+
   return (
     <SquareSkeleton
       data-testid="stSkeleton"

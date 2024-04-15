@@ -426,11 +426,7 @@ const RawElementNodeRenderer = (
       )
 
     case "skeleton": {
-      const skeletonProto = node.element.skeleton as SkeletonProto
-      if (skeletonProto.style == SkeletonProto.SkeletonStyle.APP) {
-        return <AppSkeleton /> // internal-only, does not use any of the element properties
-      }
-      return <Skeleton element={skeletonProto} />
+      return <Skeleton element={node.element.skeleton as SkeletonProto} />
     }
 
     case "snow":
