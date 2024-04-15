@@ -32,8 +32,6 @@ export const StyledAppViewContainer = styled.div(() => ({
   "@media print": {
     // print multiple pages if app is scrollable in Safari
     overflow: "visible",
-    // make background-colors appear by default (e.g. the sidebar background, widget background, multi-select element background, ...)
-    colorAdjust: "exact",
   },
 }))
 
