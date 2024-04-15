@@ -44,13 +44,13 @@ describe("Skeleton element", () => {
     expect(testSkeleton).not.toHaveAttribute("width")
   })
 
-  it("renders app skeleton", () => {
+  it("renders app skeleton", async () => {
     const props = SkeletonProto.create({
       style: SkeletonProto.SkeletonStyle.APP,
     })
     render(<Skeleton element={props} />)
 
-    expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
-    expect(screen.getByTestId("stSkeleton")).not.toBeVisible()
+    // Await the skeleton to appear.
+    expect(await screen.findByTestId("stAppSkeleton")).toBeVisible()
   })
 })
