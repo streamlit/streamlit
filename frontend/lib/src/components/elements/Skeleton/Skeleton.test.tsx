@@ -43,4 +43,14 @@ describe("Skeleton element", () => {
     expect(testSkeleton).toHaveAttribute("height", "5px")
     expect(testSkeleton).not.toHaveAttribute("width")
   })
+
+  it("renders app skeleton", () => {
+    const props = SkeletonProto.create({
+      style: SkeletonProto.SkeletonStyle.APP,
+    })
+    render(<Skeleton element={props} />)
+
+    expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
+    expect(screen.getByTestId("stSkeleton")).not.toBeVisible()
+  })
 })
