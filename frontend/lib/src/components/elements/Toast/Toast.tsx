@@ -46,10 +46,7 @@ export interface ToastProps {
   width: number
 }
 
-function generateToastOverrides(
-  expanded: boolean,
-  theme: EmotionTheme
-): ToastOverrides {
+function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
   const lightBackground = hasLightBackgroundColor(theme)
   return {
     Body: {
@@ -97,10 +94,10 @@ function generateToastOverrides(
 
 // Function used to truncate toast messages that are longer than three lines.
 export function shortenMessage(fullMessage: string): string {
-  const characterLimit = 114
+  const characterLimit = 109
 
   if (fullMessage.length > characterLimit) {
-    let message = fullMessage.replace(/^(.{114}[^\s]*).*/, "$1")
+    let message = fullMessage.replace(/^(.{109}[^\s]*).*/, "$1")
 
     if (message.length > characterLimit) {
       message = message
@@ -127,10 +124,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     setExpanded(!expanded)
   }, [expanded])
 
-  const styleOverrides = useMemo(
-    () => generateToastOverrides(expanded, theme),
-    [expanded, theme]
-  )
+  const styleOverrides = useMemo(() => generateToastOverrides(theme), [theme])
 
   const toastContent = useMemo(
     () => (
