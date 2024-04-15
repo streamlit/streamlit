@@ -90,8 +90,8 @@ class CachedWidgetWarning(StreamlitAPIWarning):
     def __init__(self):
         super().__init__(
             """
-Your script uses a widget command or a selection event within
-a cached function (function decorated with `@st.cache_data` or `@st.cache_resource`).
+Your script uses a widget command in a cached function
+(function decorated with `@st.cache_data` or `@st.cache_resource`).
 This code will only be called when we detect a cache "miss",
 which can lead to unexpected results.
 
@@ -109,6 +109,8 @@ def check_widget_usage() -> None:
 
         ctx = get_script_run_ctx()
         if ctx and ctx.disallow_cached_widget_usage:
+            # We use an exception here to show a proper stack trace
+            # that indicates to the user where the issue is.
             streamlit.exception(CachedWidgetWarning())
 
 
