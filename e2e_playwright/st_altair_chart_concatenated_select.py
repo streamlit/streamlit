@@ -44,7 +44,7 @@ for y_encoding in ["petalLength:Q", "petalWidth:Q"]:
 chart = chart.add_params(point)
 chart = chart.add_params(interval)
 st.altair_chart(chart, on_select=True, key="repeat_chart")
-if st.session_state.repeat_chart:
+if len(st.session_state.repeat_chart.select) > 0:
     st.dataframe(st.session_state.repeat_chart)
 
 # LAYERED CHART
@@ -66,7 +66,7 @@ base = (
 chart = base.mark_line() + base.mark_point()
 chart = chart.add_params(point)
 st.altair_chart(chart, on_select=True, key="layered_chart")
-if st.session_state.layered_chart:
+if len(st.session_state.layered_chart.select) > 0:
     st.dataframe(st.session_state.layered_chart)
 
 # FACET CHART
@@ -88,7 +88,7 @@ for species in ["setosa", "versicolor", "virginica"]:
     chart |= base.transform_filter(alt.datum.species == species)
 chart = chart.add_params(point)
 facet_selection = st.altair_chart(chart, on_select=True, key="facet_chart")
-if len(facet_selection) > 0:
+if len(facet_selection.select) > 0:
     st.dataframe(facet_selection)
 
 # VCONCAT CHART
@@ -115,7 +115,7 @@ lower = base.properties(height=60).add_params(brush)
 
 chart = alt.vconcat(upper, lower)
 st.altair_chart(chart, on_select=True, key="vconcat_chart")
-if st.session_state.vconcat_chart:
+if len(st.session_state.vconcat_chart.select) > 0:
     st.dataframe(st.session_state.vconcat_chart)
 
 # HCONCAT CHART
@@ -151,5 +151,5 @@ chart2 = (
 
 chart = chart1 | chart2
 st.altair_chart(chart, on_select=callback, key="hconcat_chart")
-if st.session_state.hconcat_chart:
+if len(st.session_state.hconcat_chart.select) > 0:
     st.dataframe(st.session_state.hconcat_chart)
