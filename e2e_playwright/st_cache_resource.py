@@ -33,7 +33,7 @@ st.text(side_effects)
 @st.cache_resource
 def with_cached_widget_warning():
     st.write("Cached function that should show a widget usage warning.")
-    st.radio("radio 2", ["foo", "bar", "baz", "qux"], index=1)
+    st.selectbox("selectbox", ["foo", "bar", "baz", "qux"], index=1)
 
 
 with_cached_widget_warning()
