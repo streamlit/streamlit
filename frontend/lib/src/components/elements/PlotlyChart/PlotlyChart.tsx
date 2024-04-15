@@ -354,6 +354,7 @@ function PlotlyFigure({
 
   const reset = useCallback((): void => {
     const dragmode = widgetMgr.getElementState(element.id, DRAGMODE)
+    // keep zoom state when in box or lasso select and rerun with empty selection state
     if (dragmode === "select" || dragmode === "lasso") {
       const rangeEvent = widgetMgr.getElementState(element.id, RANGE)
       const xrange0 = rangeEvent?.["xaxis.range[0]"]
@@ -369,6 +370,7 @@ function PlotlyFigure({
       widgetMgr.setElementState(element.id, DATA, {})
       widgetMgr.setJsonValue(element, {}, { fromUi: true }, fragmentId)
     } else {
+      // reset zoom but don't rerun
       widgetMgr.setElementState(element.id, DRAGMODE, dragmode)
       widgetMgr.setElementState(element.id, AUTORANGE, {
         "xaxis.autorange": true,
@@ -388,8 +390,8 @@ function PlotlyFigure({
       onSelected={
         element.isSelectEnabled || !disabled ? handleSelect : () => {}
       }
-      onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
       onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
+      onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
       onRelayout={
         element.isSelectEnabled || !disabled ? handleRelayout : () => {}
       }
