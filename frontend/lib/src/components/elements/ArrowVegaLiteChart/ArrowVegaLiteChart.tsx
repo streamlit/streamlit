@@ -253,7 +253,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 
-    const storedValue = this.props.widgetMgr.getJsonValue(this.props.element)
+    const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
     if (storedValue !== undefined) {
       const selectors = this.getSelectorsFromChart(spec)
       const parsedStoredValue = JSON.parse(storedValue)
@@ -458,17 +458,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
               this.setState({
                 selections: updatedSelections,
               })
-              // this.props.widgetMgr?.setStringValue(
-              //   this.props.element as WidgetInfo,
-              //   JSON.stringify(updatedSelections),
-              //   {
-              //     fromUi: true,
-              //   },
-              //   this.props.fragmentId
-              // )
-              this.props.widgetMgr?.setJsonValue(
+              this.props.widgetMgr?.setStringValue(
                 this.props.element as WidgetInfo,
-                updatedSelections,
+                JSON.stringify(updatedSelections),
                 {
                   fromUi: true,
                 },
@@ -483,17 +475,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         this.setState({
           selections: {},
         })
-        // this.props.widgetMgr?.setStringValue(
-        //   this.props.element as WidgetInfo,
-        //   JSON.stringify({}),
-        //   {
-        //     fromUi: true,
-        //   },
-        //   this.props.fragmentId
-        // )
-        this.props.widgetMgr?.setJsonValue(
+        this.props.widgetMgr?.setStringValue(
           this.props.element as WidgetInfo,
-          {},
+          JSON.stringify({}),
           {
             fromUi: true,
           },

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
@@ -47,6 +48,36 @@ from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+
+@dataclass
+class VegaLiteSelectionSerde:
+    """VegaLiteSelectionSerde is used to serialize and deserialize the Vega Lite Chart selection state."""
+
+    def deserialize(
+        self, ui_value: str | None, widget_id: str = ""
+    ) -> AttributeDictionary:
+        selection_state: AttributeDictionary = (
+            AttributeDictionary(
+                {
+                    "select": {},
+                }
+            )
+            if ui_value is None
+            else AttributeDictionary(json.loads(ui_value))
+        )
+
+        if "select" not in selection_state:
+            selection_state = AttributeDictionary(
+                {
+                    "select": {},
+                }
+            )
+
+        return selection_state
+
+    def serialize(self, selection_state: AttributeDictionary) -> str:
+        return json.dumps(selection_state, default=str)
 
 
 def replace_values_in_dict(
@@ -80,17 +111,7 @@ def _on_select(
         if isinstance(on_select, bool) or isinstance(on_select, str):
             on_select = None
 
-        def deserialize_vega_lite_event(ui_value, widget_id=""):
-            if ui_value is None:
-                return {}
-            if isinstance(ui_value, str):
-                return json.loads(ui_value)
-
-            return AttributeDictionary(ui_value)
-
-        def serialize_vega_lite_event(v):
-            return json.dumps(v, default=str)
-
+        vegaliteSerde = VegaLiteSelectionSerde()
         current_value = register_widget(
             "arrow_vega_lite_chart",
             proto,
@@ -98,8 +119,8 @@ def _on_select(
             on_change_handler=on_select,
             args=None,
             kwargs=None,
-            deserializer=deserialize_vega_lite_event,
-            serializer=serialize_vega_lite_event,
+            deserializer=vegaliteSerde.deserialize,
+            serializer=vegaliteSerde.serialize,
             ctx=get_script_run_ctx(),
         )
         return AttributeDictionary(current_value.value)
