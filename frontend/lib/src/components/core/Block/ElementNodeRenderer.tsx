@@ -33,6 +33,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   Radio as RadioProto,
+  Skeleton as SkeletonProto,
   Selectbox as SelectboxProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
@@ -72,10 +73,7 @@ import ExceptionElement from "@streamlit/lib/src/components/elements/ExceptionEl
 import Json from "@streamlit/lib/src/components/elements/Json"
 import Markdown from "@streamlit/lib/src/components/elements/Markdown"
 import Metric from "@streamlit/lib/src/components/elements/Metric"
-import {
-  Skeleton,
-  AppSkeleton,
-} from "@streamlit/lib/src/components/elements/Skeleton"
+import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
@@ -425,7 +423,7 @@ const RawElementNodeRenderer = (
       )
 
     case "skeleton": {
-      return <AppSkeleton />
+      return <Skeleton element={node.element.skeleton as SkeletonProto} />
     }
 
     case "snow":
@@ -743,7 +741,15 @@ const ElementNodeRenderer = (
         elementType={elementType}
       >
         <ErrorBoundary width={width}>
-          <Suspense fallback={<Skeleton />}>
+          <Suspense
+            fallback={
+              <Skeleton
+                element={SkeletonProto.create({
+                  style: SkeletonProto.SkeletonStyle.ELEMENT,
+                })}
+              />
+            }
+          >
             <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>

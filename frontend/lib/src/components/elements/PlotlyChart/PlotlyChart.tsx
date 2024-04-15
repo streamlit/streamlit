@@ -61,8 +61,8 @@ export interface Selection extends SelectionRange {
 }
 
 export const DEFAULT_HEIGHT = 450
-const DATA = "data"
 const SELECTIONS = "selections"
+const DATA = "data"
 const RANGE = "range"
 const AUTORANGE = "autorange"
 const DRAGMODE = "dragmode"
@@ -158,11 +158,11 @@ function PlotlyFigure({
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
     )
-    const storedValue = widgetMgr.getJsonValue(element)
+    const storedValue = widgetMgr.getStringValue(element)
 
     // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
-    if (storedValue !== undefined && storedValue !== "{}") {
-      const parsedStoreValue = JSON.parse(storedValue.toString())
+    if (storedValue !== undefined) {
+      const parsedStoreValue = JSON.parse(storedValue)
       // check if there is a selection
       if (parsedStoreValue.select) {
         const data = widgetMgr.getElementState(element.id, DATA)
@@ -209,7 +209,6 @@ function PlotlyFigure({
         spec.layout.xaxis.autorange = true
         spec.layout.yaxis.autorange = true
       }
-
       if (dragmode) {
         spec.layout.dragmode = dragmode
       }
@@ -330,12 +329,30 @@ function PlotlyFigure({
     // @ts-expect-error
     widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
     widgetMgr.setElementState(element.id, DATA, data)
-    widgetMgr.setJsonValue(element, returnValue, { fromUi: true }, fragmentId)
+    widgetMgr.setStringValue(
+      element,
+      JSON.stringify(returnValue),
+      { fromUi: true },
+      fragmentId
+    )
   }
 
   const { data, layout, frames } = spec
 
-  const handleDoubleClick = useCallback((): void => {
+  const handleRelayout = (event: PlotRelayoutEvent): void => {
+    if (event.dragmode) {
+      widgetMgr.setElementState(element.id, DRAGMODE, event.dragmode)
+    } else if (event["xaxis.range[0]"]) {
+      widgetMgr.setElementState(element.id, RANGE, event)
+    } else if (event["xaxis.autorange"]) {
+      widgetMgr.setElementState(element.id, AUTORANGE, event)
+
+      // autorange will reset the range to default
+      widgetMgr.setElementState(element.id, RANGE, {})
+    }
+  }
+
+  const reset = useCallback((): void => {
     const dragmode = widgetMgr.getElementState(element.id, DRAGMODE)
     if (dragmode === "select" || dragmode === "lasso") {
       const rangeEvent = widgetMgr.getElementState(element.id, RANGE)
@@ -360,19 +377,6 @@ function PlotlyFigure({
     }
   }, [widgetMgr, element, fragmentId])
 
-  const handleRelayout = (event: PlotRelayoutEvent): void => {
-    if (event.dragmode) {
-      widgetMgr.setElementState(element.id, DRAGMODE, event.dragmode)
-    } else if (event["xaxis.range[0]"]) {
-      widgetMgr.setElementState(element.id, RANGE, event)
-    } else if (event["xaxis.autorange"]) {
-      widgetMgr.setElementState(element.id, AUTORANGE, event)
-
-      // autorange will reset the range to default
-      widgetMgr.setElementState(element.id, RANGE, {})
-    }
-  }
-
   return (
     <Plot
       key={isFullScreen ? "fullscreen" : "original"}
@@ -384,12 +388,8 @@ function PlotlyFigure({
       onSelected={
         element.isSelectEnabled || !disabled ? handleSelect : () => {}
       }
-      onDeselect={
-        element.isSelectEnabled || !disabled ? handleDoubleClick : () => {}
-      }
-      onDoubleClick={
-        element.isSelectEnabled || !disabled ? handleDoubleClick : () => {}
-      }
+      onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
+      onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
       onRelayout={
         element.isSelectEnabled || !disabled ? handleRelayout : () => {}
       }

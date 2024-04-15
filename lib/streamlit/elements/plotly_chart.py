@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import urllib.parse
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
 
 from typing_extensions import TypeAlias
@@ -26,18 +27,16 @@ from streamlit import type_util
 from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.chart_util import check_on_select_str
 from streamlit.constants import ON_SELECTION_IGNORE
-from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.runtime.state.common import RegisterWidgetResult, compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -77,6 +76,46 @@ FigureOrData: TypeAlias = Union[
     "BaseFigure",
     "matplotlib.figure.Figure",
 ]
+
+
+@dataclass
+class PlotlyChartSelectionSerde:
+    """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart selection state."""
+
+    def deserialize(
+        self, ui_value: str | None, widget_id: str = ""
+    ) -> AttributeDictionary:
+        selection_state: AttributeDictionary = (
+            AttributeDictionary(
+                {
+                    "select": {
+                        "points": [],
+                        "point_indicies": [],
+                        "box": [],
+                        "lasso": [],
+                    },
+                }
+            )
+            if ui_value is None
+            else AttributeDictionary(json.loads(ui_value))
+        )
+
+        if "select" not in selection_state:
+            selection_state = AttributeDictionary(
+                {
+                    "select": {
+                        "points": [],
+                        "point_indicies": [],
+                        "box": [],
+                        "lasso": [],
+                    },
+                }
+            )
+
+        return selection_state
+
+    def serialize(self, selection_state: AttributeDictionary) -> str:
+        return json.dumps(selection_state, default=str)
 
 
 class PlotlyMixin:
@@ -179,6 +218,13 @@ class PlotlyMixin:
         )
 
         if is_select_enabled:
+            # import here to avoid circular import
+            from streamlit.elements.form import current_form_id
+            from streamlit.elements.utils import (
+                check_callback_rules,
+                check_session_state_rules,
+            )
+
             if current_form_id(self.dg):
                 # TODO(willhuang1997): double check the message of this
                 raise StreamlitAPIException(
@@ -194,13 +240,7 @@ class PlotlyMixin:
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
             check_on_select_str(on_select, "plotly_chart")
 
-            def deserialize(ui_value, widget_id=""):
-                if ui_value is None:
-                    return {}
-                return AttributeDictionary(ui_value)
-
-            def serialize(v):
-                return json.dumps(v, default=str)
+            serde = PlotlyChartSelectionSerde()
 
             ctx = get_script_run_ctx()
 
@@ -225,8 +265,8 @@ class PlotlyMixin:
                 on_change_handler=on_select_callback,
                 args=None,
                 kwargs=None,
-                deserializer=deserialize,
-                serializer=serialize,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
                 ctx=ctx,
             )
 
