@@ -40,7 +40,6 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
     app.mouse.move(350, 350)
     app.mouse.move(375, 375)
     app.mouse.move(400, 400)
-    app.mouse.down()
     app.mouse.move(435, 500)
     app.mouse.up()
     wait_for_app_run(app, 3000)
