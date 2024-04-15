@@ -67,6 +67,7 @@ export interface Props {
   element: ComponentInstanceProto
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 /**
@@ -171,7 +172,8 @@ function compareDataframeArgs(
 function ComponentInstance(props: Props): ReactElement {
   const [componentError, setComponentError] = useState<Error>()
 
-  const { disabled, element, registry, theme, widgetMgr, width } = props
+  const { disabled, element, registry, theme, widgetMgr, width, fragmentId } =
+    props
   const { componentName, jsonArgs, specialArgs, url } = element
 
   const [parsedNewArgs, parsedDataframeArgs] = tryParseArgs(
@@ -281,12 +283,14 @@ function ComponentInstance(props: Props): ReactElement {
     // Update the reference fields for the callback that we
     // passed to the componentRegistry
     onBackMsgRef.current = {
-      isReady: isReadyRef.current,
+      // isReady is a callback to ensure the caller receives the latest value
+      isReady: () => isReadyRef.current,
       element,
       widgetMgr,
       setComponentError,
       componentReadyCallback,
       frameHeightCallback: handleSetFrameHeight,
+      fragmentId,
     }
   }, [
     componentName,
@@ -300,6 +304,7 @@ function ComponentInstance(props: Props): ReactElement {
     widgetMgr,
     clearTimeoutWarningElement,
     clearTimeoutLog,
+    fragmentId,
   ])
 
   useEffect(() => {
@@ -384,7 +389,7 @@ function ComponentInstance(props: Props): ReactElement {
         // for undefined height we set the height to 0 to avoid inconsistent behavior
         height={frameHeight ?? 0}
         style={{
-          colorScheme: "light dark",
+          colorScheme: "normal",
           display: isReadyRef.current ? "initial" : "none",
         }}
         scrolling="no"

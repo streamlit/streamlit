@@ -126,10 +126,9 @@ function AppView(props: AppViewProps): ReactElement {
     disableScrolling,
     showToolbar,
     showColoredLine,
-    toastAdjustment,
   } = React.useContext(AppContext)
 
-  const { addScriptFinishedHandler, removeScriptFinishedHandler } =
+  const { addScriptFinishedHandler, removeScriptFinishedHandler, libConfig } =
     React.useContext(LibContext)
 
   const layout = wideMode ? "wide" : "narrow"
@@ -225,6 +224,7 @@ function AppView(props: AppViewProps): ReactElement {
           hasBottom={hasBottomElements}
           isEmbedded={embedded}
           hasSidebar={showSidebar}
+          disableFullscreenMode={Boolean(libConfig.disableFullscreenMode)}
         >
           {renderBlock(elements.main)}
         </StyledAppViewBlockContainer>
@@ -261,10 +261,7 @@ function AppView(props: AppViewProps): ReactElement {
         )}
       </Component>
       {hasEventElements && (
-        <EventContainer
-          toastAdjustment={toastAdjustment}
-          scriptRunId={elements.event.scriptRunId}
-        >
+        <EventContainer scriptRunId={elements.event.scriptRunId}>
           <StyledEventBlockContainer>
             {renderBlock(elements.event)}
           </StyledEventBlockContainer>
