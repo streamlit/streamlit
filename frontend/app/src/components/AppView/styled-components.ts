@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export const StyledAppViewContainer = styled.div(({ theme }) => ({
+export const StyledAppViewContainer = styled.div(() => ({
   display: "flex",
   flexDirection: "row",
   justifyContent: "flex-start",
