@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Hashable, Iterable, Sequence, cast, overl
 import streamlit
 from streamlit import config, runtime, type_util
 from streamlit.elements.form import is_in_form
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state import WidgetCallback, get_session_state
 from streamlit.runtime.state.common import RegisterWidgetResult
@@ -86,25 +86,30 @@ def check_session_state_rules(
         _shown_default_value_warning = True
 
 
+class CachedWidgetWarning(StreamlitAPIWarning):
+    def __init__(self):
+        super().__init__(
+            """
+Your script uses a widget command or a selection event within
+a cached function (function decorated with `@st.cache_data` or `@st.cache_resource`).
+This code will only be called when we detect a cache "miss",
+which can lead to unexpected results.
+
+How to fix this:
+* Move all widget commands outside the cached function.
+* Or, if you know what you're doing, use `experimental_allow_widgets=True`
+in the cache decorator to enable widget replay and suppress this warning.
+"""
+        )
+
+
 def check_widget_usage() -> None:
     if runtime.exists():
         from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
         if ctx and ctx.disallow_cached_widget_usage:
-            streamlit.warning(
-                """
-        Your script uses a widget command or a selection event within
-        a cached function (function decorated with `@st.cache_data` or `@st.cache_resource`).
-        This code will only be called when we detect a cache "miss",
-        which can lead to unexpected results.
-
-        How to fix this:
-        * Move all widget commands outside the cached function.
-        * Or, if you know what you're doing, use `experimental_allow_widgets=True`
-        in the cache decorator to enable widget replay and suppress this warning.
-                    """
-            )
+            streamlit.exception(CachedWidgetWarning())
 
 
 def get_label_visibility_proto_value(

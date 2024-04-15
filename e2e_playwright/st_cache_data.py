@@ -28,3 +28,12 @@ def foo():
 
 foo()
 st.text(side_effects)
+
+
+@st.cache_data
+def with_widget_warning():
+    st.write("Cached function that should show a widget usage warning.")
+    r = st.radio("radio 2", ["foo", "bar", "baz", "qux"], index=1)
+
+
+with_widget_warning()
