@@ -29,7 +29,7 @@ import {
   WidgetStates,
 } from "./proto"
 import { Signal, SignalConnection } from "typed-signals"
-import { isValidFormId } from "./util/utils"
+import { isValidFormId, notNullOrUndefined } from "./util/utils"
 
 export interface Source {
   fromUi: boolean
@@ -177,6 +177,11 @@ export class WidgetStateManager {
 
   // External data about all forms.
   private formsData: FormsData
+
+  // A dictionary that maps elementId -> element state keys -> element state values.
+  // This is used to store frontend-only state for elements.
+  // This state is not never sent to the server.
+  private readonly elementStates = new Map<string, Map<string, any>>()
 
   constructor(props: Props) {
     this.props = props
@@ -586,6 +591,11 @@ export class WidgetStateManager {
   public removeInactive(activeIds: Set<string>): void {
     this.widgetStates.removeInactive(activeIds)
     this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
+    this.elementStates.forEach((_, elementId) => {
+      if (!activeIds.has(elementId)) {
+        this.deleteElementState(elementId)
+      }
+    })
   }
 
   /**
@@ -707,6 +717,47 @@ export class WidgetStateManager {
     if (this.formsData !== newData) {
       this.formsData = newData
       this.props.formsDataChanged(this.formsData)
+    }
+  }
+
+  /**
+   * Get the element state value for the given element ID and key, if it exists.
+   * This is a frontend-only state that is never sent to the server.
+   */
+  public getElementState(elementId: string, key: string): any {
+    return this.elementStates.get(elementId)?.get(key)
+  }
+
+  /**
+   * Sets the state of an element identified by its ID and its key.
+   * This is a frontend-only state that is never sent to the server.
+   * It can be used to store element state to restore the state
+   * of an element in situations where an element is removed and re-added.
+   *
+   * @param {string} elementId - The unique identifier of the element.
+   * @param {string} key - The key to set
+   * @param {any} value - The value to set for the element's state.
+   * @returns {void}
+   */
+  public setElementState(elementId: string, key: string, value: any): void {
+    if (!this.elementStates.has(elementId)) {
+      this.elementStates.set(elementId, new Map<string, any>())
+    }
+
+    // It's expected here that there is always an initialized map for an elementId
+    ;(this.elementStates.get(elementId) as Map<string, any>).set(key, value)
+  }
+
+  /**
+   * Deletes the state associated with a specific element by ID. If a key is provided,
+   * only the state corresponding to that key is removed. If no key is specified, all states
+   * associated with the element ID are removed.
+   */
+  public deleteElementState(elementId: string, key?: string): void {
+    if (notNullOrUndefined(key)) {
+      this.elementStates.get(elementId)?.delete(key)
+    } else {
+      this.elementStates.delete(elementId)
     }
   }
 }
