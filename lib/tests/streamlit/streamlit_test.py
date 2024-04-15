@@ -169,6 +169,7 @@ class StreamlitTest(unittest.TestCase):
                 "cache_data",
                 "cache_resource",
                 # Experimental APIs:
+                "experimental_dialog",
                 "experimental_user",
                 "experimental_singleton",
                 "experimental_memo",
