@@ -16,6 +16,15 @@ from typing import Any, Dict
 
 
 class AttributeDictionary(Dict[Any, Any]):
+    """
+    A dictionary subclass that supports attribute-style access.
+
+    This class extends the functionality of a standard dictionary to allow items to be accessed
+    via attribute-style dot notation in addition to the traditional key-based access. If a dictionary
+    item is accessed and is itself a dictionary, it is automatically wrapped in another `AttributeDictionary`,
+    enabling recursive attribute-style access.
+    """
+
     def __getattr__(self, key):
         try:
             item = self.__getitem__(key)
