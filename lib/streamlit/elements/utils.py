@@ -95,12 +95,12 @@ def check_widget_usage() -> None:
             streamlit.warning(
                 """
         Your script uses a widget command or a selection event within
-        some cached code at (via `@st.cache_data` or `@st.cache_resource`).
+        some cached code (via `@st.cache_data` or `@st.cache_resource`).
         This code will only be called when we detect a cache "miss",
         which can lead to unexpected results.
 
         How to fix this:
-        * Move the widget command call outside the cached function.
+        * Move all widget commands outside the cached function.
         * Or, if you know what you're doing, use `experimental_allow_widgets=True`
         in the cache decorator to enable widget replay and suppress this warning.
                     """
