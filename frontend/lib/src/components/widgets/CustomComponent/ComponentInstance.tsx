@@ -343,7 +343,9 @@ function ComponentInstance(props: Props): ReactElement {
   // but while we also have not waited until the ready timeout
   const loadingSkeleton = !isReadyRef.current &&
     !isReadyTimeout &&
+    // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
+      // Skeletons will have a default height if no frameHeight was specified
       <Skeleton
         element={SkeletonProto.create({
           height: frameHeight,
