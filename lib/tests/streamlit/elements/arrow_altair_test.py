@@ -757,3 +757,57 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             "selection_0" in proto.spec,
         )
         self.assertFalse("param1" in proto.spec)
+
+    def test_altair_no_name_interval_selection(self):
+        point = alt.selection_interval()
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        st.altair_chart(chart, on_select=True)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertTrue(
+            "selection_0" in proto.spec,
+        )
+        self.assertFalse("param1" in proto.spec)
+
+    def test_altair_named_point_selection(self):
+        point = alt.selection_point(name="point")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        st.altair_chart(chart, on_select=True)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertTrue(
+            "point" in proto.spec,
+        )
+        self.assertFalse("selection_0" in proto.spec)
+
+    def test_altair_named_interval_selection(self):
+        point = alt.selection_point(name="interval")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        st.altair_chart(chart, on_select=True)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertTrue(
+            "interval" in proto.spec,
+        )
+        self.assertFalse("selection_0" in proto.spec)
