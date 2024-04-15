@@ -27,7 +27,6 @@ import useTimeout from "@streamlit/lib/src/hooks/useTimeout"
 import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
-  SkeletonStyle,
   Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
@@ -349,7 +348,7 @@ function ComponentInstance(props: Props): ReactElement {
       <Skeleton
         element={SkeletonProto.create({
           height: frameHeight,
-          style: SkeletonStyle.APP,
+          style: SkeletonProto.SkeletonStyle.ELEMENT,
         })}
       />
     )
