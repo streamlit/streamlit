@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,10 +19,17 @@ import hashlib
 import threading
 import types
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterator, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Iterator,
+    Protocol,
+    Union,
+    runtime_checkable,
+)
 
 from google.protobuf.message import Message
-from typing_extensions import Protocol, runtime_checkable
 
 import streamlit as st
 from streamlit import runtime, util
@@ -41,7 +48,7 @@ from streamlit.util import HASHLIB_KWARGS
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-_LOGGER = get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 @runtime_checkable
