@@ -28,7 +28,10 @@ import {
 
 import Checkbox, { OwnProps } from "./Checkbox"
 
-const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
+const getProps = (
+  elementProps: Partial<CheckboxProto> = {},
+  widgetProps: Partial<OwnProps> = {}
+): OwnProps => ({
   element: CheckboxProto.create({
     id: "1",
     label: "Label",
@@ -42,6 +45,7 @@ const getProps = (elementProps: Partial<CheckboxProto> = {}): OwnProps => ({
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }),
+  ...widgetProps,
 })
 
 describe("Checkbox widget", () => {
@@ -61,7 +65,8 @@ describe("Checkbox widget", () => {
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
     )
   })
 
@@ -131,9 +136,26 @@ describe("Checkbox widget", () => {
     expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
       props.element,
       true,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
     expect(screen.getByRole("checkbox")).toBeChecked()
+  })
+
+  it("can pass fragmentId to setBoolValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+
+    fireEvent.click(screen.getByRole("checkbox"))
+
+    expect(props.widgetMgr.setBoolValue).toHaveBeenCalledWith(
+      props.element,
+      true,
+      { fromUi: true },
+      "myFragmentId"
+    )
   })
 
   it("resets its value when form is cleared", () => {
@@ -152,7 +174,8 @@ describe("Checkbox widget", () => {
     expect(props.widgetMgr.setBoolValue).toHaveBeenLastCalledWith(
       props.element,
       true,
-      { fromUi: true }
+      { fromUi: true },
+      undefined
     )
 
     // "Submit" the form
@@ -165,7 +188,8 @@ describe("Checkbox widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 })

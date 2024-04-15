@@ -54,6 +54,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   width: number
+  fragmentId?: string
 }
 
 type FileUploaderStatus =
@@ -77,6 +78,17 @@ class FileUploader extends React.PureComponent<Props, State> {
    * and are separate from the serverFileIds that are returned by the server.
    */
   private localFileIdCounter = 1
+
+  /**
+   * A flag to handle the case where a file uploader that only accepts one file
+   * at a time has its file replaced, which we want to treat as a single change
+   * rather than the deletion of a file followed by the upload of another.
+   * Doing this ensures that the script (and thus callbacks, etc) is only run a
+   * single time when replacing a file.  Note that deleting a file and uploading
+   * a new one with two interactions (clicking the 'X', then dragging a file
+   * into the file uploader) will still cause the script to execute twice.
+   */
+  private forceUpdatingStatus = false
 
   public constructor(props: Props) {
     super(props)
@@ -136,7 +148,7 @@ class FileUploader extends React.PureComponent<Props, State> {
 
     // If any of our files is Uploading or Deleting, then we're currently
     // updating.
-    if (this.state.files.some(isFileUpdating)) {
+    if (this.state.files.some(isFileUpdating) || this.forceUpdatingStatus) {
       return "updating"
     }
 
@@ -151,28 +163,38 @@ class FileUploader extends React.PureComponent<Props, State> {
     }
 
     const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Maybe send a widgetValue update to the widgetStateManager.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: true,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: true,
+        },
+        fragmentId
+      )
     }
   }
 
   public componentDidMount(): void {
     const newWidgetValue = this.createWidgetValue()
-    const { element, widgetMgr } = this.props
+    const { element, widgetMgr, fragmentId } = this.props
 
     // Set the state value on mount, to avoid triggering an extra rerun after
     // the first rerun.
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(element, newWidgetValue, {
-        fromUi: false,
-      })
+      widgetMgr.setFileUploaderStateValue(
+        element,
+        newWidgetValue,
+        {
+          fromUi: false,
+        },
+        fragmentId
+      )
     }
   }
 
@@ -244,7 +266,9 @@ class FileUploader extends React.PureComponent<Props, State> {
             f => f.status.type !== "error"
           )
           if (existingFile) {
+            this.forceUpdatingStatus = true
             this.deleteFile(existingFile.id)
+            this.forceUpdatingStatus = false
           }
         }
 
@@ -472,10 +496,12 @@ class FileUploader extends React.PureComponent<Props, State> {
         return
       }
 
-      this.props.widgetMgr.setFileUploaderStateValue(
-        this.props.element,
+      const { widgetMgr, element, fragmentId } = this.props
+      widgetMgr.setFileUploaderStateValue(
+        element,
         newWidgetValue,
-        { fromUi: true }
+        { fromUi: true },
+        fragmentId
       )
     })
   }

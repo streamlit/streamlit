@@ -39,6 +39,8 @@ IGNORE_PATTERN = re.compile(
     r"|e2e_playwright/test_assets/.*\.(mp4|webm)$"
     # Exclude subtitle files we use for testing st.video.
     r"|e2e_playwright/test_assets/.*\.(vtt|srt)$"
+    # Exclude js file we use for testing st.html.
+    r"|^lib/tests/streamlit/elements/test_html\.js"
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
@@ -62,8 +64,7 @@ IGNORE_PATTERN = re.compile(
     r"|/(fixtures|__snapshots__|test_data|data)/"
     # Exclude vendored files.
     r"|/vendor/|^vendor/|^component-lib/declarations/apache-arrow"
-    r"|proto/streamlit/proto/openmetrics_data_model\.proto"
-    r"|^e2e_flaky/scripts/.*\.py",
+    r"|proto/streamlit/proto/openmetrics_data_model\.proto",
     re.IGNORECASE,
 )
 
