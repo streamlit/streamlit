@@ -195,7 +195,7 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
 
     def test_bad_theme(self):
         with self.assertRaises(StreamlitAPIException) as exc:
-            st.altair_chart(df1, theme="bad_theme")
+            st.vega_lite_chart(df1, theme="bad_theme")
 
         self.assertEqual(
             f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
@@ -239,6 +239,33 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
             proto.is_select_enabled,
             expected_is_select_enabled,
         )
+
+    def test_vega_lite_interval_selection_enables_on_select(self):
+        st.vega_lite_chart(
+            df1,
+            {
+                "mark": "rect",
+                "width": 200,
+                "params": [{"name": "name", "select": {"type": "interval"}}],
+            },
+            on_select="rerun",
+        )
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(
+            proto.is_select_enabled,
+            True,
+        )
+
+    def test_vega_lite_no_selection_throws_streamlit_exception(self):
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.vega_lite_chart(
+                df1,
+                {
+                    "mark": "rect",
+                    "width": 200,
+                },
+                on_select="rerun",
+            )
 
     @parameterized.expand(
         [
