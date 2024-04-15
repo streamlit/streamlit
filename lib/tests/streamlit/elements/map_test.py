@@ -68,7 +68,7 @@ class StMapTest(DeltaGeneratorTestCase):
     def test_alternative_names_columns(self, lat_column_name, lon_column_name):
         """Test that it can be called with alternative names of lat/lon columns."""
         df = df1.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
-        st.map(df1)
+        st.map(df)
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         self.assertEqual(len(c.get("layers")[0].get("data")), 4)

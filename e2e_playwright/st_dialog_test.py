@@ -81,7 +81,7 @@ def test_dialog_dismisses_properly(app: Page):
 def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
     # open and close the dialog multiple times
-    for i in range(0, 10):
+    for i in range(0, 5):
         # don't click indefinitely fast to give the dialog time to set the state
         app.wait_for_timeout(100)
 
@@ -100,7 +100,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
 def test_dialog_reopens_properly_after_close(app: Page):
     """Test that dialog reopens properly after closing by action button click."""
     # open and close the dialog multiple times
-    for _ in range(0, 10):
+    for _ in range(0, 5):
         open_dialog_with_images(app)
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)

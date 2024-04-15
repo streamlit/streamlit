@@ -105,7 +105,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
             declare_component("test", path=PATH)
 
         response = self._request_component(
-            f"tests.streamlit.web.server.component_request_handler_test.test//{PATH}_really"
+            f"tests.streamlit.web.server.component_request_handler_test.test/{PATH}_really"
         )
 
         self.assertEqual(403, response.code)

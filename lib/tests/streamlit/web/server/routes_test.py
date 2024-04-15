@@ -132,6 +132,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def tearDown(self) -> None:
         super().tearDown()
 
+        self._tmpfile.close()
         self._tmpdir.cleanup()
 
     def get_pages(self):
