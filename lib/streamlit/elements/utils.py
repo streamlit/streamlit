@@ -91,11 +91,11 @@ def check_widget_usage() -> None:
         from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 
         ctx = get_script_run_ctx()
-        if ctx.disallow_cached_widget_usage:
+        if ctx and ctx.disallow_cached_widget_usage:
             streamlit.warning(
                 """
         Your script uses a widget command or a selection event within
-        a cached function (via `@st.cache_data` or `@st.cache_resource`).
+        a cached function (function decorated with `@st.cache_data` or `@st.cache_resource`).
         This code will only be called when we detect a cache "miss",
         which can lead to unexpected results.
 
