@@ -53,8 +53,13 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media print`]: {
+        display: isCollapsed ? "none" : "initial",
+        // set to auto, otherwise the sidebar does not take up the whole page
         height: "auto !important",
-        display: isCollapsed ? "none" : "flex",
+        // set maxHeight to little bit less than viewheight, otherwise the sidebar might start a mostly blank page
+        maxHeight: "99vh",
+        // on Chrome, sth. adds a box-shadow in printing mode which looks weird
+        boxShadow: "none",
       },
     }
   }
@@ -242,11 +247,6 @@ export const StyledSidebarUserContent =
     paddingBottom: theme.sizes.sidebarTopSpace,
     paddingLeft: theme.spacing.twoXL,
     paddingRight: theme.spacing.twoXL,
-
-    "@media print": {
-      // paddingTop: `1rem`,
-      padding: 0,
-    },
 
     ...getWrappedHeadersStyle(theme),
   }))

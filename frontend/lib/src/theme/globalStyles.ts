@@ -30,6 +30,14 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-size: ${theme.fontSizes.mdPx}px;
   }
 
+  // Set height to 100% for printing, otherwise the page on Safari might be blank
+  // when using "display: flex" and "position: absolute" on child-elements.
+  @media print {
+    html {
+      height: 100%;
+    }
+  }
+
   a:hover,
   a:active {
     color: ${theme.colors.primary};

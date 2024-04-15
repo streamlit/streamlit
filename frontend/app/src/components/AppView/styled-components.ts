@@ -28,6 +28,11 @@ export const StyledAppViewContainer = styled.div(({ theme }) => ({
   right: 0,
   bottom: 0,
   overflow: "hidden",
+
+  "@media print": {
+    // print multiple pages if app is scrollable in Safari
+    overflow: "visible",
+  },
 }))
 
 export interface StyledAppViewMainProps {
@@ -57,6 +62,11 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
         right: 0,
         bottom: 0,
       },
+    },
+
+    "@media print": {
+      // print multiple pages if app is scrollable in Safari
+      overflow: "visible",
     },
   })
 )
@@ -147,10 +157,7 @@ export const StyledAppViewBlockContainer =
         ...fullScreenButtonStyles,
 
         [`@media print`]: {
-          padding: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
+          paddingTop: 0,
         },
       }
     }
@@ -192,7 +199,6 @@ export const StyledBottomBlockContainer =
         maxWidth: isWideMode ? "initial" : theme.sizes.contentMaxWidth,
 
         [`@media print`]: {
-          minWidth: "100%",
           paddingTop: 0,
         },
       }
