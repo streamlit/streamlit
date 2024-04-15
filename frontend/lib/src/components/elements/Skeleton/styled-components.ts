@@ -67,7 +67,7 @@ export const TextLineSkeleton = styled.div<TextLineSkeletonProps>(
     width,
     background:
       theme.colors.skeletonBackgroundColor || theme.colors.darkenedBgMix15,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     ...ANIMATION_STYLES,
   })
 )
