@@ -21,48 +21,84 @@ def _evaluate_match_media_print(app: Page):
     app.evaluate("matchMedia('print').matches")
 
 
+# DIN A4 paper is 21cm x 29.7cm which is 595px x 842px in 72dpi;
+# Use higher pixels to avoid mobile media queries to trigger but keep the ratio
+portrait_width_px = 1240
+portrait_height_px = 1754
+
+
+def _set_portrait_dimensions(app: Page):
+    app.set_viewport_size({"width": portrait_width_px, "height": portrait_height_px})
+
+
+def _set_landscape_dimensions(app: Page):
+    app.set_viewport_size({"width": portrait_height_px, "height": portrait_width_px})
+
+
 def test_app(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the app renders correctly using snapshot testing. Helps to compare with the printing version."""
     assert_snapshot(app, name="print_app-screen_media")
 
 
-def test_app_print_mode_with_sidebar_open_light_theme(
-    app: Page, assert_snapshot: ImageCompareFunction
+def test_app_print_mode_portrait_with_sidebar_open(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that the app looks correctly in print-mode with sidebar open and light-theme."""
-    app.emulate_media(media="print", forced_colors="active", color_scheme="light")
+    """Test that the app looks correctly in print-mode with sidebar open."""
+    app = themed_app
+    app.emulate_media(media="print", forced_colors="active")
+    _set_portrait_dimensions(app)
     _evaluate_match_media_print(app)
 
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
 
-    assert_snapshot(app, name="print_app-print_media-sidebar_open-light_theme")
+    assert_snapshot(app, name="print_app-print_media-portrait-sidebar_open")
 
 
-def test_app_print_mode_with_sidebar_open_dark_theme(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test that the app looks correctly in print-mode with sidebar open and dark-theme."""
-    app.emulate_media(media="print", forced_colors="active", color_scheme="dark")
-    _evaluate_match_media_print(app)
-
-    # ensure that the sidebar is visible
-    expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
-
-    assert_snapshot(app, name="print_app-print_media-sidebar_open-dark_theme")
-
-
-def test_app_print_mode_with_sidebar_closed(
-    app: Page, assert_snapshot: ImageCompareFunction
+def test_app_print_mode_portrait_with_sidebar_closed(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the app looks correctly in print-mode with sidebar closed."""
-
+    app = themed_app
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
     sidebar_element = app.get_by_test_id("stSidebarContent")
     sidebar_element.get_by_test_id("baseButton-header").click()
     expect(sidebar_element).not_to_be_visible()
 
-    app.emulate_media(media="print", forced_colors="active", color_scheme="light")
+    app.emulate_media(media="print", forced_colors="active")
+    _set_portrait_dimensions(app)
     _evaluate_match_media_print(app)
 
-    assert_snapshot(app, name="print_app-print_media-sidebar_closed-light_theme")
+    assert_snapshot(app, name="print_app-print_media-portrait-sidebar_closed")
+
+
+def test_app_print_mode_landscape_with_sidebar_open(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the app looks correctly in print-mode (orientation: landscape) with sidebar open."""
+    app = themed_app
+    app.emulate_media(media="print", forced_colors="active")
+    _set_landscape_dimensions(app)
+    _evaluate_match_media_print(app)
+
+    # ensure that the sidebar is visible
+    expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
+
+    assert_snapshot(app, name="print_app-print_media-landscape-sidebar_open")
+
+
+def test_app_print_mode_landscape_with_sidebar_closed(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the app looks correctly in print-mode (orientation: landscape) with sidebar closed."""
+    app = themed_app
+    # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    sidebar_element = app.get_by_test_id("stSidebarContent")
+    sidebar_element.get_by_test_id("baseButton-header").click()
+    expect(sidebar_element).not_to_be_visible()
+
+    app.emulate_media(media="print", forced_colors="active")
+    _set_landscape_dimensions(app)
+    _evaluate_match_media_print(app)
+
+    assert_snapshot(app, name="print_app-print_media-landscape-sidebar_closed")
