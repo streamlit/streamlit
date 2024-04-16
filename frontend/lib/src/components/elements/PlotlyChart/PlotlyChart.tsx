@@ -17,7 +17,7 @@
 import React, { ReactElement, useState, useCallback } from "react"
 
 import { useTheme } from "@emotion/react"
-import Plot from "react-plotly.js"
+import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
 
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -138,6 +138,23 @@ function renderIFrame({
   )
 }
 
+function applyTheming(
+  element: PlotlyChartProto,
+  plotlyFigure: PlotlyFigureType,
+  theme: EmotionTheme
+): PlotlyFigureType {
+  const spec = JSON.parse(
+    replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, element.theme)
+  )
+  if (element.theme === "streamlit") {
+    applyStreamlitTheme(spec, theme)
+  } else {
+    // Apply minor theming improvements to work better with Streamlit
+    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+  }
+  return spec
+}
+
 /** Render a Plotly chart from a FigureProto */
 function PlotlyFigure({
   element,
@@ -159,7 +176,7 @@ function PlotlyFigure({
       return initialFigureState
     }
     // TODO(lukasmasuch) check if figure is empty?
-    return initialFigure
+    return applyTheming(element, initialFigure, theme)
   })
 
   const [plotlyConfig] = useState(() => {
@@ -167,20 +184,7 @@ function PlotlyFigure({
   })
 
   React.useEffect(() => {
-    const spec = JSON.parse(
-      replaceTemporaryColors(
-        JSON.stringify(plotlyFigure),
-        theme,
-        element.theme
-      )
-    )
-    if (element.theme === "streamlit") {
-      applyStreamlitTheme(spec, theme)
-    } else {
-      // Apply minor theming improvements to work better with Streamlit
-      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
-    }
-
+    const spec = applyTheming(element, plotlyFigure, theme)
     // https://plotly.com/javascript/reference/layout/#layout-clickmode
     // This allows single selections and shift click to add / remove selections
     if (element.isSelectEnabled) {
@@ -190,7 +194,6 @@ function PlotlyFigure({
       spec.layout.clickmode = initialFigure.layout.clickmode
       spec.layout.hovermode = initialFigure.layout.hovermode
     }
-
     setPlotlyFigure(spec)
     // Adding plotlyFigure to the dependencies
     // array would cause an infinite update loop
@@ -297,7 +300,22 @@ function PlotlyFigure({
 
   const reset = useCallback((): void => {
     widgetMgr.setStringValue(element, "{}", { fromUi: true }, fragmentId)
-  }, [widgetMgr, element, fragmentId])
+
+    // Reset the selection info within the plotly figure
+    setPlotlyFigure({
+      ...plotlyFigure,
+      data: plotlyFigure.data.map((trace: any) => {
+        return {
+          ...trace,
+          selectedpoints: [],
+        }
+      }),
+      layout: {
+        ...plotlyFigure.layout,
+        selections: [],
+      },
+    })
+  }, [plotlyFigure, widgetMgr, element, fragmentId])
 
   return (
     <Plot
@@ -310,7 +328,7 @@ function PlotlyFigure({
       onSelected={
         element.isSelectEnabled || !disabled ? handleSelect : () => {}
       }
-      // TODO(lukasmasuch): Do we need this? onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
+      onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
       onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
       onInitialized={figure => {
         widgetMgr.setElementState(element.id, "figure", figure)
