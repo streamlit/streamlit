@@ -320,10 +320,10 @@ function PlotlyFigure({
       config={config}
       frames={frames}
       onSelected={
-        element.isSelectEnabled || !disabled ? handleSelect : () => {}
+        element.isSelectEnabled && !disabled ? handleSelect : () => {}
       }
-      onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
-      onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
+      onDoubleClick={element.isSelectEnabled && !disabled ? reset : () => {}}
+      onDeselect={element.isSelectEnabled && !disabled ? reset : () => {}}
     />
   )
 }
