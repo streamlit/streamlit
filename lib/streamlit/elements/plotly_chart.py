@@ -339,10 +339,6 @@ def marshall(
         proto.url = _get_embed_url(url)
     proto.theme = theme or ""
     proto.is_select_enabled = is_select_enabled
-
-    # import here to avoid circular import
-    from streamlit.elements.form import current_form_id
-
     ctx = get_script_run_ctx()
 
     if key is not None:
