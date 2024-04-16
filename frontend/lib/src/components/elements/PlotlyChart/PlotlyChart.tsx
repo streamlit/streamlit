@@ -284,8 +284,7 @@ function PlotlyFigure({
     returnValue.select.point_indices = pointIndices
 
     if (selections) {
-      // @ts-expect-error
-      event.selections.forEach((selection: any) => {
+      selections.forEach((selection: any) => {
         // box selection
         if (selection.type === "rect") {
           const xAndy = parseBoxSelection(selection)
