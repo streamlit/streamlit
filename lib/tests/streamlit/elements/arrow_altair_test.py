@@ -714,7 +714,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         pass
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is False,
+        is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
     @parameterized.expand(
@@ -745,7 +745,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         )
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is False,
+        is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_no_name_point_selection(self):
@@ -767,7 +767,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertFalse("param1" in proto.spec)
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is False,
+        is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_no_name_interval_selection(self):
@@ -789,7 +789,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertFalse("param1" in proto.spec)
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is False,
+        is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_named_point_selection(self):
@@ -811,7 +811,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertFalse("selection_0" in proto.spec)
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is False,
+        is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_named_interval_selection(self):
