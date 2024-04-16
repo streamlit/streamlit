@@ -121,6 +121,10 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "litellm",
     "comet_llm",
     "instructor",
+    "xgboost",
+    "lightgbm",
+    "catboost",
+    "sklearn",
     # Workflow Tools:
     "prefect",
     "luigi",
