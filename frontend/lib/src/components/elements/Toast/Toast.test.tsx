@@ -97,7 +97,7 @@ describe("Toast Component", () => {
     const expandButton = screen.getByRole("button", { name: "view more" })
     expect(toast).toBeInTheDocument()
     expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message,"
+      "Random toast message that is a really really really really really really really really really longview moreClose"
     )
     expect(toast).toContainElement(expandButton)
   })
@@ -114,7 +114,7 @@ describe("Toast Component", () => {
     // Initial state
     expect(toast).toBeInTheDocument()
     expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message,"
+      "Random toast message that is a really really really really really really really really really longview moreClose"
     )
     expect(toast).toContainElement(expandButton)
 
@@ -129,7 +129,7 @@ describe("Toast Component", () => {
     expect(toast).toContainElement(collapseButton)
     fireEvent.click(collapseButton)
     expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message,"
+      "Random toast message that is a really really really really really really really really really longview moreClose"
     )
     expect(toast).toContainElement(expandButton)
   })

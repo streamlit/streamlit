@@ -135,7 +135,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
             <DynamicIcon
               iconValue={icon}
               size="lg"
-              testid="stToastEmojiIcon"
+              testid="stToastDynamicIcon"
             />
           )}
           <StyledMessageWrapper>

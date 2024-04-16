@@ -68,7 +68,7 @@ export default function AlertElement({
             <DynamicIcon
               iconValue={icon}
               size="lg"
-              testid="stAlertEmojiIcon" // TODO[kajarenc] Disscuss, and probably change testId here
+              testid="stAlertDynamicIcon" // TODO[kajarenc] Disscuss, and probably change testId here
             />
           )}
 
