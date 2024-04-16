@@ -258,16 +258,31 @@ class CachedMessageReplayContext(threading.local):
         self._seen_dg_stack.append(set())
         self._allow_widgets = allow_widgets
 
+        nested_call = False
         ctx = get_script_run_ctx()
         if ctx:
-            ctx.disallow_cached_widget_usage = not allow_widgets
+            if ctx.disallow_cached_widget_usage:
+                # The disallow_cached_widget_usage is already set to true.
+                # This indicates that this cached function run is called from another
+                # cached function that disallows widget usage.
+                # We need to deactivate the widget usage for this cached function run
+                # even if it was allowed.
+                self._allow_widgets = False
+                nested_call = True
 
+            if not self._allow_widgets:
+                # If we're in a cached function that disallows widget usage, we need to set
+                # the disallow_cached_widget_usage to true for this cached function run
+                # to prevent widget usage (triggers a warning).
+                ctx.disallow_cached_widget_usage = True
         try:
             yield
         finally:
             self._most_recent_messages = self._cached_message_stack.pop()
             self._seen_dg_stack.pop()
-            if ctx:
+            if ctx and not nested_call:
+                # Reset the disallow_cached_widget_usage flag. But only if this
+                # is not nested inside a cached function that disallows widget usage.
                 ctx.disallow_cached_widget_usage = False
 
     def save_element_message(
