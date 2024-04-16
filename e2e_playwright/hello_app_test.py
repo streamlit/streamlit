@@ -66,7 +66,7 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     assert_snapshot(app, name="hello_app-plotting_demo_page")
 
 
-def test_mapping_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
+def test_mapping_demo_page(app: Page) -> None:
     """Test that the mapping demo page of the hello app is displayed correctly."""
     navigate_to_page(app, 3)
 
