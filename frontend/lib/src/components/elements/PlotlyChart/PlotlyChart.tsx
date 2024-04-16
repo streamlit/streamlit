@@ -309,8 +309,7 @@ function PlotlyFigure({
           selectedLassos.push(returnSelection)
         }
       })
-      // @ts-expect-error
-      widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
+      widgetMgr.setElementState(element.id, SELECTIONS, selections)
       widgetMgr.setElementState(element.id, DATA, data)
     }
 
