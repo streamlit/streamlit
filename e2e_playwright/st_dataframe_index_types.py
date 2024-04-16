@@ -68,7 +68,7 @@ st.subheader("Categorical Index (pd.CategoricalIndex)")
 st.dataframe(SPECIAL_TYPES_DF.set_index("categorical"), use_container_width=True)
 
 st.subheader("Period Index (pd.PeriodIndex)")
-st.dataframe(PERIOD_TYPES_DF.set_index("L"), use_container_width=True)
+st.dataframe(PERIOD_TYPES_DF.set_index("D"), use_container_width=True)
 
 st.subheader("Timedelta Index (pd.TimedeltaIndex)")
 st.dataframe(SPECIAL_TYPES_DF.set_index("timedelta"), use_container_width=True)

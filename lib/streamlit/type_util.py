@@ -855,6 +855,17 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index) -> bool:
     ]:
         return True
 
+    if str(column.dtype) in {
+        # These period types are not yet supported by our frontend impl.
+        # See comments in Quiver.ts for more details.
+        "period[B]",
+        "period[N]",
+        "period[ns]",
+        "period[U]",
+        "period[us]",
+    }:
+        return True
+
     if column.dtype == "object":
         # The dtype of mixed type columns is always object, the actual type of the column
         # values can be determined via the infer_dtype function:
