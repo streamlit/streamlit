@@ -4,7 +4,7 @@ altair==5.3.0
 asn1crypto==1.5.1
 async-timeout==4.0.3
 attrs==23.2.0
-backports.tarfile==1.0.0
+backports.tarfile==1.1.0
 backports.zoneinfo==0.2.1
 black==24.4.0
 blinker==1.7.0
