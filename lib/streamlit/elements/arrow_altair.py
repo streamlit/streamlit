@@ -1615,6 +1615,10 @@ def marshall(
         with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
+            # Put datasets back into the chart dict but note how they weren't
+            # transformed.
+            chart_dict["datasets"] = datasets
+
             data_id_counter = 0
 
             stable_ids = {}
@@ -1667,10 +1671,6 @@ def marshall(
                 for k in special_keys:
                     if k in chart_dict:
                         replace_values_in_dict(chart_dict[k], stable_ids)
-
-            # Put datasets back into the chart dict but note how they weren't
-            # transformed.
-            chart_dict["datasets"] = datasets
 
             arrow_vega_lite.marshall(
                 vega_lite_chart,
