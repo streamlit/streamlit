@@ -155,6 +155,9 @@ def marshall(
         raise ValueError("Vega-Lite charts require a non-empty spec dict.")
 
     if "autosize" not in spec:
+        # type fit does not work for many chart types. This change focuses
+        # on vconcat with use_container_width=True as there are unintended
+        # consequences of changing the default autosize for all charts.
         if "vconcat" in spec and use_container_width:
             spec["autosize"] = {"type": "fit-x", "contains": "padding"}
         else:
