@@ -178,7 +178,16 @@ class PyDeckTest(DeltaGeneratorTestCase):
         plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
         self.assertEqual(plotly_proto.form_id, "")
 
-    def test_outside_form_on_select_rerun(self):
+    @parameterized.expand(
+        [
+            (True),
+            (False),
+            ("rerun"),
+            ("ignore"),
+            (callback),
+        ]
+    )
+    def test_outside_form_on_select_rerun(self, on_select):
         """Test that form id is marshalled correctly outside of a form."""
         import plotly.graph_objs as go
 
@@ -186,18 +195,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         data = [trace0]
 
-        st.plotly_chart(data, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.plotly_chart
-        self.assertEqual(proto.form_id, "")
-
-    def test_outside_form_on_select_ignore(self):
-        """Test that form id is marshalled correctly outside of a form."""
-        import plotly.graph_objs as go
-
-        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
-
-        data = [trace0]
-
-        st.plotly_chart(data, on_select="rerun")
+        st.plotly_chart(data, on_select=on_select)
         proto = self.get_delta_from_queue().new_element.plotly_chart
         self.assertEqual(proto.form_id, "")
