@@ -66,9 +66,8 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     assert_snapshot(app, name="hello_app-plotting_demo_page")
 
 
-# Firefox seems to be unable to run this test due to being very
-# slow to load the map. We skip it for now.
-@pytest.mark.skip_browser("firefox")
+# The map loading is a bit flaky with other browsers
+@pytest.mark.only_browser("chromium")
 def test_mapping_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Test that the mapping demo page of the hello app is displayed correctly."""
     navigate_to_page(app, 3)
@@ -76,7 +75,7 @@ def test_mapping_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> 
     check_page_title(app, "Mapping Demo")
     # We add an additional timeout here since sometimes the loading of
     # the map takes a bit longer (probably because of the map token request).
-    app.wait_for_timeout(6000)
+    app.wait_for_timeout(5000)
     expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_attribute("height", "500")
     expect(
         app.get_by_test_id("stDeckGlJsonChart").locator(".mapboxgl-canvas")
