@@ -190,6 +190,7 @@ function PlotlyFigure({
         }
       }
     }
+
     // rangeEvent contains the last boundaries for x and y axis
     // example: {xaxis.range[0]: 1.9370622059592264, xaxis.range[1]: 4.638578149503398, yaxis.range[0]: 4.04475138121547, yaxis.range[1]: 8.155248618784531}
     const rangeEvent = widgetMgr.getElementState(element.id, RANGE)
