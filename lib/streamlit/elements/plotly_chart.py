@@ -226,10 +226,7 @@ class PlotlyMixin:
             )
 
             if current_form_id(self.dg):
-                # TODO(willhuang1997): double check the message of this
-                raise StreamlitAPIException(
-                    "st.plotly_chart with on_select enabled cannot be used inside forms!"
-                )
+                plotly_chart_proto.form_id = current_form_id(self.dg)
 
             on_select_callback = None
             if not isinstance(on_select, bool) and not isinstance(on_select, str):
@@ -355,6 +352,7 @@ def marshall(
             sharing=sharing,
             key=key,
             theme=theme,
+            form_id=proto.form_id,
             page=ctx.page_script_hash if ctx else None,
         )
         proto.id = id

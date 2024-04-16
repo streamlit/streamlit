@@ -27,6 +27,7 @@ import {
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
 
 import {
   applyStreamlitTheme,
@@ -316,6 +317,16 @@ function PlotlyFigure({
       },
     })
   }, [plotlyFigure, widgetMgr, element, fragmentId])
+
+  // This is required for the form clearing functionality:
+  React.useEffect(() => {
+    const formClearHelper = new FormClearHelper()
+    formClearHelper.manageFormClearListener(widgetMgr, element.formId, reset)
+
+    return () => {
+      formClearHelper.disconnect()
+    }
+  }, [element.formId, reset, widgetMgr])
 
   return (
     <Plot
