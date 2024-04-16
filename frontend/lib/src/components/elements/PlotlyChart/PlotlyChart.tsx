@@ -283,7 +283,7 @@ function PlotlyFigure({
     // point_indices to replicate pythonic return value
     returnValue.select.point_indices = pointIndices
 
-    if (selections && selections.length > 0) {
+    if (selections) {
       // @ts-expect-error
       event.selections.forEach((selection: any) => {
         // box selection
