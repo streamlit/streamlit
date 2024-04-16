@@ -307,7 +307,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 kind={BaseButtonKind.HEADER_NO_PADDING}
                 onClick={this.toggleCollapse}
               >
-                <Icon content={ChevronRight} size="lg" />
+                <Icon content={ChevronRight} size="xl" />
               </BaseButton>
             </StyledOpenSidebarButton>
           </StyledSidebarOpenContainer>
@@ -357,7 +357,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                   kind={BaseButtonKind.HEADER_BUTTON}
                   onClick={this.toggleCollapse}
                 >
-                  <Icon content={ChevronLeft} size="lg" />
+                  <Icon content={ChevronLeft} size="xl" />
                 </BaseButton>
               </StyledCollapseSidebarButton>
             </StyledSidebarHeaderContainer>

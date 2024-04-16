@@ -274,7 +274,7 @@ export const StyledSidebarOpenContainer =
   styled.div<StyledSidebarOpenContainerProps>(
     ({ theme, chevronDownshift, isCollapsed }) => ({
       position: "absolute",
-      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.twoXL,
+      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.xl,
       left: isCollapsed ? theme.spacing.twoXL : `-${theme.spacing.twoXL}`,
       zIndex: theme.zIndices.header,
       display: "flex",
@@ -289,7 +289,6 @@ export const StyledSidebarOpenContainer =
 export const StyledOpenSidebarButton = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.header,
   marginLeft: theme.spacing.sm,
-  height: "5rem",
   color: theme.colors.gray70,
 
   button: {
@@ -315,7 +314,8 @@ export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => {
 
   return {
     height: logoHeight,
-    margin: "0.5rem 0 0.5rem 0",
+    maxWidth: "15rem",
+    margin: "0.25rem 0 0.25rem 0",
     zIndex: theme.zIndices.header,
   }
 })
@@ -335,8 +335,10 @@ export const StyledCollapseSidebarButton =
       transition: "left 300ms",
       transitionDelay: "left 300ms",
       color: theme.colors.gray70,
+      lineHeight: "0",
 
       button: {
+        padding: "0.25rem",
         "&:hover": {
           backgroundColor: theme.colors.gray30,
         },
