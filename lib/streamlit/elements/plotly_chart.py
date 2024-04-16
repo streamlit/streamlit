@@ -225,7 +225,7 @@ class PlotlyMixin:
                 check_session_state_rules,
             )
 
-            if current_form_id(self.dg):
+            if is_select_enabled and current_form_id(self.dg):
                 plotly_chart_proto.form_id = current_form_id(self.dg)
 
             on_select_callback = None
