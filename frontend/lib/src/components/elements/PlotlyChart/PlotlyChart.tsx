@@ -14,28 +14,25 @@
  * limitations under the License.
  */
 
-import React, {
-  ReactElement,
-  useState,
-  useCallback,
-  useEffect,
-  useMemo,
-} from "react"
+import React, { ReactElement, useState, useCallback } from "react"
+
 import { useTheme } from "@emotion/react"
+import Plot from "react-plotly.js"
+
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
   Figure as FigureProto,
   PlotlyChart as PlotlyChartProto,
 } from "@streamlit/lib/src/proto"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
-import Plot from "react-plotly.js"
+import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
+import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+
 import {
   applyStreamlitTheme,
   layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
-import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
-import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
 
 export interface PlotlyChartProps {
   width: number
@@ -64,7 +61,9 @@ export interface Selection extends SelectionRange {
   yref: string
 }
 
+// Default height for Plotly charts
 export const DEFAULT_HEIGHT = 450
+// Minimum width for Plotly charts
 const MIN_WIDTH = 150
 
 /**
@@ -193,6 +192,9 @@ function PlotlyFigure({
     }
 
     setPlotlyFigure(spec)
+    // Adding plotlyFigure to the dependencies
+    // array would cause an infinite update loop
+    /* eslint-disable react-hooks/exhaustive-deps */
   }, [theme, element.theme, element.id, element.isSelectEnabled])
 
   let calculatedWidth = element.useContainerWidth
@@ -209,6 +211,7 @@ function PlotlyFigure({
     plotlyFigure.layout.height !== calculatedHeight ||
     plotlyFigure.layout.width !== calculatedWidth
   ) {
+    // Update the figure with the new height and width
     setPlotlyFigure({
       ...plotlyFigure,
       layout: {
@@ -307,7 +310,7 @@ function PlotlyFigure({
       onSelected={
         element.isSelectEnabled || !disabled ? handleSelect : () => {}
       }
-      // onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
+      // TODO(lukasmasuch): Do we need this? onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
       onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
       onInitialized={figure => {
         widgetMgr.setElementState(element.id, "figure", figure)
