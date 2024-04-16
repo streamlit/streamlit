@@ -172,27 +172,33 @@ function PlotlyFigure({
         // data is originalData + selectedpoints
         spec.data = data
         spec.layout.selections = selections
-        if (spec.data) {
-          const hasSelectedPoints: boolean = spec.data.some(
-            (trace: any) =>
-              "selectedpoints" in trace &&
-              trace.selectedpoints &&
-              trace.selectedpoints.length > 0
-          )
-          if (hasSelectedPoints) {
-            spec.data.forEach((trace: any) => {
-              if (!trace.selectedpoints) {
-                // Plotly will automatically set traces in selectedpoints with the 100% opaqueness
-                // setting selectedpoints to an empty array will set these points to be opaque, thus representing that they're unselected
-                trace.selectedpoints = []
-              }
-            })
-          }
+        const hasSelectedPoints: boolean = spec.data.some(
+          (trace: any) =>
+            "selectedpoints" in trace &&
+            trace.selectedpoints &&
+            trace.selectedpoints.length > 0
+        )
+        if (hasSelectedPoints) {
+          spec.data.forEach((trace: any) => {
+            if (!trace.selectedpoints) {
+              // Plotly will automatically set traces in selectedpoints with the 100% opaqueness
+              // setting selectedpoints to an empty array will set these points to be opaque, thus representing that they're unselected
+              trace.selectedpoints = []
+            }
+          })
         }
       }
     }
+    // rangeEvent contains the last boundaries for x and y axis
+    // example: {xaxis.range[0]: 1.9370622059592264, xaxis.range[1]: 4.638578149503398, yaxis.range[0]: 4.04475138121547, yaxis.range[1]: 8.155248618784531}
     const rangeEvent = widgetMgr.getElementState(element.id, RANGE)
+
+    // autoRangeEvent contains whether or not autorange for the x and y axis is set
+    // example: { xaxis.autorange: true, yaxis.autorange: true }
     const autoRangeEvent = widgetMgr.getElementState(element.id, AUTORANGE)
+
+    // dragmode contains what button is selected on the plotly toolbar
+    // example: { dragmode: 'pan' }
     const dragmode = widgetMgr.getElementState(element.id, DRAGMODE)
 
     try {
@@ -340,11 +346,18 @@ function PlotlyFigure({
   const { data, layout, frames } = spec
 
   const handleRelayout = (event: PlotRelayoutEvent): void => {
+    // event that captures which plotly toolbar button is selected: { dragmode: 'pan' }
     if (event.dragmode) {
       widgetMgr.setElementState(element.id, DRAGMODE, event.dragmode)
-    } else if (event["xaxis.range[0]"]) {
+    }
+    // event that captures when x and y axis are moved through zoom or pan
+    // example event: {xaxis.range[0]: 1.9370622059592264, xaxis.range[1]: 4.638578149503398, yaxis.range[0]: 4.04475138121547, yaxis.range[1]: 8.155248618784531}
+    else if (event["xaxis.range[0]"]) {
       widgetMgr.setElementState(element.id, RANGE, event)
-    } else if (event["xaxis.autorange"]) {
+    }
+    // event that captures whether or not double click occurred with pan / zoom or autoscale button pressed
+    // example event: { xaxis.autorange: true, yaxis.autorange: true }
+    else if (event["xaxis.autorange"]) {
       widgetMgr.setElementState(element.id, AUTORANGE, event)
 
       // autorange will reset the range to default
