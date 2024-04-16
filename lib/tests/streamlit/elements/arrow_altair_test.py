@@ -28,11 +28,7 @@ import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType, replace_values_in_dict
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import (
-    bytes_to_data_frame,
-    is_altair_version_less_than,
-    is_pandas_version_less_than,
-)
+from streamlit.type_util import bytes_to_data_frame, is_altair_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit import pyspark_mocks, snowpark_mocks
 
@@ -718,7 +714,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         pass
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
+        is_altair_version_less_than("5.0.0") is False,
         "This test only runs if altair is >= 5.0.0",
     )
     @parameterized.expand(
@@ -749,7 +745,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         )
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
+        is_altair_version_less_than("5.0.0") is False,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_no_name_point_selection(self):
@@ -771,7 +767,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertFalse("param1" in proto.spec)
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
+        is_altair_version_less_than("5.0.0") is False,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_no_name_interval_selection(self):
@@ -793,7 +789,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertFalse("param1" in proto.spec)
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
+        is_altair_version_less_than("5.0.0") is False,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_named_point_selection(self):
@@ -815,7 +811,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertFalse("selection_0" in proto.spec)
 
     @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
+        is_altair_version_less_than("5.0.0") is False,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_named_interval_selection(self):
