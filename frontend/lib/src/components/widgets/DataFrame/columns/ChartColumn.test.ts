@@ -22,6 +22,10 @@ import {
   ChartColumnParams,
   LineChartColumn,
   BarChartColumn,
+  AreaChartColumn,
+  LINE_CHART_TYPE,
+  AREA_CHART_TYPE,
+  BAR_CHART_TYPE,
 } from "./ChartColumn"
 
 const CHART_COLUMN_TEMPLATE = {
@@ -59,10 +63,19 @@ function getBarChartColumn(
   } as BaseColumnProps)
 }
 
+function getAreaChartColumn(
+  params?: ChartColumnParams
+): ReturnType<typeof AreaChartColumn> {
+  return AreaChartColumn({
+    ...CHART_COLUMN_TEMPLATE,
+    columnTypeOptions: params,
+  } as BaseColumnProps)
+}
+
 describe("ChartColumn", () => {
   it("creates a valid column instance", () => {
     const mockColumn = getLineChartColumn()
-    expect(mockColumn.kind).toEqual("line_chart")
+    expect(mockColumn.kind).toEqual(LINE_CHART_TYPE)
     expect(mockColumn.title).toEqual(CHART_COLUMN_TEMPLATE.title)
     expect(mockColumn.id).toEqual(CHART_COLUMN_TEMPLATE.id)
     expect(mockColumn.sortMode).toEqual("default")
@@ -84,17 +97,25 @@ describe("ChartColumn", () => {
 
   it("supports configuring the chart type", () => {
     const mockColumn = getLineChartColumn()
-    expect(mockColumn.kind).toEqual("line_chart")
+    expect(mockColumn.kind).toEqual(LINE_CHART_TYPE)
     const mockCell = mockColumn.getCell([0.1, 0.2, 0.3])
     // Default chart type is line
-    expect((mockCell as SparklineCellType).data?.graphKind).toEqual("area")
+    expect((mockCell as SparklineCellType).data?.graphKind).toEqual("line")
 
     const mockBarChartColumn = getBarChartColumn()
-    expect(mockBarChartColumn.kind).toEqual("bar_chart")
+    expect(mockBarChartColumn.kind).toEqual(BAR_CHART_TYPE)
     const mockBarChartCell = mockBarChartColumn.getCell([0.1, 0.2, 0.3])
     // Chart type should be bar
     expect((mockBarChartCell as SparklineCellType).data?.graphKind).toEqual(
       "bar"
+    )
+
+    const mockAreaChartColumn = getAreaChartColumn()
+    expect(mockAreaChartColumn.kind).toEqual(AREA_CHART_TYPE)
+    const mockAreaChartCell = mockAreaChartColumn.getCell([0.1, 0.2, 0.3])
+    // Chart type should be area
+    expect((mockAreaChartCell as SparklineCellType).data?.graphKind).toEqual(
+      "area"
     )
   })
 

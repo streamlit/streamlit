@@ -15,12 +15,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Iterator, MutableMapping
+from typing import TYPE_CHECKING, Iterable, Iterator, MutableMapping
 from urllib import parse
 
 from streamlit.constants import EMBED_QUERY_PARAMS_KEYS
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsKeysAndGetItem
 
 
 @dataclass
@@ -62,6 +65,11 @@ class QueryParams(MutableMapping[str, str]):
             raise KeyError(missing_key_error_message(key))
 
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
+        self._ensure_single_query_api_used()
+        self.__set_item_internal(key, value)
+        self._send_query_param_msg()
+
+    def __set_item_internal(self, key: str, value: str | Iterable[str]) -> None:
         if isinstance(value, dict):
             raise StreamlitAPIException(
                 f"You cannot set a query params key `{key}` to a dictionary."
@@ -77,9 +85,9 @@ class QueryParams(MutableMapping[str, str]):
             self._query_params[key] = [str(item) for item in value]
         else:
             self._query_params[key] = str(value)
-        self._send_query_param_msg()
 
     def __delitem__(self, key: str) -> None:
+        self._ensure_single_query_api_used()
         try:
             if key in EMBED_QUERY_PARAMS_KEYS:
                 raise KeyError(missing_key_error_message(key))
@@ -87,6 +95,25 @@ class QueryParams(MutableMapping[str, str]):
             self._send_query_param_msg()
         except KeyError:
             raise KeyError(missing_key_error_message(key))
+
+    def update(
+        self,
+        other: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str] = (),
+        /,
+        **kwds: str,
+    ):
+        # This overrides the `update` provided by MutableMapping
+        # to ensure only one one ForwardMsg is sent.
+        self._ensure_single_query_api_used()
+        if hasattr(other, "keys") and hasattr(other, "__getitem__"):
+            for key in other.keys():
+                self.__set_item_internal(key, other[key])
+        else:
+            for key, value in other:
+                self.__set_item_internal(key, value)
+        for key, value in kwds.items():
+            self.__set_item_internal(key, value)
+        self._send_query_param_msg()
 
     def get_all(self, key: str) -> list[str]:
         self._ensure_single_query_api_used()
@@ -122,12 +149,8 @@ class QueryParams(MutableMapping[str, str]):
         ctx.enqueue(msg)
 
     def clear(self) -> None:
-        new_query_params = {}
-        for key, value in self._query_params.items():
-            if key in EMBED_QUERY_PARAMS_KEYS:
-                new_query_params[key] = value
-        self._query_params = new_query_params
-
+        self._ensure_single_query_api_used()
+        self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
 
     def to_dict(self) -> dict[str, str]:
@@ -139,11 +162,29 @@ class QueryParams(MutableMapping[str, str]):
             if key not in EMBED_QUERY_PARAMS_KEYS
         }
 
+    def from_dict(
+        self,
+        _dict: Iterable[tuple[str, str]] | SupportsKeysAndGetItem[str, str],
+    ):
+        self._ensure_single_query_api_used()
+        old_value = self._query_params.copy()
+        self.clear_with_no_forward_msg(preserve_embed=True)
+        try:
+            self.update(_dict)
+        except StreamlitAPIException:
+            # restore the original from before we made any changes.
+            self._query_params = old_value
+            raise
+
     def set_with_no_forward_msg(self, key: str, val: list[str] | str) -> None:
         self._query_params[key] = val
 
-    def clear_with_no_forward_msg(self) -> None:
-        self._query_params.clear()
+    def clear_with_no_forward_msg(self, preserve_embed: bool = False) -> None:
+        self._query_params = {
+            key: value
+            for key, value in self._query_params.items()
+            if key in EMBED_QUERY_PARAMS_KEYS and preserve_embed
+        }
 
     def _ensure_single_query_api_used(self):
         # Avoid circular imports

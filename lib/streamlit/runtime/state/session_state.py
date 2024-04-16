@@ -56,6 +56,9 @@ STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
 )
+SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY: Final = (
+    f"{STREAMLIT_INTERNAL_KEY_PREFIX}_PAGE_SCRIPT_HASH"
+)
 
 
 @dataclass(frozen=True)
@@ -182,11 +185,21 @@ class WStates(MutableMapping[str, Any]):
         """Set a widget's metadata, overwriting any existing metadata it has."""
         self.widget_metadata[widget_meta.id] = widget_meta
 
-    def remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
-        """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
-        # TODO(vdonato / kajarenc): Remove files corresponding to an inactive file
-        # uploader.
-        self.states = {k: v for k, v in self.states.items() if k in active_widget_ids}
+    def remove_stale_widgets(
+        self,
+        active_widget_ids: set[str],
+        fragment_ids_this_run: set[str] | None,
+    ) -> None:
+        """Remove widget state for stale widgets."""
+        self.states = {
+            k: v
+            for k, v in self.states.items()
+            if not _is_stale_widget(
+                self.widget_metadata.get(k),
+                active_widget_ids,
+                fragment_ids_this_run,
+            )
+        }
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
@@ -561,14 +574,31 @@ class SessionState:
 
     def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
-        self._new_widget_state.remove_stale_widgets(active_widget_ids)
+        # Avoid circular imports.
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+
+        self._new_widget_state.remove_stale_widgets(
+            active_widget_ids,
+            ctx.fragment_ids_this_run,
+        )
 
         # Remove entries from _old_state corresponding to
         # widgets not in widget_ids.
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
-            if (k in active_widget_ids or not is_widget_id(k))
+            if (
+                not is_widget_id(k)
+                or not _is_stale_widget(
+                    self._new_widget_state.widget_metadata.get(k),
+                    active_widget_ids,
+                    ctx.fragment_ids_this_run,
+                )
+            )
         }
 
     def _set_widget_metadata(self, widget_metadata: WidgetMetadata[Any]) -> None:
@@ -669,6 +699,23 @@ class SessionState:
 
 def _is_internal_key(key: str) -> bool:
     return key.startswith(STREAMLIT_INTERNAL_KEY_PREFIX)
+
+
+def _is_stale_widget(
+    metadata: WidgetMetadata[Any] | None,
+    active_widget_ids: set[str],
+    fragment_ids_this_run: set[str] | None,
+) -> bool:
+    if not metadata:
+        return True
+    elif metadata.id in active_widget_ids:
+        return False
+    # If we're running 1 or more fragments, but this widget is unrelated to any of the
+    # fragments that we're running, then it should not be marked as stale as its value
+    # may still be needed for a future fragment run or full script run.
+    elif fragment_ids_this_run and metadata.fragment_id not in fragment_ids_this_run:
+        return False
+    return True
 
 
 @dataclass

@@ -35,7 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
 from streamlit.string_util import is_emoji
 from streamlit.type_util import Key, to_key
 
@@ -316,10 +316,10 @@ class ChatMixin:
         # Use bottom position if chat input is within the main container
         # either directly or within a vertical container. If it has any
         # other container types as parents, we use inline position.
-        parent_block_types = set(self.dg._active_dg._parent_block_types)
+        ancestor_block_types = set(self.dg._active_dg._ancestor_block_types)
         if (
             self.dg._active_dg._root_container == RootContainer.MAIN
-            and not parent_block_types
+            and not ancestor_block_types
         ):
             position = "bottom"
         else:
@@ -352,6 +352,8 @@ class ChatMixin:
             chat_input_proto.value = widget_state.value
             chat_input_proto.set_value = True
 
+        if ctx:
+            save_for_app_testing(ctx, id, widget_state.value)
         if position == "bottom":
             # We import it here to avoid circular imports.
             from streamlit import _bottom

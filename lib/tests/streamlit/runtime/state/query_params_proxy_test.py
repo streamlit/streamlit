@@ -90,6 +90,11 @@ class TestQueryParamsProxy(unittest.TestCase):
         self.query_params_proxy.key = "value"
         assert self.query_params_proxy["key"] == "value"
 
+    def test_update_sets_entries(self):
+        self.query_params_proxy.update({"key1": "value1", "key2": "value2"})
+        assert self.query_params_proxy["key1"] == "value1"
+        assert self.query_params_proxy["key2"] == "value2"
+
     def test__delattr__deletes_entry(self):
         del self.query_params_proxy.test
         assert "test" not in self.query_params_proxy
@@ -101,3 +106,18 @@ class TestQueryParamsProxy(unittest.TestCase):
     def test__delattr__raises_Attribute_exception(self):
         with pytest.raises(AttributeError):
             del self.query_params_proxy.nonexistent
+
+    def test_to_dict(self):
+        self.query_params_proxy["test_multi"] = ["value1", "value2"]
+        assert self.query_params_proxy.to_dict() == {
+            "test": "value",
+            "test_multi": "value2",
+        }
+
+    def test_from_dict(self):
+        new_dict = {"test_new": "value_new", "test_multi": ["value1", "value2"]}
+        self.query_params_proxy.from_dict(new_dict)
+        assert self.query_params_proxy.test_new == "value_new"
+        assert self.query_params_proxy["test_multi"] == "value2"
+        assert self.query_params_proxy.get_all("test_multi") == ["value1", "value2"]
+        assert len(self.query_params_proxy) == 2

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import sys
+from contextvars import ContextVar
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
@@ -25,6 +26,7 @@ from typing import (
     Final,
     Hashable,
     Iterable,
+    List,
     Literal,
     NoReturn,
     TypeVar,
@@ -58,6 +60,7 @@ from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormData, FormMixin, current_form_id
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
+from streamlit.elements.html import HtmlMixin
 from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
@@ -93,7 +96,6 @@ from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.scriptrunner.script_run_context import dg_stack
 from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
@@ -118,9 +120,9 @@ ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
 
-# Type aliases for Parent Block Types
+# Type aliases for Ancestor Block Types
 BlockType = str
-ParentBlockTypes = Iterable[BlockType]
+AncestorBlockTypes = Iterable[BlockType]
 
 
 _use_warning_has_been_displayed: bool = False
@@ -169,6 +171,7 @@ class DeltaGenerator(
     GraphvizMixin,
     HeadingMixin,
     HelpMixin,
+    HtmlMixin,
     IframeMixin,
     ImageMixin,
     LayoutsMixin,
@@ -312,9 +315,9 @@ class DeltaGenerator(
         if self == self._main_dg:
             # We're being invoked via an `st.foo` pattern - use the current
             # `with` dg (aka the top of the stack).
-            current_stack = dg_stack.get()
-            if len(current_stack) > 0:
-                return current_stack[-1]
+            last_context_stack_dg = get_last_dg_added_to_context_stack()
+            if last_context_stack_dg is not None:
+                return last_context_stack_dg
 
         # We're being invoked via an `st.sidebar.foo` pattern - ignore the
         # current `with` dg.
@@ -346,7 +349,7 @@ class DeltaGenerator(
                     message = (
                         f"Method `{name}()` does not exist for "
                         "`DeltaGenerator` objects. Did you mean "
-                        "`st.{name}()`?"
+                        f"`st.{name}()`?"
                     )
             else:
                 message = f"`{name}()` is not a valid Streamlit command."
@@ -366,18 +369,27 @@ class DeltaGenerator(
         return dg
 
     @property
-    def _parent_block_types(self) -> ParentBlockTypes:
+    def _ancestors(self) -> Iterable["DeltaGenerator"]:
+        current_dg: DeltaGenerator | None = self
+        while current_dg is not None:
+            yield current_dg
+            current_dg = current_dg._parent
+
+    @property
+    def _ancestor_block_types(self) -> AncestorBlockTypes:
         """Iterate all the block types used by this DeltaGenerator and all
         its ancestor DeltaGenerators.
         """
-        current_dg: DeltaGenerator | None = self
-        while current_dg is not None:
-            if current_dg._block_type is not None:
-                yield current_dg._block_type
-            current_dg = current_dg._parent
+        for a in self._ancestors:
+            if a._block_type is not None:
+                yield a._block_type
 
-    def _count_num_of_parent_columns(self, parent_block_types: ParentBlockTypes) -> int:
-        return sum(1 for parent_block in parent_block_types if parent_block == "column")
+    def _count_num_of_parent_columns(
+        self, ancestor_block_types: AncestorBlockTypes
+    ) -> int:
+        return sum(
+            1 for ancestor_block in ancestor_block_types if ancestor_block == "column"
+        )
 
     @property
     def _cursor(self) -> Cursor | None:
@@ -507,6 +519,15 @@ class DeltaGenerator(
         """
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
+
+        ctx = get_script_run_ctx()
+        if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
+            raise StreamlitAPIException(
+                "Calling `st.sidebar` in a function wrapped with `st.experimental_fragment` "
+                "is not supported. To write elements to the sidebar with a fragment, "
+                "call your fragment function inside a `with st.sidebar` context manager."
+            )
+
         # Warn if we're called from within a legacy @st.cache function
         legacy_caching.maybe_show_cached_st_function_warning(dg, delta_type)
         # Warn if we're called from within @st.memo or @st.singleton
@@ -585,35 +606,8 @@ class DeltaGenerator(
         # Prevent nested columns & expanders by checking all parents.
         block_type = block_proto.WhichOneof("type")
         # Convert the generator to a list, so we can use it multiple times.
-        parent_block_types = list(dg._parent_block_types)
-
-        if block_type == "column":
-            num_of_parent_columns = self._count_num_of_parent_columns(
-                parent_block_types
-            )
-            if (
-                self._root_container == RootContainer.SIDEBAR
-                and num_of_parent_columns > 0
-            ):
-                raise StreamlitAPIException(
-                    "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
-                )
-            if num_of_parent_columns > 1:
-                raise StreamlitAPIException(
-                    "Columns can only be placed inside other columns up to one level of nesting."
-                )
-        if block_type == "chat_message" and block_type in frozenset(parent_block_types):
-            raise StreamlitAPIException(
-                "Chat messages cannot nested inside other chat messages."
-            )
-        if block_type == "expandable" and block_type in frozenset(parent_block_types):
-            raise StreamlitAPIException(
-                "Expanders may not be nested inside other expanders."
-            )
-        if block_type == "popover" and block_type in frozenset(parent_block_types):
-            raise StreamlitAPIException(
-                "Popovers may not be nested inside other popovers."
-            )
+        ancestor_block_types = list(dg._ancestor_block_types)
+        _check_nested_element_violation(self, block_type, ancestor_block_types)
 
         if dg._root_container is None or dg._cursor is None:
             return dg
@@ -664,11 +658,9 @@ class DeltaGenerator(
     def _arrow_add_rows(
         self: DG,
         data: Data = None,
-        **kwargs: DataFrame
-        | npt.NDArray[Any]
-        | Iterable[Any]
-        | dict[Hashable, Any]
-        | None,
+        **kwargs: (
+            DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None
+        ),
     ) -> DG | None:
         """Concatenate a dataframe to the bottom of the current one.
 
@@ -781,6 +773,33 @@ class DeltaGenerator(
         return self
 
 
+main_dg = DeltaGenerator(root_container=RootContainer.MAIN)
+sidebar_dg = DeltaGenerator(root_container=RootContainer.SIDEBAR, parent=main_dg)
+event_dg = DeltaGenerator(root_container=RootContainer.EVENT, parent=main_dg)
+bottom_dg = DeltaGenerator(root_container=RootContainer.BOTTOM, parent=main_dg)
+
+# The dg_stack tracks the currently active DeltaGenerator, and is pushed to when
+# a DeltaGenerator is entered via a `with` block. This is implemented as a ContextVar
+# so that different threads or async tasks can have their own stacks.
+dg_stack: ContextVar[tuple[DeltaGenerator, ...]] = ContextVar(
+    "dg_stack", default=(main_dg,)
+)
+
+
+def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
+    """Get the last added DeltaGenerator of the stack in the current context.
+
+    Returns None if the stack has only one element or is empty for whatever reason.
+    """
+    current_stack = dg_stack.get()
+    # If set to "> 0" and thus return the only delta generator in the stack - which logically makes more sense -, some unit tests
+    # fail. It looks like the reason is that they create their own main delta generator but do not populate the dg_stack correctly. However, to be on the safe-side,
+    # we keep the logic but leave the comment as shared knowledge for whoever will look into this in the future.
+    if len(current_stack) > 1:
+        return current_stack[-1]
+    return None
+
+
 def _prep_data_for_add_rows(
     data: Data,
     delta_type: str,
@@ -884,4 +903,45 @@ def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
+    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = ctx.current_fragment_id
+
     ctx.enqueue(msg)
+
+
+def _writes_directly_to_sidebar(dg: DG) -> bool:
+    in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
+    has_container = bool(len(list(dg._ancestor_block_types)))
+    return in_sidebar and not has_container
+
+
+def _check_nested_element_violation(
+    dg: DeltaGenerator, block_type: str | None, ancestor_block_types: List[BlockType]
+) -> None:
+    """Check if elements are nested in a forbidden way.
+
+    Raises
+    ------
+      StreamlitAPIException: throw if an invalid element nesting is detected.
+    """
+
+    if block_type == "column":
+        num_of_parent_columns = dg._count_num_of_parent_columns(ancestor_block_types)
+        if dg._root_container == RootContainer.SIDEBAR and num_of_parent_columns > 0:
+            raise StreamlitAPIException(
+                "Columns cannot be placed inside other columns in the sidebar. This is only possible in the main area of the app."
+            )
+        if num_of_parent_columns > 1:
+            raise StreamlitAPIException(
+                "Columns can only be placed inside other columns up to one level of nesting."
+            )
+    if block_type == "chat_message" and block_type in ancestor_block_types:
+        raise StreamlitAPIException(
+            "Chat messages cannot nested inside other chat messages."
+        )
+    if block_type == "expandable" and block_type in ancestor_block_types:
+        raise StreamlitAPIException(
+            "Expanders may not be nested inside other expanders."
+        )
+    if block_type == "popover" and block_type in ancestor_block_types:
+        raise StreamlitAPIException("Popovers may not be nested inside other popovers.")

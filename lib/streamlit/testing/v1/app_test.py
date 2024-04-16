@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import hashlib
 import inspect
-import pathlib
 import tempfile
 import textwrap
 import traceback
+from pathlib import Path
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock
 from urllib import parse
@@ -32,6 +32,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.secrets import Secrets
+from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.testing.v1.element_tree import (
@@ -82,7 +83,8 @@ from streamlit.testing.v1.element_tree import (
     repr_,
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
-from streamlit.util import HASHLIB_KWARGS
+from streamlit.testing.v1.util import patch_config_options
+from streamlit.util import HASHLIB_KWARGS, calc_md5
 
 TMP_DIR = tempfile.TemporaryDirectory()
 
@@ -106,7 +108,8 @@ class AppTest:
     Once initialized, Session State and widget values can be updated and the
     script can be run. Unlike an actual live-running Streamlit app, you need to
     call ``AppTest.run()`` explicitly to re-run the app after changing a widget
-    value.
+    value. Switching pages also requires an explicit, follow-up call to
+    ``AppTest.run()``.
 
     ``AppTest`` enables developers to build tests on their app as-is, in the
     familiar python test format, without major refactoring or abstracting out
@@ -153,11 +156,14 @@ class AppTest:
     ):
         self._script_path = script_path
         self.default_timeout = default_timeout
-        self.session_state = SafeSessionState(SessionState(), lambda: None)
+        session_state = SessionState()
+        session_state[TESTING_KEY] = {}
+        self.session_state = SafeSessionState(session_state, lambda: None)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
         self.args = args
         self.kwargs = kwargs
+        self._page_hash = ""
 
         tree = ElementTree()
         tree._runner = self
@@ -199,7 +205,7 @@ class AppTest:
         hasher = hashlib.md5(bytes(script, "utf-8"), **HASHLIB_KWARGS)
         script_name = hasher.hexdigest()
 
-        path = pathlib.Path(TMP_DIR.name, script_name)
+        path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
         path.write_text(aligned_script)
         return AppTest(
@@ -280,14 +286,14 @@ class AppTest:
             executed via ``.run()``.
 
         """
-        if pathlib.Path.is_file(pathlib.Path(script_path)):
+        if Path.is_file(Path(script_path)):
             path = script_path
         else:
             # TODO: Make this not super fragile
             # Attempt to find the test file calling this method, so the
             # path can be relative to there.
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
-            filepath = pathlib.Path(stack[1].filename)
+            filepath = Path(stack[1].filename)
             path = str(filepath.parent / script_path)
         return AppTest(path, default_timeout=default_timeout)
 
@@ -329,8 +335,11 @@ class AppTest:
         script_runner = LocalScriptRunner(
             self._script_path, self.session_state, args=self.args, kwargs=self.kwargs
         )
-        self._tree = script_runner.run(widget_state, self.query_params, timeout)
-        self._tree._runner = self
+        with patch_config_options({"global.appTest": True}):
+            self._tree = script_runner.run(
+                widget_state, self.query_params, timeout, self._page_hash
+            )
+            self._tree._runner = self
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = parse.parse_qs(query_string)
@@ -352,8 +361,8 @@ class AppTest:
 
         This is equivalent to manually rerunning the app or the rerun that
         occurs upon user interaction. ``AppTest.run()`` must be manually called
-        after updating a widget value as script reruns do not occur
-        automatically as they do for live-running Streamlit apps.
+        after updating a widget value or switching pages as script reruns do
+        not occur automatically as they do for live-running Streamlit apps.
 
         Parameters
         ----------
@@ -365,8 +374,37 @@ class AppTest:
         -------
         AppTest
             self
+
         """
         return self._tree.run(timeout=timeout)
+
+    def switch_page(self, page_path: str) -> AppTest:
+        """Switch to another page of the app.
+
+        This method does not automatically rerun the app. Use a follow-up call
+        to ``AppTest.run()`` to obtain the elements on the selected page.
+
+        Parameters
+        ----------
+        page_path: str
+            Path of the page to switch to. The path must be relative to the
+            main script's location (e.g. ``"pages/my_page.py"``).
+
+        Returns
+        -------
+        AppTest
+            self
+
+        """
+        main_dir = Path(self._script_path).parent
+        full_page_path = main_dir / page_path
+        if not full_page_path.is_file():
+            raise ValueError(
+                f"Unable to find script at {page_path}, make sure the page given is relative to the main script."
+            )
+        page_path_str = str(full_page_path.resolve())
+        self._page_hash = calc_md5(page_path_str)
+        return self
 
     @property
     def main(self) -> Block:

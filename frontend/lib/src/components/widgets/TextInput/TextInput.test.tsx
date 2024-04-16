@@ -143,7 +143,21 @@ describe("TextInput widget", () => {
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
       props.element.default,
-      { fromUi: false }
+      { fromUi: false },
+      undefined
+    )
+  })
+
+  it("can pass fragmentId to setStringValue", () => {
+    const props = getProps(undefined, { fragmentId: "myFragmentId" })
+    jest.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      props.element.default,
+      { fromUi: false },
+      "myFragmentId"
     )
   })
 
@@ -178,7 +192,8 @@ describe("TextInput widget", () => {
       "testing",
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -199,7 +214,8 @@ describe("TextInput widget", () => {
       "testing",
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -243,9 +259,14 @@ describe("TextInput widget", () => {
       await screen.findByText("Press Enter to submit form")
     ).toBeInTheDocument()
 
-    expect(setStringValueSpy).toHaveBeenCalledWith(props.element, "TEST", {
-      fromUi: true,
-    })
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element,
+      "TEST",
+      {
+        fromUi: true,
+      },
+      undefined
+    )
   })
 
   it("does not update widget value on text changes when outside of a form", async () => {
@@ -265,7 +286,8 @@ describe("TextInput widget", () => {
       props.element.default,
       {
         fromUi: false,
-      }
+      },
+      undefined
     )
   })
 
@@ -291,7 +313,8 @@ describe("TextInput widget", () => {
       props.element.default,
       {
         fromUi: true,
-      }
+      },
+      undefined
     )
   })
 
@@ -305,5 +328,34 @@ describe("TextInput widget", () => {
     const props = getProps({}, { width: 190 })
     render(<TextInput {...props} />)
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
+  })
+
+  it("focuses input when clicking label", async () => {
+    const props = getProps()
+    render(<TextInput {...props} />)
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).not.toHaveFocus()
+    const label = screen.getByText(props.element.label)
+    const user = userEvent.setup()
+    await user.click(label)
+    expect(textInput).toHaveFocus()
+  })
+
+  it("ensures id doesn't change on rerender", () => {
+    const props = getProps()
+    render(<TextInput {...props} />)
+
+    const textInputLabel1 = screen.getByTestId("stWidgetLabel")
+    const forId1 = textInputLabel1.getAttribute("for")
+
+    // Make some change to cause a rerender
+    const textInput = screen.getByRole("textbox")
+    fireEvent.change(textInput, { target: { value: "0123456789" } })
+    expect(textInput).toHaveValue("0123456789")
+
+    const textInputLabel2 = screen.getByTestId("stWidgetLabel")
+    const forId2 = textInputLabel2.getAttribute("for")
+
+    expect(forId2).toBe(forId1)
   })
 })

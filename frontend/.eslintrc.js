@@ -38,6 +38,8 @@ module.exports = {
     "plugin:jest/recommended",
     // Uses the recommended rules from React Testing Library:
     "plugin:testing-library/react",
+    // Uses the recommended rules from lodash
+    "plugin:lodash/recommended",
   ],
   // Specifies the ESLint parser
   parser: "@typescript-eslint/parser",
@@ -154,6 +156,15 @@ module.exports = {
       { allowSameFolder: true, rootDir: "src", prefix: "src" },
     ],
     "no-else-return": ["error", { allowElseIf: true }],
+    "lodash/prefer-noop": "off",
+    "lodash/prefer-constant": "off",
+    "lodash/prefer-lodash-method": "off",
+    "lodash/prefer-lodash-typecheck": "off",
+    "lodash/prefer-get": "off",
+    "lodash/prefer-includes": "off",
+    "lodash/prefer-is-nil": "off",
+    "lodash/prefer-matches": "off",
+    "lodash/path-style": "off",
   },
   settings: {
     react: {

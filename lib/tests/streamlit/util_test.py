@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
-import gc
 import random
 import unittest
 from typing import Dict, List, Set
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 from parameterized import parameterized
 
 from streamlit import util
@@ -32,8 +31,8 @@ class UtilTest(unittest.TestCase):
         """Test that util.memoize works."""
         non_memoized_func = lambda: random.randint(0, 1000000)
         yes_memoized_func = util.memoize(non_memoized_func)
-        self.assertNotEqual(non_memoized_func(), non_memoized_func())
-        self.assertEqual(yes_memoized_func(), yes_memoized_func())
+        assert non_memoized_func() != non_memoized_func()
+        assert yes_memoized_func() == yes_memoized_func()
 
     @parameterized.expand(
         [("Linux", False, True), ("Windows", True, False), ("Darwin", False, True)]
@@ -50,8 +49,8 @@ class UtilTest(unittest.TestCase):
             with patch("webbrowser.open") as webbrowser_open:
                 with patch("subprocess.Popen") as subprocess_popen:
                     util.open_browser("http://some-url")
-                    self.assertEqual(webbrowser_expect, webbrowser_open.called)
-                    self.assertEqual(popen_expect, subprocess_popen.called)
+                    assert webbrowser_expect == webbrowser_open.called
+                    assert popen_expect == subprocess_popen.called
 
     def test_open_browser_linux_no_xdg(self):
         """Test opening the browser on Linux with no xdg installed"""
@@ -63,8 +62,8 @@ class UtilTest(unittest.TestCase):
             with patch("webbrowser.open") as webbrowser_open:
                 with patch("subprocess.Popen") as subprocess_popen:
                     util.open_browser("http://some-url")
-                    self.assertEqual(True, webbrowser_open.called)
-                    self.assertEqual(False, subprocess_popen.called)
+                    assert webbrowser_open.called
+                    assert not subprocess_popen.called
 
     def test_functools_wraps(self):
         """Test wrap for functools.wraps"""
@@ -75,7 +74,7 @@ class UtilTest(unittest.TestCase):
         def f():
             return True
 
-        self.assertEqual(True, hasattr(f, "__wrapped__"))
+        assert hasattr(f, "__wrapped__")
 
     @parameterized.expand(
         [
@@ -93,7 +92,7 @@ class UtilTest(unittest.TestCase):
     )
     def test_lower_clean_dict_keys(self, input_dict, answer_dict):
         return_dict = util.lower_clean_dict_keys(input_dict)
-        self.assertEqual(return_dict, answer_dict)
+        assert return_dict == answer_dict
 
     @parameterized.expand(
         [
@@ -110,7 +109,7 @@ class UtilTest(unittest.TestCase):
     )
     def test_successful_index_(self, input, find_value, expected_index):
         actual_index = util.index_(input, find_value)
-        self.assertEqual(actual_index, expected_index)
+        assert actual_index == expected_index
 
     @parameterized.expand(
         [
@@ -124,7 +123,7 @@ class UtilTest(unittest.TestCase):
         ]
     )
     def test_unsuccessful_index_(self, input, find_value):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             util.index_(input, find_value)
 
     @parameterized.expand(
@@ -153,7 +152,7 @@ class UtilTest(unittest.TestCase):
         keys_to_drop: List[str],
         result: Dict[str, List[str]],
     ):
-        self.assertDictEqual(util.exclude_keys_in_dict(d, keys_to_drop), result)
+        assert util.exclude_keys_in_dict(d, keys_to_drop) == result
 
     @parameterized.expand(
         [
@@ -178,35 +177,9 @@ class UtilTest(unittest.TestCase):
     def test_extract_key_query_params(
         self, query_params: Dict[str, List[str]], param_key: str, result: Set[str]
     ):
-        self.assertSetEqual(
-            util.extract_key_query_params(query_params, param_key), result
-        )
+        assert util.extract_key_query_params(query_params, param_key) == result
 
     def test_calc_md5_can_handle_bytes_and_strings(self):
-        self.assertEqual(
-            util.calc_md5("eventually bytes"),
-            util.calc_md5("eventually bytes".encode("utf-8")),
+        assert util.calc_md5("eventually bytes") == util.calc_md5(
+            "eventually bytes".encode("utf-8")
         )
-
-    def test_timed_cleanup_cache_gc(self):
-        """Test that the TimedCleanupCache does not leave behind tasks when
-        the cache is not externally reachable"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        async def create_cache():
-            cache = util.TimedCleanupCache(maxsize=2, ttl=10)
-            cache["foo"] = "bar"
-
-            # expire_cache and create_cache
-            assert len(asyncio.all_tasks()) > 1
-
-        asyncio.run(create_cache())
-
-        gc.collect()
-
-        async def check():
-            # Only has this function running
-            assert len(asyncio.all_tasks()) == 1
-
-        asyncio.run(check())

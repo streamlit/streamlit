@@ -21,7 +21,7 @@ import types
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
-from typing import Callable, Final
+from typing import TYPE_CHECKING, Callable, Final
 
 from blinker import Signal
 
@@ -46,8 +46,12 @@ from streamlit.runtime.state import (
     SafeSessionState,
     SessionState,
 )
+from streamlit.runtime.state.session_state import SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.vendor.ipython.modified_sys_path import modified_sys_path
+
+if TYPE_CHECKING:
+    from streamlit.runtime.fragment import FragmentStorage
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -67,6 +71,10 @@ class ScriptRunnerEvent(Enum):
 
     # The script run stopped in order to start a script run with newer widget state.
     SCRIPT_STOPPED_FOR_RERUN = "SCRIPT_STOPPED_FOR_RERUN"
+
+    # The script run corresponding to a fragment ran to completion, or was interrupted
+    # by the user.
+    FRAGMENT_STOPPED_WITH_SUCCESS = "FRAGMENT_STOPPED_WITH_SUCCESS"
 
     # The ScriptRunner is done processing the ScriptEventQueue and
     # is shut down.
@@ -106,6 +114,7 @@ class ScriptRunner:
         script_cache: ScriptCache,
         initial_rerun_data: RerunData,
         user_info: dict[str, str | None],
+        fragment_storage: "FragmentStorage",
     ):
         """Initialize the ScriptRunner.
 
@@ -119,11 +128,17 @@ class ScriptRunner:
         main_script_path
             Path to our main app script.
 
+        session_state
+            The AppSession's SessionState instance.
+
         uploaded_file_mgr
             The File manager to store the data uploaded by the file_uploader widget.
 
         script_cache
             A ScriptCache instance.
+
+        initial_rerun_data
+            RerunData to initialize this ScriptRunner with.
 
         user_info
             A dict that contains information about the current user. For now,
@@ -136,16 +151,18 @@ class ScriptRunner:
             Information about the current user is optionally provided when a
             websocket connection is initialized via the "X-Streamlit-User" header.
 
+        fragment_storage
+            The AppSession's FragmentStorage instance.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
-        self._uploaded_file_mgr = uploaded_file_mgr
-        self._script_cache = script_cache
-        self._user_info = user_info
-
         self._session_state = SafeSessionState(
             session_state, yield_callback=self._maybe_handle_execution_control_request
         )
+        self._uploaded_file_mgr = uploaded_file_mgr
+        self._script_cache = script_cache
+        self._user_info = user_info
+        self._fragment_storage = fragment_storage
 
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
@@ -277,6 +294,7 @@ class ScriptRunner:
             page_script_hash="",
             user_info=self._user_info,
             gather_usage_stats=bool(config.get_option("browser.gatherUsageStats")),
+            fragment_storage=self._fragment_storage,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -394,6 +412,9 @@ class ScriptRunner:
             The RerunData to use.
 
         """
+        # Avoid circular imports
+        from streamlit.delta_generator import dg_stack
+
         assert self._is_in_script_thread()
 
         # An explicit loop instead of recursion to avoid stack overflows
@@ -441,16 +462,32 @@ class ScriptRunner:
                 else main_page_info["page_script_hash"]
             )
 
+            fragment_ids_this_run = set(rerun_data.fragment_id_queue)
+
+            # Clear widget state on page change. This normally happens implicitly
+            # in the script run cleanup steps, but doing it explicitly ensures
+            # it happens even if a script run was interrupted.
+            try:
+                old_hash = self._session_state[SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY]
+            except KeyError:
+                old_hash = None
+
+            if old_hash != page_script_hash:
+                # Page changed, reset widget state
+                self._session_state.on_script_finished(set())
+
             ctx = self._get_script_run_ctx()
             ctx.reset(
                 query_string=rerun_data.query_string,
                 page_script_hash=page_script_hash,
+                fragment_ids_this_run=fragment_ids_this_run,
             )
 
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
+                fragment_ids_this_run=fragment_ids_this_run,
             )
 
             # Compile the script. Any errors thrown here will be surfaced
@@ -497,6 +534,16 @@ class ScriptRunner:
             # is interrupted by a RerunException.
             rerun_exception_data: RerunData | None = None
 
+            # Saving and restoring our original cursors/dg_stack is needed
+            # specifically to handle the case where a RerunException is raised while
+            # running a fragment. In this case, we need to restore both to their states
+            # at the start of the script run to ensure that we write to the correct
+            # places in the app during the rerun (without this, ctx.cursors and dg_stack
+            # will still be set to the snapshots they were restored from when running
+            # the fragment).
+            original_cursors = ctx.cursors
+            original_dg_stack = dg_stack.get()
+
             # If the script stops early, we don't want to remove unseen widgets,
             # so we track this to potentially skip session state cleanup later.
             premature_stop: bool = False
@@ -504,14 +551,6 @@ class ScriptRunner:
             try:
                 # Create fake module. This gives us a name global namespace to
                 # execute the code in.
-                # TODO(vdonato): Double-check that we're okay with naming the
-                # module for every page `__main__`. I'm pretty sure this is
-                # necessary given that people will likely often write
-                #     ```
-                #     if __name__ == "__main__":
-                #         ...
-                #     ```
-                # in their scripts.
                 module = self._new_module("__main__")
 
                 # Install the fake module as the __main__ module. This allows
@@ -537,13 +576,35 @@ class ScriptRunner:
                             rerun_data.widget_states
                         )
 
+                    self._session_state[
+                        SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY
+                    ] = page_script_hash
                     ctx.on_script_start()
                     prep_time = timer() - start_time
-                    exec(code, module.__dict__)
+
+                    if rerun_data.fragment_id_queue:
+                        for fragment_id in rerun_data.fragment_id_queue:
+                            try:
+                                wrapped_fragment = self._fragment_storage.get(
+                                    fragment_id
+                                )
+                                ctx.current_fragment_id = fragment_id
+                                wrapped_fragment()
+
+                            except KeyError:
+                                raise RuntimeError(
+                                    f"Could not find fragment with id {fragment_id}"
+                                )
+                    else:
+                        self._fragment_storage.clear()
+                        exec(code, module.__dict__)
+
                     self._session_state.maybe_check_serializable()
                     self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
             except RerunException as e:
                 rerun_exception_data = e.rerun_data
+                ctx.cursors = original_cursors
+                dg_stack.set(original_dg_stack)
                 # Interruption due to a rerun is usually from `st.rerun()`, which
                 # we want to count as a script completion so triggers reset.
                 # It is also possible for this to happen if fast reruns is off,
@@ -563,7 +624,11 @@ class ScriptRunner:
 
             finally:
                 if rerun_exception_data:
+                    # The handling for when a full script run or a fragment is stopped early
+                    # is the same, so we only have one ScriptRunnerEvent for this scenario.
                     finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                elif rerun_data.fragment_id_queue:
+                    finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
                 else:
                     finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
 
