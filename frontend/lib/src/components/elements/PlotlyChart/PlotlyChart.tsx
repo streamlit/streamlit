@@ -170,18 +170,20 @@ function PlotlyFigure({
         spec.data = data
         spec.layout.selections = selections
 
-        const hasSelectedPoints: boolean = spec.data.some(
-          (trace: any) =>
-            "selectedpoints" in trace && trace.selectedpoints.length > 0
-        )
-        if (hasSelectedPoints) {
-          spec.data.forEach((trace: any) => {
-            if (!trace.selectedpoints) {
-              // Plotly will automatically set traces in selectedpoints with the 100% opaqueness
-              // setting selectedpoints to an empty array will set these points to be opaque, thus representing that they're unselected
-              trace.selectedpoints = []
-            }
-          })
+        if (Array.isArray(spec.data)) {
+          const hasSelectedPoints: boolean = spec.data.some(
+            (trace: any) =>
+              "selectedpoints" in trace && trace.selectedpoints.length > 0
+          )
+          if (hasSelectedPoints) {
+            spec.data.forEach((trace: any) => {
+              if (!trace.selectedpoints) {
+                // Plotly will automatically set traces in selectedpoints with the 100% opaqueness
+                // setting selectedpoints to an empty array will set these points to be opaque, thus representing that they're unselected
+                trace.selectedpoints = []
+              }
+            })
+          }
         }
       }
     }
@@ -189,19 +191,29 @@ function PlotlyFigure({
     return spec
   }, [element, figure.spec, theme, widgetMgr])
 
+  const onFormCleared = useCallback(() => {
+    widgetMgr.setElementState(element.id, SELECTIONS, {})
+    widgetMgr.setElementState(
+      element.id,
+      DATA,
+      JSON.parse(replaceTemporaryColors(figure.spec, theme, element.theme))
+        .data
+    )
+  }, [widgetMgr, element.id, figure.spec, theme, element.theme])
+
   // This is required for the form clearing functionality:
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(
       widgetMgr,
       element.formId,
-      getInitialValue
+      onFormCleared
     )
 
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, getInitialValue, widgetMgr])
+  }, [element.formId, onFormCleared, widgetMgr])
   const spec = getInitialValue()
 
   const initialHeight = spec.layout.height
@@ -271,9 +283,7 @@ function PlotlyFigure({
     // point_indices to replicate pythonic return value
     returnValue.select.point_indices = pointIndices
 
-    // event.selections doesn't show up in the PlotSelectionEvent
-    // @ts-expect-error
-    if (event.selections) {
+    if (selections && selections.length > 0) {
       // @ts-expect-error
       event.selections.forEach((selection: any) => {
         // box selection
@@ -299,7 +309,6 @@ function PlotlyFigure({
           selectedLassos.push(returnSelection)
         }
       })
-
       // @ts-expect-error
       widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
       widgetMgr.setElementState(element.id, DATA, data)
