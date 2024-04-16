@@ -713,10 +713,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
     def callback():
         pass
 
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
     @parameterized.expand(
         [
             (True, True),
@@ -725,6 +721,10 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             ("ignore", False),
             (callback, True),
         ]
+    )
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_on_select(self, on_select, expected_is_select_enabled):
         point = alt.selection_point(name="name")
