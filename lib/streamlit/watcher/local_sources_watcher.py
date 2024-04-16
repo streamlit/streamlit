@@ -166,7 +166,7 @@ class LocalSourcesWatcher:
         for name, paths in module_paths.items():
             for path in paths:
                 if self._file_should_be_watched(path):
-                    self._register_watcher(str(Path(path).resolve()), name)
+                    self._register_watcher(path, name)
 
     def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
@@ -208,7 +208,7 @@ def get_module_paths(module: types.ModuleType) -> set[str]:
             _LOGGER.warning(f"Examining the path of {module.__name__} raised: {e}")
 
         all_paths.update(
-            [os.path.abspath(str(p)) for p in potential_paths if _is_valid_path(p)]
+            [str(Path(p).resolve()) for p in potential_paths if _is_valid_path(p)]
         )
     return all_paths
 
