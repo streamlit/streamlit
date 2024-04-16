@@ -39,9 +39,9 @@ def test_animation_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
     navigate_to_page(app, 1)
 
     check_page_title(app, "Animation Demo")
-    # Wait for the animation to end.
-    app.wait_for_timeout(4000)
-    expect(app.get_by_test_id("stButton")).to_contain_text("Re-run")
+    # Wait for the animation to end. The animation takes 5-10 seconds to finish
+    # which is a lot more than the default timeout
+    expect(app.get_by_test_id("stButton")).to_contain_text("Re-run", timeout=15000)
 
     assert_snapshot(app, name="hello_app-animation_demo_page")
 
@@ -51,10 +51,9 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     navigate_to_page(app, 2)
 
     check_page_title(app, "Plotting Demo")
-    # The animation takes a couple of seconds to finish, so we add
-    # and additional timeout here
-    app.wait_for_timeout(4000)
-    expect(app.get_by_test_id("stText")).to_contain_text("100% Complete")
+    # The animation takes 5-10 seconds to finish, so we add
+    # and additional timeout
+    expect(app.get_by_test_id("stText")).to_contain_text("100% Complete", timeout=15000)
     expect(
         app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
     ).to_have_attribute("height", "350")
@@ -71,6 +70,7 @@ def test_mapping_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> 
     # the map takes a bit longer (probably because of the map token request).
     app.wait_for_timeout(4000)
     expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_attribute("height", "500")
+    expect(app.get_by_test_id("stDeckGlJsonChart").locator("canvas")).to_be_visible()
 
     assert_snapshot(app, name="hello_app-mapping_demo_page")
 
