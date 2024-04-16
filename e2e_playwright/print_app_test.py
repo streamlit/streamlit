@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Emulate printing by setting the 'print' media type and the viewport size similar to DIN A4 dimensions.
+
+The 'forced_colors="active"' argument is supposed to force showing background images
+similiar to the '-webkit-print-color-adjust' CSS property. It looks like
+for the test that Chromium does not respect this property, so screenshots might look
+funny from a color-perspective there.
+
+"""
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
