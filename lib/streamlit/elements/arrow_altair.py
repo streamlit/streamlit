@@ -18,6 +18,7 @@ a nice JSON schema for expressing graphs and charts.
 """
 from __future__ import annotations
 
+import re
 from contextlib import nullcontext
 from datetime import date
 from enum import Enum
@@ -27,6 +28,7 @@ from typing import (
     Callable,
     Collection,
     Dict,
+    List,
     Literal,
     Sequence,
     Union,
@@ -45,6 +47,7 @@ from streamlit.color_util import (
     to_css_color,
 )
 from streamlit.constants import NO_SELECTION_OBJECTS_ERROR_ALTAIR, ON_SELECTION_IGNORE
+from streamlit.elements import arrow
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
@@ -840,6 +843,12 @@ class ArrowAltairMixin:
             and on_select != False
             and on_select != ON_SELECTION_IGNORE
         )
+        import altair as alt
+
+        if alt.__version__[0] == "4" and is_select_enabled:
+            raise StreamlitAPIException(
+                "Streamlit does not support Altair's api Version 4. Please upgrade to Version 5."
+            )
 
         if not is_select_enabled and current_form_id(self.dg):
             # TODO(willhuang1997): double check the message of this
@@ -1606,6 +1615,59 @@ def marshall(
         with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
+            data_id_counter = 0
+
+            stable_ids = {}
+            # Pull data out of chart_dict when it's in a 'datasets' key:
+            #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
+            if "datasets" in chart_dict:
+                for k, v in chart_dict["datasets"].items():
+                    dataset = vega_lite_chart.datasets.add()
+                    if is_select_enabled:
+                        # map data ids to our own stable ids to replace later
+                        # otherwise the widget id will change and rerender a completely new chart
+                        stable_ids[k] = str(data_id_counter)
+                        dataset.name = str(data_id_counter)
+                        data_id_counter += 1
+                    else:
+                        dataset.name = str(k)
+                    dataset.has_name = True
+                    arrow.marshall(dataset.data, v)
+                del chart_dict["datasets"]
+
+            get_script_run_ctx()
+
+            if is_select_enabled:
+                # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
+                # altair creates names for parameters when no name is created as it's required in vega
+                # streamlit reruns will increment this counter by 1 so we need a stable name
+                # otherwise the widget id will change and rerender a completely new chart
+                regex = re.compile(r"^param_\d+$")
+                param_counter = 0
+
+                if "params" in chart_dict:
+                    for param in chart_dict["params"]:
+                        view_counter = 0
+                        name = param["name"]
+                        if regex.match(name):
+                            param["name"] = f"selection_{param_counter}"
+                            stable_ids[name] = f"selection_{param_counter}"
+                            param_counter += 1
+                        if "views" in param:
+                            # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
+                            # altair creates auto generates names for views through a counter to map properties to each view
+                            # streamlit reruns will increment this counter by 1 so we need a stable name
+                            # otherwise the widget id will change and rerender a completely new chart
+                            for view_index, view in enumerate(param["views"]):
+                                param["views"][view_index] = f"view_{view_counter}"
+                                stable_ids[view] = f"view_{view_counter}"
+                                view_counter += 1
+                concat_keys = ["hconcat", "vconcat", "layer"]
+                special_keys = concat_keys + ["encoding", "data"]
+                for k in special_keys:
+                    if k in chart_dict:
+                        replace_values_in_dict(chart_dict[k], stable_ids)
+
             # Put datasets back into the chart dict but note how they weren't
             # transformed.
             chart_dict["datasets"] = datasets
@@ -1619,6 +1681,23 @@ def marshall(
                 key=key,
                 **kwargs,
             )
+
+
+def replace_values_in_dict(
+    d: Dict[str, Any] | List[Any], old_to_new_map: Dict[str, str]
+) -> None:
+    if isinstance(d, dict):
+        for key, value in d.items():
+            if isinstance(value, str) and value in old_to_new_map:
+                d[key] = old_to_new_map[value]
+            elif isinstance(value, dict):
+                replace_values_in_dict(value, old_to_new_map)
+            elif isinstance(value, list):
+                for item in value:
+                    replace_values_in_dict(item, old_to_new_map)
+    elif isinstance(d, list):
+        for item in d:
+            replace_values_in_dict(item, old_to_new_map)
 
 
 class StreamlitColumnNotFoundError(StreamlitAPIException):

@@ -26,7 +26,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements import arrow_altair as altair
-from streamlit.elements.arrow_altair import ChartType
+from streamlit.elements.arrow_altair import ChartType, replace_values_in_dict
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame, is_pandas_version_less_than
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -811,3 +811,39 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             "interval" in proto.spec,
         )
         self.assertFalse("selection_0" in proto.spec)
+
+    @parameterized.expand(
+        [
+            (
+                {"key1": "value1", "key2": "value2"},
+                {"value1": "newValue1", "value2": "newValue2"},
+                {"key1": "newValue1", "key2": "newValue2"},
+            ),
+            (
+                {"level1": {"level2": {"key": "value"}}},
+                {"value": "newValue"},
+                {"level1": {"level2": {"key": "newValue"}}},
+            ),
+            (
+                [{"key": "value"}, {"key": "value"}],
+                {"value": "newValue"},
+                [{"key": "newValue"}, {"key": "newValue"}],
+            ),
+            (
+                {"list": [{"key": "value"}, {"list2": [{"key": "value"}]}]},
+                {"value": "newValue"},
+                {"list": [{"key": "newValue"}, {"list2": [{"key": "newValue"}]}]},
+            ),
+            (
+                {"key": "unchangedValue"},
+                {"value": "newValue"},
+                {"key": "unchangedValue"},
+            ),
+            ({}, {"value": "newValue"}, {}),
+            ([], {"value": "newValue"}, []),
+            ({"key": "value"}, {"otherValue": "newValue"}, {"key": "value"}),
+        ]
+    )
+    def test_replace_values_in_dict(self, input_data, old_to_new_map, expected):
+        replace_values_in_dict(input_data, old_to_new_map)
+        self.assertEqual(input_data, expected)

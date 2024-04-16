@@ -17,9 +17,8 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.attribute_dictionary import AttributeDictionary
@@ -78,23 +77,6 @@ class VegaLiteSelectionSerde:
 
     def serialize(self, selection_state: AttributeDictionary) -> str:
         return json.dumps(selection_state, default=str)
-
-
-def replace_values_in_dict(
-    d: Dict[str, Any] | List[Any], old_to_new_map: Dict[str, str]
-) -> None:
-    if isinstance(d, dict):
-        for key, value in d.items():
-            if isinstance(value, str) and value in old_to_new_map:
-                d[key] = old_to_new_map[value]
-            elif isinstance(value, dict):
-                replace_values_in_dict(value, old_to_new_map)
-            elif isinstance(value, list):
-                for item in value:
-                    replace_values_in_dict(item, old_to_new_map)
-    elif isinstance(d, list):
-        for item in d:
-            replace_values_in_dict(item, old_to_new_map)
 
 
 def _on_select(
@@ -329,22 +311,12 @@ def marshall(
     if "autosize" not in spec:
         spec["autosize"] = {"type": "fit", "contains": "padding"}
 
-    data_id_counter = 0
-
-    stable_ids = {}
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
     if "datasets" in spec:
         for k, v in spec["datasets"].items():
             dataset = proto.datasets.add()
-            if is_select_enabled:
-                # map data ids to our own stable ids to replace later
-                # otherwise the widget id will change and rerender a completely new chart
-                stable_ids[k] = str(data_id_counter)
-                dataset.name = str(data_id_counter)
-                data_id_counter += 1
-            else:
-                dataset.name = str(k)
+            dataset.name = str(k)
             dataset.has_name = True
             arrow.marshall(dataset.data, v)
         del spec["datasets"]
@@ -368,33 +340,6 @@ def marshall(
     ctx = get_script_run_ctx()
 
     if is_select_enabled:
-        # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
-        # altair creates names for parameters when no name is created as it's required in vega
-        # streamlit reruns will increment this counter by 1 so we need a stable name
-        # otherwise the widget id will change and rerender a completely new chart
-        regex = re.compile(r"^param_\d+$")
-        param_counter = 0
-
-        for param in spec["params"]:
-            view_counter = 0
-            name = param["name"]
-            if regex.match(name):
-                param["name"] = f"selection_{param_counter}"
-                stable_ids[name] = f"selection_{param_counter}"
-                param_counter += 1
-            if "views" in param:
-                # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
-                # altair creates auto generates names for views through a counter to map properties to each view
-                # streamlit reruns will increment this counter by 1 so we need a stable name
-                # otherwise the widget id will change and rerender a completely new chart
-                for view_index, view in enumerate(param["views"]):
-                    param["views"][view_index] = f"view_{view_counter}"
-                    stable_ids[view] = f"view_{view_counter}"
-                    view_counter += 1
-        keys = ["hconcat", "vconcat", "layer", "encoding", "data"]
-        for k in keys:
-            if k in spec:
-                replace_values_in_dict(spec[k], stable_ids)
         id = compute_widget_id(
             "arrow_vega_lite",
             user_key=key,
