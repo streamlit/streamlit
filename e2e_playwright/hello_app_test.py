@@ -23,7 +23,11 @@ def navigate_to_page(app: Page, index: int):
 
 
 def check_page_title(app: Page, title: str) -> Locator:
+    page_title_element = app.get_by_test_id("stMarkdown").locator("h1").nth(0)
     expect(app.get_by_test_id("stMarkdown").locator("h1").nth(0)).to_contain_text(title)
+    # Click on the title to prevent any weird hover effects within other parts of the app
+    # e.g. the sidebar
+    page_title_element.click(force=True, no_wait_after=True)
 
 
 def test_home_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
@@ -54,6 +58,7 @@ def test_plotting_demo_page(app: Page, assert_snapshot: ImageCompareFunction) ->
     # The animation takes 5-10 seconds to finish, so we add
     # and additional timeout
     expect(app.get_by_test_id("stText")).to_contain_text("100% Complete", timeout=15000)
+    expect(app.get_by_test_id("stProgress")).not_to_be_visible()
     expect(
         app.get_by_test_id("stArrowVegaLiteChart").locator("canvas")
     ).to_have_attribute("height", "350")
@@ -70,7 +75,9 @@ def test_mapping_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -> 
     # the map takes a bit longer (probably because of the map token request).
     app.wait_for_timeout(4000)
     expect(app.get_by_test_id("stDeckGlJsonChart")).to_have_attribute("height", "500")
-    expect(app.get_by_test_id("stDeckGlJsonChart").locator("canvas")).to_be_visible()
+    expect(
+        app.get_by_test_id("stDeckGlJsonChart").locator(".mapboxgl-canvas")
+    ).to_be_visible()
 
     assert_snapshot(app, name="hello_app-mapping_demo_page")
 
