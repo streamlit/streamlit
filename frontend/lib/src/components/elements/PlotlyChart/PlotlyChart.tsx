@@ -30,6 +30,7 @@ import {
 } from "./CustomTheme"
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import { keysToSnakeCase } from "@streamlit/lib/src/util/utils"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form/FormClearHelper"
 
 export interface PlotlyChartProps {
   width: number
@@ -149,6 +150,7 @@ function PlotlyFigure({
   const [config] = useState(JSON.parse(figure.config))
 
   const theme: EmotionTheme = useTheme()
+
   const getInitialValue = useCallback((): any => {
     const spec = JSON.parse(
       replaceTemporaryColors(figure.spec, theme, element.theme)
@@ -187,6 +189,19 @@ function PlotlyFigure({
     return spec
   }, [element, figure.spec, theme, widgetMgr])
 
+  // This is required for the form clearing functionality:
+  React.useEffect(() => {
+    const formClearHelper = new FormClearHelper()
+    formClearHelper.manageFormClearListener(
+      widgetMgr,
+      element.formId,
+      getInitialValue
+    )
+
+    return () => {
+      formClearHelper.disconnect()
+    }
+  }, [element.formId, getInitialValue, widgetMgr])
   const spec = getInitialValue()
 
   const initialHeight = spec.layout.height

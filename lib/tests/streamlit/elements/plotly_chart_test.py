@@ -143,12 +143,61 @@ class PyDeckTest(DeltaGeneratorTestCase):
             st.plotly_chart(data, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    def test_plotly_chart_with_select_throws_exception_inside_form(self):
+    def test_inside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly inside of a form."""
         import plotly.graph_objs as go
 
         with st.form("form"):
             trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
 
             data = [trace0]
-            with self.assertRaises(StreamlitAPIException) as exc:
-                st.plotly_chart(data, on_select=True)
+            st.plotly_chart(data, on_select="rerun")
+
+        # 2 elements will be created: form block, plotly_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
+        self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_inside_form_on_select_ignore(self):
+        """Test that form id is marshalled correctly inside of a form."""
+        import plotly.graph_objs as go
+
+        with st.form("form"):
+            trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+            data = [trace0]
+            st.plotly_chart(data, on_select="ignore")
+
+        # 2 elements will be created: form block, plotly_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        self.get_delta_from_queue(0).add_block
+        plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
+        self.assertEqual(plotly_proto.form_id, "")
+
+    def test_outside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly outside of a form."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+        data = [trace0]
+
+        st.plotly_chart(data, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.plotly_chart
+        self.assertEqual(proto.form_id, "")
+
+    def test_outside_form_on_select_ignore(self):
+        """Test that form id is marshalled correctly outside of a form."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+        data = [trace0]
+
+        st.plotly_chart(data, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.plotly_chart
+        self.assertEqual(proto.form_id, "")
