@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { keyframes } from "@emotion/react"
 import { transparentize } from "color2k"
 import { getWrappedHeadersStyle } from "@streamlit/lib/src/theme/utils"
 
@@ -71,101 +70,51 @@ export const StyledSidebarNavContainer = styled.div(() => ({
 
 export interface StyledSidebarNavItemsProps {
   isExpanded: boolean
-  isOverflowing: boolean
   hasSidebarElements: boolean
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ isExpanded, isOverflowing, hasSidebarElements, theme }) => {
-    const isExpandedMaxHeight = isExpanded ? "75vh" : "33vh"
+  ({ isExpanded, hasSidebarElements, theme }) => {
+    const isExpandedMaxHeight = isExpanded ? "75vh" : "34vh"
     const maxHeight = hasSidebarElements ? isExpandedMaxHeight : "100vh"
 
     return {
       maxHeight,
       listStyle: "none",
-      overflow: ["auto", "overlay"],
+      overflow: "hidden",
       margin: 0,
-      // paddingTop: "0",
-      paddingTop: theme.spacing.lg,
-      paddingBottom: theme.spacing.lg,
 
       "@media print": {
         paddingTop: theme.spacing.sm,
       },
-
-      "&::before": isOverflowing
-        ? {
-            content: '" "',
-            backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
-            width: "100%",
-            height: "2rem",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            pointerEvents: "none",
-          }
-        : null,
-
-      "&::after": isOverflowing
-        ? {
-            content: '" "',
-            backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
-            height: "2rem",
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            pointerEvents: "none",
-          }
-        : null,
     }
   }
 )
 
-export interface StyledSidebarNavSeparatorContainerProps {
-  isExpanded: boolean
-  isOverflowing: boolean
-}
+export const StyledViewButton = styled.button(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  lineHeight: "1.4rem",
+  color: theme.colors.gray80,
+  backgroundColor: theme.colors.transparent,
+  border: "none",
+  borderRadius: "0.5rem",
+  marginTop: "0.25rem",
+  marginLeft: "1rem",
+  padding: "0.125rem 0.5rem 0.125rem 0.5rem",
+  "&:hover, &:active, &:focus": {
+    border: "none",
+    outline: "none",
+    boxShadow: "none",
+  },
+  "&:hover": {
+    backgroundColor: theme.colors.gray30,
+  },
+}))
 
-const bounceAnimation = keyframes`
-  from, to {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-0.25rem);
-  }
-`
-
-export const StyledSidebarNavSeparatorContainer =
-  styled.div<StyledSidebarNavSeparatorContainerProps>(
-    ({ isExpanded, isOverflowing, theme }) => ({
-      cursor: isExpanded || isOverflowing ? "pointer" : "default",
-      position: "absolute",
-      height: theme.spacing.lg,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: theme.colors.fadedText60,
-      borderBottom: `1px solid ${theme.colors.fadedText10}`,
-      transition: "color 500ms",
-
-      // ...((isExpanded || isOverflowing) && {
-      //   "&:hover": {
-      //     color: theme.colors.bodyText,
-      //     background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
-
-      //     "& > *": {
-      //       animation: `${bounceAnimation} 0.5s ease infinite`,
-      //     },
-      //   },
-      // }),
-    })
-  )
+export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
+  paddingTop: "1rem",
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+}))
 
 export const StyledSidebarNavLinkContainer = styled.div(() => ({
   display: "flex",
@@ -254,18 +203,12 @@ export const StyledSidebarUserContent =
     ...getWrappedHeadersStyle(theme),
   }))
 
-export interface StyledSidebarContentProps {
-  hideScrollbar: boolean
-}
-
-export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
-  ({ hideScrollbar }) => ({
-    position: "relative",
-    height: "100%",
-    width: "100%",
-    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
-  })
-)
+export const StyledSidebarContent = styled.div(({}) => ({
+  position: "relative",
+  height: "100%",
+  width: "100%",
+  overflow: ["auto", "overlay"],
+}))
 
 export const StyledSidebarCloseButton = styled.div(({ theme }) => ({
   position: "absolute",
@@ -343,10 +286,17 @@ export const StyledSidebarOpenContainer =
     })
   )
 
-export const StyledSidebarOpenButtonContainer = styled.div(({ theme }) => ({
+export const StyledOpenSidebarButton = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.header,
   marginLeft: theme.spacing.sm,
   height: "5rem",
+  color: theme.colors.gray70,
+
+  button: {
+    "&:hover": {
+      backgroundColor: theme.colors.gray20,
+    },
+  },
 }))
 
 export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
@@ -371,7 +321,7 @@ export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => {
 })
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
-  height: "2rem",
+  height: "2.5rem",
 }))
 
 export interface StyledCollapseSidebarButtonProps {
@@ -379,30 +329,28 @@ export interface StyledCollapseSidebarButtonProps {
 }
 
 export const StyledCollapseSidebarButton =
-  styled.div<StyledCollapseSidebarButtonProps>(({ showSidebarCollapse }) => ({
-    display: showSidebarCollapse ? "auto" : "none",
-    transition: "left 300ms",
-    transitionDelay: "left 300ms",
-  }))
+  styled.div<StyledCollapseSidebarButtonProps>(
+    ({ showSidebarCollapse, theme }) => ({
+      display: "auto",
+      transition: "left 300ms",
+      transitionDelay: "left 300ms",
+      color: theme.colors.gray70,
 
-export const StyledViewButton = styled.button(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
-  lineHeight: "1.4rem",
-  color: theme.colors.gray60,
-  backgroundColor: theme.colors.transparent,
-  border: "none",
-  boxShadow: "none",
-  position: "relative",
-  bottom: "12px",
-  left: "12px",
-  "&:hover, &:active, &:focus": {
-    border: "none",
-    outline: "none",
-    boxShadow: "none",
-  },
+      button: {
+        "&:hover": {
+          backgroundColor: theme.colors.gray30,
+        },
+      },
+
+      [`@media (min-width: ${theme.breakpoints.sm})`]: {
+        display: showSidebarCollapse ? "auto" : "none",
+      },
+    })
+  )
+
+export const StyledLogoLink = styled.a(({ theme }) => ({
+  maxWidth: "15rem",
   "&:hover": {
-    color: theme.colors.primary,
+    opacity: "0.7",
   },
 }))
-
-export const StyledLogoLink = styled.a(({ theme }) => ({}))

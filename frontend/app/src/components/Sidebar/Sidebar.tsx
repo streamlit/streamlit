@@ -37,7 +37,6 @@ import {
 import {
   StyledSidebar,
   StyledSidebarContent,
-  StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
   StyledSidebarHeaderContainer,
@@ -45,7 +44,7 @@ import {
   StyledNoLogoSpacer,
   StyledCollapseSidebarButton,
   StyledSidebarOpenContainer,
-  StyledSidebarOpenButtonContainer,
+  StyledOpenSidebarButton,
   StyledLogoLink,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
@@ -69,8 +68,6 @@ interface State {
   sidebarWidth: string
   lastInnerWidth: number
 
-  // When hovering the nav
-  hideScrollbar: boolean
   // When hovering sidebar header
   showSidebarCollapse: boolean
 }
@@ -101,7 +98,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
-      hideScrollbar: false,
       showSidebarCollapse: false,
     }
   }
@@ -210,10 +206,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
-  hideScrollbar = (newValue: boolean): void => {
-    this.setState({ hideScrollbar: newValue })
-  }
-
   onMouseOver = (): void => {
     this.setState({ showSidebarCollapse: true })
   }
@@ -279,12 +271,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   public render(): ReactNode {
-    const {
-      collapsedSidebar,
-      sidebarWidth,
-      hideScrollbar,
-      showSidebarCollapse,
-    } = this.state
+    const { collapsedSidebar, sidebarWidth, showSidebarCollapse } = this.state
     const {
       appLogo,
       appPages,
@@ -296,7 +283,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       hideSidebarNav,
     } = this.props
 
-    console.log("========= URL: ", appLogo?.url)
     const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
     // Handles checking the URL params
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
@@ -316,14 +302,14 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             data-testid="collapsedControl"
           >
             {this.renderLogo(true)}
-            <StyledSidebarOpenButtonContainer>
+            <StyledOpenSidebarButton>
               <BaseButton
                 kind={BaseButtonKind.HEADER_NO_PADDING}
                 onClick={this.toggleCollapse}
               >
                 <Icon content={ChevronRight} size="lg" />
               </BaseButton>
-            </StyledSidebarOpenButtonContainer>
+            </StyledOpenSidebarButton>
           </StyledSidebarOpenContainer>
         )}
         <Resizable
@@ -357,7 +343,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         >
           <StyledSidebarContent
             data-testid="stSidebarContent"
-            hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
             <StyledSidebarHeaderContainer
@@ -383,7 +368,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 collapseSidebar={this.toggleCollapse}
                 currentPageScriptHash={currentPageScriptHash}
                 hasSidebarElements={hasElements}
-                hideParentScrollbar={this.hideScrollbar}
                 onPageChange={onPageChange}
               />
             )}
