@@ -738,6 +738,25 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     return version.parse(pa.__version__) < version.parse(v)
 
 
+def is_altair_version_less_than(v: str) -> bool:
+    """Return True if the current Altair version is less than the input version.
+
+    Parameters
+    ----------
+    v : str
+        Version string, e.g. "0.25.0"
+
+    Returns
+    -------
+    bool
+
+    """
+    import altair as alt
+    from packaging import version
+
+    return version.parse(alt.__version__) < version.parse(v)
+
+
 def _maybe_truncate_table(
     table: pa.Table, truncated_rows: int | None = None
 ) -> pa.Table:
