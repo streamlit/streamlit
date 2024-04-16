@@ -20,14 +20,13 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 def navigate_to_page(app: Page, index: int):
     app.get_by_test_id("stSidebarNav").locator("a").nth(index).click()
     wait_for_app_run(app)
+    # Move the mouse to the top left corner to prevent any weird hover effects
+    # in the screenshots
+    app.mouse.move(0, 0)
 
 
 def check_page_title(app: Page, title: str) -> Locator:
-    page_title_element = app.get_by_test_id("stMarkdown").locator("h1").nth(0)
     expect(app.get_by_test_id("stMarkdown").locator("h1").nth(0)).to_contain_text(title)
-    # Click on the title to prevent any weird hover effects within other parts of the app
-    # e.g. the sidebar
-    page_title_element.click(force=True, no_wait_after=True)
 
 
 def test_home_page(app: Page, assert_snapshot: ImageCompareFunction) -> None:
