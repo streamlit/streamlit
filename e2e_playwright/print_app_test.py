@@ -15,7 +15,7 @@
 """Emulate printing by setting the 'print' media type and the viewport size similar to DIN A4 dimensions.
 
 The 'forced_colors="active"' argument is supposed to force showing background images
-similiar to the '-webkit-print-color-adjust' CSS property. It looks like
+similar to the '-webkit-print-color-adjust' CSS property. It looks like
 for the test that Chromium does not respect this property, so screenshots might look
 funny from a color-perspective there.
 
