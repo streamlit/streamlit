@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useCallback } from "react"
+import React, {
+  ReactElement,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+} from "react"
 import { useTheme } from "@emotion/react"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -59,8 +65,7 @@ export interface Selection extends SelectionRange {
 }
 
 export const DEFAULT_HEIGHT = 450
-const SELECTIONS = "selections"
-const DATA = "data"
+const MIN_WIDTH = 150
 
 /**
  * Parses an SVG path string into separate x and y coordinates.
@@ -144,80 +149,78 @@ function PlotlyFigure({
   disabled,
   fragmentId,
 }: PlotlyChartProps): ReactElement {
-  const figure = element.figure as FigureProto
-
-  const [config] = useState(JSON.parse(figure.config))
-
   const theme: EmotionTheme = useTheme()
-  const getInitialValue = useCallback((): any => {
+  const [initialFigure] = useState(() => {
+    return JSON.parse((element.figure as FigureProto).spec)
+  })
+
+  const [plotlyFigure, setPlotlyFigure] = useState(() => {
+    const initialFigureState = widgetMgr.getElementState(element.id, "figure")
+    if (initialFigureState) {
+      return initialFigureState
+    }
+    // TODO(lukasmasuch) check if figure is empty?
+    return initialFigure
+  })
+
+  const [plotlyConfig] = useState(() => {
+    return JSON.parse((element.figure as FigureProto).config)
+  })
+
+  React.useEffect(() => {
     const spec = JSON.parse(
-      replaceTemporaryColors(figure.spec, theme, element.theme)
+      replaceTemporaryColors(
+        JSON.stringify(plotlyFigure),
+        theme,
+        element.theme
+      )
     )
-    const storedValue = widgetMgr.getStringValue(element)
-
-    // we store serialized json in widgetStateManager when resetting so need to check an empty dictionary string
-    if (storedValue !== undefined) {
-      const parsedStoreValue = JSON.parse(storedValue)
-      // check if there is a selection
-      if (parsedStoreValue.select) {
-        const data = widgetMgr.getElementState(element.id, DATA)
-        const selections = widgetMgr.getElementState(element.id, SELECTIONS)
-
-        // https://plotly.com/javascript/reference/index/
-        // data is originalData + selectedpoints
-        spec.data = data
-        spec.layout.selections = selections
-
-        const hasSelectedPoints: boolean = spec.data.some(
-          (trace: any) =>
-            "selectedpoints" in trace && trace.selectedpoints.length > 0
-        )
-        if (hasSelectedPoints) {
-          spec.data.forEach((trace: any) => {
-            if (!trace.selectedpoints) {
-              // Plotly will automatically set traces in selectedpoints with the 100% opaqueness
-              // setting selectedpoints to an empty array will set these points to be opaque, thus representing that they're unselected
-              trace.selectedpoints = []
-            }
-          })
-        }
-      }
+    if (element.theme === "streamlit") {
+      applyStreamlitTheme(spec, theme)
+    } else {
+      // Apply minor theming improvements to work better with Streamlit
+      spec.layout = layoutWithThemeDefaults(spec.layout, theme)
     }
 
-    return spec
-  }, [element, figure.spec, theme, widgetMgr])
+    // https://plotly.com/javascript/reference/layout/#layout-clickmode
+    // This allows single selections and shift click to add / remove selections
+    if (element.isSelectEnabled) {
+      spec.layout.clickmode = "event+select"
+      spec.layout.hovermode = "closest"
+    } else {
+      spec.layout.clickmode = initialFigure.layout.clickmode
+      spec.layout.hovermode = initialFigure.layout.hovermode
+    }
 
-  const spec = getInitialValue()
+    setPlotlyFigure(spec)
+  }, [theme, element.theme, element.id, element.isSelectEnabled])
 
-  const initialHeight = spec.layout.height
-  const initialWidth = spec.layout.width
+  let calculatedWidth = element.useContainerWidth
+    ? Math.max(width, MIN_WIDTH)
+    : initialFigure.layout.width
 
+  let calculatedHeight = initialFigure.layout.height
   if (isFullScreen) {
-    spec.layout.width = width
-    spec.layout.height = height
-  } else if (element.useContainerWidth) {
-    spec.layout.width = width
-  } else {
-    spec.layout.width = initialWidth
-    spec.layout.height = initialHeight
+    calculatedWidth = width
+    calculatedHeight = height
   }
 
-  // https://plotly.com/javascript/reference/layout/#layout-clickmode
-  // This allows single selections and shift click to add / remove selections
-  if (element.isSelectEnabled) {
-    spec.layout.clickmode = "event+select"
-    spec.layout.hovermode = "closest"
-  }
-  if (element.theme === "streamlit") {
-    applyStreamlitTheme(spec, theme)
-  } else {
-    // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+  if (
+    plotlyFigure.layout.height !== calculatedHeight ||
+    plotlyFigure.layout.width !== calculatedWidth
+  ) {
+    setPlotlyFigure({
+      ...plotlyFigure,
+      layout: {
+        ...plotlyFigure.layout,
+        height: calculatedHeight,
+        width: calculatedWidth,
+      },
+    })
   }
 
   const handleSelect = (event: Readonly<Plotly.PlotSelectionEvent>): void => {
     const returnValue: any = { select: {} }
-    const { data } = spec
     const pointIndices: number[] = []
     const selectedBoxes: Selection[] = []
     const selectedLassos: Selection[] = []
@@ -225,7 +228,7 @@ function PlotlyFigure({
 
     // event.selections doesn't show up in the PlotSelectionEvent
     // @ts-expect-error
-    const selections = event.selections
+    const { selections } = event
     if (event.points.length === 0 && selections && selections.length === 0) {
       return
     }
@@ -239,16 +242,6 @@ function PlotlyFigure({
         fullData: undefined,
       })
       pointIndices.push(point.pointIndex)
-
-      // build graph representation to retain state
-      if (
-        data[point.curveNumber] &&
-        !data[point.curveNumber].selectedpoints.includes(point.pointIndex)
-      ) {
-        data[point.curveNumber].selectedpoints.push(point.pointIndex)
-      } else {
-        data[point.curveNumber].selectedpoints = [point.pointIndex]
-      }
     })
 
     returnValue.select.points = selectedPoints
@@ -284,10 +277,6 @@ function PlotlyFigure({
           selectedLassos.push(returnSelection)
         }
       })
-
-      // @ts-expect-error
-      widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
-      widgetMgr.setElementState(element.id, DATA, data)
     }
 
     returnValue.select.box = selectedBoxes
@@ -303,11 +292,7 @@ function PlotlyFigure({
     )
   }
 
-  const { data, layout, frames } = spec
-
   const reset = useCallback((): void => {
-    widgetMgr.setElementState(element.id, SELECTIONS, {})
-    widgetMgr.setElementState(element.id, DATA, {})
     widgetMgr.setStringValue(element, "{}", { fromUi: true }, fragmentId)
   }, [widgetMgr, element, fragmentId])
 
@@ -315,15 +300,22 @@ function PlotlyFigure({
     <Plot
       key={isFullScreen ? "fullscreen" : "original"}
       className="stPlotlyChart"
-      data={data}
-      layout={layout}
-      config={config}
-      frames={frames}
+      data={plotlyFigure.data}
+      layout={plotlyFigure.layout}
+      config={plotlyConfig}
+      frames={plotlyFigure.frames}
       onSelected={
         element.isSelectEnabled || !disabled ? handleSelect : () => {}
       }
-      onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
+      // onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
       onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
+      onInitialized={figure => {
+        widgetMgr.setElementState(element.id, "figure", figure)
+      }}
+      onUpdate={figure => {
+        widgetMgr.setElementState(element.id, "figure", figure)
+        setPlotlyFigure(figure)
+      }}
     />
   )
 }
