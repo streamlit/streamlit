@@ -320,7 +320,7 @@ def marshall(
         raise ValueError("Invalid sharing mode for Plotly chart: %s" % sharing)
 
     proto.use_container_width = use_container_width
-
+    data_for_id = None
     if sharing == "streamlit":
         import plotly.io
 
@@ -331,31 +331,32 @@ def marshall(
 
         proto.figure.spec = plotly.io.to_json(figure, validate=False)
         proto.figure.config = json.dumps(config)
-
+        data_for_id = proto.figure.spec + proto.figure.config
     else:
         url = _plot_to_url_or_load_cached_url(
             figure, sharing=sharing, auto_open=False, **kwargs
         )
         proto.url = _get_embed_url(url)
+
+        data_for_id = proto.url
     proto.theme = theme or ""
     proto.is_select_enabled = is_select_enabled
     ctx = get_script_run_ctx()
 
     if key is not None:
         key = str(key)
-    if is_select_enabled:
-        id = compute_widget_id(
-            "plotly_chart",
-            user_key=key,
-            figure_or_data=figure_or_data,
-            use_container_width=use_container_width,
-            sharing=sharing,
-            key=key,
-            theme=theme,
-            form_id=proto.form_id,
-            page=ctx.page_script_hash if ctx else None,
-        )
-        proto.id = id
+
+    id = compute_widget_id(
+        "plotly_chart",
+        user_key=key,
+        data_for_id=data_for_id,
+        sharing=sharing,
+        key=key,
+        theme=theme,
+        form_id=proto.form_id,
+        page=ctx.page_script_hash if ctx else None,
+    )
+    proto.id = id
 
 
 @caching.cache
