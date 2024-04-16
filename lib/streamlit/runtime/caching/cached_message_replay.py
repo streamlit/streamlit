@@ -120,10 +120,10 @@ cache keys act as one true cache key, just split up because the second part depe
 on the first.
 
 We need to treat widgets as implicit arguments of the cached function, because
-the behavior of the function, inluding what elements are created and what it
+the behavior of the function, including what elements are created and what it
 returns, can be and usually will be influenced by the values of those widgets.
 For example:
-> @st.memo
+> @st.cache_data
 > def example_fn(x):
 >     y = x + 1
 >     if st.checkbox("hi"):
@@ -379,7 +379,7 @@ class CachedMessageReplayContext(threading.local):
         dg: DeltaGenerator,
         st_func_name: str,
     ) -> None:
-        """If appropriate, warn about calling st.foo inside @memo.
+        """If appropriate, warn about calling st.foo inside @st.cache_data.
 
         DeltaGenerator's @_with_element and @_widget wrappers use this to warn
         the user when they're calling st.foo() from within a function that is
