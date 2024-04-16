@@ -260,22 +260,22 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             ),
         )
 
-        with patch.object(st, "exception") as exception:
+        with patch.object(st, "exception") as warning:
             st.text("foo")
-            exception.assert_not_called()
+            warning.assert_not_called()
 
             @cache_decorator
             def cached_func():
                 st.text("Inside cached func")
 
             cached_func()
-            exception.assert_not_called()
+            warning.assert_not_called()
 
-            exception.reset_mock()
+            warning.reset_mock()
 
             # Make sure everything got reset properly
             st.text("foo")
-            exception.assert_not_called()
+            warning.assert_not_called()
 
             # Test nested st.cache functions
             @cache_decorator
@@ -287,9 +287,9 @@ class CommonCacheTest(DeltaGeneratorTestCase):
                 return inner()
 
             outer()
-            exception.assert_not_called()
+            warning.assert_not_called()
 
-            exception.reset_mock()
+            warning.reset_mock()
 
             # Test st.cache functions that raise errors
             with self.assertRaises(RuntimeError):
@@ -301,12 +301,12 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
                 cached_raise_error()
 
-            exception.assert_not_called()
-            exception.reset_mock()
+            warning.assert_not_called()
+            warning.reset_mock()
 
             # Make sure everything got reset properly
             st.text("foo")
-            exception.assert_not_called()
+            warning.assert_not_called()
 
             # Test st.cache functions with widgets
             @cache_decorator
@@ -315,12 +315,12 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             cached_widget()
 
-            exception.assert_called()
-            exception.reset_mock()
+            warning.assert_called()
+            warning.reset_mock()
 
             # Make sure everything got reset properly
             st.text("foo")
-            exception.assert_not_called()
+            warning.assert_not_called()
 
             # Test st.cache functions with widgets enabled
             @cache_decorator(experimental_allow_widgets=True)
@@ -329,12 +329,12 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             cached_widget_enabled()
 
-            exception.assert_not_called()
-            exception.reset_mock()
+            warning.assert_not_called()
+            warning.reset_mock()
 
             # Make sure everything got reset properly
             st.text("foo")
-            exception.assert_not_called()
+            warning.assert_not_called()
 
             add_script_run_ctx(threading.current_thread(), orig_report_ctx)
 
