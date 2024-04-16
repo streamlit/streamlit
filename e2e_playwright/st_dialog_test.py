@@ -81,14 +81,15 @@ def test_dialog_dismisses_properly(app: Page):
 def test_dialog_reopens_properly_after_dismiss(app: Page):
     """Test that dialog reopens after dismiss."""
     # open and close the dialog multiple times
-    for i in range(0, 5):
+    for _ in range(0, 5):
         # don't click indefinitely fast to give the dialog time to set the state
-        app.wait_for_timeout(100)
+        app.wait_for_timeout(250)
 
         open_dialog_without_images(app)
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
+        app.wait_for_timeout(250)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
@@ -145,7 +146,7 @@ def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunct
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     expect(dialog.get_by_test_id("stButton")).to_be_visible()
-    assert_snapshot(dialog, name="dialog-in-main")
+    assert_snapshot(dialog, name="st_dialog-default")
 
 
 def test_largewidth_dialog_displays_correctly(
@@ -155,7 +156,7 @@ def test_largewidth_dialog_displays_correctly(
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     expect(dialog.get_by_test_id("stButton")).to_be_visible()
-    assert_snapshot(dialog, name="dialog-with-large-width")
+    assert_snapshot(dialog, name="st_dialog-with_large_width")
 
 
 def test_sidebardialog_displays_correctly(
@@ -165,4 +166,4 @@ def test_sidebardialog_displays_correctly(
     wait_for_app_run(app)
     dialog = app.get_by_role("dialog")
     expect(dialog.get_by_test_id("stButton")).to_be_visible()
-    assert_snapshot(dialog, name="dialog-in-sidebar")
+    assert_snapshot(dialog, name="st_dialog-in_sidebar")
