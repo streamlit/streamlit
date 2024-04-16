@@ -27,7 +27,6 @@ repos:
           # Configure Black to support only syntax supported by the minimum supported Python version in setup.py.
           - --target-version=py37
         files: \.py$|\.pyi$
-        exclude: ^e2e_flaky/.*
   - repo: https://github.com/PyCQA/isort
     rev: 5.11.5
     hooks:
@@ -54,6 +53,8 @@ repos:
       # See: https://github.com/pre-commit/pre-commit/issues/1417
       - id: prettier
         name: Prettier
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn prettier --write
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
         exclude: /vendor/
@@ -61,6 +62,8 @@ repos:
         pass_filenames: true
       - id: prettier-yaml
         name: Prettier-yaml
+        # NOTE: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend yarn prettier ../.github --write
         files: ^.github/.*\.(yml|yaml)$
         language: node
@@ -91,6 +94,8 @@ repos:
       - id: eslint
         name: Eslint
         always_run: true
+        # TODO: This hook currently does not work on Windows due to "yarn" not being an executable and win32api.CreateProcess
+        # turning `subprocess.run(["yarn", "prettier", "--write"])` into a call to `yarn.exe prettier --write` which does not exist
         entry: ./scripts/run_in_subdirectory.py frontend/ yarn lint --fix
         files: ^frontend/src/.*\.(js|jsx|ts|tsx)$
         language: node
@@ -128,6 +133,7 @@ repos:
           |^vendor/
           |^component-lib/declarations/apache-arrow
           |^frontend/app/src/assets/css/variables\.scss
+          |^lib/tests/streamlit/elements/test_html\.js
       - id: insert-license
         name: Add license for all Proto files
         files: \.proto$
@@ -172,7 +178,6 @@ repos:
           |^vendor/
           |^component-lib/declarations/apache-arrow
           |^lib/tests/isolated_asyncio_test_case\.py$
-          |^e2e_flaky/.*
       - id: insert-license
         name: Add license for all HTML files
         files: \.html$

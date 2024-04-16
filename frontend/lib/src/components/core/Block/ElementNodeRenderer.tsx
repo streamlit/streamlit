@@ -29,9 +29,11 @@ import {
   ComponentInstance as ComponentInstanceProto,
   DateInput as DateInputProto,
   FileUploader as FileUploaderProto,
+  Html as HtmlProto,
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   Radio as RadioProto,
+  Skeleton as SkeletonProto,
   Selectbox as SelectboxProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
@@ -71,10 +73,7 @@ import ExceptionElement from "@streamlit/lib/src/components/elements/ExceptionEl
 import Json from "@streamlit/lib/src/components/elements/Json"
 import Markdown from "@streamlit/lib/src/components/elements/Markdown"
 import Metric from "@streamlit/lib/src/components/elements/Metric"
-import {
-  Skeleton,
-  AppSkeleton,
-} from "@streamlit/lib/src/components/elements/Skeleton"
+import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
 import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
@@ -174,6 +173,9 @@ const ColorPicker = React.lazy(
 const DateInput = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/DateInput")
 )
+const Html = React.lazy(
+  () => import("@streamlit/lib/src/components/elements/Html")
+)
 const Multiselect = React.lazy(
   () => import("@streamlit/lib/src/components/widgets/Multiselect")
 )
@@ -246,6 +248,7 @@ const RawElementNodeRenderer = (
     ...elementProps,
     widgetMgr: props.widgetMgr,
     disabled: props.widgetsDisabled,
+    fragmentId: node.fragmentId,
   }
 
   switch (node.element.type) {
@@ -260,6 +263,19 @@ const RawElementNodeRenderer = (
         />
       )
     }
+
+    case "arrowTable":
+      return (
+        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
+      )
+
+    case "arrowVegaLiteChart":
+      return (
+        <ArrowVegaLiteChart
+          element={node.vegaLiteChartElement as VegaLiteChartElement}
+          {...elementProps}
+        />
+      )
 
     case "audio":
       return (
@@ -276,19 +292,6 @@ const RawElementNodeRenderer = (
         <Balloons scriptRunId={props.scriptRunId} />
       )
 
-    case "arrowTable":
-      return (
-        <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
-      )
-
-    case "arrowVegaLiteChart":
-      return (
-        <ArrowVegaLiteChart
-          element={node.vegaLiteChartElement as VegaLiteChartElement}
-          {...elementProps}
-        />
-      )
-
     case "bokehChart":
       return (
         <DebouncedBokehChart
@@ -296,6 +299,18 @@ const RawElementNodeRenderer = (
           {...elementProps}
         />
       )
+
+    case "code": {
+      const codeProto = node.element.code as CodeProto
+      return (
+        <StreamlitSyntaxHighlighter
+          language={codeProto.language}
+          showLineNumbers={codeProto.showLineNumbers}
+        >
+          {codeProto.codeText}
+        </StreamlitSyntaxHighlighter>
+      )
+    }
 
     case "deckGlJsonChart":
       return (
@@ -332,6 +347,14 @@ const RawElementNodeRenderer = (
         />
       )
 
+    case "heading":
+      return (
+        <Heading
+          element={node.element.heading as HeadingProto}
+          {...elementProps}
+        />
+      )
+
     case "iframe":
       return (
         <IFrame
@@ -362,12 +385,12 @@ const RawElementNodeRenderer = (
         />
       )
 
-    case "heading":
+    case "metric":
+      return <Metric element={node.element.metric as MetricProto} />
+
+    case "html":
       return (
-        <Heading
-          element={node.element.heading as HeadingProto}
-          {...elementProps}
-        />
+        <Html element={node.element.html as HtmlProto} {...elementProps} />
       )
 
     case "pageLink": {
@@ -399,6 +422,16 @@ const RawElementNodeRenderer = (
         />
       )
 
+    case "skeleton": {
+      return <Skeleton element={node.element.skeleton as SkeletonProto} />
+    }
+
+    case "snow":
+      return hideIfStale(
+        props.isStale,
+        <Snow scriptRunId={props.scriptRunId} />
+      )
+
     case "spinner":
       return (
         <Spinner
@@ -415,9 +448,6 @@ const RawElementNodeRenderer = (
         />
       )
 
-    case "metric":
-      return <Metric element={node.element.metric as MetricProto} />
-
     case "video":
       return (
         <Video
@@ -427,7 +457,21 @@ const RawElementNodeRenderer = (
         />
       )
 
-    // Widgets
+    // Events:
+    case "toast": {
+      const toastProto = node.element.toast as ToastProto
+      return (
+        <Toast
+          // React key needed so toasts triggered on re-run
+          key={node.scriptRunId}
+          body={toastProto.body}
+          icon={toastProto.icon}
+          {...elementProps}
+        />
+      )
+    }
+
+    // Widgets:
     case "arrowDataFrame": {
       const arrowProto = node.element.arrowDataFrame as ArrowProto
       widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
@@ -479,11 +523,7 @@ const RawElementNodeRenderer = (
         />
       )
     }
-    case "linkButton": {
-      const linkButtonProto = node.element.linkButton as LinkButtonProto
-      widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
-      return <LinkButton element={linkButtonProto} {...widgetProps} />
-    }
+
     case "cameraInput": {
       const cameraInputProto = node.element.cameraInput as CameraInputProto
       widgetProps.disabled = widgetProps.disabled || cameraInputProto.disabled
@@ -567,6 +607,12 @@ const RawElementNodeRenderer = (
       )
     }
 
+    case "linkButton": {
+      const linkButtonProto = node.element.linkButton as LinkButtonProto
+      widgetProps.disabled = widgetProps.disabled || linkButtonProto.disabled
+      return <LinkButton element={linkButtonProto} {...widgetProps} />
+    }
+
     case "multiselect": {
       const multiSelectProto = node.element.multiselect as MultiSelectProto
       widgetProps.disabled = widgetProps.disabled || multiSelectProto.disabled
@@ -611,10 +657,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "skeleton": {
-      return <AppSkeleton />
-    }
-
     case "slider": {
       const sliderProto = node.element.slider as SliderProto
       widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
@@ -622,12 +664,6 @@ const RawElementNodeRenderer = (
         <Slider key={sliderProto.id} element={sliderProto} {...widgetProps} />
       )
     }
-
-    case "snow":
-      return hideIfStale(
-        props.isStale,
-        <Snow scriptRunId={props.scriptRunId} />
-      )
 
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
@@ -665,32 +701,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "code": {
-      const codeProto = node.element.code as CodeProto
-      return (
-        <StreamlitSyntaxHighlighter
-          language={codeProto.language}
-          showLineNumbers={codeProto.showLineNumbers}
-        >
-          {codeProto.codeText}
-        </StreamlitSyntaxHighlighter>
-      )
-    }
-
-    // Events:
-    case "toast": {
-      const toastProto = node.element.toast as ToastProto
-      return (
-        <Toast
-          // React key needed so toasts triggered on re-run
-          key={node.scriptRunId}
-          body={toastProto.body}
-          icon={toastProto.icon}
-          {...elementProps}
-        />
-      )
-    }
-
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }
@@ -701,7 +711,7 @@ const RawElementNodeRenderer = (
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen } = React.useContext(LibContext)
+  const { isFullScreen, fragmentIdsThisRun } = React.useContext(LibContext)
   const { node, width } = props
 
   const elementType = node.element.type || ""
@@ -710,7 +720,8 @@ const ElementNodeRenderer = (
     enable,
     node,
     props.scriptRunState,
-    props.scriptRunId
+    props.scriptRunId,
+    fragmentIdsThisRun
   )
 
   // TODO: If would be great if we could return an empty fragment if isHidden is true, to keep the
@@ -730,7 +741,15 @@ const ElementNodeRenderer = (
         elementType={elementType}
       >
         <ErrorBoundary width={width}>
-          <Suspense fallback={<Skeleton />}>
+          <Suspense
+            fallback={
+              <Skeleton
+                element={SkeletonProto.create({
+                  style: SkeletonProto.SkeletonStyle.ELEMENT,
+                })}
+              />
+            }
+          >
             <RawElementNodeRenderer {...props} isStale={isStale} />
           </Suspense>
         </ErrorBoundary>

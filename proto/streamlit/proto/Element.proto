@@ -41,6 +41,7 @@ import "streamlit/proto/Exception.proto";
 import "streamlit/proto/Favicon.proto";
 import "streamlit/proto/FileUploader.proto";
 import "streamlit/proto/GraphVizChart.proto";
+import "streamlit/proto/Html.proto";
 import "streamlit/proto/IFrame.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
@@ -99,6 +100,7 @@ message Element {
     Favicon favicon = 36;
     FileUploader file_uploader = 33;
     GraphVizChart graphviz_chart = 18;
+    Html html = 54;
     IFrame iframe = 38;
     ImageList imgs = 6;
     Json json = 31;
@@ -112,7 +114,7 @@ message Element {
     Progress progress = 5;
     Radio radio = 23;
     Selectbox selectbox = 25;
-    Skeleton skeleton = 52;  // Internal-only.
+    Skeleton skeleton = 52;
     Slider slider = 21;
     Snow snow = 46;
     Spinner spinner = 44;
@@ -126,7 +128,7 @@ message Element {
     Video video = 14;
     Heading heading = 47;
     Code code = 48;
-    // Next ID: 54
+    // Next ID: 55
   }
 
   reserved 9;

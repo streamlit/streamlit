@@ -98,6 +98,10 @@ describe("Widget State Manager", () => {
       expect(sendBackMsg).not.toHaveBeenCalled()
     } else {
       expect(sendBackMsg).toHaveBeenCalledTimes(1)
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        expect.anything(),
+        undefined // fragmentId
+      )
     }
   }
 
@@ -249,6 +253,112 @@ describe("Widget State Manager", () => {
     }
   )
 
+  it("setIntValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
+    widgetMgr.setIntValue(MOCK_WIDGET, Number.MAX_SAFE_INTEGER, {
+      fromUi: true,
+    })
+
+    expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MAX_SAFE_INTEGER)
+
+    widgetMgr.setIntValue(MOCK_WIDGET, Number.MIN_SAFE_INTEGER, {
+      fromUi: true,
+    })
+
+    expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MIN_SAFE_INTEGER)
+  })
+
+  it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
+    const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
+    widgetMgr.setIntArrayValue(MOCK_WIDGET, values, {
+      fromUi: true,
+    })
+
+    expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
+  })
+
+  describe("can set fragmentId in setter methods", () => {
+    it.each([
+      {
+        setterMethod: "setStringTriggerValue",
+        value: "Hello world",
+      },
+      {
+        setterMethod: "setBoolValue",
+        value: true,
+      },
+      {
+        setterMethod: "setIntValue",
+        value: 42,
+      },
+      {
+        setterMethod: "setDoubleValue",
+        value: 42.0,
+      },
+      {
+        setterMethod: "setStringValue",
+        value: "Hello world",
+      },
+      {
+        setterMethod: "setStringArrayValue",
+        value: ["Hello", "world"],
+      },
+      {
+        setterMethod: "setDoubleArrayValue",
+        value: [40.0, 2.0],
+      },
+      {
+        setterMethod: "setIntArrayValue",
+        value: [40, 2],
+      },
+      {
+        setterMethod: "setJsonValue",
+        value: MOCK_JSON,
+      },
+      {
+        setterMethod: "setArrowValue",
+        value: MOCK_ARROW_TABLE,
+      },
+      {
+        setterMethod: "setBytesValue",
+        value: MOCK_BYTES,
+      },
+      {
+        setterMethod: "setFileUploaderStateValue",
+        value: MOCK_FILE_UPLOADER_STATE,
+      },
+    ])("%p", ({ setterMethod, value }) => {
+      // @ts-expect-error
+      widgetMgr[setterMethod](
+        MOCK_WIDGET,
+        value,
+        {
+          fromUi: true,
+        },
+        "myFragmentId"
+      )
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        expect.anything(),
+        "myFragmentId"
+      )
+    })
+
+    // This test isn't parameterized like the ones above because setTriggerValue
+    // has a slightly different signature from the other setter methods.
+    it("can set fragmentId in setTriggerValue", () => {
+      widgetMgr.setTriggerValue(
+        MOCK_WIDGET,
+        {
+          fromUi: true,
+        },
+        "myFragmentId"
+      )
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        expect.anything(),
+        "myFragmentId"
+      )
+    })
+  })
+
   describe("Primitive types as JSON values", () => {
     it("sets string value as JSON correctly", () => {
       widgetMgr.setJsonValue(MOCK_WIDGET, "mockStringValue", { fromUi: true })
@@ -288,29 +398,6 @@ describe("Widget State Manager", () => {
       expect(widgetMgr.getJsonValue(MOCK_WIDGET)).toBe(
         JSON.stringify([1.1, 2.2, 3.3])
       )
-    })
-
-    it("setIntValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
-      widgetMgr.setIntValue(MOCK_WIDGET, Number.MAX_SAFE_INTEGER, {
-        fromUi: true,
-      })
-
-      expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MAX_SAFE_INTEGER)
-
-      widgetMgr.setIntValue(MOCK_WIDGET, Number.MIN_SAFE_INTEGER, {
-        fromUi: true,
-      })
-
-      expect(widgetMgr.getIntValue(MOCK_WIDGET)).toBe(Number.MIN_SAFE_INTEGER)
-    })
-
-    it("setIntArrayValue can handle MIN_ and MAX_SAFE_INTEGER", () => {
-      const values = [Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
-      widgetMgr.setIntArrayValue(MOCK_WIDGET, values, {
-        fromUi: true,
-      })
-
-      expect(widgetMgr.getIntArrayValue(MOCK_WIDGET)).toStrictEqual(values)
     })
   })
 
@@ -375,13 +462,46 @@ describe("Widget State Manager", () => {
 
       // Our backMsg should be populated with our two widget values,
       // plus the submitButton's value.
-      expect(sendBackMsg).toHaveBeenCalledWith({
-        widgets: [
-          { id: "submitButton", triggerValue: true },
-          { id: "widget1", stringValue: "foo" },
-          { id: "widget2", stringValue: "bar" },
-        ],
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton", triggerValue: true },
+            { id: "widget1", stringValue: "foo" },
+            { id: "widget2", stringValue: "bar" },
+          ],
+        },
+        undefined // fragmentId
+      )
+
+      // We have no more pending form.
+      expect(formsData.formsWithPendingChanges).toEqual(new Set())
+    })
+
+    it("calls sendBackMsg with fragmentId", () => {
+      const formId = "mockFormId"
+      widgetMgr.addSubmitButton(
+        formId,
+        new ButtonProto({ id: "submitButton" })
+      )
+
+      // Populate a form
+      widgetMgr.setStringValue({ id: "widget1", formId }, "foo", {
+        fromUi: true,
       })
+
+      widgetMgr.submitForm(formId, undefined, "myFragmentId")
+
+      // Our backMsg should be populated with our two widget values,
+      // plus the submitButton's value.
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton", triggerValue: true },
+            { id: "widget1", stringValue: "foo" },
+          ],
+        },
+        "myFragmentId"
+      )
 
       // We have no more pending form.
       expect(formsData.formsWithPendingChanges).toEqual(new Set())
@@ -405,9 +525,12 @@ describe("Widget State Manager", () => {
       )
       widgetMgr.submitForm(formId)
 
-      expect(sendBackMsg).toHaveBeenCalledWith({
-        widgets: [{ id: "firstSubmitButton", triggerValue: true }],
-      })
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [{ id: "firstSubmitButton", triggerValue: true }],
+        },
+        undefined
+      )
     })
 
     it("does not submit the form if the first submitButton is disabled", () => {
@@ -480,12 +603,15 @@ describe("Widget State Manager", () => {
 
       // Our backMsg should be populated with the first form widget value,
       // plus the first submitButton's triggerValue.
-      expect(sendBackMsg).toHaveBeenCalledWith({
-        widgets: [
-          { id: "submitButton", triggerValue: true },
-          { id: FORM_1.id, stringValue: "foo" },
-        ],
-      })
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton", triggerValue: true },
+            { id: FORM_1.id, stringValue: "foo" },
+          ],
+        },
+        undefined
+      )
     })
 
     it("checks that only the second form is pending after the first is submitted", () => {
@@ -505,13 +631,16 @@ describe("Widget State Manager", () => {
 
       // Our most recent backMsg should be populated with the both forms' widget values,
       // plus the second submitButton's fromSubmitValue.
-      expect(sendBackMsg).toHaveBeenLastCalledWith({
-        widgets: [
-          { id: FORM_1.id, stringValue: "foo" },
-          { id: "submitButton2", triggerValue: true },
-          { id: FORM_2.id, stringValue: "bar" },
-        ],
-      })
+      expect(sendBackMsg).toHaveBeenLastCalledWith(
+        {
+          widgets: [
+            { id: FORM_1.id, stringValue: "foo" },
+            { id: "submitButton2", triggerValue: true },
+            { id: FORM_2.id, stringValue: "bar" },
+          ],
+        },
+        undefined
+      )
     })
 
     it("checks that no more pending forms exist after both are submitted", () => {
@@ -536,13 +665,88 @@ describe("Widget State Manager", () => {
         new ButtonProto({ id: "submitButton2" })
       )
 
-      expect(sendBackMsg).toHaveBeenCalledWith({
-        widgets: [
-          { id: "submitButton2", triggerValue: true },
-          { id: FORM_2.id, stringValue: "bar" },
-        ],
-      })
+      expect(sendBackMsg).toHaveBeenCalledWith(
+        {
+          widgets: [
+            { id: "submitButton2", triggerValue: true },
+            { id: FORM_2.id, stringValue: "bar" },
+          ],
+        },
+        undefined
+      )
     })
+  })
+
+  describe("manages element state values", () => {
+    it("sets extra widget information properly", () => {
+      widgetMgr.setElementState("id", "color", "red")
+      // @ts-expect-error
+      expect(widgetMgr.elementStates.get("id")?.get("color")).toEqual("red")
+    })
+
+    it("returns extra widget information when id exists and key exists", () => {
+      // @ts-expect-error
+      widgetMgr.elementStates.set("id", new Map([["color", "red"]]))
+      expect(widgetMgr.getElementState("id", "color")).toEqual("red")
+    })
+
+    it("returns undefined when when id does not exist", () => {
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+
+    it("returns undefined when when id exists and key does not exist", () => {
+      // @ts-expect-error
+      widgetMgr.elementStates.set("id", new Map([["text", "red"]]))
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+
+    it("deletes a value for the key if set", () => {
+      // @ts-expect-error
+      widgetMgr.elementStates.set("id", new Map([["text", "red"]]))
+      widgetMgr.deleteElementState("id", "color")
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+
+    it("does not error when deleting for the key if not set", () => {
+      widgetMgr.deleteElementState("id", "color")
+      expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
+    })
+  })
+
+  it("cleans up widget & element states on removeInactive", () => {
+    const widgetId1 = "TEST_ID_1"
+    const widgetId2 = "TEST_ID_2"
+    const widgetId3 = "TEST_ID_3"
+    const widgetId4 = "TEST_ID_4"
+    const elementId1 = "TEST_ID_5"
+    const elementId2 = "TEST_ID_6"
+    widgetMgr.setStringValue({ id: widgetId1 }, "widgetState1", {
+      fromUi: false,
+    })
+    widgetMgr.setStringValue({ id: widgetId2 }, "widgetState2", {
+      fromUi: false,
+    })
+    widgetMgr.setStringValue({ id: widgetId3 }, "widgetState3", {
+      fromUi: false,
+    })
+    widgetMgr.setStringValue({ id: widgetId4 }, "widgetState4", {
+      fromUi: false,
+    })
+
+    widgetMgr.setElementState(elementId1, "key1", "elementState1")
+    widgetMgr.setElementState(elementId2, "key2", "elementState2")
+
+    const activeIds = new Set([widgetId3, widgetId4, elementId2])
+    widgetMgr.removeInactive(activeIds)
+
+    expect(widgetMgr.getStringValue({ id: widgetId1 })).toBeUndefined()
+    expect(widgetMgr.getStringValue({ id: widgetId2 })).toBeUndefined()
+    expect(widgetMgr.getStringValue({ id: widgetId3 })).toEqual("widgetState3")
+    expect(widgetMgr.getStringValue({ id: widgetId4 })).toEqual("widgetState4")
+    expect(widgetMgr.getElementState(elementId1, "key1")).toBeUndefined()
+    expect(widgetMgr.getElementState(elementId2, "key2")).toEqual(
+      "elementState2"
+    )
   })
 })
 

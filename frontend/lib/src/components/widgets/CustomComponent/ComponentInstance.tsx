@@ -27,6 +27,7 @@ import useTimeout from "@streamlit/lib/src/hooks/useTimeout"
 import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
+  Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -65,6 +66,7 @@ export interface Props {
   element: ComponentInstanceProto
   width: number
   theme: EmotionTheme
+  fragmentId?: string
 }
 
 /**
@@ -169,7 +171,8 @@ function compareDataframeArgs(
 function ComponentInstance(props: Props): ReactElement {
   const [componentError, setComponentError] = useState<Error>()
 
-  const { disabled, element, registry, theme, widgetMgr, width } = props
+  const { disabled, element, registry, theme, widgetMgr, width, fragmentId } =
+    props
   const { componentName, jsonArgs, specialArgs, url } = element
 
   const [parsedNewArgs, parsedDataframeArgs] = tryParseArgs(
@@ -279,12 +282,14 @@ function ComponentInstance(props: Props): ReactElement {
     // Update the reference fields for the callback that we
     // passed to the componentRegistry
     onBackMsgRef.current = {
-      isReady: isReadyRef.current,
+      // isReady is a callback to ensure the caller receives the latest value
+      isReady: () => isReadyRef.current,
       element,
       widgetMgr,
       setComponentError,
       componentReadyCallback,
       frameHeightCallback: handleSetFrameHeight,
+      fragmentId,
     }
   }, [
     componentName,
@@ -298,6 +303,7 @@ function ComponentInstance(props: Props): ReactElement {
     widgetMgr,
     clearTimeoutWarningElement,
     clearTimeoutLog,
+    fragmentId,
   ])
 
   useEffect(() => {
@@ -340,7 +346,10 @@ function ComponentInstance(props: Props): ReactElement {
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
       <Skeleton
-        height={frameHeight === undefined ? undefined : `${frameHeight}px`}
+        element={SkeletonProto.create({
+          height: frameHeight,
+          style: SkeletonProto.SkeletonStyle.ELEMENT,
+        })}
       />
     )
 

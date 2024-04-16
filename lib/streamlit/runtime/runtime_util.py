@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Any
 
 from streamlit import config
-from streamlit.errors import MarkdownFormattedException
+from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 
@@ -51,6 +51,17 @@ of the client's browser and the Streamlit server._
                 message_size_limit_mb=(get_max_message_size_bytes() / 1e6),
             )
             .strip("\n")
+        )
+
+
+class BadDurationStringError(StreamlitAPIException):
+    """Raised when a bad duration argument string is passed."""
+
+    def __init__(self, duration: str):
+        MarkdownFormattedException.__init__(
+            self,
+            "TTL string doesn't look right. It should be formatted as"
+            f"`'1d2h34m'` or `2 days`, for example. Got: {duration}",
         )
 
 

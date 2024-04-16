@@ -79,13 +79,6 @@ export interface Props {
   sidebarChevronDownshift: number
 
   /**
-   * Adjustment to positioning of the app's toasts
-   * based on information sent from the host.
-   * @see EventContainer
-   */
-  toastAdjustment: boolean
-
-  /**
    * The latest state of the git information related to the app.
    */
   gitInfo: IGitInfo | null
@@ -106,7 +99,6 @@ export const AppContext = React.createContext<Props>({
   showColoredLine: false,
   pageLinkBaseUrl: "",
   sidebarChevronDownshift: 0,
-  toastAdjustment: false,
   gitInfo: null,
   appConfig: {},
 })

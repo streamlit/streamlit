@@ -114,6 +114,7 @@ class StreamlitTest(unittest.TestCase):
                 "graphviz_chart",
                 "header",
                 "help",
+                "html",
                 "image",
                 "info",
                 "json",
@@ -168,6 +169,7 @@ class StreamlitTest(unittest.TestCase):
                 "cache_data",
                 "cache_resource",
                 # Experimental APIs:
+                "experimental_dialog",
                 "experimental_user",
                 "experimental_singleton",
                 "experimental_memo",
@@ -176,6 +178,7 @@ class StreamlitTest(unittest.TestCase):
                 "experimental_rerun",
                 "experimental_data_editor",
                 "experimental_connection",
+                "experimental_fragment",
                 "get_option",
                 "set_option",
                 "connection",

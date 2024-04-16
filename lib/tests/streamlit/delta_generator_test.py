@@ -32,7 +32,7 @@ import streamlit as st
 import streamlit.delta_generator as delta_generator
 import streamlit.runtime.state.widgets as w
 from streamlit.cursor import LockedCursor, make_delta_path
-from streamlit.delta_generator import DeltaGenerator
+from streamlit.delta_generator import DeltaGenerator, get_last_dg_added_to_context_stack
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.Element_pb2 import Element
@@ -41,7 +41,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.proto.TextArea_pb2 import TextArea
 from streamlit.proto.TextInput_pb2 import TextInput
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.widgets import _build_duplicate_widget_message
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -125,6 +125,7 @@ class RunWarningTest(unittest.TestCase):
                 "graphviz_chart",
                 "header",
                 "help",
+                "html",
                 "id",
                 "image",
                 "info",
@@ -288,6 +289,17 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
                 str(ctx.exception),
             )
 
+    def test_get_last_dg_added_to_context_stack(self):
+        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
+        self.assertIsNone(last_dg_added_to_context_stack)
+
+        sidebar = st.sidebar
+        with sidebar:
+            last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
+            self.assertEqual(sidebar, last_dg_added_to_context_stack)
+        last_dg_added_to_context_stack = get_last_dg_added_to_context_stack()
+        self.assertNotEqual(sidebar, last_dg_added_to_context_stack)
+
 
 class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Class."""
@@ -347,7 +359,9 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         self.assertEqual(1, dg._cursor.index)
         self.assertEqual(container, new_dg._root_container)
 
-        element = self.get_delta_from_queue().new_element
+        delta = self.get_delta_from_queue()
+        element = delta.new_element
+        self.assertEqual(delta.fragment_id, "")
         self.assertEqual(element.text.body, test_data)
 
     def test_enqueue_same_id(self):
@@ -368,6 +382,35 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
             make_delta_path(RootContainer.MAIN, (), 123), msg.metadata.delta_path
         )
         self.assertEqual(msg.delta.new_element.text.body, test_data)
+
+    def test_enqueue_adds_fragment_id_to_delta_if_set(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "my_fragment_id"
+
+        dg = DeltaGenerator(root_container=RootContainer.MAIN)
+        dg._enqueue("text", TextProto())
+
+        delta = self.get_delta_from_queue()
+        self.assertEqual(delta.fragment_id, "my_fragment_id")
+
+    def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "my_fragment_id"
+        ctx.fragment_ids_this_run = {"my_fragment_id"}
+
+        exc = "is not supported"
+        with pytest.raises(StreamlitAPIException, match=exc):
+            delta_generator.sidebar_dg._enqueue("text", TextProto())
+
+    def test_enqueue_can_write_to_container_in_sidebar(self):
+        ctx = get_script_run_ctx()
+        ctx.current_fragment_id = "my_fragment_id"
+        ctx.fragment_ids_this_run = {"my_fragment_id"}
+
+        delta_generator.sidebar_dg.container().write("Hello world")
+
+        deltas = self.get_all_deltas_from_queue()
+        assert [d.fragment_id for d in deltas] == ["my_fragment_id", "my_fragment_id"]
 
 
 class DeltaGeneratorContainerTest(DeltaGeneratorTestCase):
