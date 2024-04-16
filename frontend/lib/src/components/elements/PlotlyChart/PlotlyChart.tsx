@@ -325,6 +325,9 @@ function PlotlyFigure({
           selectedLassos.push(returnSelection)
         }
       })
+      // @ts-expect-error
+      widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
+      widgetMgr.setElementState(element.id, DATA, data)
     }
 
     returnValue.select.box = selectedBoxes
@@ -332,9 +335,6 @@ function PlotlyFigure({
     returnValue.select.points = returnValue.select.points.map((point: any) =>
       keysToSnakeCase(point)
     )
-    // @ts-expect-error
-    widgetMgr.setElementState(element.id, SELECTIONS, event.selections)
-    widgetMgr.setElementState(element.id, DATA, data)
     widgetMgr.setStringValue(
       element,
       JSON.stringify(returnValue),
