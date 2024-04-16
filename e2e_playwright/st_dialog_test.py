@@ -89,6 +89,7 @@ def test_dialog_reopens_properly_after_dismiss(app: Page):
         wait_for_app_run(app)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(1)
+        app.wait_for_timeout(250)
 
         click_to_dismiss(app)
         expect(main_dialog).not_to_be_attached()
