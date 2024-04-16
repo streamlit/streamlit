@@ -172,6 +172,7 @@ function PlotlyFigure({
         // data is originalData + selectedpoints
         spec.data = data
         spec.layout.selections = selections
+
         const hasSelectedPoints: boolean = spec.data.some(
           (trace: any) =>
             "selectedpoints" in trace &&
