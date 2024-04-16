@@ -88,6 +88,7 @@ describe("Video Element", () => {
     render(<Video {...props} />)
     expect(mockSetElementState).toHaveBeenCalledTimes(1)
     expect(mockSetElementState).toHaveBeenCalledWith(
+      "id",
       "testVideoId",
       "testVideoId"
     )

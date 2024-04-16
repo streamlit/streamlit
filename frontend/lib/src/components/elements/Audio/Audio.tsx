@@ -35,12 +35,12 @@ export default function Audio({
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const [state] = useState<string>(
-    () => elementMgr.getElementState(element.id) || element.id
+    () => elementMgr.getElementState("id", element.id) || element.id
   )
 
   useEffect(() => {
     if (element.id && state) {
-      elementMgr.setElementState(element.id, state)
+      elementMgr.setElementState("id", element.id, state)
     }
   }, [state, element.id, elementMgr])
 

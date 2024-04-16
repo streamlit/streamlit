@@ -74,6 +74,7 @@ describe("Audio Element", () => {
     render(<Audio {...props} />)
     expect(mockSetElementState).toHaveBeenCalledTimes(1)
     expect(mockSetElementState).toHaveBeenCalledWith(
+      "id",
       "testAudioId",
       "testAudioId"
     )

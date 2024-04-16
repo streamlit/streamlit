@@ -43,7 +43,7 @@ export default function Video({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const [state] = useState<string>(
-    () => elementMgr.getElementState(element.id) || element.id
+    () => elementMgr.getElementState("id", element.id) || element.id
   )
 
   /* Element may contain "url" or "data" property. */
@@ -52,7 +52,7 @@ export default function Video({
 
   useEffect(() => {
     if (element.id && state) {
-      elementMgr.setElementState(element.id, state)
+      elementMgr.setElementState("id", element.id, state)
     }
   }, [state, element.id, elementMgr])
 
