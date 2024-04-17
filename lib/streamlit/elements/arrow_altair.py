@@ -185,9 +185,9 @@ class ArrowAltairMixin:
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
         title_x: str or None
-            The title of the x-axis. If None, no title will be displayed.
+            The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
         title_y: str or None
-            The title of the y-axis. If None, no title will be displayed.
+            The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
 
         Examples
@@ -359,11 +359,9 @@ class ArrowAltairMixin:
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
         title_x: str or None
-            The title of the x-axis. If a string, it will be used as the x-axis title.
-            If None, no title will be displayed.
+            The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
         title_y: str or None
-            The title of the y-axis. If a string, it will be used as the y-axis title.
-            If None, no title will be displayed.
+            The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
         Examples
         --------
@@ -535,11 +533,9 @@ class ArrowAltairMixin:
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
         title_x: str or None
-            The title of the x-axis. If a string, it will be used as the x-axis title.
-            If None, no title will be displayed.
+            The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
         title_y: str or None
-            The title of the y-axis. If a string, it will be used as the y-axis title.
-            If None, no title will be displayed.
+            The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
 
         Examples
@@ -724,11 +720,9 @@ class ArrowAltairMixin:
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
         title_x: str or None
-            The title of the x-axis. If a string, it will be used as the x-axis title.
-            If None, no title will be displayed.
+            The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
         title_y: str or None
-            The title of the y-axis. If a string, it will be used as the y-axis title.
-            If None, no title will be displayed.
+            The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
         Examples
         --------
