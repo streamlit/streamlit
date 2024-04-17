@@ -216,8 +216,6 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
             ("rerun", True),
             ("ignore", False),
             (callback, True),

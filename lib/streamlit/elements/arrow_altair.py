@@ -771,11 +771,7 @@ class ArrowAltairMixin:
         altair_chart: alt.Chart,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        # TODO(willhuang1997): This will need to be finalized to "rerun" / "ignore" or True / False
-        on_select: Literal["rerun", "ignore"]
-        | Callable[..., None]
-        | bool
-        | None = None,
+        on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         key: str | None = None,
     ) -> Union["DeltaGenerator", Dict[Any, Any]]:
         """Display a chart using the Altair library.
@@ -794,8 +790,6 @@ class ArrowAltairMixin:
             defined design or None to fallback to the default behavior of the library.
 
         on_select: Controls the behavior in response to selection events in the chart. Can be one of:
-            - False (default): Streamlit will not react to any selection events in the chart.
-            - True: Streamlit will rerun the app when the user selects data points in the chart. In this case, st.altair_chart will return the selection data as a dictionary. This requires that you add a selection event to the figure object via add_params, see here.
             - “ignore” (default): Streamlit will not react to any selection events in the chart.
             - “rerun”: Streamlit will rerun the app when the user selects data points in the chart. In this case, st.altair_chart will return the selection data as a dictionary. This requires that you add a selection event to the figure object via add_params, see here.
             - callable: If a callable is provided, Streamlit will rerun and execute the callable as a callback function before the rest of the app. The selection data can be retrieved through session state by setting the key parameter.
@@ -838,11 +832,7 @@ class ArrowAltairMixin:
             )
         proto = ArrowVegaLiteChartProto()
 
-        is_select_enabled = (
-            on_select != None
-            and on_select != False
-            and on_select != ON_SELECTION_IGNORE
-        )
+        is_select_enabled = on_select != ON_SELECTION_IGNORE
         import altair as alt
 
         if alt.__version__[0] == "4" and is_select_enabled:
@@ -856,10 +846,8 @@ class ArrowAltairMixin:
 
         if is_select_enabled:
             on_select_callback = on_select
-            # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
-            if isinstance(on_select_callback, bool) or isinstance(
-                on_select_callback, str
-            ):
+            # Must change on_select to None otherwise register_widget will error with on_change_handler to a str
+            if isinstance(on_select_callback, str):
                 on_select_callback = None
 
             key = to_key(key)

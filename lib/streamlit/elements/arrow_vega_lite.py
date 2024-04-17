@@ -81,19 +81,15 @@ class VegaLiteSelectionSerde:
 
 def _on_select(
     proto: ArrowVegaLiteChartProto,
-    on_select: Literal["rerun", "ignore"] | Callable[..., None] | bool | None = None,
+    on_select: Literal["rerun", "ignore"] | Callable[..., None] | None = None,
     key: str | None = None,
 ) -> AttributeDictionary:
-    if (
-        on_select is not None
-        and on_select != False
-        and on_select != ON_SELECTION_IGNORE
-    ):
+    if on_select != ON_SELECTION_IGNORE:
         # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
-        if isinstance(on_select, bool) or isinstance(on_select, str):
+        if isinstance(on_select, str):
             on_select = None
 
-        vegaliteSerde = VegaLiteSelectionSerde()
+        vega_lite_serde = VegaLiteSelectionSerde()
         current_value = register_widget(
             "arrow_vega_lite_chart",
             proto,
@@ -101,8 +97,8 @@ def _on_select(
             on_change_handler=on_select,
             args=None,
             kwargs=None,
-            deserializer=vegaliteSerde.deserialize,
-            serializer=vegaliteSerde.serialize,
+            deserializer=vega_lite_serde.deserialize,
+            serializer=vega_lite_serde.serialize,
             ctx=get_script_run_ctx(),
         )
         return AttributeDictionary(current_value.value)
@@ -117,10 +113,7 @@ class ArrowVegaLiteMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_select: Literal["rerun", "ignore"]
-        | Callable[..., None]
-        | bool
-        | None = None,
+        on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         key: str | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator | AttributeDictionary:
@@ -198,11 +191,7 @@ class ArrowVegaLiteMixin:
 
         proto = ArrowVegaLiteChartProto()
 
-        is_select_enabled = (
-            on_select != None
-            and on_select != False
-            and on_select != ON_SELECTION_IGNORE
-        )
+        is_select_enabled = on_select != ON_SELECTION_IGNORE
 
         if not is_select_enabled and current_form_id(self.dg):
             # TODO(willhuang1997): double check the message of this
@@ -212,10 +201,8 @@ class ArrowVegaLiteMixin:
 
         if is_select_enabled:
             on_select_callback = on_select
-            # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
-            if isinstance(on_select_callback, bool) or isinstance(
-                on_select_callback, str
-            ):
+            # Must change on_select to None otherwise register_widget will error with on_change_handler to a str
+            if isinstance(on_select_callback, str):
                 on_select_callback = None
 
             key = to_key(key)

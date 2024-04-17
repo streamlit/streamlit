@@ -715,8 +715,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
             ("rerun", True),
             ("ignore", False),
             (callback, True),
@@ -759,7 +757,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.altair_chart(chart, on_select=True)
+        st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertTrue(
             "selection_0" in proto.spec,
@@ -781,7 +779,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.altair_chart(chart, on_select=True)
+        st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertTrue(
             "selection_0" in proto.spec,
@@ -803,7 +801,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.altair_chart(chart, on_select=True)
+        st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertTrue(
             "point" in proto.spec,
@@ -825,7 +823,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             }
         )
 
-        st.altair_chart(chart, on_select=True)
+        st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertTrue(
             "interval" in proto.spec,
