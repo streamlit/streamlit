@@ -214,13 +214,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ showSidebarCollapse: false })
   }
 
-  logoClick = (): void => {
-    // const { appLogo } = this.props
-    // if (appLogo && appLogo.url) {
-    //   window.open(appLogo.url, "_blank")
-    // }
-  }
-
   // Additional safeguard for sidebar height sizing
   headerDecorationVisible(): boolean {
     let coloredLineExists = false
@@ -242,38 +235,31 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       return <StyledNoLogoSpacer />
     } else if (appLogo.url) {
       return (
-        <StyledLogoLink
-          onClick={this.logoClick}
-          href={appLogo.url}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <StyledLogoLink href={appLogo.url} target="_blank" rel="noreferrer">
           <StyledLogo
             src={this.props.endpoints.buildMediaURL(
               collapsed ? appLogo.collapsedVersion : appLogo.image
             )}
             size={appLogo.size}
-            alt="Streamlit"
+            alt="Logo"
           />
         </StyledLogoLink>
       )
-    } else {
-      return (
-        <StyledLogo
-          src={this.props.endpoints.buildMediaURL(
-            collapsed ? appLogo.collapsedVersion : appLogo.image
-          )}
-          size={appLogo.size}
-          alt="Streamlit"
-        />
-      )
     }
+    return (
+      <StyledLogo
+        src={this.props.endpoints.buildMediaURL(
+          collapsed ? appLogo.collapsedVersion : appLogo.image
+        )}
+        size={appLogo.size}
+        alt="Logo"
+      />
+    )
   }
 
   public render(): ReactNode {
     const { collapsedSidebar, sidebarWidth, showSidebarCollapse } = this.state
     const {
-      appLogo,
       appPages,
       chevronDownshift,
       children,
@@ -288,9 +274,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
     // If header decoration visible, move sidebar down so decoration doesn't go below it
     const sidebarAdjust = !isEmbedded && this.headerDecorationVisible()
-
-    const renderLogo =
-      appLogo && appLogo.url ? "logoLink" : appLogo ? "logo" : null
 
     // The tabindex is required to support scrolling by arrow keys.
     return (

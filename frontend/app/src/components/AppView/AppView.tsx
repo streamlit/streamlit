@@ -35,6 +35,11 @@ import {
 
 import { ThemedSidebar } from "@streamlit/app/src/components/Sidebar"
 import EventContainer from "@streamlit/app/src/components/EventContainer"
+import {
+  StyledSidebarOpenContainer,
+  StyledLogo,
+  StyledLogoLink,
+} from "@streamlit/app/src/components/Sidebar/styled-components"
 
 import { AppContext } from "@streamlit/app/src/components/AppContext"
 
@@ -130,6 +135,7 @@ function AppView(props: AppViewProps): ReactElement {
     disableScrolling,
     showToolbar,
     showColoredLine,
+    sidebarChevronDownshift,
   } = React.useContext(AppContext)
 
   const { addScriptFinishedHandler, removeScriptFinishedHandler, libConfig } =
@@ -176,6 +182,27 @@ function AppView(props: AppViewProps): ReactElement {
     ? ScrollToBottomContainer
     : StyledAppViewMain
 
+  const renderLogo = (appLogo: Logo): ReactElement => {
+    if (appLogo.url) {
+      return (
+        <StyledLogoLink href={appLogo.url} target="_blank" rel="noreferrer">
+          <StyledLogo
+            src={endpoints.buildMediaURL(appLogo.image)}
+            size={appLogo.size}
+            alt="Logo"
+          />
+        </StyledLogoLink>
+      )
+    }
+    return (
+      <StyledLogo
+        src={endpoints.buildMediaURL(appLogo.image)}
+        size={appLogo.size}
+        alt="Logo"
+      />
+    )
+  }
+
   const renderBlock = (node: BlockNode): ReactElement => (
     <VerticalBlock
       node={node}
@@ -213,6 +240,16 @@ function AppView(props: AppViewProps): ReactElement {
             {renderBlock(elements.sidebar)}
           </StyledSidebarBlockContainer>
         </ThemedSidebar>
+      )}
+      {!showSidebar && appLogo && (
+        <StyledSidebarOpenContainer
+          chevronDownshift={sidebarChevronDownshift}
+          isCollapsed={true}
+          data-testid="collapsedControl"
+          style={{ marginTop: "0.25rem" }}
+        >
+          {renderLogo(appLogo)}
+        </StyledSidebarOpenContainer>
       )}
       <Component
         tabIndex={0}

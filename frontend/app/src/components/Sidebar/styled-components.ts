@@ -350,7 +350,7 @@ export const StyledCollapseSidebarButton =
     })
   )
 
-export const StyledLogoLink = styled.a(({ theme }) => ({
+export const StyledLogoLink = styled.a(({}) => ({
   maxWidth: "15rem",
   "&:hover": {
     opacity: "0.7",
