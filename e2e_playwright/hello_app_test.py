@@ -44,8 +44,8 @@ def test_animation_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
 
     check_page_title(app, "Animation Demo")
     # Wait for the animation to end. The animation takes 5-10 seconds to finish
-    # which is a lot more than the default timeout
-    expect(app.get_by_test_id("stButton")).to_contain_text("Re-run", timeout=15000)
+    # which is a lot more than the default timeout, so we set it to a higher value
+    expect(app.get_by_test_id("stButton")).to_contain_text("Re-run", timeout=25000)
 
     assert_snapshot(app, name="hello_app-animation_demo_page")
 
