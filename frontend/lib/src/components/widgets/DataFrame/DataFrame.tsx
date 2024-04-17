@@ -842,9 +842,7 @@ function DataFrame({
             isRowSelectionActivated && {
               rowMarkers: {
                 kind: "checkbox",
-                checkboxStyle: isMultiRowSelectionActivated
-                  ? "square"
-                  : "circle",
+                checkboxStyle: "square",
                 theme: {
                   bgCell: theme.bgHeader,
                   bgCellMedium: theme.bgHeader,
