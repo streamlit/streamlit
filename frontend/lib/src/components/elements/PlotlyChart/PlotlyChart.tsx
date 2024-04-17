@@ -199,6 +199,7 @@ function PlotlyFigure({
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
   React.useEffect(() => {
+    // If the theme changes, we need to reapply the theming to the figure
     const spec = applyTheming(element, plotlyFigure, theme)
     // https://plotly.com/javascript/reference/layout/#layout-clickmode
     // This allows single selections and shift click to add / remove selections
