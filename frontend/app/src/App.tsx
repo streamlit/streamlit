@@ -946,9 +946,13 @@ export class App extends PureComponent<Props, State> {
       }
 
       if (newSessionProto.appPages.length > 1) {
+        const navPageSections = new Map()
+        const sectionLength = (newSessionProto.appPages || []).length
+        navPageSections.set("", { start: 0, length: sectionLength })
         this.setState(
           {
             appPages: newSessionProto.appPages,
+            navPageSections,
           },
           () => {
             this.hostCommunicationMgr.sendMessageToHost({
