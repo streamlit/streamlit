@@ -90,25 +90,29 @@ export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
   }
 )
 
-export const StyledViewButton = styled.button(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
-  lineHeight: "1.4rem",
-  color: theme.colors.gray80,
-  backgroundColor: theme.colors.transparent,
-  border: "none",
-  borderRadius: "0.5rem",
-  marginTop: "0.25rem",
-  marginLeft: "1rem",
-  padding: "0.125rem 0.5rem 0.125rem 0.5rem",
-  "&:hover, &:active, &:focus": {
+export const StyledViewButton = styled.button(({ theme }) => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    fontSize: theme.fontSizes.sm,
+    lineHeight: "1.4rem",
+    color: isLightTheme ? theme.colors.gray80 : theme.colors.gray40,
+    backgroundColor: theme.colors.transparent,
     border: "none",
-    outline: "none",
-    boxShadow: "none",
-  },
-  "&:hover": {
-    backgroundColor: theme.colors.gray30,
-  },
-}))
+    borderRadius: "0.5rem",
+    marginTop: "0.25rem",
+    marginLeft: "1rem",
+    padding: "0.125rem 0.5rem 0.125rem 0.5rem",
+    "&:hover, &:active, &:focus": {
+      border: "none",
+      outline: "none",
+      boxShadow: "none",
+    },
+    "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix25,
+    },
+  }
+})
 
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   paddingTop: "1rem",
