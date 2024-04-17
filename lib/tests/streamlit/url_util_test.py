@@ -61,7 +61,7 @@ INVALID_URLS = [
     "http://homestarrunner.com",
     "https://somethinglikegithub.com/withablob",
     "gist.github.com/nothing",
-    "https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/video.py",
+    "https://raw.githubusercontent.com/streamlit/streamlit/develop/e2e_playwright/st_video.py",
     "streamlit.io/raw/blob",
 ]
 
