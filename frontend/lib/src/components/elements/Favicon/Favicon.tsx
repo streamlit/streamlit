@@ -37,8 +37,6 @@ function iconToUrl(icon: string): string {
     iconType = "outline"
   } else if (matchResult[1] === "material-rounded") {
     iconType = "round"
-  } else {
-    iconType = "baseline"
   }
 
   const iconUrl = `https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/${snakeIconName}/${iconType}.svg`
