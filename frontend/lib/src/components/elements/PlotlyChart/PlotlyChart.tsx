@@ -341,7 +341,6 @@ function PlotlyFigure({
       onSelected={
         element.isSelectEnabled || !disabled ? handleSelect : () => {}
       }
-      onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
       onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
       onInitialized={figure => {
         widgetMgr.setElementState(element.id, "figure", figure)
