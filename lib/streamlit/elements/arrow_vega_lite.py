@@ -81,7 +81,7 @@ class VegaLiteSelectionSerde:
 
 def _on_select(
     proto: ArrowVegaLiteChartProto,
-    on_select: Literal["rerun", "ignore"] | Callable[..., None] | None = None,
+    on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
     key: str | None = None,
 ) -> AttributeDictionary:
     if on_select != ON_SELECTION_IGNORE:
