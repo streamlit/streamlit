@@ -16,7 +16,10 @@
 
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
-import { getWrappedHeadersStyle } from "@streamlit/lib/src/theme/utils"
+import {
+  getWrappedHeadersStyle,
+  hasLightBackgroundColor,
+} from "@streamlit/lib/src/theme/utils"
 
 export interface StyledSidebarProps {
   isCollapsed: boolean
@@ -70,16 +73,12 @@ export const StyledSidebarNavContainer = styled.div(() => ({
 
 export interface StyledSidebarNavItemsProps {
   isExpanded: boolean
-  hasSidebarElements: boolean
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ isExpanded, hasSidebarElements, theme }) => {
-    const isExpandedMaxHeight = isExpanded ? "75vh" : "34vh"
-    const maxHeight = hasSidebarElements ? isExpandedMaxHeight : "100vh"
-
+  ({ isExpanded, theme }) => {
     return {
-      maxHeight,
+      maxHeight: isExpanded ? "none" : "26vh",
       listStyle: "none",
       overflow: "hidden",
       margin: 0,
@@ -286,23 +285,27 @@ export const StyledSidebarOpenContainer =
     })
   )
 
-export const StyledOpenSidebarButton = styled.div(({ theme }) => ({
-  zIndex: theme.zIndices.header,
-  marginLeft: theme.spacing.sm,
-  color: theme.colors.gray70,
+export const StyledOpenSidebarButton = styled.div(({ theme }) => {
+  const isLightTheme = hasLightBackgroundColor(theme)
 
-  button: {
-    "&:hover": {
-      backgroundColor: theme.colors.gray20,
+  return {
+    zIndex: theme.zIndices.header,
+    marginLeft: theme.spacing.sm,
+    color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+
+    button: {
+      "&:hover": {
+        backgroundColor: theme.colors.darkenedBgMix25,
+      },
     },
-  },
-}))
+  }
+})
 
 export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "start",
-  padding: `${theme.spacing.twoXL}`,
+  padding: `${theme.spacing.xl} ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
 }))
 
 export interface StyledLogoProps {
@@ -322,6 +325,7 @@ export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => {
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
   height: "2.5rem",
+  marginRight: "-1rem",
 }))
 
 export interface StyledCollapseSidebarButtonProps {
@@ -330,24 +334,28 @@ export interface StyledCollapseSidebarButtonProps {
 
 export const StyledCollapseSidebarButton =
   styled.div<StyledCollapseSidebarButtonProps>(
-    ({ showSidebarCollapse, theme }) => ({
-      display: "auto",
-      transition: "left 300ms",
-      transitionDelay: "left 300ms",
-      color: theme.colors.gray70,
-      lineHeight: "0",
+    ({ showSidebarCollapse, theme }) => {
+      const isLightTheme = hasLightBackgroundColor(theme)
 
-      button: {
-        padding: "0.25rem",
-        "&:hover": {
-          backgroundColor: theme.colors.gray30,
+      return {
+        display: "auto",
+        transition: "left 300ms",
+        transitionDelay: "left 300ms",
+        color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+        lineHeight: "0",
+
+        button: {
+          padding: "0.25rem",
+          "&:hover": {
+            backgroundColor: theme.colors.darkenedBgMix25,
+          },
         },
-      },
 
-      [`@media (min-width: ${theme.breakpoints.sm})`]: {
-        display: showSidebarCollapse ? "auto" : "none",
-      },
-    })
+        [`@media (min-width: ${theme.breakpoints.sm})`]: {
+          display: showSidebarCollapse ? "auto" : "none",
+        },
+      }
+    }
   )
 
 export const StyledLogoLink = styled.a(({}) => ({

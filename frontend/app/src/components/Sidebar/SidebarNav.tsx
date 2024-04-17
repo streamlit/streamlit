@@ -77,7 +77,6 @@ const SidebarNav = ({
       <StyledSidebarNavItems
         ref={navItemsRef}
         isExpanded={expanded}
-        hasSidebarElements={hasSidebarElements}
         data-testid="stSidebarNavItems"
       >
         {appPages.map((page: IAppPage, pageIndex: number) => {
