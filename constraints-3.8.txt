@@ -1,4 +1,4 @@
-aiohttp==3.9.4
+aiohttp==3.9.5
 aiosignal==1.3.1
 altair==5.3.0
 asn1crypto==1.5.1
@@ -147,7 +147,7 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==1.26.18
-virtualenv==20.25.1
+virtualenv==20.25.2
 watchdog==4.0.0
 yarl==1.9.4
 zipp==3.18.1
