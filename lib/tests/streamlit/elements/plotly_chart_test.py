@@ -114,8 +114,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
             ("rerun", True),
             ("ignore", False),
             (callback, True),
@@ -151,4 +149,4 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
             data = [trace0]
             with self.assertRaises(StreamlitAPIException) as exc:
-                st.plotly_chart(data, on_select=True)
+                st.plotly_chart(data, on_select="rerun")
