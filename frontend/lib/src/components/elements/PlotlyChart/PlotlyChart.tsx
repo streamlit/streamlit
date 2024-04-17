@@ -404,11 +404,11 @@ function PlotlyFigure({
       config={plotlyConfig}
       frames={plotlyFigure.frames ?? undefined}
       onSelected={
-        element.isSelectEnabled || !disabled ? handleSelection : () => {}
+        element.isSelectEnabled && !disabled ? handleSelection : () => {}
       }
       // TODO(lukasmasuch): double check if we need double click or not?
       onDeselect={
-        element.isSelectEnabled || !disabled ? resetSelections : () => {}
+        element.isSelectEnabled && !disabled ? resetSelections : () => {}
       }
       onInitialized={figure => {
         widgetMgr.setElementState(element.id, "figure", figure)
