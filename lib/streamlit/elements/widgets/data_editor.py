@@ -55,7 +55,11 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
+from streamlit.elements.utils import (
+    check_callback_rules,
+    check_session_state_rules,
+    check_widget_usage_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -778,6 +782,7 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
+        check_widget_usage_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
