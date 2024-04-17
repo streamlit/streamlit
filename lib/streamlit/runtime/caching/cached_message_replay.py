@@ -116,10 +116,10 @@ cache keys act as one true cache key, just split up because the second part depe
 on the first.
 
 We need to treat widgets as implicit arguments of the cached function, because
-the behavior of the function, inluding what elements are created and what it
+the behavior of the function, including what elements are created and what it
 returns, can be and usually will be influenced by the values of those widgets.
 For example:
-> @st.memo
+> @st.cache_data
 > def example_fn(x):
 >     y = x + 1
 >     if st.checkbox("hi"):
