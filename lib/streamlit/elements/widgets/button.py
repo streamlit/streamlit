@@ -553,12 +553,12 @@ class ButtonMixin:
 
         # Importing these functions here to avoid circular imports
         from streamlit.elements.utils import (
+            check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
-            check_widget_usage_rules,
         )
 
-        check_widget_usage_rules()
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
         check_callback_rules(self.dg, on_click)
 
@@ -717,14 +717,14 @@ class ButtonMixin:
 
         # Importing these functions here to avoid circular imports
         from streamlit.elements.utils import (
+            check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
-            check_widget_usage_rules,
         )
 
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
-        check_widget_usage_rules()
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         id = compute_widget_id(

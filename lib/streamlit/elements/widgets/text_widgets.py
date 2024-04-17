@@ -20,9 +20,9 @@ from typing import TYPE_CHECKING, Literal, cast, overload
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
-    check_widget_usage_rules,
     get_label_visibility_proto_value,
 )
 from streamlit.errors import StreamlitAPIException
@@ -255,7 +255,7 @@ class TextWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
-        check_widget_usage_rules()
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
@@ -517,7 +517,7 @@ class TextWidgetsMixin:
     ) -> str | None:
         key = to_key(key)
 
-        check_widget_usage_rules()
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
         maybe_raise_label_warnings(label, label_visibility)

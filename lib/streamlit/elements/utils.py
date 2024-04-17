@@ -103,12 +103,13 @@ in the cache decorator to enable widget replay and suppress this warning.
         )
 
 
-def check_widget_usage_rules() -> None:
-    """Check if a widget can be correctly used in the current context.
+def check_cache_replay_rules() -> None:
+    """Check if a widget is allowed to be used in the current context.
+    More specifically, this checks if the current context is inside a
+    cached function that disallows widget usage. If so, it raises a warning.
 
-    This currently only checks if a widget is used inside a cached function
-    with `experimental_allow_widgets=False` and shows a warning. But is supposed
-    to be extended to check for other similar cases in the future.
+    If there are other similar checks in the future, we could extend this
+    function to check for those as well. And rename it to check_widget_usage_rules.
     """
     if runtime.exists():
         from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
