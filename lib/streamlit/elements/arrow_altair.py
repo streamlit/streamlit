@@ -102,6 +102,9 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        title: str | alt.TitleParams | None = "",
+        title_x: str | None = None,
+        title_y: str | None = None,
     ) -> DeltaGenerator:
         """Display a line chart.
 
@@ -176,6 +179,16 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+        title : str, alt.TitleParams, or None
+            The title of the chart. If a string, it will be used as the title text.
+            To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
+            <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
+            If None, no title will be displayed.
+        title_x: str or None
+            The title of the x-axis. If None, no title will be displayed.
+        title_y: str or None
+            The title of the y-axis. If None, no title will be displayed.
+
 
         Examples
         --------
@@ -242,6 +255,9 @@ class ArrowAltairMixin:
             size_from_user=None,
             width=width,
             height=height,
+            title=title,
+            title_x=title_x,
+            title_y=title_y,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -260,6 +276,9 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        title: str | alt.TitleParams | None = "",
+        title_x: str | None = None,
+        title_y: str | None = None,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -334,6 +353,17 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+        title : str, alt.TitleParams, or None
+            The title of the chart. If a string, it will be used as the title text.
+            To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
+            <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
+            If None, no title will be displayed.
+        title_x: str or None
+            The title of the x-axis. If a string, it will be used as the x-axis title.
+            If None, no title will be displayed.
+        title_y: str or None
+            The title of the y-axis. If a string, it will be used as the y-axis title.
+            If None, no title will be displayed.
 
         Examples
         --------
@@ -401,6 +431,9 @@ class ArrowAltairMixin:
             size_from_user=None,
             width=width,
             height=height,
+            title=title,
+            title_x=title_x,
+            title_y=title_y,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -419,6 +452,9 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        title: str | alt.TitleParams | None = "",
+        title_x: str | None = None,
+        title_y: str | None = None,
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -493,6 +529,18 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+        title : str, alt.TitleParams, or None
+            The title of the chart. If a string, it will be used as the title text.
+            To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
+            <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
+            If None, no title will be displayed.
+        title_x: str or None
+            The title of the x-axis. If a string, it will be used as the x-axis title.
+            If None, no title will be displayed.
+        title_y: str or None
+            The title of the y-axis. If a string, it will be used as the y-axis title.
+            If None, no title will be displayed.
+
 
         Examples
         --------
@@ -562,6 +610,9 @@ class ArrowAltairMixin:
             size_from_user=None,
             width=width,
             height=height,
+            title=title,
+            title_x=title_x,
+            title_y=title_y,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -581,6 +632,9 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
+        title: str | alt.TitleParams | None = "",
+        title_x: str | None = None,
+        title_y: str | None = None,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
 
@@ -664,6 +718,17 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
+        title : str, alt.TitleParams, or None
+            The title of the chart. If a string, it will be used as the title text.
+            To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
+            <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
+            If None, no title will be displayed.
+        title_x: str or None
+            The title of the x-axis. If a string, it will be used as the x-axis title.
+            If None, no title will be displayed.
+        title_y: str or None
+            The title of the y-axis. If a string, it will be used as the y-axis title.
+            If None, no title will be displayed.
 
         Examples
         --------
@@ -735,6 +800,9 @@ class ArrowAltairMixin:
             size_from_user=size,
             width=width,
             height=height,
+            title=title,
+            title_x=title_x,
+            title_y=title_y,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -933,6 +1001,9 @@ def _generate_chart(
     size_from_user: str | float | None = None,
     width: int = 0,
     height: int = 0,
+    title: str | alt.TitleParams | None = "",
+    title_x: str | None = None,
+    title_y: str | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
@@ -980,9 +1051,10 @@ def _generate_chart(
         mark=chart_type.value["mark_type"],
         width=width,
         height=height,
+        title=title if title is not None else "",
     ).encode(
-        x=_get_x_encoding(df, x_column, x_from_user, chart_type),
-        y=_get_y_encoding(df, y_column, y_from_user),
+        x=_get_x_encoding(df, x_column, x_from_user, chart_type, title_x),
+        y=_get_y_encoding(df, y_column, y_from_user, chart_type, title_y),
     )
 
     # Set up opacity encoding.
@@ -1171,14 +1243,26 @@ def _get_opacity_encoding(
     return None
 
 
-def _get_axis_config(df: pd.DataFrame, column_name: str | None, grid: bool) -> alt.Axis:
+def _get_axis_config(
+    df: pd.DataFrame,
+    column_name: str | None,
+    grid: bool,
+    title_x: str | None,
+    title_y: str | None,
+) -> alt.Axis:
     import altair as alt
     from pandas.api.types import is_integer_dtype
 
     if column_name is not None and is_integer_dtype(df[column_name]):
+        if title_x is not None:
+            title = title_x
+        elif title_y is not None:
+            title = title_y
+        else:
+            title = None
         # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
         # and deactivate grid lines for x-axis
-        return alt.Axis(tickMinStep=1, grid=grid)
+        return alt.Axis(tickMinStep=1, grid=grid, title=title)
 
     return alt.Axis(grid=grid)
 
@@ -1222,6 +1306,7 @@ def _get_x_encoding(
     x_column: str | None,
     x_from_user: str | None,
     chart_type: ChartType,
+    title_x: str | None,
 ) -> alt.X:
     import altair as alt
 
@@ -1247,13 +1332,15 @@ def _get_x_encoding(
             x_title = ""
         else:
             x_title = x_column
+    if title_x is not None:
+        x_title = title_x
 
     return alt.X(
         x_field,
         title=x_title,
         type=_get_x_encoding_type(df, chart_type, x_column),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, x_column, grid=False),
+        axis=_get_axis_config(df, x_column, grid=False, title_x=title_x, title_y=None),
     )
 
 
@@ -1261,6 +1348,8 @@ def _get_y_encoding(
     df: pd.DataFrame,
     y_column: str | None,
     y_from_user: str | Sequence[str] | None,
+    chart_type: ChartType,
+    title_y: str | None,
 ) -> alt.Y:
     import altair as alt
 
@@ -1287,12 +1376,15 @@ def _get_y_encoding(
         else:
             y_title = y_column
 
+    if title_y is not None:
+        y_title = title_y
+
     return alt.Y(
         field=y_field,
         title=y_title,
         type=_get_y_encoding_type(df, y_column),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, y_column, grid=True),
+        axis=_get_axis_config(df, y_column, grid=True, title_x=None, title_y=title_y),
     )
 
 
