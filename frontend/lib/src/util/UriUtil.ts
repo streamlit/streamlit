@@ -161,7 +161,7 @@ export function isValidOrigin(
   }
 
   // Allow localhost w/ any port for testing of host <-> guest communication
-  // using hostframe.html (facilitates manual & Cypress e2e testing)
+  // using hostframe.html (facilitates manual & e2e testing)
   if (
     allowedUrl.protocol !== testUrl.protocol ||
     (allowedUrl.port !== testUrl.port && testUrl.hostname !== "localhost")
