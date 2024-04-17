@@ -23,7 +23,6 @@ np.random.seed(0)
 data = np.random.randn(200, 3)
 df = pd.DataFrame(data, columns=["a", "b", "c"])
 chart = alt.Chart(df).mark_circle().encode(x="a", y="b", size="c", color="c")
-st.altair_chart(chart, theme=None)
 
 st.write("Show default vega lite theme:")
 st.altair_chart(chart, theme=None)
@@ -105,3 +104,15 @@ base = (
 
 new_base_chart = base.mark_line() + base.mark_point()
 st.altair_chart(new_base_chart)
+
+x = np.linspace(10, 100, 10)
+y1 = 5 * x
+y2 = 1 / x
+
+df1 = pd.DataFrame.from_dict({"x": x, "y1": y1, "y2": y2})
+
+c1 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y1"))
+
+c2 = alt.Chart(df1).mark_line().encode(alt.X("x"), alt.Y("y2"))
+
+st.altair_chart(c1 & c2, use_container_width=True)

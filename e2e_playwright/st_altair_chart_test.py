@@ -33,8 +33,9 @@ def test_altair_chart_displays_correctly(
         "st_altair_chart-pie_chart_large_legend_items",
         "st_altair_chart-grouped_bar_chart_default_theme",
         "st_altair_chart-grouped_bar_chart_streamlit_theme",
-        "st_altair_chart-grouped_use_container_width_default_theme"
+        "st_altair_chart-grouped_use_container_width_default_theme",
         "st_altair_chart-grouped_layered_line_chart_streamlit_theme",
+        "st_altair_chart-vconcat_width",
     ]
     for i, name in enumerate(snapshot_names):
         assert_snapshot(
