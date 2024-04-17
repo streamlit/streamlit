@@ -1254,12 +1254,7 @@ def _get_axis_config(
     from pandas.api.types import is_integer_dtype
 
     if column_name is not None and is_integer_dtype(df[column_name]):
-        if title_x is not None:
-            title = title_x
-        elif title_y is not None:
-            title = title_y
-        else:
-            title = None
+        title = title_x or title_y or None
         # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
         # and deactivate grid lines for x-axis
         return alt.Axis(tickMinStep=1, grid=grid, title=title)
