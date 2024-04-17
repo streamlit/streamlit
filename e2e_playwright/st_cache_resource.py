@@ -19,7 +19,7 @@ st.button("click to rerun")
 side_effects = []
 
 
-@st.cache_data(experimental_allow_widgets=True)
+@st.cache_resource(experimental_allow_widgets=True)
 def foo():
     side_effects.append("function ran")
     r = st.radio("radio", ["foo", "bar", "baz", "qux"], index=1)
@@ -31,7 +31,7 @@ foo()
 st.text(side_effects)
 
 
-@st.cache_data
+@st.cache_resource
 def with_cached_widget_warning():
     st.write("Cached function that should show a widget usage warning.")
     st.selectbox("selectbox", ["foo", "bar", "baz", "qux"], index=1)
@@ -41,12 +41,12 @@ if st.button("Run cached function with widget warning"):
     with_cached_widget_warning()
 
 
-@st.cache_data(experimental_allow_widgets=True)
+@st.cache_resource(experimental_allow_widgets=True)
 def inner_cache_function():
     st.radio("radio 2", ["foo", "bar", "baz", "qux"], index=1)
 
 
-@st.cache_data(experimental_allow_widgets=False)
+@st.cache_resource(experimental_allow_widgets=False)
 def nested_cached_function():
     inner_cache_function()
     st.selectbox("selectbox 2", ["foo", "bar", "baz", "qux"], index=1)
@@ -62,12 +62,11 @@ if st.button("Run nested cached function with widget warning"):
     # experimental_allow_widgets is set to False.
     nested_cached_function()
 
-
 if "run_counter" not in st.session_state:
     st.session_state.run_counter = 0
 
 
-@st.cache_data
+@st.cache_resource
 def replay_element():
     st.session_state.run_counter += 1
     st.markdown(f"Cache executions: {st.session_state.run_counter}")

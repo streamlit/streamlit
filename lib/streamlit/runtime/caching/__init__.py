@@ -14,8 +14,7 @@
 
 from __future__ import annotations
 
-import contextlib
-from typing import Any, Iterator
+from typing import Any
 
 from google.protobuf.message import Message
 
@@ -84,21 +83,6 @@ def save_media_data(image_data: bytes | str, mimetype: str, image_id: str) -> No
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_image_data(image_data, mimetype, image_id)
 
 
-def maybe_show_cached_st_function_warning(dg, st_func_name: str) -> None:
-    CACHE_DATA_MESSAGE_REPLAY_CTX.maybe_show_cached_st_function_warning(
-        dg, st_func_name
-    )
-    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.maybe_show_cached_st_function_warning(
-        dg, st_func_name
-    )
-
-
-@contextlib.contextmanager
-def suppress_cached_st_function_warning() -> Iterator[None]:
-    with CACHE_DATA_MESSAGE_REPLAY_CTX.suppress_cached_st_function_warning(), CACHE_RESOURCE_MESSAGE_REPLAY_CTX.suppress_cached_st_function_warning():
-        yield
-
-
 # Explicitly export public symbols
 from streamlit.runtime.caching.cache_data_api import get_data_cache_stats_provider
 from streamlit.runtime.caching.cache_resource_api import (
@@ -136,8 +120,6 @@ __all__ = [
     "save_block_message",
     "save_widget_metadata",
     "save_media_data",
-    "maybe_show_cached_st_function_warning",
-    "suppress_cached_st_function_warning",
     "get_data_cache_stats_provider",
     "get_resource_cache_stats_provider",
     "cache_data",

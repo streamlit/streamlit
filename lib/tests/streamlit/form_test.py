@@ -343,6 +343,21 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             submitted = st.form_submit_button("Submit")
             self.assertEqual(submitted, True)
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+
+        @st.cache_data
+        def cached_function():
+            with st.form("form"):
+                st.form_submit_button("Submit")
+
+        cached_function()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class FormStateInteractionTest(DeltaGeneratorTestCase):

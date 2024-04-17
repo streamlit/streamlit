@@ -528,11 +528,6 @@ class DeltaGenerator(
                 "call your fragment function inside a `with st.sidebar` context manager."
             )
 
-        # Warn if we're called from within a legacy @st.cache function
-        legacy_caching.maybe_show_cached_st_function_warning(dg, delta_type)
-        # Warn if we're called from within @st.memo or @st.singleton
-        caching.maybe_show_cached_st_function_warning(dg, delta_type)
-
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
 

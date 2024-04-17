@@ -239,3 +239,12 @@ class ChatTest(DeltaGeneratorTestCase):
             SESSION_STATE_WRITES_NOT_ALLOWED_ERROR_TEXT,
             str(exception_message.value),
         )
+
+    def test_chat_input_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.chat_input("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)

@@ -203,6 +203,15 @@ class SelectboxTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         self.assertEqual(c.placeholder, "Please select")
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.selectbox("the label", ["Coffee", "Tea", "Water"]))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 def test_selectbox_interaction():
     """Test interactions with an empty selectbox widget."""
