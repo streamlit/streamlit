@@ -14,7 +14,7 @@
 
 """time_input unit test."""
 
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 from parameterized import parameterized
 
@@ -113,25 +113,25 @@ class TimeInputTest(DeltaGeneratorTestCase):
 
     def test_st_time_input(self):
         """Test st.time_input."""
-        value = datetime.time(8, 45)
+        value = time(8, 45)
         st.time_input("Set an alarm for", value)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.time_input.default, "08:45")
-        self.assertEqual(el.time_input.step, datetime.timedelta(minutes=15).seconds)
+        self.assertEqual(el.time_input.step, timedelta(minutes=15).seconds)
 
     def test_st_time_input_with_step(self):
         """Test st.time_input with step."""
-        value = datetime.time(9, 00)
-        st.time_input("Set an alarm for", value, step=datetime.timedelta(minutes=5))
+        value = time(9, 00)
+        st.time_input("Set an alarm for", value, step=timedelta(minutes=5))
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.time_input.default, "09:00")
-        self.assertEqual(el.time_input.step, datetime.timedelta(minutes=5).seconds)
+        self.assertEqual(el.time_input.step, timedelta(minutes=5).seconds)
 
     def test_st_time_input_exceptions(self):
         """Test st.time_input exceptions."""
-        value = datetime.time(9, 00)
+        value = time(9, 00)
         with self.assertRaises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=True)
         with self.assertRaises(StreamlitAPIException):
@@ -141,9 +141,9 @@ class TimeInputTest(DeltaGeneratorTestCase):
         with self.assertRaises(StreamlitAPIException):
             st.time_input("Set an alarm for", value, step=59)
         with self.assertRaises(StreamlitAPIException):
-            st.time_input("Set an alarm for", value, step=datetime.timedelta(hours=24))
+            st.time_input("Set an alarm for", value, step=timedelta(hours=24))
         with self.assertRaises(StreamlitAPIException):
-            st.time_input("Set an alarm for", value, step=datetime.timedelta(days=1))
+            st.time_input("Set an alarm for", value, step=timedelta(days=1))
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
