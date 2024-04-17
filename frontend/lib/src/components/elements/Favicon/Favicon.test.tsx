@@ -33,6 +33,15 @@ const SATELLITE_TWEMOJI_URL =
 const CRESCENT_MOON_TWEMOJI_URL =
   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f319.png"
 
+const FLAG_MATERIAL_ICON_URL =
+  "https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/flag/baseline.svg"
+
+const SMART_DISPLAY_MATERIAL_OUTLINED_ICON_URL =
+  "https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/smart_display/outline.svg"
+
+const ACCESSIBILITY_NEW_MATERIAL_ROUNDED_ICON_URL =
+  "https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/accessibility_new/round.svg"
+
 test("is set up with the default favicon", () => {
   expect(getFaviconHref()).toBe("http://localhost/default.png")
 })
@@ -57,6 +66,21 @@ describe("Favicon element", () => {
   it("handles emoji variants correctly", () => {
     handleFavicon("🛰", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(SATELLITE_TWEMOJI_URL)
+  })
+
+  it("handles icon material icon correctly", () => {
+    handleFavicon(":material/flag:", jest.fn(), endpoints)
+    expect(getFaviconHref()).toBe(FLAG_MATERIAL_ICON_URL)
+  })
+
+  it("handles material-outlined icon correctly", () => {
+    handleFavicon(":material-outlined/smart_display:", jest.fn(), endpoints)
+    expect(getFaviconHref()).toBe(SMART_DISPLAY_MATERIAL_OUTLINED_ICON_URL)
+  })
+
+  it("handles material-rounded icon correctly", () => {
+    handleFavicon(":material-rounded/AccessibilityNew:", jest.fn(), endpoints)
+    expect(getFaviconHref()).toBe(ACCESSIBILITY_NEW_MATERIAL_ROUNDED_ICON_URL)
   })
 
   it("handles emoji shortcodes containing a dash correctly", () => {
