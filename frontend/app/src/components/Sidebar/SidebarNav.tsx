@@ -94,7 +94,7 @@ const NavSection = ({
                 }}
               >
                 {page.icon && page.icon.length && (
-                  <DynamicIcon size="lg" iconValue={page.icon} />
+                  <DynamicIcon size="md" iconValue={page.icon} />
                 )}
                 <StyledSidebarLinkText isActive={isActive}>
                   {tooltipContent}

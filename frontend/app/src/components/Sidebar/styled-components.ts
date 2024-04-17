@@ -71,14 +71,21 @@ export const StyledSidebarNavContainer = styled.div(() => ({
   position: "relative",
 }))
 
-export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => ({
-  paddingLeft: theme.spacing.sm,
-  paddingRight: theme.spacing.sm,
-  marginLeft: theme.spacing.lg,
-  marginRight: theme.spacing.lg,
-  marginTop: theme.spacing.md,
-  marginBottom: theme.spacing.md,
-}))
+export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
+  const isLightTheme = hasLightBackgroundColor(theme)
+
+  return {
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
+    color: isLightTheme ? theme.colors.gray80 : theme.colors.gray50,
+    lineHeight: theme.lineHeights.table,
+    paddingRight: theme.spacing.sm,
+    marginLeft: theme.spacing.twoXL,
+    marginRight: theme.spacing.twoXL,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.twoXS,
+  }
+})
 
 export interface StyledSidebarNavItemsProps {
   isExpanded: boolean
@@ -110,7 +117,7 @@ export const StyledViewButton = styled.button(({ theme }) => {
     border: "none",
     borderRadius: "0.5rem",
     marginTop: "0.25rem",
-    marginLeft: "1rem",
+    marginLeft: "1.25rem",
     padding: "0.125rem 0.5rem 0.125rem 0.5rem",
     "&:hover, &:active, &:focus": {
       border: "none",
@@ -139,6 +146,15 @@ export interface StyledSidebarNavLinkProps {
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
+    const isLightTheme = hasLightBackgroundColor(theme)
+    const activeSvgColor = isLightTheme
+      ? theme.colors.gray85
+      : theme.colors.gray10
+    const svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
+    const activeBgColor = isLightTheme
+      ? theme.colors.darkenedBgMix15
+      : theme.colors.gray100
+
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? 600 : 400,
@@ -154,13 +170,18 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
-      marginLeft: theme.spacing.lg,
-      marginRight: theme.spacing.lg,
+      marginLeft: theme.spacing.twoXL,
+      marginRight: theme.spacing.twoXL,
       marginTop: theme.spacing.threeXS,
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
-      backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
+      color: isLightTheme ? theme.colors.gray80 : theme.colors.gray40,
+      backgroundColor: isActive ? activeBgColor : "transparent",
+
+      "> svg": {
+        color: isActive ? activeSvgColor : svgColor,
+      },
 
       "&:hover": {
         backgroundColor: isActive
