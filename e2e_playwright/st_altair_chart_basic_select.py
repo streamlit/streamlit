@@ -39,7 +39,7 @@ base = (
 
 chart_point = base.add_params(point)
 st.subheader("Scatter chart with selection_point")
-st.altair_chart(chart_point, on_select=True, key="scatter_point")
+st.altair_chart(chart_point, on_select="rerun", key="scatter_point")
 if st.session_state.scatter_point and len(st.session_state.scatter_point.select) > 0:
     st.dataframe(st.session_state.scatter_point)
 

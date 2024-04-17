@@ -43,7 +43,7 @@ for y_encoding in ["petalLength:Q", "petalWidth:Q"]:
     chart &= row
 chart = chart.add_params(point)
 chart = chart.add_params(interval)
-st.altair_chart(chart, on_select=True, key="repeat_chart")
+st.altair_chart(chart, on_select="rerun", key="repeat_chart")
 if len(st.session_state.repeat_chart.select) > 0:
     st.dataframe(st.session_state.repeat_chart)
 
@@ -65,7 +65,7 @@ base = (
 # This layering must be in an exact order, otherwise this code will not work
 chart = base.mark_line() + base.mark_point()
 chart = chart.add_params(point)
-st.altair_chart(chart, on_select=True, key="layered_chart")
+st.altair_chart(chart, on_select="rerun", key="layered_chart")
 if len(st.session_state.layered_chart.select) > 0:
     st.dataframe(st.session_state.layered_chart)
 
@@ -87,7 +87,7 @@ chart = alt.hconcat()
 for species in ["setosa", "versicolor", "virginica"]:
     chart |= base.transform_filter(alt.datum.species == species)
 chart = chart.add_params(point)
-facet_selection = st.altair_chart(chart, on_select=True, key="facet_chart")
+facet_selection = st.altair_chart(chart, on_select="rerun", key="facet_chart")
 if len(facet_selection.select) > 0:
     st.dataframe(facet_selection)
 
@@ -114,7 +114,7 @@ upper = base.encode(alt.X("date:T").scale(domain=brush))
 lower = base.properties(height=60).add_params(brush)
 
 chart = alt.vconcat(upper, lower)
-st.altair_chart(chart, on_select=True, key="vconcat_chart")
+st.altair_chart(chart, on_select="rerun", key="vconcat_chart")
 if len(st.session_state.vconcat_chart.select) > 0:
     st.dataframe(st.session_state.vconcat_chart)
 
