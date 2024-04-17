@@ -27,6 +27,7 @@ def foo():
 
 
 foo()
+
 st.text(side_effects)
 
 
@@ -36,7 +37,8 @@ def with_cached_widget_warning():
     st.selectbox("selectbox", ["foo", "bar", "baz", "qux"], index=1)
 
 
-with_cached_widget_warning()
+if st.button("Run cached function with widget warning"):
+    with_cached_widget_warning()
 
 
 @st.cache_data(experimental_allow_widgets=True)
@@ -50,6 +52,20 @@ def nested_cached_function():
     st.selectbox("selectbox 2", ["foo", "bar", "baz", "qux"], index=1)
 
 
-nested_cached_function()
+if st.button("Run nested cached function with widget warning"):
+    nested_cached_function()
 
-# TODO: trigger the calls with buttons and add test for the nested case
+
+if "run_counter" not in st.session_state:
+    st.session_state.run_counter = 0
+
+
+@st.cache_data
+def replay_element():
+    st.session_state.run_counter += 1
+    st.markdown(f"Cache executions: {st.session_state.run_counter}")
+    return st.session_state.run_counter
+
+
+if st.button("Cached function with element replay"):
+    st.write("Cache return", replay_element())
