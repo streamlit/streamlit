@@ -28,53 +28,45 @@ df = pd.DataFrame(
     columns=("col_%d" % i for i in range(5)),
 )
 
+selection_mode = st.multiselect(
+    "Select the selection modes",
+    ["single-row", "multi-row", "multi-column", "single-column"],
+    default=["single-row"],
+)
 
-st.header("Single row selection:")
+st.header("Row & column selections:")
 
 selection = st.dataframe(
-    df,
-    hide_index=True,
-    on_select=True,
-    selection_mode="single-row",
+    df, hide_index=True, on_select="rerun", selection_mode=selection_mode
 )
-st.write("Selected row:", selection)
+st.write("Dataframe selection:", selection)
 
-st.header("Multi row selection:")
-
-selection = st.dataframe(
-    df,
-    hide_index=True,
-    on_select=True,
-    selection_mode="multi-row",
-)
-st.write("Selected rows:", selection)
-
-st.header("Row selection callback:")
-
-
-def on_row_selection():
-    st.write("Rows selected", st.session_state.row_selection)
-
-
-st.dataframe(
-    df,
-    hide_index=True,
-    on_select=on_row_selection,
-    selection_mode="multi-row",
-    key="row_selection",
-)
-
-st.header("Row selections in form:")
-
+st.header("Selections in form:")
 
 with st.form(key="my_form"):
     selection = st.dataframe(
         df,
         hide_index=True,
-        on_select=True,
-        selection_mode="multi-row",
-        key="row_selection_in_form",
+        on_select="rerun",
+        selection_mode=selection_mode,
+        key="df_selection_in_form",
     )
     st.form_submit_button("Submit")
-st.write("Selected rows:", selection)
-st.write("Selected rows in session state:", st.session_state.row_selection_in_form)
+st.write("Dataframe selection:", selection)
+st.write("Dataframe selection in session state:", st.session_state.df_selection_in_form)
+
+
+st.header("Selection callback:")
+
+
+def on_selection():
+    st.write("Dataframe selection:", st.session_state.df_selection)
+
+
+st.dataframe(
+    df,
+    hide_index=True,
+    on_select=on_selection,
+    selection_mode=selection_mode,
+    key="df_selection",
+)

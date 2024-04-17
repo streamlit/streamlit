@@ -45,7 +45,7 @@ import Toolbar, {
   ToolbarAction,
 } from "@streamlit/lib/src/components/shared/Toolbar"
 
-import EditingState from "./EditingState"
+import EditingState, { getColumnName } from "./EditingState"
 import {
   useCustomTheme,
   useTableSizer,
@@ -247,12 +247,18 @@ function DataFrame({
         // conform with the Python naming conventions.
         select: {
           rows: [] as number[],
+          columns: [] as string[],
         },
       }
 
       selectionState.select.rows = newSelection.rows.toArray().map(row => {
         return getOriginalIndex(row)
       })
+      selectionState.select.columns = newSelection.columns
+        .toArray()
+        .map(columnIdx => {
+          return getColumnName(originalColumns[columnIdx])
+        })
       const newWidgetState = JSON.stringify(selectionState)
       const currentWidgetState = widgetMgr.getStringValue(
         element as WidgetInfo
@@ -263,9 +269,14 @@ function DataFrame({
         currentWidgetState === undefined ||
         currentWidgetState !== newWidgetState
       ) {
-        widgetMgr.setStringValue(element as WidgetInfo, newWidgetState, {
-          fromUi: true,
-        })
+        widgetMgr.setStringValue(
+          element as WidgetInfo,
+          newWidgetState,
+          {
+            fromUi: true,
+          },
+          fragmentId
+        )
       }
     }),
     [widgetMgr, element]
@@ -418,11 +429,23 @@ function DataFrame({
 
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
+
   const isRowSelectionActivated =
-    element.rowSelectionMode !== ArrowProto.RowSelectionMode.NONE
-  const isMultiRowSelectionActivated =
-    element.rowSelectionMode === ArrowProto.RowSelectionMode.MULTI
+    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW) ||
+    element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_ROW)
+  const isMultiRowSelectionActivated = element.selectionMode.includes(
+    ArrowProto.SelectionMode.MULTI_ROW
+  )
+  const isColumnSelectionActivated =
+    element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_COLUMN) ||
+    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN)
+
+  const isMultiColumnSelectionActivated = element.selectionMode.includes(
+    ArrowProto.SelectionMode.MULTI_COLUMN
+  )
+
   const isRowSelected = gridSelection.rows.length > 0
+  const isColumnSelected = gridSelection.columns.length > 0
   const isCellSelected = gridSelection.current !== undefined
 
   const freezeColumns = isEmptyTable
@@ -527,7 +550,8 @@ function DataFrame({
         onCollapse={collapse}
         target={StyledResizableContainer}
       >
-        {isRowSelectionActivated && isRowSelected && (
+        {((isRowSelectionActivated && isRowSelected) ||
+          (isColumnSelectionActivated && isColumnSelected)) && (
           <ToolbarAction
             label={"Clear selection"}
             icon={Close}
@@ -673,9 +697,9 @@ function DataFrame({
           }}
           // Header click is used for column sorting:
           onHeaderClicked={(colIndex: number, _event) => {
-            console.log("Header clicked")
-            if (isEmptyTable || isLargeTable) {
-              // Deactivate sorting for empty state and for large dataframes
+            if (isEmptyTable || isLargeTable || isColumnSelectionActivated) {
+              // Deactivate sorting for empty state, for large dataframes, or
+              // when column selection is activated.
               return undefined
             }
             clearSelection()
@@ -696,9 +720,13 @@ function DataFrame({
               // So we allow selection changes for touch devices even when it is not focused.
               const rowSelectionChanged =
                 newSelection.rows !== gridSelection.rows
+
+              const columnSelectionChanged =
+                newSelection.columns !== gridSelection.columns
+
               let updatedSelection = newSelection
               if (
-                isRowSelectionActivated &&
+                (isRowSelectionActivated || isColumnSelectionActivated) &&
                 newSelection.current !== undefined
               ) {
                 // The default behavior is that row selections are cleared when a cell is selected.
@@ -707,11 +735,15 @@ function DataFrame({
                 updatedSelection = {
                   ...newSelection,
                   rows: gridSelection.rows,
+                  columns: gridSelection.columns,
                 }
               }
               setGridSelection(updatedSelection)
 
-              if (isRowSelectionActivated && rowSelectionChanged) {
+              if (
+                (isRowSelectionActivated && rowSelectionChanged) ||
+                (isColumnSelectionActivated && columnSelectionChanged)
+              ) {
                 applySelections(updatedSelection)
               }
 
@@ -780,6 +812,16 @@ function DataFrame({
                 : isMultiRowSelectionActivated
                 ? "multi"
                 : "single",
+              rowSelectionBlending: "mixed",
+            })}
+          {...(!isEmptyTable &&
+            isColumnSelectionActivated && {
+              columnSelect: disabled
+                ? "none"
+                : isMultiColumnSelectionActivated
+                ? "multi"
+                : "single",
+              columnSelectionBlending: "mixed",
             })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&

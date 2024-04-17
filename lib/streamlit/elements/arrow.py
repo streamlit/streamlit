@@ -24,6 +24,7 @@ from typing import (
     Iterable,
     List,
     Literal,
+    Set,
     TypedDict,
     Union,
     cast,
@@ -43,6 +44,7 @@ from streamlit.elements.lib.column_config_utils import (
     update_column_config,
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -70,6 +72,10 @@ Data: TypeAlias = Union[
     None,
 ]
 
+SelectionMode: TypeAlias = Literal[
+    "single-row", "multi-row", "single-column", "multi-column"
+]
+
 
 class DataframeSelectState(TypedDict, total=False):
     """
@@ -78,10 +84,13 @@ class DataframeSelectState(TypedDict, total=False):
     Attributes
     ----------
     rows
-        The selected rows in the dataframe.
+        The selected rows (numerical indices) in the dataframe.
+    columns
+        The selected columns (names) in the dataframe.
     """
 
     rows: list[int]
+    columns: list[str]
 
 
 class DataframeState(TypedDict, total=False):
@@ -106,6 +115,7 @@ class DataframeSelectionSerde:
             {
                 "select": {
                     "rows": [],
+                    "columns": [],
                 },
             }
             if ui_value is None
@@ -115,12 +125,52 @@ class DataframeSelectionSerde:
         if "select" not in selection_state:
             selection_state["select"] = {
                 "rows": [],
+                "columns": [],
             }
 
         return selection_state
 
     def serialize(self, editing_state: DataframeState) -> str:
         return json.dumps(editing_state, default=str)
+
+
+def parse_selection_mode(
+    selection_mode: SelectionMode | Iterable[SelectionMode],
+) -> Set[ArrowProto.SelectionMode.ValueType]:
+    if isinstance(selection_mode, str):
+        selection_mode_set = {selection_mode}
+    else:
+        selection_mode_set = set(selection_mode)
+
+    if not selection_mode_set.issubset(
+        {"single-row", "multi-row", "single-column", "multi-column"}
+    ):
+        raise StreamlitAPIException(
+            f"Invalid selection mode: {selection_mode}. "
+            "Valid options are `single-row`, `multi-row`, `single-column`, `multi-column`."
+        )
+
+    if selection_mode_set.issuperset({"single-row", "multi-row"}):
+        raise StreamlitAPIException(
+            "Only one of `single-row` or `multi-row` can be selected as selection mode."
+        )
+
+    if selection_mode_set.issuperset({"single-column", "multi-column"}):
+        raise StreamlitAPIException(
+            "Only one of `single-column` or `multi-column` can be selected as selection mod."
+        )
+
+    parsed_selection_modes = list()
+    for selection_mode in selection_mode_set:
+        if selection_mode == "single-row":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_ROW)
+        elif selection_mode == "multi-row":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_ROW)
+        elif selection_mode == "single-column":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.SINGLE_COLUMN)
+        elif selection_mode == "multi-column":
+            parsed_selection_modes.append(ArrowProto.SelectionMode.MULTI_COLUMN)
+    return parsed_selection_modes
 
 
 class ArrowMixin:
@@ -154,7 +204,7 @@ class ArrowMixin:
         column_config: ColumnConfigMappingInput | None = None,
         key: Key | None = None,
         on_select: Callable[..., None] | Literal["rerun"] = "rerun",
-        selection_mode: Literal["single-row", "multi-row"] = "multi-row",
+        selection_mode: Literal["single-row", "multi-row", ""] = "multi-row",
     ) -> DataframeState:
         ...
 
@@ -171,7 +221,7 @@ class ArrowMixin:
         column_config: ColumnConfigMappingInput | None = None,
         key: Key | None = None,
         on_select: Callable[..., None] | Literal["ignore", "rerun"] = "ignore",
-        selection_mode: Literal["single-row", "multi-row"] = "multi-row",
+        selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -242,11 +292,14 @@ class ArrowMixin:
               callback function before the rest of the app. The selection data can be retrieved through
               session state by setting the key parameter.
 
-        selection_mode : "single-row" or "multi-row"
+        selection_mode : "single-row", "multi-row", single-column", "multi-column", or an iterable of these
             The selection mode of the table. Can be one of:
 
             - “multi-row” (default): Multiple rows can be selected at a time.
             - “single-row”: Only one row can be selected at a time.
+            - “multi-column”: Multiple columns can be selected at a time.
+            - “single-column”: Only one column can be selected at a time.
+            - An iterable of the above options: The table will allow selection based on the modes specified.
 
         Examples
         --------
@@ -381,11 +434,7 @@ class ArrowMixin:
         if on_select != "ignore":
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
-            proto.row_selection_mode = (
-                ArrowProto.RowSelectionMode.MULTI
-                if selection_mode == "multi-row"
-                else ArrowProto.RowSelectionMode.SINGLE
-            )
+            proto.selection_mode.extend(parse_selection_mode(selection_mode))
             proto.form_id = current_form_id(self.dg)
 
             # We want to do this as early as possible to avoid introducing nondeterminism,
