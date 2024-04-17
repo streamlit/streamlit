@@ -351,6 +351,8 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
             with st.form("form"):
                 st.form_submit_button("Submit")
 
+        cached_function()
+
         # The widget itself is still created, so we need to go back one element more:
         el = self.get_delta_from_queue(-2).new_element.exception
         self.assertEqual(el.type, "CachedWidgetWarning")
