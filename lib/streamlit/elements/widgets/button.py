@@ -438,7 +438,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
     ) -> DeltaGenerator:
-        """Display a link to another page in a multipage app or to an external page.
+        r"""Display a link to another page in a multipage app or to an external page.
 
         If another page in a multipage app is specified, clicking ``st.page_link``
         stops the current page execution and runs the specified page as if the
