@@ -256,8 +256,11 @@ function PlotlyFigure({
     // point_indices to replicate pythonic return value
     returnValue.select.point_indices = pointIndices
 
-    if (selections) {
-      selections.forEach((selection: any) => {
+    // event.selections doesn't show up in the PlotSelectionEvent
+    // @ts-expect-error
+    if (event.selections) {
+      // @ts-expect-error
+      event.selections.forEach((selection: any) => {
         // box selection
         if (selection.type === "rect") {
           const xAndy = parseBoxSelection(selection)
@@ -297,41 +300,33 @@ function PlotlyFigure({
   }
 
   const reset = useCallback((): void => {
-    const dragmode = plotlyFigure.layout.dragmode
-    if ((dragmode && dragmode === "lasso") || dragmode == "select") {
-      widgetMgr.setStringValue(element, "{}", { fromUi: true }, fragmentId)
-    }
-  }, [plotlyFigure, widgetMgr, element, fragmentId])
+    widgetMgr.setStringValue(element, "{}", { fromUi: true }, fragmentId)
 
-  const onFormCleared = useCallback(() => {
-    const spec = applyTheming(element, initialFigure, theme)
-    // https://plotly.com/javascript/reference/layout/#layout-clickmode
-    // This allows single selections and shift click to add / remove selections
-    if (element.isSelectEnabled) {
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    } else {
-      spec.layout.clickmode = initialFigure.layout.clickmode
-      spec.layout.hovermode = initialFigure.layout.hovermode
-    }
-    setPlotlyFigure(spec)
-  }, [widgetMgr, element.id, element.figure, theme, element.theme])
+    // Reset the selection info within the plotly figure
+    setPlotlyFigure({
+      ...plotlyFigure,
+      data: plotlyFigure.data.map((trace: any) => {
+        return {
+          ...trace,
+          selectedpoints: [],
+        }
+      }),
+      layout: {
+        ...plotlyFigure.layout,
+        selections: [],
+      },
+    })
+  }, [plotlyFigure, widgetMgr, element, fragmentId])
 
   // This is required for the form clearing functionality:
   React.useEffect(() => {
     const formClearHelper = new FormClearHelper()
-    formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      onFormCleared
-    )
+    formClearHelper.manageFormClearListener(widgetMgr, element.formId, reset)
 
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, onFormCleared, widgetMgr])
-
-  const enableSelection = element.isSelectEnabled && !disabled
+  }, [element.formId, reset, widgetMgr])
 
   return (
     <Plot
@@ -341,24 +336,18 @@ function PlotlyFigure({
       layout={plotlyFigure.layout}
       config={plotlyConfig}
       frames={plotlyFigure.frames}
-      onSelected={enableSelection ? handleSelect : () => {}}
-      onInitialized={
-        enableSelection
-          ? figure => {
-              widgetMgr.setElementState(element.id, "figure", figure)
-            }
-          : () => {}
+      onSelected={
+        element.isSelectEnabled || !disabled ? handleSelect : () => {}
       }
-      onUpdate={
-        enableSelection
-          ? figure => {
-              widgetMgr.setElementState(element.id, "figure", figure)
-              setPlotlyFigure(figure)
-            }
-          : () => {}
-      }
-      onDoubleClick={enableSelection ? reset : () => {}}
-      onDeselect={enableSelection ? reset : () => {}}
+      onDoubleClick={element.isSelectEnabled || !disabled ? reset : () => {}}
+      onDeselect={element.isSelectEnabled || !disabled ? reset : () => {}}
+      onInitialized={figure => {
+        widgetMgr.setElementState(element.id, "figure", figure)
+      }}
+      onUpdate={figure => {
+        widgetMgr.setElementState(element.id, "figure", figure)
+        setPlotlyFigure(figure)
+      }}
     />
   )
 }
