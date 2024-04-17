@@ -85,7 +85,7 @@ def _on_select(
     key: str | None = None,
 ) -> AttributeDictionary:
     if on_select != ON_SELECTION_IGNORE:
-        # Must change on_select to None otherwise register_widget will error with on_change_handler to a bool or str
+        # Must change on_select to None otherwise register_widget will error with on_change_handler to a str
         if isinstance(on_select, str):
             on_select = None
 
