@@ -64,8 +64,6 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   return { pack: iconPack, icon: iconNameInPack }
 }
 
-// TODO(kajarenc): Think about writing this type with omit / type combinators
-// based on IconProps and EmojiIconProps
 interface DynamicIconProps {
   iconValue: string
   size?: IconSize

@@ -53,7 +53,6 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        # TODO( kajarenc) Generalize this code
         if icon is not None and icon.startswith(":material"):
             alert_proto.icon = validate_material_icon(icon)
         else:
@@ -90,7 +89,6 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        # TODO(kajarenc): Generalize this code
         if icon is not None and icon.startswith(":material"):
             alert_proto.icon = validate_material_icon(icon)
         else:
@@ -128,7 +126,6 @@ class AlertMixin:
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
 
-        # TODO(kajarenc): Generalize this code
         if icon is not None and icon.startswith(":material"):
             alert_proto.icon = validate_material_icon(icon)
         else:

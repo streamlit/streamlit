@@ -25,7 +25,7 @@ function iconToUrl(icon: string): string {
   const matchResult = icon.match(iconRegexp)
   let snakeIconName = ""
   if (matchResult === null) {
-    // TODO[kajarenc]: Maybe add a warning / return specific not found icon
+    // If the icon is invalid, return just an empty string
     return snakeIconName
   }
   snakeIconName = snakeCase(matchResult[2])

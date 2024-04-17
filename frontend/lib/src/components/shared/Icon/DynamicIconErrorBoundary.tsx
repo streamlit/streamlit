@@ -18,10 +18,6 @@ import React from "react"
 import { logError } from "@streamlit/lib/src/util/log"
 import { EmojiIcon } from "./Icon"
 
-// export interface Props {
-//   width?: number
-// }
-
 export interface State {
   error?: Error | null
 }
