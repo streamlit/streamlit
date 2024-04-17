@@ -35,7 +35,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
-    check_widget_usage,
+    check_widget_usage_rules,
     get_label_visibility_proto_value,
 )
 from streamlit.errors import StreamlitAPIException
@@ -414,7 +414,7 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
-        check_widget_usage()
+        check_widget_usage_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=value if value != "now" else None, key=key
@@ -671,7 +671,7 @@ class TimeWidgetsMixin:
     ) -> DateWidgetReturn:
         key = to_key(key)
 
-        check_widget_usage()
+        check_widget_usage_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=value if value != "default_value_today" else None, key=key

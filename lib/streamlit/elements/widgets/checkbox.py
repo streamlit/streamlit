@@ -22,7 +22,7 @@ from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
-    check_widget_usage,
+    check_widget_usage_rules,
     get_label_visibility_proto_value,
 )
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -276,7 +276,7 @@ class CheckboxMixin:
     ) -> bool:
         key = to_key(key)
 
-        check_widget_usage()
+        check_widget_usage_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(
             default_value=None if value is False else value, key=key

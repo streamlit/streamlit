@@ -292,10 +292,10 @@ class ChatMixin:
         from streamlit.elements.utils import (
             check_callback_rules,
             check_session_state_rules,
-            check_widget_usage,
+            check_widget_usage_rules,
         )
 
-        check_widget_usage()
+        check_widget_usage_rules()
         check_callback_rules(self.dg, on_submit)
         check_session_state_rules(default_value=default, key=key, writes_allowed=False)
 

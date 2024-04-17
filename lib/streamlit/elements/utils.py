@@ -103,7 +103,7 @@ in the cache decorator to enable widget replay and suppress this warning.
         )
 
 
-def check_widget_usage() -> None:
+def check_widget_usage_rules() -> None:
     """Check if a widget can be correctly used in the current context.
 
     This raises a warning in case its used inside a cached function with

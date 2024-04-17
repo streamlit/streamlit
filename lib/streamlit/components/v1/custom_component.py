@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 from streamlit import _main, type_util
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.elements.form import current_form_id
-from streamlit.elements.utils import check_widget_usage
+from streamlit.elements.utils import check_widget_usage_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
@@ -102,7 +102,7 @@ PyArrow. To do so locally:
 And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
             )
 
-        check_widget_usage()
+        check_widget_usage_rules()
         # In addition to the custom kwargs passed to the component, we also
         # send the special 'default' and 'key' params to the component
         # frontend.
