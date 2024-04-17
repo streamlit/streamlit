@@ -90,7 +90,7 @@ class PlotlyChartSelectionSerde:
                 {
                     "select": {
                         "points": [],
-                        "point_indicies": [],
+                        "point_indices": [],
                         "box": [],
                         "lasso": [],
                     },
@@ -105,7 +105,7 @@ class PlotlyChartSelectionSerde:
                 {
                     "select": {
                         "points": [],
-                        "point_indicies": [],
+                        "point_indices": [],
                         "box": [],
                         "lasso": [],
                     },
