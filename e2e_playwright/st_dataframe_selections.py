@@ -60,7 +60,7 @@ st.header("Selection callback:")
 
 
 def on_selection():
-    st.write("Dataframe selection:", st.session_state.df_selection)
+    st.write("Dataframe selection callback:", st.session_state.df_selection)
 
 
 st.dataframe(

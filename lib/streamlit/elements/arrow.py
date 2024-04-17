@@ -470,7 +470,6 @@ class ArrowMixin:
             self.dg._enqueue("arrow_data_frame", proto)
             return widget_state.value
         else:
-            proto.row_selection_mode = ArrowProto.RowSelectionMode.NONE
             return self.dg._enqueue("arrow_data_frame", proto)
 
     @gather_metrics("table")
