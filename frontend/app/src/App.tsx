@@ -83,6 +83,7 @@ import {
   IAppPage,
   IGitInfo,
   Initialize,
+  Logo,
   NewSession,
   PageConfig,
   PageInfo,
@@ -152,6 +153,7 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
+  appLogo: Logo | null
   appPages: IAppPage[]
   navPageSections: Map<string, { start: number; length: number }>
   currentPageScriptHash: string
@@ -260,6 +262,7 @@ export class App extends PureComponent<Props, State> {
       themeHash: this.createThemeHash(),
       gitInfo: null,
       formsData: createFormsData(),
+      appLogo: null,
       appPages: [],
       navPageSections: new Map(),
       currentPageScriptHash: "",
@@ -594,6 +597,12 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  handleLogo = (logo: Logo): void => {
+    if (logo.image) {
+      this.setState({ appLogo: logo })
+    }
+  }
+
   /**
    * Callback when we get a message from the server.
    */
@@ -643,6 +652,7 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
+        logo: (logo: Logo) => this.handleLogo(logo),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1841,7 +1851,6 @@ export class App extends PureComponent<Props, State> {
           // host communication manager elements
           pageLinkBaseUrl,
           sidebarChevronDownshift,
-          toastAdjustment: hostToolbarItems.length > 0,
           gitInfo: this.state.gitInfo,
           appConfig,
         }}
@@ -1935,6 +1944,7 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
+                appLogo={this.state.appLogo}
                 appPages={this.state.appPages}
                 navPageSections={this.state.navPageSections}
                 onPageChange={this.onPageChange}

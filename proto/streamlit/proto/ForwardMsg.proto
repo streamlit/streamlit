@@ -24,6 +24,7 @@ import "streamlit/proto/Common.proto";
 import "streamlit/proto/Delta.proto";
 import "streamlit/proto/GitInfo.proto";
 import "streamlit/proto/Navigation.proto";
+import "streamlit/proto/Logo.proto";
 import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
@@ -80,6 +81,9 @@ message ForwardMsg {
     FileURLsResponse file_urls_response = 19;
     AutoRerun auto_rerun = 21;
 
+    // App logo
+    Logo logo = 24;
+
     // Platform - message to host
     ParentMessage parent_message = 20;
 
@@ -96,7 +100,7 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8;
-  // Next: 24
+  // Next: 25
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

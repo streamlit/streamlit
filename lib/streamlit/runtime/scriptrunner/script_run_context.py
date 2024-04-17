@@ -80,6 +80,8 @@ class ScriptRunContext:
     fragment_ids_this_run: set[str] | None = None
     pages: dict[str, Page] = field(default_factory=dict)
     yield_callback: Callable[[], None] = lambda: None
+    # we allow only one dialog to be open at the same time
+    has_dialog_opened: bool = False
 
     # TODO(willhuang1997): Remove this variable when experimental query params are removed
     _experimental_query_params_used = False
@@ -105,6 +107,7 @@ class ScriptRunContext:
         self.tracked_commands_counter = collections.Counter()
         self.current_fragment_id = None
         self.fragment_ids_this_run = fragment_ids_this_run
+        self.has_dialog_opened = False
 
         parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
         with self.session_state.query_params() as qp:

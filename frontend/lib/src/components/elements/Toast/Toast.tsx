@@ -47,10 +47,7 @@ export interface ToastProps {
   width: number
 }
 
-function generateToastOverrides(
-  expanded: boolean,
-  theme: EmotionTheme
-): ToastOverrides {
+function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
   const lightBackground = hasLightBackgroundColor(theme)
   return {
     Body: {
@@ -128,10 +125,7 @@ export function Toast({ theme, body, icon, width }: ToastProps): ReactElement {
     setExpanded(!expanded)
   }, [expanded])
 
-  const styleOverrides = useMemo(
-    () => generateToastOverrides(expanded, theme),
-    [expanded, theme]
-  )
+  const styleOverrides = useMemo(() => generateToastOverrides(theme), [theme])
 
   const toastContent = useMemo(
     () => (

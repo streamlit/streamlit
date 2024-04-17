@@ -446,6 +446,9 @@ class HTTPServerIntegrationTest(unittest.TestCase):
         http_session.mount("http://", HTTPAdapter(max_retries=None))
         return http_session
 
+    @unittest.skipIf(
+        "win32" in sys.platform, "openssl not present on windows by default"
+    )
     def test_ssl(self):
         with contextlib.ExitStack() as exit_stack:
             tmp_home = exit_stack.enter_context(tempfile.TemporaryDirectory())

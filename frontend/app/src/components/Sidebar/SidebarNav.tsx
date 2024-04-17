@@ -19,10 +19,8 @@ import { AppContext } from "@streamlit/app/src/components/AppContext"
 // We import react-device-detect in this way so that tests can mock its
 // isMobile field sanely.
 import * as reactDeviceDetect from "react-device-detect"
-import { ExpandMore, ExpandLess } from "@emotion-icons/material-outlined"
 
 import {
-  Icon,
   DynamicIcon,
   useIsOverflowing,
   StreamlitEndpoints,
@@ -35,8 +33,9 @@ import {
   StyledSidebarNavLink,
   StyledSidebarLinkText,
   StyledSidebarNavLinkContainer,
-  StyledSidebarNavSeparatorContainer,
   StyledSidebarNavSectionHeader,
+  StyledSidebarNavSeparator,
+  StyledViewButton,
 } from "./styled-components"
 
 export interface NavSectionProps {
@@ -116,7 +115,6 @@ export interface Props {
   collapseSidebar: () => void
   currentPageScriptHash: string
   hasSidebarElements: boolean
-  hideParentScrollbar: (newValue: boolean) => void
   onPageChange: (pageName: string) => void
 }
 
@@ -128,23 +126,11 @@ const SidebarNav = ({
   collapseSidebar,
   currentPageScriptHash,
   hasSidebarElements,
-  hideParentScrollbar,
   onPageChange,
 }: Props): ReactElement | null => {
   const [expanded, setExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef, expanded)
-
-  const onMouseOver = useCallback(() => {
-    if (isOverflowing) {
-      hideParentScrollbar(true)
-    }
-  }, [isOverflowing, hideParentScrollbar])
-
-  const onMouseOut = useCallback(
-    () => hideParentScrollbar(false),
-    [hideParentScrollbar]
-  )
 
   const toggleExpanded = useCallback(() => {
     if (!expanded && isOverflowing) {
@@ -164,10 +150,6 @@ const SidebarNav = ({
       <StyledSidebarNavItems
         ref={navItemsRef}
         isExpanded={expanded}
-        isOverflowing={isOverflowing}
-        hasSidebarElements={hasSidebarElements}
-        onMouseOver={onMouseOver}
-        onMouseOut={onMouseOut}
         data-testid="stSidebarNavItems"
       >
         {entries.map(([header, section]) => {
@@ -187,27 +169,19 @@ const SidebarNav = ({
       </StyledSidebarNavItems>
 
       {hasSidebarElements && (
-        <StyledSidebarNavSeparatorContainer
-          data-testid="stSidebarNavSeparator"
-          isExpanded={expanded}
-          isOverflowing={isOverflowing}
-          onClick={toggleExpanded}
-        >
+        <>
           {isOverflowing && !expanded && (
-            <Icon
-              content={ExpandMore}
-              size="md"
-              testid="stSidebarNavExpandIcon"
-            />
+            <StyledViewButton onClick={toggleExpanded}>
+              View more
+            </StyledViewButton>
           )}
           {expanded && (
-            <Icon
-              content={ExpandLess}
-              size="md"
-              testid="stSidebarNavCollapseIcon"
-            />
+            <StyledViewButton onClick={toggleExpanded}>
+              View less
+            </StyledViewButton>
           )}
-        </StyledSidebarNavSeparatorContainer>
+          <StyledSidebarNavSeparator data-testid="stSidebarNavSeparator" />
+        </>
       )}
     </StyledSidebarNavContainer>
   )

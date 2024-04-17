@@ -301,6 +301,9 @@ describe("FileUploader widget tests", () => {
     expect(fileDropZoneInput.files?.[0]).toEqual(firstFile)
 
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
+    // setFileUploaderStateValue should have been called once on init and once
+    // when the file was uploaded.
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(2)
 
     const secondFile = new File(["Another text in a file"], "filename2.txt", {
       type: "text/plain",
@@ -315,6 +318,9 @@ describe("FileUploader widget tests", () => {
     expect(currentFiles[0].textContent).toContain("filename2.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(secondFile)
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
+    // setFileUploaderStateValue should have been called once on init and
+    // once each for the first and second file uploads.
+    expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
   })
 
   it("uploads multiple files, even if some have errors", async () => {
