@@ -26,7 +26,7 @@ def navigate_to_page(app: Page, index: int):
     app.mouse.move(0, 0)
 
 
-def check_page_title(app: Page, title: str) -> Locator:
+def check_page_title(app: Page, title: str) -> None:
     expect(app.get_by_test_id("stMarkdown").locator("h1").nth(0)).to_contain_text(title)
 
 
@@ -93,3 +93,99 @@ def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
     ).to_have_attribute("height", "350")
 
     assert_snapshot(app, name="hello_app-dataframe_demo_page")
+
+
+# TEST PRINTING:
+# The print tests are in this suite to avoid having full-app screenshots being spread around in different suites.
+# Even the smallest design change in one part of the app can make these full-screenshots fail and require renewal, which is why we want them to be
+# bundled in one place. The "Dataframe Demo" page was arbitrarily chosen as a good printing candidate.
+
+
+def _evaluate_match_media_print(app: Page):
+    app.evaluate("matchMedia('print').matches")
+
+
+# DIN A4 paper is 21cm x 29.7cm which is 595px x 842px in 72dpi;
+# Use higher pixels to avoid mobile media queries to trigger but keep the ratio
+portrait_width_px = 1240
+portrait_height_px = 1754
+
+
+def _set_portrait_dimensions(app: Page):
+    app.set_viewport_size({"width": portrait_width_px, "height": portrait_height_px})
+
+
+def _set_landscape_dimensions(app: Page):
+    app.set_viewport_size({"width": portrait_height_px, "height": portrait_width_px})
+
+
+def test_app_print_mode_portrait_with_sidebar_open(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the dataframe demo page looks correctly in print-mode with sidebar open."""
+    app = themed_app
+    navigate_to_page(app, 4)
+    check_page_title(app, "DataFrame Demo")
+    app.emulate_media(media="print", forced_colors="active")
+    _set_portrait_dimensions(app)
+    _evaluate_match_media_print(app)
+
+    # ensure that the sidebar is visible
+    expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
+
+    assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_open")
+
+
+def test_app_print_mode_portrait_with_sidebar_closed(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the dataframe demo page looks correctly in print-mode with sidebar closed."""
+    app = themed_app
+    navigate_to_page(app, 4)
+    check_page_title(app, "DataFrame Demo")
+    # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    sidebar_element = app.get_by_test_id("stSidebarContent")
+    sidebar_element.get_by_test_id("baseButton-header").click()
+    expect(sidebar_element).not_to_be_visible()
+
+    app.emulate_media(media="print", forced_colors="active")
+    _set_portrait_dimensions(app)
+    _evaluate_match_media_print(app)
+
+    assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_closed")
+
+
+def test_app_print_mode_landscape_with_sidebar_open(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the dataframe demo page looks correctly in print-mode (orientation: landscape) with sidebar open."""
+    app = themed_app
+    navigate_to_page(app, 4)
+    check_page_title(app, "DataFrame Demo")
+    app.emulate_media(media="print", forced_colors="active")
+    _set_landscape_dimensions(app)
+    _evaluate_match_media_print(app)
+
+    # ensure that the sidebar is visible
+    expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
+
+    assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_open")
+
+
+def test_app_print_mode_landscape_with_sidebar_closed(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the dataframe demo page looks correctly in print-mode (orientation: landscape) with sidebar closed."""
+    app = themed_app
+    navigate_to_page(app, 4)
+    check_page_title(app, "DataFrame Demo")
+    # close sidebar. Must be done before print-mode, because we hide the close button when printing
+    sidebar_element = app.get_by_test_id("stSidebarContent")
+    sidebar_element.get_by_test_id("baseButton-header").click()
+    expect(sidebar_element).not_to_be_visible()
+
+    app.emulate_media(media="print", forced_colors="active")
+    _set_landscape_dimensions(app)
+    _evaluate_match_media_print(app)
+
+    assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
