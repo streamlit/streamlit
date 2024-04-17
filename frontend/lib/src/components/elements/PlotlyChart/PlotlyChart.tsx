@@ -347,7 +347,6 @@ function PlotlyFigure({
         widgetMgr.setElementState(element.id, "figure", figure)
       }}
       onUpdate={figure => {
-        console.log("onUpdate", figure)
         widgetMgr.setElementState(element.id, "figure", figure)
         setPlotlyFigure(figure)
       }}
