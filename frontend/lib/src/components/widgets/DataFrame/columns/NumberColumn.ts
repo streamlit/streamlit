@@ -56,7 +56,14 @@ export interface NumberColumnParams {
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
   const arrowTypeName = Quiver.getTypeName(props.arrowType)
-
+  let format = undefined
+  if (arrowTypeName === "timedelta64[ns]") {
+    // Use duration formatting for timedelta64[ns] type:
+    format = "duration[ns]"
+  } else if (arrowTypeName.startsWith("period[")) {
+    // Use period formatting for period types:
+    format = arrowTypeName
+  }
   const parameters = mergeColumnParameters(
     // Default parameters:
     {
@@ -64,8 +71,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       step: isIntegerType(arrowTypeName) ? 1 : undefined,
       // if uint (unsigned int), only positive numbers are allowed
       min_value: arrowTypeName.startsWith("uint") ? 0 : undefined,
-      // Use duration formatting for timedelta64[ns] type:
-      format: arrowTypeName === "timedelta64[ns]" ? "duration[ns]" : undefined,
+      format,
     } as NumberColumnParams,
     // User parameters:
     props.columnTypeOptions

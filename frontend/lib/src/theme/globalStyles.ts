@@ -30,6 +30,16 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-size: ${theme.fontSizes.mdPx}px;
   }
 
+  // Set height to 100% for printing, otherwise the page on Safari might be blank
+  @media print {
+    html {
+      height: 100%;
+      // make background-colors appear by default (e.g. the sidebar background, widget background, multi-select element background, ...)
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+
   a:hover,
   a:active {
     color: ${theme.colors.primary};
