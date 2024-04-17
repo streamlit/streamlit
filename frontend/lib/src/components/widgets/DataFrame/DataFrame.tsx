@@ -31,6 +31,7 @@ import {
   Search,
   Close,
 } from "@emotion-icons/material-outlined"
+import isEqual from "lodash/isEqual"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
@@ -718,11 +719,30 @@ function DataFrame({
               // This results in the first cell being selected for a short period of time
               // But for touch devices, preventing this can cause issues to select cells.
               // So we allow selection changes for touch devices even when it is not focused.
-              const rowSelectionChanged =
-                newSelection.rows !== gridSelection.rows
+              const rowSelectionChanged = !isEqual(
+                newSelection.rows.toArray(),
+                gridSelection.rows.toArray()
+              )
 
-              const columnSelectionChanged =
-                newSelection.columns !== gridSelection.columns
+              const columnSelectionChanged = !isEqual(
+                newSelection.columns.toArray(),
+                gridSelection.columns.toArray()
+              )
+
+              // console.log(
+              //   columnSelectionChanged,
+              //   rowSelectionChanged,
+              //   newSelection,
+              //   gridSelection,
+              //   !isEqual(
+              //     newSelection.rows.toArray(),
+              //     gridSelection.rows.toArray()
+              //   ),
+              //   !isEqual(
+              //     newSelection.columns.toArray(),
+              //     gridSelection.columns.toArray()
+              //   )
+              // )
 
               let updatedSelection = newSelection
               if (
@@ -738,6 +758,32 @@ function DataFrame({
                   columns: gridSelection.columns,
                 }
               }
+
+              if (
+                rowSelectionChanged &&
+                newSelection.rows.length > 0 &&
+                columnSelectionChanged &&
+                newSelection.columns.length === 0
+              ) {
+                // Keep the column selection if row selection was changed
+                updatedSelection = {
+                  ...updatedSelection,
+                  columns: gridSelection.columns,
+                }
+              }
+              if (
+                columnSelectionChanged &&
+                newSelection.columns.length > 0 &&
+                rowSelectionChanged &&
+                newSelection.rows.length === 0
+              ) {
+                // Keep the row selection if column selection was changed
+                updatedSelection = {
+                  ...updatedSelection,
+                  rows: gridSelection.rows,
+                }
+              }
+
               setGridSelection(updatedSelection)
 
               if (
@@ -813,6 +859,7 @@ function DataFrame({
                 ? "multi"
                 : "single",
               rowSelectionBlending: "mixed",
+              rangeSelectionBlending: "mixed",
             })}
           {...(!isEmptyTable &&
             isColumnSelectionActivated && {
@@ -822,6 +869,7 @@ function DataFrame({
                 ? "multi"
                 : "single",
               columnSelectionBlending: "mixed",
+              rangeSelectionBlending: "mixed",
             })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
