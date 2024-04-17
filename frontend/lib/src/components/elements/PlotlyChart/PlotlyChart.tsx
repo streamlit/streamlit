@@ -308,7 +308,9 @@ function PlotlyFigure({
       data: plotlyFigure.data.map((trace: any) => {
         return {
           ...trace,
-          selectedpoints: [],
+          // Set to null to clear the selection an empty
+          // array here would still show everything as opaque
+          selectedpoints: null,
         }
       }),
       layout: {
@@ -344,6 +346,7 @@ function PlotlyFigure({
         widgetMgr.setElementState(element.id, "figure", figure)
       }}
       onUpdate={figure => {
+        console.log("onUpdate", figure)
         widgetMgr.setElementState(element.id, "figure", figure)
         setPlotlyFigure(figure)
       }}
