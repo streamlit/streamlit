@@ -19,22 +19,6 @@ import streamlit as st
 
 data = pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]})
 
-spec = {
-    "mark": "line",
-    "encoding": {
-        "x": {"field": "a", "type": "quantitative"},
-        "y": {"field": "b", "type": "quantitative"},
-    },
-}
-
-# 5 empty charts
-st.vega_lite_chart(spec, use_container_width=True)
-fig, ax = plt.subplots()
-st.pyplot(fig)
-st.line_chart()
-st.bar_chart()
-st.area_chart()
-
 # 1 empty map
 # comment this one out to avoid this Cypress-Mapbox related error.
 # ref: https://github.com/cypress-io/cypress/issues/4322
