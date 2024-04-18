@@ -837,7 +837,7 @@ class ArrowAltairMixin:
 
         if alt.__version__[0] == "4" and is_select_enabled:
             raise StreamlitAPIException(
-                "Streamlit does not support Altair's api Version 4. Please upgrade to Version 5."
+                "Streamlit does not support Altair's api Version 4. Please upgrade to Version 5. If you would like Altair's api Version 4, please upvote this [github issue](https://github.com/streamlit/streamlit/issues/8516)."
             )
 
         if not is_select_enabled and current_form_id(self.dg):
