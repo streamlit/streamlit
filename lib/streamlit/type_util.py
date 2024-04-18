@@ -219,6 +219,13 @@ _SNOWPARK_DF_ROW_TYPE_STR: Final = "snowflake.snowpark.row.Row"
 _SNOWPARK_TABLE_TYPE_STR: Final = "snowflake.snowpark.table.Table"
 _PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
 _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
+_MODIN_SERIES_TYPE_STR: Final = "modin.pandas.Series.Series"
+_SNOWPANDAS_DF_TYPE_STR: Final = (
+    "snowflake.snowpark.modin.pandas.frontend.dataframe.DataFrame"
+)
+_SNOWPANDAS_SERIES_TYPE_STR: Final = (
+    "snowflake.snowpark.modin.pandas.frontend.series.Series"
+)
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _PANDAS_DF_TYPE_STR,
@@ -282,12 +289,21 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
     return any(is_type(obj, t) for t in _DATAFRAME_LIKE_TYPES)
 
 
-def is_snowpark_or_pyspark_data_object(obj: object) -> bool:
-    """True if if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
-    True when obj is a list which contains snowflake.snowpark.row.Row or True when obj is of type pyspark.sql.dataframe.DataFrame
-    False otherwise.
+def is_unevaluated_data_object(obj: object) -> bool:
+    """True if the object is one of the supported unevaluated data objects.
+
+    Currently supported objects are:
+    - Snowpark DataFrame / Table / Row list
+    - PySpark DataFrame
+    - Modin DataFrame / Series
+    - Snowpandas DataFrame / Series
     """
-    return is_snowpark_data_object(obj) or is_pyspark_data_object(obj)
+    return (
+        is_snowpark_data_object(obj)
+        or is_pyspark_data_object(obj)
+        or is_snowpandas_data_object(obj)
+        or is_modin_data_object(obj)
+    )
 
 
 def is_snowpark_data_object(obj: object) -> bool:
@@ -314,6 +330,18 @@ def is_pyspark_data_object(obj: object) -> bool:
         is_type(obj, _PYSPARK_DF_TYPE_STR)
         and hasattr(obj, "toPandas")
         and callable(getattr(obj, "toPandas"))
+    )
+
+
+def is_modin_data_object(obj: object) -> bool:
+    """True if obj is of Modin Dataframe or Series"""
+    return is_type(obj, _MODIN_DF_TYPE_STR) or is_type(obj, _MODIN_SERIES_TYPE_STR)
+
+
+def is_snowpandas_data_object(obj: object) -> bool:
+    """True if obj is a Snowpark Pandas DataFrame or Series."""
+    return is_type(obj, _SNOWPANDAS_DF_TYPE_STR) or is_type(
+        obj, _SNOWPANDAS_SERIES_TYPE_STR
     )
 
 
@@ -595,12 +623,25 @@ def convert_anything_to_df(
             )
         return cast(pd.DataFrame, data)
 
-    if is_type(data, _MODIN_DF_TYPE_STR):
-        st.caption(
-            f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-            "Use the Modin API to show more data."
-        )
-        return data.head(max_unevaluated_rows)._to_pandas()
+    if is_type(data, _MODIN_DF_TYPE_STR) or is_type(data, _MODIN_SERIES_TYPE_STR):
+        data = data.head(max_unevaluated_rows)._to_pandas()
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Use the Modin API to show more data."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_type(data, _SNOWPANDAS_DF_TYPE_STR) or is_type(
+        data, _SNOWPANDAS_SERIES_TYPE_STR
+    ):
+        data = data.head(max_unevaluated_rows).to_pandas()
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Call `to_pandas` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
 
     # This is inefficient when data is a pyarrow.Table as it will be converted
     # back to Arrow when marshalled to protobuf, but area/bar/line charts need
@@ -654,7 +695,7 @@ def ensure_iterable(obj: OptionSequence[V_co] | Iterable[V_co]) -> Iterable[Any]
 
     """
 
-    if is_snowpark_or_pyspark_data_object(obj):
+    if is_unevaluated_data_object(obj):
         obj = convert_anything_to_df(obj)
 
     if is_dataframe(obj):
