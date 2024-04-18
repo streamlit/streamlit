@@ -126,7 +126,6 @@ function AppView(props: AppViewProps): ReactElement {
     disableScrolling,
     showToolbar,
     showColoredLine,
-    toastAdjustment,
   } = React.useContext(AppContext)
 
   const { addScriptFinishedHandler, removeScriptFinishedHandler, libConfig } =
@@ -262,10 +261,7 @@ function AppView(props: AppViewProps): ReactElement {
         )}
       </Component>
       {hasEventElements && (
-        <EventContainer
-          toastAdjustment={toastAdjustment}
-          scriptRunId={elements.event.scriptRunId}
-        >
+        <EventContainer scriptRunId={elements.event.scriptRunId}>
           <StyledEventBlockContainer>
             {renderBlock(elements.event)}
           </StyledEventBlockContainer>
