@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef, useState } from "react"
+import React, { ReactElement, useEffect, useRef, useMemo } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
@@ -42,19 +42,20 @@ export default function Video({
 }: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const [state] = useState<string>(
-    () => elementMgr.getElementState("id", element.id) || element.id
-  )
-
   /* Element may contain "url" or "data" property. */
   const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
     element
 
-  useEffect(() => {
-    if (element.id && state) {
-      elementMgr.setElementState("id", element.id, state)
+  const preventAutoplay = useMemo<boolean>(() => {
+    const preventAutoplay = elementMgr.getElementState(
+      element.id,
+      "preventAutoplay"
+    )
+    if (!preventAutoplay) {
+      elementMgr.setElementState(element.id, "preventAutoplay", true)
     }
-  }, [state, element.id, elementMgr])
+    return preventAutoplay ?? false
+  }, [element.id, elementMgr])
 
   // Handle startTime changes
   useEffect(() => {
@@ -205,7 +206,7 @@ export default function Video({
       ref={videoRef}
       controls
       muted={muted}
-      autoPlay={autoplay}
+      autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}

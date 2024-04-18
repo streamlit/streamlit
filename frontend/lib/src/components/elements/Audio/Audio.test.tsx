@@ -28,9 +28,10 @@ describe("Audio Element", () => {
   const buildMediaURL = jest.fn().mockReturnValue("https://mock.media.url")
 
   const mockSetElementState = jest.fn()
+  const mockGetElementState = jest.fn()
   const elementMgrMock = {
     setElementState: mockSetElementState,
-    getElementState: jest.fn(),
+    getElementState: mockGetElementState,
     sendRerunBackMsg: jest.fn(),
     formsDataChanged: jest.fn(),
   }
@@ -63,20 +64,30 @@ describe("Audio Element", () => {
     expect(audioElement).toHaveAttribute("src", "https://mock.media.url")
   })
 
-  it("does not call elementMgr.setElementState if autoplay is false", () => {
-    const props = getProps({ autoplay: false, id: "" })
+  it("does not autoplay if preventAutoplay is set", () => {
+    mockGetElementState.mockReturnValueOnce(true) // Autoplay should be prevented
+    const props = getProps({ autoplay: true })
     render(<Audio {...props} />)
-    expect(mockSetElementState).not.toHaveBeenCalled()
+    const audioElement = screen.getByTestId("stAudio")
+    expect(audioElement).not.toHaveAttribute("autoPlay")
   })
 
-  it("calls elementMgr.setElementState if autoplay is true", () => {
-    const props = getProps({ autoplay: true, id: "testAudioId" })
+  it("autoplays if preventAutoplay is not set", () => {
+    mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented
+    const props = getProps({ autoplay: true })
     render(<Audio {...props} />)
-    expect(mockSetElementState).toHaveBeenCalledTimes(1)
+    const audioElement = screen.getByTestId("stAudio")
+    expect(audioElement).toHaveAttribute("autoPlay")
+  })
+
+  it("calls setElementState to prevent future autoplay", () => {
+    mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented initially
+    const props = getProps({ autoplay: true })
+    render(<Audio {...props} />)
     expect(mockSetElementState).toHaveBeenCalledWith(
-      "id",
-      "testAudioId",
-      "testAudioId"
+      props.element.id,
+      "preventAutoplay",
+      true
     )
   })
 

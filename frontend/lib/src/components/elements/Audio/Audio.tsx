@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef, useState } from "react"
+import React, { ReactElement, useEffect, useRef, useMemo } from "react"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
@@ -34,15 +34,16 @@ export default function Audio({
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const [state] = useState<string>(
-    () => elementMgr.getElementState("id", element.id) || element.id
-  )
-
-  useEffect(() => {
-    if (element.id && state) {
-      elementMgr.setElementState("id", element.id, state)
+  const preventAutoplay = useMemo<boolean>(() => {
+    const preventAutoplay = elementMgr.getElementState(
+      element.id,
+      "preventAutoplay"
+    )
+    if (!preventAutoplay) {
+      elementMgr.setElementState(element.id, "preventAutoplay", true)
     }
-  }, [state, element.id, elementMgr])
+    return preventAutoplay ?? false
+  }, [element.id, elementMgr])
 
   const { startTime, endTime, loop, autoplay } = element
 
@@ -136,7 +137,7 @@ export default function Audio({
       id="audio"
       ref={audioRef}
       controls
-      autoPlay={autoplay}
+      autoPlay={autoplay && !preventAutoplay}
       src={uri}
       className="stAudio"
       style={{ width }}
