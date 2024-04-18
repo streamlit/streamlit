@@ -213,6 +213,20 @@ If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
         self.assertEqual(str(ctx.exception), expected_message)
 
+    def test_cached_st_function_clear_args(self):
+        self.x = 0
+
+        @st.cache_resource()
+        def foo(y):
+            self.x += y
+            return self.x
+
+        assert foo(1) == 1
+        foo.clear(2)
+        assert foo(1) == 1
+        foo.clear(1)
+        assert foo(1) == 2
+
 
 class CacheResourceValidateTest(unittest.TestCase):
     def setUp(self) -> None:

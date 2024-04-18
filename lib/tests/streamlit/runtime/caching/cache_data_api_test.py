@@ -260,6 +260,20 @@ If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
         self.assertEqual(str(ctx.exception), expected_message)
 
+    def test_cached_st_function_clear_args(self):
+        self.x = 0
+
+        @st.cache_data()
+        def foo(y):
+            self.x += y
+            return self.x
+
+        assert foo(1) == 1
+        foo.clear(2)
+        assert foo(1) == 1
+        foo.clear(1)
+        assert foo(1) == 2
+
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
@@ -455,6 +469,29 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             if element.WhichOneof("type") == "text"
         ]
         assert text == ["1"]
+
+    @patch("streamlit.file_util.os.stat", MagicMock())
+    @patch(
+        "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write",
+        MagicMock(),
+    )
+    @patch(
+        "streamlit.file_util.open",
+        wraps=mock_open(read_data=pickle.dumps(1)),
+    )
+    def test_cached_st_function_clear_args_persist(self, _):
+        self.x = 0
+
+        @st.cache_data(persist="disk")
+        def foo(y):
+            self.x += y
+            return self.x
+
+        assert foo(1) == 1
+        foo.clear(2)
+        assert foo(1) == 1
+        foo.clear(1)
+        assert foo(1) == 2
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
