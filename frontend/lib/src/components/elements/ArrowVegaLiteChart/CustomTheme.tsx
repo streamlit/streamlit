@@ -107,7 +107,7 @@ export function applyStreamlitTheme(config: any, theme: EmotionTheme): any {
       stroke: "transparent",
       continuousHeight: 350,
       continuousWidth: 400,
-      discreteHeight: 150,
+      discreteHeight: 350,
       discreteWidth: { step: 20 },
     },
     concat: {
@@ -185,7 +185,7 @@ export function applyThemeDefaults(config: any, theme: EmotionTheme): any {
       stroke: getGray30(theme),
       continuousHeight: 350,
       continuousWidth: 400,
-      discreteHeight: 150,
+      discreteHeight: 350,
       discreteWidth: { step: 20 },
     },
     mark: {
