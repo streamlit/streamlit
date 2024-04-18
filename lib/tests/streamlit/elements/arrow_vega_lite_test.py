@@ -211,6 +211,18 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
             merge_dicts(autosize_spec, {"mark": "rect", "width": 200}),
         )
 
+    @parameterized.expand(
+        [
+            (None, {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), None),
+            (None, None),
+        ]
+    )
+    def test_empty_vega_lite_chart_throws_error(self, data, spec):
+        with self.assertRaises(ValueError) as exc:
+            st.vega_lite_chart(data, spec, use_container_width=True)
+
 
 def merge_dicts(x, y):
     z = x.copy()
