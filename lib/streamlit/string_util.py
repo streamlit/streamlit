@@ -87,7 +87,12 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
 
     pack_name, icon_name = split_parts[0].lstrip(":"), split_parts[1].rstrip(":")
 
-    if pack_name not in ["material", "material-outlined", "material-rounded"]:
+    if pack_name not in [
+        "material",
+        "material-outlined",
+        "material-rounded",
+        "material-original",
+    ]:
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
             f" Please use a Material icon shortcode like **`:material/ThumbUp:`** ."

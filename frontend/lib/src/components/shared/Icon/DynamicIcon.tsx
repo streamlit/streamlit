@@ -41,6 +41,13 @@ const MaterialRounded = React.lazy(
     )
 )
 
+const MaterialOriginal = React.lazy(
+  () =>
+    import(
+      "@streamlit/lib/src/components/shared/Icon/Material/MaterialOriginal"
+    )
+)
+
 interface IconPackEntry {
   pack: string
   icon: string
@@ -85,6 +92,8 @@ const DynamicIconDispatcher = ({
       return <MaterialOutlined iconName={icon} {...props} />
     case "material-rounded":
       return <MaterialRounded iconName={icon} {...props} />
+    case "material-original":
+      return <MaterialOriginal iconName={icon} {...props} />
     case "emoji":
     default:
       return <EmojiIcon {...props}>{icon}</EmojiIcon>
