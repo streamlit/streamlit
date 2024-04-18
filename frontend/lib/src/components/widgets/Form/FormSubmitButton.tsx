@@ -71,7 +71,7 @@ export function FormSubmitButton(props: Props): ReactElement {
           fluidWidth={element.useContainerWidth ? fluidWidth : false}
           disabled={disabled || hasInProgressUpload}
           onClick={() => {
-            widgetMgr.submitForm(element.formId, element, fragmentId)
+            widgetMgr.submitForm(element.formId, fragmentId, element)
           }}
         >
           <StreamlitMarkdown
