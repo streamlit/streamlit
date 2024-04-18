@@ -67,3 +67,18 @@ st.video("test_assets/sintel-short.webm", start_time=35, end_time=39, loop=True)
 
 # Test end time and loop mp4 video
 st.video("test_assets/sintel-short.mp4", start_time=35, end_time=39, loop=True)
+
+# Test autoplay with video
+autoplay = st.checkbox("Autoplay", value=False)
+
+st.video(
+    "test_assets/sintel-short.webm",
+    autoplay=autoplay,
+)
+
+# Test muted with video
+st.video(
+    "test_assets/sintel-short.webm",
+    autoplay=True,
+    muted=True,
+)
