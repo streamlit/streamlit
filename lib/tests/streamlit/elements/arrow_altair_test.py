@@ -900,3 +900,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         )
 
         st.altair_chart(chart, on_select="ignore")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(proto.HasField("data"), False)
+        self.assertEqual(len(proto.datasets), 1)
