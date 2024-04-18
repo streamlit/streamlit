@@ -568,6 +568,7 @@ export class App extends PureComponent<Props, State> {
 
     if (newState === ConnectionState.CONNECTED) {
       logMessage("Reconnected to server; requesting a script run")
+      // Trigger a full app rerun:
       this.widgetMgr.sendUpdateWidgetsMessage(undefined)
       this.setState({ dialog: null })
     } else {
@@ -1340,6 +1341,7 @@ export class App extends PureComponent<Props, State> {
       this.saveSettings({ ...this.state.userSettings, runOnSave: true })
     }
 
+    // Trigger a full app rerun:
     this.widgetMgr.sendUpdateWidgetsMessage(undefined)
   }
 
