@@ -24,3 +24,7 @@ url2 = "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-
 st.audio(url2, start_time=10, end_time=13)
 
 st.audio(url2, start_time=15, end_time=19, loop=True)
+
+autoplay = st.checkbox("Autoplay", value=False)
+
+st.audio(url2, autoplay=autoplay)
