@@ -1,4 +1,20 @@
 /**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
  * @file This hook fetches Google Fonts asynchronously.
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react"
@@ -36,21 +52,25 @@ export const useFetchGoogleFonts = ({
   subset,
   variants = ["regular"],
 }: FetchOptionProps) => {
-  const [fontOptions, setFontOptions] = useState<FontOptionProps[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<FetchError | null>(null);
+  const [fontOptions, setFontOptions] = useState<FontOptionProps[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [error, setError] = useState<FetchError | null>(null)
 
   // Memoize parameters to ensure stability
-  const memoizedCategories = useMemo(() => categories, [categories]);
-  const memoizedFamily = useMemo(() => family, [family]);
-  const memoizedSort = useMemo(() => sort, [sort]);
-  const memoizedSubset = useMemo(() => subset, [subset]);
-  const memoizedVariants = useMemo(() => variants, [variants]);
+  const memoizedCategories = useMemo(() => categories, [categories])
+  const memoizedFamily = useMemo(() => family, [family])
+  const memoizedSort = useMemo(() => sort, [sort])
+  const memoizedSubset = useMemo(() => subset, [subset])
+  const memoizedVariants = useMemo(() => variants, [variants])
 
   const fetchFonts = useCallback(async () => {
     try {
       setIsLoading(true)
-      const webfontUrl = webfontUrlBuilder({ family: memoizedFamily, sort: memoizedSort, subset: memoizedSubset })
+      const webfontUrl = webfontUrlBuilder({
+        family: memoizedFamily,
+        sort: memoizedSort,
+        subset: memoizedSubset,
+      })
       const response = await WebfontAxios.get(webfontUrl)
 
       // Transforms the webfont response items for use as options in the font selector.
@@ -87,7 +107,13 @@ export const useFetchGoogleFonts = ({
     } finally {
       setIsLoading(false)
     }
-  }, [memoizedFamily, memoizedSort, memoizedSubset, memoizedCategories, memoizedVariants])
+  }, [
+    memoizedFamily,
+    memoizedSort,
+    memoizedSubset,
+    memoizedCategories,
+    memoizedVariants,
+  ])
 
   useEffect(() => {
     fetchFonts()

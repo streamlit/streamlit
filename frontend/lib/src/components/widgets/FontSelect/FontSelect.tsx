@@ -1,4 +1,20 @@
 /**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
  * @file A searchable, clearable, lazy-loading font select component.
  *
  * @module FontSelect
@@ -43,58 +59,87 @@ const FontSelect: React.FC<FontSelectProps> = ({
   options = [],
   ...props
 }) => {
-  const { fontOptions, selectedFonts, setSelectedFonts, isLoading } = useFont();
-  const fullOptionsList = useMemo(() => [...options, ...fontOptions], [options, fontOptions]);
-  const [visibleOptions, setVisibleOptions] = useState<FontOptionProps[]>([]);
+  const { fontOptions, selectedFonts, setSelectedFonts, isLoading } = useFont()
+  const fullOptionsList = useMemo(
+    () => [...options, ...fontOptions],
+    [options, fontOptions]
+  )
+  const [visibleOptions, setVisibleOptions] = useState<FontOptionProps[]>([])
   const [inputValue, setInputValue] = useState<string | null>("")
 
   // Load initial or updated font options
   useEffect(() => {
-    setVisibleOptions(fullOptionsList.slice(0, pageSize));
-  }, [fullOptionsList, pageSize]);
+    setVisibleOptions(fullOptionsList.slice(0, pageSize))
+  }, [fullOptionsList, pageSize])
 
   /**
    * Fetch more fonts from the list of available options. Filters based on input value.
    */
-  const fetchMoreFonts = useCallback((input = "") => {
-    const filteredOptions = input
-      ? fullOptionsList.filter(option => option.label.toLowerCase().includes(input.toLowerCase()))
-      : fullOptionsList;
-    const nextPageOptions = filteredOptions.slice(0, visibleOptions.length + pageSize);
-    setVisibleOptions(nextPageOptions);
-  }, [fullOptionsList, pageSize, visibleOptions.length]);
+  const fetchMoreFonts = useCallback(
+    (input = "") => {
+      const filteredOptions = input
+        ? fullOptionsList.filter(option =>
+            option.label.toLowerCase().includes(input.toLowerCase())
+          )
+        : fullOptionsList
+      const nextPageOptions = filteredOptions.slice(
+        0,
+        visibleOptions.length + pageSize
+      )
+      setVisibleOptions(nextPageOptions)
+    },
+    [fullOptionsList, pageSize, visibleOptions.length]
+  )
 
   /**
    * Update the values selected and visible in the input field.
    */
-  const handleFontChange = useCallback((newSelectedOptions: FontOptionProps[] | null, actionMeta: ActionMeta<FontOptionProps>) => {
-    setSelectedFonts(newSelectedOptions || []);
-    props.onChange?.(newSelectedOptions, actionMeta);
-  }, [setSelectedFonts, props]);
+  const handleFontChange = useCallback(
+    (
+      newSelectedOptions: FontOptionProps[] | null,
+      actionMeta: ActionMeta<FontOptionProps>
+    ) => {
+      setSelectedFonts(newSelectedOptions || [])
+      props.onChange?.(newSelectedOptions, actionMeta)
+    },
+    [setSelectedFonts, props]
+  )
 
   /**
    * Debounced search/filter functionality.
    */
-  const handleInputChange = useCallback(debounce((newInputValue: string | null, actionMeta: ActionMeta<FontOptionProps>) => {
-    setInputValue(newInputValue);
-    fetchMoreFonts(newInputValue);
-    props.onInputChange?.(newInputValue, actionMeta);
-  }, 300), [fetchMoreFonts, props]);
+  const handleInputChange = useCallback(
+    debounce(
+      (
+        newInputValue: string | null,
+        actionMeta: ActionMeta<FontOptionProps>
+      ) => {
+        setInputValue(newInputValue)
+        fetchMoreFonts(newInputValue)
+        props.onInputChange?.(newInputValue, actionMeta)
+      },
+      300
+    ),
+    [fetchMoreFonts, props]
+  )
 
   /**
    * Only loads more fonts if not in search mode.
    */
-  const onMenuScrollToBottom = useCallback((event: React.UIEvent<HTMLElement>) => {
-    if (!inputValue) fetchMoreFonts();
-    props.onMenuScrollToBottom?.(event);
-  }, [inputValue, fetchMoreFonts, props]);
+  const onMenuScrollToBottom = useCallback(
+    (event: React.UIEvent<HTMLElement>) => {
+      if (!inputValue) fetchMoreFonts()
+      props.onMenuScrollToBottom?.(event)
+    },
+    [inputValue, fetchMoreFonts, props]
+  )
 
   /**
    * Adds animated components to the Select component when prop is set.
    */
   const AnimatedComponents = useMemo(() => {
-    return isAnimated ? makeAnimated() : {};
-  }, [isAnimated]);
+    return isAnimated ? makeAnimated() : {}
+  }, [isAnimated])
 
   return (
     <Select
@@ -116,6 +161,10 @@ const FontSelect: React.FC<FontSelectProps> = ({
 /**
  * Wrap the `FontSelect` compoenent to add the context for API access.
  * This is the default export for this component.
+ *
+ * Fort testing purposes only. The Provider should be implemented at a higher level to ensure that the context is available where needed and that it's not loaded in multiple instances.
+ *
+ * TODO: Remove this section before final PR.
  */
 // const FontSelectWrapper: React.FC<FontSelectProps> = props => (
 //   <FontProvider>
@@ -129,7 +178,7 @@ function areEqual(prevProps: FontSelectProps, nextProps: FontSelectProps) {
     prevProps.isAnimated === nextProps.isAnimated &&
     prevProps.pageSize === nextProps.pageSize &&
     prevProps.options === nextProps.options
-  );
+  )
 }
 
 export default React.memo(FontSelect, areEqual)

@@ -1,4 +1,20 @@
 /**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2024)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
  * @file Utilities for fetching Google Fonts using the Google Fonts API.
  *
  * @see https://developers.google.com/fonts/docs/developer_api
@@ -28,12 +44,14 @@ export const addFontStylesheet = (href: string) => {
  * @param {string} href - The URL of the stylesheet to remove.
  */
 export const removeFontStylesheet = (href: string) => {
-  const link = document.head.querySelector(`link[href="${href}"]`) as HTMLLinkElement;
+  const link = document.head.querySelector(
+    `link[href="${href}"]`
+  ) as HTMLLinkElement
 
   if (link) {
-    document.head.removeChild(link);
+    document.head.removeChild(link)
   }
-};
+}
 
 /**
  * Google Fonts API font-face CSS URL builder.
@@ -50,7 +68,7 @@ export const chunkFontFamilies = (
   families: GoogleFontFamilyArgs[],
   chunkSize = 500
 ) => {
-  let chunked: Array<GoogleFontFamilyArgs[]> = []
+  const chunked: Array<GoogleFontFamilyArgs[]> = []
 
   for (let i = 0; i < families.length; i += chunkSize) {
     const chunk: GoogleFontFamilyArgs[] = families.slice(i, i + chunkSize)
