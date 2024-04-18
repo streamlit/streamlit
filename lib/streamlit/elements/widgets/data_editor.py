@@ -778,10 +778,20 @@ class DataEditorMixin:
            height: 350px
 
         """
+        # Lazy-loaded import
         import pandas as pd
         import pyarrow as pa
 
+        # Import here to avoid cyclic import warning
+        from streamlit.elements.utils import (
+            check_cache_replay_rules,
+            check_callback_rules,
+            check_session_state_rules,
+        )
+
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 

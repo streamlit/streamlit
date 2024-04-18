@@ -370,6 +370,15 @@ class NumberInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.number_input("My Label", value=value, max_value=max_value)
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.number_input("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 def test_number_input_interaction():
     """Test interactions with an empty number input widget."""

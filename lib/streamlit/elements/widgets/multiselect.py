@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overlo
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     current_page_hash,
@@ -83,15 +84,19 @@ def _check_and_convert_to_indices(
             default_values, "pandas.core.series.Series"
         ):
             default_values = list(cast(Sequence[Any], default_values))
-        elif not default_values or default_values in opt:
-            default_values = [default_values]
-        else:
+        elif (
+            isinstance(default_values, (tuple, set))
+            or default_values
+            and default_values not in opt
+        ):
             default_values = list(default_values)
-
+        else:
+            default_values = [default_values]
     for value in default_values:
         if value not in opt:
             raise StreamlitAPIException(
-                "Every Multiselect default value must exist in options"
+                f"The default value '{value}' is part of the options. "
+                "Please make sure that every default values also exists in the options."
             )
 
     return [opt.index(value) for value in default_values]
@@ -283,12 +288,14 @@ class MultiSelectMixin:
         ctx: ScriptRunContext | None = None,
     ) -> list[T]:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
+        maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)
         check_python_comparable(opt)
-        maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
 
