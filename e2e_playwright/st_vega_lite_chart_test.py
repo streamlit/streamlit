@@ -52,6 +52,8 @@ def test_vega_lite_chart_displays_interactive_charts(
 ):
     """Tests that it displays interactive charts on the DOM"""
     vega_lite_charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    # expect statement here so that snapshots are taken properly
+    expect(vega_lite_charts).to_have_count(14)
 
     assert_snapshot(
         vega_lite_charts.nth(4),
@@ -64,6 +66,8 @@ def test_vega_lite_chart_same_plot_different_ways(
 ):
     """Tests that it displays the same plot in different ways"""
     vega_lite_charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    # expect statement here so that snapshots are taken properly
+    expect(vega_lite_charts).to_have_count(14)
 
     for idx in range(5, 9):
         assert_snapshot(vega_lite_charts.nth(idx), name=f"st_vega_lite_chart-{idx}")
@@ -74,6 +78,8 @@ def test_vega_lite_chart_streamlit_theme(
 ):
     """Tests that st.vega_lite_chart supports the Streamlit theme"""
     vega_lite_charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    # expect statement here so that snapshots are taken properly
+    expect(vega_lite_charts).to_have_count(14)
 
     for idx in range(9, 11):
         assert_snapshot(
@@ -86,6 +92,8 @@ def test_vega_lite_chart_default_theme(
 ):
     """Tests that st.vega_lite_chart supports the default theme"""
     vega_lite_charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    # expect statement here so that snapshots are taken properly
+    expect(vega_lite_charts).to_have_count(14)
 
     assert_snapshot(
         vega_lite_charts.nth(11), name=f"st_vega_lite_chart-default_theming"
@@ -97,6 +105,8 @@ def test_vega_lite_chart_user_supplied_colors(
 ):
     """Tests that st.vega_lite_chart respects user configuration"""
     vega_lite_charts = themed_app.get_by_test_id("stArrowVegaLiteChart")
+    # expect statement here so that snapshots are taken properly
+    expect(vega_lite_charts).to_have_count(14)
 
     assert_snapshot(
         vega_lite_charts.nth(12),
@@ -106,6 +116,8 @@ def test_vega_lite_chart_user_supplied_colors(
 
 def test_empty_vega_lite_chart(app: Page, assert_snapshot: ImageCompareFunction):
     vega_lite_charts = app.get_by_test_id("stArrowVegaLiteChart")
+    # expect statement here so that snapshots are taken properly
+    expect(vega_lite_charts).to_have_count(14)
 
     assert_snapshot(
         vega_lite_charts.nth(13),
