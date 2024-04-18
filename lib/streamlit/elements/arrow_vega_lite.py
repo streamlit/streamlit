@@ -85,16 +85,12 @@ def _on_select(
     key: str | None = None,
 ) -> AttributeDictionary:
     if on_select != ON_SELECTION_IGNORE:
-        # Must change on_select to None otherwise register_widget will error with on_change_handler to a str
-        if isinstance(on_select, str):
-            on_select = None
-
         vega_lite_serde = VegaLiteSelectionSerde()
         current_value = register_widget(
             "arrow_vega_lite_chart",
             proto,
             user_key=key,
-            on_change_handler=on_select,
+            on_change_handler=on_select if callable(on_select) else None,
             args=None,
             kwargs=None,
             deserializer=vega_lite_serde.deserialize,
@@ -200,13 +196,10 @@ class ArrowVegaLiteMixin:
             )
 
         if is_select_enabled:
-            on_select_callback = on_select
-            # Must change on_select to None otherwise register_widget will error with on_change_handler to a str
-            if isinstance(on_select_callback, str):
-                on_select_callback = None
+            if callable(on_select):
+                check_callback_rules(self.dg, on_select)
 
             key = to_key(key)
-            check_callback_rules(self.dg, on_select_callback)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
             check_on_select_str(on_select, "vega_lite_chart")
 

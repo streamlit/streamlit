@@ -845,13 +845,10 @@ class ArrowAltairMixin:
             raise StreamlitAPIException("st.altair_chart cannot be used inside forms!")
 
         if is_select_enabled:
-            on_select_callback = on_select
-            # Must change on_select to None otherwise register_widget will error with on_change_handler to a str
-            if isinstance(on_select_callback, str):
-                on_select_callback = None
+            if callable(on_select):
+                check_callback_rules(self.dg, on_select)
 
             key = to_key(key)
-            check_callback_rules(self.dg, on_select_callback)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
             check_on_select_str(on_select, "altair_chart")
 
