@@ -171,6 +171,20 @@ class DateInputTest(DeltaGeneratorTestCase):
     def test_value_in_range(self, value, min_date, max_date):
         st.date_input("the label", value=value, min_value=min_date, max_value=max_date)
 
+    def test_default_min_if_today_is_before_min(self):
+        min_date = date(9998, 2, 28)
+        st.date_input("the label", min_value=min_date, max_value=date(9999, 2, 28))
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert datetime.strptime(c.default[0], "%Y/%m/%d").date() == min_date
+
+    def test_default_max_if_today_is_after_min(self):
+        max_date = date(1001, 2, 28)
+        st.date_input("the label", min_value=date(1000, 2, 28), max_value=max_date)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert datetime.strptime(c.default[0], "%Y/%m/%d").date() == max_date
+
     def test_range_session_state(self):
         """Test a range set by session state."""
         date_range_input = [date(2024, 1, 15), date(2024, 1, 15) + timedelta(2)]
