@@ -18,6 +18,7 @@ import {
   Alert as AlertProto,
   LabelVisibilityMessage as LabelVisibilityMessageProto,
   Element,
+  Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 import get from "lodash/get"
 import xxhash from "xxhashjs"
@@ -236,9 +237,9 @@ export function makeElementWithErrorText(text: string): Element {
 }
 
 /** Return a special internal-only Element showing an app "skeleton". */
-export function makeSkeletonElement(): Element {
+export function makeAppSkeletonElement(): Element {
   return new Element({
-    skeleton: {},
+    skeleton: { style: SkeletonProto.SkeletonStyle.APP },
   })
 }
 

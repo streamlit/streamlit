@@ -34,25 +34,25 @@ random.seed(0)
 st.set_page_config(layout="wide")
 
 st.subheader("Base types")
-st.dataframe(BASE_TYPES_DF, use_container_width=True)
+st.dataframe(BASE_TYPES_DF, use_container_width=True, hide_index=True)
 
 st.subheader("Number types")
-st.dataframe(NUMBER_TYPES_DF, use_container_width=True)
+st.dataframe(NUMBER_TYPES_DF, use_container_width=True, hide_index=True)
 
 st.subheader("Date, time and datetime types")
-st.dataframe(DATETIME_TYPES_DF, use_container_width=True)
+st.dataframe(DATETIME_TYPES_DF, use_container_width=True, hide_index=True)
 
 st.subheader("List types")
-st.dataframe(LIST_TYPES_DF, use_container_width=True)
+st.dataframe(LIST_TYPES_DF, use_container_width=True, hide_index=True)
 
-st.subheader("Interval dtypes in pd.DataFrame")
-st.dataframe(INTERVAL_TYPES_DF, use_container_width=True)
+st.subheader("Interval types")
+st.dataframe(INTERVAL_TYPES_DF, use_container_width=True, hide_index=True)
 
 st.subheader("Special types")
-st.dataframe(SPECIAL_TYPES_DF, use_container_width=True)
+st.dataframe(SPECIAL_TYPES_DF, use_container_width=True, hide_index=True)
 
-st.subheader("Period dtypes in pd.DataFrame")
-st.dataframe(PERIOD_TYPES_DF, use_container_width=True)
+st.subheader("Period types")
+st.dataframe(PERIOD_TYPES_DF, use_container_width=True, hide_index=True)
 
-st.subheader("Unsupported types (by Arrow)")
-st.dataframe(UNSUPPORTED_TYPES_DF, use_container_width=True)
+st.subheader("Unsupported types (string fallback)")
+st.dataframe(UNSUPPORTED_TYPES_DF, use_container_width=True, hide_index=True)
