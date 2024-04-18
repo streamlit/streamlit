@@ -476,6 +476,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
+        mpav1: bool = False,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -492,6 +493,7 @@ class AppSession:
                 client_state,
                 page_script_hash,
                 fragment_ids_this_run,
+                mpav1,
             )
         )
 
@@ -504,6 +506,7 @@ class AppSession:
         client_state: ClientState | None = None,
         page_script_hash: str | None = None,
         fragment_ids_this_run: set[str] | None = None,
+        mpav1: bool = False,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -575,7 +578,7 @@ class AppSession:
 
             self._enqueue_forward_msg(
                 self._create_new_session_message(
-                    page_script_hash, fragment_ids_this_run
+                    page_script_hash, fragment_ids_this_run, mpav1=mpav1
                 )
             )
 
@@ -675,7 +678,10 @@ class AppSession:
         return msg
 
     def _create_new_session_message(
-        self, page_script_hash: str, fragment_ids_this_run: set[str] | None = None
+        self,
+        page_script_hash: str,
+        fragment_ids_this_run: set[str] | None = None,
+        mpav1: bool = False,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
@@ -684,6 +690,7 @@ class AppSession:
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._script_data.main_script_path
         msg.new_session.page_script_hash = page_script_hash
+        msg.new_session.mpav1 = mpav1
 
         if fragment_ids_this_run:
             msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)

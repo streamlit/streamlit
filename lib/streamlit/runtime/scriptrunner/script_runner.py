@@ -495,7 +495,7 @@ class ScriptRunner:
             except KeyError:
                 old_hash = None
 
-            if old_hash != page_script_hash:
+            if old_hash != page_script_hash and mpav1:
                 # Page changed, reset widget state
                 self._session_state.on_script_finished(set())
 

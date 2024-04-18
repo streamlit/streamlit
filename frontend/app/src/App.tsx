@@ -903,6 +903,7 @@ export class App extends PureComponent<Props, State> {
       mainScriptPath,
       fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
+      mpav1,
     } = newSessionProto
 
     // mainPage must be a string as we're guaranteed at this point that
@@ -1028,7 +1029,7 @@ export class App extends PureComponent<Props, State> {
       this.setState({
         scriptRunId,
       })
-    } else {
+    } else if (mpav1) {
       this.clearAppState(newSessionHash, scriptRunId, scriptName)
     }
   }
@@ -1053,6 +1054,7 @@ export class App extends PureComponent<Props, State> {
 
   handlePageRun = (pageRunProto: PageRun): void => {
     const newPageScriptHash = pageRunProto.pageScriptHash
+    const pageChanged = newPageScriptHash !== this.state.currentPageScriptHash
 
     // mainPage must be a string as we're guaranteed at this point that
     // newSessionProto.appPages is nonempty and has a truthy pageName.
@@ -1104,9 +1106,22 @@ export class App extends PureComponent<Props, State> {
       this.endpoints
     )
 
-    this.setState({
-      currentPageScriptHash: newPageScriptHash,
-    })
+    if (pageChanged) {
+      this.setState(
+        ({ scriptRunId, fragmentIdsThisRun }) => ({
+          // Apply any pending elements that haven't been applied.
+          elements: this.pendingElementsBuffer.clearStaleNodes(
+            scriptRunId,
+            fragmentIdsThisRun
+          ),
+          currentPageScriptHash: newPageScriptHash,
+        }),
+        () => {
+          // We now have no pending elements.
+          this.pendingElementsBuffer = this.state.elements
+        }
+      )
+    }
   }
 
   /**

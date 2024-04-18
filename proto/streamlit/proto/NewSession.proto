@@ -66,6 +66,8 @@ message NewSession {
   // The fragment IDs being run in this session if it corresponds to a fragment
   // script run.
   repeated string fragment_ids_this_run = 10;
+
+  bool mpav1 = 11;
 }
 
 // Contains the session status that existed at the time the user connected.
