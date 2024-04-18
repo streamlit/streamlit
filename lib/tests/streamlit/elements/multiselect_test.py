@@ -116,10 +116,19 @@ class Multiselectbox(DeltaGeneratorTestCase):
         self.assertListEqual(c.default[:], [])
         self.assertEqual(c.options, proto_options)
 
-    @parameterized.expand([((),), ([],), (np.array([]),), (pd.Series(np.array([])),)])
+    @parameterized.expand(
+        [
+            ((),),
+            ([],),
+            (np.array([]),),
+            (pd.Series(np.array([])),),
+            (set(),),
+            (list(),),
+        ]
+    )
     def test_no_options(self, options):
         """Test that it handles no options."""
-        st.multiselect("the label", options)
+        st.multiselect("the label", options, default=options)
 
         c = self.get_delta_from_queue().new_element.multiselect
         self.assertEqual(c.label, "the label")
