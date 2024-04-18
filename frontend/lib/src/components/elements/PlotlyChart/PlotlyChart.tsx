@@ -138,14 +138,14 @@ function renderIFrame({
 }
 
 function applyTheming(
-  element: PlotlyChartProto,
   plotlyFigure: PlotlyFigureType,
+  chart_theme: string,
   theme: EmotionTheme
 ): PlotlyFigureType {
   const spec = JSON.parse(
-    replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, element.theme)
+    replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chart_theme)
   )
-  if (element.theme === "streamlit") {
+  if (chart_theme === "streamlit") {
     applyStreamlitTheme(spec, theme)
   } else {
     // Apply minor theming improvements to work better with Streamlit
@@ -186,7 +186,7 @@ function PlotlyFigure({
     if (initialFigureState) {
       return initialFigureState
     }
-    return applyTheming(element, initialFigureSpec, theme)
+    return applyTheming(initialFigureSpec, element.theme, theme)
   })
 
   const plotlyConfig = useMemo(() => {
@@ -199,11 +199,19 @@ function PlotlyFigure({
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
   React.useEffect(() => {
+    // Whenever the initial figure spec changes, we need to update
+    // the figure spec with the new spec from the element.
+    setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
+    /* eslint-disable react-hooks/exhaustive-deps */
+  }, [initialFigureSpec])
+
+  React.useEffect(() => {
     // If the theme changes, we need to reapply the theming to the figure
-    const spec = applyTheming(element, plotlyFigure, theme)
+    const spec = applyTheming(plotlyFigure, element.theme, theme)
     // https://plotly.com/javascript/reference/layout/#layout-clickmode
     // This allows single selections and shift click to add / remove selections
     if (element.isSelectEnabled) {
+      // TODO(lukasmasuch) Should we move this to the backend?
       spec.layout.clickmode = "event+select"
       spec.layout.hovermode = "closest"
     } else {
@@ -214,7 +222,7 @@ function PlotlyFigure({
     // Adding plotlyFigure to the dependencies
     // array would cause an infinite update loop
     /* eslint-disable react-hooks/exhaustive-deps */
-  }, [theme, element.theme, element.id, element.isSelectEnabled])
+  }, [theme, element.theme, element.isSelectEnabled])
 
   let calculatedWidth = element.useContainerWidth
     ? // Apply a min width to prevent the chart running into issues with negative
