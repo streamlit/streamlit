@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useState, useCallback, useMemo } from "react"
+import React, {
+  ReactElement,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+} from "react"
 
 import { useTheme } from "@emotion/react"
 import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
@@ -107,6 +113,30 @@ export function parseLassoPath(pathData: string): SelectionRange {
   return { x, y }
 }
 
+/**
+ * Parses a box selection object into separate x and y coordinates.
+ *
+ * The function takes a box selection object as input. This object should contain the following
+ * fields: x0, x1, y0, y1. These fields represent the x and y coordinates of the box selection
+ * in the plotly chart.
+ *
+ * Example Input:
+ * {
+ *   x0: 0.1,
+ *   x1: 0.2,
+ *   y0: 0.3,
+ *   y1: 0.4
+ * }
+ *
+ * Example Output:
+ * {
+ *   x: [0.1, 0.2],
+ *   y: [0.3, 0.4]
+ * }
+ *
+ * @param {Object} selection - The box selection object to be parsed.
+ * @returns {SelectionRange} An object containing two arrays: `x` for all x coordinates and `y` for all y coordinates.
+ */
 export function parseBoxSelection(selection: any): SelectionRange {
   const hasRequiredFields =
     "x0" in selection &&
@@ -123,31 +153,23 @@ export function parseBoxSelection(selection: any): SelectionRange {
   return { x, y }
 }
 
-/** Render an iframed Plotly chart from a URL */
-function renderIFrame({
-  url,
-  width,
-  height: propHeight,
-}: PlotlyIFrameProps): ReactElement {
-  const height = propHeight || DEFAULT_HEIGHT
-  return (
-    <iframe
-      title="Plotly"
-      src={url}
-      style={{ width, height, colorScheme: "normal" }}
-    />
-  )
-}
-
+/**
+ * Apply theming to the Plotly figure.
+ *
+ * @param plotlyFigure The Plotly figure to apply theming to
+ * @param chartTheme The theme of the chart (streamlit or empty string)
+ * @param theme The current theme of the app
+ * @returns The Plotly figure with theming applied
+ */
 function applyTheming(
   plotlyFigure: PlotlyFigureType,
-  chart_theme: string,
+  chartTheme: string,
   theme: EmotionTheme
 ): PlotlyFigureType {
   const spec = JSON.parse(
-    replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chart_theme)
+    replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chartTheme)
   )
-  if (chart_theme === "streamlit") {
+  if (chartTheme === "streamlit") {
     applyStreamlitTheme(spec, theme)
   } else {
     // Apply minor theming improvements to work better with Streamlit
@@ -165,7 +187,7 @@ function PlotlyFigure({
   widgetMgr,
   disabled,
   fragmentId,
-}: PlotlyChartProps): ReactElement {
+}: Readonly<PlotlyChartProps>): ReactElement {
   const theme: EmotionTheme = useTheme()
 
   // Load the initial figure spec from the element message
@@ -183,7 +205,8 @@ function PlotlyFigure({
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
     // If there was already a state with a figure using the same id,
-    // use that as the figure state
+    // use that to recover the state. This happens in some situations
+    // where a component un-mounts and mounts again.
     const initialFigureState = widgetMgr.getElementState(element.id, "figure")
     if (initialFigureState) {
       return initialFigureState
@@ -200,14 +223,14 @@ function PlotlyFigure({
 
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Whenever the initial figure spec changes, we need to update
     // the figure spec with the new spec from the element.
     setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
     /* eslint-disable react-hooks/exhaustive-deps */
   }, [initialFigureSpec])
 
-  React.useEffect(() => {
+  useEffect(() => {
     // If the theme changes, we need to reapply the theming to the figure
     const spec = applyTheming(plotlyFigure, element.theme, theme)
     // https://plotly.com/javascript/reference/layout/#layout-clickmode
@@ -392,7 +415,7 @@ function PlotlyFigure({
   }, [plotlyFigure, widgetMgr, element, fragmentId])
 
   // This is required for the form clearing functionality:
-  React.useEffect(() => {
+  useEffect(() => {
     const formClearHelper = new FormClearHelper()
     // On form clear, reset the selections (in chart & widget state)
     formClearHelper.manageFormClearListener(
@@ -432,6 +455,22 @@ function PlotlyFigure({
   )
 }
 
+/** Render an iframed Plotly chart from a URL */
+function renderIFrame({
+  url,
+  width,
+  height: propHeight,
+}: PlotlyIFrameProps): ReactElement {
+  const height = propHeight || DEFAULT_HEIGHT
+  return (
+    <iframe
+      title="Plotly"
+      src={url}
+      style={{ width, height, colorScheme: "normal" }}
+    />
+  )
+}
+
 export function PlotlyChart({
   width,
   element,
@@ -439,7 +478,7 @@ export function PlotlyChart({
   isFullScreen,
   widgetMgr,
   disabled,
-}: PlotlyChartProps): ReactElement {
+}: Readonly<PlotlyChartProps>): ReactElement {
   switch (element.chart) {
     case "url":
       return renderIFrame({
