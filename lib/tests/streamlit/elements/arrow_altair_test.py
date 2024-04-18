@@ -865,3 +865,38 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
     def test_replace_values_in_dict(self, input_data, old_to_new_map, expected):
         replace_values_in_dict(input_data, old_to_new_map)
         self.assertEqual(input_data, expected)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is False,
+        "This test only runs if altair is <= 5.0.0",
+    )
+    def test_altair_v4_raises_streamlit_exception_on_select_rerun(self):
+        point = alt.selection_multi(name="interval")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.altair_chart(chart, on_select="rerun")
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is False,
+        "This test only runs if altair is <= 5.0.0",
+    )
+    def test_altair_v4_doesnt_raises_streamlit_exception_on_select_rerun(self):
+        point = alt.selection_multi(name="interval")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        st.altair_chart(chart, on_select="ignore")
