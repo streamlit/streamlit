@@ -133,3 +133,9 @@ class SafeSessionState:
         self._yield_callback()
         with self._lock:
             yield self._state.query_params
+
+    def get(self, key: str, default: Any = None) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            return default

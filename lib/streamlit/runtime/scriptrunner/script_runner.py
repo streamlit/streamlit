@@ -490,10 +490,7 @@ class ScriptRunner:
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
-            try:
-                old_hash = self._session_state[SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY]
-            except KeyError:
-                old_hash = None
+            old_hash = self._session_state.get(SCRIPT_RUN_PAGE_SCRIPT_HASH_KEY)
 
             if old_hash != page_script_hash and mpav1:
                 # Page changed, reset widget state
