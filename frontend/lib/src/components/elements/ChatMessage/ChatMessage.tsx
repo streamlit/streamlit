@@ -29,6 +29,7 @@ import {
   StyledAvatarImage,
   StyledAvatarIcon,
   StyledAvatarBackground,
+  StyledMaterialIcon,
 } from "./styled-components"
 
 interface ChatMessageAvatarProps {
@@ -60,7 +61,9 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
               data-testid="chatAvatarIcon-user"
               background={theme.colors.red60}
             >
-              <Icon content={Face} size="lg" />
+              <StyledMaterialIcon className="material-symbols-rounded">
+                home
+              </StyledMaterialIcon>
             </StyledAvatarIcon>
           )
         } else if (avatar === "assistant") {

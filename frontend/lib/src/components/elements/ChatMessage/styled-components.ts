@@ -111,3 +111,13 @@ export const StyledAvatarImage = styled.img(({ theme }) => {
     display: "flex",
   }
 })
+
+export const StyledMaterialIcon = styled.span(() => {
+  return {
+    // display: "flex",
+    // alignItems: "center",
+    // justifyContent: "center",
+    fontSize: "1.25rem",
+    // lineHeight: "1",
+  }
+})
