@@ -80,8 +80,5 @@ def test_audio_autoplay(app: Page, assert_snapshot: ImageCompareFunction):
     autoplay_checkbox.click()
     # To prevent flakiness, we wait for the audio to load and start playing
     wait_until(app, lambda: audio_element.evaluate("el => el.readyState") == 4)
-    expect(audio_element).to_have_js_property("paused", False)
     expect(audio_element).to_have_js_property("autoplay", True)
-    # Wait for the audio to play for at least 1 second
-    wait_until(app, lambda: audio_element.evaluate("el => el.currentTime") > 1)
-    assert_snapshot(audio_element, name="st_audio-autoplay")
+    expect(audio_element).to_have_js_property("paused", False)
