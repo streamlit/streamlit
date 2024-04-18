@@ -711,5 +711,5 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         pd.testing.assert_frame_equal(output_df, expected_df)
 
     def test_empty_altair_chart_throws_error(self):
-        with self.assertRaises(AttributeError) as exc:
-            st.altair_chart(None, use_container_width=True)
+        with self.assertRaises(TypeError) as exc:
+            st.altair_chart(use_container_width=True)
