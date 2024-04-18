@@ -47,11 +47,21 @@ export default function Video({
     element
 
   const preventAutoplay = useMemo<boolean>(() => {
+    if (!element.id) {
+      // Elements without an ID should never autoplay
+      return true
+    }
+
+    // Recover the state in case this component got unmounted
+    // and mounted again for the same element.
     const preventAutoplay = elementMgr.getElementState(
       element.id,
       "preventAutoplay"
     )
+
     if (!preventAutoplay) {
+      // Set the state to prevent autoplay in case there is an unmount + mount
+      // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
     }
     return preventAutoplay ?? false
