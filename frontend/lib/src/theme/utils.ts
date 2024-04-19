@@ -479,39 +479,37 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
 
 export function getMarkdownBgColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
-  const red = lightTheme
-    ? transparentize(theme.colors.red80, 0.9)
-    : transparentize(theme.colors.red60, 0.7)
-  const orange = lightTheme
-    ? transparentize(theme.colors.yellow70, 0.9)
-    : transparentize(theme.colors.yellow70, 0.7)
-  const yellow = lightTheme
-    ? transparentize(theme.colors.yellow70, 0.9)
-    : transparentize(theme.colors.yellow50, 0.7)
-  const green = lightTheme
-    ? transparentize(theme.colors.green70, 0.9)
-    : transparentize(theme.colors.green60, 0.7)
-  const blue = lightTheme
-    ? transparentize(theme.colors.blue70, 0.9)
-    : transparentize(theme.colors.blue60, 0.7)
-  const violet = lightTheme
-    ? transparentize(theme.colors.purple70, 0.9)
-    : transparentize(theme.colors.purple60, 0.7)
-  const purple = lightTheme
-    ? transparentize(theme.colors.purple90, 0.9)
-    : transparentize(theme.colors.purple80, 0.7)
-  const gray = lightTheme
-    ? transparentize(theme.colors.gray70, 0.9)
-    : transparentize(theme.colors.gray50, 0.9)
+
   return {
-    redbg: red,
-    orangebg: orange,
-    yellowbg: yellow,
-    greenbg: green,
-    bluebg: blue,
-    violetbg: violet,
-    purplebg: purple,
-    graybg: gray,
+    redbg: transparentize(
+      theme.colors[lightTheme ? "red80" : "red60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    orangebg: transparentize(theme.colors.yellow70, lightTheme ? 0.9 : 0.7),
+    yellowbg: transparentize(
+      theme.colors[lightTheme ? "yellow70" : "yellow50"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    greenbg: transparentize(
+      theme.colors[lightTheme ? "green70" : "green60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    bluebg: transparentize(
+      theme.colors[lightTheme ? "blue70" : "blue60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    violetbg: transparentize(
+      theme.colors[lightTheme ? "purple70" : "purple60"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    purplebg: transparentize(
+      theme.colors[lightTheme ? "purple90" : "purple80"],
+      lightTheme ? 0.9 : 0.7
+    ),
+    graybg: transparentize(
+      theme.colors[lightTheme ? "gray70" : "gray50"],
+      lightTheme ? 0.9 : 0.7
+    ),
   }
 }
 
