@@ -199,6 +199,17 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when selections are activated and
+        it is used inside a cached function."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        st.cache_data(lambda: st.dataframe(df, on_select="rerun"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
