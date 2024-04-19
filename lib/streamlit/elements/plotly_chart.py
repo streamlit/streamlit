@@ -127,7 +127,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: bool | Literal["rerun", "ignore"] | WidgetCallback = False,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "rerun",
         **kwargs: Any,
     ) -> "DeltaGenerator" | AttributeDictionary:
         """Display an interactive Plotly chart.
@@ -160,9 +160,8 @@ class PlotlyMixin:
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
 
-        on_select: bool or str or callable
+        on_select: str or callable
             Controls the behavior in response to selection events in the chart. Can be one of:
-
             - “ignore” (default): Streamlit will not react to any selection events in the chart.
             - “rerun”: Streamlit will rerun the app when the user selects data points in the chart (by clicking on them or using the box/lasso tool). In this case, st.plotly_chart will return the selection data (i.e. the selected points plus metadata for the box/lasso tool) as a dictionary.
             - callable: If a callable is provided, Streamlit will rerun and execute the callable as a callback function before the rest of the app. The selection data can be retrieved through session state by setting the key parameter.
@@ -211,11 +210,7 @@ class PlotlyMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
-        is_select_enabled = (
-            on_select != None
-            and on_select != False
-            and on_select != ON_SELECTION_IGNORE
-        )
+        is_select_enabled = on_select != ON_SELECTION_IGNORE
 
         if is_select_enabled:
             # import here to avoid circular import
@@ -229,7 +224,7 @@ class PlotlyMixin:
                 plotly_chart_proto.form_id = current_form_id(self.dg)
 
             on_select_callback = None
-            if not isinstance(on_select, bool) and not isinstance(on_select, str):
+            if not isinstance(on_select, str):
                 on_select_callback = on_select
 
             key = to_key(key)
@@ -240,9 +235,6 @@ class PlotlyMixin:
             serde = PlotlyChartSelectionSerde()
 
             ctx = get_script_run_ctx()
-
-            if not isinstance(on_select, bool) and not isinstance(on_select, str):
-                pass
 
             marshall(
                 plotly_chart_proto,
