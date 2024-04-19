@@ -412,10 +412,15 @@ function PlotlyFigure({
     // event.selections doesn't show up in the PlotSelectionEvent
     // @ts-expect-error
     const { selections, points } = event
+
     // TODO: check this if:
-    if (points.length === 0 && selections && selections.length === 0) {
-      return
-    }
+    // if (
+    //   points.length === 0 &&
+    //   notNullOrUndefined(selections) &&
+    //   selections.length === 0
+    // ) {
+    //   return
+    // }
 
     points.forEach(function (point: any) {
       selectedPoints.push({
@@ -602,7 +607,7 @@ function PlotlyFigure({
     })
   }, [plotlyFigure.layout?.dragmode])
 
-  console.log(plotlyFigure)
+  console.log("Rerender", plotlyFigure)
   return (
     <Plot
       key={isFullScreen ? "fullscreen" : "original"}
@@ -631,7 +636,7 @@ function PlotlyFigure({
               // Plotly is also resetting the UI state already for
               // deselect events. So, we don't need to do it on our side.
               // Thats why the flag is false.
-              resetSelections()
+              resetSelections(false)
             }
           : undefined
       }
