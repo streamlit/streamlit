@@ -216,6 +216,8 @@ function PlotlyFigure({
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
 
+  const isSelectionActivated = element.selectionMode.length > 0 && !disabled
+
   const plotlyConfig = useMemo(() => {
     console.log("Update config")
 
@@ -223,37 +225,40 @@ function PlotlyFigure({
       return {}
     }
 
-    if (element.selectionMode.length > 0) {
-    }
-
     const config = JSON.parse(element.figure.config)
 
     if (!config.modeBarButtonsToRemove) {
+      // Only modify the mode bar buttons if it's not already set
+      // in the config provided by the user.
+
       // Hide the logo by default
       config.displaylogo = false
 
-      // Only modify the mode bar buttons if it's not already set
-      // in the config provided by the user.
       const modeBarButtonsToRemove = ["sendDataToCloud"]
-      if (
-        !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
-      ) {
-        // Remove the lasso button if lasso selection is not activated
-        modeBarButtonsToRemove.push("lasso2d")
+
+      if (!isSelectionActivated) {
+        // Remove lasso & select buttons in read-only charts:
+        modeBarButtonsToRemove.push("lasso2d", "select2d")
+      } else {
+        if (
+          !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
+        ) {
+          // Remove the lasso button if lasso selection is not activated
+          modeBarButtonsToRemove.push("lasso2d")
+        }
+
+        if (
+          !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
+        ) {
+          // Remove the box select button if box selection is not activated
+          modeBarButtonsToRemove.push("select2d")
+        }
       }
 
-      if (
-        !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
-      ) {
-        // Remove the box select button if box selection is not activated
-        modeBarButtonsToRemove.push("select2d")
-      }
       config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
     return config
   }, [element.id, element.figure?.config])
-
-  const isSelectionActivated = element.selectionMode.length > 0 && !disabled
 
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
@@ -269,6 +274,7 @@ function PlotlyFigure({
     console.log("Theme changed")
     // If the theme changes, we need to reapply the theming to the figure
     setPlotlyFigure((prevState: PlotlyFigureType) => {
+      console.log("apply theming")
       return applyTheming(prevState, element.theme, theme)
     })
   }, [element.id, theme, element.theme])
@@ -281,6 +287,7 @@ function PlotlyFigure({
       initialFigureSpec.layout.dragmode
     )
     setPlotlyFigure((prevState: PlotlyFigureType) => {
+      console.log("apply selection mode changed")
       if (isSelectionActivated) {
         if (!initialFigureSpec.layout.hovermode) {
           // If the user has already set the clickmode, we don't want to override it here.
@@ -308,6 +315,13 @@ function PlotlyFigure({
           // If the user has already set the dragmode, we don't want to override it here.
           // If not, we are selecting the best drag mode based on the selection modes.
           if (
+            element.selectionMode.includes(
+              PlotlyChartProto.SelectionMode.POINTS
+            )
+          ) {
+            // Pan drag mode has priority in case points selection is activated
+            prevState.layout.dragmode = "pan"
+          } else if (
             element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
           ) {
             // Configure select (box selection) as the activated drag mode:
@@ -358,6 +372,7 @@ function PlotlyFigure({
     )
     // Update the figure with the new height and width (if they have changed)
     setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+      console.log("apply change in height and width")
       return {
         ...prevFigure,
         layout: {
@@ -376,7 +391,7 @@ function PlotlyFigure({
     event: Readonly<Plotly.PlotSelectionEvent>
   ): void => {
     console.log("Selection event", event)
-    if (!event) {
+    if (!event || !isSelectionActivated) {
       return
     }
 
@@ -512,6 +527,7 @@ function PlotlyFigure({
           console.log("Apply reset of figure")
           // Reset the selection info within the plotly figure
           setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+            console.log("apply reset of figure")
             return {
               ...prevFigure,
               data: prevFigure.data.map((trace: any) => {
@@ -534,13 +550,13 @@ function PlotlyFigure({
     },
     [element.id, widgetMgr, fragmentId]
   )
-  console.log(plotlyFigure)
+
   // This is required for the form clearing functionality:
   useEffect(() => {
     // TODO(lukasmasuch): This is executed way to often because
     // resetSelections changes with every change in the plotly figure.
     console.log("Clear form handler", element.formId)
-    if (!element.formId) {
+    if (!element.formId || !isSelectionActivated) {
       return
     }
 
@@ -557,6 +573,36 @@ function PlotlyFigure({
     }
   }, [element.formId, widgetMgr, resetSelections])
 
+  useEffect(() => {
+    if (!isSelectionActivated) {
+      return
+    }
+    // The point selection during the lasso or box selection seems
+    // to be a bit buggy. Sometimes, points gets unselected without
+    // triggering an onDeselect event.
+    // Therefore, we are deactivating the event+select clickmode
+    // if the dragmode is set to select or lasso.
+    let clickmode: "event+select" | "event" = "event+select"
+    if (
+      plotlyFigure.layout?.dragmode === "select" ||
+      plotlyFigure.layout?.dragmode === "lasso"
+    ) {
+      clickmode = "event"
+    }
+
+    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+      console.log("Change to event clickmode")
+      return {
+        ...prevFigure,
+        layout: {
+          ...prevFigure.layout,
+          clickmode: clickmode,
+        },
+      }
+    })
+  }, [plotlyFigure.layout?.dragmode])
+
+  console.log(plotlyFigure)
   return (
     <Plot
       key={isFullScreen ? "fullscreen" : "original"}
@@ -585,7 +631,7 @@ function PlotlyFigure({
               // Plotly is also resetting the UI state already for
               // deselect events. So, we don't need to do it on our side.
               // Thats why the flag is false.
-              resetSelections(false)
+              resetSelections()
             }
           : undefined
       }
@@ -593,11 +639,40 @@ function PlotlyFigure({
         console.log("onInitialized")
         widgetMgr.setElementState(element.id, "figure", figure)
       }}
+      onClick={(event: any) => {
+        console.log("onClick event", event)
+      }}
       // Update the figure state on every change to the figure itself:
       onUpdate={figure => {
-        console.log("onUpdate")
+        console.log("onUpdate", figure)
+
         widgetMgr.setElementState(element.id, "figure", figure)
         setPlotlyFigure(figure)
+
+        // if (
+        //   (figure.layout.dragmode === "select" ||
+        //     figure.layout.dragmode === "lasso") &&
+        //   (figure.layout as any).selections
+        // ) {
+        //   let everythingTransparent = true
+        //   figure.data.forEach((trace: any) => {
+        //     if (
+        //       isNullOrUndefined(trace.selectedpoints) ||
+        //       trace.selectedpoints.length > 0
+        //     ) {
+        //       everythingTransparent = false
+        //     }
+        //   })
+        //   if (everythingTransparent) {
+        //     console.log("Everything is transparent", figure)
+        //     // console.log(dataClone)
+        //     // setPlotlyFigure(figureClone)
+        //     resetSelections(true)
+        //   } else {
+        //     widgetMgr.setElementState(element.id, "figure", figure)
+        //     setPlotlyFigure(figure)
+        //   }
+        // }
       }}
     />
   )
