@@ -14,13 +14,36 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
 def test_st_empty(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that st.empty doesn't take any space on screen."""
-    expect(app.get_by_test_id("stEmpty")).to_be_visible()
+    expect(app.get_by_test_id("stEmpty")).to_have_count(1)
 
     assert_snapshot(
         app.get_by_test_id("stVerticalBlock"), name="st_empty-no_vertical_space_taken"
     )
+
+
+def test_st_empty_as_a_container(app: Page):
+    expect(app.get_by_text("Hello")).to_be_visible()
+
+    app.get_by_test_id("stButton").nth(0).get_by_role("button").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Hello")).to_have_count(0)
+    expect(app.get_by_test_id("stArrowVegaLiteChart")).to_have_count(1)
+
+    app.get_by_test_id("stButton").nth(1).get_by_role("button").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stVegaLiteChart")).to_have_count(0)
+    expect(app.get_by_text("This is one element")).to_have_count(1)
+    expect(app.get_by_text("This is another")).to_have_count(1)
+
+    app.get_by_test_id("stButton").nth(2).get_by_role("button").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("This is one element")).to_have_count(0)
+    expect(app.get_by_text("This is another")).to_have_count(0)
