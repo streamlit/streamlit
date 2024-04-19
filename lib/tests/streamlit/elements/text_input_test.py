@@ -182,6 +182,15 @@ class TextInputTest(DeltaGeneratorTestCase):
             "'visible', 'hidden' or 'collapsed'.",
         )
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.text_input("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 class SomeObj:
     pass
@@ -208,3 +217,18 @@ def test_text_input_interaction():
     at = text_input.set_value(None).run()
     text_input = at.text_input[0]
     assert text_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "text_input" not in st.session_state:
+            st.session_state["text_input"] = None
+
+        st.text_input("text_input", key="text_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.text_input[0].value is None
