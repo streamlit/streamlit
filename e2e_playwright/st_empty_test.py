@@ -47,3 +47,7 @@ def test_st_empty_as_a_container(app: Page):
 
     expect(app.get_by_text("This is one element")).to_have_count(0)
     expect(app.get_by_text("This is another")).to_have_count(0)
+
+    assert_snapshot(
+        app.get_by_test_id("stVerticalBlock"), name="st_empty-order_after_replacement"
+    )

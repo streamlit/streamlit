@@ -31,6 +31,7 @@ placeholder = st.empty()
 
 # Replace the placeholder with some text:
 placeholder.text("Hello")
+st.text("last element")
 
 if replace_hello_text_button_clicked:
     # Replace the text with a chart:
