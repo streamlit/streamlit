@@ -525,7 +525,7 @@ function PlotlyFigure({
       layout={plotlyFigure.layout}
       config={plotlyConfig}
       frames={plotlyFigure.frames ?? undefined}
-      // This is fired after a selection is made on the chart:
+      // This is fired after a selection is made on the chart
       onSelected={isSelectionActivated ? handleSelection : () => {}}
       // Double click is needed to make it easier to the user to
       // reset the selection. The default handling can be a bit annoying
