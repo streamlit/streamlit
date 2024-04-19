@@ -37,6 +37,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
@@ -322,6 +323,10 @@ class NumberInputMixin:
                 f"\n`max_value` has {type(max_value).__name__} type."
                 f"\n`step` has {type(step).__name__} type."
             )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         if value == "min":
             if min_value is not None:

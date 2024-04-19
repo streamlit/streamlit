@@ -21,6 +21,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    List,
     Literal,
     Sequence,
     Tuple,
@@ -79,7 +80,6 @@ def _parse_date_value(
     if value == "today":
         parsed_dates = [datetime.now().date()]
     elif value == "default_value_today":
-        # Set value default.
         parsed_dates = [datetime.now().date()]
     elif isinstance(value, datetime):
         parsed_dates = [value.date()]
@@ -159,17 +159,27 @@ class _DateInputValues:
         max_value: SingleDateValue,
     ) -> _DateInputValues:
         parsed_value, is_range = _parse_date_value(value=value)
+        parsed_min = _parse_min_date(
+            min_value=min_value,
+            parsed_dates=parsed_value,
+        )
+        parsed_max = _parse_max_date(
+            max_value=max_value,
+            parsed_dates=parsed_value,
+        )
+
+        if value == "default_value_today":
+            v = cast(List[date], parsed_value)[0]
+            if v < parsed_min:
+                parsed_value = [parsed_min]
+            if v > parsed_max:
+                parsed_value = [parsed_max]
+
         return cls(
             value=parsed_value,
             is_range=is_range,
-            min=_parse_min_date(
-                min_value=min_value,
-                parsed_dates=parsed_value,
-            ),
-            max=_parse_max_date(
-                max_value=max_value,
-                parsed_dates=parsed_value,
-            ),
+            min=parsed_min,
+            max=parsed_max,
         )
 
     def __post_init__(self) -> None:
@@ -448,6 +458,10 @@ class TimeWidgetsMixin:
             page=ctx.page_script_hash if ctx else None,
         )
         del value
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            parsed_time = None
 
         time_input_proto = TimeInputProto()
         time_input_proto.id = id

@@ -406,3 +406,18 @@ def test_number_input_interaction():
     at = number_input.set_value(None).run()
     number_input = at.number_input[0]
     assert number_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "number_input" not in st.session_state:
+            st.session_state["number_input"] = None
+
+        st.number_input("number_input", key="number_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.number_input[0].value is None
