@@ -48,6 +48,7 @@ import {
   DerivedColors,
 } from "./getColors"
 import { createBaseUiTheme } from "./createThemeUtil"
+import { transparentize } from "color2k"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -478,14 +479,30 @@ export function getMarkdownTextColors(theme: EmotionTheme): any {
 
 export function getMarkdownBgColors(theme: EmotionTheme): any {
   const lightTheme = hasLightBackgroundColor(theme)
-  const red = lightTheme ? theme.colors.red40 : theme.colors.red90
-  const orange = lightTheme ? theme.colors.orange40 : theme.colors.orange90
-  const yellow = lightTheme ? theme.colors.yellow40 : theme.colors.yellow90
-  const green = lightTheme ? theme.colors.green40 : theme.colors.green90
-  const blue = lightTheme ? theme.colors.blue40 : theme.colors.blue90
-  const violet = lightTheme ? theme.colors.purple40 : theme.colors.purple90
-  const purple = lightTheme ? theme.colors.purple40 : theme.colors.purple90
-  const gray = lightTheme ? theme.colors.gray40 : theme.colors.gray90
+  const red = lightTheme
+    ? transparentize(theme.colors.red80, 0.9)
+    : transparentize(theme.colors.red60, 0.7)
+  const orange = lightTheme
+    ? transparentize(theme.colors.yellow70, 0.9)
+    : transparentize(theme.colors.yellow70, 0.7)
+  const yellow = lightTheme
+    ? transparentize(theme.colors.yellow70, 0.9)
+    : transparentize(theme.colors.yellow50, 0.7)
+  const green = lightTheme
+    ? transparentize(theme.colors.green70, 0.9)
+    : transparentize(theme.colors.green60, 0.7)
+  const blue = lightTheme
+    ? transparentize(theme.colors.blue70, 0.9)
+    : transparentize(theme.colors.blue60, 0.7)
+  const violet = lightTheme
+    ? transparentize(theme.colors.purple70, 0.9)
+    : transparentize(theme.colors.purple60, 0.7)
+  const purple = lightTheme
+    ? transparentize(theme.colors.purple90, 0.9)
+    : transparentize(theme.colors.purple80, 0.7)
+  const gray = lightTheme
+    ? transparentize(theme.colors.gray70, 0.9)
+    : transparentize(theme.colors.gray50, 0.9)
   return {
     redbg: red,
     orangebg: orange,
