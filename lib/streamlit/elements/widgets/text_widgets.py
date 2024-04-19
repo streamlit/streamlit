@@ -34,6 +34,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
@@ -277,6 +278,10 @@ class TextWidgetsMixin:
             form_id=current_form_id(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         text_input_proto = TextInputProto()
         text_input_proto.id = id
@@ -537,6 +542,10 @@ class TextWidgetsMixin:
             form_id=current_form_id(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         text_area_proto = TextAreaProto()
         text_area_proto.id = id

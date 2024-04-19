@@ -316,3 +316,18 @@ def test_radio_enum_coercion():
     with patch_config_options({"runner.enumCoercion": "off"}):
         with pytest.raises(AssertionError):
             test_enum()  # expect a failure with the config value off.
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "radio" not in st.session_state:
+            st.session_state["radio"] = None
+
+        st.radio("radio", ["a", "b", "c"], key="radio")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.radio[0].value is None
