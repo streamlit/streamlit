@@ -44,7 +44,7 @@ describe("st.markdown", () => {
       expect(els[21].textContent).to.eq("Bold text within blue background");
       expect(els[21].getElementsByTagName("span")[0].style.backgroundColor).to.eq("rgba(28, 131, 225, 0.1)");
       expect(els[22].textContent).to.eq("Italic text within red background");
-      expect(els[22].getElementsByTagName("span")[0].style.backgroundColor).to.eq("rgba(255, 43, 43, 0.1))");
+      expect(els[22].getElementsByTagName("span")[0].style.backgroundColor).to.eq("rgba(255, 43, 43, 0.1)");
       expect(els[23].textContent).to.eq("Link within rainbow background");
       expect(els[23].getElementsByTagName("span")[0].style.background).to.eq("linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 227, 18, 0.1), rgba(255, 227, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), rgba(128, 61, 245, 0.1), rgba(88, 63, 132, 0.1))");
       expect(els[24].textContent).to.eq("LaTeX math within green background: ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0");
