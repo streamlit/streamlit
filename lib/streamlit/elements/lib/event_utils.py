@@ -28,13 +28,10 @@ class AttributeDictionary(Dict[Any, Any]):
     def __getattr__(self, key):
         try:
             item = self.__getitem__(key)
-            if isinstance(item, dict):
-                # If the item is a dict, wrap it again into an `AttributeDictionary` to allow dot notation access.
-                return AttributeDictionary(item)
-            return item
-        except KeyError:
+            return AttributeDictionary(item) if isinstance(item, dict) else item
+        except KeyError as err:
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{key}'"
-            )
+            ) from err
 
     __setattr__ = dict.__setitem__

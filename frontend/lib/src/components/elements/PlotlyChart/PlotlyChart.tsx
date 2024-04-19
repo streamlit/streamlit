@@ -192,6 +192,7 @@ function PlotlyFigure({
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
+    console.log("Update initial figure spec")
     if (!element.figure?.spec) {
       return {
         layout: {},
@@ -201,9 +202,10 @@ function PlotlyFigure({
     }
 
     return JSON.parse(element.figure.spec)
-  }, [element.figure?.spec])
+  }, [element.id, element.figure?.spec])
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
+    console.log("Load figure state")
     // If there was already a state with a figure using the same id,
     // use that to recover the state. This happens in some situations
     // where a component un-mounts and mounts again.
@@ -215,15 +217,47 @@ function PlotlyFigure({
   })
 
   const plotlyConfig = useMemo(() => {
+    console.log("Update config")
     if (!element.figure?.config) {
       return {}
     }
-    return JSON.parse(element.figure.config)
-  }, [element.figure?.config])
+
+    if (element.selectionMode.length > 0) {
+    }
+
+    const config = JSON.parse(element.figure.config)
+
+    if (!config.modeBarButtonsToRemove) {
+      // Hide the logo by default
+      config.displaylogo = false
+
+      // Only modify the mode bar buttons if it's not already set
+      // in the config provided by the user.
+      const modeBarButtonsToRemove = ["sendDataToCloud"]
+      if (
+        !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
+      ) {
+        // Remove the lasso button if lasso selection is not activated
+        modeBarButtonsToRemove.push("lasso2d")
+      }
+
+      if (
+        !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
+      ) {
+        // Remove the box select button if box selection is not activated
+        modeBarButtonsToRemove.push("select2d")
+      }
+      config.modeBarButtonsToRemove = modeBarButtonsToRemove
+    }
+    return config
+  }, [element.id, element.figure?.config])
+
+  const isSelectionActivated = element.selectionMode.length > 0 && !disabled
 
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
   useEffect(() => {
+    console.log("Update spec based on updated input data")
     // Whenever the initial figure spec changes, we need to update
     // the figure spec with the new spec from the element.
     setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
@@ -231,23 +265,51 @@ function PlotlyFigure({
   }, [initialFigureSpec])
 
   useEffect(() => {
+    console.log("Theme changed")
     // If the theme changes, we need to reapply the theming to the figure
-    const spec = applyTheming(plotlyFigure, element.theme, theme)
-    // https://plotly.com/javascript/reference/layout/#layout-clickmode
-    // This allows single selections and shift click to add / remove selections
-    if (element.isSelectEnabled) {
-      // TODO(lukasmasuch) Should we move this to the backend?
-      spec.layout.clickmode = "event+select"
-      spec.layout.hovermode = "closest"
-    } else {
-      spec.layout.clickmode = initialFigureSpec.layout.clickmode
-      spec.layout.hovermode = initialFigureSpec.layout.hovermode
-    }
-    setPlotlyFigure(spec)
-    // Adding plotlyFigure to the dependencies
-    // array would cause an infinite update loop
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [theme, element.theme, element.isSelectEnabled])
+    setPlotlyFigure((prevState: PlotlyFigureType) => {
+      return applyTheming(prevState, element.theme, theme)
+    })
+  }, [element.id, theme, element.theme])
+
+  useEffect(() => {
+    console.log("Selection changed")
+    setPlotlyFigure((prevState: PlotlyFigureType) => {
+      if (isSelectionActivated) {
+        // TODO(lukasmasuch) Should we move this to the backend?
+        if (
+          element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
+        ) {
+          // https://plotly.com/javascript/reference/layout/#layout-clickmode
+          // This allows single point selections and shift click to add / remove selections
+          prevState.layout.clickmode = "event+select"
+        } else {
+          // If points selection is not activated, we deactivate the `select` behavior.
+          prevState.layout.clickmode = "event"
+        }
+        prevState.layout.hovermode = "closest"
+        console.log(prevState.layout.dragmode)
+        if (
+          element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
+        ) {
+          // Configure select (box selection) as the activated drag mode:
+          prevState.layout.dragmode = "select"
+        } else if (
+          element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
+        ) {
+          // Configure lass (lasso selection) as the activated drag mode:
+          prevState.layout.dragmode = "lasso"
+        } else {
+          prevState.layout.dragmode = "pan"
+        }
+      } else {
+        prevState.layout.clickmode = initialFigureSpec.layout.clickmode
+        prevState.layout.hovermode = initialFigureSpec.layout.hovermode
+        prevState.layout.dragmode = initialFigureSpec.layout.dragmode
+      }
+      return prevState
+    })
+  }, [element.id])
 
   let calculatedWidth = element.useContainerWidth
     ? // Apply a min width to prevent the chart running into issues with negative
@@ -283,6 +345,11 @@ function PlotlyFigure({
   const handleSelection = (
     event: Readonly<Plotly.PlotSelectionEvent>
   ): void => {
+    console.log("Selection event", event)
+    if (!event) {
+      return
+    }
+
     const selectionState: any = {
       select: {
         points: [],
@@ -300,6 +367,7 @@ function PlotlyFigure({
     // event.selections doesn't show up in the PlotSelectionEvent
     // @ts-expect-error
     const { selections, points } = event
+    // TODO: check this if:
     if (points.length === 0 && selections && selections.length === 0) {
       return
     }
@@ -363,12 +431,17 @@ function PlotlyFigure({
     selectionState.select.box = selectedBoxes
     selectionState.select.lasso = selectedLassos
 
-    widgetMgr.setStringValue(
-      element,
-      JSON.stringify(selectionState),
-      { fromUi: true },
-      fragmentId
-    )
+    const currentSelectionState = widgetMgr.getStringValue(element)
+    const newSelectionState = JSON.stringify(selectionState)
+    if (currentSelectionState !== newSelectionState) {
+      // Only update the widget state if it has changed
+      widgetMgr.setStringValue(
+        element,
+        newSelectionState,
+        { fromUi: true },
+        fragmentId
+      )
+    }
   }
 
   /**
@@ -376,6 +449,7 @@ function PlotlyFigure({
    * sends out an empty selection state.
    */
   const resetSelections = useCallback((): void => {
+    console.log("Reset selections")
     const emptySelectionState: any = {
       // We use snake case here since this is the widget state
       // that is sent and used in the backend. Therefore, it should
@@ -387,35 +461,49 @@ function PlotlyFigure({
         lasso: [],
       },
     }
-    widgetMgr.setStringValue(
-      element,
-      JSON.stringify(emptySelectionState),
-      { fromUi: true },
-      fragmentId
-    )
+    const currentSelectionState = widgetMgr.getStringValue(element)
+    const newSelectionState = JSON.stringify(emptySelectionState)
+    if (currentSelectionState !== newSelectionState) {
+      // Only update the widget state if it has changed
+      widgetMgr.setStringValue(
+        element,
+        newSelectionState,
+        { fromUi: true },
+        fragmentId
+      )
+    }
 
     // Reset the selection info within the plotly figure
-    setPlotlyFigure({
-      ...plotlyFigure,
-      data: plotlyFigure.data.map((trace: any) => {
-        return {
-          ...trace,
-          // Set to null to clear the selection an empty
-          // array here would still show everything as opaque
-          selectedpoints: null,
-        }
-      }),
-      layout: {
-        ...plotlyFigure.layout,
-        // selections is not part of the plotly typing:
-        // @ts-expect-error
-        selections: [],
-      },
+    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+      console.log("Reset figure selections")
+      return {
+        ...prevFigure,
+        data: prevFigure.data.map((trace: any) => {
+          return {
+            ...trace,
+            // Set to null to clear the selection an empty
+            // array here would still show everything as opaque
+            selectedpoints: null,
+          }
+        }),
+        layout: {
+          ...prevFigure.layout,
+          // selections is not part of the plotly typing:
+          selections: [],
+        },
+      }
     })
-  }, [plotlyFigure, widgetMgr, element, fragmentId])
+  }, [element.id, widgetMgr, fragmentId])
 
   // This is required for the form clearing functionality:
   useEffect(() => {
+    // TODO(lukasmasuch): This is executed way to often because
+    // resetSelections changes with every change in the plotly figure.
+    console.log("Clear form handler", element.formId)
+    if (!element.formId) {
+      return
+    }
+
     const formClearHelper = new FormClearHelper()
     // On form clear, reset the selections (in chart & widget state)
     formClearHelper.manageFormClearListener(
@@ -427,7 +515,7 @@ function PlotlyFigure({
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, resetSelections, widgetMgr])
+  }, [element.formId, widgetMgr, resetSelections])
 
   return (
     <Plot
@@ -437,17 +525,20 @@ function PlotlyFigure({
       layout={plotlyFigure.layout}
       config={plotlyConfig}
       frames={plotlyFigure.frames ?? undefined}
-      onSelected={
-        element.isSelectEnabled && !disabled ? handleSelection : () => {}
-      }
-      // TODO(lukasmasuch): double check if we need double click or not?
-      onDeselect={
-        element.isSelectEnabled && !disabled ? resetSelections : () => {}
-      }
+      // This is fired after a selection is made on the chart:
+      onSelected={isSelectionActivated ? handleSelection : () => {}}
+      // Double click is needed to make it easier to the user to
+      // reset the selection. The default handling can be a bit annoying
+      // sometimes.
+      onDoubleClick={isSelectionActivated ? resetSelections : () => {}}
+      onDeselect={isSelectionActivated ? resetSelections : () => {}}
       onInitialized={figure => {
+        console.log("onInitialized")
         widgetMgr.setElementState(element.id, "figure", figure)
       }}
+      // Update the figure state on every change to the figure itself:
       onUpdate={figure => {
+        console.log("onUpdate")
         widgetMgr.setElementState(element.id, "figure", figure)
         setPlotlyFigure(figure)
       }}

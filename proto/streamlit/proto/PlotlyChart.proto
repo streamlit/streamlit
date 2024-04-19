@@ -36,13 +36,22 @@ message PlotlyChart {
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
 
+  // The unique element ID of this chart.
   string id = 7;
 
-  bool is_select_enabled = 8;
+  // Activate selections types on the chart.
+  repeated SelectionMode selection_mode = 12;
 
   string form_id = 9;
 
   reserved 3, 4;
+
+  // Available selection modes:
+  enum SelectionMode {
+      POINTS = 0; // Point selection mode
+      BOX = 1; // Box selection mode
+      LASSO = 2; // Lasso selection mode
+  }
 }
 
 message Figure {
