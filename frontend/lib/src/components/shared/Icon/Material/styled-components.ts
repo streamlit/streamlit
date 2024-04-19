@@ -14,34 +14,33 @@
  * limitations under the License.
  */
 
+import React, { ReactElement } from "react"
+
 import styled from "@emotion/styled"
+
 import {
-  StyledIcon,
-  StyledEmojiIcon,
-} from "@streamlit/lib/src/components/shared/Icon/styled-components"
-import { StyledMaterialIcon } from "@streamlit/lib/src/components/shared/Icon/Material/styled-components"
+  IconSize,
+  ThemeColor,
+  computeSpacingStyle,
+} from "@streamlit/lib/src/theme"
 
-export const StyledAlertContent = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing.sm,
-  width: "100%",
+export interface StyledMaterialIconProps {
+  size: IconSize
+  margin: string
+  padding: string
+}
 
-  [StyledEmojiIcon as any]: {
-    position: "relative",
-    top: "2px",
-  },
-
-  [StyledIcon as any]: {
-    position: "relative",
-    top: "2px",
-  },
-
-  [StyledMaterialIcon as any]: {
-    position: "relative",
-    top: "2px",
-  },
-
-  ".stCodeBlock code": {
-    paddingRight: "1rem",
-  },
-}))
+export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
+  ({ size, margin, padding, theme }) => {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContents: "center",
+      fontSize: theme.iconSizes[size],
+      width: theme.iconSizes[size],
+      height: theme.iconSizes[size],
+      margin: computeSpacingStyle(margin, theme),
+      padding: computeSpacingStyle(padding, theme),
+    }
+  }
+)

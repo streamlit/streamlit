@@ -21,6 +21,7 @@ import { EmojiIcon } from "./Icon"
 import camelCase from "lodash/camelCase"
 import startCase from "lodash/startCase"
 import DynamicIconErrorBoundary from "./DynamicIconErrorBoundary"
+import MaterialFontIcon from "./Material/MaterialFontIcon"
 
 const MaterialFilled = React.lazy(
   () =>
@@ -38,13 +39,6 @@ const MaterialRounded = React.lazy(
   () =>
     import(
       "@streamlit/lib/src/components/shared/Icon/Material/MaterialRounded"
-    )
-)
-
-const MaterialOriginal = React.lazy(
-  () =>
-    import(
-      "@streamlit/lib/src/components/shared/Icon/Material/MaterialOriginal"
     )
 )
 
@@ -66,8 +60,7 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
 
   // Convert the icon name to CamelCase
   iconNameInPack = startCase(camelCase(iconNameInPack)).replace(/ /g, "")
-  iconNameInPack = iconNameInPack.replace("3X3", "3x3")
-  iconNameInPack = iconNameInPack.replace("4X4", "4x4")
+
   return { pack: iconPack, icon: iconNameInPack }
 }
 
@@ -93,7 +86,8 @@ const DynamicIconDispatcher = ({
     case "material-rounded":
       return <MaterialRounded iconName={icon} {...props} />
     case "material-original":
-      return <MaterialOriginal iconName={icon} {...props} />
+    case "material-original-filled":
+      return <MaterialFontIcon pack={pack} iconName={icon} {...props} />
     case "emoji":
     default:
       return <EmojiIcon {...props}>{icon}</EmojiIcon>
@@ -101,6 +95,7 @@ const DynamicIconDispatcher = ({
 }
 
 export const DynamicIcon = (props: DynamicIconProps): React.ReactElement => (
+  // TODO[kajarenc] Remove suspense and error boundary here
   <Suspense
     fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}
     key={props.iconValue}
