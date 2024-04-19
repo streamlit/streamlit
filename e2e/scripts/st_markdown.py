@@ -101,3 +101,14 @@ st.markdown(
 - :rainbow-background[rainbow]
 """
 )
+
+
+st.markdown(":blue-background[**Bold text within blue background**]")
+
+st.markdown(":red-background[*Italic text within red background*]")
+
+st.markdown(":rainbow-background[[Link](http://example.com) within rainbow background]")
+
+st.markdown(
+    ":green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]"
+)
