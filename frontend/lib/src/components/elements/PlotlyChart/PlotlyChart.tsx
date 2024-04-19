@@ -273,7 +273,12 @@ function PlotlyFigure({
   }, [element.id, theme, element.theme])
 
   useEffect(() => {
-    console.log("Selection changed")
+    console.log(
+      "Selection changed",
+      initialFigureSpec.layout.clickmode,
+      initialFigureSpec.layout.hovermode,
+      initialFigureSpec.layout.dragmode
+    )
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       if (isSelectionActivated) {
         // TODO(lukasmasuch) Should we move this to the backend?
@@ -448,53 +453,62 @@ function PlotlyFigure({
    * Callback resets selections in the chart and
    * sends out an empty selection state.
    */
-  const resetSelections = useCallback((): void => {
-    console.log("Reset selections")
-    const emptySelectionState: any = {
-      // We use snake case here since this is the widget state
-      // that is sent and used in the backend. Therefore, it should
-      // conform with the Python naming conventions.
-      select: {
-        points: [],
-        point_indices: [],
-        box: [],
-        lasso: [],
-      },
-    }
-    const currentSelectionState = widgetMgr.getStringValue(element)
-    const newSelectionState = JSON.stringify(emptySelectionState)
-    if (currentSelectionState !== newSelectionState) {
-      // Only update the widget state if it has changed
-      widgetMgr.setStringValue(
-        element,
-        newSelectionState,
-        { fromUi: true },
-        fragmentId
-      )
-    }
-
-    // Reset the selection info within the plotly figure
-    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-      console.log("Reset figure selections")
-      return {
-        ...prevFigure,
-        data: prevFigure.data.map((trace: any) => {
-          return {
-            ...trace,
-            // Set to null to clear the selection an empty
-            // array here would still show everything as opaque
-            selectedpoints: null,
-          }
-        }),
-        layout: {
-          ...prevFigure.layout,
-          // selections is not part of the plotly typing:
-          selections: [],
+  const resetSelections = useCallback(
+    (resetSelectionInFigure = true): void => {
+      console.log("Reset selections")
+      const emptySelectionState: any = {
+        // We use snake case here since this is the widget state
+        // that is sent and used in the backend. Therefore, it should
+        // conform with the Python naming conventions.
+        select: {
+          points: [],
+          point_indices: [],
+          box: [],
+          lasso: [],
         },
       }
-    })
-  }, [element.id, widgetMgr, fragmentId])
-
+      const currentSelectionState = widgetMgr.getStringValue(element)
+      const newSelectionState = JSON.stringify(emptySelectionState)
+      if (currentSelectionState !== newSelectionState) {
+        // Only update the widget state if it has changed
+        widgetMgr.setStringValue(
+          element,
+          newSelectionState,
+          { fromUi: true },
+          fragmentId
+        )
+      }
+      if (resetSelectionInFigure) {
+        // We need to do this reset with a short timeout, because otherwise
+        // the onUpdate callback seems to overwrite the selection state
+        // that we set here. The timeout will make sure that this is executed
+        // after the onUpdate callback.
+        setTimeout(() => {
+          // Reset the selection info within the plotly figure
+          setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+            return {
+              ...prevFigure,
+              data: prevFigure.data.map((trace: any) => {
+                return {
+                  ...trace,
+                  // Set to null to clear the selection an empty
+                  // array here would still show everything as opaque
+                  selectedpoints: null,
+                }
+              }),
+              layout: {
+                ...prevFigure.layout,
+                // selections is not part of the plotly typing:
+                selections: [],
+              },
+            }
+          })
+        }, 50)
+      }
+    },
+    [element.id, widgetMgr, fragmentId]
+  )
+  console.log(plotlyFigure)
   // This is required for the form clearing functionality:
   useEffect(() => {
     // TODO(lukasmasuch): This is executed way to often because
@@ -530,8 +544,25 @@ function PlotlyFigure({
       // Double click is needed to make it easier to the user to
       // reset the selection. The default handling can be a bit annoying
       // sometimes.
-      onDoubleClick={isSelectionActivated ? resetSelections : () => {}}
-      onDeselect={isSelectionActivated ? resetSelections : () => {}}
+      onDoubleClick={
+        isSelectionActivated
+          ? () => {
+              console.log("onDoubleClick event")
+              resetSelections()
+            }
+          : undefined
+      }
+      onDeselect={
+        isSelectionActivated
+          ? () => {
+              console.log("onDeselect event")
+              // Plotly is also resetting the UI state already for
+              // deselect events. So, we don't need to do it on our side.
+              // Thats why the flag is false.
+              resetSelections(false)
+            }
+          : undefined
+      }
       onInitialized={figure => {
         console.log("onInitialized")
         widgetMgr.setElementState(element.id, "figure", figure)

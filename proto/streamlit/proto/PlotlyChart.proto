@@ -40,7 +40,7 @@ message PlotlyChart {
   string id = 7;
 
   // Activate selections types on the chart.
-  repeated SelectionMode selection_mode = 12;
+  repeated SelectionMode selection_mode = 8;
 
   string form_id = 9;
 
