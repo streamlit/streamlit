@@ -22,6 +22,7 @@ import { screen, cleanup } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import { colors } from "@streamlit/lib/src/theme/primitives/colors"
+import { transparentize } from "color2k"
 
 import StreamlitMarkdown, {
   LinkWithTargetBlank,
@@ -346,17 +347,26 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("properly adds background colors", () => {
+    const redbg = transparentize(colors.red80, 0.9)
+    const orangebg = transparentize(colors.yellow70, 0.9)
+    const yellowbg = transparentize(colors.yellow70, 0.9)
+    const greenbg = transparentize(colors.green70, 0.9)
+    const bluebg = transparentize(colors.blue70, 0.9)
+    const violetbg = transparentize(colors.purple70, 0.9)
+    const purplebg = transparentize(colors.purple90, 0.9)
+    const graybg = transparentize(colors.gray70, 0.9)
+
     const colorMapping = new Map([
-      ["red", colors.red40],
-      ["blue", colors.blue40],
-      ["green", colors.green40],
-      ["violet", colors.purple40],
-      ["orange", colors.orange40],
-      ["gray", colors.gray40],
-      ["grey", colors.gray40],
+      ["red", redbg],
+      ["blue", bluebg],
+      ["green", greenbg],
+      ["violet", violetbg],
+      ["orange", orangebg],
+      ["gray", graybg],
+      ["grey", graybg],
       [
         "rainbow",
-        `linear-gradient(to right, ${colors.red40}, ${colors.orange40}, ${colors.yellow40}, ${colors.green40}, ${colors.blue40}, ${colors.purple40}, ${colors.purple40})`,
+        `linear-gradient(to right, ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg})`,
       ],
     ])
 
