@@ -629,9 +629,11 @@ const RawElementNodeRenderer = (
     }
 
     case "plotlyChart": {
+      const plotlyProto = node.element.plotlyChart as PlotlyChartProto
       return (
         <PlotlyChart
-          element={node.element.plotlyChart as PlotlyChartProto}
+          key={plotlyProto.id}
+          element={plotlyProto}
           {...widgetProps}
         />
       )

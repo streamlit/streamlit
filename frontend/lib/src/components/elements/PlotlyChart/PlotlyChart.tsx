@@ -45,10 +45,13 @@ export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
   height?: number
-  isFullScreen: boolean
   widgetMgr: WidgetStateManager
   disabled: boolean
   fragmentId?: string
+  isFullScreen: boolean
+  expand?: () => void
+  collapse?: () => void
+  disableFullscreenMode?: boolean
 }
 
 export interface PlotlyIFrameProps {
@@ -72,6 +75,20 @@ export interface Selection extends SelectionRange {
 export const DEFAULT_HEIGHT = 450
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
+
+const FULLSCREEN_EXPAND_ICON = {
+  width: 600,
+  height: 470,
+  name: "fullscreen-expand",
+  path: "M32 32C14.3 32 0 46.3 0 64v96c0 17.7 14.3 32 32 32s32-14.3 32-32V96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM64 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H64V352zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64v64c0 17.7 14.3 32 32 32s32-14.3 32-32V64c0-17.7-14.3-32-32-32H320zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H320c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V352z",
+}
+
+const FULLSCREEN_COLLAPSE_ICON = {
+  width: 600,
+  height: 470,
+  name: "fullscreen-collapse",
+  path: "M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z",
+}
 
 /**
  * Parses an SVG path string into separate x and y coordinates.
@@ -183,10 +200,13 @@ function PlotlyFigure({
   element,
   width,
   height,
-  isFullScreen,
   widgetMgr,
   disabled,
   fragmentId,
+  isFullScreen,
+  expand,
+  collapse,
+  disableFullscreenMode,
 }: Readonly<PlotlyChartProps>): ReactElement {
   const theme: EmotionTheme = useTheme()
 
@@ -228,6 +248,24 @@ function PlotlyFigure({
 
     const config = JSON.parse(element.figure.config)
 
+    if (!disableFullscreenMode) {
+      config.modeBarButtonsToAdd = [
+        {
+          name: isFullScreen ? "Close fullscreen" : "Fullscreen",
+          icon: isFullScreen
+            ? FULLSCREEN_COLLAPSE_ICON
+            : FULLSCREEN_EXPAND_ICON,
+          click: () => {
+            if (isFullScreen && collapse) {
+              collapse()
+            } else if (expand) {
+              expand()
+            }
+          },
+        },
+      ]
+    }
+
     if (!config.modeBarButtonsToRemove) {
       // Only modify the mode bar buttons if it's not already set
       // in the config provided by the user.
@@ -259,7 +297,7 @@ function PlotlyFigure({
       config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
     return config
-  }, [element.id, element.figure?.config])
+  }, [element.id, element.figure?.config, isFullScreen, disableFullscreenMode])
 
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
@@ -711,6 +749,9 @@ export function PlotlyChart({
   widgetMgr,
   disabled,
   fragmentId,
+  expand,
+  collapse,
+  disableFullscreenMode,
 }: Readonly<PlotlyChartProps>): ReactElement {
   switch (element.chart) {
     case "url":
@@ -725,10 +766,13 @@ export function PlotlyChart({
           width={width}
           element={element}
           height={height}
-          isFullScreen={isFullScreen}
           widgetMgr={widgetMgr}
           disabled={disabled}
           fragmentId={fragmentId}
+          isFullScreen={isFullScreen}
+          expand={expand}
+          collapse={collapse}
+          disableFullscreenMode={disableFullscreenMode}
         />
       )
     default:
@@ -736,4 +780,4 @@ export function PlotlyChart({
   }
 }
 
-export default withFullScreenWrapper(PlotlyChart)
+export default withFullScreenWrapper(PlotlyChart, true)
