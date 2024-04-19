@@ -26,7 +26,7 @@ def test_st_empty(app: Page, assert_snapshot: ImageCompareFunction):
     )
 
 
-def test_st_empty_as_a_container(app: Page):
+def test_st_empty_as_a_container(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_text("Hello")).to_be_visible()
 
     app.get_by_test_id("stButton").nth(0).get_by_role("button").click()
