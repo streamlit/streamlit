@@ -45,5 +45,7 @@ message ArrowVegaLiteChart {
 
   bool is_select_enabled = 8;
 
+  string form_id = 9;
+
   reserved 3;
 }

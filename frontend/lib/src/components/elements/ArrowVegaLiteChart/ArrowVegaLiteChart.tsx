@@ -24,7 +24,7 @@ import {
   WidgetInfo,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import { debounce } from "@streamlit/lib/src/util/utils"
+import { debounce, notNullOrUndefined } from "@streamlit/lib/src/util/utils"
 import { logMessage } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
@@ -37,6 +37,7 @@ import "@streamlit/lib/src/assets/css/vega-tooltip.css"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
 import { ScenegraphEvent } from "vega"
+import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 
 const MagicFields = {
   DATAFRAME_INDEX: "(index)",
@@ -97,6 +98,8 @@ export interface VegaLiteChartElement {
   id: string
 
   isSelectEnabled: boolean
+
+  formId: string
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
@@ -142,6 +145,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
    */
   private element: HTMLDivElement | null = null
 
+  private readonly formClearHelper = new FormClearHelper()
+
   readonly state = {
     error: undefined,
     selections: {} as Record<string, any>,
@@ -172,6 +177,31 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     this.vegaView = undefined
   }
 
+  private onFormCleared = (): void => {
+    this.setState(
+      () => {
+        return { selections: {} }
+      },
+
+      () => {
+        this.props.widgetMgr?.setStringValue(
+          this.props.element as WidgetInfo,
+          JSON.stringify({}),
+          {
+            fromUi: true,
+          },
+          this.props.fragmentId
+        )
+        // Don't use state here so we don't have to rerender
+        this.props.widgetMgr.setElementState(
+          this.props.element.id,
+          this.props.element.formId,
+          "something"
+        )
+      }
+    )
+  }
+
   public getSelectorsFromChart(spec: any): string[] {
     if ("params" in spec) {
       const select: any[] = []
@@ -184,8 +214,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
+    console.log("component did update")
     const { element: prevElement, theme: prevTheme } = prevProps
-    const { element, theme } = this.props
+    const { element, theme, widgetMgr } = this.props
 
     const prevSpec = prevElement.spec
     const { spec } = element
@@ -197,11 +228,18 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       prevProps.width !== this.props.width ||
       prevProps.height !== this.props.height ||
       prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme ||
-      prevProps.element.isSelectEnabled !== this.props.element.isSelectEnabled
+      prevProps.element.isSelectEnabled !==
+        this.props.element.isSelectEnabled ||
+      widgetMgr.getElementState(element.id, this.props.element.formId)
     ) {
       logMessage("Vega spec changed.")
       try {
         await this.createView()
+        widgetMgr.setElementState(
+          element.id,
+          this.props.element.formId,
+          undefined
+        )
       } catch (e) {
         const error = ensureError(e)
 
@@ -253,7 +291,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 
-    const storedValue = this.props.widgetMgr.getStringValue(this.props.element)
+    const storedValue = this.props.widgetMgr.getStringValue(el)
+    console.log(storedValue)
     if (storedValue !== undefined) {
       const selectors = this.getSelectorsFromChart(spec)
       const parsedStoredValue = JSON.parse(storedValue)
@@ -556,6 +595,12 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw this.state.error
     }
+    // Manage our form-clear event handler.
+    this.formClearHelper.manageFormClearListener(
+      this.props.widgetMgr,
+      this.props.element.formId,
+      this.onFormCleared
+    )
 
     return (
       // Create the container Vega draws inside.
