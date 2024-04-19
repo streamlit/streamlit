@@ -268,3 +268,18 @@ def test_selectbox_enum_coercion():
     with patch_config_options({"runner.enumCoercion": "off"}):
         with pytest.raises(AssertionError):
             test_enum()  # expect a failure with the config value off.
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "selectbox" not in st.session_state:
+            st.session_state["selectbox"] = None
+
+        st.selectbox("selectbox", ["a", "b", "c"], key="selectbox")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.selectbox[0].value is None

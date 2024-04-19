@@ -316,3 +316,18 @@ def test_date_input_interaction():
     at = date_input.set_value(None).run()
     date_input = at.date_input[0]
     assert date_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "date_input" not in st.session_state:
+            st.session_state["date_input"] = None
+
+        st.date_input("date_input", key="date_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.date_input[0].value is None

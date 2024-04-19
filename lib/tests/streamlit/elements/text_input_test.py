@@ -217,3 +217,18 @@ def test_text_input_interaction():
     at = text_input.set_value(None).run()
     text_input = at.text_input[0]
     assert text_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "text_input" not in st.session_state:
+            st.session_state["text_input"] = None
+
+        st.text_input("text_input", key="text_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.text_input[0].value is None

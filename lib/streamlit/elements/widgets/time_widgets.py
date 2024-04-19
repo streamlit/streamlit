@@ -459,6 +459,10 @@ class TimeWidgetsMixin:
         )
         del value
 
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            parsed_time = None
+
         time_input_proto = TimeInputProto()
         time_input_proto.id = id
         time_input_proto.label = label
