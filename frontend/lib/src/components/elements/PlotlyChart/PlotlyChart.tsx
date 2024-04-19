@@ -440,7 +440,6 @@ function PlotlyFigure({
       onSelected={
         element.isSelectEnabled && !disabled ? handleSelection : () => {}
       }
-      // TODO(lukasmasuch): double check if we need double click or not?
       onDeselect={
         element.isSelectEnabled && !disabled ? resetSelections : () => {}
       }

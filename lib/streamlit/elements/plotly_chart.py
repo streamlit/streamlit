@@ -414,11 +414,13 @@ def marshall(
     id = compute_widget_id(
         "plotly_chart",
         user_key=key,
+        figure_or_data=figure_or_data,
         data_for_id=data_for_id,
         sharing=sharing,
         key=key,
         theme=theme,
         form_id=proto.form_id,
+        use_container_width=use_container_width,
         page=ctx.page_script_hash if ctx else None,
     )
     proto.id = id
