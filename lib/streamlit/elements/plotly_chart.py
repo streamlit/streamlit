@@ -19,7 +19,17 @@ from __future__ import annotations
 import json
 import urllib.parse
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Literal,
+    TypedDict,
+    Union,
+    cast,
+    overload,
+)
 
 from typing_extensions import TypeAlias
 
@@ -77,59 +87,122 @@ FigureOrData: TypeAlias = Union[
     "matplotlib.figure.Figure",
 ]
 
+SelectionMode: TypeAlias = Literal["lasso", "point", "box"]
+
+
+class PlotlySelectionState(TypedDict, total=False):
+    """
+    A dictionary representing the current selection state of the plotly chart.
+
+    Attributes
+    ----------
+    points : list[dict]
+        The selected data points in the chart, this also includes
+        the the data points selected by the box and lasso mode.
+
+    point_indices : list[int]
+        The numerical indices of all selected data points in the chart,
+        this also includes the indices of the points selected by the box
+        and lasso mode.
+
+    box : list[dict]
+        The metadata related to the box selection. This includes the
+        coordinates of the selected area.
+
+    lasso : list[dict]
+        The metadata related to the lasso selection. This includes the
+        coordinates of the selected area.
+    """
+
+    points: list[dict]
+    point_indices: list[int]
+    box: list[dict]
+    lasso: list[dict]
+
+
+class PlotlyState(TypedDict, total=False):
+    """
+    A dictionary representing the current selection state of the plotly chart.
+
+    Attributes
+    ----------
+    select : PlotlySelectionState
+        The state of the `on_select` event.
+    """
+
+    select: PlotlySelectionState
+
 
 @dataclass
 class PlotlyChartSelectionSerde:
     """PlotlyChartSelectionSerde is used to serialize and deserialize the Plotly Chart selection state."""
 
-    def deserialize(
-        self, ui_value: str | None, widget_id: str = ""
-    ) -> AttributeDictionary:
-        selection_state: AttributeDictionary = (
-            AttributeDictionary(
-                {
-                    "select": {
-                        "points": [],
-                        "point_indices": [],
-                        "box": [],
-                        "lasso": [],
-                    },
-                }
-            )
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> PlotlyState:
+        empty_selection_state: PlotlyState = {
+            "select": {
+                "points": [],
+                "point_indices": [],
+                "box": [],
+                "lasso": [],
+            },
+        }
+
+        selection_state = (
+            empty_selection_state
             if ui_value is None
             else AttributeDictionary(json.loads(ui_value))
         )
 
         if "select" not in selection_state:
-            selection_state = AttributeDictionary(
-                {
-                    "select": {
-                        "points": [],
-                        "point_indices": [],
-                        "box": [],
-                        "lasso": [],
-                    },
-                }
-            )
+            selection_state = empty_selection_state
 
-        return selection_state
+        return AttributeDictionary(selection_state)
 
-    def serialize(self, selection_state: AttributeDictionary) -> str:
+    def serialize(self, selection_state: PlotlyState) -> str:
         return json.dumps(selection_state, default=str)
 
 
 class PlotlyMixin:
+    @overload
+    def plotly_chart(
+        self,
+        figure_or_data: FigureOrData,
+        use_container_width: bool = False,
+        *,
+        sharing: SharingMode = "streamlit",
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["ignore"] = "ignore",
+        **kwargs: Any,
+    ) -> DeltaGenerator:
+        ...
+
+    @overload
+    def plotly_chart(
+        self,
+        figure_or_data: FigureOrData,
+        use_container_width: bool = False,
+        *,
+        sharing: SharingMode = "streamlit",
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        **kwargs: Any,
+    ) -> PlotlyState:
+        ...
+
     @gather_metrics("plotly_chart")
     def plotly_chart(
         self,
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
+        *,
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "rerun",
         **kwargs: Any,
-    ) -> "DeltaGenerator" | AttributeDictionary:
+    ) -> "DeltaGenerator" | PlotlyState:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
