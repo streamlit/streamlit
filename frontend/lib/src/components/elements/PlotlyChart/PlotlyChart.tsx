@@ -218,6 +218,7 @@ function PlotlyFigure({
 
   const plotlyConfig = useMemo(() => {
     console.log("Update config")
+
     if (!element.figure?.config) {
       return {}
     }
@@ -348,14 +349,23 @@ function PlotlyFigure({
     plotlyFigure.layout.height !== calculatedHeight ||
     plotlyFigure.layout.width !== calculatedWidth
   ) {
+    console.log(
+      "Change width and height of the figure",
+      plotlyFigure.layout.height,
+      plotlyFigure.layout.width,
+      calculatedHeight,
+      calculatedWidth
+    )
     // Update the figure with the new height and width (if they have changed)
-    setPlotlyFigure({
-      ...plotlyFigure,
-      layout: {
-        ...plotlyFigure.layout,
-        height: calculatedHeight,
-        width: calculatedWidth,
-      },
+    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+      return {
+        ...prevFigure,
+        layout: {
+          ...prevFigure.layout,
+          height: calculatedHeight,
+          width: calculatedWidth,
+        },
+      }
     })
   }
 
@@ -499,6 +509,7 @@ function PlotlyFigure({
         // that we set here. The timeout will make sure that this is executed
         // after the onUpdate callback.
         setTimeout(() => {
+          console.log("Apply reset of figure")
           // Reset the selection info within the plotly figure
           setPlotlyFigure((prevFigure: PlotlyFigureType) => {
             return {
