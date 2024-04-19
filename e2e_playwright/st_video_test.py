@@ -16,7 +16,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 
 VIDEO_ELEMENTS_COUNT = 11
 
@@ -183,3 +183,35 @@ def test_video_muted_autoplay(app: Page):
     expect(video_element).to_have_js_property("muted", True)
     expect(video_element).to_have_js_property("autoplay", True)
     expect(video_element).to_have_js_property("paused", False)
+
+
+def test_video_remount_no_autoplay(app: Page):
+    """Test that `st.video` remounts correctly without autoplay."""
+    video_elements = app.get_by_test_id("stVideo")
+    expect(video_elements).to_have_count(VIDEO_ELEMENTS_COUNT)
+
+    expect(video_elements.nth(9)).to_be_visible()
+
+    video_element = video_elements.nth(9)
+    expect(video_element).to_have_js_property("paused", True)
+    expect(video_element).to_have_js_property("autoplay", False)
+
+    checkbox_elements = app.get_by_test_id("stCheckbox")
+    autoplay_checkbox = checkbox_elements.nth(0)
+    autoplay_checkbox.click()
+    # To prevent flakiness, we wait for the audio to load and start playing
+    wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
+    expect(video_element).to_have_js_property("autoplay", True)
+    expect(video_element).to_have_js_property("paused", False)
+
+    autoplay_checkbox.click()
+
+    button_element = app.get_by_test_id("stButton").locator("button").first
+    expect(app.get_by_test_id("stMarkdownContainer").nth(2)).to_have_text(
+        "Create some elements to unmount component"
+    )
+    button_element.click()
+    wait_for_app_run(app)
+
+    expect(video_element).to_have_js_property("autoplay", False)
+    expect(video_element).to_have_js_property("paused", True)
