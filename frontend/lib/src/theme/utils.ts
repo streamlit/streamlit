@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { getLuminance } from "color2k"
+import { getLuminance, transparentize } from "color2k"
 import camelcase from "camelcase"
 import decamelize from "decamelize"
 import cloneDeep from "lodash/cloneDeep"
@@ -48,7 +48,6 @@ import {
   DerivedColors,
 } from "./getColors"
 import { createBaseUiTheme } from "./createThemeUtil"
-import { transparentize } from "color2k"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
