@@ -211,6 +211,7 @@ function PlotlyFigure({
     // where a component un-mounts and mounts again.
     const initialFigureState = widgetMgr.getElementState(element.id, "figure")
     if (initialFigureState) {
+      console.log("Initial figure found", element.id, initialFigureState)
       return initialFigureState
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
@@ -262,13 +263,13 @@ function PlotlyFigure({
 
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
-  useEffect(() => {
-    console.log("Update spec based on updated input data")
-    // Whenever the initial figure spec changes, we need to update
-    // the figure spec with the new spec from the element.
-    setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
-    /* eslint-disable react-hooks/exhaustive-deps */
-  }, [initialFigureSpec])
+  // useEffect(() => {
+  //   console.log("Update spec based on updated input data")
+  //   // Whenever the initial figure spec changes, we need to update
+  //   // the figure spec with the new spec from the element.
+  //   setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
+  //   /* eslint-disable react-hooks/exhaustive-deps */
+  // }, [initialFigureSpec])
 
   useEffect(() => {
     console.log("Theme changed")
