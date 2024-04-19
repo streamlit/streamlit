@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Literal, cast, overload
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
@@ -33,6 +34,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id
@@ -255,9 +257,9 @@ class TextWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
-
         maybe_raise_label_warnings(label, label_visibility)
 
         # Make sure value is always string or None:
@@ -277,6 +279,10 @@ class TextWidgetsMixin:
             form_id=current_form_id(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         text_input_proto = TextInputProto()
         text_input_proto.id = id
@@ -517,9 +523,10 @@ class TextWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if value == "" else value, key=key)
-
         maybe_raise_label_warnings(label, label_visibility)
 
         value = str(value) if value is not None else None
@@ -537,6 +544,10 @@ class TextWidgetsMixin:
             form_id=current_form_id(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            value = None
 
         text_area_proto = TextAreaProto()
         text_area_proto.id = id

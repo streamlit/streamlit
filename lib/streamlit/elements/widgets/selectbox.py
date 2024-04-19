@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
@@ -32,6 +33,7 @@ from streamlit.runtime.state import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    get_session_state,
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
@@ -230,9 +232,10 @@ class SelectboxMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | None:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=None if index == 0 else index, key=key)
-
         maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)
@@ -260,6 +263,10 @@ class SelectboxMixin:
             raise StreamlitAPIException(
                 "Selectbox index must be between 0 and length of options"
             )
+
+        session_state = get_session_state().filtered_state
+        if key is not None and key in session_state and session_state[key] is None:
+            index = None
 
         selectbox_proto = SelectboxProto()
         selectbox_proto.id = id

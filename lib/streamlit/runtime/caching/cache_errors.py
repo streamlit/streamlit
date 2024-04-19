@@ -96,44 +96,6 @@ class CacheError(Exception):
     pass
 
 
-class CachedStFunctionWarning(StreamlitAPIWarning):
-    def __init__(
-        self,
-        cache_type: CacheType,
-        st_func_name: str,
-        cached_func: types.FunctionType,
-    ):
-        args = {
-            "st_func_name": f"`st.{st_func_name}()`",
-            "func_name": self._get_cached_func_name_md(cached_func),
-            "decorator_name": get_decorator_api_name(cache_type),
-        }
-
-        msg = (
-            """
-Your script uses %(st_func_name)s to write to your Streamlit app from within
-some cached code at %(func_name)s. This code will only be called when we detect
-a cache "miss", which can lead to unexpected results.
-
-How to fix this:
-* Move the %(st_func_name)s call outside %(func_name)s.
-* Or, if you know what you're doing, use `@st.%(decorator_name)s(experimental_allow_widgets=True)`
-to enable widget replay and suppress this warning.
-            """
-            % args
-        ).strip("\n")
-
-        super().__init__(msg)
-
-    @staticmethod
-    def _get_cached_func_name_md(func: types.FunctionType) -> str:
-        """Get markdown representation of the function name."""
-        if hasattr(func, "__name__"):
-            return "`%s()`" % func.__name__
-        else:
-            return "a cached function"
-
-
 class CacheReplayClosureError(StreamlitAPIException):
     def __init__(
         self,

@@ -51,10 +51,6 @@ class CacheResourceTest(unittest.TestCase):
         st.cache_resource.clear()
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
-        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
-        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = (
-            0
-        )
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -217,6 +213,20 @@ If you think this is actually a Streamlit bug, please
 [file a bug report here](https://github.com/streamlit/streamlit/issues/new/choose)."""
         self.assertEqual(str(ctx.exception), expected_message)
 
+    def test_cached_st_function_clear_args(self):
+        self.x = 0
+
+        @st.cache_resource()
+        def foo(y):
+            self.x += y
+            return self.x
+
+        assert foo(1) == 1
+        foo.clear(2)
+        assert foo(1) == 1
+        foo.clear(1)
+        assert foo(1) == 2
+
 
 class CacheResourceValidateTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -228,9 +238,6 @@ class CacheResourceValidateTest(unittest.TestCase):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._cached_func_stack = []
-        cache_resource_api.CACHE_RESOURCE_MESSAGE_REPLAY_CTX._suppress_st_function_warning = (
-            0
-        )
 
     def test_validate_success(self):
         """If we have a validate function and it returns True, we don't recompute our cached value."""

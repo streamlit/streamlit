@@ -384,6 +384,9 @@ class CacheResourceAPI:
         ...     # Create a database connection object that points to the URL.
         ...     return connection
         ...
+        >>> fetch_and_clean_data.clear(_sessionmaker, "https://streamlit.io/")
+        >>> # Clear the cached entry for the arguments provided.
+        >>>
         >>> get_database_session.clear()
         >>> # Clear all cached entries for this function.
 
@@ -549,9 +552,12 @@ class ResourceCache(Cache):
             multi_results.results[widget_key] = result
             self._mem_cache[key] = multi_results
 
-    def _clear(self) -> None:
+    def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:
-            self._mem_cache.clear()
+            if key is None:
+                self._mem_cache.clear()
+            elif key in self._mem_cache:
+                del self._mem_cache[key]
 
     def get_stats(self) -> list[CacheStat]:
         # Shallow clone our cache. Computing item sizes is potentially

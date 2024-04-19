@@ -125,7 +125,6 @@ pylint:
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --diff --check examples/ && \
 		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
 		$(BLACK) --diff --check lib/tests/ && \
 		$(BLACK) --diff --check e2e/scripts/ ; \
@@ -338,11 +337,19 @@ e2etest:
 	./scripts/run_e2e_tests.py
 
 .PHONY: playwright
-# Run playwright E2E tests.
+# Run playwright E2E tests (without custom component tests).
+custom_components_test_folder = ./custom_components
 playwright:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pytest --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
+	pytest --ignore ${custom_components_test_folder} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
+.PHONY: playwright-custom-components
+# Run playwright custom component E2E tests.
+playwright-custom-components:
+	cd e2e_playwright; \
+	rm -rf ./test-results; \
+	pip install extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment; \
+	pytest ${custom_components_test_folder} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 
 .PHONY: loc
 # Count the number of lines of code in the project.
