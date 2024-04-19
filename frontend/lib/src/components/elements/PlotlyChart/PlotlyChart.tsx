@@ -44,7 +44,7 @@ import {
 export interface PlotlyChartProps {
   width: number
   element: PlotlyChartProto
-  height: number | undefined
+  height?: number
   isFullScreen: boolean
   widgetMgr: WidgetStateManager
   disabled: boolean
@@ -710,6 +710,7 @@ export function PlotlyChart({
   isFullScreen,
   widgetMgr,
   disabled,
+  fragmentId,
 }: Readonly<PlotlyChartProps>): ReactElement {
   switch (element.chart) {
     case "url":
@@ -727,6 +728,7 @@ export function PlotlyChart({
           isFullScreen={isFullScreen}
           widgetMgr={widgetMgr}
           disabled={disabled}
+          fragmentId={fragmentId}
         />
       )
     default:
