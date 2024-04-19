@@ -1022,14 +1022,15 @@ export class App extends PureComponent<Props, State> {
       isMainPage: viewingMainPage,
     })
 
-    if (
+    if (!mpav1) {
+      // State resetting is handled differently in MPAv2
+      this.setState({ scriptRunId })
+    } else if (
       appHash === newSessionHash &&
       prevPageScriptHash === newPageScriptHash
     ) {
-      this.setState({
-        scriptRunId,
-      })
-    } else if (mpav1) {
+      this.setState({ scriptRunId })
+    } else {
       this.clearAppState(newSessionHash, scriptRunId, scriptName)
     }
   }
