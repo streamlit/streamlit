@@ -347,11 +347,14 @@ function PlotlyFigure({
     })
   }, [element.id])
 
-  let calculatedWidth = element.useContainerWidth
-    ? // Apply a min width to prevent the chart running into issues with negative
-      // width values if the browser window is too small:
-      Math.max(width, MIN_WIDTH)
-    : initialFigureSpec.layout.width
+  let calculatedWidth = Math.max(
+    element.useContainerWidth
+      ? width
+      : Math.min(initialFigureSpec.layout.width ?? width, width),
+    // Apply a min width to prevent the chart running into issues with negative
+    // width values if the browser window is too small:
+    MIN_WIDTH
+  )
   // TODO(lukasmasuch): Do we have to use a default height here?
   let calculatedHeight = initialFigureSpec.layout.height
 
