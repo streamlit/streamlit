@@ -236,7 +236,6 @@ _mem_caches = _MemCaches()
 class ThreadLocalCacheInfo(threading.local):
     def __init__(self):
         self.cached_func_stack: list[Callable[..., Any]] = []
-        self.suppress_st_function_warning = 0
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -252,54 +251,6 @@ def _calling_cached_function(func: Callable[..., Any]) -> Iterator[None]:
         yield
     finally:
         _cache_info.cached_func_stack.pop()
-
-
-@contextlib.contextmanager
-def suppress_cached_st_function_warning() -> Iterator[None]:
-    _cache_info.suppress_st_function_warning += 1
-    try:
-        yield
-    finally:
-        _cache_info.suppress_st_function_warning -= 1
-        assert _cache_info.suppress_st_function_warning >= 0
-
-
-def _show_cached_st_function_warning(
-    dg: st.delta_generator.DeltaGenerator,
-    st_func_name: str,
-    cached_func: Callable[..., Any],
-) -> None:
-    # Avoid infinite recursion by suppressing additional cached
-    # function warnings from within the cached function warning.
-    with suppress_cached_st_function_warning():
-        e = CachedStFunctionWarning(st_func_name, cached_func)
-        dg.exception(e)
-
-
-def maybe_show_cached_st_function_warning(
-    dg: st.delta_generator.DeltaGenerator, st_func_name: str
-) -> None:
-    """If appropriate, warn about calling st.foo inside @cache.
-
-    DeltaGenerator's @_with_element and @_widget wrappers use this to warn
-    the user when they're calling st.foo() from within a function that is
-    wrapped in @st.cache.
-
-    Parameters
-    ----------
-    dg : DeltaGenerator
-        The DeltaGenerator to publish the warning to.
-
-    st_func_name : str
-        The name of the Streamlit function that was called.
-
-    """
-    if (
-        len(_cache_info.cached_func_stack) > 0
-        and _cache_info.suppress_st_function_warning <= 0
-    ):
-        cached_func = _cache_info.cached_func_stack[-1]
-        _show_cached_st_function_warning(dg, st_func_name, cached_func)
 
 
 def _read_from_mem_cache(
@@ -683,11 +634,7 @@ def cache(
                 _LOGGER.debug("Cache miss: %s", non_optional_func)
 
                 with _calling_cached_function(non_optional_func):
-                    if suppress_st_warning:
-                        with suppress_cached_st_function_warning():
-                            return_value = non_optional_func(*args, **kwargs)
-                    else:
-                        return_value = non_optional_func(*args, **kwargs)
+                    return_value = non_optional_func(*args, **kwargs)
 
                 _write_to_cache(
                     mem_cache=mem_cache,
@@ -824,32 +771,6 @@ class CachedObjectMutationError(ValueError):
 
     def __repr__(self) -> str:
         return util.repr_(self)
-
-
-class CachedStFunctionWarning(StreamlitAPIWarning):
-    def __init__(self, st_func_name, cached_func):
-        msg = self._get_message(st_func_name, cached_func)
-        super().__init__(msg)
-
-    def _get_message(self, st_func_name, cached_func):
-        args = {
-            "st_func_name": "`st.%s()` or `st.write()`" % st_func_name,
-            "func_name": _get_cached_func_name_md(cached_func),
-        }
-
-        return (
-            """
-Your script uses %(st_func_name)s to write to your Streamlit app from within
-some cached code at %(func_name)s. This code will only be called when we detect
-a cache "miss", which can lead to unexpected results.
-
-How to fix this:
-* Move the %(st_func_name)s call outside %(func_name)s.
-* Or, if you know what you're doing, use `@st.cache(suppress_st_warning=True)`
-to suppress the warning.
-            """
-            % args
-        ).strip("\n")
 
 
 class CachedObjectMutationWarning(StreamlitAPIWarning):
