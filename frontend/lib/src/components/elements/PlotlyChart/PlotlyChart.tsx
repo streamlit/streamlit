@@ -281,31 +281,46 @@ function PlotlyFigure({
     )
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       if (isSelectionActivated) {
-        // TODO(lukasmasuch) Should we move this to the backend?
-        if (
-          element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
-        ) {
-          // https://plotly.com/javascript/reference/layout/#layout-clickmode
-          // This allows single point selections and shift click to add / remove selections
-          prevState.layout.clickmode = "event+select"
-        } else {
-          // If points selection is not activated, we deactivate the `select` behavior.
-          prevState.layout.clickmode = "event"
+        if (!initialFigureSpec.layout.hovermode) {
+          // If the user has already set the clickmode, we don't want to override it here.
+          // Otherwise, we are selecting the best clickmode based on the selection modes.
+          if (
+            element.selectionMode.includes(
+              PlotlyChartProto.SelectionMode.POINTS
+            )
+          ) {
+            // https://plotly.com/javascript/reference/layout/#layout-clickmode
+            // This allows single point selections and shift click to add / remove selections
+            prevState.layout.clickmode = "event+select"
+          } else {
+            // If points selection is not activated, we deactivate the `select` behavior.
+            prevState.layout.clickmode = "event"
+          }
         }
-        prevState.layout.hovermode = "closest"
-        console.log(prevState.layout.dragmode)
-        if (
-          element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
-        ) {
-          // Configure select (box selection) as the activated drag mode:
-          prevState.layout.dragmode = "select"
-        } else if (
-          element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
-        ) {
-          // Configure lass (lasso selection) as the activated drag mode:
-          prevState.layout.dragmode = "lasso"
-        } else {
-          prevState.layout.dragmode = "pan"
+
+        if (!initialFigureSpec.layout.hovermode) {
+          // If the user has already set the hovermode, we don't want to override it here.
+          prevState.layout.hovermode = "closest"
+        }
+
+        if (!initialFigureSpec.layout.dragmode) {
+          // If the user has already set the dragmode, we don't want to override it here.
+          // If not, we are selecting the best drag mode based on the selection modes.
+          if (
+            element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
+          ) {
+            // Configure select (box selection) as the activated drag mode:
+            prevState.layout.dragmode = "select"
+          } else if (
+            element.selectionMode.includes(
+              PlotlyChartProto.SelectionMode.LASSO
+            )
+          ) {
+            // Configure lass (lasso selection) as the activated drag mode:
+            prevState.layout.dragmode = "lasso"
+          } else {
+            prevState.layout.dragmode = "pan"
+          }
         }
       } else {
         prevState.layout.clickmode = initialFigureSpec.layout.clickmode
