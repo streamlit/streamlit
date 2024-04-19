@@ -233,7 +233,7 @@ class PlotlyMixin:
         sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun", "ignore"] | WidgetCallback = "rerun",
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode = ("points", "box", "lasso"),
         **kwargs: Any,
     ) -> "DeltaGenerator" | PlotlyState:
@@ -409,7 +409,6 @@ class PlotlyMixin:
             return self.dg._enqueue("plotly_chart", plotly_chart_proto)
         else:
             # Selections are activated, treat plotly chart as a widget:
-
             plotly_chart_proto.selection_mode.extend(
                 parse_selection_mode(selection_mode)
             )
