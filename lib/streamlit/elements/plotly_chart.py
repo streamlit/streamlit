@@ -347,8 +347,9 @@ class PlotlyMixin:
             )
 
         key = to_key(key)
+        is_selection_activated = on_select != "ignore"
 
-        if on_select != "ignore":
+        if is_selection_activated:
             # Import here to avoid circular imports
             from streamlit.elements.utils import (
                 check_cache_replay_rules,
@@ -388,6 +389,8 @@ class PlotlyMixin:
             )
             plotly_chart_proto.url = _get_embed_url(url)
 
+        parsed_selection_modes = parse_selection_mode(selection_mode)
+
         ctx = get_script_run_ctx()
         # We are computing the widget id for all plotly uses
         # to also allow non-widget Plotly charts to keep their state
@@ -399,19 +402,18 @@ class PlotlyMixin:
             plotly_spec=plotly_chart_proto.figure.spec,
             plotly_config=plotly_chart_proto.figure.config,
             plotly_url=plotly_chart_proto.url,
+            selection_mode=parsed_selection_modes,
+            is_selection_activated=is_selection_activated,
             sharing=sharing,
             theme=theme,
             form_id=plotly_chart_proto.form_id,
+            use_container_width=use_container_width,
             page=ctx.page_script_hash if ctx else None,
         )
 
-        if on_select == "ignore":
-            return self.dg._enqueue("plotly_chart", plotly_chart_proto)
-        else:
+        if is_selection_activated:
             # Selections are activated, treat plotly chart as a widget:
-            plotly_chart_proto.selection_mode.extend(
-                parse_selection_mode(selection_mode)
-            )
+            plotly_chart_proto.selection_mode.extend(parsed_selection_modes)
 
             serde = PlotlyChartSelectionSerde()
 
@@ -427,6 +429,8 @@ class PlotlyMixin:
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
             return widget_state.value
+        else:
+            return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
     @property
     def dg(self) -> DeltaGenerator:
