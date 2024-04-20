@@ -193,6 +193,34 @@ def parse_selection_mode(
     return parsed_selection_modes
 
 
+@caching.cache
+def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> go.Figure:
+    """Call plotly.plot wrapped in st.cache.
+
+    This is so we don't unnecessarily upload data to Plotly's SASS if nothing
+    changed since the previous upload.
+    """
+    try:
+        # Plotly 4 changed its main package.
+        import chart_studio.plotly as ply
+    except ImportError:
+        import plotly.plotly as ply
+
+    return ply.plot(*args, **kwargs)
+
+
+def _get_embed_url(url: str) -> str:
+    parsed_url = urllib.parse.urlparse(url)
+
+    # Plotly's embed URL is the normal URL plus ".embed".
+    # (Note that our use namedtuple._replace is fine because that's not a
+    # private method! It just has an underscore to avoid clashing with the
+    # tuple field names)
+    parsed_embed_url = parsed_url._replace(path=f"{parsed_url.path}.embed")
+
+    return urllib.parse.urlunparse(parsed_embed_url)
+
+
 class PlotlyMixin:
     @overload
     def plotly_chart(
@@ -389,9 +417,13 @@ class PlotlyMixin:
             )
             plotly_chart_proto.url = _get_embed_url(url)
 
+        # We already need to parse selection modes here to
+        # compute the widget id. But we only should add this
+        # to the proto if selections are activated.
         parsed_selection_modes = parse_selection_mode(selection_mode)
 
         ctx = get_script_run_ctx()
+
         # We are computing the widget id for all plotly uses
         # to also allow non-widget Plotly charts to keep their state
         # when the frontend component gets unmounted and remounted.
@@ -436,31 +468,3 @@ class PlotlyMixin:
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-
-@caching.cache
-def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> go.Figure:
-    """Call plotly.plot wrapped in st.cache.
-
-    This is so we don't unnecessarily upload data to Plotly's SASS if nothing
-    changed since the previous upload.
-    """
-    try:
-        # Plotly 4 changed its main package.
-        import chart_studio.plotly as ply
-    except ImportError:
-        import plotly.plotly as ply
-
-    return ply.plot(*args, **kwargs)
-
-
-def _get_embed_url(url: str) -> str:
-    parsed_url = urllib.parse.urlparse(url)
-
-    # Plotly's embed URL is the normal URL plus ".embed".
-    # (Note that our use namedtuple._replace is fine because that's not a
-    # private method! It just has an underscore to avoid clashing with the
-    # tuple field names)
-    parsed_embed_url = parsed_url._replace(path=parsed_url.path + ".embed")
-
-    return urllib.parse.urlunparse(parsed_embed_url)
