@@ -36,7 +36,6 @@ from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
 from streamlit import config, util
-from streamlit.elements.arrow import Data
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.Button_pb2 import Button
@@ -177,8 +176,6 @@ SAFE_VALUES = Union[
     "ellipsis",
     Message,
     PROTO_SCALAR_VALUE,
-    Data,
-    Dict[Any, Any],
 ]
 
 
