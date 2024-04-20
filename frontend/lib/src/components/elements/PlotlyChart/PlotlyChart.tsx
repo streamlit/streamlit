@@ -381,8 +381,7 @@ function sendEmptySelection(
   }
 }
 
-/** Render a Plotly chart from a FigureProto */
-function PlotlyFigure({
+export function PlotlyChart({
   element,
   width,
   height,
@@ -399,7 +398,7 @@ function PlotlyFigure({
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
     console.log("Update initial figure spec")
-    if (!element.figure?.spec) {
+    if (!element.spec) {
       return {
         layout: {},
         data: [],
@@ -407,10 +406,10 @@ function PlotlyFigure({
       }
     }
 
-    return JSON.parse(element.figure.spec)
+    return JSON.parse(element.spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
     /* eslint-disable react-hooks/exhaustive-deps */
-  }, [element.id, element.figure?.spec])
+  }, [element.id, element.spec])
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
     console.log("Load figure state")
@@ -439,11 +438,11 @@ function PlotlyFigure({
   const plotlyConfig = useMemo(() => {
     console.log("Update config")
 
-    if (!element.figure?.config) {
+    if (!element.config) {
       return {}
     }
 
-    const config = JSON.parse(element.figure.config)
+    const config = JSON.parse(element.config)
 
     if (!disableFullscreenMode) {
       config.modeBarButtonsToAdd = [
@@ -492,7 +491,7 @@ function PlotlyFigure({
     return config
   }, [
     element.id,
-    element.figure?.config,
+    element.config,
     isFullScreen,
     disableFullscreenMode,
     isSelectionActivated,
@@ -756,61 +755,6 @@ function PlotlyFigure({
       }}
     />
   )
-}
-
-/** Render an iframed Plotly chart from a URL */
-function renderIFrame({
-  url,
-  width,
-  height: propHeight,
-}: PlotlyIFrameProps): ReactElement {
-  const height = propHeight || DEFAULT_HEIGHT
-  return (
-    <iframe
-      title="Plotly"
-      src={url}
-      style={{ width, height, colorScheme: "normal" }}
-    />
-  )
-}
-
-export function PlotlyChart({
-  width,
-  element,
-  height,
-  isFullScreen,
-  widgetMgr,
-  disabled,
-  fragmentId,
-  expand,
-  collapse,
-  disableFullscreenMode,
-}: Readonly<PlotlyChartProps>): ReactElement {
-  switch (element.chart) {
-    case "url":
-      return renderIFrame({
-        url: element.url as string,
-        height,
-        width,
-      })
-    case "figure":
-      return (
-        <PlotlyFigure
-          width={width}
-          element={element}
-          height={height}
-          widgetMgr={widgetMgr}
-          disabled={disabled}
-          fragmentId={fragmentId}
-          isFullScreen={isFullScreen}
-          expand={expand}
-          collapse={collapse}
-          disableFullscreenMode={disableFullscreenMode}
-        />
-      )
-    default:
-      throw new Error(`Unrecognized PlotlyChart type: ${element.chart}`)
-  }
 }
 
 export default withFullScreenWrapper(PlotlyChart, true)

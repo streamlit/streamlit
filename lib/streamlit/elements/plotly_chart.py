@@ -37,6 +37,7 @@ from typing import (
 from typing_extensions import TypeAlias
 
 from streamlit import type_util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.lib.streamlit_plotly_theme import (
@@ -60,19 +61,6 @@ if TYPE_CHECKING:
 
 # We need to configure the Plotly theme before any Plotly figures are created:
 configure_streamlit_plotly_theme()
-
-SharingMode: TypeAlias = Literal["streamlit", "private", "public", "secret"]
-
-SHARING_MODES: set[SharingMode] = {
-    # This means the plot will be sent to the Streamlit app rather than to
-    # Plotly.
-    "streamlit",
-    # The three modes below are for plots that should be hosted in Plotly.
-    # These are the names Plotly uses for them.
-    "private",
-    "public",
-    "secret",
-}
 
 _AtomicFigureOrData: TypeAlias = Union[
     "go.Figure",
@@ -193,34 +181,6 @@ def parse_selection_mode(
     return parsed_selection_modes
 
 
-@caching.cache
-def _plot_to_url_or_load_cached_url(*args: Any, **kwargs: Any) -> go.Figure:
-    """Call plotly.plot wrapped in st.cache.
-
-    This is so we don't unnecessarily upload data to Plotly's SASS if nothing
-    changed since the previous upload.
-    """
-    try:
-        # Plotly 4 changed its main package.
-        import chart_studio.plotly as ply
-    except ImportError:
-        import plotly.plotly as ply
-
-    return ply.plot(*args, **kwargs)
-
-
-def _get_embed_url(url: str) -> str:
-    parsed_url = urllib.parse.urlparse(url)
-
-    # Plotly's embed URL is the normal URL plus ".embed".
-    # (Note that our use namedtuple._replace is fine because that's not a
-    # private method! It just has an underscore to avoid clashing with the
-    # tuple field names)
-    parsed_embed_url = parsed_url._replace(path=f"{parsed_url.path}.embed")
-
-    return urllib.parse.urlunparse(parsed_embed_url)
-
-
 class PlotlyMixin:
     @overload
     def plotly_chart(
@@ -228,7 +188,6 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         *,
-        sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
@@ -243,7 +202,6 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         *,
-        sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
@@ -258,7 +216,6 @@ class PlotlyMixin:
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         *,
-        sharing: SharingMode = "streamlit",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
@@ -284,12 +241,6 @@ class PlotlyMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the figure's native `width` value.
-
-        sharing : "streamlit", "private", "secret", or "public"
-            Use "streamlit" to insert the plot and all its dependencies
-            directly in the Streamlit app using plotly's offline mode (default).
-            Use any other sharing mode to send the chart to Plotly chart studio, which
-            requires an account. See https://plot.ly/python/chart-studio/ for more information.
 
         theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
@@ -359,14 +310,15 @@ class PlotlyMixin:
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
 
+        if "sharing" in kwargs:
+            show_deprecation_warning(
+                "The `sharing` parameter has been deprecated and will be removed in a future release."
+                "Plotly charts will always be rendered using Streamlit's offline mode."
+            )
+
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
-            )
-
-        if not isinstance(sharing, str) or sharing.lower() not in SHARING_MODES:
-            raise StreamlitAPIException(
-                f"Invalid sharing mode for Plotly chart: {sharing}. Allowed values are {SHARING_MODES}."
             )
 
         if on_select not in ["ignore", "rerun"] and not callable(on_select):
@@ -403,19 +355,13 @@ class PlotlyMixin:
         plotly_chart_proto.theme = theme or ""
         plotly_chart_proto.form_id = current_form_id(self.dg)
 
-        if sharing == "streamlit":
-            config = dict(kwargs.get("config", {}))
-            # Copy over some kwargs to config dict. Plotly does the same in plot().
-            config.setdefault("showLink", kwargs.get("show_link", False))
-            config.setdefault("linkText", kwargs.get("link_text", False))
+        config = dict(kwargs.get("config", {}))
+        # Copy over some kwargs to config dict. Plotly does the same in plot().
+        config.setdefault("showLink", kwargs.get("show_link", False))
+        config.setdefault("linkText", kwargs.get("link_text", False))
 
-            plotly_chart_proto.figure.spec = plotly.io.to_json(figure, validate=False)
-            plotly_chart_proto.figure.config = json.dumps(config)
-        else:
-            url = _plot_to_url_or_load_cached_url(
-                figure, sharing=sharing, auto_open=False, **kwargs
-            )
-            plotly_chart_proto.url = _get_embed_url(url)
+        plotly_chart_proto.spec = plotly.io.to_json(figure, validate=False)
+        plotly_chart_proto.config = json.dumps(config)
 
         # We already need to parse selection modes here to
         # compute the widget id. But we only should add this
@@ -431,12 +377,10 @@ class PlotlyMixin:
             "plotly_chart",
             user_key=key,
             key=key,
-            plotly_spec=plotly_chart_proto.figure.spec,
-            plotly_config=plotly_chart_proto.figure.config,
-            plotly_url=plotly_chart_proto.url,
+            plotly_spec=plotly_chart_proto.spec,
+            plotly_config=plotly_chart_proto.config,
             selection_mode=parsed_selection_modes,
             is_selection_activated=is_selection_activated,
-            sharing=sharing,
             theme=theme,
             form_id=plotly_chart_proto.form_id,
             use_container_width=use_container_width,
