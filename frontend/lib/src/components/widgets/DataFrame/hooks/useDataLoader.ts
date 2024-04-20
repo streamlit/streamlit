@@ -82,7 +82,6 @@ function useDataLoader(
         const arrowCell = data.getCell(originalRow + 1, originalCol)
         return getCellFromArrow(column, arrowCell, data.cssStyles)
       } catch (error) {
-        logError(error)
         return getErrorCell(
           "Error during cell creation.",
           `This should never happen. Please report this bug. \nError: ${error}`

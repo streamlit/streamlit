@@ -416,6 +416,10 @@ function DataFrame({
 
   // This is required for the form clearing functionality:
   React.useEffect(() => {
+    if (!element.formId) {
+      return
+    }
+
     const formClearHelper = new FormClearHelper()
     formClearHelper.manageFormClearListener(
       widgetMgr,
