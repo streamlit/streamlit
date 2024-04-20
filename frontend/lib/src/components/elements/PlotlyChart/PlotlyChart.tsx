@@ -66,9 +66,22 @@ export interface SelectionRange {
   y: number[]
 }
 
-export interface Selection extends SelectionRange {
+export interface PlotlySelection extends SelectionRange {
   xref: string
   yref: string
+}
+
+// This is the state that is sent to the backend
+// This needs to be the same structure that is also defined
+// in the Python code. Uses snake case to be compatible with the
+// Python naming conventions.
+export interface PlotlyWidgetState {
+  select: {
+    points: Array<any>
+    point_indices: number[]
+    box: PlotlySelection[]
+    lasso: PlotlySelection[]
+  }
 }
 
 // Default height for Plotly charts
@@ -420,125 +433,132 @@ function PlotlyFigure({
   /**
    * Callback to handle selections on the plotly chart.
    */
-  const handleSelection = (
-    event: Readonly<Plotly.PlotSelectionEvent>
-  ): void => {
-    console.log("Selection event", event)
-    if (!event || !isSelectionActivated) {
-      return
-    }
-
-    const selectionState: any = {
-      select: {
-        points: [],
-        point_indices: [],
-        box: [],
-        lasso: [],
-      },
-    }
-    // Use a set for point indices since all numbers should be unique:
-    const selectedPointIndices = new Set<number>()
-    const selectedBoxes: Selection[] = []
-    const selectedLassos: Selection[] = []
-    const selectedPoints: Array<any> = []
-
-    // event.selections doesn't show up in the PlotSelectionEvent
-    // @ts-expect-error
-    const { selections, points } = event
-
-    // TODO: check this if:
-    // if (
-    //   points.length === 0 &&
-    //   notNullOrUndefined(selections) &&
-    //   selections.length === 0
-    // ) {
-    //   return
-    // }
-
-    points.forEach(function (point: any) {
-      selectedPoints.push({
-        ...point,
-        legendgroup: point.data.legendgroup || undefined,
-        // Remove data and full data as they have been deemed to be unnecessary data overhead
-        data: undefined,
-        fullData: undefined,
-      })
-      if (notNullOrUndefined(point.pointIndex)) {
-        selectedPointIndices.add(point.pointIndex)
+  const handleSelection = useCallback(
+    (event: Readonly<Plotly.PlotSelectionEvent>): void => {
+      console.log("Selection event", event)
+      if (!event) {
+        return
       }
 
-      // If pointIndices is present (e.g. selection on histogram chart),
-      // add all of them to the set
-      if (
-        notNullOrUndefined(point.pointIndices) &&
-        point.pointIndices.length > 0
-      ) {
-        point.pointIndices.forEach((item: number) =>
-          selectedPointIndices.add(item)
+      const selectionState: PlotlyWidgetState = {
+        select: {
+          points: [],
+          point_indices: [],
+          box: [],
+          lasso: [],
+        },
+      }
+      // Use a set for point indices since all numbers should be unique:
+      const selectedPointIndices = new Set<number>()
+      const selectedBoxes: PlotlySelection[] = []
+      const selectedLassos: PlotlySelection[] = []
+      const selectedPoints: Array<any> = []
+
+      // event.selections doesn't show up in the PlotSelectionEvent
+      // @ts-expect-error
+      const { selections, points } = event
+
+      // TODO: check this if:
+      // if (
+      //   points.length === 0 &&
+      //   notNullOrUndefined(selections) &&
+      //   selections.length === 0
+      // ) {
+      //   return
+      // }
+
+      points.forEach(function (point: any) {
+        selectedPoints.push({
+          ...point,
+          legendgroup: point.data.legendgroup || undefined,
+          // Remove data and full data as they have been deemed to be unnecessary data overhead
+          data: undefined,
+          fullData: undefined,
+        })
+        if (notNullOrUndefined(point.pointIndex)) {
+          selectedPointIndices.add(point.pointIndex)
+        }
+
+        // If pointIndices is present (e.g. selection on histogram chart),
+        // add all of them to the set
+        if (
+          notNullOrUndefined(point.pointIndices) &&
+          point.pointIndices.length > 0
+        ) {
+          point.pointIndices.forEach((item: number) =>
+            selectedPointIndices.add(item)
+          )
+        }
+      })
+
+      if (selections) {
+        selections.forEach((selection: any) => {
+          // box selection
+          if (selection.type === "rect") {
+            const xAndy = parseBoxSelection(selection)
+            const returnSelection: PlotlySelection = {
+              xref: selection.xref,
+              yref: selection.yref,
+              x: xAndy.x,
+              y: xAndy.y,
+            }
+            selectedBoxes.push(returnSelection)
+          }
+          // lasso selection
+          if (selection.type === "path") {
+            const xAndy = parseLassoPath(selection.path)
+            const returnSelection: PlotlySelection = {
+              xref: selection.xref,
+              yref: selection.yref,
+              x: xAndy.x,
+              y: xAndy.y,
+            }
+            selectedLassos.push(returnSelection)
+          }
+        })
+      }
+
+      // use snake case to replicate pythonic naming
+      selectionState.select.point_indices = Array.from(selectedPointIndices)
+      selectionState.select.points = selectedPoints.map((point: any) =>
+        keysToSnakeCase(point)
+      )
+
+      selectionState.select.box = selectedBoxes
+      selectionState.select.lasso = selectedLassos
+
+      if (selectionState.select.box && !isBoxSelectionActivated) {
+        // If box selection is not activated, we don't want
+        // to send any box selection related updates to the frontend
+        return
+      }
+
+      if (selectionState.select.lasso && !isLassoSelectionActivated) {
+        // If lasso selection is not activated, we don't want
+        // to send any lasso selection related updates to the frontend
+        return
+      }
+
+      const currentSelectionState = widgetMgr.getStringValue(element)
+      const newSelectionState = JSON.stringify(selectionState)
+      if (currentSelectionState !== newSelectionState) {
+        // Only update the widget state if it has changed
+        widgetMgr.setStringValue(
+          element,
+          newSelectionState,
+          { fromUi: true },
+          fragmentId
         )
       }
-    })
-
-    if (selections) {
-      selections.forEach((selection: any) => {
-        // box selection
-        if (selection.type === "rect") {
-          const xAndy = parseBoxSelection(selection)
-          const returnSelection: Selection = {
-            xref: selection.xref,
-            yref: selection.yref,
-            x: xAndy.x,
-            y: xAndy.y,
-          }
-          selectedBoxes.push(returnSelection)
-        }
-        // lasso selection
-        if (selection.type === "path") {
-          const xAndy = parseLassoPath(selection.path)
-          const returnSelection: Selection = {
-            xref: selection.xref,
-            yref: selection.yref,
-            x: xAndy.x,
-            y: xAndy.y,
-          }
-          selectedLassos.push(returnSelection)
-        }
-      })
-    }
-
-    // use snake case to replicate pythonic naming
-    selectionState.select.point_indices = Array.from(selectedPointIndices)
-    selectionState.select.points = selectedPoints.map((point: any) =>
-      keysToSnakeCase(point)
-    )
-
-    selectionState.select.box = selectedBoxes
-    selectionState.select.lasso = selectedLassos
-
-    if (selectionState.select.box && !isBoxSelectionActivated) {
-      // If box selection is not activated, we don't want
-      // to send any box selection related updates to the frontend
-      return
-    }
-
-    if (selectionState.select.lasso && !isLassoSelectionActivated) {
-      // If lasso selection is not activated, we don't want
-      // to send any lasso selection related updates to the frontend
-      return
-    }
-
-    const currentSelectionState = widgetMgr.getStringValue(element)
-    const newSelectionState = JSON.stringify(selectionState)
-    if (currentSelectionState !== newSelectionState) {
-      // Only update the widget state if it has changed
-      widgetMgr.setStringValue(
-        element,
-        newSelectionState,
-        { fromUi: true },
-        fragmentId
-      )
-    }
-  }
+    },
+    [
+      element.id,
+      widgetMgr,
+      fragmentId,
+      isBoxSelectionActivated,
+      isLassoSelectionActivated,
+    ]
+  )
 
   /**
    * Callback resets selections in the chart and
@@ -547,7 +567,7 @@ function PlotlyFigure({
   const resetSelections = useCallback(
     (resetSelectionInFigure = true): void => {
       console.log("Reset selections")
-      const emptySelectionState: any = {
+      const emptySelectionState: PlotlyWidgetState = {
         // We use snake case here since this is the widget state
         // that is sent and used in the backend. Therefore, it should
         // conform with the Python naming conventions.
@@ -604,8 +624,6 @@ function PlotlyFigure({
 
   // This is required for the form clearing functionality:
   useEffect(() => {
-    // TODO(lukasmasuch): This is executed way to often because
-    // resetSelections changes with every change in the plotly figure.
     console.log("Clear form handler", element.formId)
     if (!element.formId || !isSelectionActivated) {
       return
@@ -699,31 +717,6 @@ function PlotlyFigure({
 
         widgetMgr.setElementState(element.id, "figure", figure)
         setPlotlyFigure(figure)
-
-        // if (
-        //   (figure.layout.dragmode === "select" ||
-        //     figure.layout.dragmode === "lasso") &&
-        //   (figure.layout as any).selections
-        // ) {
-        //   let everythingTransparent = true
-        //   figure.data.forEach((trace: any) => {
-        //     if (
-        //       isNullOrUndefined(trace.selectedpoints) ||
-        //       trace.selectedpoints.length > 0
-        //     ) {
-        //       everythingTransparent = false
-        //     }
-        //   })
-        //   if (everythingTransparent) {
-        //     console.log("Everything is transparent", figure)
-        //     // console.log(dataClone)
-        //     // setPlotlyFigure(figureClone)
-        //     resetSelections(true)
-        //   } else {
-        //     widgetMgr.setElementState(element.id, "figure", figure)
-        //     setPlotlyFigure(figure)
-        //   }
-        // }
       }}
     />
   )
