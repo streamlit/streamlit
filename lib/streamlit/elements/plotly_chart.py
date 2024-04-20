@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import json
-import urllib.parse
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -45,7 +44,6 @@ from streamlit.elements.lib.streamlit_plotly_theme import (
 )
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
-from streamlit.runtime.legacy_caching import caching
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
