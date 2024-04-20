@@ -208,6 +208,179 @@ function applyTheming(
   return spec
 }
 
+/**
+ * Handles the selection event from Plotly and sends the selection state to the backend.
+ * The selection state is sent as a stringified JSON object.
+ *
+ * @param event The Plotly selection event
+ * @param widgetMgr The widget manager
+ * @param element The PlotlyChartProto element
+ * @param fragmentId The fragment id
+ */
+function handleSelection(
+  event: Readonly<Plotly.PlotSelectionEvent>,
+  widgetMgr: WidgetStateManager,
+  element: PlotlyChartProto,
+  fragmentId: string | undefined
+): void {
+  if (!event) {
+    return
+  }
+
+  const selectionState: PlotlyWidgetState = {
+    select: {
+      points: [],
+      point_indices: [],
+      box: [],
+      lasso: [],
+    },
+  }
+  // Use a set for point indices since all numbers should be unique:
+  const selectedPointIndices = new Set<number>()
+  const selectedBoxes: PlotlySelection[] = []
+  const selectedLassos: PlotlySelection[] = []
+  const selectedPoints: Array<any> = []
+
+  // event.selections doesn't show up in the PlotSelectionEvent
+  // @ts-expect-error
+  const { selections, points } = event
+
+  // TODO: check this if:
+  // if (
+  //   points.length === 0 &&
+  //   notNullOrUndefined(selections) &&
+  //   selections.length === 0
+  // ) {
+  //   return
+  // }
+
+  points.forEach(function (point: any) {
+    selectedPoints.push({
+      ...point,
+      legendgroup: point.data.legendgroup || undefined,
+      // Remove data and full data as they have been deemed to be unnecessary data overhead
+      data: undefined,
+      fullData: undefined,
+    })
+    if (notNullOrUndefined(point.pointIndex)) {
+      selectedPointIndices.add(point.pointIndex)
+    }
+
+    // If pointIndices is present (e.g. selection on histogram chart),
+    // add all of them to the set
+    if (
+      notNullOrUndefined(point.pointIndices) &&
+      point.pointIndices.length > 0
+    ) {
+      point.pointIndices.forEach((item: number) =>
+        selectedPointIndices.add(item)
+      )
+    }
+  })
+
+  if (selections) {
+    selections.forEach((selection: any) => {
+      // box selection
+      if (selection.type === "rect") {
+        const xAndy = parseBoxSelection(selection)
+        const returnSelection: PlotlySelection = {
+          xref: selection.xref,
+          yref: selection.yref,
+          x: xAndy.x,
+          y: xAndy.y,
+        }
+        selectedBoxes.push(returnSelection)
+      }
+      // lasso selection
+      if (selection.type === "path") {
+        const xAndy = parseLassoPath(selection.path)
+        const returnSelection: PlotlySelection = {
+          xref: selection.xref,
+          yref: selection.yref,
+          x: xAndy.x,
+          y: xAndy.y,
+        }
+        selectedLassos.push(returnSelection)
+      }
+    })
+  }
+
+  selectionState.select.point_indices = Array.from(selectedPointIndices)
+  selectionState.select.points = selectedPoints.map((point: any) =>
+    keysToSnakeCase(point)
+  )
+
+  selectionState.select.box = selectedBoxes
+  selectionState.select.lasso = selectedLassos
+
+  if (
+    selectionState.select.box &&
+    !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
+  ) {
+    // If box selection is not activated, we don't want
+    // to send any box selection related updates to the frontend
+    return
+  }
+
+  if (
+    selectionState.select.lasso &&
+    !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
+  ) {
+    // If lasso selection is not activated, we don't want
+    // to send any lasso selection related updates to the frontend
+    return
+  }
+
+  const currentSelectionState = widgetMgr.getStringValue(element)
+  const newSelectionState = JSON.stringify(selectionState)
+  if (currentSelectionState !== newSelectionState) {
+    // Only update the widget state if it has changed
+    widgetMgr.setStringValue(
+      element,
+      newSelectionState,
+      { fromUi: true },
+      fragmentId
+    )
+  }
+}
+
+/**
+ * Sends an empty selection state to the backend.
+ * This is used to reset the selection state in the widget.
+ *
+ * @param widgetMgr The widget manager
+ * @param element The PlotlyChartProto element
+ * @param fragmentId The fragment id
+ */
+function sendEmptySelection(
+  widgetMgr: WidgetStateManager,
+  element: PlotlyChartProto,
+  fragmentId: string | undefined
+): void {
+  const emptySelectionState: PlotlyWidgetState = {
+    // We use snake case here since this is the widget state
+    // that is sent and used in the backend. Therefore, it should
+    // conform with the Python naming conventions.
+    select: {
+      points: [],
+      point_indices: [],
+      box: [],
+      lasso: [],
+    },
+  }
+  const currentSelectionState = widgetMgr.getStringValue(element)
+  const newSelectionState = JSON.stringify(emptySelectionState)
+  if (currentSelectionState !== newSelectionState) {
+    // Only update the widget state if it has changed
+    widgetMgr.setStringValue(
+      element,
+      newSelectionState,
+      { fromUi: true },
+      fragmentId
+    )
+  }
+}
+
 /** Render a Plotly chart from a FigureProto */
 function PlotlyFigure({
   element,
@@ -235,6 +408,8 @@ function PlotlyFigure({
     }
 
     return JSON.parse(element.figure.spec)
+    // We want to reload the initialFigureSpec object whenever the element id changes
+    /* eslint-disable react-hooks/exhaustive-deps */
   }, [element.id, element.figure?.spec])
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
@@ -433,162 +608,23 @@ function PlotlyFigure({
   /**
    * Callback to handle selections on the plotly chart.
    */
-  const handleSelection = useCallback(
+  const handleSelectionCallback = useCallback(
     (event: Readonly<Plotly.PlotSelectionEvent>): void => {
       console.log("Selection event", event)
-      if (!event) {
-        return
-      }
-
-      const selectionState: PlotlyWidgetState = {
-        select: {
-          points: [],
-          point_indices: [],
-          box: [],
-          lasso: [],
-        },
-      }
-      // Use a set for point indices since all numbers should be unique:
-      const selectedPointIndices = new Set<number>()
-      const selectedBoxes: PlotlySelection[] = []
-      const selectedLassos: PlotlySelection[] = []
-      const selectedPoints: Array<any> = []
-
-      // event.selections doesn't show up in the PlotSelectionEvent
-      // @ts-expect-error
-      const { selections, points } = event
-
-      // TODO: check this if:
-      // if (
-      //   points.length === 0 &&
-      //   notNullOrUndefined(selections) &&
-      //   selections.length === 0
-      // ) {
-      //   return
-      // }
-
-      points.forEach(function (point: any) {
-        selectedPoints.push({
-          ...point,
-          legendgroup: point.data.legendgroup || undefined,
-          // Remove data and full data as they have been deemed to be unnecessary data overhead
-          data: undefined,
-          fullData: undefined,
-        })
-        if (notNullOrUndefined(point.pointIndex)) {
-          selectedPointIndices.add(point.pointIndex)
-        }
-
-        // If pointIndices is present (e.g. selection on histogram chart),
-        // add all of them to the set
-        if (
-          notNullOrUndefined(point.pointIndices) &&
-          point.pointIndices.length > 0
-        ) {
-          point.pointIndices.forEach((item: number) =>
-            selectedPointIndices.add(item)
-          )
-        }
-      })
-
-      if (selections) {
-        selections.forEach((selection: any) => {
-          // box selection
-          if (selection.type === "rect") {
-            const xAndy = parseBoxSelection(selection)
-            const returnSelection: PlotlySelection = {
-              xref: selection.xref,
-              yref: selection.yref,
-              x: xAndy.x,
-              y: xAndy.y,
-            }
-            selectedBoxes.push(returnSelection)
-          }
-          // lasso selection
-          if (selection.type === "path") {
-            const xAndy = parseLassoPath(selection.path)
-            const returnSelection: PlotlySelection = {
-              xref: selection.xref,
-              yref: selection.yref,
-              x: xAndy.x,
-              y: xAndy.y,
-            }
-            selectedLassos.push(returnSelection)
-          }
-        })
-      }
-
-      // use snake case to replicate pythonic naming
-      selectionState.select.point_indices = Array.from(selectedPointIndices)
-      selectionState.select.points = selectedPoints.map((point: any) =>
-        keysToSnakeCase(point)
-      )
-
-      selectionState.select.box = selectedBoxes
-      selectionState.select.lasso = selectedLassos
-
-      if (selectionState.select.box && !isBoxSelectionActivated) {
-        // If box selection is not activated, we don't want
-        // to send any box selection related updates to the frontend
-        return
-      }
-
-      if (selectionState.select.lasso && !isLassoSelectionActivated) {
-        // If lasso selection is not activated, we don't want
-        // to send any lasso selection related updates to the frontend
-        return
-      }
-
-      const currentSelectionState = widgetMgr.getStringValue(element)
-      const newSelectionState = JSON.stringify(selectionState)
-      if (currentSelectionState !== newSelectionState) {
-        // Only update the widget state if it has changed
-        widgetMgr.setStringValue(
-          element,
-          newSelectionState,
-          { fromUi: true },
-          fragmentId
-        )
-      }
+      handleSelection(event, widgetMgr, element, fragmentId)
     },
-    [
-      element.id,
-      widgetMgr,
-      fragmentId,
-      isBoxSelectionActivated,
-      isLassoSelectionActivated,
-    ]
+    [element.id, widgetMgr, fragmentId]
   )
 
   /**
    * Callback resets selections in the chart and
    * sends out an empty selection state.
    */
-  const resetSelections = useCallback(
+  const resetSelectionsCallback = useCallback(
     (resetSelectionInFigure = true): void => {
       console.log("Reset selections")
-      const emptySelectionState: PlotlyWidgetState = {
-        // We use snake case here since this is the widget state
-        // that is sent and used in the backend. Therefore, it should
-        // conform with the Python naming conventions.
-        select: {
-          points: [],
-          point_indices: [],
-          box: [],
-          lasso: [],
-        },
-      }
-      const currentSelectionState = widgetMgr.getStringValue(element)
-      const newSelectionState = JSON.stringify(emptySelectionState)
-      if (currentSelectionState !== newSelectionState) {
-        // Only update the widget state if it has changed
-        widgetMgr.setStringValue(
-          element,
-          newSelectionState,
-          { fromUi: true },
-          fragmentId
-        )
-      }
+      sendEmptySelection(widgetMgr, element, fragmentId)
+
       if (resetSelectionInFigure) {
         // We need to do this reset with a short timeout, because otherwise
         // the onUpdate callback seems to overwrite the selection state
@@ -634,13 +670,13 @@ function PlotlyFigure({
     formClearHelper.manageFormClearListener(
       widgetMgr,
       element.formId,
-      resetSelections
+      resetSelectionsCallback
     )
 
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, widgetMgr, resetSelections])
+  }, [element.formId, widgetMgr, resetSelectionsCallback])
 
   useEffect(() => {
     if (!isSelectionActivated) {
@@ -681,7 +717,7 @@ function PlotlyFigure({
       config={plotlyConfig}
       frames={plotlyFigure.frames ?? undefined}
       // This is fired after a selection is made on the chart
-      onSelected={isSelectionActivated ? handleSelection : () => {}}
+      onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
       // Double click is needed to make it easier to the user to
       // reset the selection. The default handling can be a bit annoying
       // sometimes.
@@ -689,7 +725,7 @@ function PlotlyFigure({
         isSelectionActivated
           ? () => {
               console.log("onDoubleClick event")
-              resetSelections()
+              resetSelectionsCallback()
             }
           : undefined
       }
@@ -700,7 +736,7 @@ function PlotlyFigure({
               // Plotly is also resetting the UI state already for
               // deselect events. So, we don't need to do it on our side.
               // Thats why the flag is false.
-              resetSelections(false)
+              resetSelectionsCallback(false)
             }
           : undefined
       }
