@@ -43,10 +43,10 @@ jsonschema-specifications==2023.12.1
 keyring==25.1.0
 kiwisolver==1.4.5
 langchain==0.1.16
-langchain-community==0.0.33
-langchain-core==0.1.44
+langchain-community==0.0.34
+langchain-core==0.1.45
 langchain-text-splitters==0.0.1
-langsmith==0.1.48
+langsmith==0.1.49
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -122,7 +122,7 @@ toolz==0.12.1
 tornado==6.4
 twine==5.0.0
 types-click==7.1.8
-types-protobuf==4.25.0.20240417
+types-protobuf==5.26.0.20240420
 types-pytz==2024.1.0.20240417
 types-requests==2.31.0.20240406
 types-setuptools==69.5.0.20240415
