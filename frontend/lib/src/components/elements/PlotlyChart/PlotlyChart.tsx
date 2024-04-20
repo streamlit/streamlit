@@ -238,6 +238,15 @@ function PlotlyFigure({
   })
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
+  const isLassoSelectionActivated = element.selectionMode.includes(
+    PlotlyChartProto.SelectionMode.LASSO
+  )
+  const isBoxSelectionActivated = element.selectionMode.includes(
+    PlotlyChartProto.SelectionMode.BOX
+  )
+  const isPointsSelectionActivated = element.selectionMode.includes(
+    PlotlyChartProto.SelectionMode.POINTS
+  )
 
   const plotlyConfig = useMemo(() => {
     console.log("Update config")
@@ -279,16 +288,12 @@ function PlotlyFigure({
         // Remove lasso & select buttons in read-only charts:
         modeBarButtonsToRemove.push("lasso2d", "select2d")
       } else {
-        if (
-          !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
-        ) {
+        if (!isLassoSelectionActivated) {
           // Remove the lasso button if lasso selection is not activated
           modeBarButtonsToRemove.push("lasso2d")
         }
 
-        if (
-          !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
-        ) {
+        if (!isBoxSelectionActivated) {
           // Remove the box select button if box selection is not activated
           modeBarButtonsToRemove.push("select2d")
         }
@@ -331,11 +336,7 @@ function PlotlyFigure({
         if (!initialFigureSpec.layout.hovermode) {
           // If the user has already set the clickmode, we don't want to override it here.
           // Otherwise, we are selecting the best clickmode based on the selection modes.
-          if (
-            element.selectionMode.includes(
-              PlotlyChartProto.SelectionMode.POINTS
-            )
-          ) {
+          if (isPointsSelectionActivated) {
             // https://plotly.com/javascript/reference/layout/#layout-clickmode
             // This allows single point selections and shift click to add / remove selections
             prevState.layout.clickmode = "event+select"
@@ -353,23 +354,13 @@ function PlotlyFigure({
         if (!initialFigureSpec.layout.dragmode) {
           // If the user has already set the dragmode, we don't want to override it here.
           // If not, we are selecting the best drag mode based on the selection modes.
-          if (
-            element.selectionMode.includes(
-              PlotlyChartProto.SelectionMode.POINTS
-            )
-          ) {
+          if (isPointsSelectionActivated) {
             // Pan drag mode has priority in case points selection is activated
             prevState.layout.dragmode = "pan"
-          } else if (
-            element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
-          ) {
+          } else if (isBoxSelectionActivated) {
             // Configure select (box selection) as the activated drag mode:
             prevState.layout.dragmode = "select"
-          } else if (
-            element.selectionMode.includes(
-              PlotlyChartProto.SelectionMode.LASSO
-            )
-          ) {
+          } else if (isLassoSelectionActivated) {
             // Configure lass (lasso selection) as the activated drag mode:
             prevState.layout.dragmode = "lasso"
           } else {
@@ -515,13 +506,26 @@ function PlotlyFigure({
       })
     }
 
+    // use snake case to replicate pythonic naming
+    selectionState.select.point_indices = Array.from(selectedPointIndices)
     selectionState.select.points = selectedPoints.map((point: any) =>
       keysToSnakeCase(point)
     )
-    // use snake case to replicate pythonic naming
-    selectionState.select.point_indices = Array.from(selectedPointIndices)
+
     selectionState.select.box = selectedBoxes
     selectionState.select.lasso = selectedLassos
+
+    if (selectionState.select.box && !isBoxSelectionActivated) {
+      // If box selection is not activated, we don't want
+      // to send any box selection related updates to the frontend
+      return
+    }
+
+    if (selectionState.select.lasso && !isLassoSelectionActivated) {
+      // If lasso selection is not activated, we don't want
+      // to send any lasso selection related updates to the frontend
+      return
+    }
 
     const currentSelectionState = widgetMgr.getStringValue(element)
     const newSelectionState = JSON.stringify(selectionState)
