@@ -327,16 +327,6 @@ function PlotlyFigure({
     expand,
   ])
 
-  // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
-
-  // useEffect(() => {
-  //   console.log("Update spec based on updated input data")
-  //   // Whenever the initial figure spec changes, we need to update
-  //   // the figure spec with the new spec from the element.
-  //   setPlotlyFigure(applyTheming(initialFigureSpec, element.theme, theme))
-  //   /* eslint-disable react-hooks/exhaustive-deps */
-  // }, [initialFigureSpec])
-
   useEffect(() => {
     console.log("Theme changed")
     // If the theme changes, we need to reapply the theming to the figure
