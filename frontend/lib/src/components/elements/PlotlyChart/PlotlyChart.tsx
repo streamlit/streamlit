@@ -315,7 +315,17 @@ function PlotlyFigure({
       config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
     return config
-  }, [element.id, element.figure?.config, isFullScreen, disableFullscreenMode])
+  }, [
+    element.id,
+    element.figure?.config,
+    isFullScreen,
+    disableFullscreenMode,
+    isSelectionActivated,
+    isLassoSelectionActivated,
+    isBoxSelectionActivated,
+    collapse,
+    expand,
+  ])
 
   // TODO(lukasmasuch): Do we have to reload if the figure spec changes in element?
 
