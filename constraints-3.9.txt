@@ -32,7 +32,7 @@ GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
 hypothesis==6.100.1
-identify==2.5.35
+identify==2.5.36
 idna==3.7
 importlib_metadata==7.1.0
 importlib_resources==6.4.0
@@ -78,11 +78,11 @@ pkginfo==1.10.0
 platformdirs==4.2.0
 playwright==1.42.0
 plotly==5.21.0
-pluggy==1.4.0
+pluggy==1.5.0
 pre-commit==3.7.0
 protobuf==3.20.3
 py4j==0.10.9.7
-pyarrow==15.0.2
+pyarrow==16.0.0
 pycparser==2.22
 pydantic==1.10.15
 pydeck==0.8.1b0
