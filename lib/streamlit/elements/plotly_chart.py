@@ -328,6 +328,8 @@ class PlotlyMixin:
         is_selection_activated = on_select != "ignore"
 
         if is_selection_activated:
+            # Run some checks that are only relevant when selections are activated
+
             # Import here to avoid circular imports
             from streamlit.elements.utils import (
                 check_cache_replay_rules,

@@ -517,8 +517,10 @@ export function PlotlyChart({
       initialFigureSpec.layout.hovermode,
       initialFigureSpec.layout.dragmode
     )
+
+    // TODO(lukasmasuch): Only run this setPlotlyFigure if necessary?
     setPlotlyFigure((prevState: PlotlyFigureType) => {
-      console.log("apply selection mode changed")
+      console.log("Update selection mode")
       if (isSelectionActivated) {
         if (!initialFigureSpec.layout.hovermode) {
           // If the user has already set the clickmode, we don't want to override it here.
@@ -555,6 +557,7 @@ export function PlotlyChart({
           }
         }
       } else {
+        // TODO(lukasmasuch): Is this
         prevState.layout.clickmode = initialFigureSpec.layout.clickmode
         prevState.layout.hovermode = initialFigureSpec.layout.hovermode
         prevState.layout.dragmode = initialFigureSpec.layout.dragmode
@@ -694,19 +697,20 @@ export function PlotlyChart({
       clickmode = "event"
     }
 
-    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-      console.log("Change to event clickmode")
-      return {
-        ...prevFigure,
-        layout: {
-          ...prevFigure.layout,
-          clickmode: clickmode,
-        },
-      }
-    })
+    if (plotlyFigure.layout?.clickmode !== clickmode) {
+      setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+        console.log("Change to event clickmode")
+        return {
+          ...prevFigure,
+          layout: {
+            ...prevFigure.layout,
+            clickmode: clickmode,
+          },
+        }
+      })
+    }
   }, [plotlyFigure.layout?.dragmode])
 
-  console.log("Rerender", plotlyFigure)
   return (
     <Plot
       key={isFullScreen ? "fullscreen" : "original"}
@@ -743,12 +747,9 @@ export function PlotlyChart({
         console.log("onInitialized")
         widgetMgr.setElementState(element.id, "figure", figure)
       }}
-      onClick={(event: any) => {
-        console.log("onClick event", event)
-      }}
       // Update the figure state on every change to the figure itself:
       onUpdate={figure => {
-        console.log("onUpdate", figure)
+        // console.log("onUpdate", figure)
 
         widgetMgr.setElementState(element.id, "figure", figure)
         setPlotlyFigure(figure)
