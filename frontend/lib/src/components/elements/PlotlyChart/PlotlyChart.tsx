@@ -245,38 +245,31 @@ function handleSelection(
   // @ts-expect-error
   const { selections, points } = event
 
-  // TODO: check this if:
-  // if (
-  //   points.length === 0 &&
-  //   notNullOrUndefined(selections) &&
-  //   selections.length === 0
-  // ) {
-  //   return
-  // }
+  if (points) {
+    points.forEach(function (point: any) {
+      selectedPoints.push({
+        ...point,
+        legendgroup: point.data.legendgroup || undefined,
+        // Remove data and full data as they have been deemed to be unnecessary data overhead
+        data: undefined,
+        fullData: undefined,
+      })
+      if (notNullOrUndefined(point.pointIndex)) {
+        selectedPointIndices.add(point.pointIndex)
+      }
 
-  points.forEach(function (point: any) {
-    selectedPoints.push({
-      ...point,
-      legendgroup: point.data.legendgroup || undefined,
-      // Remove data and full data as they have been deemed to be unnecessary data overhead
-      data: undefined,
-      fullData: undefined,
+      // If pointIndices is present (e.g. selection on histogram chart),
+      // add all of them to the set
+      if (
+        notNullOrUndefined(point.pointIndices) &&
+        point.pointIndices.length > 0
+      ) {
+        point.pointIndices.forEach((item: number) =>
+          selectedPointIndices.add(item)
+        )
+      }
     })
-    if (notNullOrUndefined(point.pointIndex)) {
-      selectedPointIndices.add(point.pointIndex)
-    }
-
-    // If pointIndices is present (e.g. selection on histogram chart),
-    // add all of them to the set
-    if (
-      notNullOrUndefined(point.pointIndices) &&
-      point.pointIndices.length > 0
-    ) {
-      point.pointIndices.forEach((item: number) =>
-        selectedPointIndices.add(item)
-      )
-    }
-  })
+  }
 
   if (selections) {
     selections.forEach((selection: any) => {
