@@ -338,23 +338,15 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
   padding: `${theme.spacing.xl} ${theme.spacing.twoXL} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
 }))
 
-export interface StyledLogoProps {
-  size: string
-}
-
-export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => {
-  const logoHeight = size === "fixed" ? "1.5rem" : "auto"
-
-  return {
-    height: logoHeight,
-    maxWidth: "15rem",
-    margin: "0.25rem 0 0.25rem 0",
-    zIndex: theme.zIndices.header,
-  }
-})
+export const StyledLogo = styled.img(({ theme }) => ({
+  height: "1.5rem",
+  maxWidth: "15rem",
+  margin: "0.25rem 0 0.25rem 0",
+  zIndex: theme.zIndices.header,
+}))
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
-  height: "2.5rem",
+  height: "2.0rem",
   marginRight: "-1rem",
 }))
 
