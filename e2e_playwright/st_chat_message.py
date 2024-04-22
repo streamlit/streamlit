@@ -79,10 +79,10 @@ st.chat_message("assistant", avatar=image2).write(
     "Another message with the same blue avatar."
 )
 
-with st.chat_message("user", avatar=":material/AirlineSeatReclineExtra:"):
+with st.chat_message("user", avatar=":material/airline_seat_recline_extra:"):
     st.write("Hello from USER, non-emoji icon.")
 
-with st.chat_message("AI", avatar=":material/InvalidIcon:"):
+with st.chat_message("AI", avatar=":material/invalidIcon:"):
     st.write("Hello from AI, invalid non-emoji icon.")
 
 query = "This is a hardcoded user message"
