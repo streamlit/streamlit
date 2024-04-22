@@ -36,20 +36,23 @@ def test_displays_markdown(app: Page):
     markdown_elements = app.get_by_test_id("stMarkdown")
 
     # Assert the text content of each markdown element
-    expect(markdown_elements.nth(0)).to_have_text("This markdown is awesome! 😎")
-    expect(markdown_elements.nth(1)).to_have_text("This <b>HTML tag</b> is escaped!")
-    expect(markdown_elements.nth(2)).to_have_text("This HTML tag is not escaped!")
-    expect(markdown_elements.nth(3)).to_have_text("[text]")
-    expect(markdown_elements.nth(4)).to_have_text("link")
-    expect(markdown_elements.nth(5)).to_have_text("[][]")
-    expect(markdown_elements.nth(6)).to_have_text("Inline math with KaTeX\\KaTeXKATE​X")
-    expect(markdown_elements.nth(7)).to_have_text(
-        "ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0"
-    )
-    expect(markdown_elements.nth(8)).to_have_text("Some header 1")
-    expect(markdown_elements.nth(9)).to_have_text("Some header 2")
-    expect(markdown_elements.nth(10)).to_have_text("Some header 3")
-    expect(markdown_elements.nth(11)).to_have_text("Col1Col2SomeData")
+    text = [
+        "This markdown is awesome! 😎",
+        "This <b>HTML tag</b> is escaped!",
+        "This HTML tag is not escaped!",
+        "[text]",
+        "link",
+        "[][]",
+        "Inline math with KaTeX\\KaTeXKATE​X",
+        "ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0",
+        "Some header 1",
+        "Some header 2",
+        "Some header 3",
+        "Col1Col2SomeData",
+    ]
+
+    for i in range(len(text)):
+        expect(markdown_elements.nth(i)).to_have_text(text[i])
 
     # Additional checks for specific elements like links
     expect(markdown_elements.nth(3).locator("a")).to_have_count(0)
@@ -75,7 +78,8 @@ def test_markdown_displays_headers_anchors(app: Page):
 def test_markdown_displays_tables(app: Page, assert_snapshot: ImageCompareFunction):
     """Displays markdown tables correctly"""
 
-    tables = app.locator(".element-container .stMarkdown table")
+    tables = app.get_by_test_id("stMarkdown").locator("table")
+
     expect(tables).to_have_count(1)
     assert_snapshot(tables.first, name="markdown-table-visuals")
 
@@ -85,9 +89,10 @@ def test_markdown_displays_long_headers_above_other_elements(
 ):
     """Displays long headers above other elements in the markdown block"""
 
-    long_header = app.locator(
-        "[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']"
-    ).nth(0)
+    long_header = (
+        app.get_by_test_id("stVerticalBlock").get_by_test_id("stVerticalBlock").nth(0)
+    )
+
     assert_snapshot(long_header, name="long-markdown-header-above-table")
 
 
@@ -96,9 +101,10 @@ def test_markdown_displays_headings_and_markdown_together(
 ):
     """Checks how headings and markdown are displayed when called separately or together and take snapshots."""
 
-    heading_and_markdown_block = app.locator(
-        "[data-testid='stVerticalBlock'] [data-testid='stVerticalBlock']"
-    ).nth(1)
+    heading_and_markdown_block = (
+        app.get_by_test_id("stVerticalBlock").get_by_test_id("stVerticalBlock").nth(1)
+    )
+
     assert_snapshot(
         heading_and_markdown_block, name="heading-and-markdown-combinations"
     )
