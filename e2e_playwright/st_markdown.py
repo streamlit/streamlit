@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-
 import streamlit as st
 
 st.markdown("This **markdown** is awesome! :sunglasses:")
@@ -52,8 +50,13 @@ st.markdown(
 
 with st.container():
     st.markdown("# some really long header " + " ".join(["lol"] * 10))
-    np.random.seed(0)
-    st.table(np.random.randn(10, 20))
+    st.markdown(
+        """
+| Col1      | Col2        | Col3        | Col4        |
+| --------- | ----------- | ----------- | ----------- |
+| Some      | Data        | Data        | Data        |
+"""
+    )
 
 with st.container():
     st.title("Some title")
@@ -76,15 +79,26 @@ with st.container():
     st.markdown("# Some title")
     st.markdown("Some text")
 
+
 st.markdown(
     """
-- :blue[blue]
-- :green[green]
-- :red[red]
-- :violet[violet]
-- :orange[orange]
-- :gray[gray]
-- :grey[grey]
-- :rainbow[rainbow]
+Inline math with $\KaTeX$
+
+$$
+ax^2 + bx + c = 0
+$$
+
+# Some header 1
+## Some header 2
+### Some header 3
+
+| Col1      | Col2        |
+| --------- | ----------- |
+| Some      | Data        |
+
+# Some title
+Some text
+
+- :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
 """
 )

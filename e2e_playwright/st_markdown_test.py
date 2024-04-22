@@ -24,10 +24,13 @@ def test_markdown_all_elements_displayed(
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
-    expect(markdown_elements).to_have_count(18)
+    expect(markdown_elements).to_have_count(19)
 
-    for i in range(markdown_elements.count()):
-        assert_snapshot(markdown_elements.nth(i), name=f"st_markdown-{i}")
+    # Snapshot one big markdown block containing a variety of elements to reduce number of snapshots
+    assert_snapshot(
+        markdown_elements.nth(markdown_elements.count() - 1),
+        name=f"st_markdown-num_elements_displayed",
+    )
 
 
 def test_displays_markdown(app: Page):
@@ -66,13 +69,13 @@ def test_markdown_displays_headers_anchors(app: Page):
     h2 = app.locator("h2#some-header-2")
     h3 = app.locator("h3#some-header-3")
 
-    expect(h1).to_have_count(1)
-    expect(h2).to_have_count(1)
-    expect(h3).to_have_count(1)
+    expect(h1).to_have_count(2)
+    expect(h2).to_have_count(2)
+    expect(h3).to_have_count(2)
 
-    expect(h1).to_have_attribute("id", "some-header-1")
-    expect(h2).to_have_attribute("id", "some-header-2")
-    expect(h3).to_have_attribute("id", "some-header-3")
+    expect(h1.first).to_have_attribute("id", "some-header-1")
+    expect(h2.first).to_have_attribute("id", "some-header-2")
+    expect(h3.first).to_have_attribute("id", "some-header-3")
 
 
 def test_markdown_displays_tables(app: Page, assert_snapshot: ImageCompareFunction):
@@ -80,8 +83,8 @@ def test_markdown_displays_tables(app: Page, assert_snapshot: ImageCompareFuncti
 
     tables = app.get_by_test_id("stMarkdown").locator("table")
 
-    expect(tables).to_have_count(1)
-    assert_snapshot(tables.first, name="markdown-table-visuals")
+    expect(tables).to_have_count(3)
+    assert_snapshot(tables.first, name="st_markdown-display_table")
 
 
 def test_markdown_displays_long_headers_above_other_elements(
@@ -93,18 +96,18 @@ def test_markdown_displays_long_headers_above_other_elements(
         app.get_by_test_id("stVerticalBlock").get_by_test_id("stVerticalBlock").nth(0)
     )
 
-    assert_snapshot(long_header, name="long-markdown-header-above-table")
+    assert_snapshot(long_header, name="st_markdown-long-markdown-header-above-table")
 
 
 def test_markdown_displays_headings_and_markdown_together(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Checks how headings and markdown are displayed when called separately or together and take snapshots."""
+    """Checks how headings and markdown are displayed when called separately or together."""
 
     heading_and_markdown_block = (
         app.get_by_test_id("stVerticalBlock").get_by_test_id("stVerticalBlock").nth(1)
     )
 
     assert_snapshot(
-        heading_and_markdown_block, name="heading-and-markdown-combinations"
+        heading_and_markdown_block, name="st_markdown-heading_and_markdown_combinations"
     )
