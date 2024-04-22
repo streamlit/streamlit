@@ -905,13 +905,17 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertEqual(proto.HasField("data"), False)
         self.assertEqual(len(proto.datasets), 1)
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form_on_select_rerun(self):
         """Test that form id is marshalled correctly inside of a form."""
         import plotly.graph_objs as go
 
         with st.form("form"):
-            point = alt.selection_multi(name="interval")
+            point = alt.selection_point(name="interval")
             df = pd.DataFrame(
                 [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
             ).T
@@ -934,13 +938,17 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         ).new_element.arrow_vega_lite_chart
         self.assertEqual(arrow_vega_lite_proto.form_id, form_proto.form.form_id)
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_outside_form_on_select_rerun(self):
         """Test that form id is marshalled correctly outside of a form."""
         import plotly.graph_objs as go
 
         with st.form("form"):
-            point = alt.selection_multi(name="interval")
+            point = alt.selection_point(name="interval")
             df = pd.DataFrame(
                 [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
             ).T
