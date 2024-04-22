@@ -122,7 +122,7 @@ toolz==0.12.1
 tornado==6.4
 twine==5.0.0
 types-click==7.1.8
-types-protobuf==5.26.0.20240420
+types-protobuf==5.26.0.20240422
 types-pytz==2024.1.0.20240417
 types-requests==2.31.0.20240406
 types-setuptools==69.5.0.20240415
