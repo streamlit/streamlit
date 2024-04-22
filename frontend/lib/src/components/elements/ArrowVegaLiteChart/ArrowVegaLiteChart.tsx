@@ -24,7 +24,7 @@ import {
   WidgetInfo,
   WidgetStateManager,
 } from "@streamlit/lib/src/WidgetStateManager"
-import { debounce, notNullOrUndefined } from "@streamlit/lib/src/util/utils"
+import { debounce } from "@streamlit/lib/src/util/utils"
 import { logMessage } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
