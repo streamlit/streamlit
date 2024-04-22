@@ -16,14 +16,9 @@
 
 import React, { ReactElement } from "react"
 
-import styled from "@emotion/styled"
 import snakeCase from "lodash/snakeCase"
 
-import {
-  IconSize,
-  ThemeColor,
-  computeSpacingStyle,
-} from "@streamlit/lib/src/theme"
+import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import {
   StyledMaterialIcon,
   StyledMaterialIconProps,
