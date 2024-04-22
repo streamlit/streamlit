@@ -192,6 +192,9 @@ export const StyledMenuContainer = styled.div(({ theme }) => ({
     boxShadow: "none",
     borderTop: "none",
   },
+  "@media print": {
+    display: "none",
+  },
 }))
 
 export const StyledMainMenuContainer = styled.span(() => ({

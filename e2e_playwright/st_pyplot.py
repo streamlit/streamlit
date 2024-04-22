@@ -87,3 +87,6 @@ st.write("Figure using deprecated global object:")
 plot = pyplot.plot(data)
 st.pyplot()
 pyplot.clf()
+
+fig, ax = plt.subplots()
+st.pyplot(fig)
