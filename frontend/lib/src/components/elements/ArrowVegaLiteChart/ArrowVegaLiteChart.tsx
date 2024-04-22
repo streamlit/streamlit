@@ -212,7 +212,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   }
 
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
-    console.log("component did update")
     const { element: prevElement, theme: prevTheme } = prevProps
     const { element, theme } = this.props
 
@@ -286,7 +285,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     }
 
     const storedValue = this.props.widgetMgr.getStringValue(el)
-    console.log(storedValue)
     if (storedValue !== undefined) {
       const selectors = this.getSelectorsFromChart(spec)
       const parsedStoredValue = JSON.parse(storedValue)
