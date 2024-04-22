@@ -33,7 +33,7 @@ def test_markdown_all_elements_displayed(
 def test_displays_markdown(app: Page):
     """Verifies the correct text content of markdown elements."""
 
-    markdown_elements = app.locator(".element-container .stMarkdown")
+    markdown_elements = app.get_by_test_id("stMarkdown")
 
     # Assert the text content of each markdown element
     expect(markdown_elements.nth(0)).to_have_text("This markdown is awesome! 😎")
