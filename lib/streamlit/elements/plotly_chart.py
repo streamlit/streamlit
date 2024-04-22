@@ -383,7 +383,7 @@ class PlotlyMixin:
             key=key,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
-            selection_mode=cast(Sequence[str], parsed_selection_modes),
+            selection_mode=cast(Sequence[int], parsed_selection_modes),
             is_selection_activated=is_selection_activated,
             theme=theme,
             form_id=plotly_chart_proto.form_id,
