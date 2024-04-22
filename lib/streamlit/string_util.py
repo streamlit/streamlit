@@ -19,6 +19,7 @@ import textwrap
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.errors import StreamlitAPIException
+from streamlit.material_icon_names import ALL_MATERIAL_ICONS
 
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
@@ -55,6 +56,11 @@ def is_emoji(text: str) -> bool:
     return text.replace("\U0000FE0F", "") in ALL_EMOJIS
 
 
+def is_material_icon(maybe_icon: str) -> bool:
+    """Check if input string is a valid Material icon."""
+    return maybe_icon in ALL_MATERIAL_ICONS
+
+
 def validate_emoji(maybe_emoji: str | None) -> str:
     if maybe_emoji is None:
         return ""
@@ -82,7 +88,7 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
     if not icon_match:
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon}"` is not a valid Material icon. '
-            f"Please use a Material icon shortcode like **`:material/ThumbUp:`**"
+            f"Please use a Material icon shortcode like **`:material/thumb_up:`**"
         )
     pack_name, icon_name = icon_match.groups()
 
@@ -90,13 +96,19 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
         icon_packs_repr = ", ".join(f"`{pack}`" for pack in supported_icon_packs)
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode like **`:material/ThumbUp:`**. "
+            f" Please use a Material icon shortcode like **`:material/thumb_up:`**. "
             f"Only {icon_packs_repr} icon packs are supported."
         )
     if not icon_name:
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode, like **`:material/ThumbUp:`**"
+            f" Please use a Material icon shortcode, like **`:material/thumb_up:`**"
+        )
+
+    if not is_material_icon(icon_name):
+        raise StreamlitAPIException(
+            f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
+            f" Please use a Material icon shortcode, like **`:material/thumb_up:`**"
         )
     return f":{pack_name}/{icon_name}:"
 
