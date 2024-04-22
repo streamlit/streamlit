@@ -147,6 +147,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
 
   private readonly formClearHelper = new FormClearHelper()
 
+  private formCleared = false
+
   readonly state = {
     error: undefined,
     selections: {} as Record<string, any>,
@@ -193,11 +195,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
           this.props.fragmentId
         )
         // Don't use state here so we don't have to rerender
-        this.props.widgetMgr.setElementState(
-          this.props.element.id,
-          this.props.element.formId,
-          "something"
-        )
+        this.formCleared = true
       }
     )
   }
@@ -216,7 +214,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
     console.log("component did update")
     const { element: prevElement, theme: prevTheme } = prevProps
-    const { element, theme, widgetMgr } = this.props
+    const { element, theme } = this.props
 
     const prevSpec = prevElement.spec
     const { spec } = element
@@ -230,16 +228,12 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       prevProps.element.vegaLiteTheme !== this.props.element.vegaLiteTheme ||
       prevProps.element.isSelectEnabled !==
         this.props.element.isSelectEnabled ||
-      widgetMgr.getElementState(element.id, this.props.element.formId)
+      this.formCleared
     ) {
       logMessage("Vega spec changed.")
       try {
         await this.createView()
-        widgetMgr.setElementState(
-          element.id,
-          this.props.element.formId,
-          undefined
-        )
+        this.formCleared = false
       } catch (e) {
         const error = ensureError(e)
 
