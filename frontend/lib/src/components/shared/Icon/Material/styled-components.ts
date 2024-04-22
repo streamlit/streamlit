@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
-
 import styled from "@emotion/styled"
 
 import { IconSize, computeSpacingStyle } from "@streamlit/lib/src/theme"
