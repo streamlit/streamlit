@@ -504,60 +504,76 @@ export function PlotlyChart({
   }, [element.id, theme, element.theme])
 
   useEffect(() => {
-    console.log(
-      "Selection changed",
-      initialFigureSpec.layout.clickmode,
-      initialFigureSpec.layout.hovermode,
-      initialFigureSpec.layout.dragmode
-    )
+    let updatedClickMode: typeof initialFigureSpec.layout.clickmode = undefined
+    let updatedHoverMode: typeof initialFigureSpec.layout.hovermode = undefined
+    let updatedDragMode: typeof initialFigureSpec.layout.dragmode = undefined
+
+    if (disabled) {
+      updatedClickMode = "none"
+      updatedDragMode = "pan"
+    } else if (isSelectionActivated) {
+      if (!initialFigureSpec.layout.hovermode) {
+        // If the user has already set the clickmode, we don't want to override it here.
+        // Otherwise, we are selecting the best clickmode based on the selection modes.
+        if (isPointsSelectionActivated) {
+          // https://plotly.com/javascript/reference/layout/#layout-clickmode
+          // This allows single point selections and shift click to add / remove selections
+          updatedClickMode = "event+select"
+        } else {
+          // If points selection is not activated, we deactivate the `select` behavior.
+          updatedClickMode = "event"
+        }
+      }
+
+      if (!initialFigureSpec.layout.hovermode) {
+        // If the user has already set the hovermode, we don't want to override it here.
+        updatedHoverMode = "closest"
+      }
+
+      if (!initialFigureSpec.layout.dragmode) {
+        // If the user has already set the dragmode, we don't want to override it here.
+        // If not, we are selecting the best drag mode based on the selection modes.
+        if (isPointsSelectionActivated) {
+          // Pan drag mode has priority in case points selection is activated
+          updatedDragMode = "pan"
+        } else if (isBoxSelectionActivated) {
+          // Configure select (box selection) as the activated drag mode:
+          updatedDragMode = "select"
+        } else if (isLassoSelectionActivated) {
+          // Configure lass (lasso selection) as the activated drag mode:
+          updatedDragMode = "lasso"
+        } else {
+          updatedDragMode = "pan"
+        }
+      }
+    } else {
+      updatedClickMode = initialFigureSpec.layout.clickmode
+      updatedHoverMode = initialFigureSpec.layout.hovermode
+      updatedDragMode = initialFigureSpec.layout.dragmode
+    }
 
     // TODO(lukasmasuch): Only run this setPlotlyFigure if necessary?
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       console.log("Update selection mode")
-      if (isSelectionActivated) {
-        if (!initialFigureSpec.layout.hovermode) {
-          // If the user has already set the clickmode, we don't want to override it here.
-          // Otherwise, we are selecting the best clickmode based on the selection modes.
-          if (isPointsSelectionActivated) {
-            // https://plotly.com/javascript/reference/layout/#layout-clickmode
-            // This allows single point selections and shift click to add / remove selections
-            prevState.layout.clickmode = "event+select"
-          } else {
-            // If points selection is not activated, we deactivate the `select` behavior.
-            prevState.layout.clickmode = "event"
-          }
-        }
-
-        if (!initialFigureSpec.layout.hovermode) {
-          // If the user has already set the hovermode, we don't want to override it here.
-          prevState.layout.hovermode = "closest"
-        }
-
-        if (!initialFigureSpec.layout.dragmode) {
-          // If the user has already set the dragmode, we don't want to override it here.
-          // If not, we are selecting the best drag mode based on the selection modes.
-          if (isPointsSelectionActivated) {
-            // Pan drag mode has priority in case points selection is activated
-            prevState.layout.dragmode = "pan"
-          } else if (isBoxSelectionActivated) {
-            // Configure select (box selection) as the activated drag mode:
-            prevState.layout.dragmode = "select"
-          } else if (isLassoSelectionActivated) {
-            // Configure lass (lasso selection) as the activated drag mode:
-            prevState.layout.dragmode = "lasso"
-          } else {
-            prevState.layout.dragmode = "pan"
-          }
-        }
-      } else {
-        // TODO(lukasmasuch): Is this
-        prevState.layout.clickmode = initialFigureSpec.layout.clickmode
-        prevState.layout.hovermode = initialFigureSpec.layout.hovermode
-        prevState.layout.dragmode = initialFigureSpec.layout.dragmode
+      if (
+        prevState.layout.clickmode !== updatedClickMode &&
+        prevState.layout.hovermode !== updatedHoverMode &&
+        prevState.layout.dragmode !== updatedDragMode
+      ) {
+        return prevState
       }
-      return prevState
+
+      return {
+        ...prevState,
+        layout: {
+          ...prevState.layout,
+          clickmode: updatedClickMode,
+          hovermode: updatedHoverMode,
+          dragmode: updatedDragMode,
+        },
+      }
     })
-  }, [element.id])
+  }, [element.id, isSelectionActivated, isPointsSelectionActivated, disabled])
 
   let calculatedWidth = Math.max(
     element.useContainerWidth
