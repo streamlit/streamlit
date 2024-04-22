@@ -71,10 +71,6 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
 
     supported_icon_packs = [
         "material",
-        "material-outlined",
-        "material-rounded",
-        "material-original",
-        "material-original-filled",
     ]
 
     if maybe_material_icon is None:

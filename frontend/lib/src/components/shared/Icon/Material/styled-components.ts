@@ -18,11 +18,7 @@ import React, { ReactElement } from "react"
 
 import styled from "@emotion/styled"
 
-import {
-  IconSize,
-  ThemeColor,
-  computeSpacingStyle,
-} from "@streamlit/lib/src/theme"
+import { IconSize, computeSpacingStyle } from "@streamlit/lib/src/theme"
 
 export interface StyledMaterialIconProps {
   size: IconSize

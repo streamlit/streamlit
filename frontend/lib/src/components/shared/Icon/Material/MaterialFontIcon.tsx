@@ -30,8 +30,7 @@ import {
 } from "./styled-components"
 
 const ICON_PACK_MAPPING: Record<string, string> = {
-  "material-original": "material-symbols-outlined",
-  "material-original-filled": "material-symbols-outlined-filled",
+  material: "material-symbols-outlined",
 }
 
 interface MaterialIconProps {

@@ -23,23 +23,12 @@ import snakeCase from "lodash/snakeCase"
 function iconToUrl(icon: string): string {
   const iconRegexp = /^:(.*)\/(.*):$/
   const matchResult = icon.match(iconRegexp)
-  let snakeIconName = ""
   if (matchResult === null) {
     // If the icon is invalid, return just an empty string
-    return snakeIconName
-  }
-  snakeIconName = snakeCase(matchResult[2])
-
-  let iconType = "baseline"
-  if (matchResult[1] === "material") {
-    iconType = "baseline"
-  } else if (matchResult[1] === "material-outlined") {
-    iconType = "outline"
-  } else if (matchResult[1] === "material-rounded") {
-    iconType = "round"
+    return ""
   }
 
-  const iconUrl = `https://cdn.jsdelivr.net/npm/@material-icons/svg@1.0.33/svg/${snakeIconName}/${iconType}.svg`
+  const iconUrl = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/${matchResult[2]}/default/24px.svg`
   return iconUrl
 }
 
