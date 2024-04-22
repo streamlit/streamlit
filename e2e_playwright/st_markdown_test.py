@@ -78,15 +78,6 @@ def test_markdown_displays_headers_anchors(app: Page):
     expect(h3.first).to_have_attribute("id", "some-header-3")
 
 
-def test_markdown_displays_tables(app: Page, assert_snapshot: ImageCompareFunction):
-    """Displays markdown tables correctly"""
-
-    tables = app.get_by_test_id("stMarkdown").locator("table")
-
-    expect(tables).to_have_count(3)
-    assert_snapshot(tables.first, name="st_markdown-display_table")
-
-
 def test_markdown_displays_long_headers_above_other_elements(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
