@@ -330,7 +330,7 @@ const RawElementNodeRenderer = (
       )
 
     case "empty":
-      return <div className="stHidden" />
+      return <div className="stHidden" data-testid="stEmpty" />
 
     case "exception":
       return (
