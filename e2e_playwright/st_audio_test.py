@@ -63,7 +63,6 @@ def test_audio_end_time_loop(app: Page):
     wait_until(app, lambda: 16 < audio_element.evaluate("el => el.currentTime") < 18)
 
 
-@pytest.mark.skip_browser("webkit")
 def test_audio_autoplay(app: Page):
     """Test that `st.audio` autoplay property works correctly."""
     audio_elements = app.get_by_test_id("stAudio")
