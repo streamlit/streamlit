@@ -23,10 +23,9 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 def logo(
     image: str | Image.Image | AtomicImage,
-    size: Literal["fixed", "full"] = "fixed",
     *,  # keyword-only args:
-    url: str | None = None,
-    collapsed_version: str | None = None,
+    link: str | None = None,
+    collapsed_image: str | None = None,
 ) -> None:
     """
     Handles the app and sidebar logos
@@ -36,21 +35,19 @@ def logo(
         return
 
     fwd_msg = ForwardMsg()
-    # TODO: how to better handle images to send to FE
     image_url = image_to_url(image, WidthBehaviour.AUTO, True, "RGB", "auto", "logo")
 
     fwd_msg.logo.image = image_url
-    fwd_msg.logo.size = size
-    if url:
-        fwd_msg.logo.url = url
-    if collapsed_version:
+    if link:
+        fwd_msg.logo.link = link
+    if collapsed_image:
         collapsed_image_url = image_to_url(
-            collapsed_version,
+            collapsed_image,
             WidthBehaviour.AUTO,
             True,
             "RGB",
             "auto",
             "collapsed-logo",
         )
-        fwd_msg.logo.collapsed_version = collapsed_image_url
+        fwd_msg.logo.collapsed_image = collapsed_image_url
     ctx.enqueue(fwd_msg)

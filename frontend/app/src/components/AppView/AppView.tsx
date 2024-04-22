@@ -152,6 +152,9 @@ function AppView(props: AppViewProps): ReactElement {
     (!hideSidebarNav && appPages.length > 1) ||
     showSidebarOverride
 
+  // const [appLogoImage, setAppLogoImageUrl] = React.useState( appLogo && endpoints.buildMediaURL(appLogo.image) || "")
+  // const [appLogoCollapsed, setAppLogoCollapsed] = React.useState( appLogo && endpoints.buildMediaURL(appLogo.collapsedImage) || "")
+
   React.useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
     if (showSidebar && hideSidebarNav && !showSidebarOverride) {
@@ -183,24 +186,19 @@ function AppView(props: AppViewProps): ReactElement {
     : StyledAppViewMain
 
   const renderLogo = (appLogo: Logo): ReactElement => {
-    if (appLogo.url) {
+    const displayImage = appLogo.collapsedImage
+      ? appLogo.collapsedImage
+      : appLogo.image
+    const source = endpoints.buildMediaURL(displayImage)
+
+    if (appLogo.link) {
       return (
-        <StyledLogoLink href={appLogo.url} target="_blank" rel="noreferrer">
-          <StyledLogo
-            src={endpoints.buildMediaURL(appLogo.image)}
-            size={appLogo.size}
-            alt="Logo"
-          />
+        <StyledLogoLink href={appLogo.link} target="_blank" rel="noreferrer">
+          <StyledLogo src={source} alt="Logo" />
         </StyledLogoLink>
       )
     }
-    return (
-      <StyledLogo
-        src={endpoints.buildMediaURL(appLogo.image)}
-        size={appLogo.size}
-        alt="Logo"
-      />
-    )
+    return <StyledLogo src={source} alt="Logo" />
   }
 
   const renderBlock = (node: BlockNode): ReactElement => (

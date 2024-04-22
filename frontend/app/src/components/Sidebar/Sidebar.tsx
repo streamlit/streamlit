@@ -233,28 +233,21 @@ class Sidebar extends PureComponent<SidebarProps, State> {
 
     if (!appLogo) {
       return <StyledNoLogoSpacer />
-    } else if (appLogo.url) {
+    }
+
+    const displayImage =
+      collapsed && appLogo.collapsedImage
+        ? appLogo.collapsedImage
+        : appLogo.image
+    const source = this.props.endpoints.buildMediaURL(displayImage)
+    if (appLogo.link) {
       return (
-        <StyledLogoLink href={appLogo.url} target="_blank" rel="noreferrer">
-          <StyledLogo
-            src={this.props.endpoints.buildMediaURL(
-              collapsed ? appLogo.collapsedVersion : appLogo.image
-            )}
-            size={appLogo.size}
-            alt="Logo"
-          />
+        <StyledLogoLink href={appLogo.link} target="_blank" rel="noreferrer">
+          <StyledLogo src={source} alt="Logo" />
         </StyledLogoLink>
       )
     }
-    return (
-      <StyledLogo
-        src={this.props.endpoints.buildMediaURL(
-          collapsed ? appLogo.collapsedVersion : appLogo.image
-        )}
-        size={appLogo.size}
-        alt="Logo"
-      />
-    )
+    return <StyledLogo src={source} alt="Logo" />
   }
 
   public render(): ReactNode {
