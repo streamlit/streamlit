@@ -26,6 +26,7 @@ from typing import (
     Iterable,
     List,
     Literal,
+    Sequence,
     Set,
     TypedDict,
     Union,
@@ -85,7 +86,7 @@ class PlotlySelectionState(TypedDict, total=False):
 
     Attributes
     ----------
-    points : list[dict]
+    points : list[Dict[str, Any]]
         The selected data points in the chart, this also includes
         the the data points selected by the box and lasso mode.
 
@@ -94,19 +95,19 @@ class PlotlySelectionState(TypedDict, total=False):
         this also includes the indices of the points selected by the box
         and lasso mode.
 
-    box : list[dict]
+    box : list[Dict[str, Any]]
         The metadata related to the box selection. This includes the
         coordinates of the selected area.
 
-    lasso : list[dict]
+    lasso : list[Dict[str, Any]]
         The metadata related to the lasso selection. This includes the
         coordinates of the selected area.
     """
 
-    points: list[dict]
+    points: list[Dict[str, Any]]
     point_indices: list[int]
-    box: list[dict]
-    lasso: list[dict]
+    box: list[Dict[str, Any]]
+    lasso: list[Dict[str, Any]]
 
 
 class PlotlyState(TypedDict, total=False):
@@ -139,13 +140,13 @@ class PlotlyChartSelectionSerde:
         selection_state = (
             empty_selection_state
             if ui_value is None
-            else AttributeDictionary(json.loads(ui_value))
+            else cast(PlotlyState, AttributeDictionary(json.loads(ui_value)))
         )
 
         if "select" not in selection_state:
             selection_state = empty_selection_state
 
-        return AttributeDictionary(selection_state)
+        return cast(PlotlyState, AttributeDictionary(selection_state))
 
     def serialize(self, selection_state: PlotlyState) -> str:
         return json.dumps(selection_state, default=str)
@@ -176,12 +177,12 @@ def parse_selection_mode(
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.LASSO)
         elif selection_mode == "box":
             parsed_selection_modes.append(PlotlyChartProto.SelectionMode.BOX)
-    return parsed_selection_modes
+    return set(parsed_selection_modes)
 
 
 class PlotlyMixin:
     @overload
-    def plotly_chart(
+    def plotly_chart(  # type: ignore
         self,
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
@@ -189,7 +190,8 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
-        selection_mode: SelectionMode = ("points", "box", "lasso"),
+        selection_mode: SelectionMode
+        | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
     ) -> DeltaGenerator:
         ...
@@ -203,7 +205,8 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
-        selection_mode: SelectionMode = ("points", "box", "lasso"),
+        selection_mode: SelectionMode
+        | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
     ) -> PlotlyState:
         ...
@@ -217,7 +220,8 @@ class PlotlyMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
-        selection_mode: SelectionMode = ("points", "box", "lasso"),
+        selection_mode: SelectionMode
+        | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
     ) -> "DeltaGenerator" | PlotlyState:
         """Display an interactive Plotly chart.
@@ -379,7 +383,7 @@ class PlotlyMixin:
             key=key,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
-            selection_mode=parsed_selection_modes,
+            selection_mode=cast(Sequence[int], parsed_selection_modes),
             is_selection_activated=is_selection_activated,
             theme=theme,
             form_id=plotly_chart_proto.form_id,
