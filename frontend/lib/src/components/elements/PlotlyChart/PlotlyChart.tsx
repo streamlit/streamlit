@@ -448,7 +448,7 @@ export function PlotlyChart({
       ]
     }
 
-    if (!config.modeBarButtonsToRemove) {
+    if (!config.modeBarButtonsToRemove && isSelectionActivated) {
       // Only modify the mode bar buttons if it's not already set
       // in the config provided by the user.
 
