@@ -54,12 +54,6 @@ export interface PlotlyChartProps {
   disableFullscreenMode?: boolean
 }
 
-export interface PlotlyIFrameProps {
-  width: number
-  height: number | undefined
-  url: string
-}
-
 // Copied and Pasted from Plotly type def
 export interface SelectionRange {
   x: number[]
