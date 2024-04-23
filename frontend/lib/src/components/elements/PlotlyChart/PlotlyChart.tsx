@@ -41,19 +41,6 @@ import {
   replaceTemporaryColors,
 } from "./CustomTheme"
 
-export interface PlotlyChartProps {
-  width: number
-  element: PlotlyChartProto
-  height?: number
-  widgetMgr: WidgetStateManager
-  disabled: boolean
-  fragmentId?: string
-  isFullScreen: boolean
-  expand?: () => void
-  collapse?: () => void
-  disableFullscreenMode?: boolean
-}
-
 // Copied and Pasted from Plotly type def
 export interface SelectionRange {
   x: number[]
@@ -369,6 +356,19 @@ function sendEmptySelection(
   }
 }
 
+export interface PlotlyChartProps {
+  width: number
+  element: PlotlyChartProto
+  height?: number
+  widgetMgr: WidgetStateManager
+  disabled: boolean
+  fragmentId?: string
+  isFullScreen: boolean
+  expand?: () => void
+  collapse?: () => void
+  disableFullscreenMode?: boolean
+}
+
 export function PlotlyChart({
   element,
   width,
@@ -421,8 +421,6 @@ export function PlotlyChart({
   )
 
   const plotlyConfig = useMemo(() => {
-    console.log("Update config")
-
     if (!element.config) {
       // If there is no config, return an empty object
       return {}
@@ -545,14 +543,13 @@ export function PlotlyChart({
       updatedDragMode = initialFigureSpec.layout.dragmode
     }
 
-    // TODO(lukasmasuch): Only run this setPlotlyFigure if necessary?
     setPlotlyFigure((prevState: PlotlyFigureType) => {
-      console.log("Update selection mode")
       if (
         prevState.layout.clickmode !== updatedClickMode &&
         prevState.layout.hovermode !== updatedHoverMode &&
         prevState.layout.dragmode !== updatedDragMode
       ) {
+        // Nothing has changed, just return the previous state
         return prevState
       }
 
@@ -715,11 +712,7 @@ export function PlotlyChart({
       // reset the selection. The default handling can be a bit annoying
       // sometimes.
       onDoubleClick={
-        isSelectionActivated
-          ? () => {
-              resetSelectionsCallback()
-            }
-          : undefined
+        isSelectionActivated ? resetSelectionsCallback : undefined
       }
       onDeselect={
         isSelectionActivated
