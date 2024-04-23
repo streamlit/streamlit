@@ -690,7 +690,6 @@ export function PlotlyChart({
 
     if (plotlyFigure.layout?.clickmode !== clickmode) {
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-        console.log("Change to event clickmode")
         return {
           ...prevFigure,
           layout: {
