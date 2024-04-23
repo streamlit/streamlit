@@ -144,7 +144,7 @@ class LayoutsMixin:
 
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: str | None = "small"
+        self, spec: SpecType, *, gap: str | None = "small", border: bool | None = None
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -166,15 +166,19 @@ class LayoutsMixin:
             Controls the number and width of columns to insert. Can be one of:
 
             * An integer that specifies the number of columns. All columns have equal
-              width in this case.
+            width in this case.
             * An Iterable of numbers (int or float) that specify the relative width of
-              each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
-              one takes up 70% of the available with and the second one takes up 30%.
-              Or ``[1, 2, 3]`` creates three columns where the second one is two times
-              the width of the first one, and the third one is three times that width.
+            each column. E.g. ``[0.7, 0.3]`` creates two columns where the first
+            one takes up 70% of the available with and the second one takes up 30%.
+            Or ``[1, 2, 3]`` creates three columns where the second one is two times
+            the width of the first one, and the third one is three times that width.
 
         gap : "small", "medium", or "large"
             The size of the gap between the columns. Defaults to "small".
+
+        border : bool or None
+            Whether to show a border around the columns. If ``None`` (default), no
+            border is shown.
 
         Returns
         -------
@@ -187,7 +191,7 @@ class LayoutsMixin:
 
         >>> import streamlit as st
         >>>
-        >>> col1, col2, col3 = st.columns(3)
+        >>> col1, col2, col3 = st.columns(3, border=True)
         >>>
         >>> with col1:
         ...    st.header("A cat")
@@ -210,7 +214,7 @@ class LayoutsMixin:
         >>> import streamlit as st
         >>> import numpy as np
         >>>
-        >>> col1, col2 = st.columns([3, 1])
+        >>> col1, col2 = st.columns([3, 1], border=True)
         >>> data = np.random.randn(10, 1)
         >>>
         >>> col1.subheader("A wide column with a chart")
@@ -261,6 +265,7 @@ class LayoutsMixin:
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
             col_proto.allow_empty = True
+            col_proto.vertical.border = border or False
             return col_proto
 
         block_proto = BlockProto()
