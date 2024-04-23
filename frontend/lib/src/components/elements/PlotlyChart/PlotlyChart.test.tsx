@@ -272,10 +272,10 @@ describe("handleSelection", () => {
 
     jest.spyOn(widgetMgr, "setStringValue")
 
-    // @ts-expect-error
     handleSelection(
       event,
       widgetMgr,
+      // @ts-expect-error
       { ...proto, selectionMode: [] },
       mockFragmentId
     )
