@@ -133,6 +133,7 @@ class RunWarningTest(unittest.TestCase):
                 "latex",
                 "line_chart",
                 "link_button",
+                "logo",
                 "map",
                 "markdown",
                 "metric",
