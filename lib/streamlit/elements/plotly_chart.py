@@ -21,8 +21,11 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
+    Dict,
     Final,
     Iterable,
+    List,
     Literal,
     Sequence,
     TypedDict,
@@ -64,11 +67,11 @@ _AtomicFigureOrData: TypeAlias = Union[
 ]
 FigureOrData: TypeAlias = Union[
     _AtomicFigureOrData,
-    list[_AtomicFigureOrData],
+    List[_AtomicFigureOrData],
     # It is kind of hard to figure out exactly what kind of dict is supported
     # here, as plotly hasn't embraced typing yet. This version is chosen to
     # align with the docstring.
-    dict[str, _AtomicFigureOrData],
+    Dict[str, _AtomicFigureOrData],
     "BaseFigure",
     "matplotlib.figure.Figure",
 ]
@@ -179,14 +182,14 @@ def parse_selection_mode(
 
 class PlotlyMixin:
     @overload
-    def plotly_chart(  # type: ignore
+    def plotly_chart(
         self,
         figure_or_data: FigureOrData,
         use_container_width: bool = False,
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"] = "ignore",
+        on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
@@ -201,7 +204,7 @@ class PlotlyMixin:
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        on_select: Literal["rerun"] | Callable[..., None] = "rerun",
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
@@ -216,11 +219,11 @@ class PlotlyMixin:
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+        on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
-    ) -> "DeltaGenerator" | PlotlyState:
+    ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -405,7 +408,7 @@ class PlotlyMixin:
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
-            return widget_state.value
+            return cast(PlotlyState, widget_state.value)
         else:
             return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
