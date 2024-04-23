@@ -41,25 +41,6 @@ import {
   replaceTemporaryColors,
 } from "./CustomTheme"
 
-export interface PlotlyChartProps {
-  width: number
-  element: PlotlyChartProto
-  height?: number
-  widgetMgr: WidgetStateManager
-  disabled: boolean
-  fragmentId?: string
-  isFullScreen: boolean
-  expand?: () => void
-  collapse?: () => void
-  disableFullscreenMode?: boolean
-}
-
-export interface PlotlyIFrameProps {
-  width: number
-  height: number | undefined
-  url: string
-}
-
 // Copied and Pasted from Plotly type def
 export interface SelectionRange {
   x: number[]
@@ -84,15 +65,15 @@ export interface PlotlyWidgetState {
   }
 }
 
-// Default height for Plotly charts
-export const DEFAULT_HEIGHT = 450
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
 
+// Custom icon used in the fullscreen expand toolbar button:
 const FULLSCREEN_EXPAND_ICON = {
   width: 600,
   height: 470,
   name: "fullscreen-expand",
+  // https://fontawesome.com/icons/expand?f=classic&s=solid
   path: "M32 32C14.3 32 0 46.3 0 64v96c0 17.7 14.3 32 32 32s32-14.3 32-32V96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H32zM64 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H64V352zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32h64v64c0 17.7 14.3 32 32 32s32-14.3 32-32V64c0-17.7-14.3-32-32-32H320zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H320c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V352z",
 }
 
@@ -100,6 +81,7 @@ const FULLSCREEN_COLLAPSE_ICON = {
   width: 600,
   height: 470,
   name: "fullscreen-collapse",
+  // https://fontawesome.com/icons/compress?f=classic&s=solid
   path: "M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z",
 }
 
@@ -374,6 +356,19 @@ function sendEmptySelection(
   }
 }
 
+export interface PlotlyChartProps {
+  width: number
+  element: PlotlyChartProto
+  height?: number
+  widgetMgr: WidgetStateManager
+  disabled: boolean
+  fragmentId?: string
+  isFullScreen: boolean
+  expand?: () => void
+  collapse?: () => void
+  disableFullscreenMode?: boolean
+}
+
 export function PlotlyChart({
   element,
   width,
@@ -390,7 +385,6 @@ export function PlotlyChart({
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
-    console.log("Update initial figure spec")
     if (!element.spec) {
       return {
         layout: {},
@@ -405,13 +399,11 @@ export function PlotlyChart({
   }, [element.id, element.spec])
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
-    console.log("Load figure state")
     // If there was already a state with a figure using the same id,
     // use that to recover the state. This happens in some situations
     // where a component un-mounts and mounts again.
     const initialFigureState = widgetMgr.getElementState(element.id, "figure")
     if (initialFigureState) {
-      console.log("Initial figure found", element.id, initialFigureState)
       return initialFigureState
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
@@ -429,15 +421,16 @@ export function PlotlyChart({
   )
 
   const plotlyConfig = useMemo(() => {
-    console.log("Update config")
-
     if (!element.config) {
+      // If there is no config, return an empty object
       return {}
     }
 
     const config = JSON.parse(element.config)
 
+    // Customize the plotly toolbar:
     if (!disableFullscreenMode) {
+      // Add a fullscreen button to the plotly toolbar:
       config.modeBarButtonsToAdd = [
         {
           name: isFullScreen ? "Close fullscreen" : "Fullscreen",
@@ -495,10 +488,8 @@ export function PlotlyChart({
   ])
 
   useEffect(() => {
-    console.log("Theme changed")
     // If the theme changes, we need to reapply the theming to the figure
     setPlotlyFigure((prevState: PlotlyFigureType) => {
-      console.log("apply theming")
       return applyTheming(prevState, element.theme, theme)
     })
   }, [element.id, theme, element.theme])
@@ -552,14 +543,13 @@ export function PlotlyChart({
       updatedDragMode = initialFigureSpec.layout.dragmode
     }
 
-    // TODO(lukasmasuch): Only run this setPlotlyFigure if necessary?
     setPlotlyFigure((prevState: PlotlyFigureType) => {
-      console.log("Update selection mode")
       if (
         prevState.layout.clickmode !== updatedClickMode &&
         prevState.layout.hovermode !== updatedHoverMode &&
         prevState.layout.dragmode !== updatedDragMode
       ) {
+        // Nothing has changed, just return the previous state
         return prevState
       }
 
@@ -583,7 +573,7 @@ export function PlotlyChart({
     // width values if the browser window is too small:
     MIN_WIDTH
   )
-  // TODO(lukasmasuch): Do we have to use a default height here?
+
   let calculatedHeight = initialFigureSpec.layout.height
 
   if (isFullScreen) {
@@ -595,16 +585,8 @@ export function PlotlyChart({
     plotlyFigure.layout.height !== calculatedHeight ||
     plotlyFigure.layout.width !== calculatedWidth
   ) {
-    console.log(
-      "Change width and height of the figure",
-      plotlyFigure.layout.height,
-      plotlyFigure.layout.width,
-      calculatedHeight,
-      calculatedWidth
-    )
     // Update the figure with the new height and width (if they have changed)
     setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-      console.log("apply change in height and width")
       return {
         ...prevFigure,
         layout: {
@@ -621,7 +603,6 @@ export function PlotlyChart({
    */
   const handleSelectionCallback = useCallback(
     (event: Readonly<Plotly.PlotSelectionEvent>): void => {
-      console.log("Selection event", event)
       handleSelection(event, widgetMgr, element, fragmentId)
     },
     [element.id, widgetMgr, fragmentId]
@@ -633,7 +614,6 @@ export function PlotlyChart({
    */
   const resetSelectionsCallback = useCallback(
     (resetSelectionInFigure = true): void => {
-      console.log("Reset selections")
       sendEmptySelection(widgetMgr, element, fragmentId)
 
       if (resetSelectionInFigure) {
@@ -642,10 +622,8 @@ export function PlotlyChart({
         // that we set here. The timeout will make sure that this is executed
         // after the onUpdate callback.
         setTimeout(() => {
-          console.log("Apply reset of figure")
           // Reset the selection info within the plotly figure
           setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-            console.log("apply reset of figure")
             return {
               ...prevFigure,
               data: prevFigure.data.map((trace: any) => {
@@ -671,8 +649,9 @@ export function PlotlyChart({
 
   // This is required for the form clearing functionality:
   useEffect(() => {
-    console.log("Clear form handler", element.formId)
     if (!element.formId || !isSelectionActivated) {
+      // We don't need the form clear functionality if its not in a form
+      // or if selections are not activated.
       return
     }
 
@@ -708,7 +687,6 @@ export function PlotlyChart({
 
     if (plotlyFigure.layout?.clickmode !== clickmode) {
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-        console.log("Change to event clickmode")
         return {
           ...prevFigure,
           layout: {
@@ -734,17 +712,11 @@ export function PlotlyChart({
       // reset the selection. The default handling can be a bit annoying
       // sometimes.
       onDoubleClick={
-        isSelectionActivated
-          ? () => {
-              console.log("onDoubleClick event")
-              resetSelectionsCallback()
-            }
-          : undefined
+        isSelectionActivated ? resetSelectionsCallback : undefined
       }
       onDeselect={
         isSelectionActivated
           ? () => {
-              console.log("onDeselect event")
               // Plotly is also resetting the UI state already for
               // deselect events. So, we don't need to do it on our side.
               // Thats why the flag is false.
@@ -753,14 +725,13 @@ export function PlotlyChart({
           : undefined
       }
       onInitialized={figure => {
-        console.log("onInitialized")
         widgetMgr.setElementState(element.id, "figure", figure)
       }}
       // Update the figure state on every change to the figure itself:
       onUpdate={figure => {
-        // console.log("onUpdate", figure)
-
+        // Safe the updated figure state to allow it to be recovered
         widgetMgr.setElementState(element.id, "figure", figure)
+        // Set the updated plotly figure state
         setPlotlyFigure(figure)
       }}
     />

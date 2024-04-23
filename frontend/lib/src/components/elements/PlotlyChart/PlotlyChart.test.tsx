@@ -68,31 +68,6 @@ describe("PlotlyChart Element", () => {
     expect(screen.getByText("Group 1")).toBeInTheDocument()
   })
 
-  describe("Render iframe", () => {
-    const props = getProps({
-      chart: "url",
-      url: "http://url.test",
-      figure: undefined,
-    })
-    it("should render an iframe", () => {
-      render(<PlotlyChart {...props} />)
-      const iframe = screen.getByTitle("Plotly")
-      expect(iframe).toBeInTheDocument()
-      expect(iframe).toMatchSnapshot()
-      expect(iframe).toHaveStyle(`height: ${DEFAULT_HEIGHT}px`)
-    })
-    it("should render with an specific height", () => {
-      const propsWithHeight = {
-        ...props,
-        height: 400,
-        width: 500,
-      }
-      render(<PlotlyChart {...propsWithHeight} />)
-      const iframe = screen.getByTitle("Plotly")
-      expect(iframe).toBeInTheDocument()
-      expect(iframe).toHaveStyle("height: 400px")
-    })
-  })
   describe("Theming", () => {
     it("pulls default config values from theme", async () => {
       const props = getProps()
