@@ -21,7 +21,7 @@ from typing import Callable, Literal
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
-from streamlit.source_util import page_icon_and_name
+from streamlit.source_util import page_icon_and_name, set_v2_pages
 from streamlit.util import calc_md5
 
 
@@ -128,10 +128,12 @@ def navigation(
     for page in pgs.page_list:
         page_dict[page._script_hash] = page
     ctx.pages = page_dict
+
+    set_v2_pages(pgs.as_source_util_pages())
+
     try:
         page = page_dict[ctx.page_script_hash]
     except KeyError:
-        print(f"{page_dict=}")
         print(
             f"could not find page for {ctx.page_script_hash}, falling back to default page"
         )
@@ -165,3 +167,18 @@ class Pages:
     @property
     def default(self) -> Page:
         return [page for page in self.page_list if page.default][0]
+
+    def as_source_util_pages(self) -> dict[str, dict[str, str]]:
+        d = {}
+        for page in self.page_list:
+            if isinstance(page.page, Path):
+                script_path = str(page.page)
+            else:
+                script_path = ""
+            d[page._script_hash] = {
+                "page_script_hash": page._script_hash,
+                "page_name": page.title,
+                "icon": page.icon,
+                "script_path": script_path,
+            }
+        return d

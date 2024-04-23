@@ -18,6 +18,7 @@ import asyncio
 import sys
 import uuid
 from enum import Enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
@@ -420,8 +421,9 @@ class AppSession:
         return self._session_state
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
-        main_script_path = self._script_data.main_script_path
-        pages = source_util.get_pages(main_script_path)
+        main_script_path = str(Path(self._script_data.main_script_path).resolve())
+        pages = source_util.get_pages(main_script_path).copy()
+        pages.update(source_util.get_v2_pages())
 
         changed_page_script_hash = next(
             filter(lambda k: pages[k]["script_path"] == filepath, pages),
@@ -429,8 +431,16 @@ class AppSession:
         )
 
         if changed_page_script_hash is not None:
+            main_page_script_hash = next(
+                filter(lambda k: pages[k]["script_path"] == main_script_path, pages),
+                None,
+            )
             current_page_script_hash = self._client_state.page_script_hash
-            return changed_page_script_hash == current_page_script_hash
+
+            return (
+                changed_page_script_hash == current_page_script_hash
+                or changed_page_script_hash == main_page_script_hash
+            )
 
         return True
 

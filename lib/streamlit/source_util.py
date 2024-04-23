@@ -93,6 +93,7 @@ def page_icon_and_name(script_path: Path) -> tuple[str, str]:
 _pages_cache_lock = threading.RLock()
 _cached_pages: dict[str, dict[str, str]] | None = None
 _on_pages_changed = Signal(doc="Emitted when the pages directory is changed")
+_cached_pages_v2: dict[str, dict[str, str]] | None = None
 
 
 def invalidate_pages_cache() -> None:
@@ -103,6 +104,28 @@ def invalidate_pages_cache() -> None:
         _cached_pages = None
 
     _on_pages_changed.send()
+
+
+def set_v2_pages(new_pages: dict[str, dict[str, str]]) -> None:
+    global _cached_pages_v2
+    with _pages_cache_lock:
+        _on_pages_changed.send()
+
+        _cached_pages_v2 = new_pages
+
+
+def get_v2_pages() -> dict[str, dict[str, str]]:
+    global _cached_pages_v2
+    pages = _cached_pages_v2
+
+    if pages is not None:
+        return pages
+
+    with _pages_cache_lock:
+        if _cached_pages_v2 is not None:
+            return _cached_pages_v2
+        else:
+            return {}
 
 
 def get_pages(main_script_path_str: str) -> dict[str, dict[str, str]]:

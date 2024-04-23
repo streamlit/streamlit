@@ -24,7 +24,7 @@ from typing import Callable, Final
 from streamlit import config, file_util
 from streamlit.folder_black_list import FolderBlackList
 from streamlit.logger import get_logger
-from streamlit.source_util import get_pages
+from streamlit.source_util import get_pages, get_v2_pages
 from streamlit.watcher.path_watcher import (
     NoOpPathWatcher,
     get_default_path_watcher_class,
@@ -68,6 +68,16 @@ class LocalSourcesWatcher:
                     page_info["script_path"],
                     module_name=None,
                 )
+
+        for page_info in get_v2_pages().values():
+            path = page_info["script_path"]
+            if path:
+                new_pages_paths.add(path)
+                if path not in old_watched_pages:
+                    self._register_watcher(
+                        path,
+                        module_name=None,
+                    )
 
         for old_page_path in old_watched_pages:
             if old_page_path not in new_pages_paths:
@@ -145,10 +155,11 @@ class LocalSourcesWatcher:
 
     def _file_should_be_watched(self, filepath):
         # Using short circuiting for performance.
-        return self._file_is_new(filepath) and (
-            file_util.file_is_in_folder_glob(filepath, self._script_folder)
-            or file_util.file_in_pythonpath(filepath)
-        )
+        # return self._file_is_new(filepath) and (
+        #     file_util.file_is_in_folder_glob(filepath, self._script_folder)
+        #     or file_util.file_in_pythonpath(filepath)
+        # )
+        return self._file_is_new(filepath)
 
     def update_watched_modules(self):
         if self._is_closed:

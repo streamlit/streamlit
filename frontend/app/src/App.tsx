@@ -172,6 +172,7 @@ interface State {
   appConfig: AppConfig
   autoReruns: NodeJS.Timer[]
   inputsDisabled: boolean
+  mpav1: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -290,6 +291,7 @@ export class App extends PureComponent<Props, State> {
       appConfig: {},
       autoReruns: [],
       inputsDisabled: false,
+      mpav1: true,
     }
 
     this.connectionManager = null
@@ -732,13 +734,15 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
-    const { appPages } = pagesChangedMsg
-    this.setState({ appPages }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_APP_PAGES",
-        appPages,
+    if (this.state.mpav1) {
+      const { appPages } = pagesChangedMsg
+      this.setState({ appPages }, () => {
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_APP_PAGES",
+          appPages,
+        })
       })
-    })
+    }
   }
 
   handleNavigation = (navigationMsg: Navigation): void => {
@@ -756,12 +760,15 @@ export class App extends PureComponent<Props, State> {
     const appPages = sections.flatMap(section => section.appPages || [])
     const hideSidebarNav = position == "hidden"
 
-    this.setState({ appPages, navPageSections, hideSidebarNav }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_APP_PAGES",
-        appPages,
-      })
-    })
+    this.setState(
+      { appPages, navPageSections, hideSidebarNav, mpav1: false },
+      () => {
+        this.hostCommunicationMgr.sendMessageToHost({
+          type: "SET_APP_PAGES",
+          appPages,
+        })
+      }
+    )
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
