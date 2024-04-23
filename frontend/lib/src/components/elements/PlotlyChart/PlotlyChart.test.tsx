@@ -24,7 +24,6 @@ import mock from "./mock"
 
 import {
   PlotlyChart,
-  DEFAULT_HEIGHT,
   PlotlyChartProps,
   parseLassoPath,
   parseBoxSelection,
