@@ -123,7 +123,9 @@ def test_applying_changes_from_popover_container(app: Page):
     )
 
 
-def test_fullscreen_mode_is_disabled_in_popover(app: Page):
+def test_fullscreen_mode_is_disabled_in_popover(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that the fullscreen mode is disabled within a popover container."""
     # Get the fullscreen elements popover container:
     popover_element = app.get_by_test_id("stPopover").nth(4)
@@ -144,6 +146,8 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     dataframe_element.hover()
     # Should only have  two buttons, search + download CSV
     expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(2)
+
+    assert_snapshot(popover_container, name="st_popover-container")
 
 
 def test_show_tooltip_on_hover(app: Page):
