@@ -173,7 +173,7 @@ export function parseBoxSelection(selection: any): SelectionRange {
  * @param theme The current theme of the app
  * @returns The Plotly figure with theming applied
  */
-function applyTheming(
+export function applyTheming(
   plotlyFigure: PlotlyFigureType,
   chartTheme: string,
   theme: EmotionTheme
@@ -199,7 +199,7 @@ function applyTheming(
  * @param element The PlotlyChartProto element
  * @param fragmentId The fragment id
  */
-function handleSelection(
+export function handleSelection(
   event: Readonly<Plotly.PlotSelectionEvent>,
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
@@ -327,7 +327,7 @@ function handleSelection(
  * @param element The PlotlyChartProto element
  * @param fragmentId The fragment id
  */
-function sendEmptySelection(
+export function sendEmptySelection(
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
   fragmentId: string | undefined
