@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from "react"
 import "@testing-library/jest-dom"
 
 import { parseLassoPath, parseBoxSelection } from "./PlotlyChart"
+
+/**
+ * PlotlyChart.test.tsx does not contain any React-testing-library tests because Plotly doesn't support it
+ * https://github.com/plotly/react-plotly.js/issues/176
+ */
 
 describe("parsePlotlySelections", () => {
   describe("parseLassoPath", () => {
