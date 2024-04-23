@@ -180,7 +180,7 @@ def parse_selection_mode(
 
 class PlotlyMixin:
     @overload
-    def plotly_chart(  # type: ignore
+    def plotly_chart(
         self,
         figure_or_data: FigureOrData,
         use_container_width: bool = False,

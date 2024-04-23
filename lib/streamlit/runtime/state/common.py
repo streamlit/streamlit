@@ -26,7 +26,7 @@ from typing import (
     Dict,
     Final,
     Generic,
-    Sequence,
+    Iterable,
     Tuple,
     TypeVar,
     Union,
@@ -182,7 +182,7 @@ SAFE_VALUES = Union[
 def compute_widget_id(
     element_type: str,
     user_key: str | None = None,
-    **kwargs: SAFE_VALUES | Sequence[SAFE_VALUES],
+    **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.
