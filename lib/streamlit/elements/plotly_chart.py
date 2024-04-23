@@ -204,7 +204,7 @@ class PlotlyMixin:
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | Callable[..., None] = "rerun",
+        on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
@@ -219,7 +219,7 @@ class PlotlyMixin:
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
@@ -367,11 +367,6 @@ class PlotlyMixin:
         plotly_chart_proto.spec = plotly.io.to_json(figure, validate=False)
         plotly_chart_proto.config = json.dumps(config)
 
-        # We already need to parse selection modes here to
-        # compute the widget id. But we only should add this
-        # to the proto if selections are activated.
-        parsed_selection_modes = parse_selection_mode(selection_mode)
-
         ctx = get_script_run_ctx()
 
         # We are computing the widget id for all plotly uses
@@ -383,7 +378,7 @@ class PlotlyMixin:
             key=key,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
-            selection_mode=cast(Sequence[int], parsed_selection_modes),
+            selection_mode=selection_mode,
             is_selection_activated=is_selection_activated,
             theme=theme,
             form_id=plotly_chart_proto.form_id,
@@ -393,7 +388,9 @@ class PlotlyMixin:
 
         if is_selection_activated:
             # Selections are activated, treat plotly chart as a widget:
-            plotly_chart_proto.selection_mode.extend(parsed_selection_modes)
+            plotly_chart_proto.selection_mode.extend(
+                parse_selection_mode(selection_mode)
+            )
 
             serde = PlotlyChartSelectionSerde()
 
