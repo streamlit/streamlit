@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import "@testing-library/jest-dom"
 
 import {
@@ -29,9 +28,9 @@ import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
 import { mockTheme } from "@streamlit/lib/src/mocks/mockTheme"
 
 jest.mock("./CustomTheme", () => ({
-  replaceTemporaryColors: jest.fn().mockReturnValue("{}"), // Provide a default mock return value if needed
+  replaceTemporaryColors: jest.fn().mockReturnValue("{}"),
   applyStreamlitTheme: jest.fn(),
-  layoutWithThemeDefaults: jest.fn().mockReturnValue({}), // Assuming default behavior returns an empty object
+  layoutWithThemeDefaults: jest.fn().mockReturnValue({}),
 }))
 
 /**
