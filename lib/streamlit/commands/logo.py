@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
@@ -37,7 +38,13 @@ def logo(
     fwd_msg = ForwardMsg()
     image_url = image_to_url(image, WidthBehaviour.AUTO, True, "RGB", "auto", "logo")
 
+    if image_url == "":
+        raise StreamlitAPIException(
+            "The image passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
+        )
+
     fwd_msg.logo.image = image_url
+
     if link:
         fwd_msg.logo.link = link
     if collapsed_image:
@@ -49,6 +56,10 @@ def logo(
             "auto",
             "collapsed-logo",
         )
+        if collapsed_image_url == "":
+            raise StreamlitAPIException(
+                "The collapsed_image passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
+            )
         fwd_msg.logo.collapsed_image = collapsed_image_url
 
     ctx.enqueue(fwd_msg)

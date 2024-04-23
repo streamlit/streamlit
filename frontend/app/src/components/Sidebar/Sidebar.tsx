@@ -36,9 +36,7 @@ import {
 
 import {
   StyledSidebar,
-  // StyledSidebarCloseButton,
   StyledSidebarContent,
-  // StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
   StyledSidebarHeaderContainer,
@@ -230,7 +228,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     const { appLogo } = this.props
 
     if (!appLogo) {
-      return <StyledNoLogoSpacer />
+      return <StyledNoLogoSpacer data-testid="stLogoSpacer" />
     }
 
     const displayImage =
@@ -240,12 +238,17 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     const source = this.props.endpoints.buildMediaURL(displayImage)
     if (appLogo.link) {
       return (
-        <StyledLogoLink href={appLogo.link} target="_blank" rel="noreferrer">
-          <StyledLogo src={source} alt="Logo" />
+        <StyledLogoLink
+          href={appLogo.link}
+          target="_blank"
+          rel="noreferrer"
+          data-testid="stLogoLink"
+        >
+          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
         </StyledLogoLink>
       )
     }
-    return <StyledLogo src={source} alt="Logo" />
+    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
   }
 
   public render(): ReactNode {
@@ -319,7 +322,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
-            <StyledSidebarHeaderContainer>
+            <StyledSidebarHeaderContainer data-testid="stSidebarExpandControl">
               {this.renderLogo(false)}
               <StyledCollapseSidebarButton>
                 <BaseButton
