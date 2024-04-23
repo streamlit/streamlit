@@ -599,12 +599,6 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleLogo = (logo: Logo): void => {
-    if (logo.image) {
-      this.setState({ appLogo: logo })
-    }
-  }
-
   /**
    * Callback when we get a message from the server.
    */
@@ -654,7 +648,7 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
-        logo: (logo: Logo) => this.handleLogo(logo),
+        logo: (logo: Logo) => this.setState({ appLogo: logo }),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1456,6 +1450,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
+    this.setState({ appLogo: null })
     this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
   }
 
