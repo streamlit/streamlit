@@ -88,14 +88,18 @@ describe("parsePlotlySelections", () => {
   })
 })
 
+const getWidgetMgr = (): WidgetStateManager => {
+  const sendRerunBackMsg = jest.fn()
+  const formsDataChanged = jest.fn()
+  return new WidgetStateManager({
+    sendRerunBackMsg,
+    formsDataChanged,
+  })
+}
+
 describe("sendEmptySelection", () => {
   it("sends a rerun msg if widget_state is empty", () => {
-    const sendRerunBackMsg = jest.fn()
-    const formsDataChanged = jest.fn()
-    const widgetMgr = new WidgetStateManager({
-      sendRerunBackMsg,
-      formsDataChanged,
-    })
+    const widgetMgr = getWidgetMgr()
     jest.spyOn(widgetMgr, "setStringValue")
 
     sendEmptySelection(
@@ -108,12 +112,7 @@ describe("sendEmptySelection", () => {
   })
 
   it("does not send a rerun msg if widget_state is empty", () => {
-    const sendRerunBackMsg = jest.fn()
-    const formsDataChanged = jest.fn()
-    const widgetMgr = new WidgetStateManager({
-      sendRerunBackMsg,
-      formsDataChanged,
-    })
+    const widgetMgr = getWidgetMgr()
     jest.spyOn(widgetMgr, "setStringValue")
 
     const plotlyProto = { id: "plotly_chart" } as PlotlyChartProto
@@ -136,14 +135,6 @@ describe("sendEmptySelection", () => {
 })
 
 describe("handleSelection", () => {
-  const getWidgetMgr = () => {
-    const sendRerunBackMsg = jest.fn()
-    const formsDataChanged = jest.fn()
-    return new WidgetStateManager({
-      sendRerunBackMsg,
-      formsDataChanged,
-    })
-  }
   const mockFragmentId = "testFragment"
   const proto = {
     id: "plotly_chart",
