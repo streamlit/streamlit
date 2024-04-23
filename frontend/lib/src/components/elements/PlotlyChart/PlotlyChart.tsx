@@ -424,11 +424,13 @@ export function PlotlyChart({
     console.log("Update config")
 
     if (!element.config) {
+      // If there is no config, return an empty object
       return {}
     }
 
     const config = JSON.parse(element.config)
 
+    // Customize the plotly toolbar:
     if (!disableFullscreenMode) {
       // Add a fullscreen button to the plotly toolbar:
       config.modeBarButtonsToAdd = [
@@ -574,7 +576,7 @@ export function PlotlyChart({
     // width values if the browser window is too small:
     MIN_WIDTH
   )
-  // TODO(lukasmasuch): Do we have to use a default height here?
+
   let calculatedHeight = initialFigureSpec.layout.height
 
   if (isFullScreen) {
