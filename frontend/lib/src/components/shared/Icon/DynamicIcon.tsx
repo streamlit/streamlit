@@ -18,7 +18,6 @@ import React, { Suspense } from "react"
 
 import { IconSize, ThemeColor } from "@streamlit/lib/src/theme"
 import { EmojiIcon } from "./Icon"
-import DynamicIconErrorBoundary from "./DynamicIconErrorBoundary"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
 
 interface IconPackEntry {
@@ -63,13 +62,10 @@ const DynamicIconDispatcher = ({
 }
 
 export const DynamicIcon = (props: DynamicIconProps): React.ReactElement => (
-  // TODO[kajarenc] Remove suspense and error boundary here
   <Suspense
     fallback={<EmojiIcon {...props}>&nbsp;</EmojiIcon>}
     key={props.iconValue}
   >
-    <DynamicIconErrorBoundary {...props}>
-      <DynamicIconDispatcher {...props} />
-    </DynamicIconErrorBoundary>
+    <DynamicIconDispatcher {...props} />
   </Suspense>
 )
