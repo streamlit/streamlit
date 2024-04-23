@@ -21,13 +21,10 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     Final,
     Iterable,
-    List,
     Literal,
     Sequence,
-    Set,
     TypedDict,
     Union,
     cast,
@@ -67,17 +64,17 @@ _AtomicFigureOrData: TypeAlias = Union[
 ]
 FigureOrData: TypeAlias = Union[
     _AtomicFigureOrData,
-    List[_AtomicFigureOrData],
+    list[_AtomicFigureOrData],
     # It is kind of hard to figure out exactly what kind of dict is supported
     # here, as plotly hasn't embraced typing yet. This version is chosen to
     # align with the docstring.
-    Dict[str, _AtomicFigureOrData],
+    dict[str, _AtomicFigureOrData],
     "BaseFigure",
     "matplotlib.figure.Figure",
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
-_SELECTION_MODES: Final[Set[SelectionMode]] = {"lasso", "points", "box"}
+_SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
 
 
 class PlotlySelectionState(TypedDict, total=False):
@@ -86,7 +83,7 @@ class PlotlySelectionState(TypedDict, total=False):
 
     Attributes
     ----------
-    points : list[Dict[str, Any]]
+    points : list[dict[str, Any]]
         The selected data points in the chart, this also includes
         the the data points selected by the box and lasso mode.
 
@@ -95,19 +92,19 @@ class PlotlySelectionState(TypedDict, total=False):
         this also includes the indices of the points selected by the box
         and lasso mode.
 
-    box : list[Dict[str, Any]]
+    box : list[dict[str, Any]]
         The metadata related to the box selection. This includes the
         coordinates of the selected area.
 
-    lasso : list[Dict[str, Any]]
+    lasso : list[dict[str, Any]]
         The metadata related to the lasso selection. This includes the
         coordinates of the selected area.
     """
 
-    points: list[Dict[str, Any]]
+    points: list[dict[str, Any]]
     point_indices: list[int]
-    box: list[Dict[str, Any]]
-    lasso: list[Dict[str, Any]]
+    box: list[dict[str, Any]]
+    lasso: list[dict[str, Any]]
 
 
 class PlotlyState(TypedDict, total=False):
@@ -154,7 +151,7 @@ class PlotlyChartSelectionSerde:
 
 def parse_selection_mode(
     selection_mode: SelectionMode | Iterable[SelectionMode],
-) -> Set[PlotlyChartProto.SelectionMode.ValueType]:
+) -> set[PlotlyChartProto.SelectionMode.ValueType]:
     """Parse and check the user provided selection modes."""
     if isinstance(selection_mode, str):
         # Only a single selection mode was passed
