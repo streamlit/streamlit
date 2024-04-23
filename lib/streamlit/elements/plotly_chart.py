@@ -21,13 +21,13 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     Final,
     Iterable,
     List,
     Literal,
     Sequence,
-    Set,
     TypedDict,
     Union,
     cast,
@@ -77,7 +77,7 @@ FigureOrData: TypeAlias = Union[
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
-_SELECTION_MODES: Final[Set[SelectionMode]] = {"lasso", "points", "box"}
+_SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
 
 
 class PlotlySelectionState(TypedDict, total=False):
@@ -86,7 +86,7 @@ class PlotlySelectionState(TypedDict, total=False):
 
     Attributes
     ----------
-    points : list[Dict[str, Any]]
+    points : list[dict[str, Any]]
         The selected data points in the chart, this also includes
         the the data points selected by the box and lasso mode.
 
@@ -95,19 +95,19 @@ class PlotlySelectionState(TypedDict, total=False):
         this also includes the indices of the points selected by the box
         and lasso mode.
 
-    box : list[Dict[str, Any]]
+    box : list[dict[str, Any]]
         The metadata related to the box selection. This includes the
         coordinates of the selected area.
 
-    lasso : list[Dict[str, Any]]
+    lasso : list[dict[str, Any]]
         The metadata related to the lasso selection. This includes the
         coordinates of the selected area.
     """
 
-    points: list[Dict[str, Any]]
+    points: list[dict[str, Any]]
     point_indices: list[int]
-    box: list[Dict[str, Any]]
-    lasso: list[Dict[str, Any]]
+    box: list[dict[str, Any]]
+    lasso: list[dict[str, Any]]
 
 
 class PlotlyState(TypedDict, total=False):
@@ -154,7 +154,7 @@ class PlotlyChartSelectionSerde:
 
 def parse_selection_mode(
     selection_mode: SelectionMode | Iterable[SelectionMode],
-) -> Set[PlotlyChartProto.SelectionMode.ValueType]:
+) -> set[PlotlyChartProto.SelectionMode.ValueType]:
     """Parse and check the user provided selection modes."""
     if isinstance(selection_mode, str):
         # Only a single selection mode was passed
@@ -189,7 +189,7 @@ class PlotlyMixin:
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"] = "ignore",
+        on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
@@ -204,7 +204,7 @@ class PlotlyMixin:
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        on_select: Literal["rerun"] | Callable[..., None] = "rerun",
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
@@ -219,11 +219,11 @@ class PlotlyMixin:
         *,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+        on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         selection_mode: SelectionMode
         | Iterable[SelectionMode] = ("points", "box", "lasso"),
         **kwargs: Any,
-    ) -> "DeltaGenerator" | PlotlyState:
+    ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
         Plotly is a charting library for Python. The arguments to this function
@@ -383,7 +383,7 @@ class PlotlyMixin:
             key=key,
             plotly_spec=plotly_chart_proto.spec,
             plotly_config=plotly_chart_proto.config,
-            selection_mode=cast(Sequence[str], parsed_selection_modes),
+            selection_mode=cast(Sequence[int], parsed_selection_modes),
             is_selection_activated=is_selection_activated,
             theme=theme,
             form_id=plotly_chart_proto.form_id,
@@ -408,7 +408,7 @@ class PlotlyMixin:
             )
 
             self.dg._enqueue("plotly_chart", plotly_chart_proto)
-            return widget_state.value
+            return cast(PlotlyState, widget_state.value)
         else:
             return self.dg._enqueue("plotly_chart", plotly_chart_proto)
 
