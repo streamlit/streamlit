@@ -744,7 +744,6 @@ export function PlotlyChart({
       onDeselect={
         isSelectionActivated
           ? () => {
-              console.log("onDeselect event")
               // Plotly is also resetting the UI state already for
               // deselect events. So, we don't need to do it on our side.
               // Thats why the flag is false.
@@ -753,14 +752,13 @@ export function PlotlyChart({
           : undefined
       }
       onInitialized={figure => {
-        console.log("onInitialized")
         widgetMgr.setElementState(element.id, "figure", figure)
       }}
       // Update the figure state on every change to the figure itself:
       onUpdate={figure => {
-        // console.log("onUpdate", figure)
-
+        // Safe the updated figure state to allow it to be recovered
         widgetMgr.setElementState(element.id, "figure", figure)
+        // Set the updated plotly figure state
         setPlotlyFigure(figure)
       }}
     />
