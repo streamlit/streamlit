@@ -221,10 +221,10 @@ _PYSPARK_DF_TYPE_STR: Final = "pyspark.sql.dataframe.DataFrame"
 _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.Series.Series"
 _SNOWPANDAS_DF_TYPE_STR: Final = (
-    "snowflake.snowpark.modin.pandas.frontend.dataframe.DataFrame"
+    "snowflake.snowpark.modin.pandas.dataframe.DataFrame"
 )
 _SNOWPANDAS_SERIES_TYPE_STR: Final = (
-    "snowflake.snowpark.modin.pandas.frontend.series.Series"
+    "snowflake.snowpark.modin.pandas.series.Series"
 )
 
 _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
