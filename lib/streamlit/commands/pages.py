@@ -27,7 +27,7 @@ from streamlit.util import calc_md5
 
 @dataclass
 class Page:
-    page: Path | Callable[[], None]
+    _page: Path | Callable[[], None]
     title: str | None = None
     icon: str | None = None
     default: bool = False
@@ -61,7 +61,7 @@ class Page:
         name = title or inferred_name
         assert name
 
-        self.page = page
+        self._page = page
         self.title = title or inferred_name
         self.icon = icon or inferred_icon
         self.default = default
@@ -79,8 +79,8 @@ class Page:
 
     @property
     def _script_hash(self) -> str:
-        if isinstance(self.page, Page):
-            h = calc_md5(str(self.page))
+        if isinstance(self._page, Page):
+            h = calc_md5(str(self._page))
         else:
             assert self.title
             h = calc_md5(self.title)
@@ -171,8 +171,8 @@ class Pages:
     def as_source_util_pages(self) -> dict[str, dict[str, str]]:
         d = {}
         for page in self.page_list:
-            if isinstance(page.page, Path):
-                script_path = str(page.page)
+            if isinstance(page._page, Path):
+                script_path = str(page._page)
             else:
                 script_path = ""
             d[page._script_hash] = {

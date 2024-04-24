@@ -745,10 +745,10 @@ class ScriptRunner:
         # to the user via a modal dialog in the frontend, and won't result
         # in their previous script elements disappearing.
         try:
-            if isinstance(page.page, Path):
-                code = self._script_cache.get_bytecode(str(page.page))
+            if isinstance(page._page, Path):
+                code = self._script_cache.get_bytecode(str(page._page))
             else:
-                code = page.page.__code__
+                code = page._page.__code__
 
         except Exception as ex:
             # We got a compile error. Send an error event and bail immediately.
