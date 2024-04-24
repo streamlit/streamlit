@@ -237,6 +237,25 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
             expected_is_select_enabled,
         )
 
+    @parameterized.expand(
+        [
+            (True),
+            (False),
+            ("invalid"),
+        ]
+    )
+    def test_vega_lite_on_select_invalid(self, on_select):
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.vega_lite_chart(
+                df1,
+                {
+                    "mark": "rect",
+                    "width": 200,
+                    "params": [{"name": "name", "select": {"type": "point"}}],
+                },
+                on_select="on_select",
+            )
+
     def test_vega_lite_interval_selection_enables_on_select(self):
         st.vega_lite_chart(
             df1,

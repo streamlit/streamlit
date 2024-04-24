@@ -37,7 +37,6 @@ from typing import (
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
-from streamlit.chart_util import check_on_select_str
 from streamlit.color_util import (
     Color,
     is_color_like,
@@ -830,6 +829,12 @@ class ArrowAltairMixin:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
+
+        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+            raise StreamlitAPIException(
+                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+            )
+
         proto = ArrowVegaLiteChartProto()
 
         is_select_enabled = on_select != ON_SELECTION_IGNORE
@@ -850,7 +855,6 @@ class ArrowAltairMixin:
 
             key = to_key(key)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
-            check_on_select_str(on_select, "altair_chart")
 
             current_widget = None
             chart_json = altair_chart.to_dict()

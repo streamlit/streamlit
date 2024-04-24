@@ -746,6 +746,31 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
+    @parameterized.expand(
+        [
+            (True),
+            (False),
+            ("invalid"),
+        ]
+    )
+    def test_altair_on_select_invalid(self, on_select):
+        point = alt.selection_point(name="name")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+        EXPECTED_DATAFRAME = pd.DataFrame(
+            {
+                "a": ["A", "B", "C", "D"],
+                "b": [28, 55, 43, 91],
+            }
+        )
+
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.altair_chart(chart, on_select=on_select)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     def test_altair_no_name_point_selection(self):
         point = alt.selection_point()
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
