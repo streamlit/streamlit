@@ -27,7 +27,7 @@ interface IconPackEntry {
 
 function parseIconPackEntry(iconName: string): IconPackEntry {
   // This is a regex to match icon pack and icon name from the strings of format
-  // :pack:icon: like :material:settings_suggest:
+  // :pack/icon: like :material/settings_suggest:
   const iconRegexp = /^:(.*)\/(.*):$/
   const matchResult = iconName.match(iconRegexp)
   if (matchResult === null) {
@@ -38,7 +38,7 @@ function parseIconPackEntry(iconName: string): IconPackEntry {
   return { pack: iconPack, icon: iconNameInPack }
 }
 
-interface DynamicIconProps {
+export interface DynamicIconProps {
   iconValue: string
   size?: IconSize
   margin?: string
