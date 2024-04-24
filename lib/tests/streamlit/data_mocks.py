@@ -457,5 +457,3 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         # ),
     }
 )
-    }
-)

@@ -45,6 +45,8 @@ from tests.streamlit.data_mocks import (
     TestCaseMetadata,
     TestObject,
 )
+from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
 from tests.testutil import create_snowpark_session, patch_config_options
@@ -482,6 +484,15 @@ class TypeUtilTest(unittest.TestCase):
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
+    def test_is_snowpandas_data_object(self):
+        df = pd.DataFrame([1, 2, 3])
+
+        self.assertFalse(type_util.is_snowpandas_data_object(df))
+
+        # Our mock objects should be detected as snowpandas data objects:
+        self.assertTrue(type_util.is_snowpandas_data_object(SnowpandasDataFrame(df)))
+        self.assertTrue(type_util.is_snowpandas_data_object(SnowpandasSeries(df)))
+
     def test_is_snowpark_dataframe(self):
         df = pd.DataFrame(
             {
@@ -622,6 +633,8 @@ class TypeUtilTest(unittest.TestCase):
                 type_util.DataFormat.PYSPARK_OBJECT,
                 type_util.DataFormat.PANDAS_INDEX,
                 type_util.DataFormat.PANDAS_STYLER,
+                type_util.DataFormat.SNOWPANDAS_OBJECT,
+                type_util.DataFormat.MODIN_OBJECT,
                 type_util.DataFormat.EMPTY,
             ]:
                 assert isinstance(converted_data, pd.DataFrame)

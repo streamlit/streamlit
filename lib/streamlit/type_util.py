@@ -624,15 +624,23 @@ def convert_anything_to_df(
 
     if is_modin_data_object(data):
         data = data.head(max_unevaluated_rows)._to_pandas()
+
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Use the Modin API to show more data."
+                "Call `_to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
     if is_snowpandas_data_object(data):
         data = data.head(max_unevaluated_rows).to_pandas()
+
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "

@@ -15,15 +15,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from pyspark.sql.dataframe import DataFrame as PySparkDataFrame
-from pyspark.sql.session import SparkSession
-from pyspark.sql.types import (
-    FloatType,
-    IntegerType,
-    StringType,
-    StructField,
-    StructType,
-)
 
 MAP_DATA = [
     (55.22, 22.21),
@@ -81,8 +72,12 @@ class DataFrame:
         return self._data
 
 
-def create_pyspark_dataframe_with_mocked_personal_data() -> PySparkDataFrame:
+def create_pyspark_dataframe_with_mocked_personal_data():
     """Returns PySpark DataFrame with mocked personal data."""
+
+    from pyspark.sql.session import SparkSession
+    from pyspark.sql.types import IntegerType, StringType, StructField, StructType
+
     spark = SparkSession.builder.appName("snowflake.com").getOrCreate()
     schema = StructType(
         [
@@ -97,8 +92,12 @@ def create_pyspark_dataframe_with_mocked_personal_data() -> PySparkDataFrame:
     return spark.createDataFrame(data=PERSONAL_DATA, schema=schema)
 
 
-def create_pyspark_dataframe_with_mocked_map_data() -> PySparkDataFrame:
+def create_pyspark_dataframe_with_mocked_map_data():
     """Returns PySpark DataFrame with mocked map data."""
+
+    from pyspark.sql.session import SparkSession
+    from pyspark.sql.types import FloatType, StructField, StructType
+
     spark = SparkSession.builder.appName("snowflake.com").getOrCreate()
     map_schema = StructType(
         [StructField("lat", FloatType(), True), StructField("lon", FloatType(), True)]
