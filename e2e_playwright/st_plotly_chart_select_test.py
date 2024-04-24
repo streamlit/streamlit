@@ -47,7 +47,7 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
 
 
 # This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
-def test_click_on_bar_chart_displays_a_df(
+def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     chart = app.locator(".stPlotlyChart").nth(2)
@@ -73,6 +73,14 @@ def test_click_on_bar_chart_displays_a_df(
     assert_snapshot(
         app.get_by_test_id("stDataFrame"), name="st_plotly_chart-double_select_df"
     )
+
+    chart.scroll_into_view_if_needed()
+    chart.hover()
+    app.mouse.dblclick(400, 400)
+    wait_for_app_run(app, 3000)
+
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
+    assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
 
 
 def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):

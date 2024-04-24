@@ -712,7 +712,7 @@ export function PlotlyChart({
       // reset the selection. The default handling can be a bit annoying
       // sometimes.
       onDoubleClick={
-        isSelectionActivated ? resetSelectionsCallback : undefined
+        isSelectionActivated ? () => resetSelectionsCallback() : undefined
       }
       onDeselect={
         isSelectionActivated
