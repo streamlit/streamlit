@@ -30,28 +30,16 @@ const getProps = (
 
 describe("Dynamic icon", () => {
   it("renders without crashing with Material icon", () => {
-    const props = getProps()
-    render(
-      <DynamicIcon
-        {...getProps({
-          iconValue: ":material/add_circle:",
-        })}
-      />
-    )
+    const props = getProps({ iconValue: ":material/add_circle:" })
+    render(<DynamicIcon {...props} />)
     const icon = screen.getByText("add_circle")
 
     expect(icon).toBeInTheDocument()
   })
 
   it("renders without crashing with Emoji icon", () => {
-    const props = getProps()
-    render(
-      <DynamicIcon
-        {...getProps({
-          iconValue: "⛰️",
-        })}
-      />
-    )
+    const props = getProps({ iconValue: "⛰️" })
+    render(<DynamicIcon {...props} />)
     const icon = screen.getByText("⛰️")
 
     expect(icon).toBeInTheDocument()
