@@ -162,7 +162,7 @@ def test_video_autoplay(app: Page):
     checkbox_elements = app.get_by_test_id("stCheckbox")
     autoplay_checkbox = checkbox_elements.nth(0)
     autoplay_checkbox.click()
-    # To prevent flakiness, we wait for the audio to load and start playing
+    # To prevent flakiness, we wait for the video to load and start playing
     wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
     expect(video_element).to_have_js_property("autoplay", True)
     expect(video_element).to_have_js_property("paused", False)
@@ -178,7 +178,7 @@ def test_video_muted_autoplay(app: Page):
     video_element = video_elements.nth(10)
     video_element.scroll_into_view_if_needed()
 
-    # To prevent flakiness, we wait for the audio to load and start playing
+    # To prevent flakiness, we wait for the video to load and start playing
     wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
     expect(video_element).to_have_js_property("muted", True)
     expect(video_element).to_have_js_property("autoplay", True)
@@ -199,7 +199,7 @@ def test_video_remount_no_autoplay(app: Page):
     checkbox_elements = app.get_by_test_id("stCheckbox")
     autoplay_checkbox = checkbox_elements.nth(0)
     autoplay_checkbox.click()
-    # To prevent flakiness, we wait for the audio to load and start playing
+    # To prevent flakiness, we wait for the video to load and start playing
     wait_until(app, lambda: video_element.evaluate("el => el.readyState") == 4)
     expect(video_element).to_have_js_property("autoplay", True)
     expect(video_element).to_have_js_property("paused", False)
