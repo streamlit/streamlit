@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
+import React, { ReactElement, useEffect, useRef, useMemo } from "react"
 import { Video as VideoProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 import { IS_DEV_ENV } from "@streamlit/lib/src/baseconsts"
+import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 const DEFAULT_HEIGHT = 528
 
@@ -25,6 +26,7 @@ export interface VideoProps {
   endpoints: StreamlitEndpoints
   width: number
   element: VideoProto
+  elementMgr: ElementStateManager
 }
 
 export interface Subtitle {
@@ -36,12 +38,34 @@ export default function Video({
   element,
   width,
   endpoints,
+  elementMgr,
 }: VideoProps): ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
+  const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
+    element
 
-  const { type, url, startTime, subtitles, endTime, loop } = element
+  const preventAutoplay = useMemo<boolean>(() => {
+    if (!element.id) {
+      // Elements without an ID should never autoplay
+      return true
+    }
+
+    // Recover the state in case this component got unmounted
+    // and mounted again for the same element.
+    const preventAutoplay = elementMgr.getElementState(
+      element.id,
+      "preventAutoplay"
+    )
+
+    if (!preventAutoplay) {
+      // Set the state to prevent autoplay in case there is an unmount + mount
+      // for the same element.
+      elementMgr.setElementState(element.id, "preventAutoplay", true)
+    }
+    return preventAutoplay ?? false
+  }, [element.id, elementMgr])
 
   // Handle startTime changes
   useEffect(() => {
@@ -125,7 +149,7 @@ export default function Video({
   }, [loop, startTime])
 
   const getYoutubeSrc = (url: string): string => {
-    const { startTime, endTime, loop } = element
+    const { startTime, endTime, loop, autoplay, muted } = element
     const youtubeUrl = new URL(url)
 
     if (startTime && !isNaN(startTime)) {
@@ -145,6 +169,15 @@ export default function Video({
         youtubeUrl.searchParams.append("playlist", videoId)
       }
     }
+
+    if (autoplay) {
+      youtubeUrl.searchParams.append("autoplay", "1")
+    }
+
+    if (muted) {
+      youtubeUrl.searchParams.append("mute", "1")
+    }
+
     return youtubeUrl.toString()
   }
 
@@ -182,6 +215,8 @@ export default function Video({
       data-testid="stVideo"
       ref={videoRef}
       controls
+      muted={muted}
+      autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       className="stVideo"
       style={{ width, height: width === 0 ? DEFAULT_HEIGHT : undefined }}
