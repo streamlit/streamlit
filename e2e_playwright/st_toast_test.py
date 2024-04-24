@@ -23,6 +23,9 @@ def test_default_toast_rendering(
     """Test that toasts are correctly rendered."""
     themed_app.keyboard.press("r")
     wait_for_app_loaded(themed_app)
+    # Here and in tests below we move the mouse to the top left corner to prevent any
+    # weird hover effects in the screenshots
+    themed_app.mouse.move(0, 0)
     themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
@@ -39,6 +42,7 @@ def test_collapsed_toast_rendering(
     """Test collapsed long toasts are correctly rendered."""
     themed_app.keyboard.press("r")
     wait_for_app_loaded(themed_app)
+    themed_app.mouse.move(0, 0)
     themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
@@ -57,6 +61,7 @@ def test_expanded_toast_rendering(
     """Test expanded long toasts are correctly rendered."""
     themed_app.keyboard.press("r")
     wait_for_app_loaded(themed_app)
+    themed_app.mouse.move(0, 0)
     themed_app.wait_for_timeout(250)
 
     toasts = themed_app.get_by_test_id("stToast")
