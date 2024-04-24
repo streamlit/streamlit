@@ -19,7 +19,6 @@ import textwrap
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.errors import StreamlitAPIException
-from streamlit.material_icon_names import ALL_MATERIAL_ICONS
 
 if TYPE_CHECKING:
     from streamlit.type_util import SupportsStr
@@ -58,6 +57,8 @@ def is_emoji(text: str) -> bool:
 
 def is_material_icon(maybe_icon: str) -> bool:
     """Check if input string is a valid Material icon."""
+    from streamlit.material_icon_names import ALL_MATERIAL_ICONS
+
     return maybe_icon in ALL_MATERIAL_ICONS
 
 
