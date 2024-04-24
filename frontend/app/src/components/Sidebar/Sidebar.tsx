@@ -15,7 +15,7 @@
  */
 
 import React, { PureComponent, ReactElement, ReactNode } from "react"
-import { ChevronRight, Close } from "@emotion-icons/material-outlined"
+import { ChevronRight, ChevronLeft } from "@emotion-icons/material-outlined"
 import { withTheme } from "@emotion/react"
 import { Resizable } from "re-resizable"
 
@@ -35,11 +35,14 @@ import {
 
 import {
   StyledSidebar,
-  StyledSidebarCloseButton,
+  // StyledSidebarCloseButton,
   StyledSidebarContent,
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
+  StyledSidebarHeaderContainer,
+  StyledCollapseSidebarButton,
+  StyledNoLogoSpacer,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 
@@ -61,8 +64,11 @@ interface State {
   sidebarWidth: string
   lastInnerWidth: number
 
-  // When hovering the nav
-  hideScrollbar: boolean
+  // // When hovering the nav
+  // hideScrollbar: boolean
+
+  // When hovering sidebar header
+  showSidebarCollapse: boolean
 }
 
 class Sidebar extends PureComponent<SidebarProps, State> {
@@ -91,7 +97,8 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
-      hideScrollbar: false,
+      // hideScrollbar: false,
+      showSidebarCollapse: false,
     }
   }
 
@@ -199,8 +206,16 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
-  hideScrollbar = (newValue: boolean): void => {
-    this.setState({ hideScrollbar: newValue })
+  // hideScrollbar = (newValue: boolean): void => {
+  //   this.setState({ hideScrollbar: newValue })
+  // }
+
+  onMouseOver = (): void => {
+    this.setState({ showSidebarCollapse: true })
+  }
+
+  onMouseOut = (): void => {
+    this.setState({ showSidebarCollapse: false })
   }
 
   // Additional safeguard for sidebar height sizing
@@ -218,7 +233,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   public render(): ReactNode {
-    const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
+    const {
+      collapsedSidebar,
+      sidebarWidth,
+      // hideScrollbar,
+      showSidebarCollapse,
+    } = this.state
     const {
       appPages,
       chevronDownshift,
@@ -283,17 +303,26 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         >
           <StyledSidebarContent
             data-testid="stSidebarContent"
-            hideScrollbar={hideScrollbar}
+            // hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
-            <StyledSidebarCloseButton>
-              <BaseButton
-                kind={BaseButtonKind.HEADER_BUTTON}
-                onClick={this.toggleCollapse}
+            <StyledSidebarHeaderContainer
+              onMouseOver={this.onMouseOver}
+              onMouseOut={this.onMouseOut}
+              data-testid="stSidebarExpandControl"
+            >
+              <StyledNoLogoSpacer data-testid="stLogoSpacer" />
+              <StyledCollapseSidebarButton
+                showSidebarCollapse={showSidebarCollapse}
               >
-                <Icon content={Close} size="lg" />
-              </BaseButton>
-            </StyledSidebarCloseButton>
+                <BaseButton
+                  kind={BaseButtonKind.HEADER_BUTTON}
+                  onClick={this.toggleCollapse}
+                >
+                  <Icon content={ChevronLeft} size="xl" />
+                </BaseButton>
+              </StyledCollapseSidebarButton>
+            </StyledSidebarHeaderContainer>
             {!hideSidebarNav && (
               <SidebarNav
                 endpoints={this.props.endpoints}
@@ -301,7 +330,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 collapseSidebar={this.toggleCollapse}
                 currentPageScriptHash={currentPageScriptHash}
                 hasSidebarElements={hasElements}
-                hideParentScrollbar={this.hideScrollbar}
+                // hideParentScrollbar={this.hideScrollbar}
                 onPageChange={onPageChange}
               />
             )}
