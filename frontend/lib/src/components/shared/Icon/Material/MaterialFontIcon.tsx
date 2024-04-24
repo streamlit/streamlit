@@ -56,7 +56,7 @@ const MaterialFontIcon = ({
   ...props
 }: MaterialIconProps): ReactElement => {
   return (
-    // This is a recomended way to render material icons from the font
+    // This is a recommended way to render material icons from the font
     // Please see `Inserting the icon` section here:
     // https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Asettings_applications%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4024
     <StyledMaterialIcon

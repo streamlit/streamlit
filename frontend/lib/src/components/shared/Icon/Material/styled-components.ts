@@ -37,6 +37,7 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
       height: theme.iconSizes[size],
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
+      userSelect: "none",
     }
   }
 )

@@ -62,6 +62,12 @@ def is_material_icon(maybe_icon: str) -> bool:
     return maybe_icon in ALL_MATERIAL_ICONS
 
 
+def validate_icon_or_emoji(icon: str):
+    if icon is not None and icon.startswith(":material"):
+        return validate_material_icon(icon)
+    return validate_emoji(icon)
+
+
 def validate_emoji(maybe_emoji: str | None) -> str:
     if maybe_emoji is None:
         return ""

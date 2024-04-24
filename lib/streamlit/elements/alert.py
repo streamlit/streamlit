@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_emoji, validate_material_icon
+from streamlit.string_util import clean_text, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -53,10 +53,8 @@ class AlertMixin:
 
         """
         alert_proto = AlertProto()
-        if icon is not None and icon.startswith(":material"):
-            alert_proto.icon = validate_material_icon(icon)
-        else:
-            alert_proto.icon = validate_emoji(icon)
+
+        alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.body = clean_text(body)
         alert_proto.format = AlertProto.ERROR
         return self.dg._enqueue("alert", alert_proto)
@@ -89,10 +87,7 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-        if icon is not None and icon.startswith(":material"):
-            alert_proto.icon = validate_material_icon(icon)
-        else:
-            alert_proto.icon = validate_emoji(icon)
+        alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.format = AlertProto.WARNING
         return self.dg._enqueue("alert", alert_proto)
 
@@ -125,11 +120,7 @@ class AlertMixin:
 
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-
-        if icon is not None and icon.startswith(":material"):
-            alert_proto.icon = validate_material_icon(icon)
-        else:
-            alert_proto.icon = validate_emoji(icon)
+        alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.format = AlertProto.INFO
         return self.dg._enqueue("alert", alert_proto)
 
@@ -161,11 +152,7 @@ class AlertMixin:
         """
         alert_proto = AlertProto()
         alert_proto.body = clean_text(body)
-
-        if icon is not None and icon.startswith(":material"):
-            alert_proto.icon = validate_material_icon(icon)
-        else:
-            alert_proto.icon = validate_emoji(icon)
+        alert_proto.icon = validate_icon_or_emoji(icon)
         alert_proto.format = AlertProto.SUCCESS
         return self.dg._enqueue("alert", alert_proto)
 
