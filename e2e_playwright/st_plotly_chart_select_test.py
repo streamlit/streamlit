@@ -47,7 +47,7 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
 
 
 # This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
-def test_click_on_bar_chart_displays_a_df(
+def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     chart = app.locator(".stPlotlyChart").nth(2)
@@ -74,6 +74,14 @@ def test_click_on_bar_chart_displays_a_df(
         app.get_by_test_id("stDataFrame"), name="st_plotly_chart-double_select_df"
     )
 
+    chart.scroll_into_view_if_needed()
+    chart.hover()
+    app.mouse.dblclick(400, 400)
+    wait_for_app_run(app, 3000)
+
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
+    assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
+
 
 def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     chart = app.locator(".stPlotlyChart").nth(3)
@@ -89,19 +97,19 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-# TODO(willhuang1997): Readd choropleth charts and add a working test
-# This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
-# def test_click_on_choroleth_chart_displays_a_df(app: Page):
-#     chart = app.locator(".stPlotlyChart").nth(4)
-#     chart.scroll_into_view_if_needed()
-#     expect(chart).to_be_visible()
-#     chart.hover()
-#     app.mouse.down()
-#     app.mouse.up()
-#     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+# # TODO(willhuang1997): Readd choropleth charts and add a working test
+# # This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
+# # def test_click_on_choroleth_chart_displays_a_df(app: Page):
+# #     chart = app.locator(".stPlotlyChart").nth(4)
+# #     chart.scroll_into_view_if_needed()
+# #     expect(chart).to_be_visible()
+# #     chart.hover()
+# #     app.mouse.down()
+# #     app.mouse.up()
+# #     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-# TODO(willhuang1997): Looks like webkit is not working but it is working locally
+# # TODO(willhuang1997): Looks like webkit is not working but it is working locally
 @pytest.mark.only_browser("chromium")
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction

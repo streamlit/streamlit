@@ -615,6 +615,7 @@ export function PlotlyChart({
   const resetSelectionsCallback = useCallback(
     (resetSelectionInFigure = true): void => {
       sendEmptySelection(widgetMgr, element, fragmentId)
+      console.log(resetSelectionInFigure)
 
       if (resetSelectionInFigure) {
         // We need to do this reset with a short timeout, because otherwise
@@ -712,7 +713,7 @@ export function PlotlyChart({
       // reset the selection. The default handling can be a bit annoying
       // sometimes.
       onDoubleClick={
-        isSelectionActivated ? resetSelectionsCallback : undefined
+        isSelectionActivated ? () => resetSelectionsCallback() : undefined
       }
       onDeselect={
         isSelectionActivated
