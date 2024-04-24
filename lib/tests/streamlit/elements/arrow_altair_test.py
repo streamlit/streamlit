@@ -742,16 +742,16 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
             expected_is_select_enabled,
         )
 
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
     @parameterized.expand(
         [
             (True),
             (False),
             ("invalid"),
         ]
+    )
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
     )
     def test_altair_on_select_invalid(self, on_select):
         point = alt.selection_point(name="name")
