@@ -30,6 +30,7 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
       display: "inline-flex",
       alignItems: "center",
       justifyContents: "center",
+      color: theme.colors.bodyText,
       fontSize: theme.iconSizes[size],
       width: theme.iconSizes[size],
       height: theme.iconSizes[size],

@@ -90,26 +90,19 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
             f'The value `"{maybe_material_icon}"` is not a valid Material icon. '
             f"Please use a Material icon shortcode like **`:material/thumb_up:`**"
         )
+
     pack_name, icon_name = icon_match.groups()
 
-    if pack_name not in supported_icon_packs:
-        icon_packs_repr = ", ".join(f"`{pack}`" for pack in supported_icon_packs)
+    if (
+        pack_name not in supported_icon_packs
+        or not icon_name
+        or not is_material_icon(icon_name)
+    ):
         raise StreamlitAPIException(
             f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
             f" Please use a Material icon shortcode like **`:material/thumb_up:`**. "
-            f"Only {icon_packs_repr} icon packs are supported."
-        )
-    if not icon_name:
-        raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode, like **`:material/thumb_up:`**"
         )
 
-    if not is_material_icon(icon_name):
-        raise StreamlitAPIException(
-            f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
-            f" Please use a Material icon shortcode, like **`:material/thumb_up:`**"
-        )
     return f":{pack_name}/{icon_name}:"
 
 
