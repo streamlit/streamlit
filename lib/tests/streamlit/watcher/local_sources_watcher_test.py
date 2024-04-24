@@ -28,7 +28,9 @@ from streamlit import config
 from streamlit.watcher import local_sources_watcher
 from streamlit.watcher.path_watcher import NoOpPathWatcher, _is_watchdog_available
 
-SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "test_data/not_a_real_script.py")
+SCRIPT_PATH = os.path.join(
+    os.path.dirname(__file__), "test_data", "not_a_real_script.py"
+)
 
 DUMMY_MODULE_1_FILE = os.path.abspath(DUMMY_MODULE_1.__file__)
 DUMMY_MODULE_2_FILE = os.path.abspath(DUMMY_MODULE_2.__file__)
@@ -72,7 +74,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         fob.assert_called_once()
         args, _ = fob.call_args
-        self.assertEqual(args[0], SCRIPT_PATH)
+        self.assertEqual(os.path.realpath(args[0]), os.path.realpath(SCRIPT_PATH))
         method_type = type(self.setUp)
         self.assertEqual(type(args[1]), method_type)
 
