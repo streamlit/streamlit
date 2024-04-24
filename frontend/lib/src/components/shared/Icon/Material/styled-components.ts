@@ -22,15 +22,16 @@ export interface StyledMaterialIconProps {
   size: IconSize
   margin: string
   padding: string
+  color: string
 }
 
 export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
-  ({ size, margin, padding, theme }) => {
+  ({ size, margin, padding, theme, color }) => {
     return {
       display: "inline-flex",
       alignItems: "center",
       justifyContents: "center",
-      color: theme.colors.bodyText,
+      color: color,
       fontSize: theme.iconSizes[size],
       width: theme.iconSizes[size],
       height: theme.iconSizes[size],

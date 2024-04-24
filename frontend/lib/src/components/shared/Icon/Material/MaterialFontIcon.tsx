@@ -42,10 +42,12 @@ const getDefaultProps = ({
   size,
   margin,
   padding,
+  color,
 }: Partial<StyledMaterialIconProps>): StyledMaterialIconProps => ({
   size: size || "md",
   margin: margin || "",
   padding: padding || "",
+  color: color || "inherit",
 })
 
 const MaterialFontIcon = ({

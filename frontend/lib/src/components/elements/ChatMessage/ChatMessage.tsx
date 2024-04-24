@@ -75,7 +75,11 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
         } else if (avatar.startsWith(":material")) {
           return (
             <StyledAvatarBackground data-testid="chatAvatarIcon-custom">
-              <DynamicIcon size="lg" iconValue={avatar} />
+              <DynamicIcon
+                size="lg"
+                iconValue={avatar}
+                color={theme.colors.bodyText}
+              />
             </StyledAvatarBackground>
           )
         }

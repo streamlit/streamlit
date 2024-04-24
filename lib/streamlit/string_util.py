@@ -74,6 +74,8 @@ def validate_emoji(maybe_emoji: str | None) -> str:
 
 
 def validate_material_icon(maybe_material_icon: str | None) -> str:
+    """Validate a Material icon shortcode and return the icon in
+    normalized format if valid."""
 
     supported_icon_packs = [
         "material",
