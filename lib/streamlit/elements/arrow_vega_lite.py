@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Literal, cast
 
 import streamlit.elements.lib.dicttools as dicttools
-from streamlit.attribute_dictionary import AttributeDictionary
 from streamlit.chart_util import check_on_select_str
 from streamlit.constants import (
     NO_SELECTION_OBJECTS_ERROR_VEGA_LITE,
@@ -36,6 +35,7 @@ from streamlit.elements.utils import (
     last_index_for_melted_dataframes,
 )
 from streamlit.errors import StreamlitAPIException
+from streamlit.event_utils import AttributeDictionary
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
