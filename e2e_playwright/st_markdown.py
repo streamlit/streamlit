@@ -105,16 +105,14 @@ $$
 
 # Some title
 Some text
-
 - :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
 - :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
 
-:blue-background[**Bold text within blue background**]
+:blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
 
-:red-background[*Italic text within red background*]
+:rainbow-background[[Link](http://example.com) within rainbow background], :green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]
 
-:rainbow-background[[Link](http://example.com) within rainbow background]
+:violet-background[This is a repeating multiline string that wraps within purple background. This is a repeating multiline string that wraps within purple background.]
 
-:green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]
 """
 )
