@@ -31,6 +31,10 @@ message Audio {
   // Indicates whether the audio should start over from the beginning once it ends.
   bool loop = 7;
 
+  bool autoplay = 8;
+
+  string id = 9;
+
   reserved 1, 2, 4;
   reserved "data", "format";
 }

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import requests
 
 import streamlit as st
@@ -67,3 +69,25 @@ st.video("test_assets/sintel-short.webm", start_time=35, end_time=39, loop=True)
 
 # Test end time and loop mp4 video
 st.video("test_assets/sintel-short.mp4", start_time=35, end_time=39, loop=True)
+
+# Test autoplay with video
+autoplay = st.checkbox("Autoplay", value=False)
+
+if st.button("Create some elements to unmount component"):
+    for i in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+st.video(
+    "test_assets/sintel-short.webm",
+    autoplay=autoplay,
+)
+
+# Test muted with video
+st.video(
+    "test_assets/sintel-short.webm",
+    autoplay=True,
+    muted=True,
+)
