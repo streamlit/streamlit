@@ -24,7 +24,7 @@ def test_markdown_all_elements_displayed(
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
-    expect(markdown_elements).to_have_count(19)
+    expect(markdown_elements).to_have_count(23)
 
     # Snapshot one big markdown block containing a variety of elements to reduce number of snapshots
     assert_snapshot(
@@ -52,10 +52,28 @@ def test_displays_markdown(app: Page):
         "Some header 2",
         "Some header 3",
         "Col1Col2SomeData",
+        "Bold text within blue background",
+        "Italic text within red background",
+        "Link within rainbow background",
+        "LaTeX math within green background: ax2+bx+c=0ax^2 + bx + c = 0ax2+bx+c=0",
     ]
 
     for i in range(len(text)):
         expect(markdown_elements.nth(i)).to_have_text(text[i])
+
+    # Check that the style contains the correct background color
+    blue_background = markdown_elements.nth(12).locator("span").first
+    red_background = markdown_elements.nth(13).locator("span").first
+    rainbow_background = markdown_elements.nth(14).locator("span").first
+    green_background = markdown_elements.nth(15).locator("span").first
+
+    expect(blue_background).to_have_css("background-color", "rgba(28, 131, 225, 0.1)")
+    expect(red_background).to_have_css("background-color", "rgba(255, 43, 43, 0.1)")
+    expect(rainbow_background).to_have_css(
+        "background-image",
+        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 227, 18, 0.1), rgba(255, 227, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 225, 0.1), rgba(128, 61, 245, 0.1), rgba(88, 63, 132, 0.1))",
+    )
+    expect(green_background).to_have_css("background-color", "rgba(33, 195, 84, 0.1)")
 
     # Additional checks for specific elements like links
     expect(markdown_elements.nth(3).locator("a")).to_have_count(0)
