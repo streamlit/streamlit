@@ -706,7 +706,6 @@ export function PlotlyChart({
       layout={plotlyFigure.layout}
       config={plotlyConfig}
       frames={plotlyFigure.frames ?? undefined}
-      // This is fired after a selection is made on the chart
       onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
       // Double click is needed to make it easier to the user to
       // reset the selection. The default handling can be a bit annoying
@@ -729,9 +728,8 @@ export function PlotlyChart({
       }}
       // Update the figure state on every change to the figure itself:
       onUpdate={figure => {
-        // Safe the updated figure state to allow it to be recovered
+        // Save the updated figure state to allow it to be recovered
         widgetMgr.setElementState(element.id, "figure", figure)
-        // Set the updated plotly figure state
         setPlotlyFigure(figure)
       }}
     />
