@@ -68,17 +68,13 @@ describe("Favicon element", () => {
     expect(getFaviconHref()).toBe(SATELLITE_TWEMOJI_URL)
   })
 
-  it("handles icon material icon correctly", () => {
+  it("handles material icon correctly", () => {
     handleFavicon(":material/flag:", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(FLAG_MATERIAL_ICON_URL)
-  })
 
-  it("handles material-outlined icon correctly", () => {
     handleFavicon(":material/smart_display:", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(SMART_DISPLAY_MATERIAL_ICON_URL)
-  })
 
-  it("handles material-rounded icon correctly", () => {
     handleFavicon(":material/accessibility_new:", jest.fn(), endpoints)
     expect(getFaviconHref()).toBe(ACCESSIBILITY_NEW_MATERIAL_ICON_URL)
   })
