@@ -20,7 +20,7 @@ import { IGuestToHostMessage } from "@streamlit/lib/src/hostComm/types"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
 function iconToUrl(icon: string): string {
-  const iconRegexp = /^:(.*)\/(.*):$/
+  const iconRegexp = /^:(.+)\/(.+):$/
   const matchResult = icon.match(iconRegexp)
   if (matchResult === null) {
     // If the icon is invalid, return just an empty string

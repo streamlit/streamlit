@@ -82,7 +82,7 @@ def validate_material_icon(maybe_material_icon: str | None) -> str:
     if maybe_material_icon is None:
         return ""
 
-    icon_regex = r"^\s*:(.*)\/(.*):\s*$"
+    icon_regex = r"^\s*:(.+)\/(.+):\s*$"
     icon_match = re.match(icon_regex, maybe_material_icon)
 
     if not icon_match:
