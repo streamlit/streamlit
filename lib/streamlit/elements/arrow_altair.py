@@ -49,13 +49,13 @@ from streamlit.elements import arrow
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     last_index_for_melted_dataframes,
 )
 from streamlit.errors import Error, StreamlitAPIException
-from streamlit.event_utils import AttributeDictionary
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
@@ -772,7 +772,7 @@ class ArrowAltairMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         key: str | None = None,
-    ) -> Union["DeltaGenerator", Dict[Any, Any]]:
+    ) -> Union["DeltaGenerator", arrow_vega_lite.VegaLiteState]:
         """Display a chart using the Altair library.
 
         Parameters

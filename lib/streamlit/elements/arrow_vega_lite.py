@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.constants import (
@@ -28,13 +28,13 @@ from streamlit.constants import (
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
     last_index_for_melted_dataframes,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.event_utils import AttributeDictionary
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
@@ -78,11 +78,24 @@ class VegaLiteSelectionSerde:
         return json.dumps(selection_state, default=str)
 
 
+class VegaLiteState(TypedDict, total=False):
+    """
+    A dictionary representing the current selection state of the plotly chart.
+
+    Attributes
+    ----------
+    select : AttributeDictionary
+        The state of the `on_select` event.
+    """
+
+    select: AttributeDictionary
+
+
 def _on_select(
     proto: ArrowVegaLiteChartProto,
     on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
     key: str | None = None,
-) -> AttributeDictionary:
+) -> VegaLiteState:
     if on_select != ON_SELECTION_IGNORE:
         vega_lite_serde = VegaLiteSelectionSerde()
         current_value = register_widget(
@@ -96,8 +109,8 @@ def _on_select(
             serializer=vega_lite_serde.serialize,
             ctx=get_script_run_ctx(),
         )
-        return AttributeDictionary(current_value.value)
-    return AttributeDictionary({})
+        return cast(VegaLiteState, AttributeDictionary(current_value.value))
+    return cast(VegaLiteState, AttributeDictionary({}))
 
 
 class ArrowVegaLiteMixin:
@@ -111,7 +124,7 @@ class ArrowVegaLiteMixin:
         on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         key: str | None = None,
         **kwargs: Any,
-    ) -> DeltaGenerator | AttributeDictionary:
+    ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
         Parameters
