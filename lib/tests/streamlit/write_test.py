@@ -259,11 +259,7 @@ class StreamlitWriteTest(unittest.TestCase):
             (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             (SnowparkTable(num_of_rows=2, num_of_cols=2),),
             (SnowparkDataFrame(num_of_rows=2, num_of_cols=2),),
-            (
-                [
-                    SnowparkRow(),
-                ],
-            ),
+            ([SnowparkRow()],),
             (PysparkDataFrame(),),
         ]
     )
