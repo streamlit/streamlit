@@ -15,12 +15,12 @@ charset-normalizer==3.3.2
 click==8.1.7
 cloudpickle==2.2.1
 contourpy==1.2.1
-coverage==7.4.4
+coverage==7.5.0
 cryptography==42.0.5
 cycler==0.12.1
 dataclasses-json==0.6.4
 distlib==0.3.8
-docutils==0.21.1
+docutils==0.21.2
 execnet==2.1.1
 filelock==3.13.4
 fonttools==4.51.0
@@ -49,7 +49,7 @@ langchain==0.1.16
 langchain-community==0.0.34
 langchain-core==0.1.45
 langchain-text-splitters==0.0.1
-langsmith==0.1.49
+langsmith==0.1.50
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -72,7 +72,7 @@ pathspec==0.12.1
 pillow==10.3.0
 pixelmatch==0.3.0
 pkginfo==1.10.0
-platformdirs==4.2.0
+platformdirs==4.2.1
 playwright==1.42.0
 plotly==5.21.0
 pluggy==1.5.0
@@ -140,7 +140,7 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==2.2.1
-virtualenv==20.25.3
+virtualenv==20.26.0
 watchdog==4.0.0
 yarl==1.9.4
 zipp==3.18.1
