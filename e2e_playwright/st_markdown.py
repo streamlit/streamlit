@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-
 import streamlit as st
 
 st.markdown("This **markdown** is awesome! :sunglasses:")
@@ -50,10 +48,22 @@ st.markdown(
 """
 )
 
+st.markdown(":blue-background[**Bold text within blue background**]")
+st.markdown(":red-background[*Italic text within red background*]")
+st.markdown(":rainbow-background[[Link](http://example.com) within rainbow background]")
+st.markdown(
+    ":green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]"
+)
+
 with st.container():
     st.markdown("# some really long header " + " ".join(["lol"] * 10))
-    np.random.seed(0)
-    st.table(np.random.randn(10, 20))
+    st.markdown(
+        """
+| Col1      | Col2        | Col3        | Col4        |
+| --------- | ----------- | ----------- | ----------- |
+| Some      | Data        | Data        | Data        |
+"""
+    )
 
 with st.container():
     st.title("Some title")
@@ -76,15 +86,33 @@ with st.container():
     st.markdown("# Some title")
     st.markdown("Some text")
 
+
 st.markdown(
     """
-- :blue[blue]
-- :green[green]
-- :red[red]
-- :violet[violet]
-- :orange[orange]
-- :gray[gray]
-- :grey[grey]
-- :rainbow[rainbow]
+Inline math with $\KaTeX$
+
+$$
+ax^2 + bx + c = 0
+$$
+
+# Some header 1
+## Some header 2
+### Some header 3
+
+| Col1      | Col2        |
+| --------- | ----------- |
+| Some      | Data        |
+
+# Some title
+Some text
+- :blue[blue], :green[green], :red[red], :violet[violet], :orange[orange], :gray[gray], :grey[grey], :rainbow[rainbow]
+- :blue-background[blue], :green-background[green], :red-background[red], :violet-background[violet], :orange-background[orange], :gray-background[gray], :grey-background[grey], :rainbow-background[rainbow]
+
+:blue-background[**Bold text within blue background**], :red-background[*Italic text within red background*]
+
+:rainbow-background[[Link](http://example.com) within rainbow background], :green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]
+
+:violet-background[This is a repeating multiline string that wraps within purple background. This is a repeating multiline string that wraps within purple background.]
+
 """
 )
