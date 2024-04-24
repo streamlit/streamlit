@@ -494,8 +494,25 @@ class StreamlitStreamTest(unittest.TestCase):
         stream_return = st.write_stream(test_stream)
         self.assertEqual(stream_return, "Hello World")
 
-        stream_return = st.write_stream(test_stream())
-        self.assertEqual(stream_return, "Hello World")
+    def test_with_empty_chunks(self):
+        """Test st.write_stream with generator that returns empty chunks."""
+
+        def test_stream():
+            yield ""
+            yield ""
+
+        stream_return = st.write_stream(test_stream)
+        self.assertEqual(stream_return, "")
+
+    def test_with_empty_stream(self):
+        """Test st.write_stream with generator that returns empty chunks."""
+
+        def test_stream():
+            if False:
+                yield "Hello"
+
+        stream_return = st.write_stream(test_stream)
+        self.assertEqual(stream_return, "")
 
     def test_with_wrong_input(self):
         """Test st.write_stream with string or dataframe input generates exception."""

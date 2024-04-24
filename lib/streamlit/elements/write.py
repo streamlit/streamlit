@@ -197,6 +197,10 @@ class WriteMixin:
                     ) from err
 
             if isinstance(chunk, str):
+                if not chunk:
+                    # Empty strings can be ignored
+                    continue
+
                 first_text = False
                 if not stream_container:
                     stream_container = self.dg.empty()
@@ -216,10 +220,14 @@ class WriteMixin:
 
         flush_stream_response()
 
-        # If the output only contains a single string, return it as a string
-        if len(written_content) == 1 and isinstance(written_content[0], str):
+        if not written_content:
+            # If nothing was streamed, return an empty string.
+            return ""
+        elif len(written_content) == 1 and isinstance(written_content[0], str):
+            # If the output only contains a single string, return it as a string
             return written_content[0]
-        # Otherwise return it as a list
+
+        # Otherwise return it as a list of write-compatible objects
         return written_content
 
     @gather_metrics("write")
