@@ -187,7 +187,9 @@ export class ArrowVegaLiteChart extends PureComponent<
     return []
   }
 
-  public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
+  public async componentDidUpdate(
+    prevProps: PropsWithFullScreen
+  ): Promise<void> {
     const { element: prevElement, theme: prevTheme } = prevProps
     const { element, theme } = this.props
 
