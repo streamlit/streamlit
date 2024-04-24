@@ -903,3 +903,7 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
         self.assertEqual(len(proto.datasets), 1)
+
+    def test_empty_altair_chart_throws_error(self):
+        with self.assertRaises(TypeError) as exc:
+            st.altair_chart(use_container_width=True)

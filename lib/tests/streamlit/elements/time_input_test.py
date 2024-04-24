@@ -14,7 +14,7 @@
 
 """time_input unit test."""
 
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 from parameterized import parameterized
 
@@ -111,6 +111,49 @@ class TimeInputTest(DeltaGeneratorTestCase):
             "'visible', 'hidden' or 'collapsed'.",
         )
 
+    def test_st_time_input(self):
+        """Test st.time_input."""
+        value = time(8, 45)
+        st.time_input("Set an alarm for", value)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.time_input.default, "08:45")
+        self.assertEqual(el.time_input.step, timedelta(minutes=15).seconds)
+
+    def test_st_time_input_with_step(self):
+        """Test st.time_input with step."""
+        value = time(9, 00)
+        st.time_input("Set an alarm for", value, step=timedelta(minutes=5))
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.time_input.default, "09:00")
+        self.assertEqual(el.time_input.step, timedelta(minutes=5).seconds)
+
+    def test_st_time_input_exceptions(self):
+        """Test st.time_input exceptions."""
+        value = time(9, 00)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=True)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=(90, 0))
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=1)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=59)
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=timedelta(hours=24))
+        with self.assertRaises(StreamlitAPIException):
+            st.time_input("Set an alarm for", value, step=timedelta(days=1))
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.time_input("the label"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 def test_time_input_interaction():
     """Test interactions with an empty time_input widget."""
@@ -133,3 +176,18 @@ def test_time_input_interaction():
     at = time_input.set_value(None).run()
     time_input = at.time_input[0]
     assert time_input.value is None
+
+
+def test_None_session_state_value_retained():
+    def script():
+        import streamlit as st
+
+        if "time_input" not in st.session_state:
+            st.session_state["time_input"] = None
+
+        st.time_input("time_input", key="time_input")
+        st.button("button")
+
+    at = AppTest.from_function(script).run()
+    at = at.button[0].click().run()
+    assert at.time_input[0].value is None

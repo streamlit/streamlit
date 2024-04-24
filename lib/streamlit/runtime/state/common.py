@@ -26,7 +26,7 @@ from typing import (
     Dict,
     Final,
     Generic,
-    Sequence,
+    Iterable,
     Tuple,
     TypeVar,
     Union,
@@ -36,7 +36,6 @@ from google.protobuf.message import Message
 from typing_extensions import TypeAlias
 
 from streamlit import config, util
-from streamlit.elements.arrow import Data
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Arrow_pb2 import Arrow
 from streamlit.proto.ArrowVegaLiteChart_pb2 import ArrowVegaLiteChart
@@ -179,15 +178,13 @@ SAFE_VALUES = Union[
     "ellipsis",
     Message,
     PROTO_SCALAR_VALUE,
-    Data,
-    Dict[Any, Any],
 ]
 
 
 def compute_widget_id(
     element_type: str,
     user_key: str | None = None,
-    **kwargs: SAFE_VALUES | Sequence[SAFE_VALUES],
+    **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.

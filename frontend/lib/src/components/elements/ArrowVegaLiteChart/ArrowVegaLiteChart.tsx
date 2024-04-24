@@ -111,8 +111,9 @@ export interface WrappedNamedDataset {
   data: Quiver
 }
 
-export interface PropsWithHeight extends Props {
+export interface PropsWithFullScreen extends Props {
   height?: number
+  isFullScreen: boolean
 }
 
 interface State {
@@ -120,7 +121,10 @@ interface State {
   selections: Record<string, any>
 }
 
-export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
+export class ArrowVegaLiteChart extends PureComponent<
+  PropsWithFullScreen,
+  State
+> {
   /**
    * The Vega view object
    */
@@ -238,7 +242,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   }
 
   public generateSpec = (): any => {
-    const { element: el, theme } = this.props
+    const { element: el, theme, isFullScreen, width, height } = this.props
     const spec = JSON.parse(el.spec)
 
     const { useContainerWidth } = el
@@ -284,12 +288,23 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       }
     }
 
-    if (this.props.height) {
-      // fullscreen
-      spec.width = this.props.width
-      spec.height = this.props.height
+    if (isFullScreen) {
+      spec.width = width
+      spec.height = height
+
+      if ("vconcat" in spec) {
+        spec.vconcat.forEach((child: any) => {
+          child.width = width
+        })
+      }
     } else if (useContainerWidth) {
-      spec.width = this.props.width
+      spec.width = width
+
+      if ("vconcat" in spec) {
+        spec.vconcat.forEach((child: any) => {
+          child.width = width
+        })
+      }
     }
 
     if (!spec.padding) {
@@ -561,6 +576,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // Create the container Vega draws inside.
       <StyledVegaLiteChartContainer
         data-testid="stArrowVegaLiteChart"
+        useContainerWidth={this.props.element.useContainerWidth}
+        isFullScreen={this.props.isFullScreen}
         ref={c => {
           this.element = c
         }}
