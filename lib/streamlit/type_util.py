@@ -266,6 +266,8 @@ class DataFormat(Enum):
     PYARROW_TABLE = auto()  # pyarrow.Table
     SNOWPARK_OBJECT = auto()  # Snowpark DataFrame, Table, List[Row]
     PYSPARK_OBJECT = auto()  # pyspark.DataFrame
+    MODIN_OBJECT = auto()  # Modin DataFrame, Series
+    SNOWPANDAS_OBJECT = auto()  # Snowpandas DataFrame, Series
     PANDAS_STYLER = auto()  # pandas Styler
     LIST_OF_RECORDS = auto()  # List[Dict[str, Scalar]]
     LIST_OF_ROWS = auto()  # List[List[Scalar]]
@@ -1075,6 +1077,10 @@ def determine_data_format(input_data: Any) -> DataFormat:
         return DataFormat.PANDAS_STYLER
     elif is_snowpark_data_object(input_data):
         return DataFormat.SNOWPARK_OBJECT
+    elif is_modin_data_object(input_data):
+        return DataFormat.MODIN_OBJECT
+    elif is_snowpandas_data_object(input_data):
+        return DataFormat.SNOWPANDAS_OBJECT
     elif is_pyspark_data_object(input_data):
         return DataFormat.PYSPARK_OBJECT
     elif isinstance(input_data, (list, tuple, set)):
@@ -1159,6 +1165,8 @@ def convert_df_to_data_format(
         DataFormat.PYSPARK_OBJECT,
         DataFormat.PANDAS_INDEX,
         DataFormat.PANDAS_STYLER,
+        DataFormat.MODIN_OBJECT,
+        DataFormat.SNOWPANDAS_OBJECT,
     ]:
         return df
     elif data_format == DataFormat.NUMPY_LIST:

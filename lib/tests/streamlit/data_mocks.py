@@ -22,6 +22,9 @@ import pandas as pd
 import pyarrow as pa
 
 from streamlit.type_util import DataFormat
+from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.snowpandas_mocks import get_random_dataframe, get_random_series
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
@@ -191,6 +194,16 @@ SHARED_TEST_CASES = [
     (
         SnowparkTable(num_of_rows=2, num_of_cols=2),
         TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
+    ),
+    # Snowpark Pandas DataFrame:
+    (
+        SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        TestCaseMetadata(2, 2, DataFormat.SNOWPANDAS_OBJECT),
+    ),
+    # Snowpark Pandas Series:
+    (
+        SnowpandasSeries(pd.Series(np.random.randn(2))),
+        TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT),
     ),
 ]
 
@@ -442,5 +455,7 @@ UNSUPPORTED_TYPES_DF = pd.DataFrame(
         # "sparse-array": pd.Series(
         #     pd.arrays.SparseArray([random.choice([0, 1, 2]) for _ in range(n_rows)])
         # ),
+    }
+)
     }
 )
