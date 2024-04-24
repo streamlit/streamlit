@@ -615,7 +615,6 @@ export function PlotlyChart({
   const resetSelectionsCallback = useCallback(
     (resetSelectionInFigure = true): void => {
       sendEmptySelection(widgetMgr, element, fragmentId)
-      console.log(resetSelectionInFigure)
 
       if (resetSelectionInFigure) {
         // We need to do this reset with a short timeout, because otherwise
