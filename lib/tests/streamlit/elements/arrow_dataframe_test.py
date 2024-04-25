@@ -178,11 +178,11 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_snowpark_uncollected(self):
         """Tests that data can be read from Snowpark's uncollected Dataframe"""
         with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 1.2 as COL1")
+            df = snowpark_session.sql('SELECT "Hello" as COL1')
 
             st.dataframe(df)
 
-        expected = pd.DataFrame({"COL1": [1.2]})
+        expected = pd.DataFrame({"COL1": ["Hello"]})
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
@@ -191,9 +191,9 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_snowpark_collected(self):
         """Tests that data can be read from Snowpark's collected Dataframe"""
         with create_snowpark_session() as snowpark_session:
-            st.dataframe(snowpark_session.sql("SELECT 1.2 as COL1").collect())
+            st.dataframe(snowpark_session.sql('SELECT "Hello" as COL1').collect())
 
-        expected = pd.DataFrame({"COL1": [1.2]})
+        expected = pd.DataFrame({"COL1": ["Hello"]})
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
