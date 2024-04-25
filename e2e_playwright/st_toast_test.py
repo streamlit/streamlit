@@ -46,7 +46,7 @@ def test_collapsed_toast_rendering(
     toasts.nth(1).hover()
 
     expect(toasts.nth(1)).to_contain_text(
-        "🦄Random toast message that is a really really really really really really really long message, going way pastview moreClose"
+        "🦄Random toast message that is a really really really really really really really long message, going wayview moreClose"
     )
     assert_snapshot(toasts.nth(1), name="toast-collapsed")
 
