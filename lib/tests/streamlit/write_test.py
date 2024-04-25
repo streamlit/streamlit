@@ -260,7 +260,7 @@ class StreamlitWriteTest(unittest.TestCase):
             (SnowparkTable(num_of_rows=2, num_of_cols=2),),
             (SnowparkDataFrame(num_of_rows=2, num_of_cols=2),),
             ([SnowparkRow()],),
-            (PysparkDataFrame(),),
+            (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
         ]
     )
     def test_write_compatible_dataframe(

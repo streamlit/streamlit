@@ -116,7 +116,7 @@ def unhashable_type_func(_lock, ...):
             (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             (SnowparkTable(num_of_rows=2, num_of_cols=2),),
             (SnowparkDataFrame(num_of_rows=2, num_of_cols=2),),
-            (PysparkDataFrame(),),
+            (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
         ]
     )
     def test_unevaluated_dataframe_error(self, data: Any):

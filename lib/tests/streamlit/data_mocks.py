@@ -22,9 +22,9 @@ import pandas as pd
 import pyarrow as pa
 
 from streamlit.type_util import DataFormat
+from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
-from tests.streamlit.snowpandas_mocks import get_random_dataframe, get_random_series
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
@@ -204,6 +204,11 @@ SHARED_TEST_CASES = [
     (
         SnowpandasSeries(pd.Series(np.random.randn(2))),
         TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT),
+    ),
+    # Pyspark Dataframe:
+    (
+        PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        TestCaseMetadata(2, 2, DataFormat.PYSPARK_OBJECT),
     ),
 ]
 
