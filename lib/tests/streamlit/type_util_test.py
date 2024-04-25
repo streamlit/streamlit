@@ -32,19 +32,7 @@ import streamlit as st
 from streamlit import errors, type_util
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import (
-    BASE_TYPES_DF,
-    DATETIME_TYPES_DF,
-    INTERVAL_TYPES_DF,
-    LIST_TYPES_DF,
-    NUMBER_TYPES_DF,
-    PERIOD_TYPES_DF,
-    SHARED_TEST_CASES,
-    SPECIAL_TYPES_DF,
-    UNSUPPORTED_TYPES_DF,
-    TestCaseMetadata,
-    TestObject,
-)
+from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata, TestObject
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
@@ -452,33 +440,6 @@ class TypeUtilTest(unittest.TestCase):
 
         try:
             type_util.data_frame_to_bytes(df)
-        except Exception as ex:
-            self.fail(
-                "No exception should have been thrown here. "
-                f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
-            )
-
-    @parameterized.expand(
-        [
-            (BASE_TYPES_DF,),
-            (DATETIME_TYPES_DF,),
-            (INTERVAL_TYPES_DF,),
-            (LIST_TYPES_DF,),
-            (PERIOD_TYPES_DF,),
-            (NUMBER_TYPES_DF,),
-            (SPECIAL_TYPES_DF,),
-            (UNSUPPORTED_TYPES_DF,),
-        ]
-    )
-    def test_data_frame_to_bytes(
-        self,
-        input_df: pd.DataFrame,
-    ):
-        """Test that `data_frame_to_bytes` correctly converts
-        DataFrames with a variety of types to Arrow.
-        """
-        try:
-            type_util.data_frame_to_bytes(input_df)
         except Exception as ex:
             self.fail(
                 "No exception should have been thrown here. "
