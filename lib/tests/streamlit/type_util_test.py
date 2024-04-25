@@ -455,6 +455,45 @@ class TypeUtilTest(unittest.TestCase):
         self.assertTrue(type_util.is_snowpandas_data_object(SnowpandasDataFrame(df)))
         self.assertTrue(type_util.is_snowpandas_data_object(SnowpandasSeries(df)))
 
+    def test_is_snowpark_row_list(self):
+        class DummyClass:
+            """DummyClass for testing purposes"""
+
+        # empty list should not be snowpark dataframe
+        self.assertFalse(type_util.is_snowpark_row_list(list()))
+
+        # list with items should not be snowpark dataframe
+        self.assertFalse(
+            type_util.is_snowpark_row_list(
+                [
+                    "any text",
+                ]
+            )
+        )
+        self.assertFalse(
+            type_util.is_snowpark_row_list(
+                [
+                    123,
+                ]
+            )
+        )
+        self.assertFalse(
+            type_util.is_snowpark_row_list(
+                [
+                    DummyClass(),
+                ]
+            )
+        )
+
+        # list with SnowparkRow should be SnowparkDataframe
+        self.assertTrue(
+            type_util.is_snowpark_row_list(
+                [
+                    SnowparkRow(),
+                ]
+            )
+        )
+
     def test_is_snowpark_dataframe(self):
         df = pd.DataFrame(
             {
@@ -474,56 +513,6 @@ class TypeUtilTest(unittest.TestCase):
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
         self.assertTrue(type_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
-        # any object should not be snowpark dataframe
-        self.assertFalse(type_util.is_snowpark_data_object("any text"))
-        self.assertFalse(type_util.is_snowpark_data_object(123))
-
-        class DummyClass:
-            """DummyClass for testing purposes"""
-
-        self.assertFalse(type_util.is_snowpark_data_object(DummyClass()))
-
-        # empty list should not be snowpark dataframe
-        self.assertFalse(type_util.is_snowpark_data_object(list()))
-
-        # list with items should not be snowpark dataframe
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    "any text",
-                ]
-            )
-        )
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    123,
-                ]
-            )
-        )
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    DummyClass(),
-                ]
-            )
-        )
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    df,
-                ]
-            )
-        )
-
-        # list with SnowparkRow should be SnowparkDataframe
-        self.assertTrue(
-            type_util.is_snowpark_data_object(
-                [
-                    SnowparkRow(),
-                ]
-            )
-        )
 
     @pytest.mark.require_snowflake
     def test_is_snowpark_dataframe_integration(self):

@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from e2e_playwright.shared.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
+from shared.data_mocks import SHARED_TEST_CASES, TestCaseMetadata
 from streamlit.type_util import DataFormat
 
 np.random.seed(0)
