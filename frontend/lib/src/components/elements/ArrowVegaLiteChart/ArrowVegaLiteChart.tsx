@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent } from "react"
+import React, { PureComponent, useCallback } from "react"
 import { withTheme } from "@emotion/react"
 import embed from "vega-embed"
 import * as vega from "vega"
@@ -176,6 +176,33 @@ export class ArrowVegaLiteChart extends PureComponent<
     this.vegaView = undefined
   }
 
+  /**
+   * Extracts and returns the names of selection parameters from a given Vega-Lite chart specification.
+   * This method is specifically designed for use with Vega-Lite version 5 specifications.
+   *
+   * It parses the 'params' property of the specification, if present, to retrieve the names
+   * of all selection parameters.
+   *
+   * For more details on selection in Vega-Lite, visit:
+   * https://vega.github.io/vega-lite/docs/selection.html
+   *
+   * @param spec {any} - The Vega-Lite chart specification object, expected to conform to the
+   * structure utilized by Vega-Lite 5.
+   * @returns {string[]} An array of strings, where each string is the name of a selector from
+   * the chart's specification. Returns an empty array if no selectors are found.
+   *
+   * Example:
+   * ```
+   * const vegaLiteSpec = {
+   *   params: [
+   *     { name: 'brush', select: 'interval' },
+   *     { name: 'click', select: 'point', toggle: 'event.shiftKey' }
+   *   ]
+   * };
+   * const selectors = getSelectorsFromChart(vegaLiteSpec);
+   * console.log(selectors); // Output: ['brush', 'click']
+   * ```
+   */
   public getSelectorsFromChart(spec: any): string[] {
     if ("params" in spec) {
       const select: any[] = []
@@ -267,6 +294,8 @@ export class ArrowVegaLiteChart extends PureComponent<
         selectors.forEach(selector => {
           spec.params.forEach((param: any) => {
             if (param.name && param.name === selector) {
+              // initialize interval and point values if they exist to maintain state
+              // https://vega.github.io/vega-lite/docs/param-value.html
               if (param.select.type && param.select.type === "point") {
                 try {
                   const values = parsedStoredValue.select[selector].vlPoint.or
@@ -488,7 +517,7 @@ export class ArrowVegaLiteChart extends PureComponent<
         )
       })
 
-      const reset = (): void => {
+      const reset = useCallback((): void => {
         this.setState({
           selections: {},
         })
@@ -500,7 +529,7 @@ export class ArrowVegaLiteChart extends PureComponent<
           },
           this.props.fragmentId
         )
-      }
+      }, [])
 
       const resetGraph = debounce(150, (event: ScenegraphEvent) => {
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
