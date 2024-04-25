@@ -37,12 +37,12 @@ describe("st.map", () => {
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(3)
+      .eq(2)
       .matchImageSnapshot("stDeckGlJsonChart");
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(4)
+      .eq(3)
       .matchImageSnapshot("stDeckGlJsonChart-complexMap");
 
     // Need to manually change theme vs. matchThemedSnapshot to be able to add wait in right sequence
@@ -51,12 +51,12 @@ describe("st.map", () => {
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(3)
+      .eq(2)
       .matchImageSnapshot("stDeckGlJsonChart-dark");
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(4)
+      .eq(3)
       .matchImageSnapshot("stDeckGlJsonChart-complexMap-dark");
   });
 });
