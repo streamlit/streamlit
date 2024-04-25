@@ -46,6 +46,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     replay_cached_messages,
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
+from streamlit.type_util import UNEVALUATED_DATAFRAME_TYPES
 from streamlit.util import HASHLIB_KWARGS
 
 _LOGGER: Final = get_logger(__name__)
@@ -53,15 +54,6 @@ _LOGGER: Final = get_logger(__name__)
 # The timer function we use with TTLCache. This is the default timer func, but
 # is exposed here as a constant so that it can be patched in unit tests.
 TTLCACHE_TIMER = time.monotonic
-
-
-# We show a special "UnevaluatedDataFrame" warning for cached funcs
-# that attempt to return one of these unserializable types:
-UNEVALUATED_DATAFRAME_TYPES = (
-    "snowflake.snowpark.table.Table",
-    "snowflake.snowpark.dataframe.DataFrame",
-    "pyspark.sql.dataframe.DataFrame",
-)
 
 
 class Cache:

@@ -13,7 +13,10 @@
 # limitations under the License.
 
 import threading
+from typing import Any
 
+import numpy as np
+import pandas as pd
 from parameterized import parameterized
 
 import streamlit as st
@@ -25,10 +28,13 @@ from streamlit.runtime.caching.cache_errors import (
     UnserializableReturnValueError,
     get_return_value_type,
 )
-from streamlit.runtime.caching.cache_utils import UNEVALUATED_DATAFRAME_TYPES
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit import pyspark_mocks, snowpark_mocks
+from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
+from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
 
 class CacheErrorsTest(DeltaGeneratorTestCase):
@@ -104,20 +110,19 @@ def unhashable_type_func(_lock, ...):
         self.assertEqual(ep.message_is_markdown, True)
         self.assertEqual(ep.is_warning, False)
 
-    @parameterized.expand(UNEVALUATED_DATAFRAME_TYPES)
-    def test_unevaluated_dataframe_error(self, type_name):
-        if "snowpark.table.Table" in type_name:
-            to_return = snowpark_mocks.Table()
-        elif "snowpark.dataframe.DataFrame" in type_name:
-            to_return = snowpark_mocks.DataFrame()
-        else:
-            to_return = (
-                pyspark_mocks.create_pyspark_dataframe_with_mocked_personal_data()
-            )
-
-        @st.experimental_memo
+    @parameterized.expand(
+        [
+            (SnowpandasSeries(pd.Series(np.random.randn(2))),),
+            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowparkTable(num_of_rows=2, num_of_cols=2),),
+            (SnowparkDataFrame(num_of_rows=2, num_of_cols=2),),
+            (PysparkDataFrame(),),
+        ]
+    )
+    def test_unevaluated_dataframe_error(self, data: Any):
+        @st.cache_data
         def unevaluated_dataframe_func():
-            return to_return
+            return data
 
         with self.assertRaises(UnevaluatedDataFrameError) as cm:
             unevaluated_dataframe_func()

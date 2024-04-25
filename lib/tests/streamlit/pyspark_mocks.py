@@ -70,36 +70,3 @@ class DataFrame:
         if self._limit > 0:
             return self._data.head(self._limit)
         return self._data
-
-
-def create_pyspark_dataframe_with_mocked_personal_data():
-    """Returns PySpark DataFrame with mocked personal data."""
-
-    from pyspark.sql.session import SparkSession
-    from pyspark.sql.types import IntegerType, StringType, StructField, StructType
-
-    spark = SparkSession.builder.appName("snowflake.com").getOrCreate()
-    schema = StructType(
-        [
-            StructField("firstname", StringType(), True),
-            StructField("middlename", StringType(), True),
-            StructField("lastname", StringType(), True),
-            StructField("id", StringType(), True),
-            StructField("gender", StringType(), True),
-            StructField("salary", IntegerType(), True),
-        ]
-    )
-    return spark.createDataFrame(data=PERSONAL_DATA, schema=schema)
-
-
-def create_pyspark_dataframe_with_mocked_map_data():
-    """Returns PySpark DataFrame with mocked map data."""
-
-    from pyspark.sql.session import SparkSession
-    from pyspark.sql.types import FloatType, StructField, StructType
-
-    spark = SparkSession.builder.appName("snowflake.com").getOrCreate()
-    map_schema = StructType(
-        [StructField("lat", FloatType(), True), StructField("lon", FloatType(), True)]
-    )
-    return spark.createDataFrame(data=MAP_DATA, schema=map_schema)

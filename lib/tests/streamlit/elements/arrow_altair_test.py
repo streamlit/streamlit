@@ -28,9 +28,8 @@ import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame, is_pandas_version_less_than
+from streamlit.type_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit import pyspark_mocks, snowpark_mocks
 
 
 def _deep_get(dictionary, *keys):
@@ -172,62 +171,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
-
-    @parameterized.expand(ST_CHART_ARGS)
-    def test_chart_with_pyspark_dataframe(
-        self, chart_command: Callable, altair_type: str
-    ):
-        spark_df = pyspark_mocks.DataFrame(is_numpy_arr=True)
-
-        chart_command(spark_df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        chart_spec = json.loads(proto.spec)
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(
-            chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
-
-        output_df = bytes_to_data_frame(proto.datasets[0].data.data)
-
-        self.assertEqual(len(output_df.columns), 3)
-        self.assertEqual(output_df.columns[0], "index--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[1], "color--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[2], "value--p5bJXXpQgvPz6yvQMFiy")
-
-    @parameterized.expand(ST_CHART_ARGS)
-    def test_chart_with_snowpark_dataframe(
-        self, chart_command: Callable, altair_type: str
-    ):
-        snow_df = snowpark_mocks.DataFrame()
-
-        chart_command(snow_df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        chart_spec = json.loads(proto.spec)
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(
-            chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
-
-        output_df = bytes_to_data_frame(proto.datasets[0].data.data)
-
-        self.assertEqual(len(output_df.columns), 3)
-        self.assertEqual(output_df.columns[0], "index--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[1], "color--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[2], "value--p5bJXXpQgvPz6yvQMFiy")
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_explicit_x_and_implicit_y(

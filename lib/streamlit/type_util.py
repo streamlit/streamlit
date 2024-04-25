@@ -232,6 +232,18 @@ _DATAFRAME_LIKE_TYPES: Final[tuple[str, ...]] = (
     _NUMPY_ARRAY_TYPE_STR,
 )
 
+# We show a special "UnevaluatedDataFrame" warning for cached funcs
+# that attempt to return one of these unserializable types:
+UNEVALUATED_DATAFRAME_TYPES = (
+    _SNOWPARK_TABLE_TYPE_STR,
+    _SNOWPARK_DF_TYPE_STR,
+    _PYSPARK_DF_TYPE_STR,
+    _MODIN_DF_TYPE_STR,
+    _MODIN_SERIES_TYPE_STR,
+    _SNOWPANDAS_DF_TYPE_STR,
+    _SNOWPANDAS_SERIES_TYPE_STR,
+)
+
 DataFrameLike: TypeAlias = "Union[DataFrame, Index, Series, Styler]"
 
 _DATAFRAME_COMPATIBLE_TYPES: Final[tuple[type, ...]] = (
