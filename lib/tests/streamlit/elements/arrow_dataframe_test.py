@@ -191,10 +191,9 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_snowpark_collected(self):
         """Tests that data can be read from Snowpark's collected Dataframe"""
         with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 40+2 as COL1").collect()
-            st.dataframe(df)
+            st.dataframe(snowpark_session.sql("SELECT 1234567890 as COL1"))
 
-        expected = pd.DataFrame({"COL1": [42]})
+        expected = pd.DataFrame({"COL1": [1234567890]})
 
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
         pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)

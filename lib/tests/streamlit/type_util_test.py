@@ -523,12 +523,12 @@ class TypeUtilTest(unittest.TestCase):
             )
             self.assertTrue(
                 type_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1").collect()
+                    snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
                 )
             )
             self.assertTrue(
-                type_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
+                type_util.is_snowpark_row_list(
+                    snowpark_session.sql("SELECT 40+2 as COL1").collect()
                 )
             )
 
