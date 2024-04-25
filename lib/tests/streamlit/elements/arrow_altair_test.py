@@ -15,7 +15,6 @@
 import json
 import unittest
 from datetime import date
-from functools import reduce
 from typing import Any, Callable
 
 import altair as alt
