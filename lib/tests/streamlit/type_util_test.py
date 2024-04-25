@@ -511,7 +511,7 @@ class TypeUtilTest(unittest.TestCase):
         self.assertFalse(type_util.is_snowpark_data_object(df))
 
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
-        self.assertTrue(type_util.is_snowpark_data_object(SnowparkDataFrame()))
+        self.assertTrue(type_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
         # any object should not be snowpark dataframe
         self.assertFalse(type_util.is_snowpark_data_object("any text"))
