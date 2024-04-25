@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { PureComponent, useCallback } from "react"
+import React, { PureComponent } from "react"
 import { withTheme } from "@emotion/react"
 import embed from "vega-embed"
 import * as vega from "vega"
@@ -517,7 +517,7 @@ export class ArrowVegaLiteChart extends PureComponent<
         )
       })
 
-      const reset = useCallback((): void => {
+      const reset = (): void => {
         this.setState({
           selections: {},
         })
@@ -529,7 +529,7 @@ export class ArrowVegaLiteChart extends PureComponent<
           },
           this.props.fragmentId
         )
-      }, [])
+      }
 
       const resetGraph = debounce(150, (event: ScenegraphEvent) => {
         // no datum means click was not on a useful location https://stackoverflow.com/a/61782407
