@@ -173,6 +173,7 @@ interface State {
   autoReruns: NodeJS.Timer[]
   inputsDisabled: boolean
   mpav1: boolean
+  pageChanged: boolean
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -292,6 +293,7 @@ export class App extends PureComponent<Props, State> {
       autoReruns: [],
       inputsDisabled: false,
       mpav1: true,
+      pageChanged: false,
     }
 
     this.connectionManager = null
@@ -919,6 +921,8 @@ export class App extends PureComponent<Props, State> {
     )?.pageName as string
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
+    const pageChanged = prevPageScriptHash !== newPageScriptHash
+
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
       this.state.autoReruns.forEach((value: NodeJS.Timer) => {
@@ -986,6 +990,7 @@ export class App extends PureComponent<Props, State> {
           // If we're here, the fragmentIdsThisRun variable is always the
           // empty array.
           fragmentIdsThisRun,
+          pageChanged,
         },
         () => {
           this.hostCommunicationMgr.sendMessageToHost({
@@ -1056,7 +1061,7 @@ export class App extends PureComponent<Props, State> {
 
   handlePageRun = (pageRunProto: PageRun): void => {
     const newPageScriptHash = pageRunProto.pageScriptHash
-    const pageChanged = newPageScriptHash !== this.state.currentPageScriptHash
+    const { pageChanged } = this.state
 
     // mainPage must be a string as we're guaranteed at this point that
     // newSessionProto.appPages is nonempty and has a truthy pageName.
@@ -1072,7 +1077,6 @@ export class App extends PureComponent<Props, State> {
     const newPageName = newPage?.pageName as string
     const newUrlPath = newPage?.urlPath || ""
     const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
-    console.log(viewingMainPage)
 
     const baseUriParts = this.getBaseUriParts()
     if (baseUriParts) {
