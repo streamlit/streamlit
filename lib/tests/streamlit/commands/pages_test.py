@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -54,7 +55,8 @@ class PagesTest(DeltaGeneratorTestCase):
         p2 = Page("foobar.py", default=True)
         assert p2.url_path == ""
 
-    def test_navigation_explicit_default(self):
+    @patch("streamlit.commands.pages.set_v2_pages")
+    def test_navigation_explicit_default(self, _):
         p1 = Page("foo.py")
         p2 = Page(Path("baz/bar.py"), default=True)
         p3 = Page(Path("quux.py"))
@@ -63,7 +65,8 @@ class PagesTest(DeltaGeneratorTestCase):
         # Uses the explicitly set default
         assert pg == p2
 
-    def test_navigation_unspecified_default(self):
+    @patch("streamlit.commands.pages.set_v2_pages")
+    def test_navigation_unspecified_default(self, _):
         p1 = Page("foo.py")
         p2 = Page(Path("baz/bar.py"))
         p3 = Page(Path("quux.py"))
@@ -72,7 +75,8 @@ class PagesTest(DeltaGeneratorTestCase):
         # Falls back to the first one
         assert pg == p1
 
-    def test_navigation_multiple_defaults_throws(self):
+    @patch("streamlit.commands.pages.set_v2_pages")
+    def test_navigation_multiple_defaults_throws(self, _):
         p1 = Page("foo.py")
         p2 = Page(Path("baz/bar.py"), default=True)
         p3 = Page(Path("quux.py"), default=True)

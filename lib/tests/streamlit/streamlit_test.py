@@ -168,6 +168,9 @@ class StreamlitTest(unittest.TestCase):
                 "query_params",
                 "cache_data",
                 "cache_resource",
+                "navigation",
+                "Page",
+                "logo",
                 # Experimental APIs:
                 "experimental_dialog",
                 "experimental_user",
