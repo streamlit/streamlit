@@ -185,6 +185,15 @@ export interface StyledSidebarNavLinkProps {
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
+    const isLightTheme = hasLightBackgroundColor(theme)
+    const activeSvgColor = isLightTheme
+      ? theme.colors.gray85
+      : theme.colors.gray10
+    const svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
+    const activeBgColor = isLightTheme
+      ? theme.colors.darkenedBgMix15
+      : theme.colors.gray100
+
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? 600 : 400,
@@ -200,13 +209,19 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
-      marginLeft: theme.spacing.lg,
-      marginRight: theme.spacing.lg,
+      marginLeft: theme.spacing.twoXL,
+      marginRight: theme.spacing.twoXL,
       marginTop: theme.spacing.threeXS,
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
-      backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
+      // backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
+      color: isLightTheme ? theme.colors.gray80 : theme.colors.gray40,
+      backgroundColor: isActive ? activeBgColor : "transparent",
+
+      "> svg": {
+        color: isActive ? activeSvgColor : svgColor,
+      },
 
       "&:hover": {
         backgroundColor: isActive
@@ -234,13 +249,20 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 )
 
 export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
-  ({ isActive, theme }) => ({
-    color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    textOverflow: "ellipsis",
-    display: "table-cell",
-  })
+  ({ isActive, theme }) => {
+    const isLightTheme = hasLightBackgroundColor(theme)
+    const defaultColor = isLightTheme
+      ? theme.colors.gray80
+      : theme.colors.gray50
+
+    return {
+      color: isActive ? theme.colors.bodyText : defaultColor,
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+      textOverflow: "ellipsis",
+      display: "table-cell",
+    }
+  }
 )
 
 export interface StyledSidebarUserContentProps {
@@ -249,9 +271,9 @@ export interface StyledSidebarUserContentProps {
 
 export const StyledSidebarUserContent =
   styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
-    paddingTop: hasPageNavAbove
-      ? theme.spacing.lg
-      : theme.sizes.sidebarTopSpace,
+    // paddingTop: hasPageNavAbove
+    //   ? theme.spacing.lg
+    //   : theme.sizes.sidebarTopSpace,
     paddingBottom: theme.sizes.sidebarTopSpace,
     paddingLeft: theme.spacing.twoXL,
     paddingRight: theme.spacing.twoXL,
@@ -376,12 +398,12 @@ export const StyledViewButton = styled.button(({ theme }) => {
   return {
     fontSize: theme.fontSizes.sm,
     lineHeight: "1.4rem",
-    color: isLightTheme ? theme.colors.gray80 : theme.colors.gray40,
+    color: isLightTheme ? theme.colors.gray90 : theme.colors.gray10,
     backgroundColor: theme.colors.transparent,
     border: "none",
     borderRadius: "0.5rem",
     marginTop: "0.25rem",
-    marginLeft: "1rem",
+    marginLeft: "1.25rem",
     padding: "0.125rem 0.5rem 0.125rem 0.5rem",
     "&:hover, &:active, &:focus": {
       border: "none",
