@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import pandas as pd
 
 
@@ -42,13 +41,3 @@ class Series:
     def head(self, n: int) -> "Series":
         """Returns the top n element of a mock version of snowflake.snowpark.modin.pandas.series.Series"""
         return Series(self._data.head(n))
-
-
-def get_random_dataframe(num_of_rows: int = 50000, num_of_cols: int = 4) -> DataFrame:
-    """Returns a random Snowpark Pandas DataFrame with the specified number of rows and columns."""
-    return DataFrame(pd.DataFrame(np.random.randn(num_of_rows, num_of_cols)))
-
-
-def get_random_series(num_of_rows: int = 50000) -> Series:
-    """Returns a random Snowpark Pandas Series with the specified number of rows."""
-    return Series(pd.Series(np.random.randn(num_of_rows)))

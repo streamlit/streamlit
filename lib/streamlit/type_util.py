@@ -618,32 +618,12 @@ def convert_anything_to_df(
             return pd.DataFrame([])
         return pd.DataFrame(data)
 
-    if (
-        is_type(data, _SNOWPARK_DF_TYPE_STR)
-        or is_type(data, _SNOWPARK_TABLE_TYPE_STR)
-        or is_type(data, _PYSPARK_DF_TYPE_STR)
-    ):
-        if is_type(data, _PYSPARK_DF_TYPE_STR):
-            data = data.limit(max_unevaluated_rows).toPandas()
-        else:
-            data = pd.DataFrame(data.take(max_unevaluated_rows))
+    if is_snowpark_data_object(data):
+        data = data.limit(max_unevaluated_rows).to_pandas()
         if data.shape[0] == max_unevaluated_rows:
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `collect()` on the dataframe to show more."
-            )
-        return cast(pd.DataFrame, data)
-
-    if is_modin_data_object(data):
-        data = data.head(max_unevaluated_rows)._to_pandas()
-
-        if isinstance(data, pd.Series):
-            data = data.to_frame()
-
-        if data.shape[0] == max_unevaluated_rows:
-            st.caption(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
-                "Call `_to_pandas()` on the dataframe to show more."
+                "Call `to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 
@@ -657,6 +637,28 @@ def convert_anything_to_df(
             st.caption(
                 f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
                 "Call `to_pandas()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_pyspark_data_object(data):
+        data = data.limit(max_unevaluated_rows).toPandas()
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Call `toPandas()` on the dataframe to show more."
+            )
+        return cast(pd.DataFrame, data)
+
+    if is_modin_data_object(data):
+        data = data.head(max_unevaluated_rows)._to_pandas()
+
+        if isinstance(data, pd.Series):
+            data = data.to_frame()
+
+        if data.shape[0] == max_unevaluated_rows:
+            st.caption(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} rows. "
+                "Call `_to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
 

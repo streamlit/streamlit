@@ -187,12 +187,12 @@ SHARED_TEST_CASES = [
     ),
     # Snowpark DataFrame:
     (
-        SnowparkDataFrame(num_of_rows=2, num_of_cols=2),
+        SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
         TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
     ),
     # Snowpark Table:
     (
-        SnowparkTable(num_of_rows=2, num_of_cols=2),
+        SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),
         TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
     ),
     # Snowpark Pandas DataFrame:

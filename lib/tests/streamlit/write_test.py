@@ -257,10 +257,10 @@ class StreamlitWriteTest(unittest.TestCase):
             (np.array(["a", "b", "c"]),),
             (SnowpandasSeries(pd.Series(np.random.randn(2))),),
             (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkTable(num_of_rows=2, num_of_cols=2),),
-            (SnowparkDataFrame(num_of_rows=2, num_of_cols=2),),
-            ([SnowparkRow()],),
+            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            ([SnowparkRow()],),
         ]
     )
     def test_write_compatible_dataframe(

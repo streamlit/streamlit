@@ -114,8 +114,8 @@ def unhashable_type_func(_lock, ...):
         [
             (SnowpandasSeries(pd.Series(np.random.randn(2))),),
             (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkTable(num_of_rows=2, num_of_cols=2),),
-            (SnowparkDataFrame(num_of_rows=2, num_of_cols=2),),
+            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
         ]
     )
