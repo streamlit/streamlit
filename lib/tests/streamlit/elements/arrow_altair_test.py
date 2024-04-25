@@ -31,15 +31,6 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-
-def _deep_get(dictionary, *keys):
-    return reduce(
-        lambda d, key: d.get(key, None) if isinstance(d, dict) else None,
-        keys,
-        dictionary,
-    )
-
-
 ST_CHART_ARGS = [
     (st.area_chart, "area"),
     (st.bar_chart, "bar"),

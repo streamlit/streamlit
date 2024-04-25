@@ -140,6 +140,7 @@ class TypeUtilTest(unittest.TestCase):
         a variety of types to a DataFrame.
         """
         converted_df = type_util.convert_anything_to_df(input_data)
+        self.assertIsInstance(converted_df, pd.DataFrame)
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
 
