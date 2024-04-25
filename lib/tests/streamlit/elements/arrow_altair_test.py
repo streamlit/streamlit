@@ -16,6 +16,7 @@ import json
 import unittest
 from datetime import date
 from typing import Any, Callable
+from unittest import mock
 
 import altair as alt
 import pandas as pd
@@ -73,6 +74,19 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
         self.assertEqual(spec_dict["data"], {"name": proto.datasets[0].name})
         self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
         self.assertTrue("encoding" in spec_dict)
+
+    def test_altair_chart_uses_convert_anything_to_df(self):
+        """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+
+        with mock.patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df
+
+            st.altair_chart(chart)
+            convert_anything_to_df.assert_called_once()
 
     @parameterized.expand(
         [

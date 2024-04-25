@@ -174,6 +174,18 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(styler)
         mock_styler_translate.assert_called_once_with(False, False)
 
+    def test_dataframe_uses_convert_anything_to_df(self):
+        """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+
+        with patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df
+
+            st.dataframe(df)
+            convert_anything_to_df.assert_called_once()
+
     @pytest.mark.require_snowflake
     def test_snowpark_uncollected(self):
         """Tests that data can be read from Snowpark's uncollected Dataframe"""

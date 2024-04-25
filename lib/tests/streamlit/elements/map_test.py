@@ -15,6 +15,7 @@
 """Unit tests for st.map()."""
 import itertools
 import json
+from unittest import mock
 
 import numpy as np
 import pandas as pd
@@ -69,6 +70,16 @@ class StMapTest(DeltaGeneratorTestCase):
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         self.assertEqual(len(c.get("layers")[0].get("data")), 4)
+
+    def test_map_uses_convert_anything_to_df(self):
+        """Test that st.map uses convert_anything_to_df to convert input data."""
+        with mock.patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df1
+
+            st.map(df1)
+            convert_anything_to_df.assert_called_once()
 
     def test_main_kwargs(self):
         """Test that latitude, longitude, color and size propagate correctly."""
