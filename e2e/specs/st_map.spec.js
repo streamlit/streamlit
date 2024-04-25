@@ -30,20 +30,6 @@ describe("st.map", () => {
     cy.get(".element-container .zoomButton").should("have.length", 4);
   });
 
-  it("displays warning about data being capped", () => {
-    cy.get("div [data-testid='stCaptionContainer']").should("have.length", 2);
-
-    // Check warning body.
-    cy.getIndexed("div [data-testid='stCaptionContainer']", 0).should(
-      "contain",
-      "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more."
-    );
-    cy.getIndexed("div [data-testid='stCaptionContainer']", 1).should(
-      "contain",
-      "⚠️ Showing only 10k rows. Call collect() on the dataframe to show more."
-    );
-  });
-
   it("displays basic and complex maps correctly", () => {
     cy.get(".mapboxgl-canvas");
     // Adding a sufficient wait to ensure the map fully loads before taking the snapshot
@@ -51,12 +37,12 @@ describe("st.map", () => {
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(5)
+      .eq(3)
       .matchImageSnapshot("stDeckGlJsonChart");
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(6)
+      .eq(4)
       .matchImageSnapshot("stDeckGlJsonChart-complexMap");
 
     // Need to manually change theme vs. matchThemedSnapshot to be able to add wait in right sequence
@@ -65,12 +51,12 @@ describe("st.map", () => {
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(5)
+      .eq(3)
       .matchImageSnapshot("stDeckGlJsonChart-dark");
     cy.get(".element-container:has(.stDeckGlJsonChart)", {
       waitForAnimations: true,
     })
-      .eq(6)
+      .eq(4)
       .matchImageSnapshot("stDeckGlJsonChart-complexMap-dark");
   });
 });

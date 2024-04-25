@@ -71,7 +71,7 @@ def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunc
 def test_multiselect_initial_value(app: Page):
     """Should show the correct initial values."""
     text_elements = app.get_by_test_id("stText")
-    expect(text_elements).to_have_count(11)
+    expect(text_elements).to_have_count(12)
 
     expected = [
         "value 1: []",

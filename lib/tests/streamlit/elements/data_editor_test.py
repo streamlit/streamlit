@@ -431,6 +431,8 @@ class DataEditorTest(DeltaGeneratorTestCase):
             DataFormat.PYSPARK_OBJECT,
             DataFormat.PANDAS_INDEX,
             DataFormat.PANDAS_STYLER,
+            DataFormat.MODIN_OBJECT,
+            DataFormat.SNOWPANDAS_OBJECT,
             DataFormat.EMPTY,
         ]:
             assert isinstance(return_data, pd.DataFrame)

@@ -304,7 +304,7 @@ def is_unevaluated_data_object(obj: object) -> bool:
     """True if the object is one of the supported unevaluated data objects.
 
     Currently supported objects are:
-    - Snowpark DataFrame / Table / Row list
+    - Snowpark DataFrame / Table
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series
@@ -318,14 +318,12 @@ def is_unevaluated_data_object(obj: object) -> bool:
 
 
 def is_snowpark_data_object(obj: object) -> bool:
-    """True if obj is of type snowflake.snowpark.dataframe.DataFrame, snowflake.snowpark.table.Table or
-    True when obj is a list which contains snowflake.snowpark.row.Row,
-    False otherwise.
-    """
-    if is_type(obj, _SNOWPARK_TABLE_TYPE_STR):
-        return True
-    if is_type(obj, _SNOWPARK_DF_TYPE_STR):
-        return True
+    """True if obj is a Snowpark DataFrame or Table."""
+    return is_type(obj, _SNOWPARK_TABLE_TYPE_STR) or is_type(obj, _SNOWPARK_DF_TYPE_STR)
+
+
+def is_snowpark_row_list(obj: object) -> bool:
+    """True if obj is a list of snowflake.snowpark.row.Row."""
     if not isinstance(obj, list):
         return False
     if len(obj) < 1:
