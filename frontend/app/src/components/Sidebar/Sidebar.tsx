@@ -35,7 +35,6 @@ import {
 
 import {
   StyledSidebar,
-  // StyledSidebarCloseButton,
   StyledSidebarContent,
   StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
@@ -63,9 +62,6 @@ interface State {
   collapsedSidebar: boolean
   sidebarWidth: string
   lastInnerWidth: number
-
-  // // When hovering the nav
-  // hideScrollbar: boolean
 
   // When hovering sidebar header
   showSidebarCollapse: boolean
@@ -97,7 +93,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       collapsedSidebar: Sidebar.shouldCollapse(props, this.mediumBreakpointPx),
       sidebarWidth: cachedSidebarWidth || Sidebar.minWidth,
       lastInnerWidth: window ? window.innerWidth : Infinity,
-      // hideScrollbar: false,
       showSidebarCollapse: false,
     }
   }
@@ -206,10 +201,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     this.setState({ collapsedSidebar: !collapsedSidebar })
   }
 
-  // hideScrollbar = (newValue: boolean): void => {
-  //   this.setState({ hideScrollbar: newValue })
-  // }
-
   onMouseOver = (): void => {
     this.setState({ showSidebarCollapse: true })
   }
@@ -233,12 +224,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
   }
 
   public render(): ReactNode {
-    const {
-      collapsedSidebar,
-      sidebarWidth,
-      // hideScrollbar,
-      showSidebarCollapse,
-    } = this.state
+    const { collapsedSidebar, sidebarWidth, showSidebarCollapse } = this.state
     const {
       appPages,
       chevronDownshift,
@@ -303,7 +289,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
         >
           <StyledSidebarContent
             data-testid="stSidebarContent"
-            // hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
             <StyledSidebarHeaderContainer
@@ -330,14 +315,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 collapseSidebar={this.toggleCollapse}
                 currentPageScriptHash={currentPageScriptHash}
                 hasSidebarElements={hasElements}
-                // hideParentScrollbar={this.hideScrollbar}
                 onPageChange={onPageChange}
               />
             )}
-            <StyledSidebarUserContent
-              data-testid="stSidebarUserContent"
-              hasPageNavAbove={hasPageNavAbove}
-            >
+            <StyledSidebarUserContent data-testid="stSidebarUserContent">
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>
