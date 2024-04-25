@@ -194,7 +194,6 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
           },
           this.props.fragmentId
         )
-        // Don't use state here so we don't have to rerender
         this.formCleared = true
       }
     )
