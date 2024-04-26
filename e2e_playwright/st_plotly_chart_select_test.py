@@ -22,6 +22,11 @@ def test_box_select_on_scatter_chart_displays_a_df(app: Page):
     chart = app.locator(".stPlotlyChart").nth(0)
     expect(chart).to_be_visible()
     chart.hover()
+    # click on iraq point
+    app.mouse.click(0, 0)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
+
+    chart.hover()
     app.mouse.down()
     app.mouse.move(50, 50)
     app.mouse.down()
