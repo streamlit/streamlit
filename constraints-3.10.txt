@@ -80,7 +80,6 @@ plotly==5.21.0
 pluggy==1.5.0
 pre-commit==3.7.0
 protobuf==3.20.3
-py4j==0.10.9.7
 pyarrow==16.0.0
 pycparser==2.22
 pydantic==1.10.15
@@ -91,7 +90,6 @@ Pygments==2.17.2
 PyJWT==2.8.0
 pyOpenSSL==24.1.0
 pyparsing==3.1.2
-pyspark==3.5.1
 pytest==8.1.1
 pytest-base-url==2.1.0
 pytest-cov==5.0.0
