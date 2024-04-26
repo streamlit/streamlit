@@ -18,7 +18,12 @@ import pandas as pd
 class DataFrame:
     """This is dummy DataFrame class, which imitates modin.pandas.dataframe.DataFrame class
     for testing purposes. We use this to make sure that our code does a special handling
-    if it detects a modin dataframe."""
+    if it detects a modin dataframe.
+
+    This allows testing of the functionality without having the library installed,
+    but it won't capture changes in the API of the library. This requires
+    integration tests.
+    """
 
     __module__ = "modin.pandas.dataframe"
 
@@ -36,7 +41,12 @@ class DataFrame:
 class Series:
     """This is dummy Series class, which imitates modin.pandas.series.Series class
     for testing purposes. We use this to make sure that our code does a special handling
-    if it detects a modin Series."""
+    if it detects a modin Series.
+
+    This allows testing of the functionality without having the library installed,
+    but it won't capture changes in the API of the library. This requires
+    integration tests.
+    """
 
     __module__ = "modin.pandas.series"
 

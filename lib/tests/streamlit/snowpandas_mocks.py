@@ -19,7 +19,12 @@ class DataFrame:
     """This is dummy DataFrame class, which imitates
     snowflake.snowpark.modin.pandas.dataframe.DataFrame class for testing purposes.
     We use this to make sure that our code does a special handling
-    if it detects a Snowpark Pandas Dataframe."""
+    if it detects a Snowpark Pandas Dataframe.
+
+    This allows testing of the functionality without having the library installed,
+    but it won't capture changes in the API of the library. This requires
+    integration tests.
+    """
 
     __module__ = "snowflake.snowpark.modin.pandas.dataframe"
 
@@ -38,7 +43,12 @@ class Series:
     """This is dummy Series class, which imitates
     snowflake.snowpark.modin.pandas.series.Series class for testing purposes.
     We use this to make sure that our code does a special handling
-    if it detects a Snowpark Pandas Series."""
+    if it detects a Snowpark Pandas Series.
+
+    This allows testing of the functionality without having the library installed,
+    but it won't capture changes in the API of the library. This requires
+    integration tests.
+    """
 
     __module__ = "snowflake.snowpark.modin.pandas.series"
 
