@@ -289,7 +289,7 @@ export function handleSelection(
   selectionState.select.lasso = selectedLassos
 
   if (
-    selectionState.select.box &&
+    selectionState.select.box.length > 0 &&
     !element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
   ) {
     // If box selection is not activated, we don't want
@@ -298,7 +298,7 @@ export function handleSelection(
   }
 
   if (
-    selectionState.select.lasso &&
+    selectionState.select.lasso.length > 0 &&
     !element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
   ) {
     // If lasso selection is not activated, we don't want

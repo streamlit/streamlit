@@ -37,7 +37,7 @@ fig_bubble = px.scatter(
 )
 fig_bubble.update_layout(dragmode="select")
 st.header("Bubble Chart with Box Select")
-st.plotly_chart(fig_bubble, on_select="rerun", key="bubble_chart")
+st.plotly_chart(fig_bubble, on_select="rerun", key="bubble_chart", selection_mode="box")
 if len(st.session_state.bubble_chart.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.bubble_chart.select["points"]
@@ -58,7 +58,9 @@ df = px.data.gapminder().query("continent=='Oceania'")
 fig_linechart = px.line(df, x="year", y="lifeExp", color="country", markers=True)
 # Update the configuration to enable lasso selection
 fig_linechart.update_layout(dragmode="lasso")
-st.plotly_chart(fig_linechart, on_select="rerun", key="line_chart")
+st.plotly_chart(
+    fig_linechart, on_select="rerun", key="line_chart", selection_mode=["lasso"]
+)
 if len(st.session_state.line_chart.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.line_chart.select["points"]
@@ -75,11 +77,7 @@ else:
 st.header("Bar Chart with Click")
 data_canada = px.data.gapminder().query("country == 'Canada'")
 fig_bar = px.bar(data_canada, x="year", y="pop")
-st.plotly_chart(
-    fig_bar,
-    on_select="rerun",
-    key="bar_chart",
-)
+st.plotly_chart(fig_bar, on_select="rerun", key="bar_chart", selection_mode=["point"])
 if len(st.session_state.bar_chart.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.bar_chart.select["points"]
