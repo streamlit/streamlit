@@ -77,7 +77,7 @@ else:
 st.header("Bar Chart with Click")
 data_canada = px.data.gapminder().query("country == 'Canada'")
 fig_bar = px.bar(data_canada, x="year", y="pop")
-st.plotly_chart(fig_bar, on_select="rerun", key="bar_chart", selection_mode=["point"])
+st.plotly_chart(fig_bar, on_select="rerun", key="bar_chart", selection_mode=["points"])
 if len(st.session_state.bar_chart.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.bar_chart.select["points"]
