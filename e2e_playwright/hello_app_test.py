@@ -146,9 +146,10 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     app = themed_app
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
-    sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-header").click()
-    expect(sidebar_element).not_to_be_visible()
+    sidebar_header = app.get_by_test_id("stSidebarHeader")
+    sidebar_header.hover()
+    sidebar_header.get_by_test_id("baseButton-header").click()
+    expect(app.get_by_test_id("stSidebarContent")).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
@@ -180,9 +181,10 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     app = themed_app
     _load_dataframe_demo_page(app)
     # close sidebar. Must be done before print-mode, because we hide the close button when printing
-    sidebar_element = app.get_by_test_id("stSidebarContent")
-    sidebar_element.get_by_test_id("baseButton-header").click()
-    expect(sidebar_element).not_to_be_visible()
+    sidebar_header = app.get_by_test_id("stSidebarHeader")
+    sidebar_header.hover()
+    sidebar_header.get_by_test_id("baseButton-header").click()
+    expect(app.get_by_test_id("stSidebarContent")).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
     _set_landscape_dimensions(app)
