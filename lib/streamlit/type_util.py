@@ -632,6 +632,7 @@ def convert_anything_to_df(
                 "Call `_to_pandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
+
     if is_pyspark_data_object(data):
         data = data.limit(max_unevaluated_rows).toPandas()
         if data.shape[0] == max_unevaluated_rows:
@@ -640,6 +641,7 @@ def convert_anything_to_df(
                 "Call `toPandas()` on the dataframe to show more."
             )
         return cast(pd.DataFrame, data)
+
     if is_snowpark_data_object(data):
         data = data.limit(max_unevaluated_rows).to_pandas()
         if data.shape[0] == max_unevaluated_rows:
