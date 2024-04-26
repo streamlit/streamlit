@@ -19,6 +19,18 @@ import { grabTheRightIcon } from "@streamlit/lib/src/vendor/twemoji"
 import { IGuestToHostMessage } from "@streamlit/lib/src/hostComm/types"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
+function iconToUrl(icon: string): string {
+  const iconRegexp = /^:(.+)\/(.+):$/
+  const matchResult = icon.match(iconRegexp)
+  if (matchResult === null) {
+    // If the icon is invalid, return just an empty string
+    return ""
+  }
+
+  const iconUrl = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/${matchResult[2]}/default/24px.svg`
+  return iconUrl
+}
+
 /**
  * Set the provided url/emoji as the page favicon.
  *
@@ -34,12 +46,14 @@ export function handleFavicon(
   const emoji = extractEmoji(favicon)
   let imageUrl
 
-  if (emoji) {
+  if (emoji && !favicon.startsWith(":material")) {
     // Find the corresponding Twitter emoji on the CDN.
     const codepoint = grabTheRightIcon(emoji)
     const emojiUrl = `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${codepoint}.png`
 
     imageUrl = emojiUrl
+  } else if (favicon.startsWith(":material")) {
+    imageUrl = iconToUrl(favicon)
   } else {
     imageUrl = endpoints.buildMediaURL(favicon)
   }
