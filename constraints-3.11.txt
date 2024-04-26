@@ -4,7 +4,7 @@ altair==5.3.0
 asn1crypto==1.5.1
 attrs==23.2.0
 backports.tarfile==1.1.1
-black==24.4.1
+black==24.4.2
 blinker==1.7.0
 bokeh==2.4.3
 cachetools==5.3.3
@@ -47,9 +47,9 @@ keyring==25.1.0
 kiwisolver==1.4.5
 langchain==0.1.16
 langchain-community==0.0.34
-langchain-core==0.1.45
+langchain-core==0.1.46
 langchain-text-splitters==0.0.1
-langsmith==0.1.50
+langsmith==0.1.51
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -82,7 +82,7 @@ py4j==0.10.9.7
 pyarrow==16.0.0
 pycparser==2.22
 pydantic==1.10.15
-pydeck==0.9.0b0
+pydeck==0.9.0b1
 pydot==2.0.0
 pyee==11.0.1
 Pygments==2.17.2
