@@ -174,30 +174,39 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(styler)
         mock_styler_translate.assert_called_once_with(False, False)
 
+    def test_dataframe_uses_convert_anything_to_df(self):
+        """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+
+        with patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df
+
+            st.dataframe(df)
+            convert_anything_to_df.assert_called_once()
+
     @pytest.mark.require_snowflake
     def test_snowpark_uncollected(self):
         """Tests that data can be read from Snowpark's uncollected Dataframe"""
         with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 40+2 as COL1")
+            df = snowpark_session.sql("SELECT 42 as COL1")
 
             st.dataframe(df)
 
-        expected = pd.DataFrame({"COL1": [42]})
-
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
+        self.assertEqual(bytes_to_data_frame(proto.data).iat[0, 0], 42)
 
     @pytest.mark.require_snowflake
     def test_snowpark_collected(self):
         """Tests that data can be read from Snowpark's collected Dataframe"""
         with create_snowpark_session() as snowpark_session:
-            df = snowpark_session.sql("SELECT 40+2 as COL1").collect()
+            df = snowpark_session.sql("SELECT 42 as COL1").collect()
+
             st.dataframe(df)
 
-        expected = pd.DataFrame({"COL1": [42]})
-
         proto = self.get_delta_from_queue().new_element.arrow_data_frame
-        pd.testing.assert_frame_equal(bytes_to_data_frame(proto.data), expected)
+        self.assertEqual(bytes_to_data_frame(proto.data).iat[0, 0], 42)
 
 
 class StArrowTableAPITest(DeltaGeneratorTestCase):

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+from unittest.mock import patch
 
 import pandas as pd
 import pyarrow as pa
@@ -72,6 +73,17 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
         self.assertDictEqual(
             json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
+
+    def test_vega_lite_chart_uses_convert_anything_to_df(self):
+        """Test that st.vega_lite_chart uses convert_anything_to_df to convert input data."""
+
+        with patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df1
+
+            st.vega_lite_chart({"mark": "rect", "data": df1})
+            convert_anything_to_df.assert_called_once()
 
     def test_data_values_in_spec(self):
         """Test passing data={values: df} inside the spec."""

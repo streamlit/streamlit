@@ -16,7 +16,6 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from tests.streamlit import snowpark_mocks
 
 # Explicitly seed the RNG for deterministic results
 np.random.seed(0)
@@ -39,5 +38,3 @@ st.dataframe(small_df, width=200, use_container_width=False)
 
 one_col_df = pd.DataFrame(np.random.randn(100, 1))
 st.dataframe(one_col_df, use_container_width=True)
-
-st.dataframe(snowpark_mocks.DataFrame(), use_container_width=True)

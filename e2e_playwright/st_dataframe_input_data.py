@@ -18,7 +18,7 @@ import random
 import numpy as np
 
 import streamlit as st
-from tests.streamlit.data_mocks import SHARED_TEST_CASES
+from shared.data_mocks import SHARED_TEST_CASES
 
 np.random.seed(0)
 random.seed(0)

@@ -427,11 +427,13 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # Some data formats are converted to DataFrames instead of
         # the original data type/structure.
         if metadata.expected_data_format in [
-            DataFormat.SNOWPARK_OBJECT,
-            DataFormat.PYSPARK_OBJECT,
+            DataFormat.EMPTY,
+            DataFormat.MODIN_OBJECT,
             DataFormat.PANDAS_INDEX,
             DataFormat.PANDAS_STYLER,
-            DataFormat.EMPTY,
+            DataFormat.PYSPARK_OBJECT,
+            DataFormat.SNOWPANDAS_OBJECT,
+            DataFormat.SNOWPARK_OBJECT,
         ]:
             assert isinstance(return_data, pd.DataFrame)
             self.assertEqual(return_data.shape[0], metadata.expected_rows)

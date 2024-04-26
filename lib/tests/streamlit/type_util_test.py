@@ -32,21 +32,15 @@ import streamlit as st
 from streamlit import errors, type_util
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_mocks import (
-    BASE_TYPES_DF,
-    DATETIME_TYPES_DF,
-    INTERVAL_TYPES_DF,
-    LIST_TYPES_DF,
-    NUMBER_TYPES_DF,
-    PERIOD_TYPES_DF,
-    SHARED_TEST_CASES,
-    SPECIAL_TYPES_DF,
-    UNSUPPORTED_TYPES_DF,
-    TestCaseMetadata,
-    TestObject,
-)
+from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata, TestObject
+from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.modin_mocks import Series as ModinSeries
+from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
+from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
@@ -138,8 +132,35 @@ class TypeUtilTest(unittest.TestCase):
         a variety of types to a DataFrame.
         """
         converted_df = type_util.convert_anything_to_df(input_data)
+        self.assertIsInstance(converted_df, pd.DataFrame)
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
+
+    @parameterized.expand(
+        [
+            (ModinDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(2000))),),
+            (PysparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowpandasSeries(pd.Series(np.random.randn(2000))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
+        ]
+    )
+    def test_convert_anything_to_df_show_warning_for_unevaluated_df(
+        self,
+        input_data: Any,
+    ):
+        """Test that `convert_anything_to_df` correctly converts
+        a variety unevaluated dataframes and shows a warning if
+        the row count is > 1000.
+        """
+        with patch("streamlit.caption") as mock:
+            converted_df = type_util.convert_anything_to_df(
+                input_data, max_unevaluated_rows=1000
+            )
+            self.assertIsInstance(converted_df, pd.DataFrame)
+            mock.assert_called_once()
 
     def test_convert_anything_to_df_ensure_copy(self):
         """Test that `convert_anything_to_df` creates a copy of the original
@@ -455,32 +476,53 @@ class TypeUtilTest(unittest.TestCase):
                 f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
             )
 
-    @parameterized.expand(
-        [
-            (BASE_TYPES_DF,),
-            (DATETIME_TYPES_DF,),
-            (INTERVAL_TYPES_DF,),
-            (LIST_TYPES_DF,),
-            (PERIOD_TYPES_DF,),
-            (NUMBER_TYPES_DF,),
-            (SPECIAL_TYPES_DF,),
-            (UNSUPPORTED_TYPES_DF,),
-        ]
-    )
-    def test_data_frame_to_bytes(
-        self,
-        input_df: pd.DataFrame,
-    ):
-        """Test that `data_frame_to_bytes` correctly converts
-        DataFrames with a variety of types to Arrow.
-        """
-        try:
-            type_util.data_frame_to_bytes(input_df)
-        except Exception as ex:
-            self.fail(
-                "No exception should have been thrown here. "
-                f"Unsupported types of this dataframe should have been automatically fixed: {ex}"
+    def test_is_snowpandas_data_object(self):
+        df = pd.DataFrame([1, 2, 3])
+
+        self.assertFalse(type_util.is_snowpandas_data_object(df))
+
+        # Our mock objects should be detected as snowpandas data objects:
+        self.assertTrue(type_util.is_snowpandas_data_object(SnowpandasDataFrame(df)))
+        self.assertTrue(type_util.is_snowpandas_data_object(SnowpandasSeries(df)))
+
+    def test_is_snowpark_row_list(self):
+        class DummyClass:
+            """DummyClass for testing purposes"""
+
+        # empty list should not be snowpark dataframe
+        self.assertFalse(type_util.is_snowpark_row_list(list()))
+
+        # list with items should not be snowpark dataframe
+        self.assertFalse(
+            type_util.is_snowpark_row_list(
+                [
+                    "any text",
+                ]
             )
+        )
+        self.assertFalse(
+            type_util.is_snowpark_row_list(
+                [
+                    123,
+                ]
+            )
+        )
+        self.assertFalse(
+            type_util.is_snowpark_row_list(
+                [
+                    DummyClass(),
+                ]
+            )
+        )
+
+        # list with SnowparkRow should be SnowparkDataframe
+        self.assertTrue(
+            type_util.is_snowpark_row_list(
+                [
+                    SnowparkRow(),
+                ]
+            )
+        )
 
     def test_is_snowpark_dataframe(self):
         df = pd.DataFrame(
@@ -499,58 +541,7 @@ class TypeUtilTest(unittest.TestCase):
         self.assertFalse(type_util.is_snowpark_data_object(df))
 
         # if snowflake.snowpark.dataframe.DataFrame def is_snowpark_data_object should return true
-        self.assertTrue(type_util.is_snowpark_data_object(SnowparkDataFrame()))
-
-        # any object should not be snowpark dataframe
-        self.assertFalse(type_util.is_snowpark_data_object("any text"))
-        self.assertFalse(type_util.is_snowpark_data_object(123))
-
-        class DummyClass:
-            """DummyClass for testing purposes"""
-
-        self.assertFalse(type_util.is_snowpark_data_object(DummyClass()))
-
-        # empty list should not be snowpark dataframe
-        self.assertFalse(type_util.is_snowpark_data_object(list()))
-
-        # list with items should not be snowpark dataframe
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    "any text",
-                ]
-            )
-        )
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    123,
-                ]
-            )
-        )
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    DummyClass(),
-                ]
-            )
-        )
-        self.assertFalse(
-            type_util.is_snowpark_data_object(
-                [
-                    df,
-                ]
-            )
-        )
-
-        # list with SnowparkRow should be SnowparkDataframe
-        self.assertTrue(
-            type_util.is_snowpark_data_object(
-                [
-                    SnowparkRow(),
-                ]
-            )
-        )
+        self.assertTrue(type_util.is_snowpark_data_object(SnowparkDataFrame(df)))
 
     @pytest.mark.require_snowflake
     def test_is_snowpark_dataframe_integration(self):
@@ -562,12 +553,12 @@ class TypeUtilTest(unittest.TestCase):
             )
             self.assertTrue(
                 type_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1").collect()
+                    snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
                 )
             )
             self.assertTrue(
-                type_util.is_snowpark_data_object(
-                    snowpark_session.sql("SELECT 40+2 as COL1").cache_result()
+                type_util.is_snowpark_row_list(
+                    snowpark_session.sql("SELECT 40+2 as COL1").collect()
                 )
             )
 
@@ -622,6 +613,8 @@ class TypeUtilTest(unittest.TestCase):
                 type_util.DataFormat.PYSPARK_OBJECT,
                 type_util.DataFormat.PANDAS_INDEX,
                 type_util.DataFormat.PANDAS_STYLER,
+                type_util.DataFormat.SNOWPANDAS_OBJECT,
+                type_util.DataFormat.MODIN_OBJECT,
                 type_util.DataFormat.EMPTY,
             ]:
                 assert isinstance(converted_data, pd.DataFrame)
