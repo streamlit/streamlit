@@ -400,7 +400,9 @@ class WriteMixin:
                         item()
                     else:
                         self.write(item, unsafe_allow_html=unsafe_allow_html)
-            elif type_util.is_snowpark_or_pyspark_data_object(arg):
+            elif type_util.is_unevaluated_data_object(
+                arg
+            ) or type_util.is_snowpark_row_list(arg):
                 flush_buffer()
                 self.dg.dataframe(arg)
             elif type_util.is_dataframe_like(arg):
