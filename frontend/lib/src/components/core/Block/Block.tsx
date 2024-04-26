@@ -161,10 +161,24 @@ const BlockNodeRenderer = (props: BlockPropsWithWidth): ReactElement => {
   }
 
   if (node.deltaBlock.column) {
+    let verticalAlign: "top" | "bottom" | "center" = "top"
+    if (
+      node.deltaBlock.column.verticalAlign ===
+      BlockProto.Column.VerticalAlign.CENTER
+    ) {
+      verticalAlign = "center"
+    } else if (
+      node.deltaBlock.column.verticalAlign ===
+      BlockProto.Column.VerticalAlign.BOTTOM
+    ) {
+      verticalAlign = "bottom"
+    }
+
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
         gap={node.deltaBlock.column.gap ?? ""}
+        verticalAlign={verticalAlign}
         data-testid="column"
       >
         {child}

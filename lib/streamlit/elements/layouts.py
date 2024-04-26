@@ -130,6 +130,7 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
+
         if height:
             # Activate scrolling container behavior:
             block_proto.allow_empty = True
@@ -144,7 +145,11 @@ class LayoutsMixin:
 
     @gather_metrics("columns")
     def columns(
-        self, spec: SpecType, *, gap: str | None = "small"
+        self,
+        spec: SpecType,
+        *,
+        gap: str | None = "small",
+        vertical_align: Literal["top", "center", "bottom"] = "top",
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -260,6 +265,15 @@ class LayoutsMixin:
             col_proto = BlockProto()
             col_proto.column.weight = normalized_weight
             col_proto.column.gap = gap_size
+
+            if vertical_align == "bottom":
+                col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.BOTTOM
+            elif vertical_align == "center":
+                col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.CENTER
+            else:
+                # The default alignment is "top":
+                col_proto.column.vertical_align = BlockProto.Column.VerticalAlign.TOP
+
             col_proto.allow_empty = True
             return col_proto
 

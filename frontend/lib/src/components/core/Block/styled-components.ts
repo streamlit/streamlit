@@ -113,10 +113,11 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 interface StyledColumnProps {
   weight: number
   gap: string
+  verticalAlign?: "top" | "center" | "bottom"
 }
 
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ weight, gap, theme }) => {
+  ({ weight, gap, theme, verticalAlign }) => {
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
     const width = `calc(${percentage}% - ${gapWidth})`
@@ -130,6 +131,13 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       [`@media (max-width: ${theme.breakpoints.columns})`]: {
         minWidth: `calc(100% - ${theme.spacing.twoXL})`,
       },
+      ...(verticalAlign === "bottom" && {
+        marginTop: "auto",
+      }),
+      ...(verticalAlign === "center" && {
+        marginTop: "auto",
+        marginBottom: "auto",
+      }),
     }
   }
 )
