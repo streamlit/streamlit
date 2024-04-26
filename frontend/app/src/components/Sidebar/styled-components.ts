@@ -76,17 +76,14 @@ export interface StyledSidebarNavItemsProps {
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ isExpanded, hasSidebarElements, theme }) => {
+  ({ isExpanded, hasSidebarElements }) => {
     return {
       maxHeight: isExpanded ? "none" : "26vh",
       listStyle: "none",
       overflow:
         isExpanded && hasSidebarElements ? ["auto", "overlay"] : "hidden",
       margin: 0,
-
-      "@media print": {
-        paddingTop: theme.spacing.threeXL,
-      },
+      paddingBottom: "0.125rem",
     }
   }
 )
@@ -280,7 +277,7 @@ export const StyledCollapseSidebarButton =
       const isLightTheme = hasLightBackgroundColor(theme)
 
       return {
-        display: showSidebarCollapse ? "auto" : "none",
+        display: showSidebarCollapse ? "inline" : "none",
         transition: "left 300ms",
         transitionDelay: "left 300ms",
         color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
@@ -294,7 +291,7 @@ export const StyledCollapseSidebarButton =
         },
 
         [`@media (max-width: ${theme.breakpoints.sm})`]: {
-          display: "auto",
+          display: "inline",
         },
       }
     }
