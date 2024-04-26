@@ -149,7 +149,7 @@ describe("Sidebar Component", () => {
 
     // Displays the collapse <
     expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
-      "display: auto"
+      "display: inline"
     )
   })
 
