@@ -13,8 +13,7 @@
 # limitations under the License.
 
 import random
-from datetime import date, datetime, time, timedelta, timezone
-from decimal import Decimal
+from datetime import date
 from typing import NamedTuple
 
 import numpy as np
@@ -22,6 +21,9 @@ import pandas as pd
 import pyarrow as pa
 
 from streamlit.type_util import DataFormat
+from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
+from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
@@ -184,263 +186,32 @@ SHARED_TEST_CASES = [
     ),
     # Snowpark DataFrame:
     (
-        SnowparkDataFrame(num_of_rows=2, num_of_cols=2),
+        SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
         TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
     ),
     # Snowpark Table:
     (
-        SnowparkTable(num_of_rows=2, num_of_cols=2),
+        SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),
         TestCaseMetadata(2, 2, DataFormat.SNOWPARK_OBJECT),
     ),
+    # Snowpark Pandas DataFrame:
+    (
+        SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        TestCaseMetadata(2, 2, DataFormat.SNOWPANDAS_OBJECT),
+    ),
+    # Snowpark Pandas Series:
+    (
+        SnowpandasSeries(pd.Series(np.random.randn(2))),
+        TestCaseMetadata(2, 1, DataFormat.SNOWPANDAS_OBJECT),
+    ),
+    # Pyspark Dataframe:
+    (
+        PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),
+        TestCaseMetadata(2, 2, DataFormat.PYSPARK_OBJECT),
+    ),
 ]
-
-
-def random_date() -> datetime:
-    start_date = datetime.fromisoformat("2018-01-31T09:24:31.123+00:00")
-    end_date = datetime.fromisoformat("2022-01-31T09:24:31.345+00:00")
-
-    return (
-        start_date
-        + timedelta(
-            # Get a random amount of seconds between `start` and `end`
-            seconds=random.randint(0, int((end_date - start_date).total_seconds())),
-        )
-    ).replace(tzinfo=None)
 
 
 class TestObject(object):
     def __str__(self):
         return "TestObject"
-
-
-BASE_TYPES_DF = pd.DataFrame(
-    {
-        "string": [
-            "a",
-            "this is a very long sentence that does not contain any reasonable content.",
-            "c",
-            "d",
-            "",
-            None,
-        ],
-        "bool": [True, False, True, False, True, None],
-        "int64": [-5, 0, 1, 2, 3, None],
-        "float64": [-0.1, 0, 0.1, 0.001, 1.1, None],
-        "datetime": [
-            datetime(2020, 1, 1, 0, 0, 0),
-            datetime(2020, 1, 1, 0, 0, 1),
-            datetime(2020, 1, 1, 0, 0, 2),
-            datetime(2020, 1, 1, 0, 0, 3),
-            datetime(2020, 1, 1, 0, 0, 4),
-            None,
-        ],
-        "date": [
-            date(2020, 1, 1),
-            date(2020, 1, 2),
-            date(2020, 1, 3),
-            date(2020, 1, 4),
-            date(2020, 1, 5),
-            None,
-        ],
-        "time": [
-            time(0, 0, 0),
-            time(0, 0, 1),
-            time(0, 0, 2),
-            time(0, 0, 3),
-            time(0, 0, 4),
-            None,
-        ],
-        "empty": [None, np.nan, pd.NA, pd.NaT, None, None],
-    }
-)
-
-NUMBER_TYPES_DF = pd.DataFrame(
-    {
-        "int64": pd.array([-5, 1, 2, 3, 4, None], dtype="Int64"),
-        "int32": pd.array([-5, 1, 2, 3, 4, None], dtype="Int32"),
-        "int16": pd.array([-5, 1, 2, 3, 4, None], dtype="Int16"),
-        "int8": pd.array([-5, 1, 2, 3, 4, None], dtype="Int8"),
-        "uint64": pd.array([1, 2, 3, 4, 5, None], dtype="UInt64"),
-        "uint32": pd.array([1, 2, 3, 4, 5, None], dtype="UInt32"),
-        "uint16": pd.array([1, 2, 3, 4, 5, None], dtype="UInt16"),
-        "uint8": pd.array([1, 2, 3, 4, 5, None], dtype="UInt8"),
-        "float64": pd.array([-0.1, 0, 0.1, 0.001, 1.1, None], dtype="float64"),
-        "float32": pd.array([-0.1, 0, 0.1, 0.001, 1.1, None], dtype="float32"),
-        "float16": pd.array([-0.1, 0, 0.1, 0.001, 1.1, None], dtype="float16"),
-        "mixed": pd.array([1, -2, 3.1, 4, 5.0, None]),
-    }
-)
-
-DATETIME_TYPES_DF = pd.DataFrame(
-    {
-        "datetime": [random_date() for _ in range(8)] + [None],
-        "time": [random_date().time() for _ in range(8)] + [None],
-        "date": [random_date().date() for _ in range(8)] + [None],
-        "mixed_datetime": [
-            random.choice(
-                [
-                    pd.Timestamp(random_date()),
-                    np.datetime64("2022-03-11T17:13:00")
-                    - np.random.randint(400000, 1500000),
-                    pd.to_datetime(10, unit="s"),
-                ]
-            )
-            for _ in range(8)
-        ]
-        + [None],
-        "pd_datetime_TZ": [
-            (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(8)
-        ]
-        + [None],
-        "datetime_UTC_TZ": [
-            random_date().replace(tzinfo=timezone.utc) for _ in range(8)
-        ]
-        + [None],
-        # TODO: Mixed timezones within a column will force the column to be of type object
-        # It also seems to not work correctly.
-        "mixed_timezones": [
-            random.choice(
-                [
-                    random_date().replace(tzinfo=timezone.utc),
-                    pd.to_datetime("2022-03-11 17:41:00-05:00"),
-                    random_date(),
-                ]
-            )
-            for _ in range(8)
-        ]
-        + [None],
-    }
-)
-
-LIST_TYPES_DF = pd.DataFrame(
-    {
-        "string_list": pd.Series(
-            [["a", "b", "c"], ["foo", "bar"], list(["lorem"]), [], None]
-        ),
-        "number_set": pd.Series([{1, 2, 3}, {2, 3}, {4, 4}, set(), None]),
-        "boolean_tuple": [
-            (True, False),
-            (False, True, True),
-            (True, True),
-            tuple(),
-            None,
-        ],
-        "dict_list": [
-            [{"foo": random.randint(0, 1000), "bar": "blub"} for _ in range(2)]
-            for _ in range(4)
-        ]
-        + [None],
-        "datetime_list": [[random_date() for _ in range(2)] for _ in range(4)] + [None],
-    }
-)
-
-INTERVAL_TYPES_DF = pd.DataFrame(
-    {
-        "int64_both": [
-            pd.Interval(left=i, right=i + 1, closed="both") for i in range(5)
-        ]
-        + [None],
-        "int64_right": [
-            pd.Interval(left=i, right=i + 1, closed="right") for i in range(5)
-        ]
-        + [None],
-        "int64_left": [
-            pd.Interval(left=i, right=i + 1, closed="left") for i in range(5)
-        ]
-        + [None],
-        "int64_neither": [
-            pd.Interval(left=i, right=i + 1, closed="neither") for i in range(5)
-        ]
-        + [None],
-        "timestamp_right_default": [
-            pd.Interval(
-                left=pd.Timestamp(2022, 3, 14, i),
-                right=pd.Timestamp(2022, 3, 14, i + 1),
-            )
-            for i in range(5)
-        ]
-        + [None],
-        "float64": [
-            pd.Interval(np.random.random(), np.random.random() + 1) for _ in range(5)
-        ]
-        + [None],
-    }
-)
-
-
-_offset_types = ["ms", "s", "min", "h", "D", "M", "Y", "W", "W-FRI", "Q"]
-
-PERIOD_TYPES_DF = pd.DataFrame(
-    {
-        offset_type: (
-            [pd.Period(date, freq=offset_type) for date in ["1970-01-01", "2012-02-14"]]
-            + [None]
-        )
-        for offset_type in _offset_types
-    }
-)
-
-
-SPECIAL_TYPES_DF = pd.DataFrame(
-    {
-        "categorical": pd.Series(["a", "b", "c", "a", None]).astype("category"),
-        "decimal": pd.Series(
-            [
-                Decimal("1.1"),
-                Decimal("-0.03864734299516908213"),
-                Decimal("1000"),
-                Decimal("2.212"),
-                None,
-            ]
-        ),
-        "bytes": pd.Series(
-            [
-                b"a",
-                b"b",
-                b"foo",
-                b"bar",
-                None,
-            ]
-        ),
-        "emojis 🌈": pd.Series(["Black ⚫", "Red 🔴", "White ⚪", "Red 🔴", None]),
-        "timedelta": pd.Series(
-            [
-                pd.Timedelta("1 days"),
-                np.timedelta64(100, "D"),
-                pd.Timedelta("2 hours"),
-                timedelta(seconds=5),
-                None,
-            ]
-        ),
-    }
-)
-
-UNSUPPORTED_TYPES_DF = pd.DataFrame(
-    {
-        "period[us]": pd.Series(
-            [
-                pd.Period("1970-01-01", freq="us"),
-                pd.Period("2012-02-14", freq="us"),
-                pd.Period("2012-02-20T00:12:34.56780", freq="us"),
-                None,
-            ]
-        ),
-        "complex": pd.Series([1 + 2j, 3 + 4j, 5 + 6 * 1j, None]),
-        "mixed_integer": pd.Series([1, 2, "3", None]),
-        "mixed_types": pd.Series([2.1, "3", True, None]),
-        "frozenset": pd.Series(
-            [frozenset([1, 2]), frozenset([3, 4]), frozenset([5, 6]), None]
-        ),
-        "dicts": pd.Series([{"a": 1}, {"b": 2}, {"c": 2}, None]),
-        "objects": pd.Series([TestObject(), TestObject(), TestObject(), None]),
-        # TODO(lukasmasuch): Not supported, but currently leads to error
-        # "mixed_types_list": pd.Series(
-        #     [random.choice([1, 1.0, None, "foo"]) for _ in range(10)]
-        #     for _ in range(n_rows)
-        # ),
-        # TODO(lukasmasuch): Sparse array is supported, but currently leads to error
-        # "sparse-array": pd.Series(
-        #     pd.arrays.SparseArray([random.choice([0, 1, 2]) for _ in range(n_rows)])
-        # ),
-    }
-)
