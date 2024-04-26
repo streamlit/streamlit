@@ -138,13 +138,13 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (SnowpandasSeries(pd.Series(np.random.randn(15000))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(15000))),),
-            (ModinDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(15000, 2))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
-            (PysparkDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
+            (SnowpandasSeries(pd.Series(np.random.randn(2000))),),
+            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(2000))),),
+            (ModinDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (PysparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
         ]
     )
     def test_convert_anything_to_df_show_warning_for_unevaluated_df(
@@ -153,10 +153,12 @@ class TypeUtilTest(unittest.TestCase):
     ):
         """Test that `convert_anything_to_df` correctly converts
         a variety unevaluated dataframes and shows a warning if
-        the raow count is > 10000.
+        the row count is > 1000.
         """
         with patch("streamlit.caption") as mock:
-            converted_df = type_util.convert_anything_to_df(input_data)
+            converted_df = type_util.convert_anything_to_df(
+                input_data, max_unevaluated_rows=1000
+            )
             self.assertIsInstance(converted_df, pd.DataFrame)
             mock.assert_called_once()
 
