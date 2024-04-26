@@ -140,12 +140,18 @@ const SidebarNav = ({
       {hasSidebarElements && (
         <>
           {isOverflowing && !expanded && (
-            <StyledViewButton onClick={toggleExpanded}>
+            <StyledViewButton
+              onClick={toggleExpanded}
+              data-testid="stSidebarNavViewMore"
+            >
               View more
             </StyledViewButton>
           )}
           {expanded && (
-            <StyledViewButton onClick={toggleExpanded}>
+            <StyledViewButton
+              onClick={toggleExpanded}
+              data-testid="stSidebarNavViewLess"
+            >
               View less
             </StyledViewButton>
           )}

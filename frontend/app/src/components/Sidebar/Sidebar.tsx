@@ -294,11 +294,12 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             <StyledSidebarHeaderContainer
               onMouseOver={this.onMouseOver}
               onMouseOut={this.onMouseOut}
-              data-testid="stSidebarExpandControl"
+              data-testid="stSidebarHeader"
             >
               <StyledNoLogoSpacer data-testid="stLogoSpacer" />
               <StyledCollapseSidebarButton
                 showSidebarCollapse={showSidebarCollapse}
+                data-testid="stSidebarCollapseButton"
               >
                 <BaseButton
                   kind={BaseButtonKind.HEADER_BUTTON}
@@ -318,7 +319,10 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 onPageChange={onPageChange}
               />
             )}
-            <StyledSidebarUserContent data-testid="stSidebarUserContent">
+            <StyledSidebarUserContent
+              hasPageNavAbove={hasPageNavAbove}
+              data-testid="stSidebarUserContent"
+            >
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>

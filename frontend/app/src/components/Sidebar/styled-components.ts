@@ -197,13 +197,19 @@ export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
   }
 )
 
-export const StyledSidebarUserContent = styled.div(({ theme }) => ({
-  paddingBottom: theme.sizes.sidebarTopSpace,
-  paddingLeft: theme.spacing.twoXL,
-  paddingRight: theme.spacing.twoXL,
+export interface StyledSidebarUserContentProps {
+  hasPageNavAbove: boolean
+}
 
-  ...getWrappedHeadersStyle(theme),
-}))
+export const StyledSidebarUserContent =
+  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
+    paddingTop: hasPageNavAbove ? theme.spacing.twoXL : 0,
+    paddingBottom: theme.sizes.sidebarTopSpace,
+    paddingLeft: theme.spacing.twoXL,
+    paddingRight: theme.spacing.twoXL,
+
+    ...getWrappedHeadersStyle(theme),
+  }))
 
 export const StyledSidebarContent = styled.div(({}) => ({
   position: "relative",
@@ -274,7 +280,7 @@ export const StyledCollapseSidebarButton =
       const isLightTheme = hasLightBackgroundColor(theme)
 
       return {
-        display: "auto",
+        display: showSidebarCollapse ? "auto" : "none",
         transition: "left 300ms",
         transitionDelay: "left 300ms",
         color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
@@ -287,8 +293,8 @@ export const StyledCollapseSidebarButton =
           },
         },
 
-        [`@media (min-width: ${theme.breakpoints.sm})`]: {
-          display: showSidebarCollapse ? "auto" : "none",
+        [`@media (max-width: ${theme.breakpoints.sm})`]: {
+          display: "auto",
         },
       }
     }
