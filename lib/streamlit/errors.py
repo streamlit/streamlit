@@ -28,6 +28,12 @@ class Error(Exception):
     pass
 
 
+class CustomComponentError(Error):
+    """Exceptions thrown in the custom components code path."""
+
+    pass
+
+
 class DeprecationError(Error):
     pass
 

@@ -106,3 +106,18 @@ class TestQueryParamsProxy(unittest.TestCase):
     def test__delattr__raises_Attribute_exception(self):
         with pytest.raises(AttributeError):
             del self.query_params_proxy.nonexistent
+
+    def test_to_dict(self):
+        self.query_params_proxy["test_multi"] = ["value1", "value2"]
+        assert self.query_params_proxy.to_dict() == {
+            "test": "value",
+            "test_multi": "value2",
+        }
+
+    def test_from_dict(self):
+        new_dict = {"test_new": "value_new", "test_multi": ["value1", "value2"]}
+        self.query_params_proxy.from_dict(new_dict)
+        assert self.query_params_proxy.test_new == "value_new"
+        assert self.query_params_proxy["test_multi"] == "value2"
+        assert self.query_params_proxy.get_all("test_multi") == ["value1", "value2"]
+        assert len(self.query_params_proxy) == 2

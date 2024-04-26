@@ -19,7 +19,7 @@ import styled from "@emotion/styled"
 export const StyledViewButton = styled.button(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   lineHeight: "1.4rem",
-  color: theme.colors.gray60,
+  color: theme.colors.fadedText60,
   backgroundColor: theme.colors.transparent,
   border: "none",
   boxShadow: "none",
@@ -38,8 +38,31 @@ interface StyledToastMessageProps {
   expanded: boolean
 }
 
-export const StyledToastMessage = styled.div<StyledToastMessageProps>(
-  ({ theme, expanded }) => ({
-    maxHeight: expanded ? "none" : theme.breakpoints.toast,
+export const StyledToastWrapper = styled.div<StyledToastMessageProps>(
+  ({ theme }) => ({
+    display: "flex",
+    flexDirection: "row",
+    gap: theme.spacing.lg,
+
+    "> span": {
+      marginTop: "0.25rem",
+    },
   })
 )
+
+export const StyledIcon = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.xl,
+}))
+
+export const StyledMessageWrapper = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.sm,
+  alignItems: "start",
+  // Align text to the center of the icon when only 1 line.
+  justifyContent: "center",
+  overflow: "hidden",
+  minHeight: "100%",
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.base,
+}))

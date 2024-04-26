@@ -17,28 +17,45 @@ from unittest import mock
 import tornado.testing
 import tornado.web
 
-from streamlit.components.v1.components import ComponentRegistry, declare_component
+from streamlit.components.lib.local_component_registry import LocalComponentRegistry
+from streamlit.components.v1.component_registry import declare_component
+from streamlit.runtime import Runtime, RuntimeConfig
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.web.server import ComponentRequestHandler
 
 URL = "http://not.a.real.url:3001"
 PATH = "/not/a/real/path"
 
+MOCK_IS_DIR_PATH = "streamlit.components.lib.local_component_registry.os.path.isdir"
+
 
 class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     """Test /component endpoint."""
 
-    def tearDown(self) -> None:
-        ComponentRegistry._instance = None
-        super().tearDown()
+    def setUp(self) -> None:
+        config = RuntimeConfig(
+            script_path="mock/script/path.py",
+            command_line=None,
+            component_registry=LocalComponentRegistry(),
+            media_file_storage=MemoryMediaFileStorage("/mock/media"),
+            uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
+        )
+        self.runtime = Runtime(config)
+        super().setUp()
 
-    def get_app(self):
-        ComponentRegistry._instance = None
+    def tearDown(self) -> None:
+        super().tearDown()
+        Runtime._instance = None
+
+    # get_app is called in the super constructor
+    def get_app(self) -> tornado.web.Application:
         return tornado.web.Application(
             [
                 (
                     "/component/(.*)",
                     ComponentRequestHandler,
-                    dict(registry=ComponentRegistry.instance()),
+                    dict(registry=self.runtime.component_registry),
                 )
             ]
         )
@@ -49,7 +66,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_success_request(self):
         """Test request success when valid parameters are provided."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch(MOCK_IS_DIR_PATH):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
@@ -68,7 +85,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Tests to ensure a path based on the root directory (and therefore
         outside of the component root) is disallowed."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch(MOCK_IS_DIR_PATH):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
@@ -83,12 +100,12 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Tests to ensure a path based on the same prefix but a different
         directory test folder is forbidden."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch(MOCK_IS_DIR_PATH):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
         response = self._request_component(
-            f"tests.streamlit.web.server.component_request_handler_test.test//{PATH}_really"
+            f"tests.streamlit.web.server.component_request_handler_test.test/{PATH}_really"
         )
 
         self.assertEqual(403, response.code)
@@ -98,7 +115,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Tests to ensure a path relative to the component root directory
         (and specifically outside of the component root) is disallowed."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch(MOCK_IS_DIR_PATH):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
@@ -113,7 +130,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
         """Tests to ensure a path symlinked to a file outside the component
         root directory is disallowed."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch(MOCK_IS_DIR_PATH):
             # We don't need the return value in this case.
             declare_component("test", path=PATH)
 
@@ -138,7 +155,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
     def test_invalid_content_request(self):
         """Test request failure when invalid content (file) is provided."""
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch(MOCK_IS_DIR_PATH):
             declare_component("test", path=PATH)
 
         with mock.patch("streamlit.web.server.component_request_handler.open") as m:
@@ -175,7 +192,7 @@ class ComponentRequestHandlerTest(tornado.testing.AsyncHTTPTestCase):
 
                 return TextIOWrapper(str(payload, encoding=encoding))
 
-        with mock.patch("streamlit.components.v1.components.os.path.isdir"):
+        with mock.patch(MOCK_IS_DIR_PATH):
             declare_component("test", path=PATH)
 
         payload = b"\x00\x01\x00\x00\x00\x0D\x00\x80"  # binary non utf-8 payload

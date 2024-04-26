@@ -96,7 +96,13 @@ export function useThemeManager(): [ThemeManager, object[]] {
   useEffect(() => {
     const mediaMatch = window.matchMedia("(prefers-color-scheme: dark)")
     mediaMatch.addEventListener("change", updateAutoTheme)
-    return () => mediaMatch.removeEventListener("change", updateAutoTheme)
+    // Browsers do not revert back to a dark theme after printing, so we
+    // should check and update the theme after printing if necessary.
+    window.addEventListener("afterprint", updateAutoTheme)
+    return () => {
+      window.removeEventListener("afterprint", updateAutoTheme)
+      mediaMatch.removeEventListener("change", updateAutoTheme)
+    }
   }, [theme, availableThemes, updateAutoTheme])
 
   return [

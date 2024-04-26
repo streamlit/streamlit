@@ -27,6 +27,7 @@ import useTimeout from "@streamlit/lib/src/hooks/useTimeout"
 import {
   ComponentInstance as ComponentInstanceProto,
   ISpecialArg,
+  Skeleton as SkeletonProto,
 } from "@streamlit/lib/src/proto"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import {
@@ -281,7 +282,8 @@ function ComponentInstance(props: Props): ReactElement {
     // Update the reference fields for the callback that we
     // passed to the componentRegistry
     onBackMsgRef.current = {
-      isReady: isReadyRef.current,
+      // isReady is a callback to ensure the caller receives the latest value
+      isReady: () => isReadyRef.current,
       element,
       widgetMgr,
       setComponentError,
@@ -344,7 +346,10 @@ function ComponentInstance(props: Props): ReactElement {
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
       <Skeleton
-        height={frameHeight === undefined ? undefined : `${frameHeight}px`}
+        element={SkeletonProto.create({
+          height: frameHeight,
+          style: SkeletonProto.SkeletonStyle.ELEMENT,
+        })}
       />
     )
 
