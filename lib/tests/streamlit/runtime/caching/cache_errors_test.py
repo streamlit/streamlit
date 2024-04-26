@@ -114,13 +114,13 @@ def unhashable_type_func(_lock, ...):
 
     @parameterized.expand(
         [
-            (SnowpandasSeries(pd.Series(np.random.randn(2))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(2))),),
             (ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(2))),),
             (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowpandasSeries(pd.Series(np.random.randn(2))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
         ]
     )
     def test_unevaluated_dataframe_error(self, data: Any):
