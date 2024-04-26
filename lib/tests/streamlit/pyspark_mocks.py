@@ -18,9 +18,9 @@ import pandas as pd
 
 
 class DataFrame:
-    """This is dummy DataFrame class,
-    which imitates pyspark.sql.dataframe.DataFrame class
-    for testing purposes."""
+    """This is dummy DataFrame class, which imitates pyspark.sql.dataframe.DataFrame class
+    for testing purposes. We use this to make sure that our code does a special handling
+    if it detects a pyspark dataframe."""
 
     __module__ = "pyspark.sql.dataframe"
 

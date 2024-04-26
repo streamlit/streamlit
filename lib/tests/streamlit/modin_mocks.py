@@ -16,6 +16,10 @@ import pandas as pd
 
 
 class DataFrame:
+    """This is dummy DataFrame class, which imitates modin.pandas.dataframe.DataFrame class
+    for testing purposes. We use this to make sure that our code does a special handling
+    if it detects a modin dataframe."""
+
     __module__ = "modin.pandas.dataframe"
 
     def __init__(self, data: pd.DataFrame):
@@ -25,11 +29,15 @@ class DataFrame:
         return self._data
 
     def head(self, n: int) -> "DataFrame":
-        """Returns the top n element of a mock version of modin.pandas.dataframe.DataFrame"""
+        """Returns the top n element of a mock version of Modin DataFrame."""
         return DataFrame(self._data.head(n))
 
 
 class Series:
+    """This is dummy Series class, which imitates modin.pandas.series.Series class
+    for testing purposes. We use this to make sure that our code does a special handling
+    if it detects a modin Series."""
+
     __module__ = "modin.pandas.series"
 
     def __init__(self, data: pd.Series):
@@ -39,5 +47,5 @@ class Series:
         return self._data
 
     def head(self, n: int) -> "Series":
-        """Returns the top n element of a mock version of modin.pandas.series.Series"""
+        """Returns the top n element of a mock version of Modin Series."""
         return Series(self._data.head(n))

@@ -17,9 +17,10 @@ import pandas as pd
 
 
 class DataFrame:
-    """This is dummy DataFrame class,
-    which imitates snowflake.snowpark.dataframe.DataFrame class
-    for testing purposes."""
+    """This is dummy DataFrame class, which imitates
+    nowflake.snowpark.dataframe.DataFrame class for testing purposes.
+    We use this to make sure that our code does a special handling
+    if it detects a Snowpark Dataframe."""
 
     __module__ = "snowflake.snowpark.dataframe"
 
@@ -30,14 +31,15 @@ class DataFrame:
         return self._data
 
     def limit(self, n: int) -> "DataFrame":
-        """Returns the top n element of a mock version of snowflake.snowpark.dataframe.DataFrame"""
+        """Returns the top n element of a mock version of Snowpark Dataframe"""
         return DataFrame(self._data.head(n))
 
 
 class Table:
-    """This is dummy Table class,
-    which imitates snowflake.snowpark.dataframe.DataFrame class
-    for testing purposes."""
+    """This is dummy Table class, which imitates
+    nowflake.snowpark.table.Table class for testing purposes.
+    We use this to make sure that our code does a special handling
+    if it detects a Snowpark Table."""
 
     __module__ = "snowflake.snowpark.table"
 
@@ -48,7 +50,7 @@ class Table:
         return self._data
 
     def limit(self, n: int) -> "Table":
-        """Returns the top n element of a mock version of snowflake.snowpark.table.Table"""
+        """Returns the top n element of a mock version of Snowpark Table"""
         return Table(self._data.head(n))
 
 
