@@ -301,13 +301,17 @@ def is_dataframe_like(obj: object) -> TypeGuard[DataFrameLike]:
 
 
 def is_unevaluated_data_object(obj: object) -> bool:
-    """True if the object is one of the supported unevaluated data objects.
+    """True if the object is one of the supported unevaluated data objects:
 
     Currently supported objects are:
     - Snowpark DataFrame / Table
     - PySpark DataFrame
     - Modin DataFrame / Series
     - Snowpandas DataFrame / Series
+
+    Unevaluated means that the data is not yet in the local memory.
+    Unevaluated data objects are treated differently from other data objects by only
+    requesting a subset of the data instead of loading all data into th memory
     """
     return (
         is_snowpark_data_object(obj)
