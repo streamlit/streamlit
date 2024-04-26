@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, cast
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_emoji
+from streamlit.string_util import clean_text, validate_icon_or_emoji
 from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
@@ -85,7 +85,7 @@ class ToastMixin:
         """
         toast_proto = ToastProto()
         toast_proto.body = clean_text(validate_text(body))
-        toast_proto.icon = validate_emoji(icon)
+        toast_proto.icon = validate_icon_or_emoji(icon)
         return self.dg._enqueue("toast", toast_proto)
 
     @property

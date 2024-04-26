@@ -26,7 +26,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.string_util import is_emoji
+from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.url_util import is_url
 from streamlit.util import lower_clean_dict_keys
 
@@ -93,6 +93,9 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
     # If page_icon is an emoji, return it as is.
     if isinstance(page_icon, str) and is_emoji(page_icon):
         return page_icon
+
+    if isinstance(page_icon, str) and page_icon.startswith(":material"):
+        return validate_material_icon(page_icon)
 
     # Fall back to image_to_url.
     try:

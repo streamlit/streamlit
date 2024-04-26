@@ -35,7 +35,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
-from streamlit.string_util import is_emoji
+from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -75,12 +75,17 @@ def _process_avatar_input(
         # On the frontend, we only support "assistant" and "user" for the avatar.
         return (
             AvatarType.ICON,
-            "assistant"
-            if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
-            else "user",
+            (
+                "assistant"
+                if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
+                else "user"
+            ),
         )
     elif isinstance(avatar, str) and is_emoji(avatar):
         return AvatarType.EMOJI, avatar
+
+    elif isinstance(avatar, str) and avatar.startswith(":material"):
+        return AvatarType.ICON, validate_material_icon(avatar)
     else:
         try:
             return AvatarType.IMAGE, image_to_url(
