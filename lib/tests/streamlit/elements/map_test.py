@@ -28,7 +28,7 @@ from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_snowpark_session, patch_config_options
 
-df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
+mock_df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
 
 class StMapTest(DeltaGeneratorTestCase):
@@ -43,7 +43,7 @@ class StMapTest(DeltaGeneratorTestCase):
 
     def test_basic(self):
         """Test that it can be called with lat/lon."""
-        st.map(df1)
+        st.map(mock_df)
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
@@ -65,7 +65,7 @@ class StMapTest(DeltaGeneratorTestCase):
     )
     def test_alternative_names_columns(self, lat_column_name, lon_column_name):
         """Test that it can be called with alternative names of lat/lon columns."""
-        df = df1.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
+        df = mock_df.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
         st.map(df)
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
@@ -76,9 +76,9 @@ class StMapTest(DeltaGeneratorTestCase):
         with mock.patch(
             "streamlit.type_util.convert_anything_to_df"
         ) as convert_anything_to_df:
-            convert_anything_to_df.return_value = df1
+            convert_anything_to_df.return_value = mock_df
 
-            st.map(df1)
+            st.map(mock_df)
             convert_anything_to_df.assert_called_once()
 
     def test_main_kwargs(self):
@@ -274,13 +274,13 @@ class StMapTest(DeltaGeneratorTestCase):
     def turnedoff_test_map_style_raises_error(self):
         """Test that map_style raises error when no Mapbox token is present."""
         with self.assertRaises(StreamlitAPIException):
-            st.map(df1, map_style="MY_MAP_STYLE")
+            st.map(mock_df, map_style="MY_MAP_STYLE")
 
     # This test was turned off while we investigate issues with the feature.
     @patch_config_options({"mapbox.token": "MY_TOKEN"})
     def turnedoff_test_map_style(self):
         """Test that map_style works when a Mapbox token is present."""
-        st.map(df1, map_style="MY_MAP_STYLE")
+        st.map(mock_df, map_style="MY_MAP_STYLE")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         self.assertEqual(c.get("mapStyle"), "MY_MAP_STYLE")
 
@@ -288,7 +288,7 @@ class StMapTest(DeltaGeneratorTestCase):
         """Test that _DEFAULT_MAP is not modified as other work occurs."""
         self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
 
-        st.map(df1)
+        st.map(mock_df)
         self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
 
     def test_default_zoom_level(self):
@@ -304,7 +304,7 @@ class StMapTest(DeltaGeneratorTestCase):
 
         This is testing for an actual (fixed) bug.
         """
-        st.map(df1)
+        st.map(mock_df)
         st.map()
 
         c = self.get_delta_from_queue().new_element.deck_gl_json_chart
@@ -326,7 +326,7 @@ class StMapTest(DeltaGeneratorTestCase):
     )
     def test_missing_column(self, column_name, exception_message):
         """Test st.map with wrong lat column label."""
-        df = df1.drop(columns=[column_name])
+        df = mock_df.drop(columns=[column_name])
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
