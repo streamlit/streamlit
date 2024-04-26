@@ -86,6 +86,35 @@ def check_session_state_rules(
         _shown_default_value_warning = True
 
 
+def current_container_key(this_dg: DeltaGenerator) -> str | None:
+    """Find the container key for the given DeltaGenerator."""
+    # Avoid circular imports.
+    from streamlit.delta_generator import dg_stack
+
+    if not runtime.exists():
+        return None
+
+    if this_dg._container_key is not None:
+        return this_dg._container_key
+
+    if this_dg == this_dg._main_dg:
+        # We were created via an `st.foo` call.
+        # Walk up the dg_stack to see if there is a container key set.
+        for dg in reversed(dg_stack.get()):
+            if dg._container_key is not None:
+                return dg._container_key
+    else:
+        # We were created via an `dg.foo` call.
+        # Take a look at our parent's container key.
+        parent = this_dg._parent
+        if parent is not None and parent._container_key is not None:
+            return parent._container_key
+        else:
+            return current_container_key(parent)
+
+    return None
+
+
 class CachedWidgetWarning(StreamlitAPIWarning):
     def __init__(self):
         super().__init__(

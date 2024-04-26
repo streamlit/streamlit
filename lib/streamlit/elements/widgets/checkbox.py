@@ -34,7 +34,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id
+from streamlit.runtime.state.common import compute_widget_id, current_container_key
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:
@@ -293,6 +293,7 @@ class CheckboxMixin:
             key=key,
             help=help,
             form_id=current_form_id(self.dg),
+            container_key=current_container_key(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
 

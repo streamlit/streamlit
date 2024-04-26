@@ -14,13 +14,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Sequence, Union, cast
+import re
+from typing import TYPE_CHECKING, Final, Literal, Sequence, Union, cast
 
 from typing_extensions import TypeAlias
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -29,11 +31,18 @@ if TYPE_CHECKING:
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
 
+# Pattern to validate a container key (to be compatible with css class names):
+_KEY_PATTERN: Final = re.compile(r"^[a-zA-Z_][a-zA-Z0-9\-_]*$")
+
 
 class LayoutsMixin:
     @gather_metrics("container")
     def container(
-        self, *, height: int | None = None, border: bool | None = None
+        self,
+        *,
+        height: int | None = None,
+        border: bool | None = None,
+        key: Key | None = None,
     ) -> DeltaGenerator:
         """Insert a multi-element container.
 
@@ -130,6 +139,15 @@ class LayoutsMixin:
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.vertical.border = border or False
+        if key := to_key(key):
+            if not _KEY_PATTERN.match(key):
+                raise StreamlitAPIException(
+                    f"Invalid key '{key}'. Key must match the pattern '{_KEY_PATTERN.pattern}'."
+                )
+            block_proto.key = key
+            # Set the container key in the DeltaGenerator
+            self.dg._container_key = key
+
         if height:
             # Activate scrolling container behavior:
             block_proto.allow_empty = True

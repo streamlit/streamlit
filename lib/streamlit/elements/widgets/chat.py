@@ -298,6 +298,7 @@ class ChatMixin:
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
+            current_container_key,
         )
 
         check_cache_replay_rules()
@@ -311,6 +312,7 @@ class ChatMixin:
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
+            container_key=current_container_key(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
 

@@ -337,7 +337,11 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
         <StyledVerticalBlock
           width={width}
           data-testid="stVerticalBlock"
-          className={props.node.deltaBlock.key ?? undefined}
+          className={
+            props.node.deltaBlock.key
+              ? `st-${props.node.deltaBlock.key}`
+              : undefined
+          }
         >
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>

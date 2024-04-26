@@ -277,6 +277,7 @@ class DeltaGenerator(
 
         # If this an `st.form` block, this will get filled in.
         self._form_data: FormData | None = None
+        self._container_key: str | None = None
 
         # Change the module of all mixin'ed functions to be st.delta_generator,
         # instead of the original module (e.g. st.elements.markdown)

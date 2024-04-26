@@ -26,6 +26,7 @@ from streamlit.elements.utils import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
+    current_container_key,
     get_label_visibility_proto_value,
 )
 from streamlit.errors import StreamlitAPIException
@@ -301,6 +302,7 @@ class NumberInputMixin:
             help=help,
             placeholder=None if placeholder is None else str(placeholder),
             form_id=current_form_id(self.dg),
+            container_key=current_container_key(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
 

@@ -560,6 +560,7 @@ class ButtonMixin:
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
+            current_container_key,
         )
 
         check_cache_replay_rules()
@@ -576,6 +577,7 @@ class ButtonMixin:
             help=help,
             type=type,
             use_container_width=use_container_width,
+            container_key=current_container_key(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
 
@@ -724,6 +726,7 @@ class ButtonMixin:
             check_cache_replay_rules,
             check_callback_rules,
             check_session_state_rules,
+            current_container_key,
         )
 
         if not is_form_submitter:
@@ -740,6 +743,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             use_container_width=use_container_width,
+            container_key=current_container_key(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
 

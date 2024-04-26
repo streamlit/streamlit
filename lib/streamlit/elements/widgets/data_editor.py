@@ -40,7 +40,7 @@ from typing_extensions import TypeAlias
 from streamlit import logger as _logger
 from streamlit import type_util
 from streamlit.deprecation_util import deprecate_func_name
-from streamlit.elements.form import current_form_id
+from streamlit.elements.form import current_container_key, current_form_id
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -874,6 +874,7 @@ class DataEditorMixin:
             num_rows=num_rows,
             key=key,
             form_id=current_form_id(self.dg),
+            container_key=current_container_key(self.dg),
             page=ctx.page_script_hash if ctx else None,
         )
 
