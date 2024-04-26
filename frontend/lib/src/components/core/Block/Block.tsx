@@ -334,7 +334,11 @@ const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
       data-test-scroll-behavior="normal"
     >
       <StyledVerticalBlockWrapper ref={wrapperElement}>
-        <StyledVerticalBlock width={width} data-testid="stVerticalBlock">
+        <StyledVerticalBlock
+          width={width}
+          data-testid="stVerticalBlock"
+          className={props.node.deltaBlock.key ?? undefined}
+        >
           <ChildRenderer {...propsWithNewWidth} />
         </StyledVerticalBlock>
       </StyledVerticalBlockWrapper>
