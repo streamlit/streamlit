@@ -32,6 +32,8 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
+from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
@@ -260,6 +262,8 @@ class StreamlitWriteTest(unittest.TestCase):
             (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
             (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(2))),),
+            (ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             ([SnowparkRow()],),
         ]
     )

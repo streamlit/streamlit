@@ -30,6 +30,8 @@ from streamlit.runtime.caching.cache_errors import (
 )
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.modin_mocks import Series as ModinSeries
 from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
@@ -114,6 +116,8 @@ def unhashable_type_func(_lock, ...):
         [
             (SnowpandasSeries(pd.Series(np.random.randn(2))),),
             (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(2))),),
+            (ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
             (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
             (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),

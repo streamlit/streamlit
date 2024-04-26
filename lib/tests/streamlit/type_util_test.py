@@ -33,10 +33,14 @@ from streamlit import errors, type_util
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_mocks import SHARED_TEST_CASES, TestCaseMetadata, TestObject
+from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.modin_mocks import Series as ModinSeries
+from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
 from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
 from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
 from tests.streamlit.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 from tests.testutil import create_snowpark_session, patch_config_options
 
 
@@ -131,6 +135,30 @@ class TypeUtilTest(unittest.TestCase):
         self.assertIsInstance(converted_df, pd.DataFrame)
         self.assertEqual(converted_df.shape[0], metadata.expected_rows)
         self.assertEqual(converted_df.shape[1], metadata.expected_cols)
+
+    @parameterized.expand(
+        [
+            (SnowpandasSeries(pd.Series(np.random.randn(15000))),),
+            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(15000))),),
+            (ModinDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
+            (SnowparkTable(pd.DataFrame(np.random.randn(15000, 2))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
+            (PysparkDataFrame(pd.DataFrame(np.random.randn(15000, 2))),),
+        ]
+    )
+    def test_convert_anything_to_df_show_warning_for_unevaluated_df(
+        self,
+        input_data: Any,
+    ):
+        """Test that `convert_anything_to_df` correctly converts
+        a variety unevaluated dataframes and shows a warning if
+        the raow count is > 10000.
+        """
+        with patch("streamlit.caption") as mock:
+            converted_df = type_util.convert_anything_to_df(input_data)
+            self.assertIsInstance(converted_df, pd.DataFrame)
+            mock.assert_called_once()
 
     def test_convert_anything_to_df_ensure_copy(self):
         """Test that `convert_anything_to_df` creates a copy of the original
