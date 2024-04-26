@@ -26,7 +26,6 @@ import {
 import {
   render,
   mockEndpoints,
-  useIsOverflowing,
   emotionLightTheme,
   PageConfig,
   Logo,
@@ -38,10 +37,6 @@ jest.mock("@streamlit/lib/src/util/Hooks", () => ({
   ...jest.requireActual("@streamlit/lib/src/util/Hooks"),
   useIsOverflowing: jest.fn(),
 }))
-
-const mockUseIsOverflowing = useIsOverflowing as jest.MockedFunction<
-  typeof useIsOverflowing
->
 
 const mockEndpointProp = mockEndpoints()
 
@@ -101,7 +96,8 @@ describe("Sidebar Component", () => {
       "true"
     )
 
-    // Click the close sidebar X
+    // Click the close sidebar <
+    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
     fireEvent.click(screen.getByRole("button"))
 
     expect(screen.getByTestId("stSidebar")).toHaveAttribute(
@@ -140,37 +136,38 @@ describe("Sidebar Component", () => {
     expect(screen.queryByTestId("collapsedControl")).not.toBeInTheDocument()
   })
 
-  it("hides scrollbar when hideScrollbar is called", () => {
+  it("shows/hides the collapse arrow when hovering over top of sidebar", () => {
     const appPages = [
       { pageName: "first_page", pageScriptHash: "page_hash" },
       { pageName: "second_page", pageScriptHash: "page_hash2" },
     ]
-    // Need isOverflowing in SidebarNav to be true to test scrollbar behavior
-    mockUseIsOverflowing.mockReturnValueOnce(true)
     renderSidebar({ appPages })
 
-    expect(screen.getByTestId("stSidebarContent")).toHaveStyle(
-      "overflow: overlay"
+    // Hidden when not hovering near the top of sidebar
+    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
+      "display: none"
     )
 
-    fireEvent.mouseOver(screen.getByTestId("stSidebarNavItems"))
+    // Hover over the sidebar header
+    fireEvent.mouseOver(screen.getByTestId("stSidebarHeader"))
 
-    expect(screen.getByTestId("stSidebarContent")).toHaveStyle(
-      "overflow: hidden"
+    // Displays the collapse <
+    expect(screen.getByTestId("stSidebarCollapseButton")).toHaveStyle(
+      "display: auto"
     )
   })
 
-  it("has same top padding whether or not SidebarNav is displayed", () => {
-    const { unmount } = renderSidebar({
+  it("has no top padding if no SidebarNav is displayed", () => {
+    renderSidebar({
       appPages: [{ pageName: "streamlit_app", pageScriptHash: "page_hash" }],
     })
 
     expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
-      "padding-top: 1rem"
+      "padding-top: 0"
     )
+  })
 
-    unmount()
-
+  it("has small padding if the SidebarNav is displayed", () => {
     renderSidebar({
       appPages: [
         { pageName: "streamlit_app", pageScriptHash: "page_hash" },
@@ -179,7 +176,7 @@ describe("Sidebar Component", () => {
     })
 
     expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
-      "padding-top: 1rem"
+      "padding-top: 1.5rem"
     )
   })
 
@@ -224,6 +221,9 @@ describe("Sidebar Component", () => {
     renderSidebar({ appPages, hideSidebarNav: true })
 
     expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stSidebarUserContent")).toHaveStyle(
+      "padding-top: 0"
+    )
   })
 
   describe("handles appLogo rendering", () => {
@@ -283,7 +283,7 @@ describe("Sidebar Component", () => {
     it("renders logo's image param when sidebar expanded", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       renderSidebar({ appLogo: fullAppLogo })
-      const sidebarLogoContainer = screen.getByTestId("stSidebarExpandControl")
+      const sidebarLogoContainer = screen.getByTestId("stSidebarHeader")
       expect(sidebarLogoContainer).toBeInTheDocument()
       const sidebarLogo = within(sidebarLogoContainer).getByTestId("stLogo")
       expect(sidebarLogo).toBeInTheDocument()

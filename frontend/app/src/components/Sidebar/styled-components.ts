@@ -15,11 +15,11 @@
  */
 
 import styled from "@emotion/styled"
-import { keyframes } from "@emotion/react"
 import {
   getWrappedHeadersStyle,
   hasLightBackgroundColor,
 } from "@streamlit/lib/src/theme/utils"
+
 export interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
@@ -72,100 +72,40 @@ export const StyledSidebarNavContainer = styled.div(() => ({
 
 export interface StyledSidebarNavItemsProps {
   isExpanded: boolean
-  isOverflowing: boolean
-  hasSidebarElements: boolean
+  hasSidebarElements?: boolean
 }
 
 export const StyledSidebarNavItems = styled.ul<StyledSidebarNavItemsProps>(
-  ({ isExpanded, isOverflowing, hasSidebarElements, theme }) => {
-    const isExpandedMaxHeight = isExpanded ? "75vh" : "33vh"
-    const maxHeight = hasSidebarElements ? isExpandedMaxHeight : "100vh"
-
+  ({ isExpanded, hasSidebarElements, theme }) => {
     return {
-      maxHeight,
+      maxHeight: isExpanded ? "none" : "26vh",
       listStyle: "none",
-      overflow: ["auto", "overlay"],
+      overflow:
+        isExpanded && hasSidebarElements ? ["auto", "overlay"] : "hidden",
       margin: 0,
-      paddingTop: theme.spacing.lg,
-      paddingBottom: theme.spacing.lg,
 
       "@media print": {
         paddingTop: theme.spacing.threeXL,
       },
-
-      "&::before": isOverflowing
-        ? {
-            content: '" "',
-            backgroundImage: `linear-gradient(0deg, transparent, ${theme.colors.bgColor})`,
-            width: "100%",
-            height: "2rem",
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            pointerEvents: "none",
-          }
-        : null,
-
-      "&::after": isOverflowing
-        ? {
-            content: '" "',
-            backgroundImage: `linear-gradient(0deg, ${theme.colors.bgColor}, transparent)`,
-            height: "2rem",
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            pointerEvents: "none",
-          }
-        : null,
     }
   }
 )
 
-export interface StyledSidebarNavSeparatorContainerProps {
-  isExpanded: boolean
-  isOverflowing: boolean
-}
+export const StyledSidebarNavSectionHeader = styled.header(({ theme }) => {
+  const isLightTheme = hasLightBackgroundColor(theme)
 
-const bounceAnimation = keyframes`
-  from, to {
-    transform: translateY(0);
+  return {
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
+    color: isLightTheme ? theme.colors.gray80 : theme.colors.gray50,
+    lineHeight: theme.lineHeights.table,
+    paddingRight: theme.spacing.sm,
+    marginLeft: theme.spacing.twoXL,
+    marginRight: theme.spacing.twoXL,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.twoXS,
   }
-
-  50% {
-    transform: translateY(-0.25rem);
-  }
-`
-
-export const StyledSidebarNavSeparatorContainer =
-  styled.div<StyledSidebarNavSeparatorContainerProps>(
-    ({ isExpanded, isOverflowing, theme }) => ({
-      cursor: isExpanded || isOverflowing ? "pointer" : "default",
-      position: "absolute",
-      height: theme.spacing.lg,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: theme.colors.fadedText60,
-      borderBottom: `1px solid ${theme.colors.fadedText10}`,
-      transition: "color 500ms",
-
-      ...((isExpanded || isOverflowing) && {
-        "&:hover": {
-          color: theme.colors.bodyText,
-          background: `linear-gradient(0deg, ${theme.colors.darkenedBgMix15}, transparent)`,
-
-          "& > *": {
-            animation: `${bounceAnimation} 0.5s ease infinite`,
-          },
-        },
-      }),
-    })
-  )
+})
 
 export const StyledSidebarNavLinkContainer = styled.div(() => ({
   display: "flex",
@@ -178,6 +118,15 @@ export interface StyledSidebarNavLinkProps {
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
   ({ isActive, theme }) => {
+    const isLightTheme = hasLightBackgroundColor(theme)
+    const activeSvgColor = isLightTheme
+      ? theme.colors.gray85
+      : theme.colors.gray10
+    const svgColor = isLightTheme ? theme.colors.gray60 : theme.colors.gray70
+    const activeBgColor = isLightTheme
+      ? theme.colors.darkenedBgMix15
+      : theme.colors.gray100
+
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? 600 : 400,
@@ -193,13 +142,18 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
-      marginLeft: theme.spacing.lg,
-      marginRight: theme.spacing.lg,
+      marginLeft: theme.spacing.twoXL,
+      marginRight: theme.spacing.twoXL,
       marginTop: theme.spacing.threeXS,
       marginBottom: theme.spacing.threeXS,
       lineHeight: theme.lineHeights.menuItem,
 
-      backgroundColor: isActive ? theme.colors.darkenedBgMix15 : "transparent",
+      color: isLightTheme ? theme.colors.gray80 : theme.colors.gray40,
+      backgroundColor: isActive ? activeBgColor : "transparent",
+
+      "> svg": {
+        color: isActive ? activeSvgColor : svgColor,
+      },
 
       "&:hover": {
         backgroundColor: isActive
@@ -227,36 +181,70 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 )
 
 export const StyledSidebarLinkText = styled.span<StyledSidebarNavLinkProps>(
-  ({ isActive, theme }) => ({
-    color: isActive ? theme.colors.bodyText : theme.colors.fadedText60,
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    textOverflow: "ellipsis",
-    display: "table-cell",
-  })
+  ({ isActive, theme }) => {
+    const isLightTheme = hasLightBackgroundColor(theme)
+    const defaultColor = isLightTheme
+      ? theme.colors.gray80
+      : theme.colors.gray50
+
+    return {
+      color: isActive ? theme.colors.bodyText : defaultColor,
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+      textOverflow: "ellipsis",
+      display: "table-cell",
+    }
+  }
 )
 
-export const StyledSidebarUserContent = styled.div(({ theme }) => ({
-  paddingTop: theme.spacing.lg,
-  paddingBottom: theme.sizes.sidebarTopSpace,
-  paddingLeft: theme.spacing.twoXL,
-  paddingRight: theme.spacing.twoXL,
-
-  ...getWrappedHeadersStyle(theme),
-}))
-
-export interface StyledSidebarContentProps {
-  hideScrollbar: boolean
+export interface StyledSidebarUserContentProps {
+  hasPageNavAbove: boolean
 }
 
-export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
-  ({ hideScrollbar }) => ({
-    position: "relative",
-    height: "100%",
-    width: "100%",
-    overflow: hideScrollbar ? "hidden" : ["auto", "overlay"],
-  })
-)
+export const StyledSidebarUserContent =
+  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
+    paddingTop: hasPageNavAbove ? theme.spacing.twoXL : 0,
+    paddingBottom: theme.sizes.sidebarTopSpace,
+    paddingLeft: theme.spacing.twoXL,
+    paddingRight: theme.spacing.twoXL,
+
+    ...getWrappedHeadersStyle(theme),
+  }))
+
+export const StyledSidebarContent = styled.div(({}) => ({
+  position: "relative",
+  height: "100%",
+  width: "100%",
+  overflow: ["auto", "overlay"],
+}))
+
+export interface StyledSidebarCollapsedControlProps {
+  chevronDownshift: number
+  isCollapsed: boolean
+}
+
+export const StyledSidebarCollapsedControl =
+  styled.div<StyledSidebarCollapsedControlProps>(
+    ({ chevronDownshift, isCollapsed, theme }) => ({
+      position: "fixed",
+      top: chevronDownshift ? `${chevronDownshift}px` : theme.spacing.sm,
+      left: isCollapsed ? theme.spacing.twoXS : `-${theme.spacing.twoXS}`,
+      zIndex: theme.zIndices.header,
+
+      transition: "left 300ms",
+      transitionDelay: "left 300ms",
+
+      color: theme.colors.bodyText,
+
+      [`@media (max-width: ${theme.breakpoints.md})`]: {
+        color: theme.colors.bodyText,
+      },
+
+      [`@media print`]: {
+        display: "none",
+      },
+    })
+  )
 
 export const StyledResizeHandle = styled.div(({ theme }) => ({
   position: "absolute",
@@ -341,25 +329,65 @@ export const StyledOpenSidebarButton = styled.div(({ theme }) => {
   }
 })
 
-export const StyledCollapseSidebarButton = styled.div(({ theme }) => {
+export interface StyledCollapseSidebarButtonProps {
+  showSidebarCollapse: boolean
+}
+
+export const StyledCollapseSidebarButton =
+  styled.div<StyledCollapseSidebarButtonProps>(
+    ({ showSidebarCollapse, theme }) => {
+      const isLightTheme = hasLightBackgroundColor(theme)
+
+      return {
+        display: showSidebarCollapse ? "auto" : "none",
+        transition: "left 300ms",
+        transitionDelay: "left 300ms",
+        color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
+        lineHeight: "0",
+
+        button: {
+          padding: "0.25rem",
+          "&:hover": {
+            backgroundColor: theme.colors.darkenedBgMix25,
+          },
+        },
+
+        [`@media (max-width: ${theme.breakpoints.sm})`]: {
+          display: "auto",
+        },
+
+        [`@media print`]: {
+          display: "none",
+        },
+      }
+    }
+  )
+
+export const StyledViewButton = styled.button(({ theme }) => {
   const isLightTheme = hasLightBackgroundColor(theme)
 
   return {
-    display: "auto",
-    transition: "left 300ms",
-    transitionDelay: "left 300ms",
-    color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
-    lineHeight: "0",
-
-    button: {
-      padding: "0.25rem",
-      "&:hover": {
-        backgroundColor: theme.colors.darkenedBgMix25,
-      },
+    fontSize: theme.fontSizes.sm,
+    lineHeight: "1.4rem",
+    color: isLightTheme ? theme.colors.gray90 : theme.colors.gray10,
+    backgroundColor: theme.colors.transparent,
+    border: "none",
+    borderRadius: "0.5rem",
+    marginTop: "0.25rem",
+    marginLeft: "1.25rem",
+    padding: "0.125rem 0.5rem 0.125rem 0.5rem",
+    "&:hover, &:active, &:focus": {
+      border: "none",
+      outline: "none",
+      boxShadow: "none",
     },
-
-    [`@media print`]: {
-      display: "none",
+    "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix25,
     },
   }
 })
+
+export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
+  paddingTop: "1rem",
+  borderBottom: `1px solid ${theme.colors.fadedText10}`,
+}))
