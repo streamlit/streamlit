@@ -55,6 +55,20 @@ def is_emoji(text: str) -> bool:
     return text.replace("\U0000FE0F", "") in ALL_EMOJIS
 
 
+def is_material_icon(maybe_icon: str) -> bool:
+    """Check if input string is a valid Material icon."""
+    from streamlit.material_icon_names import ALL_MATERIAL_ICONS
+
+    return maybe_icon in ALL_MATERIAL_ICONS
+
+
+def validate_icon_or_emoji(icon: str | None) -> str:
+    """Validate an icon or emoji and return it in normalized format if valid."""
+    if icon is not None and icon.startswith(":material"):
+        return validate_material_icon(icon)
+    return validate_emoji(icon)
+
+
 def validate_emoji(maybe_emoji: str | None) -> str:
     if maybe_emoji is None:
         return ""
@@ -65,6 +79,41 @@ def validate_emoji(maybe_emoji: str | None) -> str:
         raise StreamlitAPIException(
             f'The value "{maybe_emoji}" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.'
         )
+
+
+def validate_material_icon(maybe_material_icon: str | None) -> str:
+    """Validate a Material icon shortcode and return the icon in
+    normalized format if valid."""
+
+    supported_icon_packs = [
+        "material",
+    ]
+
+    if maybe_material_icon is None:
+        return ""
+
+    icon_regex = r"^\s*:(.+)\/(.+):\s*$"
+    icon_match = re.match(icon_regex, maybe_material_icon)
+
+    if not icon_match:
+        raise StreamlitAPIException(
+            f'The value `"{maybe_material_icon}"` is not a valid Material icon. '
+            f"Please use a Material icon shortcode like **`:material/thumb_up:`**"
+        )
+
+    pack_name, icon_name = icon_match.groups()
+
+    if (
+        pack_name not in supported_icon_packs
+        or not icon_name
+        or not is_material_icon(icon_name)
+    ):
+        raise StreamlitAPIException(
+            f'The value `"{maybe_material_icon}"` is not a valid Material icon.'
+            f" Please use a Material icon shortcode like **`:material/thumb_up:`**. "
+        )
+
+    return f":{pack_name}/{icon_name}:"
 
 
 def extract_leading_emoji(text: str) -> tuple[str, str]:
