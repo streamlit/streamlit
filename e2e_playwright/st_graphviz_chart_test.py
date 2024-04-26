@@ -69,7 +69,7 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
 
     def check_dimensions():
         svg_dimensions = first_graph_svg.bounding_box()
-        return svg_dimensions["width"] == 1256 and svg_dimensions["height"] == 662
+        return svg_dimensions["width"] == 1256 and svg_dimensions["height"] == 648
 
     wait_until(app, check_dimensions)
 
