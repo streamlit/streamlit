@@ -138,13 +138,13 @@ class TypeUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (SnowpandasSeries(pd.Series(np.random.randn(2000))),),
-            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (ModinSeries(pd.Series(np.random.randn(2000))),),
             (ModinDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
-            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(2000))),),
             (PysparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowpandasSeries(pd.Series(np.random.randn(2000))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2000, 2))),),
+            (SnowparkTable(pd.DataFrame(np.random.randn(2000, 2))),),
         ]
     )
     def test_convert_anything_to_df_show_warning_for_unevaluated_df(
