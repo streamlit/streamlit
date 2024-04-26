@@ -23,6 +23,7 @@ from streamlit.elements.utils import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
+    current_container_key,
     get_label_visibility_proto_value,
 )
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
@@ -34,7 +35,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
 )
-from streamlit.runtime.state.common import compute_widget_id, current_container_key
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, LabelVisibility, maybe_raise_label_warnings, to_key
 
 if TYPE_CHECKING:

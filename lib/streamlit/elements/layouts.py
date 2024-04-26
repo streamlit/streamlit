@@ -145,8 +145,6 @@ class LayoutsMixin:
                     f"Invalid key '{key}'. Key must match the pattern '{_KEY_PATTERN.pattern}'."
                 )
             block_proto.key = key
-            # Set the container key in the DeltaGenerator
-            self.dg._container_key = key
 
         if height:
             # Activate scrolling container behavior:
@@ -158,7 +156,12 @@ class LayoutsMixin:
                 # containers.
                 block_proto.vertical.border = True
 
-        return self.dg._block(block_proto)
+        block_dg = self.dg._block(block_proto)
+
+        # Attach the container key info to the newly-created block's
+        # DeltaGenerator.
+        block_dg._container_key = key
+        return block_dg
 
     @gather_metrics("columns")
     def columns(

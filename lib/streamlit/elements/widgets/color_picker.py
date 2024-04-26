@@ -20,11 +20,12 @@ from textwrap import dedent
 from typing import cast
 
 import streamlit
-from streamlit.elements.form import current_container_key, current_form_id
+from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
     check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
+    current_container_key,
     get_label_visibility_proto_value,
 )
 from streamlit.errors import StreamlitAPIException
