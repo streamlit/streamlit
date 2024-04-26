@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import plotly.express as px
@@ -70,8 +69,8 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField("url"), False)
-        self.assertNotEqual(el.plotly_chart.figure.spec, "")
-        self.assertNotEqual(el.plotly_chart.figure.config, "")
+        self.assertNotEqual(el.plotly_chart.spec, "")
+        self.assertNotEqual(el.plotly_chart.config, "")
         self.assertEqual(el.plotly_chart.use_container_width, False)
 
     def test_st_plotly_chart_use_container_width_true(self):
@@ -86,39 +85,18 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.HasField("url"), False)
-        self.assertNotEqual(el.plotly_chart.figure.spec, "")
-        self.assertNotEqual(el.plotly_chart.figure.config, "")
+        self.assertNotEqual(el.plotly_chart.spec, "")
+        self.assertNotEqual(el.plotly_chart.config, "")
         self.assertEqual(el.plotly_chart.use_container_width, True)
-
-    def test_st_plotly_chart_sharing(self):
-        """Test st.plotly_chart when sending data to Plotly's service."""
-        import plotly.graph_objs as go
-
-        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
-
-        data = [trace0]
-
-        with mock.patch(
-            "streamlit.elements.plotly_chart." "_plot_to_url_or_load_cached_url"
-        ) as plot_patch:
-            plot_patch.return_value = "the_url"
-            st.plotly_chart(data, sharing="public")
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.HasField("figure"), False)
-        self.assertNotEqual(el.plotly_chart.url, "the_url")
-        self.assertEqual(el.plotly_chart.use_container_width, False)
 
     def callback():
         pass
 
     @parameterized.expand(
         [
-            (True, True),
-            (False, False),
-            ("rerun", True),
-            ("ignore", False),
-            (callback, True),
+            ("rerun", [0, 1, 2]),
+            ("ignore", []),
+            (callback, [0, 1, 2]),
         ]
     )
     def test_st_plotly_chart_valid_on_select(self, on_select, proto_value):
@@ -131,7 +109,8 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data, on_select=on_select)
 
         el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.plotly_chart.is_select_enabled, proto_value)
+        self.assertEqual(el.plotly_chart.selection_mode, proto_value)
+        self.assertEqual(el.plotly_chart.form_id, "")
 
     def test_st_plotly_chart_invalid_on_select(self):
         import plotly.graph_objs as go
@@ -143,12 +122,37 @@ class PyDeckTest(DeltaGeneratorTestCase):
             st.plotly_chart(data, on_select="invalid")
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    def test_plotly_chart_with_select_throws_exception_inside_form(self):
+    def test_inside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly inside of a form."""
         import plotly.graph_objs as go
 
         with st.form("form"):
             trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
 
             data = [trace0]
-            with self.assertRaises(StreamlitAPIException) as exc:
-                st.plotly_chart(data, on_select=True)
+            st.plotly_chart(data, on_select="rerun")
+
+        # 2 elements will be created: form block, plotly_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
+        self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_inside_form_on_select_ignore(self):
+        """Test that form id is marshalled correctly inside of a form."""
+        import plotly.graph_objs as go
+
+        with st.form("form"):
+            trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+            data = [trace0]
+            st.plotly_chart(data, on_select="ignore")
+
+        # 2 elements will be created: form block, plotly_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
+        self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)

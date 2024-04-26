@@ -249,7 +249,7 @@ fig.update_layout(
     legend_title_font_color="green",
     title_font_size=30,
 )
-st.plotly_chart(fig, config=dict(displayModeBar=False), theme="streamlit")
+st.plotly_chart(fig, theme="streamlit")
 
 data = pd.DataFrame((100, 120, 104, 102, 203, 102), columns=["some_col"])
 
@@ -260,11 +260,7 @@ fig.update_layout(annotations=[], overwrite=True)
 fig.update_layout(showlegend=False, margin=dict(t=10, l=10, b=10, r=10))
 
 # uses figure height and width when use_container_width is False
-st.plotly_chart(
-    fig, config=dict(displayModeBar=False), use_container_width=False, theme=None
-)
+st.plotly_chart(fig, use_container_width=False, theme=None)
 
 # uses container width when use_container_width flag is True
-st.plotly_chart(
-    fig, config=dict(displayModeBar=False), use_container_width=True, theme=None
-)
+st.plotly_chart(fig, use_container_width=True, theme=None)

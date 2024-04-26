@@ -114,8 +114,9 @@ export interface WrappedNamedDataset {
   data: Quiver
 }
 
-export interface PropsWithHeight extends Props {
+export interface PropsWithFullScreen extends Props {
   height?: number
+  isFullScreen: boolean
 }
 
 interface State {
@@ -123,7 +124,10 @@ interface State {
   selections: Record<string, any>
 }
 
-export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
+export class ArrowVegaLiteChart extends PureComponent<
+  PropsWithFullScreen,
+  State
+> {
   /**
    * The Vega view object
    */
@@ -199,6 +203,33 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     )
   }
 
+  /**
+   * Extracts and returns the names of selection parameters from a given Vega-Lite chart specification.
+   * This method is specifically designed for use with Vega-Lite version 5 specifications.
+   *
+   * It parses the 'params' property of the specification, if present, to retrieve the names
+   * of all selection parameters.
+   *
+   * For more details on selection in Vega-Lite, visit:
+   * https://vega.github.io/vega-lite/docs/selection.html
+   *
+   * @param spec {any} - The Vega-Lite chart specification object, expected to conform to the
+   * structure utilized by Vega-Lite 5.
+   * @returns {string[]} An array of strings, where each string is the name of a selector from
+   * the chart's specification. Returns an empty array if no selectors are found.
+   *
+   * Example:
+   * ```
+   * const vegaLiteSpec = {
+   *   params: [
+   *     { name: 'brush', select: 'interval' },
+   *     { name: 'click', select: 'point', toggle: 'event.shiftKey' }
+   *   ]
+   * };
+   * const selectors = getSelectorsFromChart(vegaLiteSpec);
+   * console.log(selectors); // Output: ['brush', 'click']
+   * ```
+   */
   public getSelectorsFromChart(spec: any): string[] {
     if ("params" in spec) {
       const select: any[] = []
@@ -210,7 +241,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     return []
   }
 
-  public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
+  public async componentDidUpdate(
+    prevProps: PropsWithFullScreen
+  ): Promise<void> {
     const { element: prevElement, theme: prevTheme } = prevProps
     const { element, theme } = this.props
 
@@ -268,7 +301,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   }
 
   public generateSpec = (): any => {
-    const { element: el, theme } = this.props
+    const { element: el, theme, isFullScreen, width, height } = this.props
     const spec = JSON.parse(el.spec)
 
     const { useContainerWidth } = el
@@ -291,6 +324,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
         selectors.forEach(selector => {
           spec.params.forEach((param: any) => {
             if (param.name && param.name === selector) {
+              // initialize interval and point values if they exist to maintain state
+              // https://vega.github.io/vega-lite/docs/param-value.html
               if (param.select.type && param.select.type === "point") {
                 try {
                   const values = parsedStoredValue.select[selector].vlPoint.or
@@ -314,12 +349,23 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       }
     }
 
-    if (this.props.height) {
-      // fullscreen
-      spec.width = this.props.width
-      spec.height = this.props.height
+    if (isFullScreen) {
+      spec.width = width
+      spec.height = height
+
+      if ("vconcat" in spec) {
+        spec.vconcat.forEach((child: any) => {
+          child.width = width
+        })
+      }
     } else if (useContainerWidth) {
-      spec.width = this.props.width
+      spec.width = width
+
+      if ("vconcat" in spec) {
+        spec.vconcat.forEach((child: any) => {
+          child.width = width
+        })
+      }
     }
 
     if (!spec.padding) {
@@ -597,6 +643,8 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // Create the container Vega draws inside.
       <StyledVegaLiteChartContainer
         data-testid="stArrowVegaLiteChart"
+        useContainerWidth={this.props.element.useContainerWidth}
+        isFullScreen={this.props.isFullScreen}
         ref={c => {
           this.element = c
         }}

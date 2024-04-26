@@ -18,11 +18,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, cast
 
 import streamlit.elements.lib.dicttools as dicttools
-from streamlit.attribute_dictionary import AttributeDictionary
-from streamlit.chart_util import check_on_select_str
 from streamlit.constants import (
     NO_SELECTION_OBJECTS_ERROR_VEGA_LITE,
     ON_SELECTION_IGNORE,
@@ -30,6 +28,7 @@ from streamlit.constants import (
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
@@ -79,11 +78,24 @@ class VegaLiteSelectionSerde:
         return json.dumps(selection_state, default=str)
 
 
+class VegaLiteState(TypedDict, total=False):
+    """
+    A dictionary representing the current selection state of the plotly chart.
+
+    Attributes
+    ----------
+    select : AttributeDictionary
+        The state of the `on_select` event.
+    """
+
+    select: AttributeDictionary
+
+
 def _on_select(
     proto: ArrowVegaLiteChartProto,
     on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
     key: str | None = None,
-) -> AttributeDictionary:
+) -> VegaLiteState:
     if on_select != ON_SELECTION_IGNORE:
         vega_lite_serde = VegaLiteSelectionSerde()
         current_value = register_widget(
@@ -97,8 +109,8 @@ def _on_select(
             serializer=vega_lite_serde.serialize,
             ctx=get_script_run_ctx(),
         )
-        return AttributeDictionary(current_value.value)
-    return AttributeDictionary({})
+        return cast(VegaLiteState, AttributeDictionary(current_value.value))
+    return cast(VegaLiteState, AttributeDictionary({}))
 
 
 class ArrowVegaLiteMixin:
@@ -112,7 +124,7 @@ class ArrowVegaLiteMixin:
         on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         key: str | None = None,
         **kwargs: Any,
-    ) -> DeltaGenerator | AttributeDictionary:
+    ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -183,6 +195,11 @@ class ArrowVegaLiteMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
+        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+            raise StreamlitAPIException(
+                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+            )
+
         proto = ArrowVegaLiteChartProto()
 
         is_select_enabled = on_select != ON_SELECTION_IGNORE
@@ -199,7 +216,6 @@ class ArrowVegaLiteMixin:
 
             key = to_key(key)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
-            check_on_select_str(on_select, "vega_lite_chart")
 
             current_widget = None
             if spec is not None:
@@ -287,7 +303,14 @@ def marshall(
         raise ValueError("Vega-Lite charts require a non-empty spec dict.")
 
     if "autosize" not in spec:
-        spec["autosize"] = {"type": "fit", "contains": "padding"}
+        # type fit does not work for many chart types. This change focuses
+        # on vconcat with use_container_width=True as there are unintended
+        # consequences of changing the default autosize for all charts.
+        # fit-x fits the width and height can be adjusted.
+        if "vconcat" in spec and use_container_width:
+            spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+        else:
+            spec["autosize"] = {"type": "fit", "contains": "padding"}
 
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})

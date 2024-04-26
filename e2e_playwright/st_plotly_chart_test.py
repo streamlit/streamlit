@@ -69,7 +69,7 @@ def test_plotly_use_container_width_false_fullscreen(
 ):
     index = 14
     themed_app.locator(".stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
+    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(
@@ -77,7 +77,7 @@ def test_plotly_use_container_width_false_fullscreen(
         name="st_plotly_chart-container_width_false_fullscreen",
     )
 
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
+    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(
@@ -91,7 +91,7 @@ def test_plotly_use_container_width_true_fullscreen(
 ):
     index = 15
     themed_app.locator(".stPlotlyChart").nth(index).hover()
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
+    fullscreen_button = themed_app.locator('[data-title="Fullscreen"]').nth(index)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(
@@ -99,7 +99,7 @@ def test_plotly_use_container_width_true_fullscreen(
         name="st_plotly_chart-container_width_true_fullscreen",
     )
 
-    fullscreen_button = themed_app.get_by_test_id("StyledFullScreenButton").nth(index)
+    fullscreen_button = themed_app.locator('[data-title="Close fullscreen"]').nth(0)
     fullscreen_button.hover()
     fullscreen_button.click()
     assert_snapshot(

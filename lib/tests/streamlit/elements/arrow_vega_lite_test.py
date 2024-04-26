@@ -237,6 +237,25 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
             expected_is_select_enabled,
         )
 
+    @parameterized.expand(
+        [
+            (True),
+            (False),
+            ("invalid"),
+        ]
+    )
+    def test_vega_lite_on_select_invalid(self, on_select):
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.vega_lite_chart(
+                df1,
+                {
+                    "mark": "rect",
+                    "width": 200,
+                    "params": [{"name": "name", "select": {"type": "point"}}],
+                },
+                on_select="on_select",
+            )
+
     def test_vega_lite_interval_selection_enables_on_select(self):
         st.vega_lite_chart(
             df1,
@@ -263,6 +282,18 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
                 },
                 on_select="rerun",
             )
+
+    @parameterized.expand(
+        [
+            (None, {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), None),
+            (None, None),
+        ]
+    )
+    def test_empty_vega_lite_chart_throws_error(self, data, spec):
+        with self.assertRaises(ValueError) as exc:
+            st.vega_lite_chart(data, spec, use_container_width=True)
 
 
 def merge_dicts(x, y):

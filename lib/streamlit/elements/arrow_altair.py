@@ -37,8 +37,6 @@ from typing import (
 
 import streamlit.elements.arrow_vega_lite as arrow_vega_lite
 from streamlit import type_util
-from streamlit.attribute_dictionary import AttributeDictionary
-from streamlit.chart_util import check_on_select_str
 from streamlit.color_util import (
     Color,
     is_color_like,
@@ -51,6 +49,7 @@ from streamlit.elements import arrow
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
+from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.elements.utils import (
     check_callback_rules,
     check_session_state_rules,
@@ -773,7 +772,7 @@ class ArrowAltairMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         key: str | None = None,
-    ) -> Union["DeltaGenerator", Dict[Any, Any]]:
+    ) -> Union["DeltaGenerator", arrow_vega_lite.VegaLiteState]:
         """Display a chart using the Altair library.
 
         Parameters
@@ -830,6 +829,12 @@ class ArrowAltairMixin:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
+
+        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+            raise StreamlitAPIException(
+                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+            )
+
         proto = ArrowVegaLiteChartProto()
 
         is_select_enabled = on_select != ON_SELECTION_IGNORE
@@ -849,7 +854,6 @@ class ArrowAltairMixin:
 
             key = to_key(key)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
-            check_on_select_str(on_select, "altair_chart")
 
             current_widget = None
             chart_json = altair_chart.to_dict()
@@ -1670,6 +1674,25 @@ def marshall(
 def replace_values_in_dict(
     d: Dict[str, Any] | List[Any], old_to_new_map: Dict[str, str]
 ) -> None:
+    """
+    Recursively traverses a dictionary or a list of dictionaries, replacing specific
+    string values based on a mapping provided.
+
+    This function modifies the input dictionary or list in-place, changing strings
+    found as dictionary values that match keys in the `old_to_new_map` dictionary
+    to the corresponding values in `old_to_new_map`.
+
+    Parameters:
+    - d (Dict[str, Any] | List[Any]): The dictionary or list of dictionaries to be
+      modified. If this is a list, it should contain dictionaries as elements.
+    - old_to_new_map (Dict[str, str]): A dictionary mapping old string values to new
+      string values. If a string in the input dictionary matches a key in this map,
+      it will be replaced with the value associated with that key.
+
+    Returns:
+    - None: The function modifies the dictionary or list in-place and does not return
+      any value.
+    """
     if isinstance(d, dict):
         for key, value in d.items():
             if isinstance(value, str) and value in old_to_new_map:
