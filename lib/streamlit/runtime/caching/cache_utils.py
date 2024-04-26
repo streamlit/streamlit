@@ -290,6 +290,9 @@ class CachedFunc:
                     type_util.is_type(computed_value, type_name)
                     for type_name in UNEVALUATED_DATAFRAME_TYPES
                 ]:
+                    # If the returned value is an unevaluated dataframe, raise an error.
+                    # Unevaluated dataframes are not yet in the local memory, which also
+                    # means they cannot be properly cached (serialized).
                     raise UnevaluatedDataFrameError(
                         f"""
                         The function {get_cached_func_name_md(self._info.func)} is decorated with `st.cache_data` but it returns an unevaluated dataframe
