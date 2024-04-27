@@ -18,17 +18,46 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 
 
-def test_box_select_on_scatter_chart_displays_a_df(app: Page):
+def test_box_select_on_scatter_chart_displays_a_df(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     chart = app.locator(".stPlotlyChart").nth(0)
     expect(chart).to_be_visible()
     chart.hover()
+
+    # first selection
     app.mouse.down()
     app.mouse.move(50, 50)
-    app.mouse.down()
     app.mouse.move(150, 150)
     app.mouse.up()
     wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+
+    # reset
+    app.mouse.dblclick(400, 400)
+    wait_for_app_run(app, 3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
+
+    # do another selection
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(75, 75)
+    app.mouse.move(150, 150)
+    app.mouse.up()
+    wait_for_app_run(app, 3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+
+    # reset
+    app.mouse.dblclick(400, 400)
+    wait_for_app_run(app, 3000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
+
+    # click China point and check that dataframe is still 0
+    app.locator('[data-title="Pan"]').nth(0).click()
+    app.mouse.move(625, 350)
+    app.mouse.down()
+    app.mouse.up()
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
 
 
 def test_lasso_select_on_line_chart_displays_a_df(app: Page):

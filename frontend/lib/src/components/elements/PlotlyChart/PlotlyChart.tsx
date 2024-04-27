@@ -228,6 +228,13 @@ export function handleSelection(
   const { selections, points } = event
 
   if (points) {
+    // clicks can still be done but the graph should not rerun
+    if (
+      !element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS) &&
+      selections.length === 0
+    ) {
+      return
+    }
     points.forEach(function (point: any) {
       selectedPoints.push({
         ...point,
