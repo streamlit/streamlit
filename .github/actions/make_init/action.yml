@@ -19,7 +19,8 @@ runs:
         key: v1-pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
     - name: Install pre-commit
       run: |
-        pip install pre-commit
+        pip install uv
+        uv pip install pre-commit
         pre-commit install-hooks
       shell: bash --login -eo pipefail {0}
     - name: Setup Node
