@@ -531,7 +531,7 @@ export function PlotlyChart({
           // Configure select (box selection) as the activated drag mode:
           updatedDragMode = "select"
         } else if (isLassoSelectionActivated) {
-          // Configure lass (lasso selection) as the activated drag mode:
+          // Configure lasso (lasso selection) as the activated drag mode:
           updatedDragMode = "lasso"
         } else {
           updatedDragMode = "pan"
@@ -545,9 +545,9 @@ export function PlotlyChart({
 
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       if (
-        prevState.layout.clickmode === updatedClickMode &&
-        prevState.layout.hovermode === updatedHoverMode &&
-        prevState.layout.dragmode === updatedDragMode
+        prevState.layout.clickmode !== updatedClickMode &&
+        prevState.layout.hovermode !== updatedHoverMode &&
+        prevState.layout.dragmode !== updatedDragMode
       ) {
         // Nothing has changed, just return the previous state
         return prevState
