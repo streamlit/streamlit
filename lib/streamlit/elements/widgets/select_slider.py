@@ -22,6 +22,7 @@ from typing_extensions import TypeGuard
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
@@ -146,8 +147,9 @@ class SelectSliderMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
@@ -256,9 +258,12 @@ class SelectSliderMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
+
         opt = ensure_indexable(options)
         check_python_comparable(opt)
 

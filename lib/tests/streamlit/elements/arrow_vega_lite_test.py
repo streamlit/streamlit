@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+from unittest.mock import patch
 
 import pandas as pd
 import pyarrow as pa
@@ -72,6 +73,17 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
         self.assertDictEqual(
             json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
+
+    def test_vega_lite_chart_uses_convert_anything_to_df(self):
+        """Test that st.vega_lite_chart uses convert_anything_to_df to convert input data."""
+
+        with patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df1
+
+            st.vega_lite_chart({"mark": "rect", "data": df1})
+            convert_anything_to_df.assert_called_once()
 
     def test_data_values_in_spec(self):
         """Test passing data={values: df} inside the spec."""
@@ -194,7 +206,7 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
 
     def test_bad_theme(self):
         with self.assertRaises(StreamlitAPIException) as exc:
-            st.altair_chart(df1, theme="bad_theme")
+            st.vega_lite_chart(df1, theme="bad_theme")
 
         self.assertEqual(
             f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
@@ -210,6 +222,18 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
             json.loads(proto.spec),
             merge_dicts(autosize_spec, {"mark": "rect", "width": 200}),
         )
+
+    @parameterized.expand(
+        [
+            (None, {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), None),
+            (None, None),
+        ]
+    )
+    def test_empty_vega_lite_chart_throws_error(self, data, spec):
+        with self.assertRaises(ValueError) as exc:
+            st.vega_lite_chart(data, spec, use_container_width=True)
 
 
 def merge_dicts(x, y):

@@ -24,6 +24,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.mutable_status_container import StatusContainer
 
 SpecType: TypeAlias = Union[int, Sequence[Union[int, float]]]
@@ -302,8 +303,9 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
@@ -412,8 +414,9 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
@@ -518,9 +521,10 @@ class LayoutsMixin:
                 must be on their own lines). Supported LaTeX functions are listed
                 at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-                where ``color`` needs to be replaced with any of the following
-                supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -630,8 +634,9 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents)
@@ -709,6 +714,24 @@ class LayoutsMixin:
         return StatusContainer._create(
             self.dg, label=label, expanded=expanded, state=state
         )
+
+    def _dialog(
+        self,
+        title: str,
+        *,
+        dismissible: bool = True,
+        width: Literal["small", "large"] = "small",
+    ) -> "Dialog":
+        """Inserts the dialog container.
+
+        Marked as internal because it is used by the dialog_decorator and is not supposed to be used directly.
+        The dialog_decorator also has a more descriptive docstring since it is user-facing.
+        """
+
+        # We need to import Dialog here to avoid a circular import
+        from streamlit.elements.lib.dialog import Dialog
+
+        return Dialog._create(self.dg, title, dismissible=dismissible, width=width)
 
     @property
     def dg(self) -> DeltaGenerator:

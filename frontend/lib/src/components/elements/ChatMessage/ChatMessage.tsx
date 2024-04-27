@@ -19,7 +19,7 @@ import { useTheme } from "@emotion/react"
 import { Face, SmartToy } from "@emotion-icons/material-outlined"
 
 import { Block as BlockProto } from "@streamlit/lib/src/proto"
-import Icon from "@streamlit/lib/src/components/shared/Icon"
+import Icon, { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
 
@@ -71,6 +71,16 @@ function ChatMessageAvatar(props: ChatMessageAvatarProps): ReactElement {
             >
               <Icon content={SmartToy} size="lg" />
             </StyledAvatarIcon>
+          )
+        } else if (avatar.startsWith(":material")) {
+          return (
+            <StyledAvatarBackground data-testid="chatAvatarIcon-custom">
+              <DynamicIcon
+                size="lg"
+                iconValue={avatar}
+                color={theme.colors.bodyText}
+              />
+            </StyledAvatarBackground>
           )
         }
     }

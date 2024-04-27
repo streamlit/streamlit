@@ -19,6 +19,7 @@ import {
   screen,
   fireEvent,
   waitFor,
+  within,
   RenderResult,
 } from "@testing-library/react"
 import "@testing-library/jest-dom"
@@ -80,7 +81,8 @@ describe("Toast Component", () => {
     const expandButton = screen.queryByRole("button", { name: "view more" })
 
     expect(toast).toBeInTheDocument()
-    expect(toast).toHaveTextContent("🐶 This is a toast message")
+    expect(toast).toHaveTextContent("🐶")
+    expect(toast).toHaveTextContent("This is a toast message")
     expect(closeButton).toBeInTheDocument()
     expect(expandButton).not.toBeInTheDocument()
   })
@@ -93,10 +95,12 @@ describe("Toast Component", () => {
     renderComponent(props)
 
     const toast = screen.getByRole("alert")
+    const toastText = within(toast).getByTestId("stMarkdownContainer")
+
     const expandButton = screen.getByRole("button", { name: "view more" })
     expect(toast).toBeInTheDocument()
-    expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message,"
+    expect(toastText).toHaveTextContent(
+      "Random toast message that is a really really really really really really really really really long"
     )
     expect(toast).toContainElement(expandButton)
   })
@@ -109,11 +113,12 @@ describe("Toast Component", () => {
     renderComponent(props)
 
     const toast = screen.getByRole("alert")
+    const toastText = within(toast).getByTestId("stMarkdownContainer")
     const expandButton = screen.getByRole("button", { name: "view more" })
     // Initial state
     expect(toast).toBeInTheDocument()
-    expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message,"
+    expect(toastText).toHaveTextContent(
+      "Random toast message that is a really really really really really really really really really long"
     )
     expect(toast).toContainElement(expandButton)
 
@@ -127,8 +132,8 @@ describe("Toast Component", () => {
     const collapseButton = screen.getByRole("button", { name: "view less" })
     expect(toast).toContainElement(collapseButton)
     fireEvent.click(collapseButton)
-    expect(toast).toHaveTextContent(
-      "Random toast message that is a really really really really really really really really really long message,"
+    expect(toastText).toHaveTextContent(
+      "Random toast message that is a really really really really really really really really really long"
     )
     expect(toast).toContainElement(expandButton)
   })

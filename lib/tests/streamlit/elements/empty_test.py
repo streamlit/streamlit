@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
-class StEmmptyAPITest(DeltaGeneratorTestCase):
+class StEmptyAPITest(DeltaGeneratorTestCase):
     """Test Public Streamlit Public APIs."""
 
     def test_st_empty(self):

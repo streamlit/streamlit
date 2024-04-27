@@ -427,11 +427,13 @@ class DataEditorTest(DeltaGeneratorTestCase):
         # Some data formats are converted to DataFrames instead of
         # the original data type/structure.
         if metadata.expected_data_format in [
-            DataFormat.SNOWPARK_OBJECT,
-            DataFormat.PYSPARK_OBJECT,
+            DataFormat.EMPTY,
+            DataFormat.MODIN_OBJECT,
             DataFormat.PANDAS_INDEX,
             DataFormat.PANDAS_STYLER,
-            DataFormat.EMPTY,
+            DataFormat.PYSPARK_OBJECT,
+            DataFormat.SNOWPANDAS_OBJECT,
+            DataFormat.SNOWPARK_OBJECT,
         ]:
             assert isinstance(return_data, pd.DataFrame)
             self.assertEqual(return_data.shape[0], metadata.expected_rows)
@@ -649,3 +651,12 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         # no exception should be raised here
         _check_column_names(df)
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this widget is used inside a cached function."""
+        st.cache_data(lambda: st.data_editor(pd.DataFrame()))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
