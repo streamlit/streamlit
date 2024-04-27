@@ -196,3 +196,23 @@ class PyDeckTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element.exception
         self.assertEqual(el.type, "CachedWidgetWarning")
         self.assertTrue(el.is_warning)
+
+    def test_selection_mode_parsing(self):
+        """Test that the selection_mode parameter is parsed correctly."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, on_select="rerun", selection_mode="points")
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [0])
+
+        st.plotly_chart(data, on_select="rerun", selection_mode=("points", "lasso"))
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [0, 2])
+
+        st.plotly_chart(data, on_select="rerun", selection_mode={"box", "lasso"})
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [1, 2])
