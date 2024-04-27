@@ -26,19 +26,19 @@ def test_plotly_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     snapshot_names = [
-        "st_plotly_chart-none-theme",
-        "st_plotly_chart-streamlit-theme-use-container-width",
-        "st_plotly_chart-candlestick-streamlit-theme",
-        "st_plotly_chart-sunburst-custom-color",
-        "st_plotly_chart-contour-heatmap-together",
-        "st_plotly_chart-waterfall-chart-custom-height-and-width",
-        "st_plotly_chart-ternary-chart",
-        "st_plotly_chart-table-plot",
-        "st_plotly_chart-electric-colorscale",
-        "st_plotly_chart-discrete-sequence",
-        "st_plotly_chart-layout-customization",
-        "st_plotly_chart-template-customization",
-        "st_plotly_chart-histogram-chart",
+        "st_plotly_chart-none_theme",
+        "st_plotly_chart-streamlit_theme_use_container_width",
+        "st_plotly_chart-candlestick_streamlit_theme",
+        "st_plotly_chart-sunburst_custom_color",
+        "st_plotly_chart-contour_heatmap_together",
+        "st_plotly_chart-waterfall_chart_custom_height_and_width",
+        "st_plotly_chart-ternary_chart",
+        "st_plotly_chart-table_plot",
+        "st_plotly_chart-electric_colorscale",
+        "st_plotly_chart-discrete_sequence",
+        "st_plotly_chart-layout_customization",
+        "st_plotly_chart-template_customization",
+        "st_plotly_chart-histogram_chart",
     ]
     expect(themed_app.locator(".stPlotlyChart")).to_have_count(16)
     for i, name in enumerate(snapshot_names):
@@ -52,9 +52,9 @@ def test_plotly_has_correct_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     snapshot_names = [
-        "st_plotly_chart-line-chart-specific-height-width",
-        "st_plotly_chart-use-container-width-false-and-specified-height",
-        "st_plotly_chart-none-theme-and-use-container-width",
+        "st_plotly_chart-line_chart_specific_height_width",
+        "st_plotly_chart-use_container_width_false_and_specified_height",
+        "st_plotly_chart-none_theme_and_use_container_width",
     ]
     plotly_indices = [13, 14, 15]
     for i, name in enumerate(snapshot_names):
