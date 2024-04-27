@@ -29,8 +29,13 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(fig)
 
         el = self.get_delta_from_queue().new_element
-        self.assertNotEqual(el.plotly_chart.figure.spec, None)
-        self.assertNotEqual(el.plotly_chart.figure.config, None)
+        self.assertNotEqual(el.plotly_chart.spec, "")
+        self.assertNotEqual(el.plotly_chart.config, "")
+
+        # Check that deprecated properties are empty
+        self.assertEqual(el.plotly_chart.figure.spec, "")
+        self.assertEqual(el.plotly_chart.figure.config, "")
+        self.assertEqual(el.plotly_chart.HasField("url"), False)
 
     @parameterized.expand(
         [
@@ -112,6 +117,27 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.selection_mode, proto_value)
         self.assertEqual(el.plotly_chart.form_id, "")
 
+    def test_plotly_chart_on_select_initial_returns(self):
+        """Test st.plotly_chart returns an empty selection as initial result."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+        data = [trace0]
+
+        selection = st.plotly_chart(data, on_select="rerun", key="plotly_chart")
+
+        self.assertEqual(selection.select.points, [])
+        self.assertEqual(selection.select.box, [])
+        self.assertEqual(selection.select.lasso, [])
+        self.assertEqual(selection.select.point_indices, [])
+
+        # Check that the selection state is added to the session state:
+        self.assertEqual(st.session_state.plotly_chart.select.points, [])
+        self.assertEqual(st.session_state.plotly_chart.select.box, [])
+        self.assertEqual(st.session_state.plotly_chart.select.lasso, [])
+        self.assertEqual(st.session_state.plotly_chart.select.point_indices, [])
+
     def test_st_plotly_chart_invalid_on_select(self):
         import plotly.graph_objs as go
 
@@ -156,3 +182,17 @@ class PyDeckTest(DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
         self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this is used with selections activated
+        inside a cached function."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+        st.cache_data(lambda: st.plotly_chart(data, on_select="rerun"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
