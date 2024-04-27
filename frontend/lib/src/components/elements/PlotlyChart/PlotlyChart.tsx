@@ -410,15 +410,15 @@ export function PlotlyChart({
   })
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
-  const isLassoSelectionActivated = element.selectionMode.includes(
-    PlotlyChartProto.SelectionMode.LASSO
-  )
-  const isBoxSelectionActivated = element.selectionMode.includes(
-    PlotlyChartProto.SelectionMode.BOX
-  )
-  const isPointsSelectionActivated = element.selectionMode.includes(
-    PlotlyChartProto.SelectionMode.POINTS
-  )
+  const isLassoSelectionActivated =
+    isSelectionActivated &&
+    element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
+  const isBoxSelectionActivated =
+    isSelectionActivated &&
+    element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
+  const isPointsSelectionActivated =
+    isSelectionActivated &&
+    element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
 
   const plotlyConfig = useMemo(() => {
     if (!element.config) {
