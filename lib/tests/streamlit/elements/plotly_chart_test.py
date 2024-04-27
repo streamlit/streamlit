@@ -117,6 +117,21 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.selection_mode, proto_value)
         self.assertEqual(el.plotly_chart.form_id, "")
 
+    def test_plotly_chart_on_select_initial_returns(self):
+        """Test st.plotly_chart returns an empty selection as initial result."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+        data = [trace0]
+
+        selection = st.plotly_chart(data, on_select="rerun")
+
+        self.assertEqual(selection.select.points, [])
+        self.assertEqual(selection.select.box, [])
+        self.assertEqual(selection.select.lasso, [])
+        self.assertEqual(selection.select.point_indices, [])
+
     def test_st_plotly_chart_invalid_on_select(self):
         import plotly.graph_objs as go
 
