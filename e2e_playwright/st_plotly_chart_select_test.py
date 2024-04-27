@@ -27,7 +27,7 @@ def test_box_select_on_scatter_chart_displays_a_df(app: Page):
     app.mouse.down()
     app.mouse.move(150, 150)
     app.mouse.up()
-    wait_for_app_run(app, 3000)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
@@ -42,7 +42,7 @@ def test_lasso_select_on_line_chart_displays_a_df(app: Page):
     app.mouse.move(400, 400)
     app.mouse.move(435, 500)
     app.mouse.up()
-    wait_for_app_run(app, 3000)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
@@ -56,8 +56,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     chart.hover()
     app.mouse.down()
     app.mouse.up()
-    wait_for_app_run(app, 3000)
-
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(
         app.get_by_test_id("stDataFrame"), name="st_plotly_chart-single_select_df"
@@ -77,8 +76,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     chart.scroll_into_view_if_needed()
     chart.hover()
     app.mouse.dblclick(400, 400)
-    wait_for_app_run(app, 3000)
-
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
     assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
 
@@ -93,7 +91,7 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     app.mouse.down()
     app.mouse.move(150, 150)
     app.mouse.up()
-    wait_for_app_run(app, 3000)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
@@ -124,7 +122,7 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     app.mouse.move(400, 400)
     app.mouse.move(435, 500)
     app.mouse.up()
-    wait_for_app_run(app, 3000)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
     chart = app.locator(".stPlotlyChart").nth(4)
@@ -148,7 +146,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     app.mouse.down()
     app.mouse.move(150, 150)
     app.mouse.up()
-    wait_for_app_run(app, 3000)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
     app.locator('[data-title="Zoom in"]').nth(0).click()
@@ -168,7 +166,7 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     app.mouse.down()
     app.mouse.move(150, 150)
     app.mouse.up()
-    wait_for_app_run(app, 3000)
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
     app.locator('[data-title="Zoom in"]').nth(0).click()
