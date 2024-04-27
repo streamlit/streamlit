@@ -495,9 +495,12 @@ export function PlotlyChart({
   }, [element.id, theme, element.theme])
 
   useEffect(() => {
-    let updatedClickMode: typeof initialFigureSpec.layout.clickmode = undefined
-    let updatedHoverMode: typeof initialFigureSpec.layout.hovermode = undefined
-    let updatedDragMode: typeof initialFigureSpec.layout.dragmode = undefined
+    let updatedClickMode: typeof initialFigureSpec.layout.clickmode =
+      initialFigureSpec.layout.clickmode
+    let updatedHoverMode: typeof initialFigureSpec.layout.hovermode =
+      initialFigureSpec.layout.hovermode
+    let updatedDragMode: typeof initialFigureSpec.layout.dragmode =
+      initialFigureSpec.layout.dragmode
 
     if (disabled) {
       updatedClickMode = "none"
@@ -537,17 +540,13 @@ export function PlotlyChart({
           updatedDragMode = "pan"
         }
       }
-    } else {
-      updatedClickMode = initialFigureSpec.layout.clickmode
-      updatedHoverMode = initialFigureSpec.layout.hovermode
-      updatedDragMode = initialFigureSpec.layout.dragmode
     }
 
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       if (
-        prevState.layout.clickmode !== updatedClickMode &&
-        prevState.layout.hovermode !== updatedHoverMode &&
-        prevState.layout.dragmode !== updatedDragMode
+        prevState.layout.clickmode === updatedClickMode &&
+        prevState.layout.hovermode === updatedHoverMode &&
+        prevState.layout.dragmode === updatedDragMode
       ) {
         // Nothing has changed, just return the previous state
         return prevState
@@ -563,7 +562,14 @@ export function PlotlyChart({
         },
       }
     })
-  }, [element.id, isSelectionActivated, isPointsSelectionActivated, disabled])
+  }, [
+    element.id,
+    isSelectionActivated,
+    isPointsSelectionActivated,
+    isBoxSelectionActivated,
+    isLassoSelectionActivated,
+    disabled,
+  ])
 
   let calculatedWidth = Math.max(
     element.useContainerWidth
