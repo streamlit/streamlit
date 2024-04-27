@@ -576,14 +576,20 @@ export function PlotlyChart({
     disabled,
   ])
 
-  let calculatedWidth = Math.max(
-    element.useContainerWidth
-      ? width
-      : Math.min(initialFigureSpec.layout.width ?? width, width),
-    // Apply a min width to prevent the chart running into issues with negative
-    // width values if the browser window is too small:
-    MIN_WIDTH
-  )
+  let calculatedWidth =
+    width === -1
+      ? // In some situations - e.g. initial loading of tabs - the width is set to -1
+        // before its able to determine the real width. We want to keep the previous
+        // width in this case.
+        plotlyFigure.layout?.width
+      : Math.max(
+          element.useContainerWidth
+            ? width
+            : Math.min(initialFigureSpec.layout.width ?? width, width),
+          // Apply a min width to prevent the chart running into issues with negative
+          // width values if the browser window is too small:
+          MIN_WIDTH
+        )
 
   let calculatedHeight = initialFigureSpec.layout.height
 
@@ -734,6 +740,12 @@ export function PlotlyChart({
       layout={plotlyFigure.layout}
       config={plotlyConfig}
       frames={plotlyFigure.frames ?? undefined}
+      style={{
+        // Hide the plotly chart if the width is not defined yet
+        // to prevent flickering issues.
+        visibility:
+          plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+      }}
       onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
       // Double click is needed to make it easier to the user to
       // reset the selection. The default handling can be a bit annoying
