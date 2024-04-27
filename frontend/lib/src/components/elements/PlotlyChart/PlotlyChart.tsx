@@ -503,7 +503,7 @@ export function PlotlyChart({
       updatedClickMode = "none"
       updatedDragMode = "pan"
     } else if (isSelectionActivated) {
-      if (!initialFigureSpec.layout.hovermode) {
+      if (!initialFigureSpec.layout.clickmode) {
         // If the user has already set the clickmode, we don't want to override it here.
         // Otherwise, we are selecting the best clickmode based on the selection modes.
         if (isPointsSelectionActivated) {
@@ -511,8 +511,8 @@ export function PlotlyChart({
           // This allows single point selections and shift click to add / remove selections
           updatedClickMode = "event+select"
         } else {
-          // If points selection is not activated, we deactivate the `select` behavior.
-          updatedClickMode = "event"
+          // If points selection is not activated, we set the clickmode to none (no single item clicks)
+          updatedClickMode = "none"
         }
       }
 
@@ -545,9 +545,9 @@ export function PlotlyChart({
 
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       if (
-        prevState.layout.clickmode !== updatedClickMode &&
-        prevState.layout.hovermode !== updatedHoverMode &&
-        prevState.layout.dragmode !== updatedDragMode
+        prevState.layout.clickmode === updatedClickMode &&
+        prevState.layout.hovermode === updatedHoverMode &&
+        prevState.layout.dragmode === updatedDragMode
       ) {
         // Nothing has changed, just return the previous state
         return prevState
@@ -677,12 +677,16 @@ export function PlotlyChart({
     // triggering an onDeselect event.
     // Therefore, we are deactivating the event+select clickmode
     // if the dragmode is set to select or lasso.
-    let clickmode: "event+select" | "event" = "event+select"
+    let clickmode: "event+select" | "event" | "none"
     if (
       plotlyFigure.layout?.dragmode === "select" ||
       plotlyFigure.layout?.dragmode === "lasso"
     ) {
       clickmode = "event"
+    } else {
+      // Reset to either none or event+select based on if points selection mode
+      // is activated or not.
+      clickmode = isPointsSelectionActivated ? "event+select" : "none"
     }
 
     if (plotlyFigure.layout?.clickmode !== clickmode) {
