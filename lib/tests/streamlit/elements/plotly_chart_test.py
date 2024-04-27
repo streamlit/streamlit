@@ -205,7 +205,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         data = [trace0]
 
         st.plotly_chart(data, on_select="rerun", selection_mode="points")
-
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.selection_mode, [0])
 
@@ -216,3 +215,22 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data, on_select="rerun", selection_mode={"box", "lasso"})
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.plotly_chart.selection_mode, [1, 2])
+
+        # If selections are deactivated, the selection mode list should be empty
+        # even if the selection_mode parameter is set.
+        st.plotly_chart(data, on_select="ignore", selection_mode={"box", "lasso"})
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [])
+
+        def callback():
+            pass
+
+        st.plotly_chart(
+            data, on_select=callback, selection_mode=["points", "box", "lasso"]
+        )
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [0, 1, 2])
+
+        # Should throw an exception of the selection mode is parsed wrongly
+        with self.assertRaises(StreamlitAPIException):
+            st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
