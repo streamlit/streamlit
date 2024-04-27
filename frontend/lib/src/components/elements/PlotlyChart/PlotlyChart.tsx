@@ -395,7 +395,7 @@ export function PlotlyChart({
 
     return JSON.parse(element.spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.id, element.spec])
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
@@ -475,6 +475,8 @@ export function PlotlyChart({
       config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
     return config
+    // We want to reload the plotlyConfig object whenever the element id changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.id,
     element.config,
@@ -562,6 +564,9 @@ export function PlotlyChart({
         },
       }
     })
+    // We want to reload these options whenever the element id changes
+    // or the selection modes change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.id,
     isSelectionActivated,
@@ -611,6 +616,9 @@ export function PlotlyChart({
     (event: Readonly<Plotly.PlotSelectionEvent>): void => {
       handleSelection(event, widgetMgr, element, fragmentId)
     },
+    // We are using element.id here instead of element since we don't
+    // shallow reference equality will not work correctly for element.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -650,6 +658,9 @@ export function PlotlyChart({
         }, 50)
       }
     },
+    // We are using element.id here instead of element since we don't
+    // shallow reference equality will not work correctly for element.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -672,7 +683,12 @@ export function PlotlyChart({
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, widgetMgr, resetSelectionsCallback])
+  }, [
+    element.formId,
+    widgetMgr,
+    isSelectionActivated,
+    resetSelectionsCallback,
+  ])
 
   useEffect(() => {
     if (!isSelectionActivated) {
@@ -706,6 +722,8 @@ export function PlotlyChart({
         }
       })
     }
+    // We only want to trigger this effect if the dragmode changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plotlyFigure.layout?.dragmode])
 
   return (
