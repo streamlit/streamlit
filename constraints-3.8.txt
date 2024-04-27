@@ -7,7 +7,7 @@ attrs==23.2.0
 backports.tarfile==1.1.1
 backports.zoneinfo==0.2.1
 black==24.4.2
-blinker==1.7.0
+blinker==1.8.0
 bokeh==2.4.3
 cachetools==5.3.3
 certifi==2024.2.2
@@ -145,6 +145,7 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==1.26.18
+uv==0.1.39
 virtualenv==20.26.0
 watchdog==4.0.0
 yarl==1.9.4
