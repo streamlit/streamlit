@@ -512,7 +512,7 @@ export function PlotlyChart({
           updatedClickMode = "event+select"
         } else {
           // If points selection is not activated, we deactivate the `select` behavior.
-          updatedClickMode = "none"
+          updatedClickMode = "event"
         }
       }
 
@@ -677,12 +677,12 @@ export function PlotlyChart({
     // triggering an onDeselect event.
     // Therefore, we are deactivating the event+select clickmode
     // if the dragmode is set to select or lasso.
-    let clickmode: "event+select" | "none" = "event+select"
+    let clickmode: "event+select" | "event" = "event+select"
     if (
       plotlyFigure.layout?.dragmode === "select" ||
       plotlyFigure.layout?.dragmode === "lasso"
     ) {
-      clickmode = "none"
+      clickmode = "event"
     }
 
     if (plotlyFigure.layout?.clickmode !== clickmode) {
