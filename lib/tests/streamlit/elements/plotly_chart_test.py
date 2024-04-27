@@ -125,12 +125,18 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
         data = [trace0]
 
-        selection = st.plotly_chart(data, on_select="rerun")
+        selection = st.plotly_chart(data, on_select="rerun", key="plotly_chart")
 
         self.assertEqual(selection.select.points, [])
         self.assertEqual(selection.select.box, [])
         self.assertEqual(selection.select.lasso, [])
         self.assertEqual(selection.select.point_indices, [])
+
+        # Check that the selection state is added to the session state:
+        self.assertEqual(st.session_state.plotly_chart.select.points, [])
+        self.assertEqual(st.session_state.plotly_chart.select.box, [])
+        self.assertEqual(st.session_state.plotly_chart.select.lasso, [])
+        self.assertEqual(st.session_state.plotly_chart.select.point_indices, [])
 
     def test_st_plotly_chart_invalid_on_select(self):
         import plotly.graph_objs as go
