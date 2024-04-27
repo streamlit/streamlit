@@ -15,8 +15,8 @@
 import json
 import unittest
 from datetime import date
-from functools import reduce
 from typing import Any, Callable
+from unittest import mock
 
 import altair as alt
 import pandas as pd
@@ -28,18 +28,8 @@ import streamlit as st
 from streamlit.elements import arrow_altair as altair
 from streamlit.elements.arrow_altair import ChartType
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame, is_pandas_version_less_than
+from streamlit.type_util import bytes_to_data_frame
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit import pyspark_mocks, snowpark_mocks
-
-
-def _deep_get(dictionary, *keys):
-    return reduce(
-        lambda d, key: d.get(key, None) if isinstance(d, dict) else None,
-        keys,
-        dictionary,
-    )
-
 
 ST_CHART_ARGS = [
     (st.area_chart, "area"),
@@ -84,6 +74,19 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
         self.assertEqual(spec_dict["data"], {"name": proto.datasets[0].name})
         self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
         self.assertTrue("encoding" in spec_dict)
+
+    def test_altair_chart_uses_convert_anything_to_df(self):
+        """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+
+        with mock.patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df
+
+            st.altair_chart(chart)
+            convert_anything_to_df.assert_called_once()
 
     @parameterized.expand(
         [
@@ -172,62 +175,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assert_output_df_is_correct_and_input_is_untouched(
             orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
         )
-
-    @parameterized.expand(ST_CHART_ARGS)
-    def test_chart_with_pyspark_dataframe(
-        self, chart_command: Callable, altair_type: str
-    ):
-        spark_df = pyspark_mocks.DataFrame(is_numpy_arr=True)
-
-        chart_command(spark_df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        chart_spec = json.loads(proto.spec)
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(
-            chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
-
-        output_df = bytes_to_data_frame(proto.datasets[0].data.data)
-
-        self.assertEqual(len(output_df.columns), 3)
-        self.assertEqual(output_df.columns[0], "index--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[1], "color--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[2], "value--p5bJXXpQgvPz6yvQMFiy")
-
-    @parameterized.expand(ST_CHART_ARGS)
-    def test_chart_with_snowpark_dataframe(
-        self, chart_command: Callable, altair_type: str
-    ):
-        snow_df = snowpark_mocks.DataFrame()
-
-        chart_command(snow_df)
-
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        chart_spec = json.loads(proto.spec)
-        self.assertIn(chart_spec["mark"], [altair_type, {"type": altair_type}])
-        self.assertEqual(
-            chart_spec["encoding"]["x"]["field"], "index--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["y"]["field"], "value--p5bJXXpQgvPz6yvQMFiy"
-        )
-        self.assertEqual(
-            chart_spec["encoding"]["color"]["field"], "color--p5bJXXpQgvPz6yvQMFiy"
-        )
-
-        output_df = bytes_to_data_frame(proto.datasets[0].data.data)
-
-        self.assertEqual(len(output_df.columns), 3)
-        self.assertEqual(output_df.columns[0], "index--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[1], "color--p5bJXXpQgvPz6yvQMFiy")
-        self.assertEqual(output_df.columns[2], "value--p5bJXXpQgvPz6yvQMFiy")
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_explicit_x_and_implicit_y(
