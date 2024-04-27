@@ -495,15 +495,18 @@ export function PlotlyChart({
   }, [element.id, theme, element.theme])
 
   useEffect(() => {
-    let updatedClickMode: typeof initialFigureSpec.layout.clickmode = undefined
-    let updatedHoverMode: typeof initialFigureSpec.layout.hovermode = undefined
-    let updatedDragMode: typeof initialFigureSpec.layout.dragmode = undefined
+    let updatedClickMode: typeof initialFigureSpec.layout.clickmode =
+      initialFigureSpec.layout.clickmode
+    let updatedHoverMode: typeof initialFigureSpec.layout.hovermode =
+      initialFigureSpec.layout.hovermode
+    let updatedDragMode: typeof initialFigureSpec.layout.dragmode =
+      initialFigureSpec.layout.dragmode
 
     if (disabled) {
       updatedClickMode = "none"
       updatedDragMode = "pan"
     } else if (isSelectionActivated) {
-      if (!initialFigureSpec.layout.hovermode) {
+      if (!initialFigureSpec.layout.clickmode) {
         // If the user has already set the clickmode, we don't want to override it here.
         // Otherwise, we are selecting the best clickmode based on the selection modes.
         if (isPointsSelectionActivated) {
@@ -511,8 +514,8 @@ export function PlotlyChart({
           // This allows single point selections and shift click to add / remove selections
           updatedClickMode = "event+select"
         } else {
-          // If points selection is not activated, we deactivate the `select` behavior.
-          updatedClickMode = "event"
+          // If points selection is not activated, we set the clickmode to none (no single item clicks)
+          updatedClickMode = "none"
         }
       }
 
@@ -531,23 +534,19 @@ export function PlotlyChart({
           // Configure select (box selection) as the activated drag mode:
           updatedDragMode = "select"
         } else if (isLassoSelectionActivated) {
-          // Configure lass (lasso selection) as the activated drag mode:
+          // Configure lasso (lasso selection) as the activated drag mode:
           updatedDragMode = "lasso"
         } else {
           updatedDragMode = "pan"
         }
       }
-    } else {
-      updatedClickMode = initialFigureSpec.layout.clickmode
-      updatedHoverMode = initialFigureSpec.layout.hovermode
-      updatedDragMode = initialFigureSpec.layout.dragmode
     }
 
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       if (
-        prevState.layout.clickmode !== updatedClickMode &&
-        prevState.layout.hovermode !== updatedHoverMode &&
-        prevState.layout.dragmode !== updatedDragMode
+        prevState.layout.clickmode === updatedClickMode &&
+        prevState.layout.hovermode === updatedHoverMode &&
+        prevState.layout.dragmode === updatedDragMode
       ) {
         // Nothing has changed, just return the previous state
         return prevState
@@ -563,7 +562,14 @@ export function PlotlyChart({
         },
       }
     })
-  }, [element.id, isSelectionActivated, isPointsSelectionActivated, disabled])
+  }, [
+    element.id,
+    isSelectionActivated,
+    isPointsSelectionActivated,
+    isBoxSelectionActivated,
+    isLassoSelectionActivated,
+    disabled,
+  ])
 
   let calculatedWidth = Math.max(
     element.useContainerWidth
@@ -677,12 +683,16 @@ export function PlotlyChart({
     // triggering an onDeselect event.
     // Therefore, we are deactivating the event+select clickmode
     // if the dragmode is set to select or lasso.
-    let clickmode: "event+select" | "event" = "event+select"
+    let clickmode: "event+select" | "event" | "none"
     if (
       plotlyFigure.layout?.dragmode === "select" ||
       plotlyFigure.layout?.dragmode === "lasso"
     ) {
       clickmode = "event"
+    } else {
+      // Reset to either none or event+select based on if points selection mode
+      // is activated or not.
+      clickmode = isPointsSelectionActivated ? "event+select" : "none"
     }
 
     if (plotlyFigure.layout?.clickmode !== clickmode) {
