@@ -47,7 +47,7 @@ jsonpatch==1.33
 jsonpointer==2.4
 jsonschema==4.21.1
 jsonschema-specifications==2023.12.1
-keyring==25.1.0
+keyring==25.2.0
 kiwisolver==1.4.5
 langchain==0.1.16
 langchain-community==0.0.34
@@ -93,7 +93,7 @@ Pygments==2.17.2
 PyJWT==2.8.0
 pyOpenSSL==24.1.0
 pyparsing==3.1.2
-pytest==8.1.1
+pytest==8.1.2
 pytest-base-url==2.1.0
 pytest-cov==5.0.0
 pytest-github-actions-annotate-failures==0.2.0
