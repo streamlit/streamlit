@@ -29,8 +29,13 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(fig)
 
         el = self.get_delta_from_queue().new_element
-        self.assertNotEqual(el.plotly_chart.figure.spec, None)
-        self.assertNotEqual(el.plotly_chart.figure.config, None)
+        self.assertNotEqual(el.plotly_chart.spec, "")
+        self.assertNotEqual(el.plotly_chart.config, "")
+
+        # Check that deprecated properties are empty
+        self.assertEqual(el.plotly_chart.figure.spec, "")
+        self.assertEqual(el.plotly_chart.figure.config, "")
+        self.assertEqual(el.plotly_chart.HasField("url"), False)
 
     @parameterized.expand(
         [
