@@ -209,17 +209,19 @@ def test_box_and_lasso_select_works(app: Page, assert_snapshot: ImageCompareFunc
     # box select
     app.mouse.down()
     app.mouse.move(350, 350)
-    app.mouse.move(450, 450)
+    app.mouse.move(375, 375)
     app.mouse.up()
     wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
     # lasso select
+    chart.scroll_into_view_if_needed()
+    chart.hover()
     app.locator("[data-title='Lasso Select']").nth(3).click()
     app.mouse.down()
-    app.mouse.move(450, 450)
-    app.mouse.move(475, 475)
-    app.mouse.move(500, 500)
+    app.mouse.move(375, 375)
+    app.mouse.move(400, 400)
+    app.mouse.move(425, 425)
     app.mouse.up()
     wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
