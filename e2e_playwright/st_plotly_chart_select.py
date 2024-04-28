@@ -32,7 +32,6 @@ fig_bubble = px.scatter(
     log_x=True,
     size_max=60,
 )
-fig_bubble.update_layout(dragmode="select")
 st.header("Bubble Chart with Box Select")
 st.plotly_chart(fig_bubble, on_select="rerun", key="bubble_chart", selection_mode="box")
 if len(st.session_state.bubble_chart.select["points"]) > 0:
@@ -53,8 +52,6 @@ else:
 st.header("Line Chart with Lasso select")
 df = px.data.gapminder().query("continent=='Oceania'")
 fig_linechart = px.line(df, x="year", y="lifeExp", color="country", markers=True)
-# Update the configuration to enable lasso selection
-fig_linechart.update_layout(dragmode="lasso")
 st.plotly_chart(
     fig_linechart, on_select="rerun", key="line_chart", selection_mode=["lasso"]
 )
@@ -74,8 +71,10 @@ else:
 st.header("Bar Chart with Click")
 data_canada = px.data.gapminder().query("country == 'Canada'")
 fig_bar = px.bar(data_canada, x="year", y="pop")
-st.plotly_chart(fig_bar, on_select="rerun", key="bar_chart", selection_mode=["points"])
-if len(st.session_state.bar_chart.select["points"]) > 0:
+event_data = st.plotly_chart(
+    fig_bar, on_select="rerun", key="bar_chart", selection_mode=["points"]
+)
+if len(event_data.select["points"]) > 0:
     st.write("The original df data selected:")
     points = st.session_state.bar_chart.select["points"]
     # Extract x and y values directly into lists
@@ -96,13 +95,12 @@ wide_df = px.data.medals_wide()
 fig = px.bar(
     wide_df, x="nation", y=["gold", "silver", "bronze"], title="Wide-Form Input"
 )
-fig.update_layout(dragmode="select")
-st.plotly_chart(
+event_data = st.plotly_chart(
     fig,
     on_select="rerun",
     key="StackedBar_chart",
 )
-if len(st.session_state.StackedBar_chart.select["points"]) > 0:
+if len(event_data.select["points"]) > 0:
     st.write("Countries and their medal data that were selected:")
     points = st.session_state.StackedBar_chart.select["points"]
     # Extract x and y values directly into lists
@@ -166,7 +164,7 @@ fig = px.histogram(df, x="total_bill")
 
 
 def histogram_callback():
-    try:
+    if len(st.session_state.histogram_chart.select["points"]) > 0:
         lasso_select = st.session_state.histogram_chart.select["lasso"]
         st.write("Tips for selected:")
         min_x = lasso_select[0]["x"][0]
@@ -174,13 +172,28 @@ def histogram_callback():
         filtered_df = df[(df["total_bill"] > min_x) & (df["total_bill"] < max_x)]
         filtered_values = filtered_df["tip"].values
         st.dataframe(filtered_values)
-    except:
-        st.write("You have selected nothing.")
 
 
-fig.update_layout(dragmode="lasso")
 st.plotly_chart(
     fig,
     on_select=histogram_callback,
     key="histogram_chart",
 )
+
+import time
+
+if st.button("Create some elements to unmount component"):
+    for i in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+df = px.data.iris()  # iris is a pandas DataFrame
+fig = px.scatter(df, x="sepal_width", y="sepal_length")
+event_data = st.plotly_chart(
+    fig, on_select="rerun", key="bubble_chart_2", selection_mode=("box", "lasso")
+)
+
+if len(event_data.select["points"]) > 0:
+    st.dataframe(event_data.select["points"])
