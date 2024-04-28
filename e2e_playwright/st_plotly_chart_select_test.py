@@ -215,7 +215,7 @@ def test_box_and_lasso_select_works(app: Page, assert_snapshot: ImageCompareFunc
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
     # lasso select
-    app.locator("[data-title='Lasso Select']").nth(5).click()
+    app.locator("[data-title='Lasso Select']").nth(3).click()
     app.mouse.down()
     app.mouse.move(450, 450)
     app.mouse.move(475, 475)
