@@ -114,6 +114,18 @@ class ArrowTest(DeltaGeneratorTestCase):
             bytes_to_data_frame(proto.styler.display_values), expected
         )
 
+    def test_table_uses_convert_anything_to_df(self):
+        """Test that st.table uses convert_anything_to_df to convert input data."""
+        df = mock_data_frame()
+
+        with patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df
+
+            st.table(df)
+            convert_anything_to_df.assert_called_once()
+
     @patch(
         "streamlit.type_util.is_pandas_version_less_than",
         MagicMock(return_value=False),

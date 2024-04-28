@@ -17,6 +17,7 @@ import unittest
 from parameterized import parameterized
 
 from streamlit import string_util
+from streamlit.errors import StreamlitAPIException
 
 
 class StringUtilTest(unittest.TestCase):
@@ -140,3 +141,28 @@ class StringUtilTest(unittest.TestCase):
     )
     def test_max_char_sequence(self, text, char, expected):
         self.assertEqual(string_util.max_char_sequence(text, char), expected)
+
+    @parameterized.expand(
+        [
+            ":material/cabin:",
+            ":material/add_circle:",
+            ":material/add_a_photo:",
+        ]
+    )
+    def test_validate_material_icons_success(self, icon_string: str):
+        """Test that validate_material_icons not raises exception on correct icons."""
+        string_util.validate_material_icon(icon_string)
+
+    @parameterized.expand(
+        [
+            ":material/cabBbin:",
+            ":material-outlined/add_circle:",
+            ":material:add_a_photo:",
+        ]
+    )
+    def test_validate_material_icons_raises_exception(self, icon_name):
+        """Test that validate_material_icons raises exception on incorrect icons."""
+        with self.assertRaises(StreamlitAPIException) as e:
+            string_util.validate_material_icon(icon_name)
+
+        self.assertIn("not a valid Material icon.", str(e.exception))

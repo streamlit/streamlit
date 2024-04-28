@@ -18,11 +18,7 @@ import types
 from typing import Any
 
 from streamlit import type_util
-from streamlit.errors import (
-    MarkdownFormattedException,
-    StreamlitAPIException,
-    StreamlitAPIWarning,
-)
+from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 
 CACHE_DOCS_URL = "https://docs.streamlit.io/library/advanced-features/caching"
