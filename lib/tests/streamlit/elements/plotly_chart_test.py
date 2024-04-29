@@ -29,8 +29,13 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(fig)
 
         el = self.get_delta_from_queue().new_element
-        self.assertNotEqual(el.plotly_chart.figure.spec, None)
-        self.assertNotEqual(el.plotly_chart.figure.config, None)
+        self.assertNotEqual(el.plotly_chart.spec, "")
+        self.assertNotEqual(el.plotly_chart.config, "")
+
+        # Check that deprecated properties are empty
+        self.assertEqual(el.plotly_chart.figure.spec, "")
+        self.assertEqual(el.plotly_chart.figure.config, "")
+        self.assertEqual(el.plotly_chart.HasField("url"), False)
 
     @parameterized.expand(
         [
@@ -112,6 +117,27 @@ class PyDeckTest(DeltaGeneratorTestCase):
         self.assertEqual(el.plotly_chart.selection_mode, proto_value)
         self.assertEqual(el.plotly_chart.form_id, "")
 
+    def test_plotly_chart_on_select_initial_returns(self):
+        """Test st.plotly_chart returns an empty selection as initial result."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+
+        data = [trace0]
+
+        selection = st.plotly_chart(data, on_select="rerun", key="plotly_chart")
+
+        self.assertEqual(selection.select.points, [])
+        self.assertEqual(selection.select.box, [])
+        self.assertEqual(selection.select.lasso, [])
+        self.assertEqual(selection.select.point_indices, [])
+
+        # Check that the selection state is added to the session state:
+        self.assertEqual(st.session_state.plotly_chart.select.points, [])
+        self.assertEqual(st.session_state.plotly_chart.select.box, [])
+        self.assertEqual(st.session_state.plotly_chart.select.lasso, [])
+        self.assertEqual(st.session_state.plotly_chart.select.point_indices, [])
+
     def test_st_plotly_chart_invalid_on_select(self):
         import plotly.graph_objs as go
 
@@ -156,3 +182,69 @@ class PyDeckTest(DeltaGeneratorTestCase):
         form_proto = self.get_delta_from_queue(0).add_block
         plotly_proto = self.get_delta_from_queue(1).new_element.plotly_chart
         self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this is used with selections activated
+        inside a cached function."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+        st.cache_data(lambda: st.plotly_chart(data, on_select="rerun"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
+    def test_selection_mode_parsing(self):
+        """Test that the selection_mode parameter is parsed correctly."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, on_select="rerun", selection_mode="points")
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [0])
+
+        st.plotly_chart(data, on_select="rerun", selection_mode=("points", "lasso"))
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [0, 2])
+
+        st.plotly_chart(data, on_select="rerun", selection_mode={"box", "lasso"})
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [1, 2])
+
+        # If selections are deactivated, the selection mode list should be empty
+        # even if the selection_mode parameter is set.
+        st.plotly_chart(data, on_select="ignore", selection_mode={"box", "lasso"})
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [])
+
+        def callback():
+            pass
+
+        st.plotly_chart(
+            data, on_select=callback, selection_mode=["points", "box", "lasso"]
+        )
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.plotly_chart.selection_mode, [0, 1, 2])
+
+        # Should throw an exception of the selection mode is parsed wrongly
+        with self.assertRaises(StreamlitAPIException):
+            st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
+
+    def test_show_deprecation_warning_for_sharing(self):
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, sharing="streamlit")
+        # Get the second to last element, which should be deprecation warning
+        el = self.get_delta_from_queue(-2).new_element
+        self.assertIn(
+            "has been deprecated and will be removed in a future release",
+            el.alert.body,
+        )

@@ -18,10 +18,12 @@ import dataclasses
 import time
 import unittest
 from collections import namedtuple
+from typing import Any
 from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import numpy as np
 import pandas as pd
+from parameterized import parameterized
 from PIL import Image
 
 import streamlit as st
@@ -30,6 +32,14 @@ from streamlit.elements import write
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
+from tests.streamlit.modin_mocks import DataFrame as ModinDataFrame
+from tests.streamlit.modin_mocks import Series as ModinSeries
+from tests.streamlit.pyspark_mocks import DataFrame as PysparkDataFrame
+from tests.streamlit.snowpandas_mocks import DataFrame as SnowpandasDataFrame
+from tests.streamlit.snowpandas_mocks import Series as SnowpandasSeries
+from tests.streamlit.snowpark_mocks import DataFrame as SnowparkDataFrame
+from tests.streamlit.snowpark_mocks import Row as SnowparkRow
+from tests.streamlit.snowpark_mocks import Table as SnowparkTable
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -107,29 +117,6 @@ class StreamlitWriteTest(unittest.TestCase):
             st.write("more", "strings", "to", "pass")
 
             p.assert_called_once_with("more strings to pass", unsafe_allow_html=False)
-
-    def test_dataframe(self):
-        """Test st.write with dataframe."""
-        data = {
-            type_util._PANDAS_DF_TYPE_STR: pd.DataFrame(
-                [[20, 30, 50]], columns=["a", "b", "c"]
-            ),
-            type_util._PANDAS_SERIES_TYPE_STR: pd.Series(np.array(["a", "b", "c"])),
-            type_util._PANDAS_INDEX_TYPE_STR: pd.Index(list("abc")),
-            type_util._PANDAS_STYLER_TYPE_STR: pd.DataFrame(
-                {"a": [1], "b": [2]}
-            ).style.format("{:.2%}"),
-            type_util._NUMPY_ARRAY_TYPE_STR: np.array(["a", "b", "c"]),
-        }
-
-        # Make sure we have test cases for all _DATAFRAME_LIKE_TYPES
-        self.assertEqual(sorted(data.keys()), sorted(type_util._DATAFRAME_LIKE_TYPES))
-
-        for df in data.values():
-            with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
-                st.write(df)
-
-                p.assert_called_once()
 
     def test_exception_type(self):
         """Test st.write with exception."""
@@ -263,38 +250,29 @@ class StreamlitWriteTest(unittest.TestCase):
 
             p.assert_called_once()
 
-    def test_snowpark_dataframe_write(self):
-        """Test st.write with snowflake.snowpark.dataframe.DataFrame."""
-        # Import package inside the test so the test suite still runs even if you don't
-        # have this package.
-        from tests.streamlit.snowpark_mocks import DataFrame, Row
-
-        # SnowparkDataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
+    @parameterized.expand(
+        [
+            (pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"]),),
+            (pd.Series(np.array(["a", "b", "c"])),),
+            (pd.Index(list("abc")),),
+            (pd.DataFrame({"a": [1], "b": [2]}).style.format("{:.2%}"),),
+            (np.array(["a", "b", "c"]),),
+            (SnowpandasSeries(pd.Series(np.random.randn(2))),),
+            (SnowpandasDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowparkTable(pd.DataFrame(np.random.randn(2, 2))),),
+            (SnowparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (PysparkDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            (ModinSeries(pd.Series(np.random.randn(2))),),
+            (ModinDataFrame(pd.DataFrame(np.random.randn(2, 2))),),
+            ([SnowparkRow()],),
+        ]
+    )
+    def test_write_compatible_dataframe(
+        self,
+        input_data: Any,
+    ):
         with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
-            st.write(DataFrame())
-            p.assert_called_once()
-
-        # SnowparkRow inside list should call streamlit.delta_generator.DeltaGenerator.dataframe
-        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
-            st.write(
-                [
-                    Row(),
-                ]
-            )
-            p.assert_called_once()
-
-    def test_pyspark_dataframe_write(self):
-        """Test st.write with pyspark.sql.DataFrame."""
-        # Import package inside the test so the test suite still runs even if you don't
-        # have this package.
-        from tests.streamlit import pyspark_mocks
-
-        # PySpark DataFrame should call streamlit.delta_generator.DeltaGenerator.dataframe
-        with patch("streamlit.delta_generator.DeltaGenerator.dataframe") as p:
-            snowpark_dataframe = (
-                pyspark_mocks.create_pyspark_dataframe_with_mocked_personal_data()
-            )
-            st.write(snowpark_dataframe)
+            st.write(input_data)
             p.assert_called_once()
 
     @patch("streamlit.delta_generator.DeltaGenerator.markdown")
@@ -494,8 +472,25 @@ class StreamlitStreamTest(unittest.TestCase):
         stream_return = st.write_stream(test_stream)
         self.assertEqual(stream_return, "Hello World")
 
-        stream_return = st.write_stream(test_stream())
-        self.assertEqual(stream_return, "Hello World")
+    def test_with_empty_chunks(self):
+        """Test st.write_stream with generator that returns empty chunks."""
+
+        def test_stream():
+            yield ""
+            yield ""
+
+        stream_return = st.write_stream(test_stream)
+        self.assertEqual(stream_return, "")
+
+    def test_with_empty_stream(self):
+        """Test st.write_stream with generator that returns empty chunks."""
+
+        def test_stream():
+            if False:
+                yield "Hello"
+
+        stream_return = st.write_stream(test_stream)
+        self.assertEqual(stream_return, "")
 
     def test_with_wrong_input(self):
         """Test st.write_stream with string or dataframe input generates exception."""

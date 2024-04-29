@@ -303,8 +303,9 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
@@ -413,8 +414,9 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
@@ -519,9 +521,10 @@ class LayoutsMixin:
                 must be on their own lines). Supported LaTeX functions are listed
                 at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-                where ``color`` needs to be replaced with any of the following
-                supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
+              supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -631,8 +634,9 @@ class LayoutsMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents)

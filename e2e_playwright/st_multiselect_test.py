@@ -63,7 +63,7 @@ def del_from_kth_multiselect(page: Page, option_text: str, k: int):
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Should show widgets correctly when loaded."""
     multiselect_elements = themed_app.get_by_test_id("stMultiSelect")
-    expect(multiselect_elements).to_have_count(12)
+    expect(multiselect_elements).to_have_count(11)
     for idx, el in enumerate(multiselect_elements.all()):
         assert_snapshot(el, name="st_multiselect-" + str(idx))
 
