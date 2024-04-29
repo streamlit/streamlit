@@ -56,7 +56,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     chart.hover()
     app.mouse.down()
     app.mouse.up()
-    wait_for_app_run(app)
+    wait_for_app_run(app, wait_delay=3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(
         app.get_by_test_id("stDataFrame"), name="st_plotly_chart-single_select_df"
@@ -76,7 +76,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     chart.scroll_into_view_if_needed()
     chart.hover()
     app.mouse.dblclick(400, 400)
-    wait_for_app_run(app)
+    wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
     assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
 
@@ -95,16 +95,23 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-# TODO(willhuang1997): Readd choropleth charts and add a working test
 # This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
-# def test_click_on_choroleth_chart_displays_a_df(app: Page):
-#     chart = app.locator(".stPlotlyChart").nth(4)
-#     chart.scroll_into_view_if_needed()
-#     expect(chart).to_be_visible()
-#     chart.hover()
-#     app.mouse.down()
-#     app.mouse.up()
-#     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
+# Mapbox doesn't load on firefox so just test on chrome for now
+@pytest.mark.only_browser("chromium")
+def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
+    chart = app.locator(".stPlotlyChart").nth(4)
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    # wait for map to load
+    wait_for_app_run(app, 3000)
+
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(50, 50)
+    app.mouse.move(150, 150)
+    app.mouse.up()
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
 # TODO(willhuang1997): Looks like webkit is not working but it is working locally
@@ -112,7 +119,7 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(4)
+    chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
@@ -122,16 +129,16 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     app.mouse.move(400, 400)
     app.mouse.move(435, 500)
     app.mouse.up()
-    wait_for_app_run(app)
+    wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
-    chart = app.locator(".stPlotlyChart").nth(4)
+    chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
 
     app.mouse.dblclick(400, 400)
-    chart = app.locator(".stPlotlyChart").nth(4)
-    chart.scroll_into_view_if_needed()
     wait_for_app_run(app, 3000)
+    chart = app.locator(".stPlotlyChart").nth(5)
+    chart.scroll_into_view_if_needed()
     assert_snapshot(chart, name="st_plotly_chart-reset")
 
 
@@ -177,4 +184,26 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     app.mouse.up()
     assert_snapshot(chart, name="st_plotly_chart-panned")
     app.mouse.dblclick(675, 400)
+    wait_for_app_run(app, 3000)
     assert_snapshot(chart, name="st_plotly_chart-panned_reset")
+
+
+def test_selection_state_remains_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = app.locator(".stPlotlyChart").nth(6)
+    expect(chart).to_be_visible()
+    chart.scroll_into_view_if_needed()
+    chart.hover()
+    app.mouse.down()
+    app.mouse.move(350, 350)
+    app.mouse.move(450, 450)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    app.get_by_test_id("stButton").locator("button").click()
+    wait_for_app_run(app, 4000)
+
+    chart = app.locator(".stPlotlyChart").nth(6)
+    expect(chart).to_be_visible()
+    assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
