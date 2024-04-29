@@ -170,6 +170,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     wait_for_app_run(app, 3000)
     # Move mouse to reset hovering tooltip:
     app.mouse.move(0, 0)
+    chart.scroll_into_view_if_needed()
     assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
 
 
