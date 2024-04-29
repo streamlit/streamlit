@@ -62,64 +62,44 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const [heading, ...rest] = body.split("\n")
 
   return (
-    <div className="stHeadingContainer" data-testid="stHeading">
-      <div className="stMarkdown" style={{ width }}>
-        <StyledStreamlitMarkdown
-          isCaption={Boolean(false)}
-          isInSidebar={isInSidebar}
-          style={{ width }}
-          data-testid="stMarkdownContainer"
+    // <div className="stHeadingContainer" data-testid="stHeading">
+    <div className="stMarkdown" style={{ width }} data-testid="stHeading">
+      <StyledStreamlitMarkdown
+        isCaption={Boolean(false)}
+        isInSidebar={isInSidebar}
+        style={{ width }}
+        data-testid="stMarkdownContainer"
+      >
+        {/* <StyledHeaderContainer> */}
+        <HeadingWithAnchor
+          tag={tag}
+          anchor={anchor}
+          help={help}
+          hideAnchor={hideAnchor}
         >
-          <StyledHeaderContainer>
-            <HeadingWithAnchor
-              tag={tag}
-              anchor={anchor}
-              hideAnchor={hideAnchor}
-            >
-              {help ? (
-                <StyledLabelHelpWrapper>
-                  <RenderedMarkdown
-                    source={makeMarkdownHeading(tag, heading)}
-                    allowHTML={false}
-                    // this is purely an inline string
-                    overrideComponents={{
-                      p: Fragment,
-                      h1: Fragment,
-                      h2: Fragment,
-                      h3: Fragment,
-                      h4: Fragment,
-                      h5: Fragment,
-                      h6: Fragment,
-                    }}
-                  />
-                  <InlineTooltipIcon content={help} />
-                </StyledLabelHelpWrapper>
-              ) : (
-                <>
-                  <RenderedMarkdown
-                    source={makeMarkdownHeading(tag, heading)}
-                    allowHTML={false}
-                    // this is purely an inline string
-                    overrideComponents={{
-                      p: Fragment,
-                      h1: Fragment,
-                      h2: Fragment,
-                      h3: Fragment,
-                      h4: Fragment,
-                      h5: Fragment,
-                      h6: Fragment,
-                    }}
-                  />
-                </>
-              )}
-            </HeadingWithAnchor>
-          </StyledHeaderContainer>
-          {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
-          {rest.length > 0 && (
-            <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
-          )}
-        </StyledStreamlitMarkdown>
-      </div>
+          <RenderedMarkdown
+            source={makeMarkdownHeading(tag, heading)}
+            allowHTML={false}
+            // this is purely an inline string
+            overrideComponents={{
+              p: Fragment,
+              h1: Fragment,
+              h2: Fragment,
+              h3: Fragment,
+              h4: Fragment,
+              h5: Fragment,
+              h6: Fragment,
+            }}
+          />
+        </HeadingWithAnchor>
+        {/* </StyledHeaderContainer> */}
+        {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
+        {rest.length > 0 && (
+          <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
+        )}
+      </StyledStreamlitMarkdown>
+      {/* {help && <InlineTooltipIcon content={help} />} */}
+      {/* </div> */}
       {divider && (
         <StyledDivider
           data-testid="stHeadingDivider"

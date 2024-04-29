@@ -134,45 +134,42 @@ export const StyledStreamlitMarkdown =
     }
   )
 
-export const StyledLinkIconContainer = styled.div(() => ({
-  position: "relative",
-  left: "calc(-2.5rem - 0.5rem)",
-  width: "calc(100% + 2.5rem + 0.5rem)",
-  display: "flex",
-  alignItems: "center",
-  overflow: "visible",
+export const StyledHeaderWithAnchor = styled.div(() => ({
+  a: {
+    visibility: "hidden",
+  },
   ":hover": {
     a: {
-      opacity: 1,
-      transform: "scale(1)",
-      transition: "none",
+      visibility: "visible",
     },
   },
 }))
 
-export const StyledLinkIcon = styled.a(({ theme }) => ({
-  position: "absolute",
-  marginRight: "0.5rem",
+export const StyledNoBreakHeaderChar = styled.span(() => ({
+  whiteSpace: "nowrap",
+}))
 
+export const StyledHeaderElements = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  gap: "0.5rem",
+
+  // make sure that the elements are hoverable and are not "covered" by margins etc. of other elements
+  "& > *": {
+    zIndex: theme.zIndices.sidebar + 1,
+  },
+}))
+
+export const StyledLinkIcon = styled.a(({ theme }) => ({
   // center icon
   lineHeight: 0,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
 
-  // copied from full screen button
-  transform: "scale(0)",
-  transition: "opacity 300ms 150ms, transform 300ms 150ms",
-  opacity: 0,
-  height: "2.5rem",
-  width: "2.5rem",
-  zIndex: theme.zIndices.sidebar + 1,
-  border: "none",
-  backgroundColor: theme.colors.lightenedBg05,
-  borderRadius: "50%",
-
   svg: {
+    // same color as the tooltip-icon
     stroke: theme.colors.fadedText60,
+    strokeWidth: 2.25,
   },
 
   "&:hover svg": {

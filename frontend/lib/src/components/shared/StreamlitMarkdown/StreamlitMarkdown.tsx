@@ -36,13 +36,18 @@ import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
 import rehypeKatex from "rehype-katex"
-import { Link as LinkIcon } from "react-feather"
+import { Link2 as LinkIcon } from "react-feather"
+// import { Link as LinkIcon2 } from "@emotion-icons/material-outlined"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
+import {
+  InlineTooltipIcon,
+  StyledLabelHelpWrapper,
+} from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
   getMarkdownTextColors,
   getMarkdownBgColors,
@@ -51,10 +56,13 @@ import {
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
   StyledHeaderContainer,
-  StyledHeaderContent,
+  // StyledHeaderContent,
   StyledLinkIcon,
-  StyledLinkIconContainer,
+  // StyledLinkIconContainer,
+  StyledHeaderElements,
   StyledStreamlitMarkdown,
+  StyledHeaderWithAnchor,
+  StyledNoBreakHeaderChar,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -147,11 +155,12 @@ interface HeadingWithAnchorProps {
   hideAnchor?: boolean
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
+  help?: string
 }
 
 export const HeadingWithAnchor: FunctionComponent<
   React.PropsWithChildren<HeadingWithAnchorProps>
-> = ({ tag, anchor: propsAnchor, hideAnchor, children, tagProps }) => {
+> = ({ tag, anchor: propsAnchor, help, hideAnchor, children, tagProps }) => {
   const isInSidebar = React.useContext(IsSidebarContext)
   const isInDialog = React.useContext(IsDialogContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
@@ -193,17 +202,40 @@ export const HeadingWithAnchor: FunctionComponent<
     return React.createElement(tag, tagProps, children)
   }
 
-  return React.createElement(
-    tag,
-    { ...tagProps, ref, id: elementId },
-    <StyledLinkIconContainer data-testid="StyledLinkIconContainer">
-      {elementId && !hideAnchor && (
-        <StyledLinkIcon href={`#${elementId}`}>
-          <LinkIcon size="18" />
-        </StyledLinkIcon>
+  let actionElements = undefined
+  if (help || !hideAnchor) {
+    actionElements = (
+      <>
+        {/* prevent the header-icons from wrapping on their own by adding a non-visible, non-wrappable character to the heading*/}
+        <StyledNoBreakHeaderChar>&nbsp;</StyledNoBreakHeaderChar>
+        <StyledHeaderElements>
+          {help && <InlineTooltipIcon iconSize="18" content={help} />}
+          {elementId && !hideAnchor && (
+            <StyledLinkIcon href={`#${elementId}`}>
+              <LinkIcon size="18" />
+            </StyledLinkIcon>
+          )}
+        </StyledHeaderElements>
+      </>
+    )
+  }
+
+  return (
+    <StyledHeaderWithAnchor>
+      {React.createElement(
+        tag,
+        {
+          ...tagProps,
+          ref,
+          id: elementId,
+          // style: { display: "inline" },
+        },
+        <>
+          {children}
+          {actionElements}
+        </>
       )}
-      <StyledHeaderContent>{children}</StyledHeaderContent>
-    </StyledLinkIconContainer>
+    </StyledHeaderWithAnchor>
   )
 }
 
