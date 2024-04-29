@@ -102,6 +102,10 @@ def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
     chart = app.locator(".stPlotlyChart").nth(4)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
+
+    # wait for map to load
+    wait_for_app_run(app, 3000)
+
     chart.hover()
     app.mouse.down()
     app.mouse.move(50, 50)
@@ -111,7 +115,7 @@ def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
 
 
 # TODO(willhuang1997): Looks like webkit is not working but it is working locally
-# @pytest.mark.only_browser("chromium")
+@pytest.mark.only_browser("chromium")
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
