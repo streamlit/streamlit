@@ -102,33 +102,11 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-# This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
-# Mapbox doesn't load on firefox so just test on chrome for now
-@pytest.mark.skip_browser("firefox")
-def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
-    chart = app.locator(".stPlotlyChart").nth(4)
-    chart.scroll_into_view_if_needed()
-    expect(chart).to_be_visible()
-    # Wait for map to load:
-    app.wait_for_timeout(3000)
-
-    chart.hover()
-    app.mouse.down()
-    app.mouse.move(50, 50)
-    app.mouse.move(150, 150)
-    app.mouse.up()
-    wait_for_app_run(app)
-
-    # Hover chart to show toolbar:
-    chart.hover()
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-
-
 @pytest.mark.skip_browser("webkit")  # Flaky on WebKit, but manually tested
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(5)
+    chart = app.locator(".stPlotlyChart").nth(4)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
@@ -219,7 +197,7 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
 def test_selection_state_remains_after_unmounting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    chart = app.locator(".stPlotlyChart").nth(6)
+    chart = app.locator(".stPlotlyChart").nth(5)
     expect(chart).to_be_visible()
     chart.scroll_into_view_if_needed()
     chart.hover()
@@ -239,7 +217,7 @@ def test_selection_state_remains_after_unmounting(
 
 
 def test_supports_points_and_box_if_activated(app: Page):
-    chart = app.locator(".stPlotlyChart").nth(7)
+    chart = app.locator(".stPlotlyChart").nth(6)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
     chart.hover()
