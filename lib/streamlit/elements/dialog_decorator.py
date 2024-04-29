@@ -94,56 +94,80 @@ def dialog_decorator(title: F | None, *, width: DialogWidth = "small") -> F:
 def dialog_decorator(
     title: F | None | str = "", *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
-    r"""Decorate a function to mark it as a Streamlit dialog. When the decorated function is called, a dialog element is inserted with the function's body as the content.
+    """Decorator to turn a function into a dialog function which creates a modal overlay when called.
 
-    The decorated function can hold multiple elements which are rendered inside of a modal when the decorated function is called.
-    The decorated function is using `st.experimental_fragment`, which means that interacting with elements inside of the dialog will
-    only re-run the dialog function.
+    When you call a function decorated with ``@st.experimental_dialog``, a
+    modal element is inserted into your app. Streamlit element commands called
+    within the dialog function render inside the modal.
 
-    The decorated function can accept arguments that can be passed when it is called.
+    The decorated function can accept arguments that can be passed when it is
+    called. Any values from the dialog that need to be accessed from the wider
+    app should generally be stored in Session State.
 
-    Dismissing a dialog does not cause an app re-run.
-    You can close the dialog programmatically by executing `st.rerun()` explicitly inside of the decorated function.
+    A user can dismiss a modal by clicking outside of it, pressing ``ESC`` on
+    their keyboard, or clicking the "**X**" in its upper-right corner.
+    Dismissing a dialog does not trigger an app rerun. To close the modal
+    programmatically, call ``st.rerun()`` explicitly inside of the decorated
+    function.
 
-    In order to pass state from dialog widgets to the app, you can leverage `st.session_state`.
+    ``st.experimental_dialog`` inherits behavior from |st.experimental_fragment|_.
+    When a user interacts with an input widget created inside a dialog function,
+    Streamlit only reruns the dialog function instead of the full script.
+
+    Calling ``st.sidebar`` in a dialog function is not supported.
+
+    Dialog code can interact with Session State, imported modules, and other
+    Streamlit elements created outside the dialog. Note that these interactions
+    are additive across multiple dialog reruns. You are responsible for
+    handling any side effects of that behavior.
 
     .. warning::
-        Currently, a dialog may not open another dialog.
-        Also, only one dialog-decorated function may be called in a script run, which means that only one dialog can be open at any given time.
+        A dialog may not open another dialog. Only one dialog-decorated
+        function may be called in a script run, which means that only one
+        dialog can be open at any given time.
+
+    .. |st.experimental_fragment| replace:: ``st.experimental_fragment``
+    .. _st.experimental_fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
 
     Parameters
     ----------
     title : str
-        A string that will be used as the dialog's title. It cannot be empty.
+        The title to display at the top of the modal. It cannot be empty.
     width : "small", "large"
-        The width of the dialog. Defaults to "small".
-
-    Returns
-    -------
-    A decorated function that, when called, inserts a dialog element context container. The container itself contains the decorated function's elements.
+        The width of the dialog. If ``width`` is ``"small`` (default), the modal
+        will be 500 pixels wide. If ``width`` is ``"large"``, the modal will be
+        about 750 pixels wide.
 
     Examples
     --------
-    You can annotate a function to mark it as a Streamlit dialog function and pass arguments to it. You can either dismiss the dialog via the ESC-key or the X-button or close it programmatically and trigger a re-run by using `st.rerun()`.
-    Leverage `st.session_state` if you want to pass dialog widget states to the overall app:
+    The following example demonstrates the basic usage of ``@st.experimental_dialog``.
+    In this app, clicking "**A**" or "**B**" will open a modal and prompt you
+    to enter a reason for your vote. In the modal, click "**Submit**" to record
+    your vote into Session State and rerun the app. This will close the modal
+    since the dialog function is not be called during the full-script rerun.
 
     >>> import streamlit as st
     >>>
-    >>> @st.experimental_dialog("Streamlit Example Dialog")
-    >>> def example_dialog(some_arg: str, some_other_arg: int):
-    >>>     st.write(f"You passed following args: {some_arg} | {some_other_arg}")
-    >>>     # interacting with the text_input only re-runs `example_dialog`
-    >>>     some_text_input = st.text_input("Type something:", key="example_dialog_some_text_input")
-    >>>     # following write is updated when chaning the text_input inside the dialog
-    >>>     st.write(f"You wrote '{some_text_input}' in the dialog")
-    >>>     if st.button("Close the dialog"):
+    >>> @st.experimental_dialog("Cast your vote")
+    >>> def vote(item):
+    >>>     st.write(f"Why is {item} your favorite?")
+    >>>     reason = st.text_input("Because...")
+    >>>     if st.button("Submit"):
+    >>>         st.session_state.vote = {"item": item, "reason": reason}
     >>>         st.rerun()
     >>>
-    >>> if st.button("Open dialog"):
-    >>>     example_dialog("Some string arg", 42)
-    >>>
-    >>> # following write is updated with the dialog's text input when the dialog was opened, the text input was interacted with and a re-run was triggered, e.g. by clicking the Close-button defined in `example_dialog`
-    >>> st.write(f"You wrote '{st.session_state.get('example_dialog_some_text_input', '')}' in the dialog")
+    >>> if "vote" not in st.session_state:
+    >>>     st.write("Vote for your favorite")
+    >>>     if st.button("A"):
+    >>>         vote("A")
+    >>>     if st.button("B"):
+    >>>         vote("B")
+    >>> else:
+    >>>     f"You voted for {st.session_state.vote['item']} because {st.session_state.vote['reason']}"
+
+    .. output::
+        https://doc-dialog.streamlit.app/
+        height: 350px
 
     """
 
