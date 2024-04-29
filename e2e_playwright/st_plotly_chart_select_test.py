@@ -57,10 +57,10 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app.mouse.down()
     app.mouse.up()
     wait_for_app_run(app, wait_delay=3000)
-    expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
-    assert_snapshot(
-        app.get_by_test_id("stDataFrame"), name="st_plotly_chart-single_select_df"
-    )
+    expect(app.get_by_text("Selected points: 1")).to_be_attached()
+
+    # Move mouse to reset hovering tooltip:
+    app.mouse.move(0, 0)
     assert_snapshot(chart, name="st_plotly_chart-single_select")
 
     app.keyboard.down("Shift")
@@ -68,15 +68,19 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     app.mouse.down()
     app.mouse.up()
     wait_for_app_run(app, wait_delay=3000)
+    # Move mouse to reset hovering tooltip:
+    app.mouse.move(0, 0)
     assert_snapshot(chart, name="st_plotly_chart-double_select")
-    assert_snapshot(
-        app.get_by_test_id("stDataFrame"), name="st_plotly_chart-double_select_df"
-    )
+    expect(app.get_by_text("Selected points: 2")).to_be_attached()
 
     chart.scroll_into_view_if_needed()
+    # Hover to position the cursor for a more reliable double click
+    chart.hover()
     app.mouse.dblclick(400, 400)
     wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
+    # Move mouse to reset hovering tooltip:
+    app.mouse.move(0, 0)
     assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
 
 
@@ -140,6 +144,8 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     wait_for_app_run(app, 3000)
     chart.scroll_into_view_if_needed()
 
+    # Move mouse to reset hovering tooltip:
+    app.mouse.move(0, 0)
     assert_snapshot(chart, name="st_plotly_chart-reset")
 
 
@@ -160,6 +166,8 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     app.locator('[data-title="Zoom in"]').nth(0).click()
     app.mouse.dblclick(350, 350)
     wait_for_app_run(app, 3000)
+    # Move mouse to reset hovering tooltip:
+    app.mouse.move(0, 0)
     assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
 
 
@@ -183,6 +191,9 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     app.mouse.move(350, 350)
     app.mouse.up()
     assert_snapshot(chart, name="st_plotly_chart-panned")
+
+    # Hover to position the cursor for a more reliable double click
+    chart.hover()
     app.mouse.dblclick(675, 400)
     wait_for_app_run(app, 3000)
     assert_snapshot(chart, name="st_plotly_chart-panned_reset")

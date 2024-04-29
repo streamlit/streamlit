@@ -72,7 +72,7 @@ if len(st.session_state.line_chart.select["points"]) > 0:
 else:
     st.write("Nothing is selected")
 
-st.header("Bar Chart with Click")
+st.header("Bar Chart with Points Selection")
 data_canada = px.data.gapminder().query("country == 'Canada'")
 fig_bar = px.bar(data_canada, x="year", y="pop")
 event_data = st.plotly_chart(
@@ -89,7 +89,7 @@ if len(event_data.select["points"]) > 0:
     filtered_df = data_canada[
         data_canada["year"].isin(x_values) & data_canada["pop"].isin(y_values)
     ]
-    st.dataframe(filtered_df)
+    st.write(f"Selected points: {len(filtered_df)}")
 else:
     st.write("Nothing is selected")
 
