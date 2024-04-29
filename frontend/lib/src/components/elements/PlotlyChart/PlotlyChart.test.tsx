@@ -291,6 +291,38 @@ describe("handleSelection", () => {
     handleSelection(event, widgetMgr, proto, mockFragmentId)
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
   })
+
+  it('should rerun if there is a lasso select and a box select when selection_mode=["box", "lasso"]', () => {
+    const boxEvent = {
+      points: [],
+      selections: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "y",
+          x0: "0",
+          x1: "1",
+          y0: "0",
+          y1: "1",
+        },
+      ],
+    } as any
+
+    const widgetMgr = getWidgetMgr()
+
+    jest.spyOn(widgetMgr, "setStringValue")
+    handleSelection(boxEvent, widgetMgr, proto, mockFragmentId)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+
+    const lassoEvent = {
+      selections: [
+        { type: "path", xref: "x", yref: "y", path: "M4.0,8.0L4.0,7.8Z" },
+      ],
+    } as any
+
+    handleSelection(lassoEvent, widgetMgr, proto, mockFragmentId)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe("applyTheming", () => {
