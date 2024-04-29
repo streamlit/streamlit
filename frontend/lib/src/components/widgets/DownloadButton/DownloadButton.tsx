@@ -60,9 +60,9 @@ function DownloadButton(props: Props): ReactElement {
     const uri = endpoints.buildMediaURL(element.url)
     link.setAttribute("href", uri)
     if (downloadButtonNewTab) {
-      link.setAttribute("target", "_self")
-    } else {
       link.setAttribute("target", "_blank")
+    } else {
+      link.setAttribute("target", "_self")
     }
     link.setAttribute("download", "")
     link.click()

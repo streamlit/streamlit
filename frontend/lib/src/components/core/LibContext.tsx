@@ -34,6 +34,8 @@ export type LibConfig = {
    * Whether to disable the full screen mode all elements / widgets.
    */
   disableFullscreenMode?: boolean
+
+  downloadButtonNewTab?: boolean
 }
 
 export interface LibContextProps {

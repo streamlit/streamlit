@@ -512,6 +512,8 @@ const RawElementNodeRenderer = (
     }
 
     case "downloadButton": {
+      const { libConfig } = React.useContext(LibContext)
+      const downloadButtonNewTab = libConfig.downloadButtonNewTab
       const downloadButtonProto = node.element
         .downloadButton as DownloadButtonProto
       widgetProps.disabled =
@@ -521,6 +523,7 @@ const RawElementNodeRenderer = (
           endpoints={props.endpoints}
           key={downloadButtonProto.id}
           element={downloadButtonProto}
+          downloadButtonNewTab={downloadButtonNewTab}
           {...widgetProps}
         />
       )

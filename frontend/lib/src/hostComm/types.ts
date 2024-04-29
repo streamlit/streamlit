@@ -197,8 +197,6 @@ export type AppConfig = {
    * Enables custom string messages to be sent to the host
    */
   enableCustomParentMessages?: boolean
-
-  downloadButtonNewTab?: boolean
 }
 
 /**
