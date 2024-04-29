@@ -48,7 +48,6 @@ const getDefaultProps = ({
 
 const MaterialFontIcon = ({
   iconName,
-  pack,
   ...props
 }: MaterialIconProps): ReactElement => {
   return (
