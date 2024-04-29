@@ -294,7 +294,15 @@ describe("handleSelection", () => {
 
   it('should rerun if there is a lasso select and a box select when selection_mode=["box", "lasso"]', () => {
     const boxEvent = {
-      points: [],
+      points: [
+        {
+          pointIndex: 0,
+          data: { legendgroup: "group2" },
+          pointIndices: [0],
+          x: 0,
+          y: 0,
+        },
+      ],
       selections: [
         {
           type: "rect",
@@ -315,18 +323,54 @@ describe("handleSelection", () => {
       boxEvent,
       widgetMgr,
       { ...proto, selectionMode: [1, 2] } as PlotlyChartProto,
-      mockFragmentId
+      undefined
     )
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    const lassoEvent = {
+    const lassoEventAndBoxEvent = {
+      points: [
+        {
+          pointIndex: 1,
+          data: { legendgroup: "group1" },
+          pointIndices: [1],
+          x: 1,
+          y: 1,
+        },
+        {
+          pointIndex: 0,
+          data: { legendgroup: "group2" },
+          pointIndices: [0],
+          x: 0,
+          y: 0,
+        },
+      ],
       selections: [
-        { type: "path", xref: "x", yref: "y", path: "M4.0,8.0L4.0,7.8Z" },
+        { type: "path", xref: "x", yref: "y", path: "M4.0,8.0L4.0,7Z" },
+        {
+          type: "rect",
+          xref: "x",
+          yref: "y",
+          x0: "0",
+          x1: "1",
+          y0: "0",
+          y1: "1",
+        },
       ],
     } as any
 
-    handleSelection(lassoEvent, widgetMgr, proto, mockFragmentId)
+    handleSelection(
+      lassoEventAndBoxEvent,
+      widgetMgr,
+      { ...proto, selectionMode: [1, 2] } as PlotlyChartProto,
+      undefined
+    )
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
+    expect(widgetMgr.setStringValue).toHaveBeenLastCalledWith(
+      { id: "plotly_chart", selectionMode: [1, 2] },
+      '{"select":{"points":[{"point_index":1,"point_indices":[1],"x":1,"y":1,"legendgroup":"group1"},{"point_index":0,"point_indices":[0],"x":0,"y":0,"legendgroup":"group2"}],"point_indices":[1,0],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7]}]}}',
+      { fromUi: true },
+      undefined
+    )
   })
 })
 
