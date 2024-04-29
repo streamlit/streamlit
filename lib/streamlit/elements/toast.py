@@ -69,8 +69,11 @@ class ToastMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              Text and background colors can be nested (e.g.
+              ``:orange[:blue-background[Hello]]``).
+
         icon : str or None
             An optional argument that specifies an emoji to use as
             the icon for the toast. Shortcodes are not allowed, please use a
