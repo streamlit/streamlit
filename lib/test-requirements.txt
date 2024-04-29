@@ -16,7 +16,9 @@ urllib3>=1.9
 # Testing infrastructure dependencies:
 hypothesis>=6.17.4
 parameterized
-pytest
+# Pinned for now because AsyncTest doesn't work with pytest 8.2.0
+# https://github.com/pytest-dev/pytest/issues/12263
+pytest<8.2.0
 pytest-cov
 requests-mock
 testfixtures
