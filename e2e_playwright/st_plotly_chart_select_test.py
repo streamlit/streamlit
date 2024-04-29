@@ -137,7 +137,7 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
 
-    app.mouse.dblclick(400, 400)
+    app.mouse.dblclick(10, 10)
     wait_for_app_run(app, 3000)
     chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
