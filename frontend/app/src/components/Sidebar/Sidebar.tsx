@@ -322,9 +322,9 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
-            <StyledSidebarHeaderContainer data-testid="stSidebarExpandControl">
+            <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
               {this.renderLogo(false)}
-              <StyledCollapseSidebarButton>
+              <StyledCollapseSidebarButton data-testid="stSidebarCollapseButton">
                 <BaseButton
                   kind={BaseButtonKind.HEADER_BUTTON}
                   onClick={this.toggleCollapse}

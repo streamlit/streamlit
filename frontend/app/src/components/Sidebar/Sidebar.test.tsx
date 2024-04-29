@@ -283,7 +283,7 @@ describe("Sidebar Component", () => {
     it("renders logo's image param when sidebar expanded", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       renderSidebar({ appLogo: fullAppLogo })
-      const sidebarLogoContainer = screen.getByTestId("stSidebarExpandControl")
+      const sidebarLogoContainer = screen.getByTestId("stSidebarHeader")
       expect(sidebarLogoContainer).toBeInTheDocument()
       const sidebarLogo = within(sidebarLogoContainer).getByTestId("stLogo")
       expect(sidebarLogo).toBeInTheDocument()

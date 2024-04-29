@@ -18,24 +18,14 @@ from PIL import Image
 
 import streamlit as st
 
-small_logo = Image.open(str(pathlib.Path(__file__).parent / "small-streamlit.png"))
+small_logo = Image.open(
+    str(pathlib.Path(__file__).parent.parent / "small-streamlit.png")
+)
 
-logo = Image.open(str(pathlib.Path(__file__).parent / "full-streamlit.png"))
+logo = Image.open(str(pathlib.Path(__file__).parent.parent / "full-streamlit.png"))
 
-st.header("App with no sidebar")
-
-st.subheader("Page Navigation:")
-
+st.header("Logo page")
 st.logo(logo, link="https://www.example.com", collapsed_image=small_logo)
 
-
-colA, colB = st.columns(2)
-
-with colA:
-    st.page_link("mpa_configure_sidebar.py", label="Home", icon="🏠")
-    st.page_link("pages/02_page2.py", label="Page 2", icon="📄")
-    st.page_link("pages/03_page3.py", label="Page 3", icon="📈", disabled=True)
-
-with colB:
-    st.page_link("pages/04_page_with_duplicate_name.py", label="Page 4", icon="🧪")
-    st.page_link("pages/05_page_with_duplicate_name.py", label="Page 5", icon="🌎")
+with st.sidebar:
+    st.radio("Example Sidebar Content", ["Home", "About", "Contact"])
