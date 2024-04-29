@@ -311,7 +311,12 @@ describe("handleSelection", () => {
     const widgetMgr = getWidgetMgr()
 
     jest.spyOn(widgetMgr, "setStringValue")
-    handleSelection(boxEvent, widgetMgr, proto, mockFragmentId)
+    handleSelection(
+      boxEvent,
+      widgetMgr,
+      { ...proto, selectionMode: [1, 2] } as PlotlyChartProto,
+      mockFragmentId
+    )
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
     const lassoEvent = {
