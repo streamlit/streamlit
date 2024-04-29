@@ -76,7 +76,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     chart.scroll_into_view_if_needed()
     chart.hover()
     app.mouse.dblclick(400, 400)
-    wait_for_app_run(app)
+    wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
     assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
 
@@ -130,9 +130,9 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     chart.scroll_into_view_if_needed()
 
     app.mouse.dblclick(400, 400)
+    wait_for_app_run(app, 3000)
     chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
-    wait_for_app_run(app, 3000)
     assert_snapshot(chart, name="st_plotly_chart-reset")
 
 
