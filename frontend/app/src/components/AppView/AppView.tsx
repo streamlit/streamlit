@@ -178,9 +178,7 @@ function AppView(props: AppViewProps): ReactElement {
   ])
 
   const renderLogo = (appLogo: Logo): ReactElement => {
-    const displayImage = appLogo.collapsedImage
-      ? appLogo.collapsedImage
-      : appLogo.image
+    const displayImage = appLogo.iconImage ? appLogo.iconImage : appLogo.image
     const source = endpoints.buildMediaURL(displayImage)
 
     if (appLogo.link) {

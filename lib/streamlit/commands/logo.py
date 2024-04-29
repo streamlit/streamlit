@@ -33,7 +33,7 @@ def logo(
     image: str | Image.Image | AtomicImage,
     *,  # keyword-only args:
     link: str | None = None,
-    collapsed_image: str | None = None,
+    icon_image: str | None = None,
 ) -> None:
     """
     Handles the app and sidebar logos
@@ -53,20 +53,27 @@ def logo(
     fwd_msg.logo.image = image_url
 
     if link:
-        fwd_msg.logo.link = link
-    if collapsed_image:
-        collapsed_image_url = image_to_url(
-            collapsed_image,
+        # Handle external links:
+        if link.startswith("http://") or link.startswith("https://"):
+            fwd_msg.logo.link = link
+        else:
+            raise StreamlitAPIException(
+                f"Invalid link - {link} - the link param supports external links only and must start with either http:// or https://."
+            )
+
+    if icon_image:
+        icon_image_url = image_to_url(
+            icon_image,
             WidthBehaviour.AUTO,
             True,
             "RGB",
             "auto",
             "collapsed-logo",
         )
-        if collapsed_image_url == "":
+        if icon_image_url == "":
             raise StreamlitAPIException(
-                "The collapsed_image passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
+                "The icon_image passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
             )
-        fwd_msg.logo.collapsed_image = collapsed_image_url
+        fwd_msg.logo.icon_image = icon_image_url
 
     ctx.enqueue(fwd_msg)

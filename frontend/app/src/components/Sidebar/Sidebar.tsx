@@ -236,9 +236,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     }
 
     const displayImage =
-      collapsed && appLogo.collapsedImage
-        ? appLogo.collapsedImage
-        : appLogo.image
+      collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
     const source = this.props.endpoints.buildMediaURL(displayImage)
     if (appLogo.link) {
       return (
