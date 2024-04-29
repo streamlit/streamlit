@@ -271,7 +271,7 @@ describe("AppView element", () => {
       image:
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
       link: "www.example.com",
-      collapsedImage: "https://docs.streamlit.io/logo.svg",
+      iconImage: "https://docs.streamlit.io/logo.svg",
     })
 
     it("doesn't render if no logo provided", () => {
@@ -279,7 +279,7 @@ describe("AppView element", () => {
       expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
     })
 
-    it("uses collapsedImage if provided", () => {
+    it("uses iconImage if provided", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       render(<AppView {...getProps({ appLogo: fullAppLogo })} />)
       const openSidebarContainer = screen.getByTestId("collapsedControl")
@@ -291,7 +291,7 @@ describe("AppView element", () => {
       )
     })
 
-    it("defaults to image if no collapsedImage", () => {
+    it("defaults to image if no iconImage", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       render(<AppView {...getProps({ appLogo: imageOnly })} />)
       const openSidebarContainer = screen.getByTestId("collapsedControl")

@@ -25,7 +25,7 @@ small_logo = Image.open(
 logo = Image.open(str(pathlib.Path(__file__).parent.parent / "full-streamlit.png"))
 
 st.header("Logo page")
-st.logo(logo, link="https://www.example.com", collapsed_image=small_logo)
+st.logo(logo, link="https://www.example.com", icon_image=small_logo)
 
 with st.sidebar:
     st.radio("Example Sidebar Content", ["Home", "About", "Contact"])

@@ -38,7 +38,7 @@ class LogoTest(DeltaGeneratorTestCase):
         self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
         self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
         self.assertEqual(c.link, "")
-        self.assertEqual(c.collapsed_image, "")
+        self.assertEqual(c.icon_image, "")
 
     def test_image_and_link(self):
         """Test that it can be called with image & link."""
@@ -51,7 +51,7 @@ class LogoTest(DeltaGeneratorTestCase):
         self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
         self.assertTrue(c.image.endswith(get_extension_for_mimetype("image/png")))
         self.assertEqual(c.link, "http://www.example.com")
-        self.assertEqual(c.collapsed_image, "")
+        self.assertEqual(c.icon_image, "")
 
     def test_invalid_link(self):
         """Test that it can be only be called with a valid link."""
@@ -61,7 +61,7 @@ class LogoTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc_message:
             st.logo(streamlit, link="www.example.com")
 
-    def test_with_collapsed_image(self):
+    def test_with_icon_image(self):
         """Test that it can be called with image & link."""
         streamlit = Image.open(
             str(pathlib.Path(__file__).parent / "full-streamlit.png")
@@ -70,7 +70,7 @@ class LogoTest(DeltaGeneratorTestCase):
             str(pathlib.Path(__file__).parent / "small-streamlit.png")
         )
 
-        st.logo(streamlit, link="https://www.example.com", collapsed_image=collapsed)
+        st.logo(streamlit, link="https://www.example.com", icon_image=collapsed)
 
         png_extension = get_extension_for_mimetype("image/png")
 
@@ -78,5 +78,5 @@ class LogoTest(DeltaGeneratorTestCase):
         self.assertTrue(c.image.startswith(MEDIA_ENDPOINT))
         self.assertTrue(c.image.endswith(png_extension))
         self.assertEqual(c.link, "https://www.example.com")
-        self.assertTrue(c.collapsed_image.startswith(MEDIA_ENDPOINT))
+        self.assertTrue(c.icon_image.startswith(MEDIA_ENDPOINT))
         self.assertTrue(c.image.endswith(png_extension))

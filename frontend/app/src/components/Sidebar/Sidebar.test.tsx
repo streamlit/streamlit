@@ -242,7 +242,7 @@ describe("Sidebar Component", () => {
       image:
         "https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/8/8cb5b6c0e1fe4e4ebfd30b769204c0d30c332fec.png",
       link: "www.example.com",
-      collapsedImage: "https://docs.streamlit.io/logo.svg",
+      iconImage: "https://docs.streamlit.io/logo.svg",
     })
 
     it("renders spacer if no logo provided", () => {
@@ -250,7 +250,7 @@ describe("Sidebar Component", () => {
       expect(screen.getByTestId("stLogoSpacer")).toBeInTheDocument()
     })
 
-    it("renders logo when sidebar collapsed - uses collapsedImage if provided", () => {
+    it("renders logo when sidebar collapsed - uses iconImage if provided", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       renderSidebar({
         initialSidebarState: PageConfig.SidebarState.COLLAPSED,
@@ -265,7 +265,7 @@ describe("Sidebar Component", () => {
       )
     })
 
-    it("renders logo when sidebar collapsed - defaults to image if no collapsedImage", () => {
+    it("renders logo when sidebar collapsed - defaults to image if no iconImage", () => {
       const sourceSpy = jest.spyOn(mockEndpointProp, "buildMediaURL")
       renderSidebar({
         initialSidebarState: PageConfig.SidebarState.COLLAPSED,
