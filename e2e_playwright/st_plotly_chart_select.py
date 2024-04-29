@@ -13,7 +13,11 @@
 # limitations under the License.
 
 
+import json
+from urllib.request import urlopen
+
 import numpy as np
+import pandas as pd
 import plotly.express as px
 
 import streamlit as st
@@ -110,51 +114,50 @@ if len(event_data.select["points"]) > 0:
 else:
     st.write("Nothing is selected")
 
-# TODO(willhuang1997): Readd choropleth charts
-# st.header("Selections on Choropleth Chart with a callback")
+st.header("Selections on Choropleth Chart with a callback")
 
 
-# @st.cache_data
-# def load_json(url):
-#     with urlopen(url) as response:
-#         counties = json.load(response)
-#         return counties
+@st.cache_data
+def load_json(url):
+    with urlopen(url) as response:
+        counties = json.load(response)
+        return counties
 
 
-# @st.cache_data
-# def load_data(url):
-#     df = pd.read_csv(url, dtype={"fips": str})
-#     return df
+@st.cache_data
+def load_data(url):
+    df = pd.read_csv(url, dtype={"fips": str})
+    return df
 
 
-# df = load_data(
-#     "https://raw.githubusercontent.com/plotly/datasets/master/fips-unemp-16.csv"
-# )
-# counties = load_json(
-#     "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
-# )
-# fig = px.choropleth_mapbox(
-#     df,
-#     geojson=counties,
-#     locations="fips",
-#     color="unemp",
-#     color_continuous_scale="Viridis",
-#     range_color=(0, 12),
-#     mapbox_style="carto-positron",
-#     zoom=3,
-#     center={"lat": 37.0902, "lon": -95.7129},
-#     opacity=0.5,
-#     labels={"unemp": "unemployment rate"},
-# )
-# fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-# return_value = st.plotly_chart(
-#     fig,
-#     on_select="rerun",
-#     key="Choropleth_chart",
-# )
-# st.write("Data selected:")
-# if return_value:
-#     st.dataframe(return_value.select["points"])
+df = load_data(
+    "https://raw.githubusercontent.com/plotly/datasets/master/fips-unemp-16.csv"
+)
+counties = load_json(
+    "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json"
+)
+fig = px.choropleth_mapbox(
+    df,
+    geojson=counties,
+    locations="fips",
+    color="unemp",
+    color_continuous_scale="Viridis",
+    range_color=(0, 12),
+    mapbox_style="carto-positron",
+    zoom=3,
+    center={"lat": 37.0902, "lon": -95.7129},
+    opacity=0.5,
+    labels={"unemp": "unemployment rate"},
+)
+fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+return_value = st.plotly_chart(
+    fig,
+    on_select="rerun",
+    key="Choropleth_chart",
+)
+st.write("Data selected:")
+if return_value:
+    st.dataframe(return_value.select["points"])
 
 st.header("Lasso selections on Histograms with a callback")
 df = px.data.tips()
