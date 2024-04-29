@@ -155,8 +155,8 @@ return_value = st.plotly_chart(
     on_select="rerun",
     key="Choropleth_chart",
 )
-st.write("Data selected:")
-if return_value:
+if len(return_value.select.points) > 0:
+    st.write("Data selected:")
     st.dataframe(return_value.select["points"])
 
 st.header("Lasso selections on Histograms with a callback")
