@@ -102,6 +102,8 @@ def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
     chart = app.locator(".stPlotlyChart").nth(4)
     chart.scroll_into_view_if_needed()
     expect(chart).to_be_visible()
+    # Wait for map to load:
+    app.wait_for_timeout(3000)
 
     chart.hover()
     app.mouse.down()
@@ -109,6 +111,7 @@ def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
     app.mouse.move(150, 150)
     app.mouse.up()
     wait_for_app_run(app)
+
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
@@ -135,7 +138,7 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
 
-    app.mouse.dblclick(400, 400)
+    app.mouse.dblclick(50, 50, delay=100)
     wait_for_app_run(app, 3000)
     chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
@@ -157,7 +160,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
     app.locator('[data-title="Zoom in"]').nth(0).click()
-    app.mouse.dblclick(350, 350)
+    app.mouse.dblclick(400, 400, delay=100)
     wait_for_app_run(app, 3000)
     assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
 
