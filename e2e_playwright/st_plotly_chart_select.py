@@ -150,14 +150,14 @@ fig = px.choropleth_mapbox(
     labels={"unemp": "unemployment rate"},
 )
 fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-return_value = st.plotly_chart(
+event_data = st.plotly_chart(
     fig,
     on_select="rerun",
     key="Choropleth_chart",
 )
-if len(return_value.select.points) > 0:
+if len(event_data.select.points) > 0:
     st.write("Data selected:")
-    st.dataframe(return_value.select["points"])
+    st.dataframe(event_data.select["points"])
 
 st.header("Lasso selections on Histograms with a callback")
 df = px.data.tips()
