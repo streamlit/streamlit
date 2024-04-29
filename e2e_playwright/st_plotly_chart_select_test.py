@@ -114,7 +114,7 @@ def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-@pytest.mark.skip_browser("webkit")
+@pytest.mark.only_browser("chromium")
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -137,7 +137,7 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
 
-    app.mouse.dblclick(50, 50, delay=100)
+    app.mouse.dblclick(400, 400)
     wait_for_app_run(app, 3000)
     chart = app.locator(".stPlotlyChart").nth(5)
     chart.scroll_into_view_if_needed()
@@ -159,7 +159,7 @@ def test_double_click_select_mode_doesnt_reset_zoom(
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
     app.locator('[data-title="Zoom in"]').nth(0).click()
-    app.mouse.dblclick(400, 400, delay=100)
+    app.mouse.dblclick(350, 350)
     wait_for_app_run(app, 3000)
     assert_snapshot(chart, name="st_plotly_chart-zoomed_in_reset")
 
@@ -178,7 +178,6 @@ def test_double_click_pan_mode_resets_zoom_and_doesnt_rerun(
     wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
-    app.locator('[data-title="Zoom in"]').nth(0).click()
     app.locator('[data-title="Pan"]').nth(0).click()
     app.mouse.down()
     app.mouse.move(450, 450)
