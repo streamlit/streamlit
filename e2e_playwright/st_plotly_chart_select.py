@@ -192,3 +192,21 @@ event_data = st.plotly_chart(
 
 if len(event_data.select["points"]) > 0:
     st.dataframe(event_data.select["points"])
+
+st.header("Bubble Chart with Points & Box Select")
+event_data = st.plotly_chart(
+    fig_bubble, on_select="rerun", selection_mode=("points", "box")
+)
+if len(event_data.select.points) > 0:
+    points = event_data.select.points
+    # Extract x and y values directly into lists
+    x_values = [point["x"] for point in points]
+    y_values = [point["y"] for point in points]
+
+    # Use these lists to filter the DataFrame
+    filtered_df = df_bubble[
+        df_bubble["gdpPercap"].isin(x_values) & df_bubble["lifeExp"].isin(y_values)
+    ]
+    st.write(f"Selected points: {len(filtered_df)}")
+else:
+    st.write("Nothing is selected")
