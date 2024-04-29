@@ -134,7 +134,11 @@ export const StyledStreamlitMarkdown =
     }
   )
 
-export const StyledHeaderWithAnchor = styled.div(() => ({
+export const StyledHeaderWithAnchor = styled.div(({ theme }) => ({
+  "h1, h2, h3, h4, h5, h6, span": {
+    scrollMarginTop: theme.spacing.threeXL,
+  },
+  ...sharedMarkdownStyle(theme),
   a: {
     visibility: "hidden",
   },
@@ -152,6 +156,8 @@ export const StyledNoBreakHeaderChar = styled.span(() => ({
 export const StyledHeaderElements = styled.span(({ theme }) => ({
   display: "inline-flex",
   gap: "0.5rem",
+
+  verticalAlign: "middle",
 
   // make sure that the elements are hoverable and are not "covered" by margins etc. of other elements
   "& > *": {
@@ -177,12 +183,12 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   },
 }))
 
-export const StyledHeaderContainer = styled.div(({ theme }) => ({
-  "h1, h2, h3, h4, h5, h6, span": {
-    scrollMarginTop: theme.spacing.threeXL,
-  },
-  ...sharedMarkdownStyle(theme),
-}))
+// export const StyledHeaderContainer = styled.div(({ theme }) => ({
+//   "h1, h2, h3, h4, h5, h6, span": {
+//     scrollMarginTop: theme.spacing.threeXL,
+//   },
+//   ...sharedMarkdownStyle(theme),
+// }))
 
 export const StyledHeaderContent = styled.span(() => ({
   position: "relative",

@@ -19,17 +19,17 @@ import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
 import {
-  StyledHeaderContainer,
+  // StyledHeaderContainer,
   StyledStreamlitMarkdown,
   StyledDivider,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
 import {
-  InlineTooltipIcon,
-  StyledLabelHelpWrapper,
-} from "@streamlit/lib/src/components/shared/TooltipIcon"
-import { HeadingWithAnchor, RenderedMarkdown, Tags } from "./StreamlitMarkdown"
+  HeadingWithActionElements,
+  RenderedMarkdown,
+  Tags,
+} from "./StreamlitMarkdown"
 
 export interface HeadingProtoProps {
   width: number
@@ -62,7 +62,6 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const [heading, ...rest] = body.split("\n")
 
   return (
-    // <div className="stHeadingContainer" data-testid="stHeading">
     <div className="stMarkdown" style={{ width }} data-testid="stHeading">
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
@@ -70,16 +69,15 @@ function Heading(props: HeadingProtoProps): ReactElement {
         style={{ width }}
         data-testid="stMarkdownContainer"
       >
-        {/* <StyledHeaderContainer> */}
-        <HeadingWithAnchor
-          tag={tag}
+        <HeadingWithActionElements
           anchor={anchor}
           help={help}
           hideAnchor={hideAnchor}
+          tag={tag}
         >
           <RenderedMarkdown
-            source={makeMarkdownHeading(tag, heading)}
             allowHTML={false}
+            source={makeMarkdownHeading(tag, heading)}
             // this is purely an inline string
             overrideComponents={{
               p: Fragment,
@@ -91,15 +89,12 @@ function Heading(props: HeadingProtoProps): ReactElement {
               h6: Fragment,
             }}
           />
-        </HeadingWithAnchor>
-        {/* </StyledHeaderContainer> */}
+        </HeadingWithActionElements>
         {/* Only the first line of the body is used as a heading, the remaining text is added as regular mardkown below. */}
         {rest.length > 0 && (
           <RenderedMarkdown source={rest.join("\n")} allowHTML={false} />
         )}
       </StyledStreamlitMarkdown>
-      {/* {help && <InlineTooltipIcon content={help} />} */}
-      {/* </div> */}
       {divider && (
         <StyledDivider
           data-testid="stHeadingDivider"

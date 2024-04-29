@@ -46,7 +46,7 @@ import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContex
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
 import {
   InlineTooltipIcon,
-  StyledLabelHelpWrapper,
+  // StyledLabelHelpWrapper,
 } from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
   getMarkdownTextColors,
@@ -55,7 +55,7 @@ import {
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
-  StyledHeaderContainer,
+  // StyledHeaderContainer,
   // StyledHeaderContent,
   StyledLinkIcon,
   // StyledLinkIconContainer,
@@ -149,6 +149,37 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
 
+interface HeadingActionElements {
+  elementId?: string
+  help?: string
+  hideAnchor?: boolean
+}
+
+const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
+  elementId,
+  help,
+  hideAnchor,
+}) => {
+  if (!help && hideAnchor) {
+    return <></>
+  }
+
+  return (
+    <>
+      {/* prevent the header-icons from wrapping on their own by adding a non-visible, non-wrappable character to the heading*/}
+      <StyledNoBreakHeaderChar>&nbsp;</StyledNoBreakHeaderChar>
+      <StyledHeaderElements>
+        {help && <InlineTooltipIcon iconSize="18" content={help} />}
+        {elementId && !hideAnchor && (
+          <StyledLinkIcon href={`#${elementId}`}>
+            <LinkIcon size="18" />
+          </StyledLinkIcon>
+        )}
+      </StyledHeaderElements>
+    </>
+  )
+}
+
 interface HeadingWithAnchorProps {
   tag: string
   anchor?: string
@@ -158,7 +189,7 @@ interface HeadingWithAnchorProps {
   help?: string
 }
 
-export const HeadingWithAnchor: FunctionComponent<
+export const HeadingWithActionElements: FunctionComponent<
   React.PropsWithChildren<HeadingWithAnchorProps>
 > = ({ tag, anchor: propsAnchor, help, hideAnchor, children, tagProps }) => {
   const isInSidebar = React.useContext(IsSidebarContext)
@@ -186,11 +217,12 @@ export const HeadingWithAnchor: FunctionComponent<
 
   const ref = React.useCallback(
     (node: any) => {
-      if (node === null) {
+      if (node === null || node.textContent === null) {
         return
       }
 
-      const anchor = propsAnchor || createAnchorFromText(node.textContent)
+      const anchor =
+        propsAnchor || createAnchorFromText(node.textContent.trim())
       setElementId(anchor)
       if (window.location.hash.slice(1) === anchor) {
         setTarget(node)
@@ -201,24 +233,13 @@ export const HeadingWithAnchor: FunctionComponent<
   if (isInSidebar || isInDialog) {
     return React.createElement(tag, tagProps, children)
   }
-
-  let actionElements = undefined
-  if (help || !hideAnchor) {
-    actionElements = (
-      <>
-        {/* prevent the header-icons from wrapping on their own by adding a non-visible, non-wrappable character to the heading*/}
-        <StyledNoBreakHeaderChar>&nbsp;</StyledNoBreakHeaderChar>
-        <StyledHeaderElements>
-          {help && <InlineTooltipIcon iconSize="18" content={help} />}
-          {elementId && !hideAnchor && (
-            <StyledLinkIcon href={`#${elementId}`}>
-              <LinkIcon size="18" />
-            </StyledLinkIcon>
-          )}
-        </StyledHeaderElements>
-      </>
-    )
-  }
+  const actionElements = (
+    <HeaderActionElements
+      elementId={elementId}
+      help={help}
+      hideAnchor={hideAnchor}
+    />
+  )
 
   return (
     <StyledHeaderWithAnchor>
@@ -228,7 +249,6 @@ export const HeadingWithAnchor: FunctionComponent<
           ...tagProps,
           ref,
           id: elementId,
-          // style: { display: "inline" },
         },
         <>
           {children}
@@ -247,11 +267,13 @@ export const CustomHeading: FunctionComponent<
 > = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
-    <StyledHeaderContainer>
-      <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
-        {children}
-      </HeadingWithAnchor>
-    </StyledHeaderContainer>
+    <HeadingWithActionElements
+      tag={node.tagName}
+      anchor={anchor}
+      tagProps={rest}
+    >
+      {children}
+    </HeadingWithActionElements>
   )
 }
 export interface RenderedMarkdownProps {
