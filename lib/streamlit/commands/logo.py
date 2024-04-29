@@ -53,7 +53,14 @@ def logo(
     fwd_msg.logo.image = image_url
 
     if link:
-        fwd_msg.logo.link = link
+        # Handle external links:
+        if link.startswith("http://") or link.startswith("https://"):
+            fwd_msg.logo.link = link
+        else:
+            raise StreamlitAPIException(
+                f"Invalid link - {link} - the link param supports external links only and must start with either http:// or https://."
+            )
+
     if collapsed_image:
         collapsed_image_url = image_to_url(
             collapsed_image,
