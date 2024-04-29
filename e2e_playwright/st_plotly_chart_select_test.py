@@ -74,7 +74,6 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     )
 
     chart.scroll_into_view_if_needed()
-    chart.hover()
     app.mouse.dblclick(400, 400)
     wait_for_app_run(app, 3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
@@ -114,7 +113,6 @@ def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
-@pytest.mark.only_browser("chromium")
 def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_clicked(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -134,13 +132,13 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     expect(app.get_by_text("Callback triggered")).to_be_attached()
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
-    chart = app.locator(".stPlotlyChart").nth(5)
+    chart.scroll_into_view_if_needed()
+    # Hover to position the cursor for a more reliable double click
+    chart.hover()
+    app.mouse.dblclick(500, 500)
+    wait_for_app_run(app, 3000)
     chart.scroll_into_view_if_needed()
 
-    app.mouse.dblclick(10, 10)
-    wait_for_app_run(app, 3000)
-    chart = app.locator(".stPlotlyChart").nth(5)
-    chart.scroll_into_view_if_needed()
     assert_snapshot(chart, name="st_plotly_chart-reset")
 
 
@@ -205,6 +203,5 @@ def test_selection_state_remains_after_unmounting(
     app.get_by_test_id("stButton").locator("button").click()
     wait_for_app_run(app, 4000)
 
-    chart = app.locator(".stPlotlyChart").nth(6)
     expect(chart).to_be_visible()
     assert_snapshot(chart, name="st_plotly_chart-unmounted_still_has_selection")
