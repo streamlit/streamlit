@@ -38,6 +38,18 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
       userSelect: "none",
+      fontFamily: "Material Symbols Outlined",
+      fontWeight: "normal",
+      fontStyle: "normal",
+      lineHeight: 1,
+      letterSpacing: "normal",
+      textTransform: "none",
+      whiteSpace: "nowrap",
+      wordWrap: "normal",
+      direction: "ltr",
+      fontFeatureSettings: "liga",
+      MozFontFeatureSettings: "liga",
+      WebkitFontFeatureSettings: "liga",
     }
   }
 )
