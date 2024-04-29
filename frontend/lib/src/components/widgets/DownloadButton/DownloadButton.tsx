@@ -32,10 +32,19 @@ export interface Props {
   widgetMgr: WidgetStateManager
   width: number
   fragmentId?: string
+  downloadButtonNewTab?: boolean
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const { disabled, element, widgetMgr, width, endpoints, fragmentId } = props
+  const {
+    disabled,
+    element,
+    widgetMgr,
+    width,
+    endpoints,
+    fragmentId,
+    downloadButtonNewTab,
+  } = props
   const style = { width }
 
   const kind =
@@ -50,7 +59,11 @@ function DownloadButton(props: Props): ReactElement {
     const link = document.createElement("a")
     const uri = endpoints.buildMediaURL(element.url)
     link.setAttribute("href", uri)
-    link.setAttribute("target", "_self")
+    if (downloadButtonNewTab) {
+      link.setAttribute("target", "_self")
+    } else {
+      link.setAttribute("target", "_blank")
+    }
     link.setAttribute("download", "")
     link.click()
   }

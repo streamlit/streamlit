@@ -406,12 +406,14 @@ export class App extends PureComponent<Props, State> {
           disableFullscreenMode,
           enableCustomParentMessages,
           mapboxToken,
+          downloadButtonNewTab,
         } = response
 
         const appConfig: AppConfig = {
           allowedOrigins,
           useExternalAuthToken,
           enableCustomParentMessages,
+          downloadButtonNewTab,
         }
         const libConfig: LibConfig = { mapboxToken, disableFullscreenMode }
 
