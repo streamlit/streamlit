@@ -56,7 +56,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     chart.hover()
     app.mouse.down()
     app.mouse.up()
-    wait_for_app_run(app)
+    wait_for_app_run(app, wait_delay=3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
     assert_snapshot(
         app.get_by_test_id("stDataFrame"), name="st_plotly_chart-single_select_df"
@@ -96,6 +96,8 @@ def test_box_select_on_stacked_bar_chart_displays_a_df(app: Page):
 
 
 # This test could be flakey because https://github.com/plotly/plotly.js/issues/6898
+# Mapbox doesn't load on firefox so just test on chrome for now
+@pytest.mark.only_browser("chromium")
 def test_click_on_choroleth_chart_displays_a_df(app: Page):
     chart = app.locator(".stPlotlyChart").nth(4)
     chart.scroll_into_view_if_needed()
