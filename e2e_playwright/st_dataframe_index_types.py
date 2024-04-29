@@ -17,7 +17,7 @@ import random
 import numpy as np
 
 import streamlit as st
-from tests.streamlit.data_mocks import (
+from shared.data_mocks import (
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
     INTERVAL_TYPES_DF,

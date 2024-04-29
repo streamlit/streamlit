@@ -395,7 +395,7 @@ export function PlotlyChart({
 
     return JSON.parse(element.spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element.id, element.spec])
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
@@ -410,15 +410,15 @@ export function PlotlyChart({
   })
 
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
-  const isLassoSelectionActivated = element.selectionMode.includes(
-    PlotlyChartProto.SelectionMode.LASSO
-  )
-  const isBoxSelectionActivated = element.selectionMode.includes(
-    PlotlyChartProto.SelectionMode.BOX
-  )
-  const isPointsSelectionActivated = element.selectionMode.includes(
-    PlotlyChartProto.SelectionMode.POINTS
-  )
+  const isLassoSelectionActivated =
+    isSelectionActivated &&
+    element.selectionMode.includes(PlotlyChartProto.SelectionMode.LASSO)
+  const isBoxSelectionActivated =
+    isSelectionActivated &&
+    element.selectionMode.includes(PlotlyChartProto.SelectionMode.BOX)
+  const isPointsSelectionActivated =
+    isSelectionActivated &&
+    element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
 
   const plotlyConfig = useMemo(() => {
     if (!element.config) {
@@ -448,7 +448,7 @@ export function PlotlyChart({
       ]
     }
 
-    if (!config.modeBarButtonsToRemove && isSelectionActivated) {
+    if (!config.modeBarButtonsToRemove) {
       // Only modify the mode bar buttons if it's not already set
       // in the config provided by the user.
 
@@ -475,6 +475,8 @@ export function PlotlyChart({
       config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
     return config
+    // We want to reload the plotlyConfig object whenever the element id changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.id,
     element.config,
@@ -495,15 +497,18 @@ export function PlotlyChart({
   }, [element.id, theme, element.theme])
 
   useEffect(() => {
-    let updatedClickMode: typeof initialFigureSpec.layout.clickmode = undefined
-    let updatedHoverMode: typeof initialFigureSpec.layout.hovermode = undefined
-    let updatedDragMode: typeof initialFigureSpec.layout.dragmode = undefined
+    let updatedClickMode: typeof initialFigureSpec.layout.clickmode =
+      initialFigureSpec.layout.clickmode
+    let updatedHoverMode: typeof initialFigureSpec.layout.hovermode =
+      initialFigureSpec.layout.hovermode
+    let updatedDragMode: typeof initialFigureSpec.layout.dragmode =
+      initialFigureSpec.layout.dragmode
 
     if (disabled) {
       updatedClickMode = "none"
       updatedDragMode = "pan"
     } else if (isSelectionActivated) {
-      if (!initialFigureSpec.layout.hovermode) {
+      if (!initialFigureSpec.layout.clickmode) {
         // If the user has already set the clickmode, we don't want to override it here.
         // Otherwise, we are selecting the best clickmode based on the selection modes.
         if (isPointsSelectionActivated) {
@@ -511,8 +516,8 @@ export function PlotlyChart({
           // This allows single point selections and shift click to add / remove selections
           updatedClickMode = "event+select"
         } else {
-          // If points selection is not activated, we deactivate the `select` behavior.
-          updatedClickMode = "event"
+          // If points selection is not activated, we set the clickmode to none (no single item clicks)
+          updatedClickMode = "none"
         }
       }
 
@@ -531,23 +536,19 @@ export function PlotlyChart({
           // Configure select (box selection) as the activated drag mode:
           updatedDragMode = "select"
         } else if (isLassoSelectionActivated) {
-          // Configure lass (lasso selection) as the activated drag mode:
+          // Configure lasso (lasso selection) as the activated drag mode:
           updatedDragMode = "lasso"
         } else {
           updatedDragMode = "pan"
         }
       }
-    } else {
-      updatedClickMode = initialFigureSpec.layout.clickmode
-      updatedHoverMode = initialFigureSpec.layout.hovermode
-      updatedDragMode = initialFigureSpec.layout.dragmode
     }
 
     setPlotlyFigure((prevState: PlotlyFigureType) => {
       if (
-        prevState.layout.clickmode !== updatedClickMode &&
-        prevState.layout.hovermode !== updatedHoverMode &&
-        prevState.layout.dragmode !== updatedDragMode
+        prevState.layout.clickmode === updatedClickMode &&
+        prevState.layout.hovermode === updatedHoverMode &&
+        prevState.layout.dragmode === updatedDragMode
       ) {
         // Nothing has changed, just return the previous state
         return prevState
@@ -563,16 +564,32 @@ export function PlotlyChart({
         },
       }
     })
-  }, [element.id, isSelectionActivated, isPointsSelectionActivated, disabled])
+    // We want to reload these options whenever the element id changes
+    // or the selection modes change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    element.id,
+    isSelectionActivated,
+    isPointsSelectionActivated,
+    isBoxSelectionActivated,
+    isLassoSelectionActivated,
+    disabled,
+  ])
 
-  let calculatedWidth = Math.max(
-    element.useContainerWidth
-      ? width
-      : Math.min(initialFigureSpec.layout.width ?? width, width),
-    // Apply a min width to prevent the chart running into issues with negative
-    // width values if the browser window is too small:
-    MIN_WIDTH
-  )
+  let calculatedWidth =
+    width === -1
+      ? // In some situations - e.g. initial loading of tabs - the width is set to -1
+        // before its able to determine the real width. We want to keep the previous
+        // width in this case.
+        plotlyFigure.layout?.width
+      : Math.max(
+          element.useContainerWidth
+            ? width
+            : Math.min(initialFigureSpec.layout.width ?? width, width),
+          // Apply a min width to prevent the chart running into issues with negative
+          // width values if the browser window is too small:
+          MIN_WIDTH
+        )
 
   let calculatedHeight = initialFigureSpec.layout.height
 
@@ -605,6 +622,9 @@ export function PlotlyChart({
     (event: Readonly<Plotly.PlotSelectionEvent>): void => {
       handleSelection(event, widgetMgr, element, fragmentId)
     },
+    // We are using element.id here instead of element since we don't
+    // shallow reference equality will not work correctly for element.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -644,6 +664,9 @@ export function PlotlyChart({
         }, 50)
       }
     },
+    // We are using element.id here instead of element since we don't
+    // shallow reference equality will not work correctly for element.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
   )
 
@@ -666,7 +689,12 @@ export function PlotlyChart({
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, widgetMgr, resetSelectionsCallback])
+  }, [
+    element.formId,
+    widgetMgr,
+    isSelectionActivated,
+    resetSelectionsCallback,
+  ])
 
   useEffect(() => {
     if (!isSelectionActivated) {
@@ -677,12 +705,16 @@ export function PlotlyChart({
     // triggering an onDeselect event.
     // Therefore, we are deactivating the event+select clickmode
     // if the dragmode is set to select or lasso.
-    let clickmode: "event+select" | "event" = "event+select"
+    let clickmode: "event+select" | "event" | "none"
     if (
       plotlyFigure.layout?.dragmode === "select" ||
       plotlyFigure.layout?.dragmode === "lasso"
     ) {
       clickmode = "event"
+    } else {
+      // Reset to either none or event+select based on if points selection mode
+      // is activated or not.
+      clickmode = isPointsSelectionActivated ? "event+select" : "none"
     }
 
     if (plotlyFigure.layout?.clickmode !== clickmode) {
@@ -696,6 +728,8 @@ export function PlotlyChart({
         }
       })
     }
+    // We only want to trigger this effect if the dragmode changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plotlyFigure.layout?.dragmode])
 
   return (
@@ -706,6 +740,12 @@ export function PlotlyChart({
       layout={plotlyFigure.layout}
       config={plotlyConfig}
       frames={plotlyFigure.frames ?? undefined}
+      style={{
+        // Hide the plotly chart if the width is not defined yet
+        // to prevent flickering issues.
+        visibility:
+          plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+      }}
       onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
       // Double click is needed to make it easier to the user to
       // reset the selection. The default handling can be a bit annoying

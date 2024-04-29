@@ -14,24 +14,48 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, useEffect, useRef } from "react"
+import React, { ReactElement, useEffect, useRef, useMemo } from "react"
 import { Audio as AudioProto } from "@streamlit/lib/src/proto"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { WidgetStateManager as ElementStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 export interface AudioProps {
   endpoints: StreamlitEndpoints
   width: number
   element: AudioProto
+  elementMgr: ElementStateManager
 }
 
 export default function Audio({
   element,
   width,
   endpoints,
+  elementMgr,
 }: AudioProps): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { startTime, endTime, loop } = element
+  const { startTime, endTime, loop, autoplay } = element
+
+  const preventAutoplay = useMemo<boolean>(() => {
+    if (!element.id) {
+      // Elements without an ID should never autoplay
+      return true
+    }
+
+    // Recover the state in case this component got unmounted
+    // and mounted again for the same element.
+    const preventAutoplay = elementMgr.getElementState(
+      element.id,
+      "preventAutoplay"
+    )
+
+    if (!preventAutoplay) {
+      // Set the state to prevent autoplay in case there is an unmount + mount
+      // for the same element.
+      elementMgr.setElementState(element.id, "preventAutoplay", true)
+    }
+    return preventAutoplay ?? false
+  }, [element.id, elementMgr])
 
   // Handle startTime changes
   useEffect(() => {
@@ -116,12 +140,14 @@ export default function Audio({
   }, [loop, startTime])
 
   const uri = endpoints.buildMediaURL(element.url)
+
   return (
     <audio
       data-testid="stAudio"
       id="audio"
       ref={audioRef}
       controls
+      autoPlay={autoplay && !preventAutoplay}
       src={uri}
       className="stAudio"
       style={{ width }}

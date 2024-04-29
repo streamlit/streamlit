@@ -109,6 +109,7 @@ jobs:
           md5sum lib/min-constraints-gen.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
           md5sum lib/test-requirements.txt >> $GITHUB_WORKSPACE/python_cache_key.md5
           md5sum lib/setup.py >> $GITHUB_WORKSPACE/python_cache_key.md5
+          md5sum Makefile >> $GITHUB_WORKSPACE/python_cache_key.md5
           date +%F >> $GITHUB_WORKSPACE/python_cache_key.md5
       - name: Restore virtualenv from cache
         id: cache-virtualenv
@@ -121,6 +122,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
+          pip install uv
           deactivate
       - name: Activate virtualenv
         run: echo 'source venv/bin/activate' >> $HOME/.bash_profile
@@ -131,7 +133,7 @@ jobs:
       # End of inlined make_init action
 
       - name: Make local modules visible
-        run: pip install --editable lib --no-deps
+        run: uv pip install --editable lib --no-deps
       - name: Run Python Tests
         run: make pytest
       - name: Run Integration Tests
