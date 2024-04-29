@@ -312,7 +312,7 @@ class PlotlyMixin:
 
         if "sharing" in kwargs:
             show_deprecation_warning(
-                "The `sharing` parameter has been deprecated and will be removed in a future release."
+                "The `sharing` parameter has been deprecated and will be removed in a future release. "
                 "Plotly charts will always be rendered using Streamlit's offline mode."
             )
 

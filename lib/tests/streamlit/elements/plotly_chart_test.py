@@ -234,3 +234,17 @@ class PyDeckTest(DeltaGeneratorTestCase):
         # Should throw an exception of the selection mode is parsed wrongly
         with self.assertRaises(StreamlitAPIException):
             st.plotly_chart(data, on_select="rerun", selection_mode=["invalid", "box"])
+
+    def test_show_deprecation_warning_for_sharing(self):
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        st.plotly_chart(data, sharing="streamlit")
+        # Get the second to last element, which should be deprecation warning
+        el = self.get_delta_from_queue(-2).new_element
+        self.assertIn(
+            "has been deprecated and will be removed in a future release",
+            el.alert.body,
+        )
