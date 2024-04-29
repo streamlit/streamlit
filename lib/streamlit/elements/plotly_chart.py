@@ -253,8 +253,8 @@ class PlotlyMixin:
 
         on_select : "ignore" or "rerun" or callable
             Controls the behavior in response to selection events on the charts. Can be one of:
-            - “ignore” (default): Streamlit will not react to any selection events in the chart.
-            - “rerun”: Streamlit will rerun the app when the user selects data in the chart. In this case,
+            - "ignore" (default): Streamlit will not react to any selection events in the chart.
+            - "rerun: Streamlit will rerun the app when the user selects data in the chart. In this case,
               ```st.plotly_chart``` will return the selection data as a dictionary.
             - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
               callback function before the rest of the app. The selection data can be retrieved through
@@ -262,9 +262,9 @@ class PlotlyMixin:
 
         selection_mode : "points", "box", "lasso" or an iterable of these
             The selection mode of the table. Can be one of:
-            - “points”:
-            - “box”:
-            - “lasso”:
+            - "points": The chart will allow selections based on individual data points.
+            - "box": The chart will allow selections based on rectangular areas.
+            - "lasso": The chart will allow selections based on freeform areas.
             - An iterable of the above options: The chart will allow selections based on the modes specified.
 
             All selections modes are activated by default.
@@ -410,4 +410,4 @@ class PlotlyMixin:
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
-        return cast("DeltaGenerator", self)
+        return cast("DeltaGenerator", self)""
