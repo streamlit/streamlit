@@ -163,8 +163,6 @@ fig = px.histogram(df, x="total_bill")
 
 
 def histogram_callback():
-    df = px.data.tips()
-    fig = px.histogram(df, x="total_bill")
     if len(st.session_state.histogram_chart.select["points"]) > 0:
         points = list(
             point for point in st.session_state.histogram_chart.select["points"]
@@ -179,7 +177,7 @@ st.plotly_chart(
 import time
 
 if st.button("Create some elements to unmount component"):
-    for i in range(3):
+    for _ in range(3):
         # The sleep here is needed, because it won't unmount the
         # component if this is too fast.
         time.sleep(1)

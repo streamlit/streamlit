@@ -111,6 +111,7 @@ def test_box_select_on_choroleth_chart_displays_a_df(app: Page):
     app.mouse.move(50, 50)
     app.mouse.move(150, 150)
     app.mouse.up()
+    wait_for_app_run(app)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
 
