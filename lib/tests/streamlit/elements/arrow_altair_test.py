@@ -17,6 +17,7 @@ import unittest
 from datetime import date
 from typing import Any, Callable
 from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import altair as alt
 import pandas as pd
@@ -875,6 +876,70 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertEqual(proto.HasField("data"), False)
         self.assertEqual(len(proto.datasets), 1)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_inside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly inside of a form."""
+        import plotly.graph_objs as go
+
+        with st.form("form"):
+            point = alt.selection_point(name="interval")
+            df = pd.DataFrame(
+                [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
+            ).T
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+            EXPECTED_DATAFRAME = pd.DataFrame(
+                {
+                    "a": ["A", "B", "C", "D"],
+                    "b": [28, 55, 43, 91],
+                }
+            )
+
+            st.altair_chart(chart, on_select="rerun")
+
+        # 2 elements will be created: form block, altair_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        arrow_vega_lite_proto = self.get_delta_from_queue(
+            1
+        ).new_element.arrow_vega_lite_chart
+        self.assertEqual(arrow_vega_lite_proto.form_id, form_proto.form.form_id)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_outside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly outside of a form."""
+        import plotly.graph_objs as go
+
+        with st.form("form"):
+            point = alt.selection_point(name="interval")
+            df = pd.DataFrame(
+                [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
+            ).T
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+            EXPECTED_DATAFRAME = pd.DataFrame(
+                {
+                    "a": ["A", "B", "C", "D"],
+                    "b": [28, 55, 43, 91],
+                }
+            )
+
+            st.altair_chart(chart, on_select="ignore")
+
+        # 2 elements will be created: form block, altair_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        self.get_delta_from_queue(0).add_block
+        plotly_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
+        self.assertEqual(plotly_proto.form_id, "")
 
     def test_empty_altair_chart_throws_error(self):
         with self.assertRaises(TypeError) as exc:
