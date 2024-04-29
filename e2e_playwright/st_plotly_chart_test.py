@@ -106,3 +106,14 @@ def test_plotly_use_container_width_true_fullscreen(
         themed_app.locator(".stPlotlyChart").nth(index),
         name="st_plotly_chart-container_width_true_exited_fullscreen",
     )
+
+
+def test_allows_custom_toolbar_modifications(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart_element = app.locator(".stPlotlyChart").nth(1)
+    chart_element.hover()
+    assert_snapshot(
+        chart_element,
+        name="st_plotly_chart-toolbar_customization",
+    )

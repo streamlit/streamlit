@@ -127,6 +127,8 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     app.mouse.move(435, 500)
     app.mouse.up()
     wait_for_app_run(app, 3000)
+
+    # Check if the callback was triggered
     expect(app.get_by_text("Callback triggered")).to_be_attached()
     expect(app.get_by_test_id("stDataFrame")).to_have_count(1)
 
