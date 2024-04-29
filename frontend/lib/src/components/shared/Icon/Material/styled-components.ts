@@ -50,6 +50,7 @@ export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
       fontFeatureSettings: "liga",
       MozFontFeatureSettings: "liga",
       WebkitFontFeatureSettings: "liga",
+      WebkitFontSmoothing: "antialiased",
     }
   }
 )
