@@ -151,9 +151,7 @@ fig = px.choropleth_mapbox(
 )
 fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 event_data = st.plotly_chart(
-    fig,
-    on_select="rerun",
-    key="Choropleth_chart",
+    fig, on_select="rerun", key="Choropleth_chart", selection_mode="box"
 )
 if len(event_data.select.points) > 0:
     st.write("Data selected:")
