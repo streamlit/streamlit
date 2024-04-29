@@ -70,6 +70,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "time_input": "string_value",
         "component_instance": "json_value",
         "data_editor": "string_value",
+        "plotly_chart": "string_value",
     }
 )
 
