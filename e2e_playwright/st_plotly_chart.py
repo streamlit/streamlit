@@ -269,9 +269,3 @@ st.plotly_chart(fig, use_container_width=False, theme=None)
 
 # uses container width when use_container_width flag is True
 st.plotly_chart(fig, use_container_width=True, theme=None)
-
-st.header("Custom toolbar configuration")
-# Custom toolbar configuration
-st.plotly_chart(
-    fig_bubble, use_container_width=True, config={"modeBarButtonsToRemove": ["zoom"]}
-)
