@@ -20,12 +20,6 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "PlotlyChartProto";
 
 message PlotlyChart {
-  // JSON-serialized dict containing keys from the set {data, frames, layout}.
-  string spec = 10;
-
-  // JSON-serialized dict with Plotly's config object.
-  string config = 11;
-
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 5;
 
@@ -38,7 +32,14 @@ message PlotlyChart {
   // Activate selections types on the chart.
   repeated SelectionMode selection_mode = 8;
 
+  // Form ID, filled if selections are activated.
   string form_id = 9;
+
+  // JSON-serialized dict containing keys from the set {data, frames, layout}.
+  string spec = 10;
+
+  // JSON-serialized dict with Plotly's config object.
+  string config = 11;
 
   reserved 3, 4;
 
@@ -54,8 +55,7 @@ message PlotlyChart {
     // DEPRECATED and unused.
     string url = 1;
 
-    // If the user chose to not send the plot to Plotly's server, then we pass
-    // here the plot's dict spec as JSON.
+    // DEPRECATED and unused.
     Figure figure = 2;
   }
 
