@@ -96,9 +96,7 @@ fig = px.bar(
     wide_df, x="nation", y=["gold", "silver", "bronze"], title="Wide-Form Input"
 )
 event_data = st.plotly_chart(
-    fig,
-    on_select="rerun",
-    key="StackedBar_chart",
+    fig, on_select="rerun", key="StackedBar_chart", selection_mode=["box", "lasso"]
 )
 if len(event_data.select["points"]) > 0:
     st.write("Countries and their medal data that were selected:")
@@ -164,20 +162,18 @@ fig = px.histogram(df, x="total_bill")
 
 
 def histogram_callback():
+    df = px.data.tips()
+    fig = px.histogram(df, x="total_bill")
     if len(st.session_state.histogram_chart.select["points"]) > 0:
-        lasso_select = st.session_state.histogram_chart.select["lasso"]
-        st.write("Tips for selected:")
-        min_x = lasso_select[0]["x"][0]
-        max_x = lasso_select[0]["x"][1]
-        filtered_df = df[(df["total_bill"] > min_x) & (df["total_bill"] < max_x)]
-        filtered_values = filtered_df["tip"].values
-        st.dataframe(filtered_values)
+        points = list(
+            bin_number
+            for bin_number in st.session_state.histogram_chart.select["points"]
+        )
+        st.dataframe(points)
 
 
 st.plotly_chart(
-    fig,
-    on_select=histogram_callback,
-    key="histogram_chart",
+    fig, on_select=histogram_callback, key="histogram_chart", selection_mode="lasso"
 )
 
 import time
