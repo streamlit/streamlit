@@ -81,6 +81,7 @@ def test_click_on_bar_chart_displays_a_df_and_double_click_resets_properly(
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
     # Move mouse to reset hovering tooltip:
     app.mouse.move(0, 0)
+    chart.scroll_into_view_if_needed()
     assert_snapshot(chart, name="st_plotly_chart-bar_chart_reset")
 
 
@@ -141,11 +142,12 @@ def test_lasso_select_on_histogram_chart_displays_a_df_and_resets_when_double_cl
     # Hover to position the cursor for a more reliable double click
     chart.hover()
     app.mouse.dblclick(500, 500)
-    wait_for_app_run(app, 3000)
-    chart.scroll_into_view_if_needed()
+    wait_for_app_run(app, 4000)
+    expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
 
     # Move mouse to reset hovering tooltip:
     app.mouse.move(0, 0)
+    chart.scroll_into_view_if_needed()
     assert_snapshot(chart, name="st_plotly_chart-reset")
 
 
