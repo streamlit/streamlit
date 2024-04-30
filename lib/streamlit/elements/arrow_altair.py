@@ -841,17 +841,15 @@ class ArrowAltairMixin:
             )
 
         if is_select_enabled:
-            # avoid cyclic import
+            # Import here to avoid circular imports
             from streamlit.elements.form import current_form_id
-
-            proto.form_id = current_form_id(self.dg)
-
-            # avoid cyclic import
             from streamlit.elements.utils import (
                 check_callback_rules,
                 check_session_state_rules,
                 last_index_for_melted_dataframes,
             )
+
+            proto.form_id = current_form_id(self.dg)
 
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
@@ -1039,7 +1037,7 @@ def _generate_chart(
     # Get name of column to use for size, or constant value to use. Any/both could be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)
 
-    # avoid cyclic import
+    # Import here to avoid circular imports
     from streamlit.elements.utils import last_index_for_melted_dataframes
 
     # Store some info so we can use it in add_rows.

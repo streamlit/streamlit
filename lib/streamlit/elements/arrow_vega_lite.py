@@ -198,16 +198,11 @@ class ArrowVegaLiteMixin:
 
         is_select_enabled = on_select != ON_SELECTION_IGNORE
 
-        # avoid cyclic import
+        # Import here to avoid circular imports
         from streamlit.elements.form import current_form_id
 
-        if not is_select_enabled and current_form_id(self.dg):
-            # TODO(willhuang1997): double check the message of this
-            raise StreamlitAPIException(
-                "st.vega_lite_chart cannot be used inside forms!"
-            )
-
         if is_select_enabled:
+            proto.form_id = current_form_id(self.dg)
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
 
