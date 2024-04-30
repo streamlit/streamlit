@@ -158,3 +158,20 @@ def test_double_click_interval_shows_no_dataframe(
     app.mouse.dblclick(500, 500)
     wait_for_app_run(app, wait_delay=3000)
     expect(app.get_by_test_id("stDataFrame")).to_have_count(0)
+
+
+def test_selection_state_remains_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = app.get_by_test_id("stArrowVegaLiteChart").nth(8)
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+    chart.hover()
+    app.mouse.move(400, 400)
+    app.mouse.down()
+    app.mouse.move(425, 425)
+    app.mouse.up()
+
+    app.get_by_test_id("stButton").locator("button").click()
+    wait_for_app_run(app, wait_delay=4000)
+    assert_snapshot(chart, name="st_altair_chart-unmounted_still_has_selection")

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import altair as alt
 import pandas as pd
 
@@ -174,3 +176,12 @@ if (
     and len(st.session_state.histogram_interval.select) > 0
 ):
     st.dataframe(st.session_state.histogram_interval)
+
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
+
+st.altair_chart(histogram_interval, on_select="rerun", key="histogram_interval_dup")

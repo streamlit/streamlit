@@ -334,8 +334,7 @@ export class ArrowVegaLiteChart extends PureComponent<
                 } catch (e) {
                   logMessage(e)
                 }
-              }
-              if (param.select.type === "interval") {
+              } else if (param.select.type === "interval") {
                 try {
                   const values = parsedStoredValue.select[selector]
                   param.value = values
