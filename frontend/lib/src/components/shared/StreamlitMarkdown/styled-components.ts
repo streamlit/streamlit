@@ -142,11 +142,13 @@ export const StyledHeaderWithAnchor = styled.div(({ theme }) => ({
   // break-word makes most headings break in a nicer way than break-all while still
   // preventing overflowing of the container to the side
   wordBreak: "break-word",
-  a: {
+
+  // show link-icon when hovering somewhere over the heading
+  "& .header-action-link": {
     visibility: "hidden",
   },
   ":hover": {
-    a: {
+    "& .header-action-link": {
       visibility: "visible",
     },
   },

@@ -180,7 +180,10 @@ const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
       <StyledHeaderElements>
         {help && <InlineTooltipIcon iconSize="18" content={help} />}
         {elementId && !hideAnchor && (
-          <StyledLinkIcon href={`#${elementId}`}>
+          <StyledLinkIcon
+            className="header-action-link"
+            href={`#${elementId}`}
+          >
             <LinkIcon size="18" />
           </StyledLinkIcon>
         )}
