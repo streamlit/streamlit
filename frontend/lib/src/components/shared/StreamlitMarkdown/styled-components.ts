@@ -139,9 +139,11 @@ export const StyledHeaderWithAnchor = styled.div(({ theme }) => ({
     scrollMarginTop: theme.spacing.threeXL,
   },
   ...sharedMarkdownStyle(theme),
-  // break-word makes most headings break in a nicer way than break-all while still
-  // preventing overflowing of the container to the side
+
+  // break-word & pretty makes most headings break in a nicer way than break-all while still
+  // preventing overflowing of the container to the side. Long headings without whitespaces or hyphens might still look weird
   wordBreak: "break-word",
+  textWrap: "pretty",
 
   // show link-icon when hovering somewhere over the heading
   "& .header-action-link": {
@@ -154,19 +156,18 @@ export const StyledHeaderWithAnchor = styled.div(({ theme }) => ({
   },
 }))
 
-export const StyledNoBreakHeaderChar = styled.span(() => ({
-  whiteSpace: "nowrap",
-}))
-
 export const StyledHeaderElements = styled.span(({ theme }) => ({
+  marginLeft: "0.5rem",
   display: "inline-flex",
   gap: "0.5rem",
 
   verticalAlign: "middle",
 
-  // make sure that the elements are hoverable and are not "covered" by margins etc. of other elements
   "& > *": {
+    // make sure that the elements are hoverable and are not "covered" by margins etc. of other elements
     zIndex: theme.zIndices.sidebar + 1,
+    // remove margins of inner elements as they are wrapped in a container that applies the margin
+    marginLeft: "0 !important",
   },
 }))
 
