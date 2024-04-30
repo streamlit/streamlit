@@ -171,7 +171,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
         ...
 
     @gather_metrics("query_params.from_dict")
-    def from_dict(self, other):
+    def from_dict(self, params):
         """
         Set all of the query parameters from a dictionary or dictionary-like object.
 
@@ -190,9 +190,9 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
         Parameters
         ----------
-        other: dict
+        params: dict
             A dictionary used to replace the current query parameters.
 
         """
         with get_session_state().query_params() as qp:
-            return qp.from_dict(other)
+            return qp.from_dict(params)
