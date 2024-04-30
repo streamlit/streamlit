@@ -676,12 +676,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_point(name="name")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         st.altair_chart(chart, on_select=on_select)
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
@@ -705,12 +699,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_point(name="name")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         with self.assertRaises(StreamlitAPIException) as exc:
             st.altair_chart(chart, on_select=on_select)
@@ -723,12 +711,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_point()
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
@@ -745,12 +727,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_interval()
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
@@ -767,12 +743,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_point(name="point")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
@@ -789,12 +759,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_point(name="interval")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
@@ -847,12 +811,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_multi(name="interval")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         with self.assertRaises(StreamlitAPIException) as exc:
             st.altair_chart(chart, on_select="rerun")
@@ -865,12 +823,6 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         point = alt.selection_multi(name="interval")
         df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
         chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-        EXPECTED_DATAFRAME = pd.DataFrame(
-            {
-                "a": ["A", "B", "C", "D"],
-                "b": [28, 55, 43, 91],
-            }
-        )
 
         st.altair_chart(chart, on_select="ignore")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
@@ -884,20 +836,12 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form_on_select_rerun(self):
         """Test that form id is marshalled correctly inside of a form."""
-        import plotly.graph_objs as go
-
         with st.form("form"):
             point = alt.selection_point(name="interval")
             df = pd.DataFrame(
                 [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
             ).T
             chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-            EXPECTED_DATAFRAME = pd.DataFrame(
-                {
-                    "a": ["A", "B", "C", "D"],
-                    "b": [28, 55, 43, 91],
-                }
-            )
 
             st.altair_chart(chart, on_select="rerun")
 
@@ -917,20 +861,12 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_outside_form_on_select_rerun(self):
         """Test that form id is marshalled correctly outside of a form."""
-        import plotly.graph_objs as go
-
         with st.form("form"):
             point = alt.selection_point(name="interval")
             df = pd.DataFrame(
                 [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
             ).T
             chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-            EXPECTED_DATAFRAME = pd.DataFrame(
-                {
-                    "a": ["A", "B", "C", "D"],
-                    "b": [28, 55, 43, 91],
-                }
-            )
 
             st.altair_chart(chart, on_select="ignore")
 
