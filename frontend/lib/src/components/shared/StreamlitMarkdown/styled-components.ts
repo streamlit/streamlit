@@ -139,6 +139,9 @@ export const StyledHeaderWithAnchor = styled.div(({ theme }) => ({
     scrollMarginTop: theme.spacing.threeXL,
   },
   ...sharedMarkdownStyle(theme),
+  // break-word makes most headings break in a nicer way than break-all while still
+  // preventing overflowing of the container to the side
+  wordBreak: "break-word",
   a: {
     visibility: "hidden",
   },

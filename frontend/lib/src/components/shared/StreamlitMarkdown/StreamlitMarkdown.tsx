@@ -164,10 +164,19 @@ const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
     return <></>
   }
 
+  // prevent the header-icons from wrapping on their own in most cases by adding a non-visible,
+  // non-wrappable character to the heading. In some cases with long parts without white-spaces in the heading
+  // the wrap can still happen, but its more rarely. An even better approach to prevent the actions from never wrapping
+  // without a preceding char would be to check the last character of the heading for being alpha-numeric and if yes,
+  // move the last char into this element. As this should be rare and the user can always modify their heading to look better,
+  // we go with the simpler solution.
+  const invisibleChar = (
+    <StyledNoBreakHeaderChar>&nbsp;</StyledNoBreakHeaderChar>
+  )
+
   return (
     <>
-      {/* prevent the header-icons from wrapping on their own by adding a non-visible, non-wrappable character to the heading*/}
-      <StyledNoBreakHeaderChar>&nbsp;</StyledNoBreakHeaderChar>
+      {invisibleChar}
       <StyledHeaderElements>
         {help && <InlineTooltipIcon iconSize="18" content={help} />}
         {elementId && !hideAnchor && (
