@@ -40,6 +40,7 @@ _ALL_CONNECTION_PARAMS = {
     "host",
     "port",
     "database",
+    "query",
 }
 _REQUIRED_CONNECTION_PARAMS = {"dialect", "username", "host"}
 
