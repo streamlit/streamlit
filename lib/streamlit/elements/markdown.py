@@ -60,8 +60,8 @@ class MarkdownMixin:
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
               respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              Text and background colors can be nested (e.g.
-              ``:orange[:blue-background[Hello]]``).
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -181,8 +181,8 @@ class MarkdownMixin:
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
               respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              Text and background colors can be nested (e.g.
-              ``:orange[:blue-background[Hello]]``).
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in strings will be escaped and

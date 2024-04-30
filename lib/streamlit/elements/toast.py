@@ -71,8 +71,8 @@ class ToastMixin:
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
               respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-              Text and background colors can be nested (e.g.
-              ``:orange[:blue-background[Hello]]``).
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         icon : str, None
             An optional emoji or icon to display next to the alert. If ``icon``
