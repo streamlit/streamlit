@@ -283,6 +283,7 @@ const RawElementNodeRenderer = (
           element={node.element.audio as AudioProto}
           endpoints={props.endpoints}
           {...elementProps}
+          elementMgr={props.widgetMgr}
         />
       )
 
@@ -329,7 +330,7 @@ const RawElementNodeRenderer = (
       )
 
     case "empty":
-      return <div className="stHidden" />
+      return <div className="stHidden" data-testid="stEmpty" />
 
     case "exception":
       return (
@@ -405,15 +406,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "plotlyChart":
-      return (
-        <PlotlyChart
-          element={node.element.plotlyChart as PlotlyChartProto}
-          height={undefined}
-          {...elementProps}
-        />
-      )
-
     case "progress":
       return (
         <Progress
@@ -454,6 +446,7 @@ const RawElementNodeRenderer = (
           element={node.element.video as VideoProto}
           endpoints={props.endpoints}
           {...elementProps}
+          elementMgr={props.widgetMgr}
         />
       )
 
@@ -632,6 +625,17 @@ const RawElementNodeRenderer = (
         <NumberInput
           key={numberInputProto.id}
           element={numberInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "plotlyChart": {
+      const plotlyProto = node.element.plotlyChart as PlotlyChartProto
+      return (
+        <PlotlyChart
+          key={plotlyProto.id}
+          element={plotlyProto}
           {...widgetProps}
         />
       )

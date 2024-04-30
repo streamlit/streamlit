@@ -112,8 +112,13 @@ python-init:
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		pip_args+=("--requirement" "lib/test-requirements.txt"); \
 	fi;\
-	echo "Running command: pip install $${pip_args[@]}";\
-	pip install $${pip_args[@]};
+	if command -v "uv" > /dev/null; then \
+		echo "Running command: uv pip install $${pip_args[@]}"; \
+		uv pip install $${pip_args[@]}; \
+	else \
+		echo "Running command: pip install $${pip_args[@]}"; \
+		pip install $${pip_args[@]}; \
+	fi;\
 	if [ "${INSTALL_TEST_REQS}" = "true" ] ; then\
 		python -m playwright install --with-deps; \
 	fi;\
@@ -125,7 +130,6 @@ pylint:
 	# status if anything is not properly formatted. (This isn't really
 	# "linting"; we're not checking anything but code style.)
 	if command -v "black" > /dev/null; then \
-		$(BLACK) --diff --check examples/ && \
 		$(BLACK) --diff --check lib/streamlit/ --exclude=/*_pb2.py$/ && \
 		$(BLACK) --diff --check lib/tests/ && \
 		$(BLACK) --diff --check e2e/scripts/ ; \
@@ -349,7 +353,14 @@ playwright:
 playwright-custom-components:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pip install extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment; \
+	pip_args="extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment";\
+	if command -v "uv" > /dev/null; then \
+		echo "Running command: uv pip install $(pip_args)"; \
+		uv pip install $(pip_args); \
+	else \
+		echo "Running command: pip install $(pip_args)"; \
+		pip install $(pip_args); \
+	fi;\
 	pytest ${custom_components_test_folder} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 
 .PHONY: loc

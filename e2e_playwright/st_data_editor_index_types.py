@@ -17,7 +17,7 @@ import random
 import numpy as np
 
 import streamlit as st
-from tests.streamlit.data_mocks import BASE_TYPES_DF, DATETIME_TYPES_DF, NUMBER_TYPES_DF
+from shared.data_mocks import BASE_TYPES_DF, DATETIME_TYPES_DF, NUMBER_TYPES_DF
 
 np.random.seed(0)
 random.seed(0)

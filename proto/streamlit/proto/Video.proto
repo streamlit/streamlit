@@ -49,6 +49,12 @@ message Video {
   // Indicates whether the video should start over from the beginning once it ends.
   bool loop = 9;
 
+  bool autoplay = 10;
+
+  bool muted = 11;
+
+  string id = 12;
+
   reserved 1,2,4;
   reserved "format", "data";
 }

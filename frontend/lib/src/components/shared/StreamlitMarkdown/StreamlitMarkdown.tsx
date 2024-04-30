@@ -43,7 +43,10 @@ import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import { getMarkdownTextColors } from "@streamlit/lib/src/theme"
+import {
+  getMarkdownTextColors,
+  getMarkdownBgColors,
+} from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
@@ -290,6 +293,16 @@ export function RenderedMarkdown({
   const theme = useTheme()
   const { red, orange, yellow, green, blue, violet, purple, gray } =
     getMarkdownTextColors(theme)
+  const {
+    redbg,
+    orangebg,
+    yellowbg,
+    greenbg,
+    bluebg,
+    violetbg,
+    purplebg,
+    graybg,
+  } = getMarkdownBgColors(theme)
   const colorMapping = new Map(
     Object.entries({
       red: `color: ${red}`,
@@ -302,6 +315,16 @@ export function RenderedMarkdown({
       // Gradient from red, orange, yellow, green, blue, violet, purple
       rainbow: `color: transparent; background-clip: text; -webkit-background-clip: text; background-image: linear-gradient(to right,
         ${red}, ${orange}, ${yellow}, ${green}, ${blue}, ${violet}, ${purple});`,
+      "red-background": `background-color: ${redbg}`,
+      "blue-background": `background-color: ${bluebg}`,
+      "green-background": `background-color: ${greenbg}`,
+      "violet-background": `background-color: ${violetbg}`,
+      "orange-background": `background-color: ${orangebg}`,
+      "gray-background": `background-color: ${graybg}`,
+      "grey-background": `background-color: ${graybg}`,
+      // Gradient from red, orange, yellow, green, blue, violet, purple
+      "rainbow-background": `background: linear-gradient(to right,
+        ${redbg}, ${orangebg}, ${yellowbg}, ${greenbg}, ${bluebg}, ${violetbg}, ${purplebg});`,
     })
   )
   function remarkColoring() {
@@ -311,9 +334,17 @@ export function RenderedMarkdown({
           const nodeName = String(node.name)
           if (colorMapping.has(nodeName)) {
             const data = node.data || (node.data = {})
+            const style = colorMapping.get(nodeName)
             data.hName = "span"
-            data.hProperties = {
-              style: colorMapping.get(nodeName),
+            data.hProperties = data.hProperties || {}
+            data.hProperties.style = style
+            // Add class for background color for custom styling
+            if (
+              style &&
+              (/background-color:/.test(style) || /background:/.test(style))
+            ) {
+              data.hProperties.className =
+                (data.hProperties.className || "") + " has-background-color"
             }
           }
         }

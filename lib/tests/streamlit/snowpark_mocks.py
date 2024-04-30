@@ -13,95 +13,55 @@
 # limitations under the License.
 
 
-import random
-from typing import List, Union
-
-import numpy as np
 import pandas as pd
 
 
-class _SnowparkDataLikeBaseClass:
-    def __init__(
-        self, is_map: bool = False, num_of_rows: int = 50000, num_of_cols: int = 4
-    ):
-        self._data: Union[pd.DataFrame, List[List[int]], None] = None
-        self._is_map = is_map
-        self._num_of_rows = num_of_rows
-        self._num_of_cols = num_of_cols
+class DataFrame:
+    """This is dummy DataFrame class, which imitates
+    nowflake.snowpark.dataframe.DataFrame class for testing purposes.
+    We use this to make sure that our code does a special handling
+    if it detects a Snowpark Dataframe.
 
-    def count(self) -> int:
-        return self._num_of_rows
-
-    def take(self, n: int):
-        """Returns n element of fake Data like, which imitates take of snowflake.snowpark.dataframe.DataFrame"""
-        self._lazy_evaluation()
-        if n > self._num_of_rows:
-            n = self._num_of_rows
-        assert self._data is not None
-        return self._data[:n]
-
-    def collect(self) -> List[List[int]]:
-        """Returns fake Data like, which imitates collection of snowflake.snowpark.dataframe.DataFrame"""
-        self._lazy_evaluation()
-        assert self._data is not None
-        return self._data
-
-    def _lazy_evaluation(self):
-        """Sometimes we don't need data inside Data like class, so we populate it once and only when necessary"""
-        if self._data is None:
-            if self._is_map:
-                self._data = pd.DataFrame(
-                    (
-                        np.random.randn(self._num_of_rows, 2) / [50, 50]
-                        + [37.76, -122.4]
-                    ),
-                    columns=["lat", "lon"],
-                )
-            else:
-                random.seed(0)
-                self._data = self._random_data()
-
-    def _random_data(self) -> List[List[int]]:
-        data: List[List[int]] = []
-        for _ in range(0, self._num_of_rows):
-            data.append(self._random_row())
-        return data
-
-    def _random_row(self) -> List[int]:
-        row: List[int] = []
-        for _ in range(0, self._num_of_cols):
-            row.append(random.randint(1, 1000000))
-        return row
-
-
-class DataFrame(_SnowparkDataLikeBaseClass):
-    """This is dummy DataFrame class,
-    which imitates snowflake.snowpark.dataframe.DataFrame class
-    for testing purposes."""
+    This allows testing of the functionality without having the library installed,
+    but it won't capture changes in the API of the library. This requires
+    integration tests.
+    """
 
     __module__ = "snowflake.snowpark.dataframe"
 
-    def __init__(
-        self, is_map: bool = False, num_of_rows: int = 50000, num_of_cols: int = 4
-    ):
-        super(DataFrame, self).__init__(
-            is_map=is_map, num_of_rows=num_of_rows, num_of_cols=num_of_cols
-        )
+    def __init__(self, data: pd.DataFrame):
+        self._data: pd.DataFrame = data
+
+    def to_pandas(self) -> pd.DataFrame:
+        return self._data
+
+    def limit(self, n: int) -> "DataFrame":
+        """Returns the top n element of a mock version of Snowpark Dataframe"""
+        return DataFrame(self._data.head(n))
 
 
-class Table(_SnowparkDataLikeBaseClass):
-    """This is dummy Table class,
-    which imitates snowflake.snowpark.dataframe.DataFrame class
-    for testing purposes."""
+class Table:
+    """This is dummy Table class, which imitates
+    nowflake.snowpark.table.Table class for testing purposes.
+    We use this to make sure that our code does a special handling
+    if it detects a Snowpark Table.
+
+    This allows testing of the functionality without having the library installed,
+    but it won't capture changes in the API of the library. This requires
+    integration tests.
+    """
 
     __module__ = "snowflake.snowpark.table"
 
-    def __init__(
-        self, is_map: bool = False, num_of_rows: int = 50000, num_of_cols: int = 4
-    ):
-        super(Table, self).__init__(
-            is_map=is_map, num_of_rows=num_of_rows, num_of_cols=num_of_cols
-        )
+    def __init__(self, data: pd.Series):
+        self._data: pd.Series = data
+
+    def to_pandas(self) -> pd.DataFrame:
+        return self._data
+
+    def limit(self, n: int) -> "Table":
+        """Returns the top n element of a mock version of Snowpark Table"""
+        return Table(self._data.head(n))
 
 
 class Row:

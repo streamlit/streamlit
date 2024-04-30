@@ -24,7 +24,6 @@ from typing_extensions import TypeAlias
 
 from streamlit import runtime, source_util
 from streamlit.elements.form import current_form_id, is_in_form
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.proto.Button_pb2 import Button as ButtonProto
@@ -98,8 +97,9 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
@@ -217,8 +217,9 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents)
@@ -377,8 +378,9 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents)
@@ -469,8 +471,9 @@ class ButtonMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively — where ``color`` needs to be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
 
             Unsupported elements are unwrapped so only their children (text contents)
@@ -551,7 +554,17 @@ class ButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> bool:
         key = to_key(key)
+
+        # Importing these functions here to avoid circular imports
+        from streamlit.elements.utils import (
+            check_cache_replay_rules,
+            check_callback_rules,
+            check_session_state_rules,
+        )
+
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+        check_callback_rules(self.dg, on_click)
 
         id = compute_widget_id(
             "download_button",
@@ -704,8 +717,18 @@ class ButtonMixin:
         use_container_width: bool = False,
         ctx: ScriptRunContext | None = None,
     ) -> bool:
+        key = to_key(key)
+
+        # Importing these functions here to avoid circular imports
+        from streamlit.elements.utils import (
+            check_cache_replay_rules,
+            check_callback_rules,
+            check_session_state_rules,
+        )
+
         if not is_form_submitter:
             check_callback_rules(self.dg, on_click)
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         id = compute_widget_id(

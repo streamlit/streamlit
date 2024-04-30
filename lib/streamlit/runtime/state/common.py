@@ -26,7 +26,7 @@ from typing import (
     Dict,
     Final,
     Generic,
-    Sequence,
+    Iterable,
     Tuple,
     TypeVar,
     Union,
@@ -49,6 +49,7 @@ from streamlit.proto.DownloadButton_pb2 import DownloadButton
 from streamlit.proto.FileUploader_pb2 import FileUploader
 from streamlit.proto.MultiSelect_pb2 import MultiSelect
 from streamlit.proto.NumberInput_pb2 import NumberInput
+from streamlit.proto.PlotlyChart_pb2 import PlotlyChart
 from streamlit.proto.Radio_pb2 import Radio
 from streamlit.proto.Selectbox_pb2 import Selectbox
 from streamlit.proto.Slider_pb2 import Slider
@@ -85,6 +86,7 @@ WidgetProto: TypeAlias = Union[
     TextArea,
     TextInput,
     TimeInput,
+    PlotlyChart,
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"
@@ -180,7 +182,7 @@ SAFE_VALUES = Union[
 def compute_widget_id(
     element_type: str,
     user_key: str | None = None,
-    **kwargs: SAFE_VALUES | Sequence[SAFE_VALUES],
+    **kwargs: SAFE_VALUES | Iterable[SAFE_VALUES],
 ) -> str:
     """Compute the widget id for the given widget. This id is stable: a given
     set of inputs to this function will always produce the same widget id output.

@@ -21,3 +21,5 @@ st.toast(
     "Random toast message that is a really really really really really really really long message, going way past the 3 line limit",
     icon="🦄",
 )
+
+st.toast("Your edited image was saved!", icon=":material/cabin:")
