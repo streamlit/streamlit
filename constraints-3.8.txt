@@ -25,7 +25,7 @@ distlib==0.3.8
 docutils==0.20.1
 exceptiongroup==1.2.1
 execnet==2.1.1
-filelock==3.13.4
+filelock==3.14.0
 fonttools==4.51.0
 frozenlist==1.4.1
 gitdb==4.0.11
@@ -53,7 +53,7 @@ langchain==0.1.16
 langchain-community==0.0.34
 langchain-core==0.1.46
 langchain-text-splitters==0.0.1
-langsmith==0.1.51
+langsmith==0.1.52
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.1
@@ -86,7 +86,7 @@ protobuf==3.20.3
 pyarrow==16.0.0
 pycparser==2.22
 pydantic==1.10.15
-pydeck==0.9.0b1
+pydeck==0.9.0
 pydot==2.0.0
 pyee==11.0.1
 Pygments==2.17.2
@@ -118,7 +118,7 @@ SecretStorage==3.3.3
 semver==2.13.0
 six==1.16.0
 smmap==5.0.1
-snowflake-connector-python==3.9.1
+snowflake-connector-python==3.10.0
 snowflake-snowpark-python==1.15.0
 sortedcontainers==2.4.0
 SQLAlchemy==1.4.52
@@ -146,7 +146,7 @@ tzdata==2024.1
 tzlocal==5.2
 urllib3==1.26.18
 uv==0.1.39
-virtualenv==20.26.0
+virtualenv==20.26.1
 watchdog==4.0.0
 yarl==1.9.4
 zipp==3.18.1
