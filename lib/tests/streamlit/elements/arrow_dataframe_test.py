@@ -40,6 +40,10 @@ def mock_data_frame():
     )
 
 
+def mock_callback():
+    pass
+
+
 class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     """Test ability to marshall arrow protos."""
 
@@ -255,14 +259,11 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         self.assertEqual(el.type, "CachedWidgetWarning")
         self.assertTrue(el.is_warning)
 
-    def callback():
-        pass
-
     @parameterized.expand(
         [
-            ("rerun", [0, 1, 2]),
+            ("rerun", [1]),
             ("ignore", []),
-            (callback, [0, 1, 2]),
+            (mock_callback, [1]),
         ]
     )
     def test_dataframe_valid_on_select(self, on_select, proto_value):
