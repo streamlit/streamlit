@@ -48,20 +48,13 @@ from streamlit.constants import NO_SELECTION_OBJECTS_ERROR_ALTAIR, ON_SELECTION_
 from streamlit.elements import arrow
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
-from streamlit.elements.form import current_form_id
-from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.utils import (
-    check_callback_rules,
-    check_session_state_rules,
-    last_index_for_melted_dataframes,
-)
 from streamlit.errors import Error, StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import to_key
 
 if TYPE_CHECKING:
     import altair as alt
@@ -846,9 +839,18 @@ class ArrowAltairMixin:
             )
 
         if is_select_enabled:
+            # avoid cyclic import
+            from streamlit.elements.form import current_form_id
+
             proto.form_id = current_form_id(self.dg)
 
-        if is_select_enabled:
+            # avoid cyclic import
+            from streamlit.elements.utils import (
+                check_callback_rules,
+                check_session_state_rules,
+                last_index_for_melted_dataframes,
+            )
+
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
 
@@ -1034,6 +1036,9 @@ def _generate_chart(
     color_column, color_value = _parse_generic_column(df, color_from_user)
     # Get name of column to use for size, or constant value to use. Any/both could be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)
+
+    # avoid cyclic import
+    from streamlit.elements.utils import last_index_for_melted_dataframes
 
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(

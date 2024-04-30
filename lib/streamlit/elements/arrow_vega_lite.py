@@ -27,13 +27,8 @@ from streamlit.constants import (
 )
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
-from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.utils import (
-    check_callback_rules,
-    check_session_state_rules,
-    last_index_for_melted_dataframes,
-)
+from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -42,7 +37,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.runtime.state.widgets import register_widget
-from streamlit.type_util import Key, to_key
+from streamlit.type_util import to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -203,6 +198,9 @@ class ArrowVegaLiteMixin:
         proto = ArrowVegaLiteChartProto()
 
         is_select_enabled = on_select != ON_SELECTION_IGNORE
+
+        # avoid cyclic import
+        from streamlit.elements.form import current_form_id
 
         if not is_select_enabled and current_form_id(self.dg):
             # TODO(willhuang1997): double check the message of this
