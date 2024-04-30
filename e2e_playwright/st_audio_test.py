@@ -16,13 +16,13 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 
 
 def test_audio_has_correct_properties(app: Page):
     """Test that `st.audio` renders correct properties."""
     audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements).to_have_count(3)
+    expect(audio_elements).to_have_count(4)
 
     expect(audio_elements.nth(0)).to_be_visible()
     expect(audio_elements.nth(0)).to_have_attribute("controls", "")
@@ -33,7 +33,7 @@ def test_audio_has_correct_properties(app: Page):
 def test_audio_end_time(app: Page):
     """Test that `st.audio` end_time property works correctly."""
     audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements).to_have_count(3)
+    expect(audio_elements).to_have_count(4)
 
     expect(audio_elements.nth(1)).to_be_visible()
 
@@ -48,7 +48,7 @@ def test_audio_end_time(app: Page):
 def test_audio_end_time_loop(app: Page):
     """Test that `st.audio` end_time and loop properties work correctly."""
     audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements).to_have_count(3)
+    expect(audio_elements).to_have_count(4)
 
     expect(audio_elements.nth(2)).to_be_visible()
 
@@ -61,3 +61,55 @@ def test_audio_end_time_loop(app: Page):
     app.wait_for_timeout(6000)
     expect(audio_element).to_have_js_property("paused", False)
     wait_until(app, lambda: 16 < audio_element.evaluate("el => el.currentTime") < 18)
+
+
+def test_audio_autoplay(app: Page):
+    """Test that `st.audio` autoplay property works correctly."""
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements).to_have_count(4)
+
+    expect(audio_elements.nth(3)).to_be_visible()
+
+    audio_element = audio_elements.nth(3)
+    expect(audio_element).to_have_js_property("paused", True)
+    expect(audio_element).to_have_js_property("autoplay", False)
+
+    checkbox_element = app.get_by_test_id("stCheckbox")
+    autoplay_checkbox = checkbox_element.nth(0)
+    autoplay_checkbox.click()
+    # To prevent flakiness, we wait for the audio to load and start playing
+    wait_until(app, lambda: audio_element.evaluate("el => el.readyState") == 4)
+    expect(audio_element).to_have_js_property("autoplay", True)
+    expect(audio_element).to_have_js_property("paused", False)
+
+
+def test_audio_remount_no_autoplay(app: Page):
+    """Test that `st.audio` remounts correctly without autoplay."""
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements).to_have_count(4)
+
+    expect(audio_elements.nth(3)).to_be_visible()
+
+    audio_element = audio_elements.nth(3)
+    expect(audio_element).to_have_js_property("paused", True)
+    expect(audio_element).to_have_js_property("autoplay", False)
+
+    checkbox_element = app.get_by_test_id("stCheckbox")
+    autoplay_checkbox = checkbox_element.nth(0)
+    autoplay_checkbox.click()
+    # To prevent flakiness, we wait for the audio to load and start playing
+    wait_until(app, lambda: audio_element.evaluate("el => el.readyState") == 4)
+    expect(audio_element).to_have_js_property("autoplay", True)
+    expect(audio_element).to_have_js_property("paused", False)
+
+    autoplay_checkbox.click()
+
+    button_element = app.get_by_test_id("stButton").locator("button").first
+    expect(app.get_by_test_id("stMarkdownContainer").nth(1)).to_have_text(
+        "Create some elements to unmount component"
+    )
+    button_element.click()
+    wait_for_app_run(app)
+
+    expect(audio_element).to_have_js_property("autoplay", False)
+    expect(audio_element).to_have_js_property("paused", True)

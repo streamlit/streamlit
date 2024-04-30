@@ -15,6 +15,7 @@
 """Unit tests for st.map()."""
 import itertools
 import json
+from unittest import mock
 
 import numpy as np
 import pandas as pd
@@ -25,12 +26,9 @@ import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 from streamlit.errors import StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit import pyspark_mocks
-from tests.streamlit.snowpark_mocks import DataFrame as MockedSnowparkDataFrame
-from tests.streamlit.snowpark_mocks import Table as MockedSnowparkTable
 from tests.testutil import create_snowpark_session, patch_config_options
 
-df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
+mock_df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
 
 
 class StMapTest(DeltaGeneratorTestCase):
@@ -45,7 +43,7 @@ class StMapTest(DeltaGeneratorTestCase):
 
     def test_basic(self):
         """Test that it can be called with lat/lon."""
-        st.map(df1)
+        st.map(mock_df)
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
 
@@ -67,11 +65,21 @@ class StMapTest(DeltaGeneratorTestCase):
     )
     def test_alternative_names_columns(self, lat_column_name, lon_column_name):
         """Test that it can be called with alternative names of lat/lon columns."""
-        df = df1.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
+        df = mock_df.rename(columns={"lat": lat_column_name, "lon": lon_column_name})
         st.map(df)
 
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         self.assertEqual(len(c.get("layers")[0].get("data")), 4)
+
+    def test_map_uses_convert_anything_to_df(self):
+        """Test that st.map uses convert_anything_to_df to convert input data."""
+        with mock.patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = mock_df
+
+            st.map(mock_df)
+            convert_anything_to_df.assert_called_once()
 
     def test_main_kwargs(self):
         """Test that latitude, longitude, color and size propagate correctly."""
@@ -266,13 +274,13 @@ class StMapTest(DeltaGeneratorTestCase):
     def turnedoff_test_map_style_raises_error(self):
         """Test that map_style raises error when no Mapbox token is present."""
         with self.assertRaises(StreamlitAPIException):
-            st.map(df1, map_style="MY_MAP_STYLE")
+            st.map(mock_df, map_style="MY_MAP_STYLE")
 
     # This test was turned off while we investigate issues with the feature.
     @patch_config_options({"mapbox.token": "MY_TOKEN"})
     def turnedoff_test_map_style(self):
         """Test that map_style works when a Mapbox token is present."""
-        st.map(df1, map_style="MY_MAP_STYLE")
+        st.map(mock_df, map_style="MY_MAP_STYLE")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         self.assertEqual(c.get("mapStyle"), "MY_MAP_STYLE")
 
@@ -280,7 +288,7 @@ class StMapTest(DeltaGeneratorTestCase):
         """Test that _DEFAULT_MAP is not modified as other work occurs."""
         self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
 
-        st.map(df1)
+        st.map(mock_df)
         self.assertEqual(_DEFAULT_MAP["initialViewState"]["latitude"], 0)
 
     def test_default_zoom_level(self):
@@ -296,7 +304,7 @@ class StMapTest(DeltaGeneratorTestCase):
 
         This is testing for an actual (fixed) bug.
         """
-        st.map(df1)
+        st.map(mock_df)
         st.map()
 
         c = self.get_delta_from_queue().new_element.deck_gl_json_chart
@@ -318,7 +326,7 @@ class StMapTest(DeltaGeneratorTestCase):
     )
     def test_missing_column(self, column_name, exception_message):
         """Test st.map with wrong lat column label."""
-        df = df1.drop(columns=[column_name])
+        df = mock_df.drop(columns=[column_name])
         with self.assertRaises(Exception) as ctx:
             st.map(df)
 
@@ -334,23 +342,6 @@ class StMapTest(DeltaGeneratorTestCase):
             st.map(df)
 
         self.assertIn("not allowed to contain null values", str(ctx.exception))
-
-    def test_unevaluated_snowpark_table_mock(self):
-        """Test st.map with unevaluated Snowpark Table based on mock data"""
-        mocked_snowpark_table = MockedSnowparkTable(is_map=True, num_of_rows=50000)
-        st.map(mocked_snowpark_table)
-
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-
-        self.assertIsNotNone(c.get("initialViewState"))
-        self.assertIsNotNone(c.get("layers"))
-        self.assertIsNone(c.get("mapStyle"))
-        self.assertEqual(len(c.get("layers")), 1)
-        self.assertEqual(c.get("initialViewState").get("pitch"), 0)
-        self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
-
-        """Check if map data was cut to 10k rows"""
-        self.assertEqual(len(c["layers"][0]["data"]), 10000)
 
     @pytest.mark.require_snowflake
     def test_unevaluated_snowpark_table_integration(self):
@@ -371,25 +362,6 @@ class StMapTest(DeltaGeneratorTestCase):
         """Check if map data have 4 rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 4)
 
-    def test_unevaluated_snowpark_dataframe_mock(self):
-        """Test st.map with unevaluated Snowpark DataFrame based on mock data"""
-        mocked_snowpark_dataframe = MockedSnowparkDataFrame(
-            is_map=True, num_of_rows=50000
-        )
-        st.map(mocked_snowpark_dataframe)
-
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-
-        self.assertIsNotNone(c.get("initialViewState"))
-        self.assertIsNotNone(c.get("layers"))
-        self.assertIsNone(c.get("mapStyle"))
-        self.assertEqual(len(c.get("layers")), 1)
-        self.assertEqual(c.get("initialViewState").get("pitch"), 0)
-        self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
-
-        """Check if map data was cut to 10k rows"""
-        self.assertEqual(len(c["layers"][0]["data"]), 10000)
-
     @pytest.mark.require_snowflake
     def test_unevaluated_snowpark_dataframe_integration(self):
         """Test st.map with unevaluated Snowpark DataFrame using real Snowflake instance"""
@@ -408,25 +380,6 @@ class StMapTest(DeltaGeneratorTestCase):
 
         """Check if map data have 4 rows"""
         self.assertEqual(len(c["layers"][0]["data"]), 4)
-
-    def test_pyspark_dataframe(self):
-        """Test st.map with pyspark.sql.DataFrame"""
-        pyspark_map_dataframe = (
-            pyspark_mocks.create_pyspark_dataframe_with_mocked_map_data()
-        )
-        st.map(pyspark_map_dataframe)
-
-        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
-
-        self.assertIsNotNone(c.get("initialViewState"))
-        self.assertIsNotNone(c.get("layers"))
-        self.assertIsNone(c.get("mapStyle"))
-        self.assertEqual(len(c.get("layers")), 1)
-        self.assertEqual(c.get("initialViewState").get("pitch"), 0)
-        self.assertEqual(c.get("layers")[0].get("@@type"), "ScatterplotLayer")
-
-        """Check if map data has 5 rows"""
-        self.assertEqual(len(c["layers"][0]["data"]), 5)
 
     def test_id_changes_when_data_changes(self):
         st.map()

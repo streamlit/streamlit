@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from tests.streamlit.data_mocks import (
+from shared.data_mocks import (
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
     INTERVAL_TYPES_DF,
