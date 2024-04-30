@@ -21,10 +21,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, cast
 
 import streamlit.elements.lib.dicttools as dicttools
-from streamlit.constants import (
-    NO_SELECTION_OBJECTS_ERROR_VEGA_LITE,
-    ON_SELECTION_IGNORE,
-)
+from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.elements.lib.event_utils import AttributeDictionary
@@ -41,6 +38,8 @@ from streamlit.type_util import to_key
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+
+NO_SELECTION_OBJECTS_ERROR_VEGA_LITE = "In order to make VegaLite work, one needs to have a selection enabled through parameters. Please check out this documentation to add some: https://vega.github.io/vega-lite/docs/selection.html"
 
 
 @dataclass

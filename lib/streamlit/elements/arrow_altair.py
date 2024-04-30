@@ -44,7 +44,7 @@ from streamlit.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.constants import NO_SELECTION_OBJECTS_ERROR_ALTAIR, ON_SELECTION_IGNORE
+from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements import arrow
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
@@ -103,6 +103,8 @@ MELTED_COLOR_COLUMN_NAME = MELTED_COLOR_COLUMN_TITLE + PROTECTION_SUFFIX
 # Name we use for a column we know doesn't exist in the data, to address a Vega-Lite rendering bug
 # where empty charts need x, y encodings set in order to take up space.
 NON_EXISTENT_COLUMN_NAME = "DOES_NOT_EXIST" + PROTECTION_SUFFIX
+
+NO_SELECTION_OBJECTS_ERROR_ALTAIR = "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
 
 
 class ArrowAltairMixin:
