@@ -16,6 +16,7 @@ import json
 import unittest
 from datetime import date
 from typing import Any, Callable
+from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import altair as alt
