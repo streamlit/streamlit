@@ -134,10 +134,10 @@ class CheckboxMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> agree = st.checkbox('I agree')
+        >>> agree = st.checkbox("I agree")
         >>>
         >>> if agree:
-        ...     st.write('Great!')
+        ...     st.write("Great!")
 
         .. output::
            https://doc-checkbox.streamlit.app/
@@ -240,10 +240,10 @@ class CheckboxMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> on = st.toggle('Activate feature')
+        >>> on = st.toggle("Activate feature")
         >>>
         >>> if on:
-        ...     st.write('Feature activated!')
+        ...     st.write("Feature activated!")
 
         .. output::
            https://doc-toggle.streamlit.app/

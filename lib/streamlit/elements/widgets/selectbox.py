@@ -152,7 +152,7 @@ class SelectboxMixin:
             An optional dict of kwargs to pass to the callback.
         placeholder : str
             A string to display when no options are selected.
-            Defaults to 'Choose an option'.
+            Defaults to "Choose an option".
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False.
@@ -172,10 +172,10 @@ class SelectboxMixin:
         >>> import streamlit as st
         >>>
         >>> option = st.selectbox(
-        ...     'How would you like to be contacted?',
-        ...     ('Email', 'Home phone', 'Mobile phone'))
+        ...     "How would you like to be contacted?",
+        ...     ("Email", "Home phone", "Mobile phone"))
         >>>
-        >>> st.write('You selected:', option)
+        >>> st.write("You selected:", option)
 
         .. output::
            https://doc-selectbox.streamlit.app/
@@ -192,7 +192,7 @@ class SelectboxMixin:
         ...    placeholder="Select contact method...",
         ... )
         >>>
-        >>> st.write('You selected:', option)
+        >>> st.write("You selected:", option)
 
         .. output::
            https://doc-selectbox-empty.streamlit.app/

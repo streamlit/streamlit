@@ -376,8 +376,8 @@ class TimeWidgetsMixin:
         >>> import datetime
         >>> import streamlit as st
         >>>
-        >>> t = st.time_input('Set an alarm for', datetime.time(8, 45))
-        >>> st.write('Alarm is set for', t)
+        >>> t = st.time_input("Set an alarm for", datetime.time(8, 45))
+        >>> st.write("Alarm is set for", t)
 
         .. output::
            https://doc-time-input.streamlit.app/
@@ -388,8 +388,8 @@ class TimeWidgetsMixin:
         >>> import datetime
         >>> import streamlit as st
         >>>
-        >>> t = st.time_input('Set an alarm for', value=None)
-        >>> st.write('Alarm is set for', t)
+        >>> t = st.time_input("Set an alarm for", value=None)
+        >>> st.write("Alarm is set for", t)
 
         .. output::
            https://doc-time-input-empty.streamlit.app/
@@ -589,7 +589,7 @@ class TimeWidgetsMixin:
             An optional dict of kwargs to pass to the callback.
         format : str
             A format string controlling how the interface should display dates.
-            Supports “YYYY/MM/DD” (default), “DD/MM/YYYY”, or “MM/DD/YYYY”.
+            Supports "YYYY/MM/DD" (default), "DD/MM/YYYY", or "MM/DD/YYYY".
             You may also use a period (.) or hyphen (-) as separators.
         disabled : bool
             An optional boolean, which disables the date input if set to True.
@@ -613,7 +613,7 @@ class TimeWidgetsMixin:
         >>> import streamlit as st
         >>>
         >>> d = st.date_input("When's your birthday", datetime.date(2019, 7, 6))
-        >>> st.write('Your birthday is:', d)
+        >>> st.write("Your birthday is:", d)
 
         .. output::
            https://doc-date-input.streamlit.app/
@@ -646,7 +646,7 @@ class TimeWidgetsMixin:
         >>> import streamlit as st
         >>>
         >>> d = st.date_input("When's your birthday", value=None)
-        >>> st.write('Your birthday is:', d)
+        >>> st.write("Your birthday is:", d)
 
         .. output::
            https://doc-date-input-empty.streamlit.app/

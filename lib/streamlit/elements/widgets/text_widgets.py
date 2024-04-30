@@ -214,8 +214,8 @@ class TextWidgetsMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> title = st.text_input('Movie title', 'Life of Brian')
-        >>> st.write('The current movie title is', title)
+        >>> title = st.text_input("Movie title", "Life of Brian")
+        >>> st.write("The current movie title is", title)
 
         .. output::
            https://doc-text-input.streamlit.app/
@@ -485,7 +485,7 @@ class TextWidgetsMixin:
         ...     "despair, (...)",
         ...     )
         >>>
-        >>> st.write(f'You wrote {len(txt)} characters.')
+        >>> st.write(f"You wrote {len(txt)} characters.")
 
         .. output::
            https://doc-text-area.streamlit.app/

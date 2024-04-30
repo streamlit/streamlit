@@ -224,8 +224,8 @@ class NumberInputMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> number = st.number_input('Insert a number')
-        >>> st.write('The current number is ', number)
+        >>> number = st.number_input("Insert a number")
+        >>> st.write("The current number is ", number)
 
         .. output::
            https://doc-number-input.streamlit.app/
@@ -236,7 +236,7 @@ class NumberInputMixin:
         >>> import streamlit as st
         >>>
         >>> number = st.number_input("Insert a number", value=None, placeholder="Type a number...")
-        >>> st.write('The current number is ', number)
+        >>> st.write("The current number is ", number)
 
         .. output::
            https://doc-number-input-empty.streamlit.app/
