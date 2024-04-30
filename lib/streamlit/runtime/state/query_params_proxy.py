@@ -85,6 +85,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
     def update(self, **kwds: str) -> None:
         ...
 
+    @gather_metrics("query_params.update")
     def update(self, other=(), /, **kwds):
         """
         Update one or more values in query_params at once from a dictionary or
