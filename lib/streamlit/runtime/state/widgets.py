@@ -59,6 +59,7 @@ ELEMENT_TYPE_TO_VALUE_TYPE: Final[
         "color_picker": "string_value",
         "component_instance": "json_value",
         "data_editor": "string_value",
+        "dataframe": "string_value",
         "date_input": "string_array_value",
         "download_button": "trigger_value",
         "file_uploader": "file_uploader_state_value",
