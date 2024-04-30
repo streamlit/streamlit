@@ -44,10 +44,7 @@ import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
-import {
-  InlineTooltipIcon,
-  // StyledLabelHelpWrapper,
-} from "@streamlit/lib/src/components/shared/TooltipIcon"
+import { InlineTooltipIcon } from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
   getMarkdownTextColors,
   getMarkdownBgColors,
@@ -55,13 +52,10 @@ import {
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
-  // StyledHeaderContainer,
-  // StyledHeaderContent,
   StyledLinkIcon,
-  // StyledLinkIconContainer,
-  StyledHeaderElements,
+  StyledHeadingActionElements,
   StyledStreamlitMarkdown,
-  StyledHeaderWithAnchor,
+  StyledHeadingWithActionElements,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -165,22 +159,22 @@ const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
 
   return (
     <>
-      <StyledHeaderElements>
+      <StyledHeadingActionElements
+        data-testid="stHeaderActionElements"
+        className="stHeaderActionElements"
+      >
         {help && <InlineTooltipIcon iconSize="18" content={help} />}
         {elementId && !hideAnchor && (
-          <StyledLinkIcon
-            className="header-action-link"
-            href={`#${elementId}`}
-          >
+          <StyledLinkIcon href={`#${elementId}`}>
             <LinkIcon size="18" />
           </StyledLinkIcon>
         )}
-      </StyledHeaderElements>
+      </StyledHeadingActionElements>
     </>
   )
 }
 
-interface HeadingWithAnchorProps {
+interface HeadingWithActionElementsProps {
   tag: string
   anchor?: string
   hideAnchor?: boolean
@@ -190,7 +184,7 @@ interface HeadingWithAnchorProps {
 }
 
 export const HeadingWithActionElements: FunctionComponent<
-  React.PropsWithChildren<HeadingWithAnchorProps>
+  React.PropsWithChildren<HeadingWithActionElementsProps>
 > = ({ tag, anchor: propsAnchor, help, hideAnchor, children, tagProps }) => {
   const isInSidebar = React.useContext(IsSidebarContext)
   const isInDialog = React.useContext(IsDialogContext)
@@ -217,12 +211,11 @@ export const HeadingWithActionElements: FunctionComponent<
 
   const ref = React.useCallback(
     (node: any) => {
-      if (node === null || node.textContent === null) {
+      if (node === null) {
         return
       }
 
-      const anchor =
-        propsAnchor || createAnchorFromText(node.textContent.trim())
+      const anchor = propsAnchor || createAnchorFromText(node.textContent)
       setElementId(anchor)
       if (window.location.hash.slice(1) === anchor) {
         setTarget(node)
@@ -242,21 +235,28 @@ export const HeadingWithActionElements: FunctionComponent<
     />
   )
 
+  // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
+  // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
+  // then we would need to add padding to the outer container and fiddle with the vertical alignment.
+  const headerElementWithActions = React.createElement(
+    tag,
+    {
+      ...tagProps,
+      ref,
+      id: elementId,
+    },
+    <>
+      {children}
+      {actionElements}
+    </>
+  )
   return (
-    <StyledHeaderWithAnchor>
-      {React.createElement(
-        tag,
-        {
-          ...tagProps,
-          ref,
-          id: elementId,
-        },
-        <>
-          {children}
-          {actionElements}
-        </>
-      )}
-    </StyledHeaderWithAnchor>
+    <StyledHeadingWithActionElements
+      className="stHeadingWithActionElements"
+      data-testid="stStyledHeadingWithActionElements"
+    >
+      {headerElementWithActions}
+    </StyledHeadingWithActionElements>
   )
 }
 

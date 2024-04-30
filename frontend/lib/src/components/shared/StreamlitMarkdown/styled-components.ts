@@ -134,7 +134,7 @@ export const StyledStreamlitMarkdown =
     }
   )
 
-export const StyledHeaderWithAnchor = styled.div(({ theme }) => ({
+export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   "h1, h2, h3, h4, h5, h6, span": {
     scrollMarginTop: theme.spacing.threeXL,
   },
@@ -146,17 +146,19 @@ export const StyledHeaderWithAnchor = styled.div(({ theme }) => ({
   textWrap: "pretty",
 
   // show link-icon when hovering somewhere over the heading
-  "& .header-action-link": {
-    visibility: "hidden",
+  // we use opacity instead of visibility because the react-testing-library seems
+  // to have issues with queryByRole('link') otherwise, even when triggering hover-events
+  "& .stHeaderActionElements > a": {
+    opacity: 0,
   },
   ":hover": {
-    "& .header-action-link": {
-      visibility: "visible",
+    "& .stHeaderActionElements > a": {
+      opacity: 1,
     },
   },
 }))
 
-export const StyledHeaderElements = styled.span(({ theme }) => ({
+export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   marginLeft: "0.5rem",
   display: "inline-flex",
   gap: "0.5rem",
@@ -187,19 +189,6 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   "&:hover svg": {
     stroke: theme.colors.bodyText,
   },
-}))
-
-// export const StyledHeaderContainer = styled.div(({ theme }) => ({
-//   "h1, h2, h3, h4, h5, h6, span": {
-//     scrollMarginTop: theme.spacing.threeXL,
-//   },
-//   ...sharedMarkdownStyle(theme),
-// }))
-
-export const StyledHeaderContent = styled.span(() => ({
-  position: "relative",
-  flex: "1",
-  marginLeft: "calc(2.5rem + 0.5rem)",
 }))
 
 export interface StyledDividerProps {
