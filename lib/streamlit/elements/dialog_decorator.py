@@ -94,21 +94,22 @@ def dialog_decorator(title: F | None, *, width: DialogWidth = "small") -> F:
 def dialog_decorator(
     title: F | None | str = "", *, width: DialogWidth = "small"
 ) -> F | Callable[[F], F]:
-    """Decorator to turn a function into a dialog function which creates a modal overlay when called.
+    """Function decorator to create a modal dialog.
 
-    When you call a function decorated with ``@st.experimental_dialog``, a
-    modal element is inserted into your app. Streamlit element commands called
-    within the dialog function render inside the modal.
+    A function decorated with ``@st.experimental_dialog`` becomes a dialog
+    function. When you call a dialog function, Streamlit inserts a modal dialog
+    into your app. Streamlit element commands called within the dialog function
+    render inside the modal dialog.
 
-    The decorated function can accept arguments that can be passed when it is
+    The dialog function can accept arguments that can be passed when it is
     called. Any values from the dialog that need to be accessed from the wider
     app should generally be stored in Session State.
 
-    A user can dismiss a modal by clicking outside of it, pressing ``ESC`` on
-    their keyboard, or clicking the "**X**" in its upper-right corner.
-    Dismissing a dialog does not trigger an app rerun. To close the modal
-    programmatically, call ``st.rerun()`` explicitly inside of the decorated
-    function.
+    A user can dismiss a modal dialog by clicking outside of it, clicking the
+    "**X**" in its upper-right corner, or pressing``ESC`` on their keyboard.
+    Dismissing a modal dialog does not trigger an app rerun. To close the modal
+    dialog programmatically, call ``st.rerun()`` explicitly inside of the
+    dialog function.
 
     ``st.experimental_dialog`` inherits behavior from |st.experimental_fragment|_.
     When a user interacts with an input widget created inside a dialog function,
@@ -122,9 +123,9 @@ def dialog_decorator(
     handling any side effects of that behavior.
 
     .. warning::
-        A dialog may not open another dialog. Only one dialog-decorated
-        function may be called in a script run, which means that only one
-        dialog can be open at any given time.
+        A dialog may not open another dialog. Only one dialog function may be
+        called in a script run, which means that only one dialog can be open at
+        any given time.
 
     .. |st.experimental_fragment| replace:: ``st.experimental_fragment``
     .. _st.experimental_fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
@@ -132,19 +133,19 @@ def dialog_decorator(
     Parameters
     ----------
     title : str
-        The title to display at the top of the modal. It cannot be empty.
+        The title to display at the top of the modal dialog. It cannot be empty.
     width : "small", "large"
-        The width of the dialog. If ``width`` is ``"small`` (default), the modal
-        will be 500 pixels wide. If ``width`` is ``"large"``, the modal will be
-        about 750 pixels wide.
+        The width of the modal dialog. If ``width`` is ``"small`` (default), the
+        modal dialog will be 500 pixels wide. If ``width`` is ``"large"``, the
+        modal dialog will be about 750 pixels wide.
 
     Examples
     --------
     The following example demonstrates the basic usage of ``@st.experimental_dialog``.
-    In this app, clicking "**A**" or "**B**" will open a modal and prompt you
-    to enter a reason for your vote. In the modal, click "**Submit**" to record
-    your vote into Session State and rerun the app. This will close the modal
-    since the dialog function is not be called during the full-script rerun.
+    In this app, clicking "**A**" or "**B**" will open a modal dialog and prompt you
+    to enter a reason for your vote. In the modal dialog, click "**Submit**" to record
+    your vote into Session State and rerun the app. This will close the modal dialog
+    since the dialog function is not called during the full-script rerun.
 
     >>> import streamlit as st
     >>>
