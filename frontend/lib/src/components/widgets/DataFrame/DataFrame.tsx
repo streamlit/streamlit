@@ -124,7 +124,7 @@ function DataFrame({
   expand,
   collapse,
   fragmentId,
-}: DataFrameProps): ReactElement {
+}: Readonly<DataFrameProps>): ReactElement {
   const resizableRef = React.useRef<Resizable>(null)
   const dataEditorRef = React.useRef<DataEditorRef>(null)
   const resizableContainerRef = React.useRef<HTMLDivElement>(null)
@@ -436,18 +436,20 @@ function DataFrame({
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
   const isRowSelectionActivated =
-    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW) ||
-    element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_ROW)
-  const isMultiRowSelectionActivated = element.selectionMode.includes(
-    ArrowProto.SelectionMode.MULTI_ROW
-  )
-  const isColumnSelectionActivated =
-    element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_COLUMN) ||
-    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN)
+    !disabled &&
+    (element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW) ||
+      element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_ROW))
+  const isMultiRowSelectionActivated =
+    !disabled &&
+    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW)
 
-  const isMultiColumnSelectionActivated = element.selectionMode.includes(
-    ArrowProto.SelectionMode.MULTI_COLUMN
-  )
+  const isColumnSelectionActivated =
+    !disabled &&
+    (element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_COLUMN) ||
+      element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN))
+  const isMultiColumnSelectionActivated =
+    !disabled &&
+    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN)
 
   const isRowSelected = gridSelection.rows.length > 0
   const isColumnSelected = gridSelection.columns.length > 0
@@ -732,21 +734,6 @@ function DataFrame({
                 newSelection.columns.toArray(),
                 gridSelection.columns.toArray()
               )
-
-              // console.log(
-              //   columnSelectionChanged,
-              //   rowSelectionChanged,
-              //   newSelection,
-              //   gridSelection,
-              //   !isEqual(
-              //     newSelection.rows.toArray(),
-              //     gridSelection.rows.toArray()
-              //   ),
-              //   !isEqual(
-              //     newSelection.columns.toArray(),
-              //     gridSelection.columns.toArray()
-              //   )
-              // )
 
               let updatedSelection = newSelection
               if (
