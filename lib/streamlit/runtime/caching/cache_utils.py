@@ -304,9 +304,40 @@ class CachedFunc:
                 )
 
     def clear(self, *args, **kwargs):
-        """Clear the wrapped function's associated cache.
-        If no arguments are passed, clear the cache of all values.
-        If args/kwargs are provided, clear the cached value for these arguments only."""
+        """Clear the cached function's associated cache.
+
+        If no arguments are passed, Streamlit will clear all values cached for
+        the function. If arguments are passed, Streamlit will clear the cached
+        value for these arguments only.
+
+        Parameters
+        ----------
+        *args: Any
+            Arguments of the cached functions.
+        **kwargs: Any
+            Keyword arguments of the cached function.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> @st.cache_data
+        >>> def foo(bar):
+        >>>     time.sleep(2)
+        >>>     st.write(f"Executed foo({bar}).")
+        >>>     return bar
+        >>>
+        >>> if st.button("Clear all cached values for `foo`", on_click=foo.clear):
+        >>>     foo.clear()
+        >>>
+        >>> if st.button("Clear the cached value of `foo(1)`"):
+        >>>     foo.clear(1)
+        >>>
+        >>> foo(1)
+        >>> foo(2)
+
+        """
         cache = self._info.get_function_cache(self._function_key)
         if args or kwargs:
             key = _make_value_key(

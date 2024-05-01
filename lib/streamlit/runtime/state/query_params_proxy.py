@@ -171,26 +171,36 @@ class QueryParamsProxy(MutableMapping[str, str]):
         ...
 
     @gather_metrics("query_params.from_dict")
-    def from_dict(self, other):
+    def from_dict(self, params):
         """
         Set all of the query parameters from a dictionary or dictionary-like object.
 
-        This method primarily exists for advanced users who want to be able to control
-        multiple query string parameters in a single update. To set individual
-        query string parameters you should still use `st.query_params["parameter"] = "value"`
-        or `st.query_params.parameter = "value"`.
+        This method primarily exists for advanced users who want to control
+        multiple query parameters in a single update. To set individual query
+        parameters, use key or attribute notation instead.
 
-        `embed` and `embed_options` may not be set via this method and may not be keys in the
-        `other` dictionary.
+        This method inherits limitations from ``st.query_params`` and can't be
+        used to set embedding options as described in `Embed your app \
+        <https://docs.streamlit.io/deploy/streamlit-community-cloud/share-your-app/embed-your-app#embed-options>`_.
 
-        Note that this method is NOT a direct inverse of `st.query_params.to_dict()` when
-        the URL query string contains multiple values for a single key. A true inverse
-        operation for from_dict is `{key: st.query_params.get_all(key) for key st.query_params}`.
+        To handle repeated keys, the value in a key-value pair should be a list.
+
+        .. note::
+            ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
+            you are working with repeated keys. A true inverse operation is
+            ``{key: st.query_params.get_all(key) for key st.query_params}``.
 
         Parameters
+        ----------
+        params: dict
+            A dictionary used to replace the current query parameters.
+
+        Example
         -------
-        other: SupportsKeysAndGetItem[str, str] | Iterable[tuple[str, str]]
-            A dictionary used to replace the current query_params.
+        >>> import streamlit as st
+        >>>
+        >>> st.query_params.from_dict({"foo": "bar", "baz": [1, "two"]})
+
         """
         with get_session_state().query_params() as qp:
-            return qp.from_dict(other)
+            return qp.from_dict(params)

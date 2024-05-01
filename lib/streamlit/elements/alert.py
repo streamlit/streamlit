@@ -39,11 +39,22 @@ class AlertMixin:
         ----------
         body : str
             The error text to display.
-        icon : str or None
-            An optional argument that specifies an emoji to use as
-            the icon for the alert. Shortcodes are not allowed, please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
+        icon : str, None
+            An optional emoji or icon to display next to the alert. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Example
         -------
@@ -72,11 +83,22 @@ class AlertMixin:
         ----------
         body : str
             The warning text to display.
-        icon : str or None
-            An optional argument that specifies an emoji to use as
-            the icon for the alert. Shortcodes are not allowed, please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
+        icon : str, None
+            An optional emoji or icon to display next to the alert. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Example
         -------
@@ -104,11 +126,22 @@ class AlertMixin:
         ----------
         body : str
             The info text to display.
-        icon : str or None
-            An optional argument that specifies an emoji to use as
-            the icon for the alert. Shortcodes are not allowed, please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
+        icon : str, None
+            An optional emoji or icon to display next to the alert. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Example
         -------
@@ -137,11 +170,22 @@ class AlertMixin:
         ----------
         body : str
             The success text to display.
-        icon : str or None
-            An optional argument that specifies an emoji to use as
-            the icon for the alert. Shortcodes are not allowed, please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
+        icon : str, None
+            An optional emoji or icon to display next to the alert. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Example
         -------
