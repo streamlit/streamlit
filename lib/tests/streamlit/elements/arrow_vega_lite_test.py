@@ -307,6 +307,26 @@ class ArrowVegaLiteTest(DeltaGeneratorTestCase):
         with self.assertRaises(ValueError) as exc:
             st.vega_lite_chart(data, spec, use_container_width=True)
 
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this is used with selections activated
+        inside a cached function."""
+        st.cache_data(
+            lambda: st.vega_lite_chart(
+                df1,
+                {
+                    "mark": "rect",
+                    "width": 200,
+                    "params": [{"name": "name", "select": {"type": "interval"}}],
+                },
+                on_select="rerun",
+            )
+        )()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
+
 
 def merge_dicts(x, y):
     z = x.copy()
