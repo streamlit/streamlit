@@ -26,6 +26,11 @@ from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.event_utils import AttributeDictionary
+from streamlit.elements.utils import (
+    check_cache_replay_rules,
+    check_callback_rules,
+    check_session_state_rules,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -199,13 +204,6 @@ class ArrowVegaLiteMixin:
         is_select_enabled = on_select != ON_SELECTION_IGNORE
 
         if is_select_enabled:
-            # Import here to avoid circular imports
-            from streamlit.elements.utils import (
-                check_cache_replay_rules,
-                check_callback_rules,
-                check_session_state_rules,
-            )
-
             check_cache_replay_rules()
             proto.form_id = current_form_id(self.dg)
             if callable(on_select):
