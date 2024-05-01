@@ -406,15 +406,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "plotlyChart":
-      return (
-        <PlotlyChart
-          element={node.element.plotlyChart as PlotlyChartProto}
-          height={undefined}
-          {...elementProps}
-        />
-      )
-
     case "progress":
       return (
         <Progress
@@ -634,6 +625,17 @@ const RawElementNodeRenderer = (
         <NumberInput
           key={numberInputProto.id}
           element={numberInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "plotlyChart": {
+      const plotlyProto = node.element.plotlyChart as PlotlyChartProto
+      return (
+        <PlotlyChart
+          key={plotlyProto.id}
+          element={plotlyProto}
           {...widgetProps}
         />
       )

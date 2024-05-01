@@ -20,29 +20,50 @@ option java_package = "com.snowflake.apps.streamlit";
 option java_outer_classname = "PlotlyChartProto";
 
 message PlotlyChart {
-  oneof chart {
-    // If the user chose to send the plot to Plotly's server, then this is the
-    // URL that can be used to embed to the plot.
-    string url = 1;
-
-    // If the user chose to not send the plot to Plotly's server, then we pass
-    // here the plot's dict spec as JSON.
-    Figure figure = 2;
-  }
-
   // If True, will overwrite the chart width spec to fit to container.
   bool use_container_width = 5;
 
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
 
-  reserved 3, 4;
-}
+  // The unique element ID of this chart.
+  string id = 7;
 
-message Figure {
+  // Activate selections types on the chart.
+  repeated SelectionMode selection_mode = 8;
+
+  // Form ID, filled if selections are activated.
+  string form_id = 9;
+
   // JSON-serialized dict containing keys from the set {data, frames, layout}.
-  string spec = 1;
+  string spec = 10;
 
   // JSON-serialized dict with Plotly's config object.
+  string config = 11;
+
+  reserved 3, 4;
+
+  // Available selection modes:
+  enum SelectionMode {
+      POINTS = 0; // Point selection mode
+      BOX = 1; // Box selection mode
+      LASSO = 2; // Lasso selection mode
+  }
+
+  // DEPRECATED and unused.
+  oneof chart {
+    // DEPRECATED and unused.
+    string url = 1;
+
+    // DEPRECATED and unused.
+    Figure figure = 2;
+  }
+
+}
+
+
+// DEPRECATED and unused.
+message Figure {
+  string spec = 1;
   string config = 2;
 }
