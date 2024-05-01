@@ -99,8 +99,10 @@ class ButtonMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -140,10 +142,10 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> st.button("Reset", type="primary")
-        >>> if st.button('Say hello'):
-        ...     st.write('Why hello there')
+        >>> if st.button("Say hello"):
+        ...     st.write("Why hello there")
         ... else:
-        ...     st.write('Goodbye')
+        ...     st.write("Goodbye")
 
         .. output::
            https://doc-buton.streamlit.app/
@@ -219,8 +221,10 @@ class ButtonMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
@@ -278,15 +282,15 @@ class ButtonMixin:
         >>> @st.cache_data
         ... def convert_df(df):
         ...     # IMPORTANT: Cache the conversion to prevent computation on every rerun
-        ...     return df.to_csv().encode('utf-8')
+        ...     return df.to_csv().encode("utf-8")
         >>>
         >>> csv = convert_df(my_large_df)
         >>>
         >>> st.download_button(
         ...     label="Download data as CSV",
         ...     data=csv,
-        ...     file_name='large_df.csv',
-        ...     mime='text/csv',
+        ...     file_name="large_df.csv",
+        ...     mime="text/csv",
         ... )
 
         Download a string as a file:
@@ -294,15 +298,15 @@ class ButtonMixin:
         >>> import streamlit as st
         >>>
         >>> text_contents = '''This is some text'''
-        >>> st.download_button('Download some text', text_contents)
+        >>> st.download_button("Download some text", text_contents)
 
         Download a binary file:
 
         >>> import streamlit as st
         >>>
-        >>> binary_contents = b'example content'
-        >>> # Defaults to 'application/octet-stream'
-        >>> st.download_button('Download binary file', binary_contents)
+        >>> binary_contents = b"example content"
+        >>> # Defaults to "application/octet-stream"
+        >>> st.download_button("Download binary file", binary_contents)
 
         Download an image:
 
@@ -380,8 +384,10 @@ class ButtonMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
@@ -473,8 +479,10 @@ class ButtonMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents)
             render. Display unsupported elements as literal characters by
