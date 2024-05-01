@@ -49,6 +49,7 @@ from streamlit.elements import arrow
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.form import current_form_id
+from streamlit.elements.utils import last_index_for_melted_dataframes
 from streamlit.errors import Error, StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -1036,9 +1037,6 @@ def _generate_chart(
     color_column, color_value = _parse_generic_column(df, color_from_user)
     # Get name of column to use for size, or constant value to use. Any/both could be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)
-
-    # Import here to avoid circular imports
-    from streamlit.elements.utils import last_index_for_melted_dataframes
 
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
