@@ -315,7 +315,7 @@ class CachedFunc:
         *args: Any
             Arguments of the cached functions.
         **kwargs: Any
-            Keyword arguments of the cached function
+            Keyword arguments of the cached function.
 
         Example
         -------
