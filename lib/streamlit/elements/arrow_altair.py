@@ -54,7 +54,6 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.type_util import to_key
 
 if TYPE_CHECKING:
     import altair as alt
@@ -844,6 +843,7 @@ class ArrowAltairMixin:
             # Import here to avoid circular imports
             from streamlit.elements.form import current_form_id
             from streamlit.elements.utils import (
+                check_cache_replay_rules,
                 check_callback_rules,
                 check_session_state_rules,
                 last_index_for_melted_dataframes,
@@ -851,10 +851,11 @@ class ArrowAltairMixin:
 
             proto.form_id = current_form_id(self.dg)
 
+            check_cache_replay_rules()
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
 
-            key = to_key(key)
+            key = type_util.to_key(key)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
 
             current_widget = None

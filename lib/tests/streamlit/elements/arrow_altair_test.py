@@ -880,3 +880,17 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
     def test_empty_altair_chart_throws_error(self):
         with self.assertRaises(TypeError) as exc:
             st.altair_chart(use_container_width=True)
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this is used with selections activated
+        inside a cached function."""
+        point = alt.selection_point(name="interval")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+
+        st.cache_data(lambda: st.altair_chart(chart, on_select="rerun"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)

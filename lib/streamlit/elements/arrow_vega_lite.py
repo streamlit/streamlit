@@ -25,7 +25,6 @@ from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements import arrow
 from streamlit.elements.arrow import Data
 from streamlit.elements.lib.event_utils import AttributeDictionary
-from streamlit.elements.utils import check_callback_rules, check_session_state_rules
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -44,7 +43,7 @@ NO_SELECTION_OBJECTS_ERROR_VEGA_LITE = "In order to make VegaLite work, one need
 
 @dataclass
 class VegaLiteSelectionSerde:
-    """VegaLiteSelectionSerde is used to serialize and deserialize the Vega Lite Chart selection state."""
+    """VegaLiteSelectionSerde is used to serialize and deserialize the VegaLite Chart selection state."""
 
     def deserialize(
         self, ui_value: str | None, widget_id: str = ""
@@ -74,7 +73,7 @@ class VegaLiteSelectionSerde:
 
 class VegaLiteState(TypedDict, total=False):
     """
-    A dictionary representing the current selection state of the plotly chart.
+    A dictionary representing the current selection state of the VegaLite chart.
 
     Attributes
     ----------
@@ -198,10 +197,14 @@ class ArrowVegaLiteMixin:
 
         is_select_enabled = on_select != ON_SELECTION_IGNORE
 
-        # Import here to avoid circular imports
-        from streamlit.elements.form import current_form_id
-
         if is_select_enabled:
+            # Import here to avoid circular imports
+            from streamlit.elements.form import current_form_id
+            from streamlit.elements.utils import (
+                check_callback_rules,
+                check_session_state_rules,
+            )
+
             proto.form_id = current_form_id(self.dg)
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
