@@ -278,7 +278,6 @@ export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
 }))
 
 export const StyledLogoLink = styled.a(({}) => ({
-  maxWidth: "15rem",
   "&:hover": {
     opacity: "0.7",
   },
@@ -287,13 +286,12 @@ export const StyledLogoLink = styled.a(({}) => ({
 export const StyledLogo = styled.img(({ theme }) => ({
   height: "1.5rem",
   maxWidth: "15rem",
-  margin: "0.25rem 0 0.25rem 0",
+  margin: "0.25rem 0.5rem 0.25rem 0",
   zIndex: theme.zIndices.header,
 }))
 
 export const StyledNoLogoSpacer = styled.div(({}) => ({
   height: "2.0rem",
-  marginRight: "-1rem",
 }))
 
 export interface StyledSidebarOpenContainerProps {
@@ -326,7 +324,6 @@ export const StyledOpenSidebarButton = styled.div(({ theme }) => {
 
   return {
     zIndex: theme.zIndices.header,
-    marginLeft: theme.spacing.sm,
     color: isLightTheme ? theme.colors.gray70 : theme.colors.bodyText,
 
     button: {

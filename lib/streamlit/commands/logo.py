@@ -28,29 +28,57 @@ if TYPE_CHECKING:
     from PIL import Image
 
 
+def _invalid_logo_text(field_name: str):
+    return f"The {field_name} passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
+
+
 @gather_metrics("logo")
 def logo(
     image: str | Image.Image | AtomicImage,
     *,  # keyword-only args:
     link: str | None = None,
-    icon_image: str | None = None,
+    icon_image: str | Image.Image | AtomicImage | None = None,
 ) -> None:
     """
-    Handles the app and sidebar logos
+    Renders logos in the main and sidebar sections of the page
+
+    Parameters
+    ----------
+    image: numpy.ndarray, BytesIO, or str
+        The app logo to be displayed in the top left corner of the sidebar of your app
+        (as well as the main section if icon_image param is not provided).
+    link : str or None
+        The external url to be opened when a user clicks on the logo (must start with
+        http:// or https://)
+    icon_image: numpy.ndarray, BytesIO, str, or None
+        The app logo to be displayed in the top left corner of the main section of your
+        app.
+
+    Example
+    -------
+    >>> import streamlit as st
+    >>>
+    >>> st.logo(streamlit_full, link="https://streamlit.io/gallery", icon_image=streamlit_small)
     """
+
     ctx = get_script_run_ctx()
     if ctx is None:
         return
 
     fwd_msg = ForwardMsg()
-    image_url = image_to_url(image, WidthBehaviour.AUTO, True, "RGB", "auto", "logo")
 
-    if image_url == "":
-        raise StreamlitAPIException(
-            "The image passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
+    try:
+        image_url = image_to_url(
+            image,
+            width=WidthBehaviour.AUTO,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="logo",
         )
-
-    fwd_msg.logo.image = image_url
+        fwd_msg.logo.image = image_url
+    except Exception:
+        raise StreamlitAPIException(_invalid_logo_text("image"))
 
     if link:
         # Handle external links:
@@ -58,22 +86,21 @@ def logo(
             fwd_msg.logo.link = link
         else:
             raise StreamlitAPIException(
-                f"Invalid link - {link} - the link param supports external links only and must start with either http:// or https://."
+                f"Invalid link: {link} - the link param supports external links only and must start with either http:// or https://."
             )
 
     if icon_image:
-        icon_image_url = image_to_url(
-            icon_image,
-            WidthBehaviour.AUTO,
-            True,
-            "RGB",
-            "auto",
-            "collapsed-logo",
-        )
-        if icon_image_url == "":
-            raise StreamlitAPIException(
-                "The icon_image passed to st.logo is invalid - See [documentation](https://docs.streamlit.io/library/api-reference/layout/st.logo) for more information on valid types"
+        try:
+            icon_image_url = image_to_url(
+                icon_image,
+                width=WidthBehaviour.AUTO,
+                clamp=False,
+                channels="RGB",
+                output_format="auto",
+                image_id="icon-image",
             )
-        fwd_msg.logo.icon_image = icon_image_url
+            fwd_msg.logo.icon_image = icon_image_url
+        except Exception:
+            raise StreamlitAPIException(_invalid_logo_text("icon_image"))
 
     ctx.enqueue(fwd_msg)
