@@ -142,7 +142,7 @@ class ArrowVegaLiteMixin:
 
         on_select: Controls the behavior in response to selection events in the chart. Can be one of:
             - “ignore” (default): Streamlit will not react to any selection events in the chart.
-            - “rerun”: Streamlit will rerun the app when the user selects data points in the chart. In this case, st.altair_chart will return the selection data as a dictionary. This requires that you add a selection event to the figure object via add_params, see here.
+            - “rerun”: Streamlit will rerun the app when the user selects data points in the chart. In this case, st.vega_lite_chart will return the selection data as a dictionary. This requires that you add a selection event to the figure object via add_params, see here.
             - callable: If a callable is provided, Streamlit will rerun and execute the callable as a callback function before the rest of the app. The selection data can be retrieved through session state by setting the key parameter.
 
         key : str or int
