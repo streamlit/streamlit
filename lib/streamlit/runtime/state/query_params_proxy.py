@@ -183,6 +183,8 @@ class QueryParamsProxy(MutableMapping[str, str]):
         used to set embedding options as described in `Embed your app \
         <https://docs.streamlit.io/deploy/streamlit-community-cloud/share-your-app/embed-your-app#embed-options>`_.
 
+        To handle repeated keys, the value in a key-value pair should be a list.
+
         .. note::
             ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
             you are working with repeated keys. A true inverse operation is
@@ -192,6 +194,12 @@ class QueryParamsProxy(MutableMapping[str, str]):
         ----------
         params: dict
             A dictionary used to replace the current query parameters.
+
+        Example
+        -------
+        >>> import streamlit as st
+        >>>
+        >>> st.query_params.from_dict({"foo": "bar", "baz": [1, "two"]})
 
         """
         with get_session_state().query_params() as qp:
