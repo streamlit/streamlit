@@ -48,6 +48,7 @@ from streamlit.constants import ON_SELECTION_IGNORE
 from streamlit.elements import arrow
 from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
+from streamlit.elements.form import current_form_id
 from streamlit.errors import Error, StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
@@ -841,12 +842,10 @@ class ArrowAltairMixin:
 
         if is_select_enabled:
             # Import here to avoid circular imports
-            from streamlit.elements.form import current_form_id
             from streamlit.elements.utils import (
                 check_cache_replay_rules,
                 check_callback_rules,
                 check_session_state_rules,
-                last_index_for_melted_dataframes,
             )
 
             proto.form_id = current_form_id(self.dg)
