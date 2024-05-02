@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypedDict, cast, overload
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit.constants import ON_SELECTION_IGNORE
@@ -35,6 +35,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
+from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state.common import compute_widget_id
@@ -45,36 +46,6 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 NO_SELECTION_OBJECTS_ERROR_VEGA_LITE = "In order to make VegaLite work, one needs to have a selection enabled through parameters. Please check out this documentation to add some: https://vega.github.io/vega-lite/docs/selection.html"
-
-
-@dataclass
-class VegaLiteSelectionSerde:
-    """VegaLiteSelectionSerde is used to serialize and deserialize the VegaLite Chart selection state."""
-
-    def deserialize(
-        self, ui_value: str | None, widget_id: str = ""
-    ) -> AttributeDictionary:
-        selection_state: AttributeDictionary = (
-            AttributeDictionary(
-                {
-                    "select": {},
-                }
-            )
-            if ui_value is None
-            else AttributeDictionary(json.loads(ui_value))
-        )
-
-        if "select" not in selection_state:
-            selection_state = AttributeDictionary(
-                {
-                    "select": {},
-                }
-            )
-
-        return selection_state
-
-    def serialize(self, selection_state: AttributeDictionary) -> str:
-        return json.dumps(selection_state, default=str)
 
 
 class VegaLiteState(TypedDict, total=False):
@@ -90,13 +61,37 @@ class VegaLiteState(TypedDict, total=False):
     select: AttributeDictionary
 
 
+@dataclass
+class VegaLiteStateSerde:
+    """VegaLiteStateSerde is used to serialize and deserialize the VegaLite Chart state."""
+
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> VegaLiteState:
+        empty_selection_state: VegaLiteState = {
+            "select": {},
+        }
+
+        selection_state = (
+            empty_selection_state
+            if ui_value is None
+            else cast(VegaLiteState, AttributeDictionary(json.loads(ui_value)))
+        )
+
+        if "select" not in selection_state:
+            selection_state = empty_selection_state
+
+        return cast(VegaLiteState, AttributeDictionary(selection_state))
+
+    def serialize(self, selection_state: VegaLiteState) -> str:
+        return json.dumps(selection_state, default=str)
+
+
 def _on_select(
     proto: ArrowVegaLiteChartProto,
     on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
     key: str | None = None,
 ) -> VegaLiteState:
     if on_select != ON_SELECTION_IGNORE:
-        vega_lite_serde = VegaLiteSelectionSerde()
+        vega_lite_serde = VegaLiteStateSerde()
         current_value = register_widget(
             "arrow_vega_lite_chart",
             proto,
@@ -113,6 +108,32 @@ def _on_select(
 
 
 class ArrowVegaLiteMixin:
+    @overload
+    def vega_lite_chart(
+        self,
+        data: Data = None,
+        spec: dict[str, Any] | None = None,
+        use_container_width: bool = False,
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: str | None = None,
+        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        **kwargs: Any,
+    ) -> DeltaGenerator:
+        ...
+
+    @overload
+    def vega_lite_chart(
+        self,
+        data: Data = None,
+        spec: dict[str, Any] | None = None,
+        use_container_width: bool = False,
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: str | None = None,
+        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        **kwargs: Any,
+    ) -> DeltaGenerator:
+        ...
+
     @gather_metrics("vega_lite_chart")
     def vega_lite_chart(
         self,
@@ -120,8 +141,8 @@ class ArrowVegaLiteMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
         key: str | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
@@ -189,7 +210,7 @@ class ArrowVegaLiteMixin:
         translated to the syntax shown above.
 
         """
-        if theme != "streamlit" and theme != None:
+        if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
@@ -201,17 +222,16 @@ class ArrowVegaLiteMixin:
 
         proto = ArrowVegaLiteChartProto()
 
-        is_select_enabled = on_select != ON_SELECTION_IGNORE
+        key = to_key(key)
+        is_selection_activated = on_select != "ignore"
 
-        if is_select_enabled:
+        if is_selection_activated:
             check_cache_replay_rules()
-            proto.form_id = current_form_id(self.dg)
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
-
-            key = to_key(key)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
 
+            proto.form_id = current_form_id(self.dg)
             current_widget = None
             if spec is not None:
                 if "params" not in spec:
@@ -233,7 +253,7 @@ class ArrowVegaLiteMixin:
                 spec,
                 use_container_width=use_container_width,
                 theme=theme,
-                is_select_enabled=is_select_enabled,
+                is_selection_activated=is_selection_activated,
                 key=key,
                 **kwargs,
             )

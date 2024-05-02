@@ -849,15 +849,14 @@ class ArrowAltairMixin:
                 check_session_state_rules,
             )
 
-            proto.form_id = current_form_id(self.dg)
-
             check_cache_replay_rules()
             if callable(on_select):
                 check_callback_rules(self.dg, on_select)
-
-            key = type_util.to_key(key)
             check_session_state_rules(default_value={}, key=key, writes_allowed=False)
 
+            key = type_util.to_key(key)
+
+            proto.form_id = current_form_id(self.dg)
             current_widget = None
             chart_json = altair_chart.to_dict()
             if "params" not in chart_json:
