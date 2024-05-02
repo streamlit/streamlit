@@ -103,13 +103,11 @@ def _get_container_of_text(app: Page, text: str) -> Locator:
     into the same container.
     """
 
-    # select container we wrapped the text and headers with
-    container_selector = "@data-testid='stVerticalBlock'"
-    # and select only the container that has a direct div child with the given exact text match
-    inner_div_text_selector = f"div[.//text()='{text}']"
-    outermost_selector = f"(//div[{container_selector}]/{inner_div_text_selector})[1]"
-    return app.locator(
-        f"xpath={outermost_selector}",
+    # take the 2nd match because the first would be the most outer block
+    return (
+        app.get_by_test_id("stVerticalBlock")
+        .filter(has=app.get_by_text(text, exact=True))
+        .nth(1)
     )
 
 
