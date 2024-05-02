@@ -22,6 +22,8 @@ st.title("`Code` - Title without Anchor")
 st.title("`Code` - Title with Anchor", anchor="title")
 st.title("`Code` - Title with hidden Anchor", anchor=False)
 
+st.subheader("This subheader is awesome!")
+st.subheader("This subheader is awesome too!", anchor="awesome-subheader")
 st.subheader("`Code` - Subheader without Anchor")
 st.subheader(
     """`Code` - Subheader with Anchor [test_link](href)""",
@@ -29,4 +31,16 @@ st.subheader(
 )
 st.subheader("`Code` - Subheader with hidden Anchor", anchor=False)
 
-st.title("a [link]()")
+st.title("a [link](#test)")
+
+# Test dividers
+colors = ["blue", "gray", "green", "grey", "orange", "rainbow", "red", "violet"]
+lorem_ipsum_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
+# Headers with specified color
+for color in colors:
+    st.header(f"{color.capitalize()} Header Divider:", divider=color)
+    st.write(lorem_ipsum_text)
+# Subheaders with specified color
+for color in colors:
+    st.subheader(f"{color.capitalize()} Subheader Divider:", divider=color)
+    st.write(lorem_ipsum_text)
