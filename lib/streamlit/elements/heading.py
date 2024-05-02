@@ -69,8 +69,10 @@ class HeadingMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -140,8 +142,10 @@ class HeadingMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
@@ -213,8 +217,10 @@ class HeadingMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         anchor : str or False
             The anchor name of the header that can be accessed with #anchor
