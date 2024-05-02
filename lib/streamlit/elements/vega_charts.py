@@ -109,6 +109,17 @@ def _prepare_vega_lite_spec(
     return spec
 
 
+def _serialize_data(data: Any) -> bytes:
+    """Serialize the any type of data structure to Arrow IPC format (bytes)."""
+    import pyarrow as pa
+
+    if isinstance(data, pa.Table):
+        return type_util.pyarrow_table_to_bytes(data)
+
+    df = type_util.convert_anything_to_df(data)
+    return type_util.data_frame_to_bytes(df)
+
+
 def _marshall_chart_data(
     proto: ArrowVegaLiteChartProto,
     spec: dict[str, Any],
@@ -124,8 +135,7 @@ def _marshall_chart_data(
             dataset = proto.datasets.add()
             dataset.name = str(dataset_name)
             dataset.has_name = True
-            df = type_util.convert_anything_to_df(dataset_data)
-            dataset.data.data = type_util.data_frame_to_bytes(df)
+            dataset.data.data = _serialize_data(dataset_data)
         del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
@@ -145,8 +155,7 @@ def _marshall_chart_data(
             del spec["data"]
 
     if data is not None:
-        df = type_util.convert_anything_to_df(data)
-        proto.data.data = type_util.data_frame_to_bytes(df)
+        proto.data.data = _serialize_data(data)
 
 
 def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]:
