@@ -344,11 +344,8 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-
-        vega_lite_spec = _convert_altair_to_vega_lite_spec(chart)
-        return self._vega_lite_chart(
-            data=None,  # The data is already part of the spec
-            spec=vega_lite_spec,
+        return self._altair_chart(
+            chart,
             use_container_width=use_container_width,
             theme="streamlit",
             add_rows_metadata=add_rows_metadata,
@@ -506,11 +503,8 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-
-        vega_lite_spec = _convert_altair_to_vega_lite_spec(chart)
-        return self._vega_lite_chart(
-            data=None,  # The data is already part of the spec
-            spec=vega_lite_spec,
+        return self._altair_chart(
+            chart,
             use_container_width=use_container_width,
             theme="streamlit",
             add_rows_metadata=add_rows_metadata,
@@ -670,10 +664,8 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-        vega_lite_spec = _convert_altair_to_vega_lite_spec(chart)
-        return self._vega_lite_chart(
-            data=None,  # The data is already part of the spec
-            spec=vega_lite_spec,
+        return self._altair_chart(
+            chart,
             use_container_width=use_container_width,
             theme="streamlit",
             add_rows_metadata=add_rows_metadata,
@@ -846,10 +838,8 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-        vega_lite_spec = _convert_altair_to_vega_lite_spec(chart)
-        return self._vega_lite_chart(
-            data=None,  # The data is already part of the spec
-            spec=vega_lite_spec,
+        return self._altair_chart(
+            chart,
             use_container_width=use_container_width,
             theme="streamlit",
             add_rows_metadata=add_rows_metadata,
@@ -903,12 +893,8 @@ class VegaChartsMixin:
         https://altair-viz.github.io/gallery/.
 
         """
-        vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)
-        return self._vega_lite_chart(
-            data=None,  # The data is already part of the spec
-            spec=vega_lite_spec,
-            use_container_width=use_container_width,
-            theme=theme,
+        return self._altair_chart(
+            altair_chart, use_container_width=use_container_width, theme=theme
         )
 
     @gather_metrics("vega_lite_chart")
@@ -982,6 +968,23 @@ class VegaChartsMixin:
             **kwargs,
         )
 
+    def _altair_chart(
+        self,
+        altair_chart: alt.Chart,
+        use_container_width: bool = False,
+        theme: Literal["streamlit"] | None = "streamlit",
+        add_rows_metadata: AddRowsMetadata | None = None,
+    ) -> DeltaGenerator:
+        """Internal method to enqueue a vega-lite chart element based on an Altair chart."""
+        vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)
+        return self._vega_lite_chart(
+            data=None,  # The data is already part of the spec
+            spec=vega_lite_spec,
+            use_container_width=use_container_width,
+            theme=theme,
+            add_rows_metadata=add_rows_metadata,
+        )
+
     def _vega_lite_chart(
         self,
         data: Data = None,
@@ -991,7 +994,8 @@ class VegaChartsMixin:
         add_rows_metadata: AddRowsMetadata | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
-        """Internal method to enqueue a Vega-Lite chart element."""
+        """Internal method to enqueue a vega-lite chart element based on a vega-lite spec."""
+
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
