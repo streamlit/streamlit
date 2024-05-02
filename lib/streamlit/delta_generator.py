@@ -783,6 +783,7 @@ def _prep_data_for_add_rows(
     # otherwise the input data and the actual data used
     # by vega_lite will be different, and it will throw an error.
     if add_rows_metadata:
+        # Lazy-load modules to prevent circular imports and slow startup times:
         import pandas as pd
 
         from streamlit.elements.lib.built_in_chart_utils import prep_data
