@@ -62,7 +62,6 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata, prep_data
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
@@ -103,6 +102,7 @@ if TYPE_CHECKING:
     from pandas import DataFrame, Series
 
     from streamlit.elements.arrow import Data
+    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
 
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
@@ -784,6 +784,8 @@ def _prep_data_for_add_rows(
     # by vega_lite will be different, and it will throw an error.
     if add_rows_metadata:
         import pandas as pd
+
+        from streamlit.elements.lib.built_in_chart_utils import prep_data
 
         df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
 
