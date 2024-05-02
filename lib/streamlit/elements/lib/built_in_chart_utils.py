@@ -38,13 +38,13 @@ from streamlit.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.elements.arrow import Data
 from streamlit.errors import Error, StreamlitAPIException
 
 if TYPE_CHECKING:
     import altair as alt
     import pandas as pd
 
+    from streamlit.elements.arrow import Data
     from streamlit.type_util import DataFrameCompatible
 
 

@@ -22,8 +22,6 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Sequence, cast
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import type_util
-from streamlit.color_util import Color
-from streamlit.elements.arrow import Data
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartType,
@@ -38,7 +36,9 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     import altair as alt
 
+    from streamlit.color_util import Color
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.arrow import Data
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {
