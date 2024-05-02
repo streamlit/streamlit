@@ -24,5 +24,6 @@ st.write("Value 2:", w2)
 
 x = st.sidebar.text("overwrite me")
 x.text("overwritten")
-
 y = st.sidebar.text_input("type here")
+
+# TODO: add more tests such as markdown elements and also a test that takes screenshot of complete app to verify alignment of elements
