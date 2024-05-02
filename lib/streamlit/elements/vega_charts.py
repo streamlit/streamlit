@@ -21,6 +21,7 @@ from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Final, Literal, Sequence, cast
 
 import streamlit.elements.lib.dicttools as dicttools
+from streamlit import type_util
 from streamlit.color_util import Color
 from streamlit.elements.arrow import Data
 from streamlit.elements.arrow import marshall as marshal_arrow
@@ -108,19 +109,23 @@ def _prepare_vega_lite_spec(
     return spec
 
 
-def _prepare_chart_data(
+def _marshall_chart_data(
     proto: ArrowVegaLiteChartProto,
+    spec: dict[str, Any],
     data: Data = None,
-    spec: dict[str, Any] | None = None,
-):
+) -> None:
+    """Adds the data to the proto and removes it from the spec dict.
+    These operations will happen in-place."""
+
     # Pull data out of spec dict when it's in a 'datasets' key:
     #   datasets: {foo: df1, bar: df2}, ...}
     if "datasets" in spec:
-        for k, v in spec["datasets"].items():
+        for dataset_name, dataset_data in spec["datasets"].items():
             dataset = proto.datasets.add()
-            dataset.name = str(k)
+            dataset.name = str(dataset_name)
             dataset.has_name = True
-            marshal_arrow(dataset.data, v)
+            df = type_util.convert_anything_to_df(dataset_data)
+            dataset.data.data = type_util.data_frame_to_bytes(df)
         del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
@@ -138,10 +143,13 @@ def _prepare_chart_data(
         else:
             data = data_spec
             del spec["data"]
-    return spec, data
+
+    if data is not None:
+        df = type_util.convert_anything_to_df(data)
+        proto.data.data = type_util.data_frame_to_bytes(df)
 
 
-def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict:
+def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]:
     """Convert an Altair chart object to a Vega-Lite chart spec."""
     import altair as alt
 
@@ -990,14 +998,11 @@ class VegaChartsMixin:
         proto = ArrowVegaLiteChartProto()
 
         spec = _prepare_vega_lite_spec(spec, use_container_width, **kwargs)
-        spec, data = _prepare_chart_data(proto, data, spec)
+        _marshall_chart_data(proto, spec, data)
+
         proto.spec = json.dumps(spec)
         proto.use_container_width = use_container_width
         proto.theme = theme or ""
-
-        if data is not None:
-            # Serialize data into arrow IPC:
-            marshal_arrow(proto.data, data)
 
         return self.dg._enqueue(
             "arrow_vega_lite_chart", proto, add_rows_metadata=add_rows_metadata
