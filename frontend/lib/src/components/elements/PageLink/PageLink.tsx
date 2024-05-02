@@ -15,7 +15,7 @@
  */
 
 import React, { ReactElement } from "react"
-import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
 import { BaseButtonTooltip } from "@streamlit/lib/src/components/shared/BaseButton"
@@ -95,7 +95,9 @@ function PageLink(props: Props): ReactElement {
             rel="noreferrer"
             onClick={handleClick}
           >
-            {element.icon && <EmojiIcon size="lg">{element.icon}</EmojiIcon>}
+            {element.icon && (
+              <DynamicIcon size="lg" iconValue={element.icon} />
+            )}
             <StyledNavLinkText disabled={disabled}>
               <StreamlitMarkdown
                 source={element.label}

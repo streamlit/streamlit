@@ -39,7 +39,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.runtime.state.common import compute_widget_id, save_for_app_testing
-from streamlit.string_util import validate_emoji
+from streamlit.string_util import validate_icon_or_emoji
 from streamlit.type_util import Key, to_key
 
 if TYPE_CHECKING:
@@ -662,7 +662,7 @@ class ButtonMixin:
             page_link_proto.label = label
 
         if icon is not None:
-            page_link_proto.icon = validate_emoji(icon)
+            page_link_proto.icon = validate_icon_or_emoji(icon)
 
         if help is not None:
             page_link_proto.help = dedent(help)
