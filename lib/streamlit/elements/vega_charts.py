@@ -24,7 +24,6 @@ import streamlit.elements.lib.dicttools as dicttools
 from streamlit import type_util
 from streamlit.color_util import Color
 from streamlit.elements.arrow import Data
-from streamlit.elements.arrow import marshall as marshal_arrow
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartType,
