@@ -41,53 +41,58 @@ with st.sidebar:
 
 "---"
 
-st.text("Headers in single st.markdown")
-draw_header_test(True)
-
-"---"
-
-st.text("Headers in multiple st.markdown")
-draw_header_test(False)
-
-"---"
-
-st.text("Headers in columns")
-
-a, b = st.columns(2)
-
-with a:
+with st.container():
+    st.text("Headers in single st.markdown")
     draw_header_test(True)
 
-with b:
+"---"
+
+with st.container():
+    st.text("Headers in multiple st.markdown")
     draw_header_test(False)
 
 "---"
 
-st.text("Headers in columns with other elements above")
+with st.container():
+    st.text("Headers in columns")
 
-a, b = st.columns(2)
+    a, b = st.columns(2)
 
-with a:
-    st.text("This is some text")
-    draw_header_test(True)
+    with a:
+        draw_header_test(True)
 
-with b:
-    st.text("This is some text")
-    with st.container():
+    with b:
         draw_header_test(False)
 
 "---"
 
-st.text("Headers in column beside widget")
+with st.container():
+    st.text("Headers in columns with other elements above")
 
-a, b = st.columns(2)
+    a, b = st.columns(2)
 
-with a:
-    st.write("# Header header")
-    st.write("## Header header")
+    with a:
+        st.text("This is some text")
+        draw_header_test(True)
 
-with b:
-    st.text_input("This is a label", key="2")
+    with b:
+        st.text("This is some text")
+        with st.container():
+            draw_header_test(False)
+
+"---"
+
+with st.container():
+    st.text("Headers in column beside widget")
+
+    a, b = st.columns(2)
+
+    with a:
+        st.write("# Header header")
+        st.write("## Header header")
+
+    with b:
+        st.text_input("This is a label", key="2")
 
 "---"
 
