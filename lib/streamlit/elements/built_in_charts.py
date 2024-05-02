@@ -30,9 +30,9 @@ from streamlit.color_util import (
     is_hex_color_like,
     to_css_color,
 )
-from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import Data
 from streamlit.elements.arrow_altair import marshall
+from streamlit.elements.lib.altair_utils import AddRowsMetadata
 from streamlit.elements.utils import last_index_for_melted_dataframes
 from streamlit.errors import Error, StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
@@ -159,7 +159,7 @@ def _melt_data(
     return fixed_df
 
 
-def _prep_data(
+def prep_data(
     df: pd.DataFrame,
     x_column: str | None,
     y_column_list: list[str],
@@ -247,7 +247,7 @@ def _generate_chart(
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
 
-    df, x_column, y_column, color_column, size_column = _prep_data(
+    df, x_column, y_column, color_column, size_column = prep_data(
         df, x_column, y_column_list, color_column, size_column
     )
 

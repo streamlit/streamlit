@@ -46,12 +46,12 @@ from streamlit import (
 )
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
-from streamlit.elements.altair_utils import AddRowsMetadata
 from streamlit.elements.arrow import ArrowMixin
-from streamlit.elements.arrow_altair import ArrowAltairMixin, prep_data
+from streamlit.elements.arrow_altair import ArrowAltairMixin
 from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
+from streamlit.elements.built_in_charts import prep_data
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
@@ -65,6 +65,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.lib.altair_utils import AddRowsMetadata
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
