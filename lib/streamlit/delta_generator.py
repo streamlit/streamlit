@@ -51,7 +51,7 @@ from streamlit.elements.arrow_altair import ArrowAltairMixin
 from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
-from streamlit.elements.built_in_charts import prep_data
+from streamlit.elements.built_in_charts import BuiltInChartMixin, prep_data
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
@@ -95,7 +95,7 @@ from streamlit.elements.write import WriteMixin
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.runtime import caching, legacy_caching
+from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import NoValue
 
@@ -160,6 +160,7 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
+    BuiltInChartMixin,
     CameraInputMixin,
     ChatMixin,
     CheckboxMixin,
