@@ -27,9 +27,8 @@ def test_markdown_all_elements_displayed(
     expect(markdown_elements).to_have_count(50)
 
     # Snapshot one big markdown block containing a variety of elements to reduce number of snapshots
-    multi_markdown_format_container = markdown_elements.locator(
-        "//div[@data-testid='stMarkdownContainer' and ./p[./text()='Many different markdown formats in one block:']]"
-    )
+    multi_markdown_format_container = markdown_elements.nth(14)
+    multi_markdown_format_container.scroll_into_view_if_needed()
     assert_snapshot(
         multi_markdown_format_container,
         name="st_markdown-num_elements_displayed",
@@ -135,6 +134,8 @@ def test_match_snapshot_for_headers_in_sidebar(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that headers in sidebar are rendered correctly."""
+    # expand the sidebar
+    app.get_by_test_id("collapsedControl").click()
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_visible()
     assert_snapshot(sidebar, name="st_markdown-headers_in_sidebar")
