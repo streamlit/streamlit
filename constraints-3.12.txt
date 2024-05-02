@@ -49,7 +49,7 @@ langchain-text-splitters==0.0.1
 langsmith==0.1.52
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
-marshmallow==3.21.1
+marshmallow==3.21.2
 matplotlib==3.8.4
 mdurl==0.1.2
 more-itertools==10.2.0
@@ -71,7 +71,7 @@ pixelmatch==0.3.0
 pkginfo==1.10.0
 platformdirs==4.2.1
 playwright==1.42.0
-plotly==5.21.0
+plotly==5.22.0
 pluggy==1.5.0
 pre-commit==3.7.0
 protobuf==3.20.3
@@ -95,7 +95,7 @@ python-slugify==8.0.4
 pytz==2024.1
 PyYAML==6.0.1
 readme_renderer==43.0
-referencing==0.35.0
+referencing==0.35.1
 requests==2.31.0
 requests-mock==1.12.1
 requests-toolbelt==1.0.0
@@ -113,7 +113,7 @@ sortedcontainers==2.4.0
 SQLAlchemy==1.4.52
 sqlalchemy2-stubs==0.0.2a38
 tenacity==8.2.3
-testfixtures==8.1.0
+testfixtures==8.2.0
 text-unidecode==1.3
 toml==0.10.2
 toolz==0.12.1
