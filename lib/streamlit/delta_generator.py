@@ -47,11 +47,8 @@ from streamlit import (
 from streamlit.cursor import Cursor
 from streamlit.elements.alert import AlertMixin
 from streamlit.elements.arrow import ArrowMixin
-from streamlit.elements.arrow_altair import ArrowAltairMixin
-from streamlit.elements.arrow_vega_lite import ArrowVegaLiteMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
-from streamlit.elements.built_in_charts import BuiltInChartMixin, prep_data
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
 from streamlit.elements.doc_string import HelpMixin
@@ -65,7 +62,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
-from streamlit.elements.lib.altair_utils import AddRowsMetadata
+from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata, prep_data
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
@@ -76,6 +73,7 @@ from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
+from streamlit.elements.vega_charts import VegaChartsMixin
 from streamlit.elements.widgets.button import ButtonMixin
 from streamlit.elements.widgets.camera_input import CameraInputMixin
 from streamlit.elements.widgets.chat import ChatMixin
@@ -108,15 +106,6 @@ if TYPE_CHECKING:
 
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
-
-# List of Streamlit commands that perform a Pandas "melt" operation on
-# input dataframes:
-ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES: Final = (
-    "arrow_line_chart",
-    "arrow_area_chart",
-    "arrow_bar_chart",
-    "arrow_scatter_chart",
-)
 
 Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
@@ -160,7 +149,6 @@ class DeltaGenerator(
     BalloonsMixin,
     BokehMixin,
     ButtonMixin,
-    BuiltInChartMixin,
     CameraInputMixin,
     ChatMixin,
     CheckboxMixin,
@@ -199,8 +187,7 @@ class DeltaGenerator(
     ToastMixin,
     WriteMixin,
     ArrowMixin,
-    ArrowAltairMixin,
-    ArrowVegaLiteMixin,
+    VegaChartsMixin,
     DataEditorMixin,
 ):
     """Creator of Delta protobuf messages.
@@ -533,18 +520,9 @@ class DeltaGenerator(
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
 
-        # Some elements have a method.__name__ != delta_type in proto.
-        # This really matters for line_chart, bar_chart & area_chart,
-        # since add_rows() relies on method.__name__ == delta_type
-        # TODO: Fix for all elements (or the cache warning above will be wrong)
-        proto_type = delta_type
-
-        if proto_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
-            proto_type = "arrow_vega_lite_chart"
-
         # Copy the marshalled proto into the overall msg proto
         msg = ForwardMsg_pb2.ForwardMsg()
-        msg_el_proto = getattr(msg.delta.new_element, proto_type)
+        msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
 
         # Only enqueue message and fill in metadata if there's a container.
@@ -734,22 +712,20 @@ class DeltaGenerator(
 
         # When doing _arrow_add_rows on an element that does not already have data
         # (for example, st.line_chart() without any args), call the original
-        # st._arrow_foo() element with new data instead of doing a _arrow_add_rows().
+        # st.foo() element with new data instead of doing a _arrow_add_rows().
         if (
-            self._cursor.props["delta_type"] in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES
+            "add_rows_metadata" in self._cursor.props
+            and self._cursor.props["add_rows_metadata"]
             and self._cursor.props["add_rows_metadata"].last_index is None
         ):
-            # IMPORTANT: This assumes delta types and st method names always
-            # match!
-            # delta_type starts with "arrow_", but st_method_name doesn't use this prefix.
-            st_method_name = self._cursor.props["delta_type"].replace("arrow_", "")
-            st_method = getattr(self, st_method_name)
+            st_method = getattr(
+                self, self._cursor.props["add_rows_metadata"].chart_command
+            )
             st_method(data, **kwargs)
             return None
 
         new_data, self._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
             data,
-            self._cursor.props["delta_type"],
             self._cursor.props["add_rows_metadata"],
         )
 
@@ -799,15 +775,14 @@ def get_last_dg_added_to_context_stack() -> DeltaGenerator | None:
 
 def _prep_data_for_add_rows(
     data: Data,
-    delta_type: str,
-    add_rows_metadata: AddRowsMetadata,
-) -> tuple[Data, AddRowsMetadata]:
+    add_rows_metadata: AddRowsMetadata | None,
+) -> tuple[Data, AddRowsMetadata | None]:
     out_data: Data
 
-    # For some delta types we have to reshape the data structure
+    # For built-in chart commands we have to reshape the data structure
     # otherwise the input data and the actual data used
     # by vega_lite will be different, and it will throw an error.
-    if delta_type in ARROW_DELTA_TYPES_THAT_MELT_DATAFRAMES:
+    if add_rows_metadata:
         import pandas as pd
 
         df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
