@@ -39,12 +39,13 @@ from streamlit.color_util import (
     to_css_color,
 )
 from streamlit.elements.arrow import Data
-from streamlit.elements.utils import last_index_for_melted_dataframes
 from streamlit.errors import Error, StreamlitAPIException
 
 if TYPE_CHECKING:
     import altair as alt
     import pandas as pd
+
+    from streamlit.type_util import DataFrameCompatible
 
 
 class PrepDataColumns(TypedDict):
@@ -187,7 +188,7 @@ def generate_chart(
         # The st command that was used to generate this chart.
         chart_command=chart_type.value["command"],
         # The last index of df so we can adjust the input df in add_rows:
-        last_index=last_index_for_melted_dataframes(df),
+        last_index=_last_index_for_melted_dataframes(df),
         # This is the input to prep_data (except for the df):
         columns=dict(
             x_column=x_column,
@@ -247,6 +248,18 @@ def generate_chart(
         )
 
     return chart.interactive(), add_rows_metadata
+
+
+def _last_index_for_melted_dataframes(
+    data: DataFrameCompatible | Any,
+) -> Hashable | None:
+    if type_util.is_dataframe_compatible(data):
+        data = type_util.convert_anything_to_df(data)
+
+        if data.index.size > 0:
+            return cast(Hashable, data.index[-1])
+
+    return None
 
 
 def _is_date_column(df: pd.DataFrame, name: str | None) -> bool:
