@@ -127,12 +127,12 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
 
     def test_no_args(self):
         """Test that an error is raised when called with no args."""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(StreamlitAPIException):
             st.vega_lite_chart()
 
     def test_none_args(self):
         """Test that an error is raised when called with args set to None."""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(StreamlitAPIException):
             st.vega_lite_chart(None, None)
 
     def test_spec_but_no_data(self):
@@ -325,7 +325,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         ]
     )
     def test_empty_vega_lite_chart_throws_error(self, data, spec):
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(StreamlitAPIException):
             st.vega_lite_chart(data, spec, use_container_width=True)
 
 
