@@ -14,6 +14,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
@@ -189,23 +190,31 @@ def test_links_are_rendered_correctly_snapshot(
 _number_of_colors = 8
 
 
-def test_header_divider_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+@pytest.mark.parametrize("color_index", range(_number_of_colors))
+def test_header_divider_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction, color_index: int
+):
     """Test that st.header renders correctly with dividers."""
     header_divider_elements = _get_header_elements(app).filter(
         has_text=_header_divider_filter_text
     )
     expect(header_divider_elements).to_have_count(_number_of_colors)
+    assert_snapshot(
+        header_divider_elements.nth(color_index),
+        name=f"st_header-divider_{color_index}",
+    )
 
-    for i, element in enumerate(header_divider_elements.all()):
-        assert_snapshot(element, name=f"st_header-divider_{i}")
 
-
-def test_subheader_divider_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+@pytest.mark.parametrize("color_index", range(_number_of_colors))
+def test_subheader_divider_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction, color_index: int
+):
     """Test that st.subheader renders correctly with dividers."""
     subheader_divider_elements = _get_subheader_elements(app).filter(
         has_text=_subheader_divider_filter_text
     )
     expect(subheader_divider_elements).to_have_count(_number_of_colors)
-
-    for i, element in enumerate(subheader_divider_elements.all()):
-        assert_snapshot(element, name=f"st_subheader-divider_{i}")
+    assert_snapshot(
+        subheader_divider_elements.nth(color_index),
+        name=f"st_subheader-divider_{color_index}",
+    )
