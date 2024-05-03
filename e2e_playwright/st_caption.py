@@ -14,6 +14,8 @@
 
 import streamlit as st
 
+# keep the sidebar collapsed by default to prevent render flakiness
+st.set_page_config(initial_sidebar_state="collapsed")
 sidebar_markdown = """# I am a header
 
 ## I am a subheader
@@ -30,11 +32,11 @@ with st.sidebar:
     st.caption(sidebar_markdown)
 
 st.caption("This is a caption!")
-st.caption("This is a *caption* that contains **markdown inside it**!")
-st.caption("This is a caption that contains <div>html</div> inside it!")
 st.caption(
     "This is a caption that contains <div>html</div> inside it!", unsafe_allow_html=True
 )
+st.caption("This is a caption with a help tooltip", help="This is some help tooltip!")
+
 st.caption(
     """This is a caption that contains a bunch of interesting markdown:
 
@@ -57,5 +59,9 @@ st.caption(
  1. ordered list item 1
  1. ordered list item 2
  1. ordered list item 3
+
+ This is a *caption* that contains **markdown inside it**!
+
+ This line contains <div>html</div>!
 """
 )
