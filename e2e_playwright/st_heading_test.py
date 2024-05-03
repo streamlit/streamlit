@@ -39,13 +39,21 @@ _header_divider_filter_text = re.compile(r"[a-zA-Z]+ Header Divider:")
 _subheader_divider_filter_text = re.compile(r"[a-zA-Z]+ Subheader Divider:")
 
 
-def test_correct_number_of_title_elements(app: Page):
+def test_correct_number_and_content_of_title_elements(app: Page):
     """Test that correct number of st.title (=> h1) exist with the right content"""
-    headers = _get_title_elements(app)
-    expect(headers).to_have_count(4)
+    titles = _get_title_elements(app)
+    expect(titles).to_have_count(6)
+
+    expect(titles.nth(0)).to_have_text("This title is awesome!")
+    expect(titles.nth(1)).to_have_text("This title is awesome too!")
+    expect(titles.nth(2)).to_have_text("Code - Title with hidden Anchor")
+    expect(titles.nth(3)).to_have_text("a link")
+    expect(titles.nth(4)).to_have_text("日本語タイトル")
+    expect(titles.nth(5)).to_have_text("その他の邦題")
 
 
 def test_correct_number_and_content_of_header_elements(app: Page):
+    """Test that correct number of st.header (=> h2) exist with the right content"""
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
     expect(headers).to_have_count(5)
 
@@ -58,16 +66,28 @@ def test_correct_number_and_content_of_header_elements(app: Page):
 
 def test_correct_number_and_content_of_subheader_elements(app: Page):
     """Test that correct number of st.subheader (=> h3) exist with the right content"""
-    headers = app.locator(".element-container .stMarkdown h3").filter(
+    subheaders = app.locator(".element-container .stMarkdown h3").filter(
         has_not_text=_subheader_divider_filter_text
     )
-    expect(headers).to_have_count(7)
+    expect(subheaders).to_have_count(7)
 
-    expect(headers.nth(0)).to_have_text("This subheader is awesome!")
-    expect(headers.nth(1)).to_have_text("This subheader is awesome too!")
-    expect(headers.nth(2)).to_have_text("Code - Subheader without Anchor")
-    expect(headers.nth(3)).to_have_text("Code - Subheader with Anchor test_link")
-    expect(headers.nth(4)).to_have_text("Subheader with hidden Anchor")
+    expect(subheaders.nth(0)).to_have_text("This subheader is awesome!")
+    expect(subheaders.nth(1)).to_have_text("This subheader is awesome too!")
+    expect(subheaders.nth(2)).to_have_text("Code - Subheader without Anchor")
+    expect(subheaders.nth(3)).to_have_text("Code - Subheader with Anchor test_link")
+    expect(subheaders.nth(4)).to_have_text("Subheader with hidden Anchor")
+
+
+def test_display_titles_with_anchors(app: Page):
+    titles = _get_title_elements(app)
+
+    expect(titles.nth(0)).to_have_id("this-title-is-awesome")
+    expect(titles.nth(1)).to_have_id("awesome-title")
+    expect(titles.nth(2)).to_have_id("code-title-with-hidden-anchor")
+    expect(titles.nth(3)).to_have_id("a-link")
+    # the id is generated based on the title
+    expect(titles.nth(4)).to_have_id("d3b04b7a")
+    expect(titles.nth(5)).to_have_id("アンカー")
 
 
 def test_display_headers_with_anchors_and_style_icons(app: Page):
@@ -199,8 +219,10 @@ def test_header_divider_snapshot(
         has_text=_header_divider_filter_text
     )
     expect(header_divider_elements).to_have_count(_number_of_colors)
+    header_divider_element = header_divider_elements.nth(color_index)
+    header_divider_element.scroll_into_view_if_needed()
     assert_snapshot(
-        header_divider_elements.nth(color_index),
+        header_divider_element,
         name=f"st_header-divider_{color_index}",
     )
 
@@ -214,7 +236,9 @@ def test_subheader_divider_snapshot(
         has_text=_subheader_divider_filter_text
     )
     expect(subheader_divider_elements).to_have_count(_number_of_colors)
+    subheader_divider_element = subheader_divider_elements.nth(color_index)
+    subheader_divider_element.scroll_into_view_if_needed()
     assert_snapshot(
-        subheader_divider_elements.nth(color_index),
+        subheader_divider_element,
         name=f"st_subheader-divider_{color_index}",
     )

@@ -14,15 +14,19 @@
 
 import streamlit as st
 
+st.title("This title is awesome!")
+st.title("This title is awesome too!", anchor="awesome-title")
+st.title("`Code` - Title with hidden Anchor", anchor=False)
+st.title("a [link](#test)")
+# Foreign language titles and anchors
+st.title("日本語タイトル")
+st.title("その他の邦題", anchor="アンカー")
+
 st.header("This header is awesome!")
 st.header("This header is awesome too!", anchor="awesome-header")
 st.header("This header with hidden anchor is awesome tooooo!", anchor=False)
 st.header("header with help", help="Some help tooltip")
 st.header("header with help and hidden anchor", help="Some help tooltip", anchor=False)
-
-st.title("`Code` - Title without Anchor")
-st.title("`Code` - Title with Anchor", anchor="title")
-st.title("`Code` - Title with hidden Anchor", anchor=False)
 
 st.subheader("This subheader is awesome!")
 st.subheader("This subheader is awesome too!", anchor="awesome-subheader")
@@ -36,8 +40,6 @@ st.subheader("Subheader with help", help="Some help tooltip")
 st.subheader(
     "Subheader with help and hidden anchor", help="Some help tooltip", anchor=False
 )
-
-st.title("a [link](#test)")
 
 # Test dividers
 colors = ["blue", "gray", "green", "grey", "orange", "rainbow", "red", "violet"]
