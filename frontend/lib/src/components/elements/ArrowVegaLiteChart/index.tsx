@@ -14,4 +14,6 @@
  * limitations under the License.
  */
 
+export type { VegaLiteChartElement } from "./arrowUtils"
+
 export { default } from "./ArrowVegaLiteChart"
