@@ -39,27 +39,37 @@ def test_correct_content_in_caption(app: Page):
         "This is a caption with a help tooltip"
     )
     expect(caption_containers.nth(6)).to_have_text(
-        "This is a caption that contains <div>html</div> inside it and a help tooltip!"
+        "This is a caption that contains html inside it and a help tooltip!"
     )
 
 
 def test_match_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    caption_containers = themed_app.get_by_test_id("stCaptionContainer")
+    # fetching the element-container so that when we capture a snapshot, it contains the tooltip
+    caption_containers = themed_app.get_by_test_id("element-container").filter(
+        has=themed_app.get_by_test_id("stCaptionContainer")
+    )
     # nth(0) is sidebar which has its own test method, so start at 1
     assert_snapshot(caption_containers.nth(1), name="st_caption-simple")
     assert_snapshot(caption_containers.nth(2), name="st_caption-with_markdown")
-    assert_snapshot(caption_containers.nth(3), name="st_caption-with_html")
-    assert_snapshot(caption_containers.nth(4), name="st_caption-with_tooltip")
-    assert_snapshot(caption_containers.nth(5), name="st_caption-with_html_and_tooltip")
     assert_snapshot(
-        caption_containers.nth(6), name="st_caption-with_different_markdown_content"
+        caption_containers.nth(3), name="st_caption-with_html_and_unsafe_html_false"
+    )
+    assert_snapshot(
+        caption_containers.nth(4), name="st_caption-with_html_and_unsafe_html_true"
+    )
+    assert_snapshot(caption_containers.nth(5), name="st_caption-with_tooltip")
+    assert_snapshot(caption_containers.nth(6), name="st_caption-with_html_and_tooltip")
+    assert_snapshot(
+        caption_containers.nth(7), name="st_caption-with_different_markdown_content"
     )
 
 
 def test_match_snapshot_in_sidebar(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    caption_in_sidebar = themed_app.get_by_test_id("stSidebar").get_by_test_id(
-        "stCaptionContainer"
-    )
+    # expand the sidebar
+    themed_app.get_by_test_id("collapsedControl").click()
+    sidebar = themed_app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+    caption_in_sidebar = sidebar.get_by_test_id("stCaptionContainer")
     assert_snapshot(caption_in_sidebar, name="st_caption-sidebar_caption")

@@ -14,6 +14,8 @@
 
 import streamlit as st
 
+# keep the sidebar collapsed by default to prevent render flakiness
+st.set_page_config(initial_sidebar_state="collapsed")
 sidebar_markdown = """# I am a header
 
 ## I am a subheader
@@ -35,11 +37,11 @@ st.caption("This is a caption that contains <div>html</div> inside it!")
 st.caption(
     "This is a caption that contains <div>html</div> inside it!", unsafe_allow_html=True
 )
-st.caption("This is a caption with a help tooltip", help="This is som help tooltip!")
+st.caption("This is a caption with a help tooltip", help="This is some help tooltip!")
 st.caption(
     "This is a caption that contains <div>html</div> inside it and a help tooltip!",
     unsafe_allow_html=True,
-    help="This is som help tooltip!",
+    help="This is some help tooltip!",
 )
 
 st.caption(
