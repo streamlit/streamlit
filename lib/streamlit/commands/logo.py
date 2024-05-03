@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from streamlit import url_util
 from streamlit.elements.image import AtomicImage, WidthBehaviour, image_to_url
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -34,17 +35,17 @@ def _invalid_logo_text(field_name: str):
 
 @gather_metrics("logo")
 def logo(
-    image: str | Image.Image | AtomicImage,
+    image: AtomicImage,
     *,  # keyword-only args:
     link: str | None = None,
-    icon_image: str | Image.Image | AtomicImage | None = None,
+    icon_image: AtomicImage | None = None,
 ) -> None:
     """
     Renders logos in the main and sidebar sections of the page
 
     Parameters
     ----------
-    image: numpy.ndarray, BytesIO, or str
+    image: Anything supported by st.image or str
         The app logo to be displayed in the top left corner of the sidebar of your app
         (as well as the main section if icon_image param is not provided).
     link : str or None
@@ -82,7 +83,7 @@ def logo(
 
     if link:
         # Handle external links:
-        if link.startswith("http://") or link.startswith("https://"):
+        if url_util.is_url(link, ("http", "https")):
             fwd_msg.logo.link = link
         else:
             raise StreamlitAPIException(
