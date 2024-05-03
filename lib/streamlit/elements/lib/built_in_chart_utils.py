@@ -208,8 +208,8 @@ def generate_chart(
 
 def prep_chart_data_for_add_rows(
     data: Data,
-    add_rows_metadata: AddRowsMetadata | None,
-) -> tuple[Data, AddRowsMetadata | None]:
+    add_rows_metadata: AddRowsMetadata,
+) -> tuple[Data, AddRowsMetadata]:
     """Prepares the data for add_rows on our built-in charts.
 
     This includes aspects like conversion of the data to Pandas DataFrame,
