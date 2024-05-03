@@ -777,53 +777,19 @@ def _prep_data_for_add_rows(
     data: Data,
     add_rows_metadata: AddRowsMetadata | None,
 ) -> tuple[Data, AddRowsMetadata | None]:
-    out_data: Data
+    if not add_rows_metadata:
+        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
+        return type_util.convert_anything_to_df(data, allow_styler=True), None
+
+    # If add_rows_metadata is set, it indicates that the add_rows used called
+    # on a chart based on our built-in chart commands.
 
     # For built-in chart commands we have to reshape the data structure
     # otherwise the input data and the actual data used
     # by vega_lite will be different, and it will throw an error.
-    if add_rows_metadata:
-        # Lazy-load modules to prevent circular imports and slow startup times:
-        import pandas as pd
+    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
 
-        from streamlit.elements.lib.built_in_chart_utils import prep_data
-
-        df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
-
-        # Make range indices start at last_index.
-        if isinstance(df.index, pd.RangeIndex):
-            old_step = _get_pandas_index_attr(df, "step")
-
-            # We have to drop the predefined index
-            df = df.reset_index(drop=True)
-
-            old_stop = _get_pandas_index_attr(df, "stop")
-
-            if old_step is None or old_stop is None:
-                raise StreamlitAPIException(
-                    "'RangeIndex' object has no attribute 'step'"
-                )
-
-            start = add_rows_metadata.last_index + old_step
-            stop = add_rows_metadata.last_index + old_step + old_stop
-
-            df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-            add_rows_metadata.last_index = stop - 1
-
-        out_data, *_ = prep_data(df, **add_rows_metadata.columns)
-
-    else:
-        # When calling add_rows on st.table or st.dataframe we want styles to pass through.
-        out_data = type_util.convert_anything_to_df(data, allow_styler=True)
-
-    return out_data, add_rows_metadata
-
-
-def _get_pandas_index_attr(
-    data: DataFrame | Series,
-    attr: str,
-) -> Any | None:
-    return getattr(data.index, attr, None)
+    return prep_chart_data_for_add_rows(data, add_rows_metadata)
 
 
 @overload

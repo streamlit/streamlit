@@ -111,50 +111,6 @@ _MELTED_COLOR_COLUMN_NAME: Final = _MELTED_COLOR_COLUMN_TITLE + _PROTECTION_SUFF
 _NON_EXISTENT_COLUMN_NAME: Final = "DOES_NOT_EXIST" + _PROTECTION_SUFFIX
 
 
-def prep_data(
-    df: pd.DataFrame,
-    x_column: str | None,
-    y_column_list: list[str],
-    color_column: str | None,
-    size_column: str | None,
-) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
-    """Prepares the data for charting. This is also used in add_rows.
-
-    Returns the prepared dataframe and the new names of the x column (taking the index reset into
-    consideration) and y, color, and size columns.
-    """
-
-    # If y is provided, but x is not, we'll use the index as x.
-    # So we need to pull the index into its own column.
-    x_column = _maybe_reset_index_in_place(df, x_column, y_column_list)
-
-    # Drop columns we're not using.
-    selected_data = _drop_unused_columns(
-        df, x_column, color_column, size_column, *y_column_list
-    )
-
-    # Maybe convert color to Vega colors.
-    _maybe_convert_color_column_in_place(selected_data, color_column)
-
-    # Make sure all columns have string names.
-    (
-        x_column,
-        y_column_list,
-        color_column,
-        size_column,
-    ) = _convert_col_names_to_str_in_place(
-        selected_data, x_column, y_column_list, color_column, size_column
-    )
-
-    # Maybe melt data from wide format into long format.
-    melted_data, y_column, color_column = _maybe_melt(
-        selected_data, x_column, y_column_list, color_column, size_column
-    )
-
-    # Return the data, but also the new names to use for x, y, and color.
-    return melted_data, x_column, y_column, color_column, size_column
-
-
 def generate_chart(
     chart_type: ChartType,
     data: Data | None,
@@ -201,7 +157,7 @@ def generate_chart(
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
 
-    df, x_column, y_column, color_column, size_column = prep_data(
+    df, x_column, y_column, color_column, size_column = _prep_data(
         df, x_column, y_column_list, color_column, size_column
     )
 
@@ -248,6 +204,93 @@ def generate_chart(
         )
 
     return chart.interactive(), add_rows_metadata
+
+
+def prep_chart_data_for_add_rows(
+    data: Data,
+    add_rows_metadata: AddRowsMetadata | None,
+) -> tuple[Data, AddRowsMetadata | None]:
+    """Prepares the data for add_rows on our built-in charts.
+
+    This includes aspects like conversion of the data to Pandas DataFrame,
+    changes to the index, and melting the data if needed.
+    """
+    import pandas as pd
+
+    df = cast(pd.DataFrame, type_util.convert_anything_to_df(data))
+
+    # Make range indices start at last_index.
+    if isinstance(df.index, pd.RangeIndex):
+        old_step = _get_pandas_index_attr(df, "step")
+
+        # We have to drop the predefined index
+        df = df.reset_index(drop=True)
+
+        old_stop = _get_pandas_index_attr(df, "stop")
+
+        if old_step is None or old_stop is None:
+            raise StreamlitAPIException("'RangeIndex' object has no attribute 'step'")
+
+        start = add_rows_metadata.last_index + old_step
+        stop = add_rows_metadata.last_index + old_step + old_stop
+
+        df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
+        add_rows_metadata.last_index = stop - 1
+
+    out_data, *_ = _prep_data(df, **add_rows_metadata.columns)
+
+    return out_data, add_rows_metadata
+
+
+def _get_pandas_index_attr(
+    data: pd.DataFrame | pd.Series,
+    attr: str,
+) -> Any | None:
+    return getattr(data.index, attr, None)
+
+
+def _prep_data(
+    df: pd.DataFrame,
+    x_column: str | None,
+    y_column_list: list[str],
+    color_column: str | None,
+    size_column: str | None,
+) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None]:
+    """Prepares the data for charting. This is also used in add_rows.
+
+    Returns the prepared dataframe and the new names of the x column (taking the index reset into
+    consideration) and y, color, and size columns.
+    """
+
+    # If y is provided, but x is not, we'll use the index as x.
+    # So we need to pull the index into its own column.
+    x_column = _maybe_reset_index_in_place(df, x_column, y_column_list)
+
+    # Drop columns we're not using.
+    selected_data = _drop_unused_columns(
+        df, x_column, color_column, size_column, *y_column_list
+    )
+
+    # Maybe convert color to Vega colors.
+    _maybe_convert_color_column_in_place(selected_data, color_column)
+
+    # Make sure all columns have string names.
+    (
+        x_column,
+        y_column_list,
+        color_column,
+        size_column,
+    ) = _convert_col_names_to_str_in_place(
+        selected_data, x_column, y_column_list, color_column, size_column
+    )
+
+    # Maybe melt data from wide format into long format.
+    melted_data, y_column, color_column = _maybe_melt(
+        selected_data, x_column, y_column_list, color_column, size_column
+    )
+
+    # Return the data, but also the new names to use for x, y, and color.
+    return melted_data, x_column, y_column, color_column, size_column
 
 
 def _last_index_for_melted_dataframes(
@@ -834,4 +877,5 @@ class StreamlitColorLengthError(StreamlitAPIException):
             "length as the list of columns to be colored "
             f"`{y_column_list}`."
         )
+        super().__init__(message, *args)
         super().__init__(message, *args)
