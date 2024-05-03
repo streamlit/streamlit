@@ -33,6 +33,8 @@ from typing import (
     cast,
 )
 
+from typing_extensions import TypeAlias
+
 from streamlit import (
     cli_util,
     config,
@@ -109,8 +111,8 @@ Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
 
 # Type aliases for Ancestor Block Types
-BlockType = str
-AncestorBlockTypes = Iterable[BlockType]
+BlockType: TypeAlias = str
+AncestorBlockTypes: TypeAlias = Iterable[BlockType]
 
 
 _use_warning_has_been_displayed: bool = False
