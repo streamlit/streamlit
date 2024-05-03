@@ -269,14 +269,6 @@ const RawElementNodeRenderer = (
         <ArrowTable element={node.quiverElement as Quiver} {...elementProps} />
       )
 
-    case "arrowVegaLiteChart":
-      return (
-        <ArrowVegaLiteChart
-          element={node.vegaLiteChartElement as VegaLiteChartElement}
-          {...widgetProps}
-        />
-      )
-
     case "audio":
       return (
         <Audio
@@ -483,6 +475,22 @@ const RawElementNodeRenderer = (
         />
       )
     }
+
+    case "arrowVegaLiteChart":
+      const vegaLiteElement = node.vegaLiteChartElement as VegaLiteChartElement
+      return (
+        <ArrowVegaLiteChart
+          element={vegaLiteElement}
+          // Vega-lite chart can be used as a widget (when selections are activated) or
+          // an element. We only want to set the key in case of it being used as a widget.
+          // For the non-widget usage, the id will
+          // be undefined.
+          {...(vegaLiteElement.id && {
+            key: vegaLiteElement.id,
+          })}
+          {...widgetProps}
+        />
+      )
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
