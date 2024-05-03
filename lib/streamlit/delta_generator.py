@@ -31,8 +31,9 @@ from typing import (
     NoReturn,
     TypeVar,
     cast,
-    overload,
 )
+
+from typing_extensions import TypeAlias
 
 from streamlit import (
     cli_util,
@@ -94,12 +95,11 @@ from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
     from numpy import typing as npt
-    from pandas import DataFrame, Series
+    from pandas import DataFrame
 
     from streamlit.elements.arrow import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
@@ -111,8 +111,8 @@ Value = TypeVar("Value")
 DG = TypeVar("DG", bound="DeltaGenerator")
 
 # Type aliases for Ancestor Block Types
-BlockType = str
-AncestorBlockTypes = Iterable[BlockType]
+BlockType: TypeAlias = str
+AncestorBlockTypes: TypeAlias = Iterable[BlockType]
 
 
 _use_warning_has_been_displayed: bool = False
@@ -413,75 +413,12 @@ class DeltaGenerator(
         dg = self._active_dg
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
-    @overload
     def _enqueue(
         self,
         delta_type: str,
         element_proto: Message,
-        return_value: None,
         add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
     ) -> DeltaGenerator:
-        ...
-
-    @overload
-    def _enqueue(  # type: ignore[misc]
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: type[NoValue],
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> None:
-        ...
-
-    @overload
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: Value,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> Value:
-        ...
-
-    @overload
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> DeltaGenerator:
-        ...
-
-    @overload
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: type[NoValue] | Value | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> DeltaGenerator | Value | None:
-        ...
-
-    def _enqueue(
-        self,
-        delta_type: str,
-        element_proto: Message,
-        return_value: type[NoValue] | Value | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
-        element_width: int | None = None,
-        element_height: int | None = None,
-    ) -> DeltaGenerator | Value | None:
         """Create NewElement delta, fill it, and enqueue it.
 
         Parameters
@@ -490,21 +427,12 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
-        return_value : any or None
-            The value to return to the calling script (for widgets)
-        element_width : int or None
-            Desired width for the element
-        element_height : int or None
-            Desired height for the element
 
         Returns
         -------
-        DeltaGenerator or any
-            If this element is NOT an interactive widget, return a
-            DeltaGenerator that can be used to modify the newly-created
-            element. Otherwise, if the element IS a widget, return the
-            `return_value` parameter.
-
+        DeltaGenerator
+            Return a DeltaGenerator that can be used to modify the newly-created
+            element.
         """
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
@@ -530,11 +458,6 @@ class DeltaGenerator(
         if dg._root_container is not None and dg._cursor is not None:
             msg.metadata.delta_path[:] = dg._cursor.delta_path
 
-            if element_width is not None:
-                msg.metadata.element_dimension_spec.width = element_width
-            if element_height is not None:
-                msg.metadata.element_dimension_spec.height = element_height
-
             _enqueue_message(msg)
             msg_was_enqueued = True
 
@@ -559,7 +482,7 @@ class DeltaGenerator(
             # no-op from the point of view of the app.
             output_dg = dg
 
-        # Save message for replay if we're called from within @st.memo or @st.singleton
+        # Save message for replay if we're called from within @st.cache_data or @st.cache_resource
         caching.save_element_message(
             delta_type,
             element_proto,
@@ -568,7 +491,7 @@ class DeltaGenerator(
             returned_dg_id=output_dg.id,
         )
 
-        return _value_or_dg(return_value, output_dg)
+        return output_dg
 
     def _block(
         self,
@@ -790,51 +713,6 @@ def _prep_data_for_add_rows(
     from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
 
     return prep_chart_data_for_add_rows(data, add_rows_metadata)
-
-
-@overload
-def _value_or_dg(value: None, dg: DG) -> DG:
-    ...
-
-
-@overload
-def _value_or_dg(value: type[NoValue], dg: DG) -> None:  # type: ignore[misc]
-    ...
-
-
-@overload
-def _value_or_dg(value: Value, dg: DG) -> Value:
-    # This overload definition technically overlaps with the one above (Value
-    # contains Type[NoValue]), and since the return types are conflicting,
-    # mypy complains. Hence, the ignore-comment above. But, in practice, since
-    # the overload above is more specific, and is matched first, there is no
-    # actual overlap. The `Value` type here is thus narrowed to the cases
-    # where value is neither None nor NoValue.
-
-    # The ignore-comment should thus be fine.
-    ...
-
-
-def _value_or_dg(
-    value: type[NoValue] | Value | None,
-    dg: DG,
-) -> DG | Value | None:
-    """Return either value, or None, or dg.
-
-    This is needed because Widgets have meaningful return values. This is
-    unlike other elements, which always return None. Then we internally replace
-    that None with a DeltaGenerator instance.
-
-    However, sometimes a widget may want to return None, and in this case it
-    should not be replaced by a DeltaGenerator. So we have a special NoValue
-    object that gets replaced by None.
-
-    """
-    if value is NoValue:
-        return None
-    if value is None:
-        return dg
-    return cast(Value, value)
 
 
 def _enqueue_message(msg: ForwardMsg_pb2.ForwardMsg) -> None:
