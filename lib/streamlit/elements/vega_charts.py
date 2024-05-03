@@ -192,6 +192,14 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
 
 
 class VegaChartsMixin:
+    """Mix-in class for all vega-related chart commands.
+
+    Altair is a python wrapper on top of the vega-lite spec. And our
+    built-in chart commands are just another layer on-top of Altair.
+    All of these chart commands will be eventually converted to a vega-lite
+    spec and rendered using the same vega-lite chart component.
+    """
+
     @gather_metrics("line_chart")
     def line_chart(
         self,
