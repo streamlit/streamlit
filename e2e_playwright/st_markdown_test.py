@@ -17,10 +17,10 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 
 
-def test_markdown_all_elements_displayed(
+def test_different_markdown_elements_in_one_block_displayed(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Displays correct number of markdown elements"""
+    """Test that the block containing a mixture of different markdown elements is displayed correctly."""
 
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
 
@@ -31,11 +31,11 @@ def test_markdown_all_elements_displayed(
     multi_markdown_format_container.scroll_into_view_if_needed()
     assert_snapshot(
         multi_markdown_format_container,
-        name="st_markdown-num_elements_displayed",
+        name="st_markdown-many_elements_in_one_block",
     )
 
 
-def test_displays_markdown(app: Page):
+def test_displays_individual_markdowns(app: Page):
     """Verifies the correct text content of markdown elements."""
 
     # get markdown elements in main app view, not sidebar
