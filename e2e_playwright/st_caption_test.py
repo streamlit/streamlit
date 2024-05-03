@@ -60,6 +60,6 @@ def test_match_snapshot_in_sidebar(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     caption_in_sidebar = themed_app.get_by_test_id("stSidebar").get_by_test_id(
-        "stMarkdown"
+        "stCaptionContainer"
     )
     assert_snapshot(caption_in_sidebar, name="st_caption-sidebar_caption")
