@@ -59,7 +59,8 @@ describe("Heading", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)
 
-    const link = screen.getByRole("link")
+    // trying to trigger the :hover css state did not work, so using 'hidden: true' here. We have an e2e test to check the hovering.
+    const link = screen.getByRole("link", { hidden: true })
     expect(link).toHaveAttribute("href", "#some-anchor")
   })
 

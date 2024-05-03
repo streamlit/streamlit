@@ -151,7 +151,7 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(
-      screen.queryByTestId("stStyledHeadingWithActionElements=1")
+      screen.queryByTestId("stStyledHeadingWithActionElements")
     ).not.toBeInTheDocument()
   })
 

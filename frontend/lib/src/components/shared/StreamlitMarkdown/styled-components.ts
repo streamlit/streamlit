@@ -149,11 +149,11 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   // we use opacity instead of visibility because the react-testing-library seems
   // to have issues with queryByRole('link') otherwise, even when triggering hover-events
   "& .stHeaderActionElements > a": {
-    opacity: 0,
+    visibility: "hidden",
   },
   ":hover": {
     "& .stHeaderActionElements > a": {
-      opacity: 1,
+      visibility: "visible",
     },
   },
 }))
