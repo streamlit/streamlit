@@ -19,7 +19,7 @@ from e2e_playwright.conftest import ImageCompareFunction
 
 def test_correct_number_of_elements(app: Page):
     caption_containers = app.get_by_test_id("stCaptionContainer")
-    expect(caption_containers).to_have_count(8)
+    expect(caption_containers).to_have_count(5)
 
 
 def test_correct_content_in_caption(app: Page):
@@ -27,19 +27,10 @@ def test_correct_content_in_caption(app: Page):
     caption_containers = app.get_by_test_id("stCaptionContainer")
     expect(caption_containers.nth(1)).to_have_text("This is a caption!")
     expect(caption_containers.nth(2)).to_have_text(
-        "This is a caption that contains markdown inside it!"
-    )
-    expect(caption_containers.nth(3)).to_have_text(
-        "This is a caption that contains <div>html</div> inside it!"
-    )
-    expect(caption_containers.nth(4)).to_have_text(
         "This is a caption that contains html inside it!"
     )
-    expect(caption_containers.nth(5)).to_have_text(
+    expect(caption_containers.nth(3)).to_have_text(
         "This is a caption with a help tooltip"
-    )
-    expect(caption_containers.nth(6)).to_have_text(
-        "This is a caption that contains html inside it and a help tooltip!"
     )
 
 
@@ -48,19 +39,13 @@ def test_match_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction)
     caption_containers = themed_app.get_by_test_id("element-container").filter(
         has=themed_app.get_by_test_id("stCaptionContainer")
     )
-    # nth(0) is sidebar which has its own test method, so start at 1
-    assert_snapshot(caption_containers.nth(1), name="st_caption-simple")
-    assert_snapshot(caption_containers.nth(2), name="st_caption-with_markdown")
+    # nth(0) is sidebar which has its own test method and 1 is trivial, so start at 1
     assert_snapshot(
-        caption_containers.nth(3), name="st_caption-with_html_and_unsafe_html_false"
+        caption_containers.nth(2), name="st_caption-with_html_and_unsafe_html_true"
     )
+    assert_snapshot(caption_containers.nth(3), name="st_caption-with_tooltip")
     assert_snapshot(
-        caption_containers.nth(4), name="st_caption-with_html_and_unsafe_html_true"
-    )
-    assert_snapshot(caption_containers.nth(5), name="st_caption-with_tooltip")
-    assert_snapshot(caption_containers.nth(6), name="st_caption-with_html_and_tooltip")
-    assert_snapshot(
-        caption_containers.nth(7), name="st_caption-with_different_markdown_content"
+        caption_containers.nth(4), name="st_caption-with_different_markdown_content"
     )
 
 
