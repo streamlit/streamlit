@@ -45,8 +45,15 @@ def test_correct_content_in_caption(app: Page):
 
 def test_match_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
     caption_containers = themed_app.get_by_test_id("stCaptionContainer")
-    for i, caption_container in enumerate(caption_containers.all()):
-        assert_snapshot(caption_container, name=f"st_caption-caption_container_{i}")
+    # nth(0) is sidebar which has its own test method, so start at 1
+    assert_snapshot(caption_containers.nth(1), name="st_caption-simple")
+    assert_snapshot(caption_containers.nth(2), name="st_caption-with_markdown")
+    assert_snapshot(caption_containers.nth(3), name="st_caption-with_html")
+    assert_snapshot(caption_containers.nth(4), name="st_caption-with_tooltip")
+    assert_snapshot(caption_containers.nth(5), name="st_caption-with_html_and_tooltip")
+    assert_snapshot(
+        caption_containers.nth(6), name="st_caption-with_different_markdown_content"
+    )
 
 
 def test_match_snapshot_in_sidebar(
