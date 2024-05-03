@@ -158,19 +158,17 @@ const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
   }
 
   return (
-    <>
-      <StyledHeadingActionElements
-        data-testid="stHeaderActionElements"
-        className="stHeaderActionElements"
-      >
-        {help && <InlineTooltipIcon iconSize="18" content={help} />}
-        {elementId && !hideAnchor && (
-          <StyledLinkIcon href={`#${elementId}`}>
-            <LinkIcon size="18" />
-          </StyledLinkIcon>
-        )}
-      </StyledHeadingActionElements>
-    </>
+    <StyledHeadingActionElements
+      data-testid="stHeaderActionElements"
+      className="stHeaderActionElements"
+    >
+      {help && <InlineTooltipIcon content={help} />}
+      {elementId && !hideAnchor && (
+        <StyledLinkIcon href={`#${elementId}`}>
+          <LinkIcon size="18" />
+        </StyledLinkIcon>
+      )}
+    </StyledHeadingActionElements>
   )
 }
 
