@@ -34,18 +34,42 @@ def test_correct_content_in_caption(app: Page):
     )
 
 
-def test_match_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
+def test_match_snapshot_for_caption_with_html_and_unsafe_html_true(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the unsafe_html caption matches the snapshot."""
     # fetching the element-container so that when we capture a snapshot, it contains the tooltip
-    caption_containers = themed_app.get_by_test_id("element-container").filter(
-        has=themed_app.get_by_test_id("stCaptionContainer")
+    caption_container = (
+        app.get_by_test_id("element-container")
+        .filter(has=app.get_by_test_id("stCaptionContainer"))
+        .nth(2)
     )
-    # nth(0) is sidebar which has its own test method and 1 is trivial, so start at 1
-    assert_snapshot(
-        caption_containers.nth(2), name="st_caption-with_html_and_unsafe_html_true"
+    assert_snapshot(caption_container, name="st_caption-with_html_and_unsafe_html_true")
+
+
+def test_match_snapshot_for_caption_with_tooltip(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the caption with matches the snapshot. Also test dark-theme to make sure icon is visible."""
+    caption_container = (
+        themed_app.get_by_test_id("element-container")
+        .filter(has=themed_app.get_by_test_id("stCaptionContainer"))
+        .nth(3)
     )
-    assert_snapshot(caption_containers.nth(3), name="st_caption-with_tooltip")
+    assert_snapshot(caption_container, name="st_caption-with_tooltip")
+
+
+def test_match_snapshot_for_mixed_markdown_content(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the big markdown caption with the mixed content matches the snapshot."""
+    caption_container = (
+        app.get_by_test_id("element-container")
+        .filter(has=app.get_by_test_id("stCaptionContainer"))
+        .nth(4)
+    )
     assert_snapshot(
-        caption_containers.nth(4), name="st_caption-with_different_markdown_content"
+        caption_container, name="st_caption-with_different_markdown_content"
     )
 
 
