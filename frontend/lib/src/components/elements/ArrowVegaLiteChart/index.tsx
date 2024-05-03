@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-export type { VegaLiteChartElement } from "./arrowUtils"
+export type { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
 
 export { default } from "./ArrowVegaLiteChart"
