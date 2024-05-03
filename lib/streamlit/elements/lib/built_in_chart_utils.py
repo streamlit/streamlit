@@ -339,7 +339,44 @@ def _melt_data(
     new_y_column_name: str,
     new_color_column_name: str,
 ) -> pd.DataFrame:
-    """Converts a wide-format dataframe to a long-format dataframe."""
+    """Converts a wide-format dataframe to a long-format dataframe.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to melt.
+    columns_to_leave_alone : list[str]
+        The columns to leave as they are.
+    columns_to_melt : list[str]
+        The columns to melt.
+    new_y_column_name : str
+        The name of the new column that will store the values of the melted columns.
+    new_color_column_name : str
+        The name of column that will store the original column names.
+
+    Returns
+    -------
+    pd.DataFrame
+        The melted dataframe.
+
+
+    Examples
+    --------
+
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({
+    ...     "a": [1, 2, 3],
+    ...     "b": [4, 5, 6],
+    ...     "c": [7, 8, 9],
+    ... })
+    >>> _melt_data(df, ["a"], ["b", "c"], "value", "color")
+    >>>    a color  value
+    >>> 0  1        b      4
+    >>> 1  2        b      5
+    >>> 2  3        b      6
+    >>> ...
+
+    """
     import pandas as pd
     from pandas.api.types import infer_dtype
 
