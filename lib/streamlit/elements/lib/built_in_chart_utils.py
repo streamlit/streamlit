@@ -341,6 +341,9 @@ def _melt_data(
 ) -> pd.DataFrame:
     """Converts a wide-format dataframe to a long-format dataframe.
 
+    You can find more info about melting on the Pandas documentation:
+    https://pandas.pydata.org/docs/reference/api/pandas.melt.html
+
     Parameters
     ----------
     df : pd.DataFrame
