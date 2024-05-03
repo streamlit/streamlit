@@ -35,6 +35,13 @@ st.caption("This is a caption that contains <div>html</div> inside it!")
 st.caption(
     "This is a caption that contains <div>html</div> inside it!", unsafe_allow_html=True
 )
+st.caption("This is a caption with a help tooltip", help="This is som help tooltip!")
+st.caption(
+    "This is a caption that contains <div>html</div> inside it and a help tooltip!",
+    unsafe_allow_html=True,
+    help="This is som help tooltip!",
+)
+
 st.caption(
     """This is a caption that contains a bunch of interesting markdown:
 
