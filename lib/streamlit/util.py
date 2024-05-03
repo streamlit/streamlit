@@ -199,3 +199,39 @@ def extract_key_query_params(
         ]
         for item in sublist
     }
+
+
+def replace_values_in_dict(
+    d: dict[str, Any] | list[Any], old_to_new_map: dict[str, str]
+) -> None:
+    """
+    Recursively traverses a dictionary or a list of dictionaries, replacing specific
+    string values based on a mapping provided.
+    This function modifies the input dictionary or list in-place, changing strings
+    found as dictionary values that match keys in the `old_to_new_map` dictionary
+    to the corresponding values in `old_to_new_map`.
+
+    Parameters:
+    ----------
+
+    d (Dict[str, Any] | List[Any])
+        The dictionary or list of dictionaries to be
+        modified. If this is a list, it should contain dictionaries as elements.
+
+    old_to_new_map (Dict[str, str])
+        A dictionary mapping old string values to new
+        string values. If a string in the input dictionary matches a key in this map,
+        it will be replaced with the value associated with that key.
+    """
+    if isinstance(d, dict):
+        for key, value in d.items():
+            if isinstance(value, str) and value in old_to_new_map:
+                d[key] = old_to_new_map[value]
+            elif isinstance(value, dict):
+                replace_values_in_dict(value, old_to_new_map)
+            elif isinstance(value, list):
+                for item in value:
+                    replace_values_in_dict(item, old_to_new_map)
+    elif isinstance(d, list):
+        for item in d:
+            replace_values_in_dict(item, old_to_new_map)

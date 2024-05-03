@@ -16,7 +16,7 @@ import json
 import unittest
 from typing import Any, Callable
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import altair as alt
 import pandas as pd
@@ -27,7 +27,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.type_util import (
+    bytes_to_data_frame,
+    is_altair_version_less_than,
+    pyarrow_table_to_bytes,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
@@ -59,7 +63,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
 
-        self.assertEqual(proto.HasField("data"), False)
+        self.assertFalse(proto.HasField("data"))
         self.assertEqual(len(proto.datasets), 1)
         pd.testing.assert_frame_equal(
             bytes_to_data_frame(proto.datasets[0].data.data), EXPECTED_DATAFRAME
@@ -75,7 +79,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         )
         self.assertEqual(spec_dict["data"], {"name": proto.datasets[0].name})
         self.assertIn(spec_dict["mark"], ["bar", {"type": "bar"}])
-        self.assertTrue("encoding" in spec_dict)
+        self.assertIn("encoding", spec_dict)
 
     def test_altair_chart_uses_convert_anything_to_df(self):
         """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
@@ -120,6 +124,181 @@ class AltairChartTest(DeltaGeneratorTestCase):
     def test_empty_altair_chart_throws_error(self):
         with self.assertRaises(TypeError):
             st.altair_chart(use_container_width=True)
+
+    @parameterized.expand(
+        [
+            ("rerun", True),
+            ("ignore", False),
+            (lambda: None, True),
+        ]
+    )
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_on_select(self, on_select: Any, expected_is_select_enabled: bool):
+        point = alt.selection_point(name="name")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+        st.altair_chart(chart, on_select=on_select)
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(
+            proto.is_select_enabled,
+            expected_is_select_enabled,
+        )
+
+    @parameterized.expand(
+        [
+            (True),
+            (False),
+            ("invalid"),
+        ]
+    )
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_on_select_invalid(self, on_select):
+        point = alt.selection_point(name="name")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+        with self.assertRaises(StreamlitAPIException):
+            st.altair_chart(chart, on_select=on_select)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_no_name_point_selection(self):
+        point = alt.selection_point()
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+        st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertIn(
+            "selection_0",
+            proto.spec,
+        )
+        self.assertNotIn("param1", proto.spec)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_no_name_interval_selection(self):
+        interval = alt.selection_interval()
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
+
+        st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertIn(
+            "selection_0",
+            proto.spec,
+        )
+        self.assertNotIn("param1", proto.spec)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_named_point_selection(self):
+        point = alt.selection_point(name="point")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+        st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertTrue(
+            "point" in proto.spec,
+        )
+        self.assertFalse("selection_0" in proto.spec)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_altair_named_interval_selection(self):
+        interval = alt.selection_interval(name="interval")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(interval)
+
+        st.altair_chart(chart, on_select="rerun")
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertIn(
+            "interval",
+            proto.spec,
+        )
+        self.assertIn("selection_0", proto.spec)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_inside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly inside of a form."""
+        with st.form("form"):
+            point = alt.selection_point(name="point")
+            df = pd.DataFrame(
+                [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
+            ).T
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+
+            st.altair_chart(chart, on_select="rerun")
+
+        # 2 elements will be created: form block, altair_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        arrow_vega_lite_proto = self.get_delta_from_queue(
+            1
+        ).new_element.arrow_vega_lite_chart
+        self.assertEqual(arrow_vega_lite_proto.form_id, form_proto.form.form_id)
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_outside_form_on_select_rerun(self):
+        """Test that form id is marshalled correctly outside of a form."""
+        with st.form("form"):
+            point = alt.selection_point(name="point")
+            df = pd.DataFrame(
+                [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
+            ).T
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+
+            st.altair_chart(chart, on_select="ignore")
+
+        # 2 elements will be created: form block, altair_chart
+        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
+
+        self.get_delta_from_queue(0).add_block
+        plotly_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
+        self.assertEqual(plotly_proto.form_id, "")
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this is used with selections activated
+        inside a cached function."""
+        point = alt.selection_point(name="point")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
+
+        st.cache_data(lambda: st.altair_chart(chart, on_select="rerun"))()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
 
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
@@ -263,7 +442,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         chart = st.vega_lite_chart({"mark": "rect"})
 
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.HasField("data"), False)
+        self.assertFalse(proto.HasField("data"))
 
         chart.add_rows(df1)
 
@@ -281,7 +460,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
         )
 
-        self.assertEqual(proto.use_container_width, True)
+        self.assertTrue(proto.use_container_width)
 
     @parameterized.expand(
         [
@@ -302,7 +481,7 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             st.vega_lite_chart(df1, theme="bad_theme")
 
         self.assertEqual(
-            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
             str(exc.exception),
         )
 
@@ -327,6 +506,95 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
     def test_empty_vega_lite_chart_throws_error(self, data, spec):
         with self.assertRaises(StreamlitAPIException):
             st.vega_lite_chart(data, spec, use_container_width=True)
+
+    @parameterized.expand(
+        [
+            ("rerun", True),
+            ("ignore", False),
+            (lambda: None, True),
+        ]
+    )
+    def test_vega_lite_on_select(
+        self, on_select: Any, expected_is_select_enabled: bool
+    ):
+        st.vega_lite_chart(
+            df1,
+            {
+                "mark": "rect",
+                "width": 200,
+                "params": [{"name": "name", "select": {"type": "point"}}],
+            },
+            on_select=on_select,
+        )
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(
+            proto.is_select_enabled,
+            expected_is_select_enabled,
+        )
+
+    @parameterized.expand(
+        [
+            (True),
+            (False),
+            ("invalid"),
+        ]
+    )
+    def test_vega_lite_on_select_invalid(self, on_select: Any):
+        with self.assertRaises(StreamlitAPIException):
+            st.vega_lite_chart(
+                df1,
+                {
+                    "mark": "rect",
+                    "width": 200,
+                    "params": [{"name": "name", "select": {"type": "point"}}],
+                },
+                on_select=on_select,
+            )
+
+    def test_vega_lite_interval_selection_enables_on_select(self):
+        st.vega_lite_chart(
+            df1,
+            {
+                "mark": "rect",
+                "width": 200,
+                "params": [{"name": "name", "select": {"type": "interval"}}],
+            },
+            on_select="rerun",
+        )
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertTrue(proto.is_select_enabled)
+
+    def test_vega_lite_no_selection_throws_streamlit_exception(self):
+        with self.assertRaises(StreamlitAPIException):
+            st.vega_lite_chart(
+                df1,
+                {
+                    "mark": "rect",
+                    "width": 200,
+                },
+                on_select="rerun",
+            )
+
+    def test_shows_cached_widget_replay_warning(self):
+        """Test that a warning is shown when this is used with selections activated
+        inside a cached function."""
+
+        st.cache_data(
+            lambda: st.vega_lite_chart(
+                df1,
+                {
+                    "mark": "rect",
+                    "width": 200,
+                    "params": [{"name": "name", "select": {"type": "interval"}}],
+                },
+                on_select="rerun",
+            )
+        )()
+
+        # The widget itself is still created, so we need to go back one element more:
+        el = self.get_delta_from_queue(-2).new_element.exception
+        self.assertEqual(el.type, "CachedWidgetWarning")
+        self.assertTrue(el.is_warning)
 
 
 ST_CHART_ARGS = [
@@ -846,20 +1114,20 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
             with self.assertRaises(StreamlitAPIException) as exc:
                 chart_command(df, y=["a", "b"], color=color_arg)
 
-            self.assertTrue("The list of colors" in str(exc.exception))
+            self.assertIn("The list of colors", str(exc.exception))
 
         for color_arg in too_many_args:
             with self.assertRaises(StreamlitAPIException) as exc:
                 chart_command(df, y="a", color=color_arg)
 
-            self.assertTrue("The list of colors" in str(exc.exception))
+            self.assertIn("The list of colors", str(exc.exception))
 
         for color_arg in bad_args:
             with self.assertRaises(StreamlitAPIException) as exc:
                 chart_command(df, y="a", color=color_arg)
 
-            self.assertTrue(
-                "This does not look like a valid color argument" in str(exc.exception)
+            self.assertIn(
+                "This does not look like a valid color argument", str(exc.exception)
             )
 
     def assert_output_df_is_correct_and_input_is_untouched(

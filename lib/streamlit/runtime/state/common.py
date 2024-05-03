@@ -70,6 +70,7 @@ if TYPE_CHECKING:
 # Protobuf types for all widgets.
 WidgetProto: TypeAlias = Union[
     Arrow,
+    ArrowVegaLiteChart,
     Button,
     CameraInput,
     ChatInput,
@@ -81,14 +82,13 @@ WidgetProto: TypeAlias = Union[
     FileUploader,
     MultiSelect,
     NumberInput,
+    PlotlyChart,
     Radio,
     Selectbox,
     Slider,
     TextArea,
     TextInput,
     TimeInput,
-    PlotlyChart,
-    ArrowVegaLiteChart,
 ]
 
 GENERATED_WIDGET_ID_PREFIX: Final = "$$WIDGET_ID"

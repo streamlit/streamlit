@@ -17,22 +17,39 @@
 from __future__ import annotations
 
 import json
+import re
 from contextlib import nullcontext
-from typing import TYPE_CHECKING, Any, Final, Literal, Sequence, cast
+from dataclasses import dataclass
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    Sequence,
+    TypedDict,
+    cast,
+    overload,
+)
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import type_util
+from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartType,
     generate_chart,
 )
+from streamlit.elements.lib.event_utils import AttributeDictionary
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state.common import compute_widget_id
+from streamlit.type_util import Key, to_key
+from streamlit.util import replace_values_in_dict
 
 if TYPE_CHECKING:
     import altair as alt
@@ -70,6 +87,42 @@ _CHANNELS: Final = {
     "row",
     "column",
 }
+
+
+class VegaLiteState(TypedDict, total=False):
+    """
+    A dictionary representing the current selection state of the VegaLite chart.
+    Attributes
+    ----------
+    select : AttributeDictionary
+        The state of the `on_select` event.
+    """
+
+    select: AttributeDictionary
+
+
+@dataclass
+class VegaLiteStateSerde:
+    """VegaLiteStateSerde is used to serialize and deserialize the VegaLite Chart state."""
+
+    def deserialize(self, ui_value: str | None, widget_id: str = "") -> VegaLiteState:
+        empty_selection_state: VegaLiteState = {
+            "select": {},
+        }
+
+        selection_state = (
+            empty_selection_state
+            if ui_value is None
+            else cast(VegaLiteState, AttributeDictionary(json.loads(ui_value)))
+        )
+
+        if "select" not in selection_state:
+            selection_state = empty_selection_state
+
+        return cast(VegaLiteState, AttributeDictionary(selection_state))
+
+    def serialize(self, selection_state: VegaLiteState) -> str:
+        return json.dumps(selection_state, default=str)
 
 
 def _prepare_vega_lite_spec(
@@ -118,9 +171,6 @@ def _serialize_data(data: Any) -> bytes:
 
     df = type_util.convert_anything_to_df(data)
     return type_util.data_frame_to_bytes(df)
-
-
-NO_SELECTION_OBJECTS_ERROR_ALTAIR = "In order to make Altair work, one needs to have a selection enabled through add_params. Please check out this documentation to add some: https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions"
 
 
 def _marshall_chart_data(
@@ -192,7 +242,85 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
     # Put datasets back into the chart dict but note how they weren't
     # transformed.
     chart_dict["datasets"] = datasets
+    # TODO(lukasmasuch): Double check this:
+    _stabilize_spec(chart_dict)
+
     return chart_dict
+
+
+def _check_spec_for_selections(spec: dict[str, Any]) -> None:
+    """Check if the spec has any selections defined. If not, raise an exception."""
+
+    if spec and "params" in spec:
+        for param in spec["params"]:
+            # TODO(lukasmasuch): The type in selection does not seem to be required in the spec?
+            # https://vega.github.io/vega-lite/docs/selection.html
+            if "name" in param and "select" in param and "type" in param["select"]:
+                # Selection found, just return here to not show the exception.
+                return
+
+    raise StreamlitAPIException(
+        "Selections are activated, but the provided chart spec does not "
+        "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
+        "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions)."
+        "For adding selections to `st.vega_lite_chart`, take a look "
+        "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
+    )
+
+
+def _stabilize_spec(chart_dict: dict[str, Any]) -> None:
+    stable_ids = {}
+    # Pull data out of chart_dict when it's in a 'datasets' key:
+    #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
+    # TODO:
+    # data_id_counter = 0
+    # if "datasets" in chart_dict:
+    #     for k, v in chart_dict["datasets"].items():
+    #         dataset = vega_lite_chart.datasets.add()
+    #         if is_select_enabled:
+    #             # map data ids to our own stable ids to replace later
+    #             # otherwise the widget id will change and rerender a completely new chart
+    #             stable_ids[k] = str(data_id_counter)
+    #             dataset.name = str(data_id_counter)
+    #             data_id_counter += 1
+    #         else:
+    #             dataset.name = str(k)
+    #         dataset.has_name = True
+    #         arrow.marshall(dataset.data, v)
+    #     del chart_dict["datasets"]
+
+    get_script_run_ctx()
+
+    # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
+    # altair creates names for parameters when no name is created as it's required in vega
+    # streamlit reruns will increment this counter by 1 so we need a stable name
+    # otherwise the widget id will change and rerender a completely new chart
+    regex = re.compile(r"^param_\d+$")
+    param_counter = 0
+
+    if "params" in chart_dict:
+        for param in chart_dict["params"]:
+            view_counter = 0
+            name = param["name"]
+            if regex.match(name):
+                param["name"] = f"selection_{param_counter}"
+                stable_ids[name] = f"selection_{param_counter}"
+                param_counter += 1
+            if "views" in param:
+                # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
+                # altair creates auto generates names for views through a counter to map properties to each view
+                # streamlit reruns will increment this counter by 1 so we need a stable name
+                # otherwise the widget id will change and rerender a completely new chart
+                for view_index, view in enumerate(param["views"]):
+                    param["views"][view_index] = f"view_{view_counter}"
+                    stable_ids[view] = f"view_{view_counter}"
+                    view_counter += 1
+
+        concat_keys = ["hconcat", "vconcat", "layer"]
+        special_keys = concat_keys + ["encoding", "data"]
+        for k in special_keys:
+            if k in chart_dict:
+                replace_values_in_dict(chart_dict[k], stable_ids)
 
 
 class VegaChartsMixin:
@@ -857,15 +985,41 @@ class VegaChartsMixin:
             add_rows_metadata=add_rows_metadata,
         )
 
+    @overload
+    def altair_chart(
+        self,
+        altair_chart: alt.Chart,
+        *,
+        use_container_width: bool = False,
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        **kwargs: Any,
+    ) -> DeltaGenerator:
+        ...
+
+    @overload
+    def altair_chart(
+        self,
+        altair_chart: alt.Chart,
+        *,
+        use_container_width: bool = False,
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+    ) -> VegaLiteState:
+        ...
+
     @gather_metrics("altair_chart")
     def altair_chart(
         self,
         altair_chart: alt.Chart,
+        *,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
-        on_select: Literal["rerun", "ignore"] | Callable[..., None] = "ignore",
-        key: str | None = None,
-    ) -> Union["DeltaGenerator", arrow_vega_lite.VegaLiteState]:
+        key: Key | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
+    ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Altair library.
 
         Parameters
@@ -881,16 +1035,19 @@ class VegaChartsMixin:
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
 
-        on_select: Controls the behavior in response to selection events in the chart. Can be one of:
-            - “ignore” (default): Streamlit will not react to any selection events in the chart.
-            - “rerun”: Streamlit will rerun the app when the user selects data points in the chart. In this case, st.altair_chart will return the selection data as a dictionary. This requires that you add a selection event to the figure object via add_params, see here.
-            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a callback function before the rest of the app. The selection data can be retrieved through session state by setting the key parameter.
+        key : str
+            An optional string to use as the unique key for this element when used in combination
+            with ```on_select```. If this is omitted, a key will be generated for the widget based
+            on its content. Multiple widgets of the same type may not share the same key.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+        on_select : "ignore" or "rerun" or callable
+            Controls the behavior in response to selection events on the charts. Can be one of:
+            - "ignore" (default): Streamlit will not react to any selection events in the chart.
+            - "rerun: Streamlit will rerun the app when the user selects data in the chart. In this case,
+              ```st.altair_chart``` will return the selection data as a dictionary.
+            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
+              callback function before the rest of the app. The selection data can be retrieved through
+              session state by setting the key parameter.
 
         Example
         -------
@@ -919,18 +1076,53 @@ class VegaChartsMixin:
 
         """
         return self._altair_chart(
-            altair_chart, use_container_width=use_container_width, theme=theme
+            altair_chart=altair_chart,
+            use_container_width=use_container_width,
+            theme=theme,
+            key=key,
+            on_select=on_select,
         )
+
+    @overload
+    def vega_lite_chart(
+        self,
+        data: Data = None,
+        spec: dict[str, Any] | None = None,
+        *,
+        use_container_width: bool = False,
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        **kwargs: Any,
+    ) -> DeltaGenerator:
+        ...
+
+    @overload
+    def vega_lite_chart(
+        self,
+        data: Data = None,
+        spec: dict[str, Any] | None = None,
+        *,
+        use_container_width: bool = False,
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        **kwargs: Any,
+    ) -> VegaLiteState:
+        ...
 
     @gather_metrics("vega_lite_chart")
     def vega_lite_chart(
         self,
         data: Data = None,
         spec: dict[str, Any] | None = None,
+        *,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         **kwargs: Any,
-    ) -> DeltaGenerator:
+    ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
         Parameters
@@ -951,6 +1143,20 @@ class VegaChartsMixin:
         theme : "streamlit" or None
             The theme of the chart. Currently, we only support "streamlit" for the Streamlit
             defined design or None to fallback to the default behavior of the library.
+
+        key : str
+            An optional string to use as the unique key for this element when used in combination
+            with ```on_select```. If this is omitted, a key will be generated for the widget based
+            on its content. Multiple widgets of the same type may not share the same key.
+
+        on_select : "ignore" or "rerun" or callable
+            Controls the behavior in response to selection events on the charts. Can be one of:
+            - "ignore" (default): Streamlit will not react to any selection events in the chart.
+            - "rerun: Streamlit will rerun the app when the user selects data in the chart. In this case,
+              ```st.vega_lite_chart``` will return the selection data as a dictionary.
+            - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
+              callback function before the rest of the app. The selection data can be retrieved through
+              session state by setting the key parameter.
 
         **kwargs : any
             Same as spec, but as keywords.
@@ -990,6 +1196,8 @@ class VegaChartsMixin:
             spec=spec,
             use_container_width=use_container_width,
             theme=theme,
+            key=key,
+            on_select=on_select,
             **kwargs,
         )
 
@@ -998,15 +1206,27 @@ class VegaChartsMixin:
         altair_chart: alt.Chart,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         add_rows_metadata: AddRowsMetadata | None = None,
-    ) -> DeltaGenerator:
+    ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on an Altair chart."""
+
+        if type_util.is_altair_version_less_than("5.0.0") and on_select != "ignore":
+            raise StreamlitAPIException(
+                "Streamlit does not support selections with Altair 4.x. Please upgrade to Version 5. "
+                "If you would like to use Altair 4.x with selections, please upvote "
+                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516)."
+            )
+
         vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)
         return self._vega_lite_chart(
             data=None,  # The data is already part of the spec
             spec=vega_lite_spec,
             use_container_width=use_container_width,
             theme=theme,
+            key=key,
+            on_select=on_select,
             add_rows_metadata=add_rows_metadata,
         )
 
@@ -1016,6 +1236,8 @@ class VegaChartsMixin:
         spec: dict[str, Any] | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         add_rows_metadata: AddRowsMetadata | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
@@ -1026,23 +1248,89 @@ class VegaChartsMixin:
                 f'You set theme="{theme}" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.'
             )
 
+        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+            raise StreamlitAPIException(
+                f"You have passed {on_select} to `on_select`. But only 'ignore', 'rerun', or a callable is supported."
+            )
+
+        key = to_key(key)
+        is_selection_activated = on_select != "ignore"
+
+        if is_selection_activated:
+            # Run some checks that are only relevant when selections are activated
+
+            # Import here to avoid circular imports
+            from streamlit.elements.utils import (
+                check_cache_replay_rules,
+                check_callback_rules,
+                check_session_state_rules,
+            )
+
+            check_cache_replay_rules()
+            if callable(on_select):
+                check_callback_rules(self.dg, on_select)
+            check_session_state_rules(default_value=None, key=key, writes_allowed=False)
+
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)
         if isinstance(data, dict) and spec is None:
             spec = data
             data = None
 
-        proto = ArrowVegaLiteChartProto()
+        vega_lite_proto = ArrowVegaLiteChartProto()
 
         spec = _prepare_vega_lite_spec(spec, use_container_width, **kwargs)
-        _marshall_chart_data(proto, spec, data)
+        _marshall_chart_data(vega_lite_proto, spec, data)
 
-        proto.spec = json.dumps(spec)
-        proto.use_container_width = use_container_width
-        proto.theme = theme or ""
+        vega_lite_proto.spec = json.dumps(spec)
+        vega_lite_proto.use_container_width = use_container_width
+        vega_lite_proto.theme = theme or ""
 
+        if is_selection_activated:
+            # Check if the processed spec has selections defined:
+            _check_spec_for_selections(spec)
+
+            vega_lite_proto.is_select_enabled = True
+            vega_lite_proto.form_id = current_form_id(self.dg)
+
+            ctx = get_script_run_ctx()
+            vega_lite_proto.id = compute_widget_id(
+                "arrow_vega_lite_chart",
+                user_key=key,
+                key=key,
+                vega_lite_spec=vega_lite_proto.spec,
+                vega_lite_data=vega_lite_proto.data.data,
+                theme=theme,
+                form_id=vega_lite_proto.form_id,
+                use_container_width=use_container_width,
+                is_selection_activated=is_selection_activated,
+                page=ctx.page_script_hash if ctx else None,
+            )
+
+            serde = VegaLiteStateSerde()
+
+            widget_state = register_widget(
+                "arrow_vega_lite_chart",
+                vega_lite_proto,
+                user_key=key,
+                on_change_handler=on_select if callable(on_select) else None,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+            )
+
+            self.dg._enqueue(
+                "arrow_vega_lite_chart",
+                vega_lite_proto,
+                add_rows_metadata=add_rows_metadata,
+            )
+            return cast(VegaLiteState, widget_state.value)
+        # If its not used with selections activated, just return
+        # the delta generator related to this element.
         return self.dg._enqueue(
-            "arrow_vega_lite_chart", proto, add_rows_metadata=add_rows_metadata
+            "arrow_vega_lite_chart",
+            vega_lite_proto,
+            add_rows_metadata=add_rows_metadata,
         )
 
     @property
