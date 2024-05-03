@@ -46,7 +46,7 @@ def test_correct_number_of_title_elements(app: Page):
 
 def test_correct_number_and_content_of_header_elements(app: Page):
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
-    expect(headers).to_have_count(3)
+    expect(headers).to_have_count(5)
 
     expect(headers.nth(0)).to_have_text("This header is awesome!")
     expect(headers.nth(1)).to_have_text("This header is awesome too!")
@@ -60,15 +60,13 @@ def test_correct_number_and_content_of_subheader_elements(app: Page):
     headers = app.locator(".element-container .stMarkdown h3").filter(
         has_not_text=_subheader_divider_filter_text
     )
-    expect(headers).to_have_count(5)
+    expect(headers).to_have_count(7)
 
     expect(headers.nth(0)).to_have_text("This subheader is awesome!")
     expect(headers.nth(1)).to_have_text("This subheader is awesome too!")
-    expect(headers.nth(2)).to_have_text("`Code` - Subheader without Anchor")
-    expect(headers.nth(3)).to_have_text(
-        "`Code` - Subheader with Anchor [test_link](href)"
-    )
-    expect(headers.nth(4)).to_have_text("`Code` - Subheader with hidden Anchor")
+    expect(headers.nth(2)).to_have_text("Code - Subheader without Anchor")
+    expect(headers.nth(3)).to_have_text("Code - Subheader with Anchor test_link")
+    expect(headers.nth(4)).to_have_text("Subheader with hidden Anchor")
 
 
 def test_display_headers_with_anchors_and_style_icons(app: Page):
@@ -111,9 +109,83 @@ def test_display_subheaders_with_anchors_and_style_icons(app: Page):
     expect(third_header.locator("svg")).not_to_be_attached()
 
 
-def test_links_are_rendered_correctly(app: Page, assert_snapshot: ImageCompareFunction):
-    wait_for_app_loaded(app)
-    link = app.get_by_text("a link")
+def test_headers_snapshot_match(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    headers = _get_header_elements(themed_app)
+
+    assert_snapshot(headers.nth(0), name="st_header-header_simple")
+    assert_snapshot(headers.nth(3), name="st_header-header_with_help")
+
+
+def test_headers_hovered_snapshot_match(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    headers = _get_header_elements(themed_app)
+    header = headers.nth(0)
+    header.hover()
+    link_container = header.get_by_test_id("StyledLinkIconContainer")
+    expect(link_container).to_have_css("opacity", "1")
+    assert_snapshot(link_container, name="st_header-header_hover_with_visible_anchor")
+
+    header = headers.nth(3)
+    header.hover()
+    link_container = header.get_by_test_id("StyledLinkIconContainer")
+    expect(link_container).to_have_css("opacity", "1")
+    assert_snapshot(link_container, name="st_header-header_hover_with_help_and_anchor")
+
+    header = headers.nth(4)
+    header.hover()
+    link_container = header.get_by_test_id("StyledLinkIconContainer")
+    expect(link_container).to_have_css("opacity", "1")
+    assert_snapshot(
+        link_container, name="st_header-header_hover_with_help_and_hidden_anchor"
+    )
+
+
+def test_subheaders_snapshot_match(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    headers = _get_subheader_elements(themed_app)
+
+    assert_snapshot(headers.nth(0), name="st_header-subheader_simple")
+    assert_snapshot(headers.nth(5), name="st_header-subheader_with_code_and_help")
+
+
+def test_subheaders_hovered_snapshot_match(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    headers = _get_subheader_elements(themed_app)
+    header = headers.nth(0)
+    header.hover()
+    link_container = header.get_by_test_id("StyledLinkIconContainer")
+    expect(link_container).to_have_css("opacity", "1")
+    assert_snapshot(
+        link_container, name="st_header-subheader_hover_with_visible_anchor"
+    )
+
+    header = headers.nth(5)
+    header.hover()
+    link_container = header.get_by_test_id("StyledLinkIconContainer")
+    expect(link_container).to_have_css("opacity", "1")
+    assert_snapshot(
+        link_container, name="st_header-subheader_hover_with_help_and_anchor"
+    )
+
+    header = headers.nth(6)
+    header.hover()
+    link_container = header.get_by_test_id("StyledLinkIconContainer")
+    expect(link_container).to_have_css("opacity", "1")
+    assert_snapshot(
+        link_container, name="st_header-subheader_hover_with_help_and_hidden_anchor"
+    )
+
+
+def test_links_are_rendered_correctly_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    wait_for_app_loaded(themed_app)
+    link = themed_app.get_by_text("a link")
     link.scroll_into_view_if_needed()
     expect(link).to_have_count(1)
     expect(link).to_be_visible()
