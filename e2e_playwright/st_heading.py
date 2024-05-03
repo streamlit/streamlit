@@ -29,7 +29,7 @@ st.subheader(
     """`Code` - Subheader with Anchor [test_link](href)""",
     anchor="subheader",
 )
-st.subheader("`Code` - Subheader with hidden Anchor", anchor=False)
+st.subheader("Subheader with hidden Anchor", anchor=False)
 
 st.title("a [link](#test)")
 

@@ -39,12 +39,12 @@ _subheader_divider_filter_text = re.compile(r"[a-zA-Z]+ Subheader Divider:")
 
 
 def test_correct_number_of_title_elements(app: Page):
-    """Test that correct number of st.title (=> h1) exist"""
+    """Test that correct number of st.title (=> h1) exist with the right content"""
     headers = _get_title_elements(app)
     expect(headers).to_have_count(4)
 
 
-def test_correct_number_of_header_elements(app: Page):
+def test_correct_number_and_content_of_header_elements(app: Page):
     headers = _get_header_elements(app).filter(has_not_text=_header_divider_filter_text)
     expect(headers).to_have_count(3)
 
@@ -55,12 +55,20 @@ def test_correct_number_of_header_elements(app: Page):
     )
 
 
-def test_correct_number_of_subheader_elements(app: Page):
-    """Test that correct number of st.subheader (=> h3) exist"""
+def test_correct_number_and_content_of_subheader_elements(app: Page):
+    """Test that correct number of st.subheader (=> h3) exist with the right content"""
     headers = app.locator(".element-container .stMarkdown h3").filter(
         has_not_text=_subheader_divider_filter_text
     )
     expect(headers).to_have_count(5)
+
+    expect(headers.nth(0)).to_have_text("This subheader is awesome!")
+    expect(headers.nth(1)).to_have_text("This subheader is awesome too!")
+    expect(headers.nth(2)).to_have_text("`Code` - Subheader without Anchor")
+    expect(headers.nth(3)).to_have_text(
+        "`Code` - Subheader with Anchor [test_link](href)"
+    )
+    expect(headers.nth(4)).to_have_text("`Code` - Subheader with hidden Anchor")
 
 
 def test_display_headers_with_anchors_and_style_icons(app: Page):
@@ -80,6 +88,26 @@ def test_display_headers_with_anchors_and_style_icons(app: Page):
 
     third_header = headers.nth(2)
     expect(third_header).to_have_id("this-header-with-hidden-anchor-is-awesome-tooooo")
+    expect(third_header.locator("svg")).not_to_be_attached()
+
+
+def test_display_subheaders_with_anchors_and_style_icons(app: Page):
+    headers = _get_subheader_elements(app)
+
+    first_header = headers.nth(0)
+    expect(first_header).to_have_id("this-subheader-is-awesome")
+    expect(first_header.locator("svg")).to_be_attached()
+    expect(first_header.locator("a")).to_have_attribute(
+        "href", "#this-subheader-is-awesome"
+    )
+
+    second_header = headers.nth(1)
+    expect(second_header).to_have_id("awesome-subheader")
+    expect(second_header.locator("svg")).to_be_attached()
+    expect(second_header.locator("a")).to_have_attribute("href", "#awesome-subheader")
+
+    third_header = headers.nth(4)
+    expect(third_header).to_have_id("subheader-with-hidden-anchor")
     expect(third_header.locator("svg")).not_to_be_attached()
 
 
