@@ -114,8 +114,8 @@ def test_headers_snapshot_match(
 ):
     headers = _get_header_elements(themed_app)
 
-    assert_snapshot(headers.nth(0), name="st_header-header_simple")
-    assert_snapshot(headers.nth(3), name="st_header-header_with_help")
+    assert_snapshot(headers.nth(0), name="st_header-simple")
+    assert_snapshot(headers.nth(3), name="st_header-with_help")
 
 
 def test_headers_hovered_snapshot_match(
@@ -126,21 +126,19 @@ def test_headers_hovered_snapshot_match(
     header.hover()
     link_container = header.get_by_test_id("StyledLinkIconContainer")
     expect(link_container).to_have_css("opacity", "1")
-    assert_snapshot(link_container, name="st_header-header_hover_with_visible_anchor")
+    assert_snapshot(link_container, name="st_header-hover_with_visible_anchor")
 
     header = headers.nth(3)
     header.hover()
     link_container = header.get_by_test_id("StyledLinkIconContainer")
     expect(link_container).to_have_css("opacity", "1")
-    assert_snapshot(link_container, name="st_header-header_hover_with_help_and_anchor")
+    assert_snapshot(link_container, name="st_header-hover_with_help_and_anchor")
 
     header = headers.nth(4)
     header.hover()
     link_container = header.get_by_test_id("StyledLinkIconContainer")
     expect(link_container).to_have_css("opacity", "1")
-    assert_snapshot(
-        link_container, name="st_header-header_hover_with_help_and_hidden_anchor"
-    )
+    assert_snapshot(link_container, name="st_header-hover_with_help_and_hidden_anchor")
 
 
 def test_subheaders_snapshot_match(
@@ -148,8 +146,8 @@ def test_subheaders_snapshot_match(
 ):
     headers = _get_subheader_elements(themed_app)
 
-    assert_snapshot(headers.nth(0), name="st_header-subheader_simple")
-    assert_snapshot(headers.nth(5), name="st_header-subheader_with_code_and_help")
+    assert_snapshot(headers.nth(0), name="st_subheader-simple")
+    assert_snapshot(headers.nth(5), name="st_subheader-with_code_and_help")
 
 
 def test_subheaders_hovered_snapshot_match(
@@ -160,24 +158,20 @@ def test_subheaders_hovered_snapshot_match(
     header.hover()
     link_container = header.get_by_test_id("StyledLinkIconContainer")
     expect(link_container).to_have_css("opacity", "1")
-    assert_snapshot(
-        link_container, name="st_header-subheader_hover_with_visible_anchor"
-    )
+    assert_snapshot(link_container, name="st_subheader-hover_with_visible_anchor")
 
     header = headers.nth(5)
     header.hover()
     link_container = header.get_by_test_id("StyledLinkIconContainer")
     expect(link_container).to_have_css("opacity", "1")
-    assert_snapshot(
-        link_container, name="st_header-subheader_hover_with_help_and_anchor"
-    )
+    assert_snapshot(link_container, name="st_subheader-hover_with_help_and_anchor")
 
     header = headers.nth(6)
     header.hover()
     link_container = header.get_by_test_id("StyledLinkIconContainer")
     expect(link_container).to_have_css("opacity", "1")
     assert_snapshot(
-        link_container, name="st_header-subheader_hover_with_help_and_hidden_anchor"
+        link_container, name="st_subheader-hover_with_help_and_hidden_anchor"
     )
 
 
