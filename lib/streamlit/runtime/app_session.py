@@ -465,7 +465,7 @@ class AppSession:
             self._local_sources_watcher.update_watched_pages()
 
     def _clear_queue(self) -> None:
-        self._browser_queue.clear()
+        self._browser_queue.clear(retain_lifecycle_msgs=True)
 
     def _on_scriptrunner_event(
         self,
