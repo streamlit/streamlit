@@ -14,34 +14,35 @@
 
 import json
 import unittest
-from datetime import date
 from typing import Any, Callable
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import altair as alt
 import pandas as pd
+import pyarrow as pa
 import pytest
 from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements import arrow_altair as altair
-from streamlit.elements.arrow_altair import ChartType, replace_values_in_dict
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame, is_altair_version_less_than
+from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
-ST_CHART_ARGS = [
-    (st.area_chart, "area"),
-    (st.bar_chart, "bar"),
-    (st.line_chart, "line"),
-    (st.scatter_chart, "circle"),
-]
+df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
+autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
 
 
-class ArrowAltairTest(DeltaGeneratorTestCase):
-    """Test ability to marshall arrow_altair_chart proto."""
+def merge_dicts(x, y):
+    z = x.copy()
+    z.update(y)
+    return z
+
+
+class AltairChartTest(DeltaGeneratorTestCase):
+    """Test the `st.altair_chart` command."""
 
     def test_altair_chart(self):
         """Test that it can be called with args."""
@@ -96,22 +97,18 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
         ]
     )
     def test_theme(self, theme_value, proto_value):
-        df = pd.DataFrame(
-            {"index": [date(2019, 8, 9), date(2019, 8, 10)], "numbers": [1, 10]}
-        ).set_index("index")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        chart, _ = altair._generate_chart(ChartType.LINE, df)
         st.altair_chart(chart, theme=theme_value)
 
         el = self.get_delta_from_queue().new_element
         self.assertEqual(el.arrow_vega_lite_chart.theme, proto_value)
 
     def test_bad_theme(self):
-        df = pd.DataFrame(
-            {"index": [date(2019, 8, 9), date(2019, 8, 10)], "numbers": [1, 10]}
-        ).set_index("index")
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
 
-        chart, _ = altair._generate_chart(ChartType.LINE, df)
         with self.assertRaises(StreamlitAPIException) as exc:
             st.altair_chart(chart, theme="bad_theme")
 
@@ -120,9 +117,228 @@ class ArrowAltairTest(DeltaGeneratorTestCase):
             str(exc.exception),
         )
 
+    def test_empty_altair_chart_throws_error(self):
+        with self.assertRaises(TypeError):
+            st.altair_chart(use_container_width=True)
 
-class ArrowChartsTest(DeltaGeneratorTestCase):
-    """Test Arrow charts."""
+
+class VegaLiteChartTest(DeltaGeneratorTestCase):
+    """Test the `st.vega_lite_chart` command."""
+
+    def test_no_args(self):
+        """Test that an error is raised when called with no args."""
+        with self.assertRaises(StreamlitAPIException):
+            st.vega_lite_chart()
+
+    def test_none_args(self):
+        """Test that an error is raised when called with args set to None."""
+        with self.assertRaises(StreamlitAPIException):
+            st.vega_lite_chart(None, None)
+
+    def test_spec_but_no_data(self):
+        """Test that it can be called with only data set to None."""
+        st.vega_lite_chart(None, {"mark": "rect"})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(proto.HasField("data"), False)
+        self.assertDictEqual(
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
+        )
+
+    def test_spec_in_arg1(self):
+        """Test that it can be called with spec as the 1st arg."""
+        st.vega_lite_chart({"mark": "rect"})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(proto.HasField("data"), False)
+        self.assertDictEqual(
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
+        )
+
+    def test_data_in_spec(self):
+        """Test passing data=df inside the spec."""
+        st.vega_lite_chart({"mark": "rect", "data": df1})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+        )
+        self.assertDictEqual(
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
+        )
+
+    def test_vega_lite_chart_uses_convert_anything_to_df(self):
+        """Test that st.vega_lite_chart uses convert_anything_to_df to convert input data."""
+
+        with patch(
+            "streamlit.type_util.convert_anything_to_df"
+        ) as convert_anything_to_df:
+            convert_anything_to_df.return_value = df1
+
+            st.vega_lite_chart({"mark": "rect", "data": df1})
+            convert_anything_to_df.assert_called_once()
+
+    def test_data_values_in_spec(self):
+        """Test passing data={values: df} inside the spec."""
+        st.vega_lite_chart({"mark": "rect", "data": {"values": df1}})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+        )
+        self.assertDictEqual(
+            json.loads(proto.spec),
+            merge_dicts(autosize_spec, {"mark": "rect"}),
+        )
+
+    def test_datasets_in_spec(self):
+        """Test passing datasets={foo: df} inside the spec."""
+        st.vega_lite_chart({"mark": "rect", "datasets": {"foo": df1}})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(proto.HasField("data"), False)
+        self.assertDictEqual(
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
+        )
+
+    def test_datasets_correctly_in_spec(self):
+        """Test passing datasets={foo: df}, data={name: 'foo'} in the spec."""
+        st.vega_lite_chart(
+            {"mark": "rect", "datasets": {"foo": df1}, "data": {"name": "foo"}}
+        )
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(proto.HasField("data"), False)
+        self.assertDictEqual(
+            json.loads(proto.spec),
+            merge_dicts(autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}),
+        )
+
+    def test_dict_unflatten(self):
+        """Test passing a spec as keywords."""
+        st.vega_lite_chart(df1, x="foo", boink_boop=100, baz={"boz": "booz"})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+        )
+        self.assertDictEqual(
+            json.loads(proto.spec),
+            merge_dicts(
+                autosize_spec,
+                {
+                    "baz": {"boz": "booz"},
+                    "boink": {"boop": 100},
+                    "encoding": {"x": "foo"},
+                },
+            ),
+        )
+
+    def test_pyarrow_table_data(self):
+        """Test that you can pass pyarrow.Table as data."""
+        table = pa.Table.from_pandas(df1)
+        st.vega_lite_chart(table, {"mark": "rect"})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+
+        self.assertEqual(proto.HasField("data"), True)
+        self.assertEqual(proto.data.data, pyarrow_table_to_bytes(table))
+
+    def test_add_rows(self):
+        """Test that you can call add_rows on arrow_vega_lite_chart (with data)."""
+        chart = st.vega_lite_chart(df1, {"mark": "rect"})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(proto.HasField("data"), True)
+
+        chart.add_rows(df2)
+
+        proto = self.get_delta_from_queue().arrow_add_rows
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.data.data), df2, check_dtype=False
+        )
+
+    def test_no_args_add_rows(self):
+        """Test that you can call add_rows on a arrow_vega_lite_chart (without data)."""
+        chart = st.vega_lite_chart({"mark": "rect"})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertEqual(proto.HasField("data"), False)
+
+        chart.add_rows(df1)
+
+        proto = self.get_delta_from_queue().arrow_add_rows
+        pd.testing.assert_frame_equal(
+            bytes_to_data_frame(proto.data.data), df1, check_dtype=False
+        )
+
+    def test_use_container_width(self):
+        """Test that use_container_width=True autosets to full width."""
+        st.vega_lite_chart(df1, {"mark": "rect"}, use_container_width=True)
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertDictEqual(
+            json.loads(proto.spec), merge_dicts(autosize_spec, {"mark": "rect"})
+        )
+
+        self.assertEqual(proto.use_container_width, True)
+
+    @parameterized.expand(
+        [
+            ("streamlit", "streamlit"),
+            (None, ""),
+        ]
+    )
+    def test_theme(self, theme_value, proto_value):
+        st.vega_lite_chart(
+            df1, {"mark": "rect"}, use_container_width=True, theme=theme_value
+        )
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.arrow_vega_lite_chart.theme, proto_value)
+
+    def test_bad_theme(self):
+        with self.assertRaises(StreamlitAPIException) as exc:
+            st.vega_lite_chart(df1, theme="bad_theme")
+
+        self.assertEqual(
+            f'You set theme="bad_theme" while Streamlit charts only support theme=”streamlit” or theme=None to fallback to the default library theme.',
+            str(exc.exception),
+        )
+
+    def test_width_inside_spec(self):
+        """Test that Vega-Lite sets the width."""
+        st.vega_lite_chart(df1, {"mark": "rect", "width": 200})
+
+        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
+        self.assertDictEqual(
+            json.loads(proto.spec),
+            merge_dicts(autosize_spec, {"mark": "rect", "width": 200}),
+        )
+
+    @parameterized.expand(
+        [
+            (None, {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), {}),
+            (pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 4]}), None),
+            (None, None),
+        ]
+    )
+    def test_empty_vega_lite_chart_throws_error(self, data, spec):
+        with self.assertRaises(StreamlitAPIException):
+            st.vega_lite_chart(data, spec, use_container_width=True)
+
+
+ST_CHART_ARGS = [
+    (st.area_chart, "area"),
+    (st.bar_chart, "bar"),
+    (st.line_chart, "line"),
+    (st.scatter_chart, "circle"),
+]
+
+
+class BuiltInChartTest(DeltaGeneratorTestCase):
+    """Test our built-in chart commands."""
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
@@ -657,240 +873,3 @@ class ArrowChartsTest(DeltaGeneratorTestCase):
         self.assertNotEqual(id(output_df), id(expected_df))
 
         pd.testing.assert_frame_equal(output_df, expected_df)
-
-    def callback():
-        pass
-
-    @parameterized.expand(
-        [
-            ("rerun", True),
-            ("ignore", False),
-            (callback, True),
-        ]
-    )
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    def test_altair_on_select(self, on_select, expected_is_select_enabled):
-        point = alt.selection_point(name="name")
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-
-        st.altair_chart(chart, on_select=on_select)
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(
-            proto.is_select_enabled,
-            expected_is_select_enabled,
-        )
-
-    @parameterized.expand(
-        [
-            (True),
-            (False),
-            ("invalid"),
-        ]
-    )
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    def test_altair_on_select_invalid(self, on_select):
-        point = alt.selection_point(name="name")
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-
-        with self.assertRaises(StreamlitAPIException) as exc:
-            st.altair_chart(chart, on_select=on_select)
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    def test_altair_no_name_point_selection(self):
-        point = alt.selection_point()
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-
-        st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertTrue(
-            "selection_0" in proto.spec,
-        )
-        self.assertFalse("param1" in proto.spec)
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    def test_altair_no_name_interval_selection(self):
-        point = alt.selection_interval()
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-
-        st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertTrue(
-            "selection_0" in proto.spec,
-        )
-        self.assertFalse("param1" in proto.spec)
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    def test_altair_named_point_selection(self):
-        point = alt.selection_point(name="point")
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-
-        st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertTrue(
-            "point" in proto.spec,
-        )
-        self.assertFalse("selection_0" in proto.spec)
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    def test_altair_named_interval_selection(self):
-        point = alt.selection_point(name="interval")
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
-
-        st.altair_chart(chart, on_select="rerun")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertTrue(
-            "interval" in proto.spec,
-        )
-        self.assertFalse("selection_0" in proto.spec)
-
-    @parameterized.expand(
-        [
-            (
-                {"key1": "value1", "key2": "value2"},
-                {"value1": "newValue1", "value2": "newValue2"},
-                {"key1": "newValue1", "key2": "newValue2"},
-            ),
-            (
-                {"level1": {"level2": {"key": "value"}}},
-                {"value": "newValue"},
-                {"level1": {"level2": {"key": "newValue"}}},
-            ),
-            (
-                [{"key": "value"}, {"key": "value"}],
-                {"value": "newValue"},
-                [{"key": "newValue"}, {"key": "newValue"}],
-            ),
-            (
-                {"list": [{"key": "value"}, {"list2": [{"key": "value"}]}]},
-                {"value": "newValue"},
-                {"list": [{"key": "newValue"}, {"list2": [{"key": "newValue"}]}]},
-            ),
-            (
-                {"key": "unchangedValue"},
-                {"value": "newValue"},
-                {"key": "unchangedValue"},
-            ),
-            ({}, {"value": "newValue"}, {}),
-            ([], {"value": "newValue"}, []),
-            ({"key": "value"}, {"otherValue": "newValue"}, {"key": "value"}),
-        ]
-    )
-    def test_replace_values_in_dict(self, input_data, old_to_new_map, expected):
-        replace_values_in_dict(input_data, old_to_new_map)
-        self.assertEqual(input_data, expected)
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is False,
-        "This test only runs if altair is <= 5.0.0",
-    )
-    def test_altair_v4_raises_streamlit_exception_on_select_rerun(self):
-        point = alt.selection_multi(name="interval")
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-
-        with self.assertRaises(StreamlitAPIException) as exc:
-            st.altair_chart(chart, on_select="rerun")
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is False,
-        "This test only runs if altair is <= 5.0.0",
-    )
-    def test_altair_v4_doesnt_raises_streamlit_exception_on_select_rerun(self):
-        point = alt.selection_multi(name="interval")
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-
-        st.altair_chart(chart, on_select="ignore")
-        proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
-        self.assertEqual(proto.HasField("data"), False)
-        self.assertEqual(len(proto.datasets), 1)
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    def test_inside_form_on_select_rerun(self):
-        """Test that form id is marshalled correctly inside of a form."""
-        with st.form("form"):
-            point = alt.selection_point(name="interval")
-            df = pd.DataFrame(
-                [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
-            ).T
-            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-
-            st.altair_chart(chart, on_select="rerun")
-
-        # 2 elements will be created: form block, altair_chart
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
-
-        form_proto = self.get_delta_from_queue(0).add_block
-        arrow_vega_lite_proto = self.get_delta_from_queue(
-            1
-        ).new_element.arrow_vega_lite_chart
-        self.assertEqual(arrow_vega_lite_proto.form_id, form_proto.form.form_id)
-
-    @unittest.skipIf(
-        is_altair_version_less_than("5.0.0") is True,
-        "This test only runs if altair is >= 5.0.0",
-    )
-    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
-    def test_outside_form_on_select_rerun(self):
-        """Test that form id is marshalled correctly outside of a form."""
-        with st.form("form"):
-            point = alt.selection_point(name="interval")
-            df = pd.DataFrame(
-                [["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]
-            ).T
-            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-
-            st.altair_chart(chart, on_select="ignore")
-
-        # 2 elements will be created: form block, altair_chart
-        self.assertEqual(len(self.get_all_deltas_from_queue()), 2)
-
-        self.get_delta_from_queue(0).add_block
-        plotly_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
-        self.assertEqual(plotly_proto.form_id, "")
-
-    def test_empty_altair_chart_throws_error(self):
-        with self.assertRaises(TypeError) as exc:
-            st.altair_chart(use_container_width=True)
-
-    def test_shows_cached_widget_replay_warning(self):
-        """Test that a warning is shown when this is used with selections activated
-        inside a cached function."""
-        point = alt.selection_point(name="interval")
-        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
-        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_selection(point)
-
-        st.cache_data(lambda: st.altair_chart(chart, on_select="rerun"))()
-
-        # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
-        self.assertEqual(el.type, "CachedWidgetWarning")
-        self.assertTrue(el.is_warning)
