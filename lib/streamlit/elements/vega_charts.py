@@ -81,16 +81,16 @@ def _prepare_vega_lite_spec(
     #   marshall(proto, baz='boz')
     if spec is None:
         spec = dict()
-    else:
-        # Clone the spec dict, since we may be mutating it.
-        spec = dict(spec)
 
-    # Support passing in kwargs. Example:
-    #   marshall(proto, {foo: 'bar'}, baz='boz')
     if len(kwargs):
+        # Support passing in kwargs. Example:
+        #   marshall(proto, {foo: 'bar'}, baz='boz')
         # Merge spec with unflattened kwargs, where kwargs take precedence.
         # This only works for string keys, but kwarg keys are strings anyways.
         spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))
+    else:
+        # Clone the spec dict, since we may be mutating it.
+        spec = dict(spec)
 
     if len(spec) == 0:
         raise StreamlitAPIException("Vega-Lite charts require a non-empty spec dict.")
