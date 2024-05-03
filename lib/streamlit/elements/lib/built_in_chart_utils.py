@@ -878,4 +878,3 @@ class StreamlitColorLengthError(StreamlitAPIException):
             f"`{y_column_list}`."
         )
         super().__init__(message, *args)
-        super().__init__(message, *args)
