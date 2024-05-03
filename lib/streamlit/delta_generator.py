@@ -31,7 +31,6 @@ from typing import (
     NoReturn,
     TypeVar,
     cast,
-    overload,
 )
 
 from streamlit import (
@@ -94,12 +93,11 @@ from streamlit.proto import Block_pb2, ForwardMsg_pb2
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import NoValue
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
     from numpy import typing as npt
-    from pandas import DataFrame, Series
+    from pandas import DataFrame
 
     from streamlit.elements.arrow import Data
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
