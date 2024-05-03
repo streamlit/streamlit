@@ -1210,7 +1210,10 @@ class VegaChartsMixin:
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         add_rows_metadata: AddRowsMetadata | None = None,
     ) -> DeltaGenerator | VegaLiteState:
-        """Internal method to enqueue a vega-lite chart element based on an Altair chart."""
+        """Internal method to enqueue a vega-lite chart element based on an Altair chart.
+
+        See the `altair_chart` method docstring for more information.
+        """
 
         if type_util.is_altair_version_less_than("5.0.0") and on_select != "ignore":
             raise StreamlitAPIException(
@@ -1241,7 +1244,10 @@ class VegaChartsMixin:
         add_rows_metadata: AddRowsMetadata | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
-        """Internal method to enqueue a vega-lite chart element based on a vega-lite spec."""
+        """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
+
+        See the `vega_lite_chart` method docstring for more information.
+        """
 
         if theme not in ["streamlit", None]:
             raise StreamlitAPIException(
