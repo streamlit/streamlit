@@ -26,7 +26,7 @@ import {
   UNICODE,
 } from "@streamlit/lib/src/mocks/arrow"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
-import { getDataArray } from "./ArrowVegaLiteChart"
+import { getDataArray } from "./arrowUtils"
 
 describe("Types of dataframe indexes as x axis", () => {
   describe("Supported", () => {
