@@ -76,7 +76,7 @@ import Metric from "@streamlit/lib/src/components/elements/Metric"
 import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
 import Maybe from "@streamlit/lib/src/components/core/Maybe"
