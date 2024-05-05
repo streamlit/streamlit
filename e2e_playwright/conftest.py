@@ -204,7 +204,12 @@ def app_port(worker_id: str) -> int:
 @pytest.fixture(scope="module", autouse=True)
 def app_server(
     app_port: int, request: FixtureRequest
-) -> Generator[AsyncSubprocess, None, None]:
+) -> Generator[AsyncSubprocess | None, None, None]:
+    # modules / test marked with `no_app_server` run standalone without a Streamlit app
+    if "no_app_server" in request.keywords:
+        yield None
+        return
+
     """Fixture that starts and stops the Streamlit app server."""
     streamlit_proc = AsyncSubprocess(
         [
