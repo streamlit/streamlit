@@ -61,7 +61,6 @@ from streamlit.runtime.state import (
 from streamlit.runtime.stats import StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
-from streamlit.watcher import LocalSourcesWatcher
 
 if TYPE_CHECKING:
     from streamlit.runtime.caching.storage import CacheStorageManager
@@ -563,7 +562,6 @@ class Runtime:
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
-            local_sources_watcher=LocalSourcesWatcher(self._main_script_path),
             user_info={"email": "test@test.com"},
         )
 
