@@ -105,6 +105,7 @@ import {
   IHostConfigResponse,
   LibConfig,
   AppConfig,
+  Navigation,
 } from "@streamlit/lib"
 import without from "lodash/without"
 
@@ -130,6 +131,12 @@ export interface Props {
   theme: ThemeManager
 }
 
+interface AppLogo {
+  logo: Logo
+  // Associated scriptHash for the logo
+  scriptHash: string
+}
+
 interface State {
   connectionState: ConnectionState
   elements: AppRoot
@@ -151,8 +158,9 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
-  appLogo: Logo | null
+  appLogo: AppLogo | null
   appPages: IAppPage[]
+  navPageSections: Map<string, IAppPage[]>
   currentPageScriptHash: string
   latestRunTime: number
   fragmentIdsThisRun: Array<string>
@@ -169,6 +177,7 @@ interface State {
   appConfig: AppConfig
   autoReruns: NodeJS.Timer[]
   inputsDisabled: boolean
+  mainScriptHash: string
 }
 
 const ELEMENT_LIST_BUFFER_TIMEOUT_MS = 10
@@ -243,7 +252,7 @@ export class App extends PureComponent<Props, State> {
 
     this.state = {
       connectionState: ConnectionState.INITIAL,
-      elements: AppRoot.empty(true),
+      elements: AppRoot.empty("", true),
       isFullScreen: false,
       scriptName: "",
       scriptRunId: INITIAL_SCRIPT_RUN_ID,
@@ -263,6 +272,7 @@ export class App extends PureComponent<Props, State> {
       formsData: createFormsData(),
       appLogo: null,
       appPages: [],
+      navPageSections: new Map(),
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
       // available on page load (we get it when the script begins to run), so
@@ -288,6 +298,7 @@ export class App extends PureComponent<Props, State> {
       appConfig: {},
       autoReruns: [],
       inputsDisabled: false,
+      mainScriptHash: "",
     }
 
     this.connectionManager = null
@@ -628,6 +639,8 @@ export class App extends PureComponent<Props, State> {
             deltaMsg,
             msgProto.metadata as ForwardMsgMetadata
           ),
+        navigation: (navigationMsg: Navigation) =>
+          this.handleNavigation(navigationMsg),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
         pageInfoChanged: (pageInfo: PageInfo) =>
@@ -647,13 +660,23 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
-        logo: (logo: Logo) => this.setState({ appLogo: logo }),
+        logo: (logo: Logo) =>
+          this.handleLogo(logo, msgProto.metadata as ForwardMsgMetadata),
       })
     } catch (e) {
       const err = ensureError(e)
       logError(err)
       this.showError("Bad message format", err.message)
     }
+  }
+
+  handleLogo = (logo: Logo, metadata: ForwardMsgMetadata): void => {
+    this.setState({
+      appLogo: {
+        logo,
+        scriptHash: metadata.activeScriptHash ?? "",
+      },
+    })
   }
 
   handlePageConfigChanged = (pageConfig: PageConfig): void => {
@@ -722,6 +745,10 @@ export class App extends PureComponent<Props, State> {
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
     this.maybeSetState(this.appNavigation.handlePagesChanged(pagesChangedMsg))
+  }
+
+  handleNavigation = (navigationMsg: Navigation): void => {
+    this.maybeSetState(this.appNavigation.handleNavigation(navigationMsg))
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -877,7 +904,12 @@ export class App extends PureComponent<Props, State> {
 
   maybeSetState(stateUpdate: MaybeStateUpdate): void {
     if (stateUpdate) {
-      const { currentPageScriptHash, appPages, hideSidebarNav } = this.state
+      const {
+        currentPageScriptHash,
+        appPages,
+        hideSidebarNav,
+        navPageSections,
+      } = this.state
       const [newState, callback] = stateUpdate
 
       this.setState(
@@ -885,6 +917,7 @@ export class App extends PureComponent<Props, State> {
           currentPageScriptHash,
           appPages,
           hideSidebarNav,
+          navPageSections,
           ...newState,
         },
         callback
@@ -919,6 +952,7 @@ export class App extends PureComponent<Props, State> {
       mainScriptPath,
       fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
+      mainScriptHash,
     } = newSessionProto
 
     const newSessionHash = hashString(
@@ -945,6 +979,7 @@ export class App extends PureComponent<Props, State> {
         hideTopBar: config.hideTopBar,
         toolbarMode: config.toolbarMode,
         latestRunTime: performance.now(),
+        mainScriptHash,
         // If we're here, the fragmentIdsThisRun variable is always the
         // empty array.
         fragmentIdsThisRun,
@@ -971,7 +1006,12 @@ export class App extends PureComponent<Props, State> {
         scriptRunId,
       })
     } else {
-      this.clearAppState(newSessionHash, scriptRunId, scriptName)
+      this.clearAppState(
+        newSessionHash,
+        scriptRunId,
+        scriptName,
+        mainScriptHash
+      )
     }
   }
 
@@ -997,17 +1037,15 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
-    const targetAppPage =
-      this.state.appPages.find(appPage =>
-        // The page name is embedded at the end of the URL path, and if not, we are in the main page.
-        // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
-        document.location.pathname.endsWith("/" + appPage.pageName)
-      ) ?? this.state.appPages[0]
+    const { appPages, currentPageScriptHash, navPageSections } = this.state
+    const targetAppPage = this.appNavigation.getPageFromPageName(
+      appPages,
+      navPageSections
+    )
 
     // do not cause a rerun when an anchor is clicked and we aren't changing pages
     const hasAnchor = document.location.toString().includes("#")
-    const isSamePage =
-      targetAppPage?.pageScriptHash === this.state.currentPageScriptHash
+    const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
 
     if (targetAppPage == null || (hasAnchor && isSamePage)) {
       return
@@ -1142,22 +1180,32 @@ export class App extends PureComponent<Props, State> {
   clearAppState(
     appHash: string,
     scriptRunId: string,
-    scriptName: string
+    scriptName: string,
+    mainScriptHash: string
   ): void {
     const { hideSidebarNav, elements } = this.state
-    // Handle hideSidebarNav = true -> retain sidebar elements to avoid flicker
-    const sidebarElements = (hideSidebarNav && elements.sidebar) || undefined
+
+    const newElements = this.appNavigation.clearPageElements(
+      elements,
+      hideSidebarNav,
+      mainScriptHash
+    )
 
     this.setState(
       {
         scriptRunId,
         scriptName,
         appHash,
-        elements: AppRoot.empty(false, sidebarElements),
+        elements: newElements,
       },
       () => {
         this.pendingElementsBuffer = this.state.elements
-        this.widgetMgr.removeInactive(new Set([]))
+        const activeWidgetIds = new Set(
+          Array.from(this.state.elements.getElements())
+            .map(element => getElementWidgetID(element))
+            .filter(notUndefined)
+        )
+        this.widgetMgr.removeInactive(activeWidgetIds)
       }
     )
   }
@@ -1317,7 +1365,12 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
-    this.setState({ appLogo: null })
+    if (
+      this.state.appLogo &&
+      this.state.appLogo.scriptHash !== this.state.mainScriptHash
+    ) {
+      this.setState({ appLogo: null })
+    }
     this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
   }
 
@@ -1829,8 +1882,9 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
-                appLogo={this.state.appLogo}
+                appLogo={this.state.appLogo?.logo ?? null}
                 appPages={this.state.appPages}
+                navPageSections={this.state.navPageSections}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
                 hideSidebarNav={hideSidebarNav || hostHideSidebarNav}

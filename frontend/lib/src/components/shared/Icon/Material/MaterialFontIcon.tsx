@@ -51,7 +51,7 @@ const MaterialFontIcon = ({
   ...props
 }: MaterialIconProps): ReactElement => {
   return (
-    <StyledMaterialIcon {...getDefaultProps(props)}>
+    <StyledMaterialIcon {...getDefaultProps(props)} className="stMaterialIcon">
       {snakeCase(iconName)}
     </StyledMaterialIcon>
   )

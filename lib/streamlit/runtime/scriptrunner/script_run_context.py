@@ -92,6 +92,10 @@ class ScriptRunContext:
     def page_script_hash(self):
         return self.pages_manager.get_current_page_script_hash()
 
+    @property
+    def active_script_hash(self):
+        return self.pages_manager.get_active_page_script_hash()
+
     def reset(
         self,
         query_string: str = "",
@@ -142,10 +146,16 @@ class ScriptRunContext:
         # We want to disallow set_page config if one of the following occurs:
         # - set_page_config was called on this message
         # - The script has already started and a different st call occurs (a delta)
+        # TODO(kmcgrady): Modify this logic to allow set_page_config to be called
+        # after a delta on the active page.
         if msg.HasField("page_config_changed") or (
             msg.HasField("delta") and self._has_script_started
         ):
             self._set_page_config_allowed = False
+
+        msg.metadata.active_script_hash = (
+            self.pages_manager.get_active_page_script_hash()
+        )
 
         # Pass the message up to our associated ScriptRunner.
         self._enqueue(msg)

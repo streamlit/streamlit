@@ -169,7 +169,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     key=key,
                     json_args=serialized_json_args,
                     special_args=special_args,
-                    page=ctx.page_script_hash if ctx else None,
+                    page=ctx.active_script_hash if ctx else None,
                 )
             else:
                 computed_id = compute_widget_id(
@@ -179,7 +179,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                     form_id=current_form_id(dg),
                     url=self.url,
                     key=key,
-                    page=ctx.page_script_hash if ctx else None,
+                    page=ctx.active_script_hash if ctx else None,
                 )
             element.component_instance.id = computed_id
 

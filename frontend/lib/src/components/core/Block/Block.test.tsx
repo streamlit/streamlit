@@ -36,6 +36,7 @@ class ResizeObserver {
 
 function makeColumn(weight: number, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
+    "",
     children,
     new BlockProto({ allowEmpty: true, column: { weight } })
   )
@@ -45,6 +46,7 @@ function makeHorizontalBlock(numColumns: number): BlockNode {
   const weight = 1 / numColumns
 
   return new BlockNode(
+    "",
     Array.from({ length: numColumns }, () => makeColumn(weight)),
     new BlockProto({ allowEmpty: true, horizontal: { gap: "small" } })
   )
@@ -55,6 +57,7 @@ function makeVerticalBlock(
   additionalProps: Partial<BlockProto> = {}
 ): BlockNode {
   return new BlockNode(
+    "",
     children,
     new BlockProto({ allowEmpty: true, ...additionalProps })
   )

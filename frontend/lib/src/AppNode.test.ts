@@ -40,7 +40,13 @@ const BLOCK = block([
 
 // Initialize new AppRoot with a main block node and three child block nodes - sidebar, events and bottom.
 const ROOT = new AppRoot(
-  new BlockNode([BLOCK, new BlockNode(), new BlockNode(), new BlockNode()])
+  new BlockNode("", [
+    BLOCK,
+    new BlockNode(""),
+    new BlockNode(""),
+    new BlockNode(""),
+  ]),
+  ""
 )
 
 describe("AppNode.getIn", () => {
@@ -804,7 +810,7 @@ describe("AppRoot.empty", () => {
   })
 
   it("creates empty tree except for a skeleton", async () => {
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty("")
 
     // The linter is misfiring here. We're not accessing a DOM node.
     // eslint-disable-next-line testing-library/no-node-access
@@ -822,7 +828,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty("")
 
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
@@ -835,7 +841,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty("")
 
     // The linter is misfiring here. We're not accessing a DOM node.
     // eslint-disable-next-line testing-library/no-node-access
@@ -853,7 +859,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty()
+    const empty = AppRoot.empty("")
 
     // The linter is misfiring here. We're not accessing a DOM node.
     // eslint-disable-next-line testing-library/no-node-access
@@ -871,7 +877,7 @@ describe("AppRoot.empty", () => {
       },
     }))
 
-    const empty = AppRoot.empty(false)
+    const empty = AppRoot.empty("", false)
 
     expect(empty.main.isEmpty).toBe(true)
     expect(empty.sidebar.isEmpty).toBe(true)
@@ -972,7 +978,7 @@ describe("AppRoot.clearStaleNodes", () => {
   })
 
   it("handles currentFragmentId correctly", () => {
-    const root = AppRoot.empty()
+    const root = AppRoot.empty("")
       // Block not corresponding to my_fragment_id. Should be preserved.
       .applyDelta(
         "old_session_id",
@@ -1062,7 +1068,7 @@ describe("AppRoot.getElements", () => {
 /** Create a `Text` element node with the given properties. */
 function text(text: string, scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { text: { body: text } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId, "")
 }
 
 /** Create a BlockNode with the given properties. */
@@ -1070,19 +1076,19 @@ function block(
   children: AppNode[] = [],
   scriptRunId = NO_SCRIPT_RUN_ID
 ): BlockNode {
-  return new BlockNode(children, makeProto(BlockProto, {}), scriptRunId)
+  return new BlockNode("", children, makeProto(BlockProto, {}), scriptRunId)
 }
 
 /** Create an arrowTable element node with the given properties. */
 function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { arrowTable: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId, "")
 }
 
 /** Create an arrowDataFrame element node with the given properties. */
 function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId, "")
 }
 
 /** Create an arrowVegaLiteChart element node with the given properties. */
@@ -1091,7 +1097,7 @@ function arrowVegaLiteChart(
   scriptRunId = NO_SCRIPT_RUN_ID
 ): ElementNode {
   const element = makeProto(Element, { arrowVegaLiteChart: data })
-  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId)
+  return new ElementNode(element, ForwardMsgMetadata.create(), scriptRunId, "")
 }
 
 /** Create a ForwardMsgMetadata with the given container and path */

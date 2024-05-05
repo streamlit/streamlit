@@ -274,7 +274,7 @@ class RadioMixin:
             horizontal=horizontal,
             captions=captions,
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if not isinstance(index, int) and index is not None:

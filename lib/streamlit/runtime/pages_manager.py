@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import threading
 from pathlib import Path
 from typing import Callable, Final
@@ -152,6 +153,75 @@ class V1PagesManager:
         raise NotImplementedError("Cannot set pages in version 1 of multipage apps.")
 
 
+class V2PagesManager:
+    def __init__(self, parent):
+        self._parent = parent
+        self._pages = None
+        self._current_page_hash = self._parent.main_script_hash
+        self._active_page_hash = self._parent.main_script_hash
+
+    def get_main_page(self):
+        return {
+            "script_path": self._parent.main_script_path,
+            "script_hash": self._parent.main_script_hash,  # Default Hash
+        }
+
+    def get_active_page_script_hash(self):
+        return self._active_page_hash
+
+    def get_current_page_script_hash(self):
+        return self._current_page_hash
+
+    def set_active_page_script_hash(self, page_hash):
+        self._active_page_hash = page_hash
+
+    def set_current_page_script_hash(self, page_hash):
+        self._current_page_hash = page_hash
+
+    def get_page_by_run(self, page_script_hash, page_name):
+        pages = self.get_pages()
+        page_hash = None
+        if page_script_hash:
+            page_hash = page_script_hash
+        elif not page_script_hash and page_name:
+            # If a user navigates directly to a non-main page of an app, we get
+            # the first script run request before the list of pages has been
+            # sent to the frontend. In this case, we choose the first script
+            # with a name matching the requested page name.
+            current_page_info = next(
+                filter(
+                    # There seems to be this weird bug with mypy where it
+                    # thinks that p can be None (which is impossible given the
+                    # types of pages), so we add `p and` at the beginning of
+                    # the predicate to circumvent this.
+                    lambda p: p and (p["page_name"] == page_name),
+                    pages.values(),
+                ),
+                None,
+            )
+            if current_page_info:
+                page_hash = current_page_info["page_script_hash"]
+
+        return {
+            # We always run the main script in V2 as it's the common code
+            "script_path": self._parent.main_script_path,
+            "script_hash": page_hash or "",  # Default Hash
+        }
+
+    def get_pages(self):
+        return self._pages or {
+            self._parent.main_script_hash: {
+                "script_hash": self._parent.main_script_hash,
+                "page_name": "",
+                "icon": "",
+                "script_path": self._parent.main_script_path,
+            }
+        }
+
+    def set_pages(self, pages):
+        self._pages = pages
+
+
 class PagesManager:
     _cached_pages: dict[str, dict[str, str]] | None = None
     _pages_cache_lock = threading.RLock()
@@ -179,6 +249,19 @@ class PagesManager:
     def set_current_page_script_hash(self, page_hash):
         self._version_manager.set_current_page_script_hash(page_hash)
 
+    def get_active_page_script_hash(self):
+        return self._version_manager.get_active_page_script_hash()
+
+    def set_active_page_script_hash(self, page_hash):
+        self._version_manager.set_active_page_script_hash(page_hash)
+
+    @contextlib.contextmanager
+    def run_with_active_hash(self, page_hash):
+        original_page_hash = self.get_active_page_script_hash()
+        self.set_active_page_script_hash(page_hash)
+        yield
+        self.set_active_page_script_hash(original_page_hash)
+
     def get_page_by_run(self, page_script_hash, page_name):
         return self._version_manager.get_page_by_run(page_script_hash, page_name)
 
@@ -198,6 +281,20 @@ class PagesManager:
             self._cached_pages = pages
 
             return pages
+
+    def set_pages(self, pages):
+        try:
+            vm_pages = self._version_manager.set_pages(pages)
+        except NotImplementedError:
+            _LOGGER.warning(
+                "We've detected a call to st.navigation in a script that has a pages directory."
+            )
+            self._version_manager = V2PagesManager(self)
+            self.invalidate_pages_cache()
+            vm_pages = self._version_manager.set_pages(pages)
+
+        self._cached_pages = vm_pages
+        self._on_pages_changed.send()
 
     def invalidate_pages_cache(self) -> None:
         _LOGGER.debug("Pages directory changed")

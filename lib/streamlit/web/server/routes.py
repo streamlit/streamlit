@@ -54,9 +54,6 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
         else:
             self.set_header("Cache-Control", "public")
 
-    def parse_url_path(self, url_path: str) -> str:
-        return "index.html"
-
     def write_error(self, status_code: int, **kwargs) -> None:
         if status_code == 404:
             index_file = os.path.join(file_util.get_static_dir(), "index.html")

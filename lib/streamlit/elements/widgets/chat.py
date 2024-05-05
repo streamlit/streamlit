@@ -328,7 +328,7 @@ class ChatMixin:
             key=key,
             placeholder=placeholder,
             max_chars=max_chars,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # It doesn't make sense to create a chat input inside a form.

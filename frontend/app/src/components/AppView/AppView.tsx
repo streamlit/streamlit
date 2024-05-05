@@ -84,6 +84,8 @@ export interface AppViewProps {
 
   appLogo: Logo | null
 
+  navPageSections: Map<string, IAppPage[]>
+
   appPages: IAppPage[]
 
   onPageChange: (pageName: string) => void
@@ -109,6 +111,7 @@ function AppView(props: AppViewProps): ReactElement {
     formsData,
     appLogo,
     appPages,
+    navPageSections,
     onPageChange,
     currentPageScriptHash,
     hideSidebarNav,
@@ -229,6 +232,7 @@ function AppView(props: AppViewProps): ReactElement {
           initialSidebarState={initialSidebarState}
           appLogo={appLogo}
           appPages={appPages}
+          navPageSections={navPageSections}
           hasElements={hasSidebarElements}
           onPageChange={onPageChange}
           currentPageScriptHash={currentPageScriptHash}

@@ -189,7 +189,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> DeltaGenerator:
         ...
@@ -204,7 +208,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback = "rerun",
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> PlotlyState:
         ...
@@ -219,7 +227,11 @@ class PlotlyMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode
-        | Iterable[SelectionMode] = ("points", "box", "lasso"),
+        | Iterable[SelectionMode] = (
+            "points",
+            "box",
+            "lasso",
+        ),
         **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
@@ -381,7 +393,7 @@ class PlotlyMixin:
             theme=theme,
             form_id=plotly_chart_proto.form_id,
             use_container_width=use_container_width,
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         if is_selection_activated:

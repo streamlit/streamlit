@@ -43,7 +43,8 @@ function createBalloonNode(scriptRunId: string): ElementNode {
       show: true,
     }),
     ForwardMsgMetadata.create({}),
-    scriptRunId
+    scriptRunId,
+    ""
   )
   node.element.type = "balloons"
   return node
@@ -55,7 +56,8 @@ function createSnowNode(scriptRunId: string): ElementNode {
       show: true,
     }),
     ForwardMsgMetadata.create({}),
-    scriptRunId
+    scriptRunId,
+    ""
   )
   node.element.type = "snow"
   return node

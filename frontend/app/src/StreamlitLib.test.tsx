@@ -142,7 +142,7 @@ class StreamlitLibExample extends PureComponent<Props, State> {
 
     // Initialize React state
     this.state = {
-      elements: AppRoot.empty(),
+      elements: AppRoot.empty(""),
       formsData: createFormsData(),
       scriptRunState: ScriptRunState.NOT_RUNNING,
       // ScriptRunID should get a new unique ID every time the

@@ -105,6 +105,7 @@ import streamlit.column_config as _column_config
 from streamlit.echo import echo as echo
 from streamlit.runtime.legacy_caching import cache as _cache
 from streamlit.commands.logo import logo as logo
+from streamlit.commands.pages import navigation as navigation, Page as Page
 from streamlit.elements.spinner import spinner as spinner
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (

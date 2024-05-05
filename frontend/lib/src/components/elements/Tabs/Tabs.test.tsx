@@ -26,6 +26,7 @@ import Tabs, { TabProps } from "./Tabs"
 
 function makeTab(label: string, children: BlockNode[] = []): BlockNode {
   return new BlockNode(
+    "",
     children,
     new BlockProto({ allowEmpty: true, tab: { label } })
   )
@@ -33,6 +34,7 @@ function makeTab(label: string, children: BlockNode[] = []): BlockNode {
 
 function makeTabsNode(tabs: number): BlockNode {
   return new BlockNode(
+    "",
     Array.from({ length: tabs }, (_element, index) => makeTab(`Tab ${index}`)),
     new BlockProto({ allowEmpty: true })
   )

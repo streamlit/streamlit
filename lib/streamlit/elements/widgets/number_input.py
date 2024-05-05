@@ -303,7 +303,7 @@ class NumberInputMixin:
             help=help,
             placeholder=None if placeholder is None else str(placeholder),
             form_id=current_form_id(self.dg),
-            page=ctx.page_script_hash if ctx else None,
+            page=ctx.active_script_hash if ctx else None,
         )
 
         # Ensure that all arguments are of the same type.
