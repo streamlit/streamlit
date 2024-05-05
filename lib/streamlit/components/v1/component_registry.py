@@ -21,6 +21,7 @@ from types import FrameType
 from streamlit.components.types.base_component_registry import BaseComponentRegistry
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.runtime import get_instance
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 
 def _get_module_name(caller_frame: FrameType) -> str:
@@ -46,7 +47,7 @@ def declare_component(
     name: str,
     path: str | None = None,
     url: str | None = None,
-) -> CustomComponent:
+) -> CustomComponent | None:
     """Create and register a custom component.
 
     Parameters
@@ -62,12 +63,17 @@ def declare_component(
 
     Returns
     -------
-    CustomComponent
+    CustomComponent or None
         A CustomComponent that can be called like a function.
         Calling the component will create a new instance of the component
         in the Streamlit app.
+        Returns None if no ScriptRunContext exists; this can happen when CustomComponents are executed as standalone commands, e.g. for testing.
 
     """
+
+    ctx = get_script_run_ctx()
+    if ctx is None:
+        return None
 
     # Get our stack frame.
     current_frame: FrameType | None = inspect.currentframe()
