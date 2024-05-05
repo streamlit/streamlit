@@ -701,12 +701,17 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
-  handlePageNotFound = (pageNotFound: PageNotFound): void => {
-    const { pageName } = pageNotFound
+  onPageNotFound = (pageName?: string): void => {
     const errMsg = pageName
       ? `You have requested page /${pageName}, but no corresponding file was found in the app's pages/ directory`
       : "The page that you have requested does not seem to exist"
     this.showError("Page not found", `${errMsg}. Running the app's main page.`)
+  }
+
+  handlePageNotFound = (pageNotFound: PageNotFound): void => {
+    const { pageName } = pageNotFound
+
+    this.onPageNotFound(pageName)
 
     const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
     this.setState({ currentPageScriptHash }, () => {
@@ -841,6 +846,45 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Updates the page url if the page has changed
+   * @param mainPageName the name of the main page
+   * @param newPageName the name of the new page
+   * @param isViewingMainPage whether the user is viewing the main page
+   */
+  maybeUpdatePageUrl = (
+    mainPageName: string,
+    newPageName: string,
+    isViewingMainPage: boolean
+  ): void => {
+    const baseUriParts = this.getBaseUriParts()
+    if (baseUriParts) {
+      const { basePath } = baseUriParts
+
+      const prevPageNameInPath = extractPageNameFromPathName(
+        document.location.pathname,
+        basePath
+      )
+      const prevPageName =
+        prevPageNameInPath === "" ? mainPageName : prevPageNameInPath
+      // It is important to compare `newPageName` with the previous one encoded in the URL
+      // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
+      // e.g. the case where the user clicks the back button.
+      // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
+      if (prevPageName !== newPageName) {
+        const pagePath = isViewingMainPage ? "" : newPageName
+        const queryString = preserveEmbedQueryParams()
+        const qs = queryString ? `?${queryString}` : ""
+
+        const basePathPrefix = basePath ? `/${basePath}` : ""
+
+        const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
+
+        window.history.pushState({}, "", pageUrl)
+      }
+    }
+  }
+
+  /**
    * Handler for ForwardMsg.newSession messages. This runs on each rerun
    * @param newSessionProto a NewSession protobuf
    */
@@ -869,17 +913,12 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash: newPageScriptHash,
     } = newSessionProto
 
-    // mainPage must be a string as we're guaranteed at this point that
-    // newSessionProto.appPages is nonempty and has a truthy pageName.
-    // Otherwise, we'd either have no main script or a nameless main script,
-    // neither of which can happen.
-    const mainPage = newSessionProto.appPages[0] as AppPage
-    // We're similarly guaranteed that newPageName will be found / truthy
-    // here.
-    const newPageName = newSessionProto.appPages.find(
-      p => p.pageScriptHash === newPageScriptHash
-    )?.pageName as string
-    const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
+    const newSessionHash = hashString(
+      this.sessionInfo.current.installationId + mainScriptPath
+    )
+
+    this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
+    this.metricsMgr.setAppHash(newSessionHash)
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
@@ -891,47 +930,35 @@ export class App extends PureComponent<Props, State> {
       const config = newSessionProto.config as Config
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
-      const baseUriParts = this.getBaseUriParts()
-      if (baseUriParts) {
-        const { basePath } = baseUriParts
+      // mainPage must be a string as we're guaranteed at this point that
+      // newSessionProto.appPages is nonempty and has a truthy pageName.
+      // Otherwise, we'd either have no main script or a nameless main script,
+      // neither of which can happen.
+      const mainPage = newSessionProto.appPages[0] as AppPage
+      // We're similarly guaranteed that newPageName will be found / truthy
+      // here.
+      const newPageName = newSessionProto.appPages.find(
+        p => p.pageScriptHash === newPageScriptHash
+      )?.pageName as string
+      const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
-        const prevPageNameInPath = extractPageNameFromPathName(
-          document.location.pathname,
-          basePath
-        )
-        const prevPageName =
-          prevPageNameInPath === "" ? mainPage.pageName : prevPageNameInPath
-        // It is important to compare `newPageName` with the previous one encoded in the URL
-        // to handle new session runs triggered by URL changes through the `onHistoryChange()` callback,
-        // e.g. the case where the user clicks the back button.
-        // See https://github.com/streamlit/streamlit/pull/6271#issuecomment-1465090690 for the discussion.
-        if (prevPageName !== newPageName) {
-          // If embed params need to be changed, make sure to change to other parts of the code that reference preserveEmbedQueryParams
-          const queryString = preserveEmbedQueryParams()
-          const qs = queryString ? `?${queryString}` : ""
-
-          const basePathPrefix = basePath ? `/${basePath}` : ""
-
-          const pagePath = viewingMainPage ? "" : newPageName
-          const pageUrl = `${basePathPrefix}/${pagePath}${qs}`
-
-          window.history.pushState({}, "", pageUrl)
-        }
-      }
-
+      this.maybeUpdatePageUrl(mainPage.pageName, newPageName, viewingMainPage)
       this.processThemeInput(themeInput)
+      this.setState({
+        allowRunOnSave: config.allowRunOnSave,
+        hideTopBar: config.hideTopBar,
+        toolbarMode: config.toolbarMode,
+        latestRunTime: performance.now(),
+        // If we're here, the fragmentIdsThisRun variable is always the
+        // empty array.
+        fragmentIdsThisRun,
+      })
+
       this.setState(
         {
-          allowRunOnSave: config.allowRunOnSave,
-          hideTopBar: config.hideTopBar,
           hideSidebarNav: config.hideSidebarNav,
-          toolbarMode: config.toolbarMode,
           appPages: newSessionProto.appPages,
           currentPageScriptHash: newPageScriptHash,
-          latestRunTime: performance.now(),
-          // If we're here, the fragmentIdsThisRun variable is always the
-          // empty array.
-          fragmentIdsThisRun,
         },
         () => {
           this.hostCommunicationMgr.sendMessageToHost({
@@ -947,6 +974,11 @@ export class App extends PureComponent<Props, State> {
         }
       )
 
+      this.metricsMgr.enqueue("updateReport", {
+        numPages: newSessionProto.appPages.length,
+        isMainPage: viewingMainPage,
+      })
+
       // Set the title and favicon to their default values if we are not running
       // a fragment.
       document.title = `${newPageName} · Streamlit`
@@ -961,18 +993,6 @@ export class App extends PureComponent<Props, State> {
         latestRunTime: performance.now(),
       })
     }
-
-    const newSessionHash = hashString(
-      this.sessionInfo.current.installationId + mainScriptPath
-    )
-
-    this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
-    this.metricsMgr.setAppHash(newSessionHash)
-
-    this.metricsMgr.enqueue("updateReport", {
-      numPages: newSessionProto.appPages.length,
-      isMainPage: viewingMainPage,
-    })
 
     if (
       appHash === newSessionHash &&
