@@ -70,7 +70,6 @@ import {
   StreamlitEndpoints,
   ensureError,
   LibContext,
-  AppPage,
   AutoRerun,
   BackMsg,
   Config,
@@ -124,6 +123,7 @@ import withScreencast, {
 import "@streamlit/app/src/assets/css/theme.scss"
 import { preserveEmbedQueryParams } from "@streamlit/lib/src/util/utils"
 import { ThemeManager } from "./util/useThemeManager"
+import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
 
 export interface Props {
   screenCast: ScreenCastHOC
@@ -232,6 +232,8 @@ export class App extends PureComponent<Props, State> {
   private readonly componentRegistry: ComponentRegistry
 
   private readonly embeddingId: string = generateUID()
+
+  private readonly appNavigation: AppNavigation
 
   public constructor(props: Props) {
     super(props)
@@ -360,6 +362,12 @@ export class App extends PureComponent<Props, State> {
 
     this.pendingElementsTimerRunning = false
     this.pendingElementsBuffer = this.state.elements
+    this.appNavigation = new AppNavigation(
+      this.hostCommunicationMgr,
+      this.metricsMgr,
+      this.maybeUpdatePageUrl,
+      this.onPageNotFound
+    )
 
     window.streamlitDebug = {
       clearForwardMsgCache: this.debugClearForwardMsgCache,
@@ -709,28 +717,11 @@ export class App extends PureComponent<Props, State> {
   }
 
   handlePageNotFound = (pageNotFound: PageNotFound): void => {
-    const { pageName } = pageNotFound
-
-    this.onPageNotFound(pageName)
-
-    const currentPageScriptHash = this.state.appPages[0]?.pageScriptHash || ""
-    this.setState({ currentPageScriptHash }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_CURRENT_PAGE_NAME",
-        currentPageName: "",
-        currentPageScriptHash,
-      })
-    })
+    this.maybeSetState(this.appNavigation.handlePageNotFound(pageNotFound))
   }
 
   handlePagesChanged = (pagesChangedMsg: PagesChanged): void => {
-    const { appPages } = pagesChangedMsg
-    this.setState({ appPages }, () => {
-      this.hostCommunicationMgr.sendMessageToHost({
-        type: "SET_APP_PAGES",
-        appPages,
-      })
-    })
+    this.maybeSetState(this.appNavigation.handlePagesChanged(pagesChangedMsg))
   }
 
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
@@ -884,6 +875,23 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
+  maybeSetState(stateUpdate: MaybeStateUpdate): void {
+    if (stateUpdate) {
+      const { currentPageScriptHash, appPages, hideSidebarNav } = this.state
+      const [newState, callback] = stateUpdate
+
+      this.setState(
+        {
+          currentPageScriptHash,
+          appPages,
+          hideSidebarNav,
+          ...newState,
+        },
+        callback
+      )
+    }
+  }
+
   /**
    * Handler for ForwardMsg.newSession messages. This runs on each rerun
    * @param newSessionProto a NewSession protobuf
@@ -930,19 +938,7 @@ export class App extends PureComponent<Props, State> {
       const config = newSessionProto.config as Config
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
-      // mainPage must be a string as we're guaranteed at this point that
-      // newSessionProto.appPages is nonempty and has a truthy pageName.
-      // Otherwise, we'd either have no main script or a nameless main script,
-      // neither of which can happen.
-      const mainPage = newSessionProto.appPages[0] as AppPage
-      // We're similarly guaranteed that newPageName will be found / truthy
-      // here.
-      const newPageName = newSessionProto.appPages.find(
-        p => p.pageScriptHash === newPageScriptHash
-      )?.pageName as string
-      const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
-
-      this.maybeUpdatePageUrl(mainPage.pageName, newPageName, viewingMainPage)
+      this.maybeSetState(this.appNavigation.handleNewSession(newSessionProto))
       this.processThemeInput(themeInput)
       this.setState({
         allowRunOnSave: config.allowRunOnSave,
@@ -954,34 +950,7 @@ export class App extends PureComponent<Props, State> {
         fragmentIdsThisRun,
       })
 
-      this.setState(
-        {
-          hideSidebarNav: config.hideSidebarNav,
-          appPages: newSessionProto.appPages,
-          currentPageScriptHash: newPageScriptHash,
-        },
-        () => {
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_APP_PAGES",
-            appPages: newSessionProto.appPages,
-          })
-
-          this.hostCommunicationMgr.sendMessageToHost({
-            type: "SET_CURRENT_PAGE_NAME",
-            currentPageName: viewingMainPage ? "" : newPageName,
-            currentPageScriptHash: newPageScriptHash,
-          })
-        }
-      )
-
-      this.metricsMgr.enqueue("updateReport", {
-        numPages: newSessionProto.appPages.length,
-        isMainPage: viewingMainPage,
-      })
-
-      // Set the title and favicon to their default values if we are not running
-      // a fragment.
-      document.title = `${newPageName} · Streamlit`
+      // Set the favicon to their default values
       handleFavicon(
         `${process.env.PUBLIC_URL}/favicon.png`,
         this.hostCommunicationMgr.sendMessageToHost,
