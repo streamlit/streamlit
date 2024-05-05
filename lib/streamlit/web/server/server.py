@@ -368,12 +368,6 @@ class Server:
                         {
                             "path": "%s/" % static_path,
                             "default_filename": "index.html",
-                            "get_pages": lambda: {
-                                page_info["page_name"]
-                                for page_info in source_util.get_pages(
-                                    self.main_script_path
-                                ).values()
-                            },
                         },
                     ),
                     (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),

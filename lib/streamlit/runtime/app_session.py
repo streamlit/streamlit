@@ -21,7 +21,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, Final
 
 import streamlit.elements.exception as exception_utils
-from streamlit import config, runtime, source_util
+from streamlit import config, runtime
 from streamlit.case_converters import to_snake_case
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -40,6 +40,7 @@ from streamlit.runtime import caching, legacy_caching
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -127,6 +128,7 @@ class AppSession:
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
+        self._pages_manager = PagesManager(script_data.main_script_path)
 
         # The browser queue contains messages that haven't yet been
         # delivered to the browser. Periodically, the server flushes
@@ -181,9 +183,7 @@ class AppSession:
         to.
         """
         if self._local_sources_watcher is None:
-            self._local_sources_watcher = LocalSourcesWatcher(
-                self._script_data.main_script_path
-            )
+            self._local_sources_watcher = LocalSourcesWatcher(self._pages_manager)
 
         self._local_sources_watcher.register_file_change_callback(
             self._on_source_file_changed
@@ -191,7 +191,7 @@ class AppSession:
         self._stop_config_listener = config.on_config_parsed(
             self._on_source_file_changed, force_connect=True
         )
-        self._stop_pages_listener = source_util.register_pages_changed_callback(
+        self._stop_pages_listener = self._pages_manager.register_pages_changed_callback(
             self._on_pages_changed
         )
         secrets_singleton.file_change_listener.connect(self._on_secrets_file_changed)
@@ -407,6 +407,7 @@ class AppSession:
             initial_rerun_data=initial_rerun_data,
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
+            pages_manager=self._pages_manager,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -416,8 +417,7 @@ class AppSession:
         return self._session_state
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
-        main_script_path = self._script_data.main_script_path
-        pages = source_util.get_pages(main_script_path)
+        pages = self._pages_manager.get_pages()
 
         changed_page_script_hash = next(
             filter(lambda k: pages[k]["script_path"] == filepath, pages),
@@ -454,7 +454,7 @@ class AppSession:
 
     def _on_pages_changed(self, _) -> None:
         msg = ForwardMsg()
-        _populate_app_pages(msg.pages_changed, self._script_data.main_script_path)
+        self._populate_app_pages(msg.pages_changed)
         self._enqueue_forward_msg(msg)
 
         if self._local_sources_watcher is not None:
@@ -678,7 +678,7 @@ class AppSession:
         if fragment_ids_this_run:
             msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
-        _populate_app_pages(msg.new_session, self._script_data.main_script_path)
+        self._populate_app_pages(msg.new_session)
         _populate_config_msg(msg.new_session.config)
         _populate_theme_msg(msg.new_session.custom_theme)
 
@@ -829,6 +829,14 @@ class AppSession:
 
         self._enqueue_forward_msg(msg)
 
+    def _populate_app_pages(self, msg: NewSession | PagesChanged) -> None:
+        for page_script_hash, page_info in self._pages_manager.get_pages().items():
+            page_proto = msg.app_pages.add()
+
+            page_proto.page_script_hash = page_script_hash
+            page_proto.page_name = page_info["page_name"]
+            page_proto.icon = page_info["icon"]
+
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so
 # we need to use quotes.
@@ -913,12 +921,3 @@ def _populate_theme_msg(msg: CustomThemeConfig) -> None:
 def _populate_user_info_msg(msg: UserInfo) -> None:
     msg.installation_id = Installation.instance().installation_id
     msg.installation_id_v3 = Installation.instance().installation_id_v3
-
-
-def _populate_app_pages(msg: NewSession | PagesChanged, main_script_path: str) -> None:
-    for page_script_hash, page_info in source_util.get_pages(main_script_path).items():
-        page_proto = msg.app_pages.add()
-
-        page_proto.page_script_hash = page_script_hash
-        page_proto.page_name = page_info["page_name"]
-        page_proto.icon = page_info["icon"]

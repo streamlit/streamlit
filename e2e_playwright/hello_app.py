@@ -14,17 +14,19 @@
 
 import numpy as np
 
-from streamlit import source_util
 from streamlit.hello import Hello
 
 # Set random seed to always get the same results in the plotting demo
 np.random.seed(0)
 
 # This is a trick to setup the MPA hello app programmatically
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-source_util._cached_pages = None
-source_util._cached_pages = source_util.get_pages(Hello.__file__)
-source_util._on_pages_changed.send()
+ctx = get_script_run_ctx()
+
+ctx.pages_manager._cached_pages = None
+ctx.pages_manager._cached_pages = ctx.pages_manager.get_pages(Hello.__file__)
+ctx.pages_manager._on_pages_changed.send()
 
 # TODO(lukasmasuch): Once we migrate the hello app to the new programmatic
 # MPA API, we can remove this workaround.
