@@ -167,7 +167,7 @@ def dialog_decorator(
     >>>     f"You voted for {st.session_state.vote['item']} because {st.session_state.vote['reason']}"
 
     .. output::
-        https://doc-dialog.streamlit.app/
+        https://doc-modal-dialog.streamlit.app/
         height: 350px
 
     """
