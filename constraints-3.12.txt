@@ -12,8 +12,8 @@ cfgv==3.4.0
 charset-normalizer==3.3.2
 click==8.1.7
 contourpy==1.2.1
-coverage==7.5.0
-cryptography==42.0.5
+coverage==7.5.1
+cryptography==42.0.6
 cycler==0.12.1
 dataclasses-json==0.6.5
 distlib==0.3.8
@@ -26,7 +26,7 @@ gitdb==4.0.11
 GitPython==3.1.43
 graphviz==0.20.3
 greenlet==3.0.3
-hypothesis==6.100.2
+hypothesis==6.100.4
 identify==2.5.36
 idna==3.7
 importlib_metadata==7.1.0
@@ -81,7 +81,7 @@ pydantic==1.10.15
 pydeck==0.9.0
 pydot==2.0.0
 pyee==11.0.1
-Pygments==2.17.2
+Pygments==2.18.0
 pyparsing==3.1.2
 pytest==8.1.2
 pytest-base-url==2.1.0
