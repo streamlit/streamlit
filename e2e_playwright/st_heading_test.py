@@ -35,6 +35,17 @@ def _get_subheader_elements(app: Page) -> Locator:
     return app.locator(".element-container .stMarkdown h3")
 
 
+def _expect_tooltip(app: Page, el_with_help_tooltip):
+    hover_target = el_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
+
+    hover_target.hover()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).to_be_visible()
+    expect(tooltip_content).to_have_text("Some help tooltip")
+
+
 _header_divider_filter_text = re.compile(r"[a-zA-Z]+ Header Divider:")
 _subheader_divider_filter_text = re.compile(r"[a-zA-Z]+ Subheader Divider:")
 
@@ -242,3 +253,15 @@ def test_subheader_divider_snapshot(
         subheader_divider_element,
         name=f"st_subheader-divider_{color_index}",
     )
+
+
+def test_help_tooltip_works(app: Page):
+    """Test that the help tooltip is displayed on hover."""
+    header_with_help = _get_header_elements(app).nth(3)
+    _expect_tooltip(app, header_with_help)
+
+    subheader_with_help = _get_subheader_elements(app).nth(5)
+    _expect_tooltip(app, subheader_with_help)
+
+    title_with_help = _get_title_elements(app).nth(1)
+    _expect_tooltip(app, title_with_help)
