@@ -15,12 +15,12 @@
 import streamlit as st
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-# ctx = get_script_run_ctx()
-# if ctx is None:
-#     # This script is not compatible with running it in "bare" mode (e.g. `python script.py`)
-#     # The reason is that the mutable container is not correctly returned if
-#     # the runtime doesn't exist.
-#     exit(0)
+ctx = get_script_run_ctx()
+if ctx is None:
+    # This script is not compatible with running it in "bare" mode (e.g. `python script.py`)
+    # The reason is that the mutable container is not correctly returned if
+    # the runtime doesn't exist.
+    exit(0)
 
 
 running_status = st.status("Running status", expanded=True)
