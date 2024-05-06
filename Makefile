@@ -166,9 +166,9 @@ pytest-snowflake:
 mypy:
 	./scripts/mypy
 
-.PHONY: integration-tests
+.PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.
-integration-tests:
+bare-execution-tests:
 	python3 scripts/run_bare_integration_tests.py
 
 .PHONY: cli-smoke-tests

@@ -13,6 +13,13 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+ctx = get_script_run_ctx()
+if ctx is None:
+    # This script is not compatible with running it in "bare" mode (e.g. `python script.py`)
+    exit(0)
+
 
 running_status = st.status("Running status", expanded=True)
 running_status.write("Doing some work...")

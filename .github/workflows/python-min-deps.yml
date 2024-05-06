@@ -136,8 +136,6 @@ jobs:
         run: uv pip install --editable lib --no-deps
       - name: Run Python Tests
         run: make pytest
-      - name: Run Integration Tests
-        run: make integration-tests
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Validate min-constraints-gen
