@@ -353,14 +353,14 @@ playwright:
 playwright-custom-components:
 	cd e2e_playwright; \
 	rm -rf ./test-results; \
-	pip_args="extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment";\
+	pip_args="extra-streamlit-components streamlit-ace streamlit-antd-components streamlit-aggrid streamlit-autorefresh streamlit-chat streamlit-echarts streamlit-folium streamlit-lottie streamlit-option-menu streamlit-url-fragment"; \
 	if command -v "uv" > /dev/null; then \
-		echo "Running command: uv pip install $(pip_args)"; \
-		uv pip install $(pip_args); \
+		echo "Running command: uv pip install $${pip_args}"; \
+		uv pip install $${pip_args}; \
 	else \
-		echo "Running command: pip install $(pip_args)"; \
-		pip install $(pip_args); \
-	fi;\
+		echo "Running command: pip install $${pip_args}"; \
+		pip install $${pip_args}; \
+	fi; \
 	pytest ${custom_components_test_folder} --browser webkit --browser chromium --browser firefox --video retain-on-failure --screenshot only-on-failure --output ./test-results/ -n auto --reruns 1 --reruns-delay 1 --rerun-except "Missing snapshot" --durations=5 -r aR -v
 
 .PHONY: loc
