@@ -55,6 +55,12 @@ export interface VegaLiteChartElement {
 
   /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
   vegaLiteTheme: string
+
+  id: string
+
+  isSelectEnabled: boolean
+
+  formId: string
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */
