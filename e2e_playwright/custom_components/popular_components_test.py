@@ -14,6 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import wait_for_app_run
+
 
 def _select_component(app: Page, component: str):
     selectbox_input = app.get_by_test_id("stSelectbox").locator("input")
@@ -21,6 +23,7 @@ def _select_component(app: Page, component: str):
     # Type an option (defined in the test app):
     selectbox_input.type(component)
     selectbox_input.press("Enter")
+    wait_for_app_run(app)
 
 
 def _expect_no_exception(app: Page):
