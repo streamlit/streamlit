@@ -169,7 +169,7 @@ mypy:
 .PHONY: bare-execution-tests
 # Run all our e2e tests in "bare" mode and check for non-zero exit codes.
 bare-execution-tests:
-	python3 scripts/run_bare_integration_tests.py
+	python3 scripts/run_bare_execution_tests.py
 
 .PHONY: cli-smoke-tests
 # Verify that CLI boots as expected when called with `python -m streamlit`
