@@ -36,7 +36,7 @@ import click
 # Where we expect to find the example files.
 E2E_DIR = "e2e_playwright"
 
-EXCLUDED_FILENAMES: Set[str] = {}
+EXCLUDED_FILENAMES: Set[str] = set()
 
 # Since there is not DISPLAY set (and since Streamlit is not actually running
 # and fixing Matplotlib in these tests), we set the MPL backend to something
