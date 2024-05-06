@@ -22,17 +22,17 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 
 def _get_title_elements(app: Page) -> Locator:
     """Title elements are rendered as h1 elements"""
-    return app.locator(".element-container [data-testid=stHeading] h1")
+    return app.get_by_test_id("stHeading").locator("h1")
 
 
 def _get_header_elements(app: Page) -> Locator:
     """Header elements are rendered as h2 elements"""
-    return app.locator(".element-container [data-testid=stHeading] h2")
+    return app.get_by_test_id("stHeading").locator("h2")
 
 
 def _get_subheader_elements(app: Page) -> Locator:
     """Subheader elements are rendered as h3 elements"""
-    return app.locator(".element-container [data-testid=stHeading] h3")
+    return app.get_by_test_id("stHeading").locator("h3")
 
 
 _header_divider_filter_text = re.compile(r"[a-zA-Z]+ Header Divider:")
