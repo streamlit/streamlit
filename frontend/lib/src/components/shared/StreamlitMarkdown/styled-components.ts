@@ -164,8 +164,6 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   textWrap: "pretty",
 
   // show link-icon when hovering somewhere over the heading
-  // we use opacity instead of visibility because the react-testing-library seems
-  // to have issues with queryByRole('link') otherwise, even when triggering hover-events
   [StyledLinkIcon as any]: {
     visibility: "hidden",
   },
