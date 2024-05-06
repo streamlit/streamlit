@@ -94,6 +94,7 @@ def test_extra_streamlit_components(app: Page):
 def test_folium(app: Page):
     """Test that the folium component renders"""
     _select_component(app, "folium")
+    _expect_no_exception(app)
     _expect_iframe_attached(app)
 
 
