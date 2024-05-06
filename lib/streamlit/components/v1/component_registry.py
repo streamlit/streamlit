@@ -47,7 +47,7 @@ def declare_component(
     name: str,
     path: str | None = None,
     url: str | None = None,
-) -> CustomComponent | None:
+) -> CustomComponent:
     """Create a custom component and register it if there is a ScriptRun context.
 
     The component is not registered when there is no ScriptRun context; this can happen when CustomComponents are executed as standalone commands, e.g. for testing.
