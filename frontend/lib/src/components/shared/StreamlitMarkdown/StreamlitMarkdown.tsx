@@ -217,15 +217,13 @@ export const HeadingWithActionElements: FunctionComponent<
     },
     [propsAnchor]
   )
-  if (isInSidebar || isInDialog) {
-    return React.createElement(tag, tagProps, children)
-  }
 
+  const isInSidebarOrDialog = isInSidebar || isInDialog
   const actionElements = (
     <HeaderActionElements
       elementId={elementId}
       help={help}
-      hideAnchor={hideAnchor}
+      hideAnchor={hideAnchor || isInSidebarOrDialog}
     />
   )
 
@@ -244,6 +242,12 @@ export const HeadingWithActionElements: FunctionComponent<
       {actionElements}
     </>
   )
+
+  // we don't want to apply styling, so return the "raw" header
+  if (isInSidebarOrDialog) {
+    return headerElementWithActions
+  }
+
   return (
     <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
       {headerElementWithActions}
