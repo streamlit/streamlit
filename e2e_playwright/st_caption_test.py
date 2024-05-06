@@ -36,7 +36,8 @@ def test_correct_content_in_caption(app: Page):
 
 def test_help_tooltip_works(app: Page):
     """Test that the help tooltip is displayed on hover."""
-    caption_with_help = app.get_by_test_id("stCaptionContainer").nth(3)
+    # The stMarkdown div is the outermost container that holds the caption and the help tooltip:
+    caption_with_help = app.get_by_test_id("stMarkdown").nth(3)
 
     hover_target = caption_with_help.get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
