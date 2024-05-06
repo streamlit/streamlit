@@ -37,7 +37,6 @@ import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
 import rehypeKatex from "rehype-katex"
 import { Link2 as LinkIcon } from "react-feather"
-// import { Link as LinkIcon2 } from "@emotion-icons/material-outlined"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
@@ -158,10 +157,7 @@ const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
   }
 
   return (
-    <StyledHeadingActionElements
-      data-testid="stHeaderActionElements"
-      className="stHeaderActionElements"
-    >
+    <StyledHeadingActionElements data-testid="stHeaderActionElements">
       {help && <InlineTooltipIcon content={help} />}
       {elementId && !hideAnchor && (
         <StyledLinkIcon href={`#${elementId}`}>
@@ -249,10 +245,7 @@ export const HeadingWithActionElements: FunctionComponent<
     </>
   )
   return (
-    <StyledHeadingWithActionElements
-      className="stHeadingWithActionElements"
-      data-testid="stStyledHeadingWithActionElements"
-    >
+    <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
       {headerElementWithActions}
     </StyledHeadingWithActionElements>
   )

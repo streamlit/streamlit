@@ -134,45 +134,6 @@ export const StyledStreamlitMarkdown =
     }
   )
 
-export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
-  "h1, h2, h3, h4, h5, h6, span": {
-    scrollMarginTop: theme.spacing.threeXL,
-  },
-  ...sharedMarkdownStyle(theme),
-
-  // break-word & pretty makes most headings break in a nicer way than break-all while still
-  // preventing overflowing of the container to the side. Long headings without whitespaces or hyphens might still look weird
-  wordBreak: "break-word",
-  textWrap: "pretty",
-
-  // show link-icon when hovering somewhere over the heading
-  // we use opacity instead of visibility because the react-testing-library seems
-  // to have issues with queryByRole('link') otherwise, even when triggering hover-events
-  "& .stHeaderActionElements > a": {
-    visibility: "hidden",
-  },
-  ":hover": {
-    "& .stHeaderActionElements > a": {
-      visibility: "visible",
-    },
-  },
-}))
-
-export const StyledHeadingActionElements = styled.span(({ theme }) => ({
-  marginLeft: "0.5rem",
-  display: "inline-flex",
-  gap: "0.5rem",
-
-  verticalAlign: "middle",
-
-  "& > *": {
-    // make sure that the elements are hoverable and are not "covered" by margins etc. of other elements
-    zIndex: theme.zIndices.sidebar + 1,
-    // remove margins of inner elements as they are wrapped in a container that applies the margin
-    marginLeft: "0 !important",
-  },
-}))
-
 export const StyledLinkIcon = styled.a(({ theme }) => ({
   // center icon
   lineHeight: 0,
@@ -188,6 +149,45 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
 
   "&:hover svg": {
     stroke: theme.colors.bodyText,
+  },
+}))
+
+export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
+  "h1, h2, h3, h4, h5, h6, span": {
+    scrollMarginTop: theme.spacing.threeXL,
+  },
+  ...sharedMarkdownStyle(theme),
+
+  // break-word & pretty makes most headings break in a nicer way than break-all while still
+  // preventing overflowing of the container to the side. Long headings without whitespaces or hyphens might still look weird
+  wordBreak: "break-word",
+  textWrap: "pretty",
+
+  // show link-icon when hovering somewhere over the heading
+  // we use opacity instead of visibility because the react-testing-library seems
+  // to have issues with queryByRole('link') otherwise, even when triggering hover-events
+  [StyledLinkIcon as any]: {
+    visibility: "hidden",
+  },
+
+  // we have to set the hover here so that the link icon becomes visible when hovering anywhere over the heading
+  "&:hover": {
+    [StyledLinkIcon as any]: {
+      visibility: "visible",
+    },
+  },
+}))
+
+export const StyledHeadingActionElements = styled.span(() => ({
+  marginLeft: "0.5rem",
+  display: "inline-flex",
+  gap: "0.5rem",
+
+  verticalAlign: "middle",
+
+  "& > *": {
+    // remove margins of inner elements as they are wrapped in a container that applies the margin
+    marginLeft: "0 !important",
   },
 }))
 

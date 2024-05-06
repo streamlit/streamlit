@@ -18,11 +18,7 @@ import React, { Fragment, ReactElement } from "react"
 import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 
-import {
-  // StyledHeaderContainer,
-  StyledStreamlitMarkdown,
-  StyledDivider,
-} from "./styled-components"
+import { StyledStreamlitMarkdown, StyledDivider } from "./styled-components"
 
 import "katex/dist/katex.min.css"
 import {
@@ -62,7 +58,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const [heading, ...rest] = body.split("\n")
 
   return (
-    <div className="stMarkdown" style={{ width }} data-testid="stHeading">
+    <div style={{ width }} data-testid="stHeading">
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
         isInSidebar={isInSidebar}

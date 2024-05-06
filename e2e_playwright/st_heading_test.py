@@ -22,17 +22,17 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 
 def _get_title_elements(app: Page) -> Locator:
     """Title elements are rendered as h1 elements"""
-    return app.locator(".element-container .stMarkdown h1")
+    return app.locator(".element-container [data-testid=stHeading] h1")
 
 
 def _get_header_elements(app: Page) -> Locator:
     """Header elements are rendered as h2 elements"""
-    return app.locator(".element-container .stMarkdown h2")
+    return app.locator(".element-container [data-testid=stHeading] h2")
 
 
 def _get_subheader_elements(app: Page) -> Locator:
     """Subheader elements are rendered as h3 elements"""
-    return app.locator(".element-container .stMarkdown h3")
+    return app.locator(".element-container [data-testid=stHeading] h3")
 
 
 _header_divider_filter_text = re.compile(r"[a-zA-Z]+ Header Divider:")
@@ -66,7 +66,7 @@ def test_correct_number_and_content_of_header_elements(app: Page):
 
 def test_correct_number_and_content_of_subheader_elements(app: Page):
     """Test that correct number of st.subheader (=> h3) exist with the right content"""
-    subheaders = app.locator(".element-container .stMarkdown h3").filter(
+    subheaders = _get_subheader_elements(app).filter(
         has_not_text=_subheader_divider_filter_text
     )
     expect(subheaders).to_have_count(7)
@@ -128,6 +128,18 @@ def test_display_subheaders_with_anchors_and_style_icons(app: Page):
     third_header = headers.nth(4)
     expect(third_header).to_have_id("subheader-with-hidden-anchor")
     expect(third_header.locator("svg")).not_to_be_attached()
+
+
+def test_clicking_on_anchor_changes_url(app: Page):
+    import re
+
+    headers = _get_header_elements(app)
+    first_header = headers.nth(0)
+    first_header.hover()
+    link = first_header.locator("a")
+    expect(link).to_have_attribute("href", "#this-header-is-awesome")
+    link.click()
+    expect(app).to_have_url(re.compile(".*#this-header-is-awesome"))
 
 
 def test_headers_snapshot_match(

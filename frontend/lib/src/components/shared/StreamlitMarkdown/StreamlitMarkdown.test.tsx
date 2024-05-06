@@ -116,7 +116,7 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(
-      screen.getByTestId("stStyledHeadingWithActionElements")
+      screen.getByTestId("stHeadingWithActionElements")
     ).toBeInTheDocument()
   })
 
@@ -128,7 +128,7 @@ describe("StreamlitMarkdown", () => {
       </IsDialogContext.Provider>
     )
     expect(
-      screen.getByTestId("stStyledHeadingWithActionElements")
+      screen.getByTestId("stHeadingWithActionElements")
     ).toBeInTheDocument()
   })
 
@@ -151,7 +151,7 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(
-      screen.queryByTestId("stStyledHeadingWithActionElements")
+      screen.queryByTestId("stHeadingWithActionElements")
     ).not.toBeInTheDocument()
   })
 
@@ -163,7 +163,7 @@ describe("StreamlitMarkdown", () => {
       </IsDialogContext.Provider>
     )
     expect(
-      screen.queryByTestId("stStyledHeadingWithActionElements")
+      screen.queryByTestId("stHeadingWithActionElements")
     ).not.toBeInTheDocument()
   })
 
