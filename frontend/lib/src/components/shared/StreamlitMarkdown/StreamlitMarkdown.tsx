@@ -227,6 +227,7 @@ export const HeadingWithActionElements: FunctionComponent<
     />
   )
 
+  const attributes = isInSidebarOrDialog ? {} : { ref, id: elementId }
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
@@ -234,8 +235,7 @@ export const HeadingWithActionElements: FunctionComponent<
     tag,
     {
       ...tagProps,
-      ref,
-      id: elementId,
+      ...attributes,
     },
     <>
       {children}
