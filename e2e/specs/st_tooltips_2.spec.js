@@ -21,9 +21,7 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Display text properly on tooltips on markdown", () => {
-    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 0)
-      .invoke("show")
-      .click();
+    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 0).invoke("show").click();
     cy.get("[data-testid=stMarkdownContainer]").should(
       "contain",
       "This is example tooltip displayed on markdown."
@@ -31,9 +29,7 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Display text properly on tooltips on text", () => {
-    cy.get(`.stTextLabelWrapper > * > .stTooltipIcon`)
-      .invoke("show")
-      .click();
+    cy.get(`.stTextLabelWrapper > * > .stTooltipIcon`).invoke("show").click();
     cy.get("[data-testid=stMarkdownContainer]").should(
       "contain",
       "This is example tooltip displayed on text."
@@ -41,9 +37,7 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Display text properly on tooltips on latex", () => {
-    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 1)
-      .invoke("show")
-      .click();
+    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 1).invoke("show").click();
     cy.get("[data-testid=stMarkdownContainer]").should(
       "contain",
       "This is example tooltip displayed on latex."
@@ -51,9 +45,7 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Display text properly on tooltips on caption", () => {
-    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 2)
-      .invoke("show")
-      .click();
+    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 2).invoke("show").click();
     cy.get("[data-testid=stMarkdownContainer]").should(
       "contain",
       "This is example tooltip displayed on caption."
@@ -61,7 +53,7 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Display text properly on tooltips on title", () => {
-    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 3)
+    cy.getIndexed(`[data-testid=stMarkdownContainer] .stTooltipIcon`, 0)
       .invoke("show")
       .click();
     cy.get("[data-testid=stMarkdownContainer]").should(
@@ -71,7 +63,7 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Display text properly on tooltips on header", () => {
-    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 4)
+    cy.getIndexed(`[data-testid=stMarkdownContainer] .stTooltipIcon`, 1)
       .invoke("show")
       .click();
     cy.get("[data-testid=stMarkdownContainer]").should(
@@ -81,7 +73,7 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Display text properly on tooltips on subheader", () => {
-    cy.getIndexed(`.stMarkdown .stTooltipIcon`, 5)
+    cy.getIndexed(`[data-testid=stMarkdownContainer] .stTooltipIcon`, 2)
       .invoke("show")
       .click();
     cy.get("[data-testid=stMarkdownContainer]").should(
@@ -91,12 +83,20 @@ describe("displays tooltips on text elements properly", () => {
   });
 
   it("Tooltips match image snapshots", () => {
-    cy.getIndexed(".stTooltipContent", 0).matchImageSnapshot("stTooltipMarkdown")
-    cy.getIndexed(".stTooltipContent", 1).matchImageSnapshot("stTooltipText")
-    cy.getIndexed(".stTooltipContent", 2).matchImageSnapshot("stTooltipLatex")
-    cy.getIndexed(".stTooltipContent", 3).matchImageSnapshot("stTooltipCaption")
-    cy.getIndexed(".stTooltipContent", 4).matchImageSnapshot("stTooltipTitle")
-    cy.getIndexed(".stTooltipContent", 5).matchImageSnapshot("stTooltipHeader")
-    cy.getIndexed(".stTooltipContent", 6).matchImageSnapshot("stTooltipSubheader")
-  })
+    cy.getIndexed(".stTooltipContent", 0).matchImageSnapshot(
+      "stTooltipMarkdown"
+    );
+    cy.getIndexed(".stTooltipContent", 1).matchImageSnapshot("stTooltipText");
+    cy.getIndexed(".stTooltipContent", 2).matchImageSnapshot("stTooltipLatex");
+    cy.getIndexed(".stTooltipContent", 3).matchImageSnapshot(
+      "stTooltipCaption"
+    );
+    cy.getIndexed(".stTooltipContent", 4).matchImageSnapshot("stTooltipTitle");
+    cy.getIndexed(".stTooltipContent", 5).matchImageSnapshot(
+      "stTooltipHeader"
+    );
+    cy.getIndexed(".stTooltipContent", 6).matchImageSnapshot(
+      "stTooltipSubheader"
+    );
+  });
 });
