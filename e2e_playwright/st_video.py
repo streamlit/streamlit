@@ -19,6 +19,8 @@ import requests
 
 import streamlit as st
 
+# Construct test assets path relative to this script file to
+# allow its execution with different working directories.
 TEST_ASSETS_DIR = join(dirname(abspath(__file__)), "test_assets")
 
 WEBM_VIDEO_PATH = join(TEST_ASSETS_DIR, "sintel-short.webm")
