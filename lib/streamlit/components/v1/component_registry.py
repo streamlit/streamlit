@@ -48,7 +48,10 @@ def declare_component(
     path: str | None = None,
     url: str | None = None,
 ) -> CustomComponent | None:
-    """Create and register a custom component.
+    """Create a custom component and register it if there is a ScriptRun context.
+
+    The component is not registered when there is no ScriptRun context; this can happen when CustomComponents are executed as standalone commands, e.g. for testing.
+
 
     Parameters
     ----------
@@ -63,19 +66,11 @@ def declare_component(
 
     Returns
     -------
-    CustomComponent or None
+    CustomComponent
         A CustomComponent that can be called like a function.
         Calling the component will create a new instance of the component
         in the Streamlit app.
-        Returns None if no ScriptRunContext exists; this can happen when CustomComponents are executed as standalone commands, e.g. for testing.
-
     """
-
-    # the ctx can be None if a custom component script is run outside of Streamlit, e.g. via 'python ...'
-    ctx = get_script_run_ctx()
-    if ctx is None:
-        return None
-
     # Get our stack frame.
     current_frame: FrameType | None = inspect.currentframe()
     assert current_frame is not None
@@ -91,7 +86,11 @@ def declare_component(
     component = CustomComponent(
         name=component_name, path=path, url=url, module_name=module_name
     )
-    get_instance().component_registry.register_component(component)
+
+    # the ctx can be None if a custom component script is run outside of Streamlit, e.g. via 'python ...'
+    ctx = get_script_run_ctx()
+    if ctx is not None:
+        get_instance().component_registry.register_component(component)
 
     return component
 
