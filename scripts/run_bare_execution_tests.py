@@ -49,10 +49,10 @@ def _command_to_string(command):
 
 
 def _get_filenames(folder):
-    folder = os.path.abspath(folder)
+    folder_path = os.path.abspath(folder)
     return [
-        os.path.join(folder, filename)
-        for filename in sorted(os.listdir(folder))
+        os.path.join(folder_path, filename)
+        for filename in sorted(os.listdir(folder_path))
         if filename.endswith(".py")
         and not filename.endswith("_test.py")
         and filename not in EXCLUDED_FILENAMES
