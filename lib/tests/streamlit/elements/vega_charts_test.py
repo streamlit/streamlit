@@ -31,7 +31,11 @@ from streamlit.elements.vega_charts import (
     _stabilize_vega_json_spec,
 )
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.type_util import (
+    bytes_to_data_frame,
+    is_altair_version_less_than,
+    pyarrow_table_to_bytes,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
@@ -155,6 +159,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
         with self.assertRaises(TypeError):
             st.altair_chart(use_container_width=True)
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     def test_that_altair_chart_spec_stays_stable(self):
         """Test that st.altair_chart stays stable across multiple calls."""
         # Execution 1:
