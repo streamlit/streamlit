@@ -35,7 +35,7 @@ export type LibConfig = {
    */
   disableFullscreenMode?: boolean
 
-  downloadButtonNewTab?: boolean
+  enforceDownloadInNewTab?: boolean
 }
 
 export interface LibContextProps {

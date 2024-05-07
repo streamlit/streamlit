@@ -24,6 +24,7 @@ import BaseButton, {
 import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
 import { StreamlitEndpoints } from "@streamlit/lib/src/StreamlitEndpoints"
+import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -32,20 +33,14 @@ export interface Props {
   widgetMgr: WidgetStateManager
   width: number
   fragmentId?: string
-  downloadButtonNewTab?: boolean
 }
 
 function DownloadButton(props: Props): ReactElement {
-  const {
-    disabled,
-    element,
-    widgetMgr,
-    width,
-    endpoints,
-    fragmentId,
-    downloadButtonNewTab,
-  } = props
+  const { disabled, element, widgetMgr, width, endpoints, fragmentId } = props
   const style = { width }
+  const {
+    libConfig: { enforceDownloadInNewTab = false }, // Default to false, if no libConfig, e.g. for tests
+  } = React.useContext(LibContext)
 
   const kind =
     element.type === "primary"
@@ -59,7 +54,7 @@ function DownloadButton(props: Props): ReactElement {
     const link = document.createElement("a")
     const uri = endpoints.buildMediaURL(element.url)
     link.setAttribute("href", uri)
-    if (downloadButtonNewTab) {
+    if (enforceDownloadInNewTab) {
       link.setAttribute("target", "_blank")
     } else {
       link.setAttribute("target", "_self")

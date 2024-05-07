@@ -202,7 +202,7 @@ class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "useExternalAuthToken": False,
                 # Default host configuration settings:
                 "enableCustomParentMessages": False,
-                "downloadButtonNewTab": False,
+                "enforceDownloadInNewTab": False,
             },
             response_body,
         )
