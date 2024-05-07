@@ -191,11 +191,11 @@ class SliderMixin:
         This supports int, float, date, time, and datetime types.
 
         This also allows you to render a range slider by passing a two-element
-        tuple or list as the `value`.
+        tuple or list as the ``value``.
 
-        The difference between `st.slider` and `st.select_slider` is that
-        `slider` only accepts numerical or date/time data and takes a range as
-        input, while `select_slider` accepts any datatype and takes an iterable
+        The difference between ``st.slider`` and ``st.select_slider`` is that
+        ``slider`` only accepts numerical or date/time data and takes a range as
+        input, while ``select_slider`` accepts any datatype and takes an iterable
         set of options.
 
         .. note::
@@ -223,8 +223,10 @@ class SliderMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -291,17 +293,17 @@ class SliderMixin:
         --------
         >>> import streamlit as st
         >>>
-        >>> age = st.slider('How old are you?', 0, 130, 25)
-        >>> st.write("I'm ", age, 'years old')
+        >>> age = st.slider("How old are you?", 0, 130, 25)
+        >>> st.write("I'm ", age, "years old")
 
         And here's an example of a range slider:
 
         >>> import streamlit as st
         >>>
         >>> values = st.slider(
-        ...     'Select a range of values',
+        ...     "Select a range of values",
         ...     0.0, 100.0, (25.0, 75.0))
-        >>> st.write('Values:', values)
+        >>> st.write("Values:", values)
 
         This is a range time slider:
 

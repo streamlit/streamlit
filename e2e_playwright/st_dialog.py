@@ -28,6 +28,7 @@ def dialog_with_images():
         pd.DataFrame(np.zeros((1000, 6)), columns=["A", "B", "C", "D", "E", "F"])
     )
 
+    st.subheader("Images", help="Some images are generated")
     # render multiple images. This will make the Close button to go out of
     # screen and allows scrollability of the dialog
     for _ in range(0, 3):
@@ -65,6 +66,15 @@ def large_width_dialog():
 if st.button("Open large-width Dialog"):
     large_width_dialog()
 
+
+@st.experimental_dialog("Dialog with headings")
+def headings_dialog():
+    st.header("Header", help="Some tooltip!")
+
+
+if st.button("Open headings Dialog"):
+    headings_dialog()
+
 # We use this dialog for a screenshot test as loading images via the browser
 # is non-deterministic
 with st.sidebar:
@@ -78,3 +88,18 @@ with st.sidebar:
 
     if st.button("Open Sidebar-Dialog"):
         dialog_in_sidebar()
+
+
+@st.experimental_dialog("Level2 Dialog")
+def level2_dialog():
+    st.write("Second level dialog")
+
+
+@st.experimental_dialog("Level1 Dialog")
+def level1_dialog():
+    st.write("First level dialog")
+    level2_dialog()
+
+
+if st.button("Open Nested Dialogs"):
+    level1_dialog()

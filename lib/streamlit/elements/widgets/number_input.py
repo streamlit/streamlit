@@ -158,8 +158,10 @@ class NumberInputMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -222,8 +224,8 @@ class NumberInputMixin:
         -------
         >>> import streamlit as st
         >>>
-        >>> number = st.number_input('Insert a number')
-        >>> st.write('The current number is ', number)
+        >>> number = st.number_input("Insert a number")
+        >>> st.write("The current number is ", number)
 
         .. output::
            https://doc-number-input.streamlit.app/
@@ -234,7 +236,7 @@ class NumberInputMixin:
         >>> import streamlit as st
         >>>
         >>> number = st.number_input("Insert a number", value=None, placeholder="Type a number...")
-        >>> st.write('The current number is ', number)
+        >>> st.write("The current number is ", number)
 
         .. output::
            https://doc-number-input-empty.streamlit.app/
