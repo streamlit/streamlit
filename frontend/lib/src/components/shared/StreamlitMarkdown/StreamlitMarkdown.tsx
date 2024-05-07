@@ -36,13 +36,14 @@ import remarkDirective from "remark-directive"
 import remarkMathPlugin from "remark-math"
 import rehypeRaw from "rehype-raw"
 import rehypeKatex from "rehype-katex"
-import { Link as LinkIcon } from "react-feather"
+import { Link2 as LinkIcon } from "react-feather"
 import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import CodeBlock from "@streamlit/lib/src/components/elements/CodeBlock"
 import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import ErrorBoundary from "@streamlit/lib/src/components/shared/ErrorBoundary"
+import { InlineTooltipIcon } from "@streamlit/lib/src/components/shared/TooltipIcon"
 import {
   getMarkdownTextColors,
   getMarkdownBgColors,
@@ -50,11 +51,10 @@ import {
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import {
-  StyledHeaderContainer,
-  StyledHeaderContent,
   StyledLinkIcon,
-  StyledLinkIconContainer,
+  StyledHeadingActionElements,
   StyledStreamlitMarkdown,
+  StyledHeadingWithActionElements,
 } from "./styled-components"
 
 import "katex/dist/katex.min.css"
@@ -141,17 +141,45 @@ const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
 
-interface HeadingWithAnchorProps {
+interface HeadingActionElements {
+  elementId?: string
+  help?: string
+  hideAnchor?: boolean
+}
+
+const HeaderActionElements: FunctionComponent<HeadingActionElements> = ({
+  elementId,
+  help,
+  hideAnchor,
+}) => {
+  if (!help && hideAnchor) {
+    return <></>
+  }
+
+  return (
+    <StyledHeadingActionElements data-testid="stHeaderActionElements">
+      {help && <InlineTooltipIcon content={help} />}
+      {elementId && !hideAnchor && (
+        <StyledLinkIcon href={`#${elementId}`}>
+          <LinkIcon size="18" />
+        </StyledLinkIcon>
+      )}
+    </StyledHeadingActionElements>
+  )
+}
+
+interface HeadingWithActionElementsProps {
   tag: string
   anchor?: string
   hideAnchor?: boolean
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
+  help?: string
 }
 
-export const HeadingWithAnchor: FunctionComponent<
-  React.PropsWithChildren<HeadingWithAnchorProps>
-> = ({ tag, anchor: propsAnchor, hideAnchor, children, tagProps }) => {
+export const HeadingWithActionElements: FunctionComponent<
+  React.PropsWithChildren<HeadingWithActionElementsProps>
+> = ({ tag, anchor: propsAnchor, help, hideAnchor, children, tagProps }) => {
   const isInSidebar = React.useContext(IsSidebarContext)
   const isInDialog = React.useContext(IsDialogContext)
   const [elementId, setElementId] = React.useState(propsAnchor)
@@ -189,21 +217,41 @@ export const HeadingWithAnchor: FunctionComponent<
     },
     [propsAnchor]
   )
-  if (isInSidebar || isInDialog) {
-    return React.createElement(tag, tagProps, children)
+
+  const isInSidebarOrDialog = isInSidebar || isInDialog
+  const actionElements = (
+    <HeaderActionElements
+      elementId={elementId}
+      help={help}
+      hideAnchor={hideAnchor || isInSidebarOrDialog}
+    />
+  )
+
+  const attributes = isInSidebarOrDialog ? {} : { ref, id: elementId }
+  // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
+  // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
+  // then we would need to add padding to the outer container and fiddle with the vertical alignment.
+  const headerElementWithActions = React.createElement(
+    tag,
+    {
+      ...tagProps,
+      ...attributes,
+    },
+    <>
+      {children}
+      {actionElements}
+    </>
+  )
+
+  // we don't want to apply styling, so return the "raw" header
+  if (isInSidebarOrDialog) {
+    return headerElementWithActions
   }
 
-  return React.createElement(
-    tag,
-    { ...tagProps, ref, id: elementId },
-    <StyledLinkIconContainer data-testid="StyledLinkIconContainer">
-      {elementId && !hideAnchor && (
-        <StyledLinkIcon href={`#${elementId}`}>
-          <LinkIcon size="18" />
-        </StyledLinkIcon>
-      )}
-      <StyledHeaderContent>{children}</StyledHeaderContent>
-    </StyledLinkIconContainer>
+  return (
+    <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
+      {headerElementWithActions}
+    </StyledHeadingWithActionElements>
   )
 }
 
@@ -215,11 +263,13 @@ export const CustomHeading: FunctionComponent<
 > = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
-    <StyledHeaderContainer>
-      <HeadingWithAnchor tag={node.tagName} anchor={anchor} tagProps={rest}>
-        {children}
-      </HeadingWithAnchor>
-    </StyledHeaderContainer>
+    <HeadingWithActionElements
+      tag={node.tagName}
+      anchor={anchor}
+      tagProps={rest}
+    >
+      {children}
+    </HeadingWithActionElements>
   )
 }
 export interface RenderedMarkdownProps {

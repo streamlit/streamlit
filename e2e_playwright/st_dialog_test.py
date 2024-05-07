@@ -32,6 +32,10 @@ def open_largewidth_dialog(app: Page):
     app.get_by_text("Open large-width Dialog").click()
 
 
+def open_headings_dialogs(app: Page):
+    app.get_by_text("Open headings Dialog").click()
+
+
 def open_sidebar_dialog(app: Page):
     app.get_by_text("Open Sidebar-Dialog").click()
 
@@ -126,7 +130,7 @@ def test_dialog_is_scrollable(app: Page):
 
 
 def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
-    """Test that elemenets within the dialog do not show the fullscreen option."""
+    """Test that elements within the dialog do not show the fullscreen option."""
     open_dialog_with_images(app)
     wait_for_app_run(app)
     main_dialog = app.get_by_test_id(modal_test_id)
@@ -139,6 +143,27 @@ def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
     dataframe_toolbar = app.get_by_test_id("stElementToolbarButton")
     # 2 elements are in the toolbar as of today: download, search
     expect(dataframe_toolbar).to_have_count(2)
+
+
+def test_actions_for_dialog_headings(app: Page):
+    """Test that headings within the dialog show the tooltip icon but not the link icon."""
+    open_headings_dialogs(app)
+    wait_for_app_run(app)
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+
+    # check that the actions-element is there
+    action_elements = app.get_by_test_id("stHeaderActionElements")
+    expect(action_elements).to_have_count(1)
+
+    # check that the tooltip icon is there and hoverable
+    tooltip_element = action_elements.get_by_test_id("stTooltipIcon")
+    expect(tooltip_element).to_have_count(1)
+    tooltip_element.hover()
+    expect(app.get_by_text("Some tooltip!")).to_be_visible()
+
+    # check that the link-icon does not exist
+    expect(tooltip_element.locator("a")).not_to_be_attached()
 
 
 def test_dialog_displays_correctly(app: Page, assert_snapshot: ImageCompareFunction):
