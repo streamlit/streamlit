@@ -713,10 +713,9 @@ function DataFrame({
             sortColumn(colIndex)
           }}
           gridSelection={gridSelection}
-          onSelectionCleared={() => {
-            // TODO: do we need to do something here?
-            console.log("Selection cleared")
-          }}
+          // We don't have to react to "onSelectionCleared" since
+          // we already correctly process selections in
+          // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
             if (isFocused || isTouchDevice) {
               // Only allow selection changes if the grid is focused.
