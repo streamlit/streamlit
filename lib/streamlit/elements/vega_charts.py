@@ -238,11 +238,11 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
 
 
 def _stabilize_vega_json_spec(vega_spec: str) -> str:
-    """Makes the chart spec stay stable across reruns.
+    """Makes the chart spec stay stable across reruns and sessions.
 
     Altair auto creates names for unnamed parameters & views. It uses a global counter
     for the naming which will result in a different spec on every rerun.
-    In Streamlit, we need the spec to be stable across reruns to prevent the chart
+    In Streamlit, we need the spec to be stable across reruns and sessions to prevent the chart
     from getting a new identity. So we need to replace the names with counter with a stable name.
 
     Parameter counter:
