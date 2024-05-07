@@ -195,7 +195,6 @@ class AltairChartTest(DeltaGeneratorTestCase):
     )
     def test_that_altair_chart_spec_stays_stable(self):
         """Test that st.altair_chart stays stable across multiple calls."""
-        self.maxDiff = None
         # Execution 1:
         chart = create_advanced_altair_chart()
         st.altair_chart(chart)
