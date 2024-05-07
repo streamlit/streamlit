@@ -26,7 +26,10 @@ from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.vega_charts import _reset_counter_pattern
+from streamlit.elements.vega_charts import (
+    _reset_counter_pattern,
+    _stabilize_vega_json_spec,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -40,6 +43,36 @@ def merge_dicts(x, y):
     z = x.copy()
     z.update(y)
     return z
+
+
+def create_advanced_altair_chart() -> alt.Chart:
+    """Create an advanced Altair chart based on concatenation and with parameters."""
+    iris = alt.UrlData(
+        "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json"
+    )
+
+    point = alt.selection_point()
+    interval = alt.selection_interval()
+
+    base = (
+        alt.Chart()
+        .mark_point()
+        .encode(
+            color="species:N",
+            tooltip=alt.value(None),
+        )
+        .properties(width=200, height=200)
+    )
+
+    chart = alt.vconcat(data=iris)
+    for y_encoding in ["petalLength:Q", "petalWidth:Q"]:
+        row = alt.hconcat()
+        for x_encoding in ["sepalLength:Q", "sepalWidth:Q"]:
+            row |= base.encode(x=x_encoding, y=y_encoding)
+        chart &= row
+    chart = chart.add_params(point)
+    chart = chart.add_params(interval)
+    return chart
 
 
 class AltairChartTest(DeltaGeneratorTestCase):
@@ -121,6 +154,30 @@ class AltairChartTest(DeltaGeneratorTestCase):
     def test_empty_altair_chart_throws_error(self):
         with self.assertRaises(TypeError):
             st.altair_chart(use_container_width=True)
+
+    def test_that_altair_chart_spec_stays_stable(self):
+        """Test that st.altair_chart stays stable across multiple calls."""
+        # Execution 1:
+        chart = create_advanced_altair_chart()
+        st.altair_chart(chart)
+
+        initial_spec = (
+            self.get_delta_from_queue().new_element.arrow_vega_lite_chart.spec
+        )
+
+        # Execution 2:
+        chart = create_advanced_altair_chart()
+        st.altair_chart(chart)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
+
+        # Execution 3:
+        chart = create_advanced_altair_chart()
+        st.altair_chart(chart)
+
+        el = self.get_delta_from_queue().new_element
+        self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
 
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
@@ -911,4 +968,34 @@ class VegaUtilitiesTest(unittest.TestCase):
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):
         """Test that _reset_counter_pattern correctly replaces IDs."""
         result = _reset_counter_pattern(prefix, vega_spec)
+        self.assertEqual(result, expected)
+
+    @parameterized.expand(
+        [
+            (
+                '{"vconcat": [{"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_33", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_34", "width": 200}]}, {"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_35", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_36", "width": 200}]}], "data": {"url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json"}, "params": [{"name": "param_17", "select": {"type": "point"}, "views": ["view_33", "view_34", "view_35", "view_36"]}, {"name": "param_18", "select": {"type": "interval"}, "views": ["view_33", "view_34", "view_35", "view_36"]}], "$schema": "https://vega.github.io/schema/vega-lite/v5.17.0.json", "autosize": {"type": "fit", "contains": "padding"}}',
+                '{"vconcat": [{"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_1", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_2", "width": 200}]}, {"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_3", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_4", "width": 200}]}], "data": {"url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json"}, "params": [{"name": "param_1", "select": {"type": "point"}, "views": ["view_1", "view_2", "view_3", "view_4"]}, {"name": "param_2", "select": {"type": "interval"}, "views": ["view_1", "view_2", "view_3", "view_4"]}], "$schema": "https://vega.github.io/schema/vega-lite/v5.17.0.json", "autosize": {"type": "fit", "contains": "padding"}}',
+            ),  # Advanced concatenated Vega-Lite spec with parameters
+            # Simpler cases:
+            (
+                "{ 'mark': 'point', 'encoding': { 'x': { 'field': 'a', 'type': 'quantitative' }, 'y': { 'field': 'b', 'type': 'quantitative' } } }",
+                "{ 'mark': 'point', 'encoding': { 'x': { 'field': 'a', 'type': 'quantitative' }, 'y': { 'field': 'b', 'type': 'quantitative' } } }",
+            ),  # Simple with nothing replaced
+            (
+                '{"mark": "bar", "encoding": {"x": {"field": "data", "type": "ordinal"}, "y": {"field": "value", "type": "quantitative"}, "color": {"field": "category", "type": "nominal"}}, "name": "view_112"}',
+                '{"mark": "bar", "encoding": {"x": {"field": "data", "type": "ordinal"}, "y": {"field": "value", "type": "quantitative"}, "color": {"field": "category", "type": "nominal"}}, "name": "view_1"}',
+            ),  # A simple bar chart with a high view count needing reset
+            (
+                '{"description": "This is a view_123 visualization of param_45 data points.", "mark": "point"}',
+                '{"description": "This is a view_123 visualization of param_45 data points.", "mark": "point"}',
+            ),  # Ensure text containing prefix within descriptions or other properties is not changed
+            (
+                '{"elements": [{"type": "parameter", "name": "param_5"}]}',
+                '{"elements": [{"type": "parameter", "name": "param_5"}]}',
+            ),  # Do not replace params when there's no "params" key but similar naming exists
+        ]
+    )
+    def test_stabilize_vega_json_spec(self, input_spec: str, expected: str):
+        """Test that _stabilize_vega_json_spec correctly fixes the auto-generated names."""
+        result = _stabilize_vega_json_spec(input_spec)
         self.assertEqual(result, expected)
