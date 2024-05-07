@@ -889,7 +889,7 @@ function DataFrame({
               onHeaderClicked: undefined,
             })}
           // Disable some features when the widget is disabled:
-          {...(!disabled && {
+          {...(disabled && {
             rowSelect: "none",
             columnSelect: "none",
             onRowAppended: undefined,
