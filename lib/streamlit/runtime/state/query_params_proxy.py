@@ -72,17 +72,19 @@ class QueryParamsProxy(MutableMapping[str, str]):
                 raise AttributeError(missing_key_error_message(key))
 
     @overload
-    def update(self, mapping: SupportsKeysAndGetItem[str, str], /, **kwds: str) -> None:
-        ...
-
-    @overload
     def update(
-        self, keys_and_values: Iterable[tuple[str, str]], /, **kwds: str
+        self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]], /, **kwds: str
     ) -> None:
         ...
 
     @overload
-    def update(self, **kwds: str) -> None:
+    def update(
+        self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]], /, **kwds: str
+    ) -> None:
+        ...
+
+    @overload
+    def update(self, **kwds: str | Iterable[str]) -> None:
         ...
 
     def update(self, other=(), /, **kwds):
@@ -163,11 +165,15 @@ class QueryParamsProxy(MutableMapping[str, str]):
             return qp.to_dict()
 
     @overload
-    def from_dict(self, keys_and_values: Iterable[tuple[str, str]]) -> None:
+    def from_dict(
+        self, keys_and_values: Iterable[tuple[str, str | Iterable[str]]]
+    ) -> None:
         ...
 
     @overload
-    def from_dict(self, mapping: SupportsKeysAndGetItem[str, str]) -> None:
+    def from_dict(
+        self, mapping: SupportsKeysAndGetItem[str, str | Iterable[str]]
+    ) -> None:
         ...
 
     @gather_metrics("query_params.from_dict")
