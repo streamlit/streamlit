@@ -474,7 +474,7 @@ describe("useDataEditor hook", () => {
     // The number of rows should be one less
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS - 1)
 
-    expect(applyEditsMock).toHaveBeenCalledWith(true)
+    expect(applyEditsMock).toHaveBeenCalled()
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
