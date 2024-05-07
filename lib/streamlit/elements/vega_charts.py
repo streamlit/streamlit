@@ -221,6 +221,8 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     if matches := list(dict.fromkeys(pattern.findall(vega_spec))):
         # Add a prefix to the replacement to avoid
         # replacing instances that already have been replaced before.
+        # The prefix here is arbitrarily chosen with the main goal
+        # that its extremely unlikely to already be part of the spec:
         replacement_prefix = "__replace_prefix_o9hd101n22e1__"
 
         # Replace all matches with a counter starting from 1
