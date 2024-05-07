@@ -159,12 +159,43 @@ class AltairChartTest(DeltaGeneratorTestCase):
         with self.assertRaises(TypeError):
             st.altair_chart(use_container_width=True)
 
+    def test_dataset_names_stay_stable(self):
+        """Test that dataset names stay stable across multiple calls
+        with new Pandas objects containing the same data.
+        """
+        # Execution 1:
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart)
+        chart_el_1 = self.get_delta_from_queue().new_element
+
+        # Execution 2 (recreate the same chart with new objects)
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart)
+
+        chart_el_2 = self.get_delta_from_queue().new_element
+
+        # Make sure that there is one named dataset:
+        self.assertEqual(len(chart_el_1.arrow_vega_lite_chart.datasets), 1)
+        # The names should not have changes
+        self.assertEqual(
+            [dataset.name for dataset in chart_el_1.arrow_vega_lite_chart.datasets],
+            [dataset.name for dataset in chart_el_2.arrow_vega_lite_chart.datasets],
+        )
+        # The specs should also be the same:
+        self.assertEqual(
+            chart_el_1.arrow_vega_lite_chart.spec,
+            chart_el_2.arrow_vega_lite_chart.spec,
+        )
+
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
     def test_that_altair_chart_spec_stays_stable(self):
         """Test that st.altair_chart stays stable across multiple calls."""
+        self.maxDiff = None
         # Execution 1:
         chart = create_advanced_altair_chart()
         st.altair_chart(chart)
@@ -173,19 +204,13 @@ class AltairChartTest(DeltaGeneratorTestCase):
             self.get_delta_from_queue().new_element.arrow_vega_lite_chart.spec
         )
 
-        # Execution 2:
-        chart = create_advanced_altair_chart()
-        st.altair_chart(chart)
+        # Create the same chart 100 times and check that the spec is the same:
+        for _ in range(100):
+            chart = create_advanced_altair_chart()
+            st.altair_chart(chart)
 
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
-
-        # Execution 3:
-        chart = create_advanced_altair_chart()
-        st.altair_chart(chart)
-
-        el = self.get_delta_from_queue().new_element
-        self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
 
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
@@ -959,7 +984,7 @@ class VegaUtilitiesTest(unittest.TestCase):
             (
                 "view_",
                 '{"views": {"list": ["view_10", "view_2"], "additional": "view_1"}}',
-                '{"views": {"list": ["view_2", "view_3"], "additional": "view_1"}}',
+                '{"views": {"list": ["view_1", "view_2"], "additional": "view_3"}}',
             ),  # Deep structure, with single key being the same as others
             (
                 "view_",
