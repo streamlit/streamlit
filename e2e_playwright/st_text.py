@@ -23,3 +23,4 @@ st.text(
 """
 )
 st.text("_This text is **awesome**!_")
+st.text("Text with a help tooltip", help="This is a help tooltip!")

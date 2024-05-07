@@ -177,3 +177,23 @@ def test_match_snapshot_for_column_beside_widget(
     """Test that the st.markdown columns beside widget snapshot is correct."""
     container = _get_container_of_text(app, "Headers in column beside widget")
     assert_snapshot(container, name="st_markdown-headers_beside_widget")
+
+
+def test_help_tooltip_works(app: Page):
+    """Test that the help tooltip is displayed on hover."""
+    # Get the first element in the main view:
+    markdown_with_help = (
+        app.get_by_test_id("stAppViewBlockContainer")
+        .get_by_test_id("stMarkdown")
+        .nth(0)
+    )
+    hover_target = markdown_with_help.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).not_to_be_attached()
+
+    hover_target.hover()
+
+    expect(tooltip_content).to_be_visible()
+    expect(tooltip_content).to_have_text("This is a help tooltip!")

@@ -36,8 +36,8 @@ export default function TextElement({
 }: TextProps): ReactElement {
   const styleProp = { width }
   return (
-    <StyledLabelHelpWrapper style={styleProp} className="stTextLabelWrapper">
-      <StyledText data-testid="stText">{element.body}</StyledText>
+    <StyledLabelHelpWrapper style={styleProp} data-testid="stText">
+      <StyledText>{element.body}</StyledText>
       {element.help && <InlineTooltipIcon content={element.help} />}
     </StyledLabelHelpWrapper>
   )
