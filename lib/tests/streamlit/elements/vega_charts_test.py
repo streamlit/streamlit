@@ -26,6 +26,7 @@ from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.vega_charts import _reset_counter_pattern
 from streamlit.errors import StreamlitAPIException
 from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -873,3 +874,41 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         self.assertNotEqual(id(output_df), id(expected_df))
 
         pd.testing.assert_frame_equal(output_df, expected_df)
+
+
+class VegaUtilitiesTest(unittest.TestCase):
+    """Test vega chart utility methods."""
+
+    @parameterized.expand(
+        [
+            (
+                "param_",
+                '{"config": {"settings": ["param_1", "param_2"], "ignore": ["param_3"]}}',
+                '{"config": {"settings": ["param_1", "param_2"], "ignore": ["param_3"]}}',
+            ),  # Deep structure, but "ignore" should not be reset
+            (
+                "param_",
+                '{"data": {"options": ["param_20"], "params": ["param_20", "param_5"]}}',
+                '{"data": {"options": ["param_1"], "params": ["param_1", "param_2"]}}',
+            ),  # Nested with duplicates across sub-structures
+            (
+                "view_",
+                '{"views": {"list": ["view_10", "view_2"], "additional": "view_1"}}',
+                '{"views": {"list": ["view_2", "view_3"], "additional": "view_1"}}',
+            ),  # Deep structure, with single key being the same as others
+            (
+                "view_",
+                '{"layers": [{"id": "view_5"}, {"id": "view_5"}, {"id": "view_7"}]}',
+                '{"layers": [{"id": "view_1"}, {"id": "view_1"}, {"id": "view_2"}]}',
+            ),  # Objects in an array with duplicate IDs
+            (
+                "plot_",
+                '{"data": {"items": ["plot_3"], "descriptions": ["This plot_4 shows..."]}}',
+                '{"data": {"items": ["plot_1"], "descriptions": ["This plot_4 shows..."]}}',
+            ),  # Only replace actual IDs, not text content
+        ]
+    )
+    def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):
+        """Test that _reset_counter_pattern correctly replaces IDs."""
+        result = _reset_counter_pattern(prefix, vega_spec)
+        self.assertEqual(result, expected)

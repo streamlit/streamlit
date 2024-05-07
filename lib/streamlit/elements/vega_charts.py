@@ -216,10 +216,19 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     """
     pattern = re.compile(rf'"{prefix}\d+"')
     if matches := sorted(set(pattern.findall(vega_spec))):
+        # Add a prefix to the replacement to avoid
+        # replacing instances that already have been replaced before.
+        replacement_prefix = "__replace_prefix_o9hd101n22e1__"
+
         # Replace all matches with a counter starting from 1
         # We start from 1 to imitate the altair behavior.
         for counter, match in enumerate(matches, start=1):
-            vega_spec = vega_spec.replace(match, f'"{prefix}{counter}"')
+            vega_spec = vega_spec.replace(
+                match, f'"{replacement_prefix}{prefix}{counter}"'
+            )
+
+        # Remove the prefix again from all replacements:
+        vega_spec = vega_spec.replace(replacement_prefix, "")
     return vega_spec
 
 
