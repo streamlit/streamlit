@@ -436,19 +436,21 @@ function DataFrame({
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
 
   const isRowSelectionActivated =
+    !isEmptyTable &&
     !disabled &&
     (element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW) ||
       element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_ROW))
   const isMultiRowSelectionActivated =
-    !disabled &&
+    isRowSelectionActivated &&
     element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW)
 
   const isColumnSelectionActivated =
+    !isEmptyTable &&
     !disabled &&
     (element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_COLUMN) ||
       element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN))
   const isMultiColumnSelectionActivated =
-    !disabled &&
+    isColumnSelectionActivated &&
     element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN)
 
   const isRowSelected = gridSelection.rows.length > 0
@@ -828,37 +830,28 @@ function DataFrame({
           validateCell={validateCell}
           // The default setup is read only, and therefore we deactivate paste here:
           onPaste={false}
-          {...(!isEmptyTable &&
-            isRowSelectionActivated && {
-              rowMarkers: {
-                kind: "checkbox",
-                checkboxStyle: "square",
-                theme: {
-                  bgCell: theme.bgHeader,
-                  bgCellMedium: theme.bgHeader,
-                },
+          // Activate features required for row selection:
+          {...(isRowSelectionActivated && {
+            rowMarkers: {
+              // Apply style settings for the row markers column:
+              kind: "checkbox",
+              checkboxStyle: "square",
+              theme: {
+                bgCell: theme.bgHeader,
+                bgCellMedium: theme.bgHeader,
               },
-              rowSelectionMode: isMultiRowSelectionActivated
-                ? "multi"
-                : "auto",
-              rowSelect: disabled
-                ? "none"
-                : isMultiRowSelectionActivated
-                ? "multi"
-                : "single",
-              rowSelectionBlending: "mixed",
-              rangeSelectionBlending: "mixed",
-            })}
-          {...(!isEmptyTable &&
-            isColumnSelectionActivated && {
-              columnSelect: disabled
-                ? "none"
-                : isMultiColumnSelectionActivated
-                ? "multi"
-                : "single",
-              columnSelectionBlending: "mixed",
-              rangeSelectionBlending: "mixed",
-            })}
+            },
+            rowSelectionMode: isMultiRowSelectionActivated ? "multi" : "auto",
+            rowSelect: isMultiRowSelectionActivated ? "multi" : "single",
+            rowSelectionBlending: "mixed",
+            rangeSelectionBlending: "mixed",
+          })}
+          // Activate features required for column selection:
+          {...(isColumnSelectionActivated && {
+            columnSelect: isMultiColumnSelectionActivated ? "multi" : "single",
+            columnSelectionBlending: "mixed",
+            rangeSelectionBlending: "mixed",
+          })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
             element.editingMode !== READ_ONLY &&
@@ -889,12 +882,18 @@ function DataFrame({
                 },
               },
               rowSelectionMode: "multi",
-              rowSelect: disabled ? "none" : "multi",
+              rowSelect: "multi",
               // Support adding rows:
-              onRowAppended: disabled ? undefined : onRowAppended,
+              onRowAppended: onRowAppended,
               // Deactivate sorting, since it is not supported with dynamic editing:
               onHeaderClicked: undefined,
             })}
+          // Disable some features when the widget is disabled:
+          {...(!disabled && {
+            rowSelect: "none",
+            columnSelect: "none",
+            onRowAppended: undefined,
+          })}
         />
       </Resizable>
       {tooltip && tooltip.content && (
