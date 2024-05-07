@@ -218,6 +218,11 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     # Get all matches without duplicates in order of appearance.
     # Using a set here would not guarantee the order of appearance,
     # which might lead to different replacements on each run.
+    # The order of the spec from Altair is expected to stay stable
+    # within the same session / Altair version.
+    # The order might change with Altair updates, but that's not really
+    # a case that is relevant for us since we mainly care about having
+    # this stable within a session.
     if matches := list(dict.fromkeys(pattern.findall(vega_spec))):
         # Add a prefix to the replacement to avoid
         # replacing instances that already have been replaced before.
