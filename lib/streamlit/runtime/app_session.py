@@ -83,7 +83,6 @@ class AppSession:
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
-        local_sources_watcher: LocalSourcesWatcher,
         user_info: dict[str, str | None],
         session_id_override: str | None = None,
     ) -> None:
@@ -104,9 +103,6 @@ class AppSession:
 
         message_enqueued_callback
             After enqueuing a message, this callable notification will be invoked.
-
-        local_sources_watcher
-            The file watcher that lets the session know local files have changed.
 
         user_info
             A dict that contains information about the current user. For now,
@@ -144,7 +140,7 @@ class AppSession:
         # due to the source code changing we need to pass in the previous client state.
         self._client_state = ClientState()
 
-        self._local_sources_watcher: LocalSourcesWatcher | None = local_sources_watcher
+        self._local_sources_watcher: LocalSourcesWatcher | None = None
         self._stop_config_listener: Callable[[], bool] | None = None
         self._stop_pages_listener: Callable[[], None] | None = None
 
