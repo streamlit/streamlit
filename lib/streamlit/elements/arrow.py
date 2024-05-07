@@ -287,11 +287,11 @@ class ArrowMixin:
             on its content. Multiple widgets of the same type may not share the same key.
 
         on_select : "ignore" or "rerun" or callable
-            Controls the behavior in response to row selection events on the table. Can be one of:
+            Controls the behavior in response to selection events on the table. Can be one of:
 
             - "ignore" (default): Streamlit will not react to any selection events in the chart.
-            - "rerun": Streamlit will rerun the app when the user selects rows in the table. In this case,
-              ```st.dataframe``` will return the selection data as a dictionary.
+            - "rerun": Streamlit will rerun the app when the user selects rows or columns in the table.
+              In this case, ```st.dataframe``` will return the selection data as a dictionary.
             - callable: If a callable is provided, Streamlit will rerun and execute the callable as a
               callback function before the rest of the app. The selection data can be retrieved through
               session state by setting the key parameter.
