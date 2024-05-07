@@ -21,6 +21,7 @@ def handle_route_hostconfig_disable_fullscreen(route: Route) -> None:
     response = route.fetch()
     body = response.json()
     body["disableFullscreenMode"] = True
+    body["enforceDownloadInNewTab"] = True
     route.fulfill(
         # Pass all fields from the response.
         response=response,
@@ -52,3 +53,21 @@ def test_disable_fullscreen(
     assert_snapshot(
         dataframe_toolbar, name="host_config-dataframe_disabled_fullscreen_mode"
     )
+
+
+def test_enforce_download_new_tab(page: Page, app_port: int, context):
+    """Test that download button opens in new tab when set via host-config"""
+    page.route("**/_stcore/host-config", handle_route_hostconfig_disable_fullscreen)
+    page.goto(f"http://localhost:{app_port}")
+    wait_for_app_loaded(page)
+
+    download_button = page.get_by_test_id("stDownloadButton").nth(0)
+
+    # Get page after a specific action (e.g. clicking a link)
+    with context.expect_page() as new_page_info:
+        # Click download button
+        download_button.click()
+    new_page = new_page_info.value
+
+    url = new_page.url()
+    expect(url).to_contain("/media")
