@@ -15,13 +15,15 @@
 # limitations under the License.
 
 """
-Runs all the scripts in the e2e/scripts folder in "bare" mode - that is,
+Runs all the scripts in the e2e_playwright folder in "bare" mode - that is,
 using `python [script]` as opposed to `streamlit run [script]`.
 
 If any script exits with a non-zero status, this will also exit
 with a non-zero status.
 """
 
+
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -32,13 +34,9 @@ from typing import Set
 import click
 
 # Where we expect to find the example files.
-E2E_DIR = "e2e/scripts"
+E2E_DIR = "e2e_playwright"
 
 EXCLUDED_FILENAMES: Set[str] = set()
-
-# st_experimental_rerun.py calls st.experimental_rerun which raises a
-# RerunException when called within plain Python.
-EXCLUDED_FILENAMES.add("st_experimental_rerun.py")
 
 # Since there is not DISPLAY set (and since Streamlit is not actually running
 # and fixing Matplotlib in these tests), we set the MPL backend to something
@@ -47,25 +45,24 @@ os.environ["MPLBACKEND"] = "Agg"
 
 
 def _command_to_string(command):
-    if isinstance(command, list):
-        return " ".join(command)
-    else:
-        return command
+    return " ".join(command) if isinstance(command, list) else command
 
 
-def _get_filenames(dir):
-    dir = os.path.abspath(dir)
+def _get_filenames(folder):
+    folder_path = os.path.abspath(folder)
     return [
-        os.path.join(dir, filename)
-        for filename in sorted(os.listdir(dir))
-        if filename.endswith(".py") and filename not in EXCLUDED_FILENAMES
+        os.path.join(folder_path, filename)
+        for filename in sorted(os.listdir(folder_path))
+        if filename.endswith(".py")
+        and not filename.endswith("_test.py")
+        and filename not in EXCLUDED_FILENAMES
     ]
 
 
 def run_commands(section_header, commands):
     """Run a list of commands, displaying them within the given section."""
 
-    pool = ThreadPool(processes=4)
+    pool = ThreadPool(processes=max(1, multiprocessing.cpu_count() - 1))
     lock = Lock()
     failed_commands = []
 
@@ -73,14 +70,8 @@ def run_commands(section_header, commands):
         i, command = arg
 
         # Display the status.
-        vars = {
-            "section_header": section_header,
-            "total": len(commands),
-            "command": _command_to_string(command),
-            "v": i + 1,
-        }
         click.secho(
-            "\nRunning %(section_header)s %(v)s/%(total)s : %(command)s" % vars,
+            f"\nRunning {section_header} {i + 1}/{len(commands)} : {_command_to_string(command)}",
             bold=True,
         )
 
@@ -98,7 +89,7 @@ def run_commands(section_header, commands):
 
 def main():
     filenames = _get_filenames(E2E_DIR)
-    commands = ["python %s" % filename for filename in filenames]
+    commands = [f"python {filename}" for filename in filenames]
     failed = run_commands("bare scripts", commands)
 
     if len(failed) == 0:
@@ -108,7 +99,7 @@ def main():
         click.secho(
             "\n".join(_command_to_string(command) for command in failed), fg="red"
         )
-        click.secho("\n%s failed scripts" % len(failed), fg="red", bold=True)
+        click.secho(f"\n{ len(failed)} failed scripts", fg="red", bold=True)
         sys.exit(-1)
 
 

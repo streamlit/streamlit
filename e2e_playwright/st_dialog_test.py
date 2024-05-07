@@ -192,3 +192,14 @@ def test_sidebardialog_displays_correctly(
     dialog = app.get_by_role("dialog")
     expect(dialog.get_by_test_id("stButton")).to_be_visible()
     assert_snapshot(dialog, name="st_dialog-in_sidebar")
+
+
+def test_nested_dialogs(app: Page):
+    """Test that st.dialog may not be nested inside other dialogs."""
+    app.get_by_text("Open Nested Dialogs").click()
+    wait_for_app_run(app)
+    exception_message = app.get_by_test_id("stException")
+
+    expect(exception_message).to_contain_text(
+        "StreamlitAPIException: Dialogs may not be nested inside other dialogs."
+    )
