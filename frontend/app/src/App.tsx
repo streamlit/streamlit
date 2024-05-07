@@ -83,6 +83,7 @@ import {
   IAppPage,
   IGitInfo,
   Initialize,
+  Logo,
   NewSession,
   PageConfig,
   PageInfo,
@@ -150,6 +151,7 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
+  appLogo: Logo | null
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
@@ -257,6 +259,7 @@ export class App extends PureComponent<Props, State> {
       themeHash: this.createThemeHash(),
       gitInfo: null,
       formsData: createFormsData(),
+      appLogo: null,
       appPages: [],
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
@@ -636,6 +639,7 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
+        logo: (logo: Logo) => this.setState({ appLogo: logo }),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1323,6 +1327,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
+    this.setState({ appLogo: null })
     this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
   }
 
@@ -1834,6 +1839,7 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
+                appLogo={this.state.appLogo}
                 appPages={this.state.appPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}

@@ -130,6 +130,28 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         message = self.get_message_from_queue(0)
         assert "foo=bar" in message.page_info_changed.query_string
 
+    def test_update_adds_list_values(self):
+        self.query_params.update({"foo": ["bar", "baz"]})
+        assert self.query_params.get_all("foo") == ["bar", "baz"]
+        message = self.get_message_from_queue(0)
+        assert "foo=bar&foo=baz" in message.page_info_changed.query_string
+
+    def test_update_with_iterable(self):
+        self.query_params.update([("foo", "bar"), ("stream", ["lit", "rocks"])])
+        assert self.query_params.get("foo") == "bar"
+        assert self.query_params.get("stream") == "rocks"
+        message = self.get_message_from_queue(0)
+        assert "foo=bar" in message.page_info_changed.query_string
+        assert "stream=lit&stream=rocks" in message.page_info_changed.query_string
+
+    def test_update_with_keywords(self):
+        self.query_params.update(foo="bar", stream=["lit", "rocks"])
+        assert self.query_params.get("foo") == "bar"
+        assert self.query_params.get("stream") == "rocks"
+        message = self.get_message_from_queue(0)
+        assert "foo=bar" in message.page_info_changed.query_string
+        assert "stream=lit&stream=rocks" in message.page_info_changed.query_string
+
     def test_update_raises_error_with_embed_key(self):
         with pytest.raises(StreamlitAPIException):
             self.query_params.update({"foo": "bar", "embed": "true"})
