@@ -28,6 +28,8 @@ _LOGGER: Final = _logger.get_logger(__name__)
 
 
 _state_use_warning_already_displayed: bool = False
+# The mock session state is used as a fallback if the script is run without `streamlit run`
+_mock_session_state: SafeSessionState | None = None
 
 
 def get_session_state() -> SafeSessionState:
@@ -42,8 +44,8 @@ def get_session_state() -> SafeSessionState:
 
     ctx = get_script_run_ctx()
 
-    # If there is no script run context because the script is run bare, have
-    # session state act as an always empty dictionary, and print a warning.
+    # If there is no script run context because the script is run bare, we
+    # use a global mock session state version to allow bare script execution (via python script.py)
     if ctx is None:
         if not _state_use_warning_already_displayed:
             _state_use_warning_already_displayed = True
@@ -51,7 +53,13 @@ def get_session_state() -> SafeSessionState:
                 _LOGGER.warning(
                     "Session state does not function when running a script without `streamlit run`"
                 )
-        return SafeSessionState(SessionState(), lambda: None)
+
+        global _mock_session_state
+
+        if _mock_session_state is None:
+            # Lazy initialize the mock session state
+            _mock_session_state = SafeSessionState(SessionState(), lambda: None)
+        return _mock_session_state
     return ctx.session_state
 
 

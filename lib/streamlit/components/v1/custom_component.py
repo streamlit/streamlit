@@ -205,11 +205,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 widget_value = default
             elif isinstance(widget_value, ArrowTableProto):
                 widget_value = component_arrow.arrow_proto_to_dataframe(widget_value)
-
-            # widget_value will be either None or whatever the component's most
-            # recent setWidgetValue value is. We coerce None -> NoValue,
-            # because that's what DeltaGenerator._enqueue expects.
-            return widget_value if widget_value is not None else NoValue
+            return widget_value
 
         # We currently only support writing to st._main, but this will change
         # when we settle on an improved API in a post-layout world.
@@ -217,11 +213,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
 
         element = Element()
         return_value = marshall_component(dg, element)
-        result = dg._enqueue(
-            "component_instance", element.component_instance, return_value
-        )
 
-        return result
+        dg._enqueue("component_instance", element.component_instance)
+        return return_value
 
     def __eq__(self, other) -> bool:
         """Equality operator."""

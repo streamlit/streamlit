@@ -20,6 +20,8 @@ import "@testing-library/jest-dom"
 import { screen } from "@testing-library/react"
 import { render } from "@streamlit/lib/src/test_util"
 import { Heading as HeadingProto } from "@streamlit/lib/src/proto"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
+import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
 import Heading, { HeadingProtoProps } from "./Heading"
 
 const getHeadingProps = (
@@ -59,20 +61,71 @@ describe("Heading", () => {
     const props = getHeadingProps({ body: "hello" })
     render(<Heading {...props} />)
 
-    const link = screen.getByRole("link")
+    // trying to trigger the :hover css state did not work, so using 'hidden: true' here. We have an e2e test to check the hovering.
+    const link = screen.getByRole("link", { hidden: true })
     expect(link).toHaveAttribute("href", "#some-anchor")
   })
 
-  it("does not renders anchor link when it is hidden", () => {
+  it("does not render anchor link when it is hidden", () => {
     const props = getHeadingProps({ body: "hello", hideAnchor: true })
     render(<Heading {...props} />)
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument()
   })
 
+  it("does not render anchor link in sidebar", () => {
+    const props = getHeadingProps()
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <Heading {...props} />
+      </IsSidebarContext.Provider>
+    )
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+  })
+
+  it("does not render anchor link in dialog", () => {
+    const props = getHeadingProps()
+    render(
+      <IsDialogContext.Provider value={true}>
+        <Heading {...props} />
+      </IsDialogContext.Provider>
+    )
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+  })
+
   it("renders properly with help text", () => {
     const props = getHeadingProps({ body: "hello", help: "help text" })
     render(<Heading {...props} />)
+
+    expect(screen.getByRole("heading")).toHaveTextContent("hello")
+    expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
+
+    const tooltip = screen.getByTestId("stTooltipIcon")
+    expect(tooltip).toBeInTheDocument()
+  })
+
+  it("renders properly with help text in sidebar", () => {
+    const props = getHeadingProps({ body: "hello", help: "help text" })
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <Heading {...props} />
+      </IsSidebarContext.Provider>
+    )
+
+    expect(screen.getByRole("heading")).toHaveTextContent("hello")
+    expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
+
+    const tooltip = screen.getByTestId("stTooltipIcon")
+    expect(tooltip).toBeInTheDocument()
+  })
+
+  it("renders properly with help text in dialog", () => {
+    const props = getHeadingProps({ body: "hello", help: "help text" })
+    render(
+      <IsDialogContext.Provider value={true}>
+        <Heading {...props} />
+      </IsDialogContext.Provider>
+    )
 
     expect(screen.getByRole("heading")).toHaveTextContent("hello")
     expect(screen.getAllByTestId("stMarkdownContainer")).toHaveLength(1)
