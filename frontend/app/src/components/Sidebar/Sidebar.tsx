@@ -31,15 +31,21 @@ import {
   isColoredLineDisplayed,
   IAppPage,
   PageConfig,
+  Logo,
 } from "@streamlit/lib"
 
 import {
   StyledSidebar,
-  StyledSidebarCloseButton,
   StyledSidebarContent,
-  StyledSidebarCollapsedControl,
   StyledSidebarUserContent,
   StyledResizeHandle,
+  StyledSidebarHeaderContainer,
+  StyledCollapseSidebarButton,
+  StyledSidebarOpenContainer,
+  StyledOpenSidebarButton,
+  StyledLogo,
+  StyledNoLogoSpacer,
+  StyledLogoLink,
 } from "./styled-components"
 import SidebarNav from "./SidebarNav"
 
@@ -50,6 +56,7 @@ export interface SidebarProps {
   initialSidebarState?: PageConfig.SidebarState
   theme: EmotionTheme
   hasElements: boolean
+  appLogo: Logo | null
   appPages: IAppPage[]
   onPageChange: (pageName: string) => void
   currentPageScriptHash: string
@@ -217,6 +224,31 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     return coloredLineExists
   }
 
+  renderLogo(collapsed: boolean): ReactElement {
+    const { appLogo } = this.props
+
+    if (!appLogo) {
+      return <StyledNoLogoSpacer data-testid="stLogoSpacer" />
+    }
+
+    const displayImage =
+      collapsed && appLogo.iconImage ? appLogo.iconImage : appLogo.image
+    const source = this.props.endpoints.buildMediaURL(displayImage)
+    if (appLogo.link) {
+      return (
+        <StyledLogoLink
+          href={appLogo.link}
+          target="_blank"
+          rel="noreferrer"
+          data-testid="stLogoLink"
+        >
+          <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+        </StyledLogoLink>
+      )
+    }
+    return <StyledLogo src={source} alt="Logo" data-testid="stLogo" />
+  }
+
   public render(): ReactNode {
     const { collapsedSidebar, sidebarWidth, hideScrollbar } = this.state
     const {
@@ -229,7 +261,6 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       hideSidebarNav,
     } = this.props
 
-    const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
     // Handles checking the URL params
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
     // If header decoration visible, move sidebar down so decoration doesn't go below it
@@ -239,18 +270,21 @@ class Sidebar extends PureComponent<SidebarProps, State> {
     return (
       <>
         {collapsedSidebar && (
-          <StyledSidebarCollapsedControl
+          <StyledSidebarOpenContainer
             chevronDownshift={chevronDownshift}
             isCollapsed={collapsedSidebar}
             data-testid="collapsedControl"
           >
-            <BaseButton
-              kind={BaseButtonKind.HEADER_NO_PADDING}
-              onClick={this.toggleCollapse}
-            >
-              <Icon content={ChevronRight} size="lg" />
-            </BaseButton>
-          </StyledSidebarCollapsedControl>
+            {this.renderLogo(true)}
+            <StyledOpenSidebarButton>
+              <BaseButton
+                kind={BaseButtonKind.HEADER_NO_PADDING}
+                onClick={this.toggleCollapse}
+              >
+                <Icon content={ChevronRight} size="xl" />
+              </BaseButton>
+            </StyledOpenSidebarButton>
+          </StyledSidebarOpenContainer>
         )}
         <Resizable
           data-testid="stSidebar"
@@ -286,14 +320,17 @@ class Sidebar extends PureComponent<SidebarProps, State> {
             hideScrollbar={hideScrollbar}
             ref={this.sidebarRef}
           >
-            <StyledSidebarCloseButton>
-              <BaseButton
-                kind={BaseButtonKind.HEADER_BUTTON}
-                onClick={this.toggleCollapse}
-              >
-                <Icon content={Close} size="lg" />
-              </BaseButton>
-            </StyledSidebarCloseButton>
+            <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
+              {this.renderLogo(false)}
+              <StyledCollapseSidebarButton data-testid="stSidebarCollapseButton">
+                <BaseButton
+                  kind={BaseButtonKind.HEADER_BUTTON}
+                  onClick={this.toggleCollapse}
+                >
+                  <Icon content={Close} size="lg" />
+                </BaseButton>
+              </StyledCollapseSidebarButton>
+            </StyledSidebarHeaderContainer>
             {!hideSidebarNav && (
               <SidebarNav
                 endpoints={this.props.endpoints}
@@ -305,10 +342,7 @@ class Sidebar extends PureComponent<SidebarProps, State> {
                 onPageChange={onPageChange}
               />
             )}
-            <StyledSidebarUserContent
-              data-testid="stSidebarUserContent"
-              hasPageNavAbove={hasPageNavAbove}
-            >
+            <StyledSidebarUserContent data-testid="stSidebarUserContent">
               {children}
             </StyledSidebarUserContent>
           </StyledSidebarContent>

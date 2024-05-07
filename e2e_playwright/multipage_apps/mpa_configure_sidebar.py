@@ -12,11 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+
+from PIL import Image
+
 import streamlit as st
+
+small_logo = Image.open(str(pathlib.Path(__file__).parent / "small-streamlit.png"))
+
+logo = Image.open(str(pathlib.Path(__file__).parent / "full-streamlit.png"))
 
 st.header("App with no sidebar")
 
 st.subheader("Page Navigation:")
+
+st.logo(logo, link="https://www.example.com", icon_image=small_logo)
+
 
 colA, colB = st.columns(2)
 
