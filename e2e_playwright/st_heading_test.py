@@ -35,15 +35,20 @@ def _get_subheader_elements(app: Page) -> Locator:
     return app.get_by_test_id("stHeading").locator("h3")
 
 
-def _expect_tooltip(app: Page, el_with_help_tooltip):
+def _expect_tooltip(app: Page, el_with_help_tooltip: Locator):
     hover_target = el_with_help_tooltip.get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).not_to_be_attached()
+
     hover_target.hover()
 
-    tooltip_content = app.get_by_test_id("stTooltipContent")
     expect(tooltip_content).to_be_visible()
     expect(tooltip_content).to_have_text("Some help tooltip")
+
+    # reset the hovering in case _expect_tooltip is called multiple times in the same test
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
 
 
 _header_divider_filter_text = re.compile(r"[a-zA-Z]+ Header Divider:")

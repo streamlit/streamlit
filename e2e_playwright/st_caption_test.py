@@ -42,9 +42,11 @@ def test_help_tooltip_works(app: Page):
     hover_target = caption_with_help.get_by_test_id("stTooltipHoverTarget")
     expect(hover_target).to_be_visible()
 
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).not_to_be_attached()
+
     hover_target.hover()
 
-    tooltip_content = app.get_by_test_id("stTooltipContent")
     expect(tooltip_content).to_be_visible()
     expect(tooltip_content).to_have_text("This is some help tooltip!")
 
