@@ -1146,11 +1146,6 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      const successful =
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-        status ===
-          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
-
       window.setTimeout(() => {
         // Notify any subscribers of this event (and do it on the next cycle of
         // the event loop)
@@ -1173,6 +1168,11 @@ export class App extends PureComponent<Props, State> {
         }
       )
 
+      if (
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+        status ===
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+      ) {
         // Tell the WidgetManager which widgets still exist. It will remove
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
