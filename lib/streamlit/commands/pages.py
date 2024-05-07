@@ -28,6 +28,7 @@ from streamlit.util import calc_md5
 @dataclass
 class Page:
     _page: Path | Callable[[], None]
+    _can_be_called: bool = False
     title: str | None = None
     icon: str | None = None
     default: bool = False
@@ -71,6 +72,13 @@ class Page:
         self.default = default
 
     def run(self) -> None:
+        if not self._can_be_called:
+            raise StreamlitAPIException(
+                "This page cannot be called directly. Only the page returned from st.navigation can be called once."
+            )
+
+        self._can_be_called = False
+
         ctx = get_script_run_ctx()
         assert ctx
 
@@ -151,6 +159,8 @@ def navigation(
             f"could not find page for {page_script_hash}, falling back to default page"
         )
         page = default_page
+
+    page._can_be_called = True
     msg.navigation.page_script_hash = page._script_hash
 
     ctx.enqueue(msg)

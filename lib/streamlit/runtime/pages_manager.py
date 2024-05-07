@@ -230,7 +230,7 @@ class PagesManager:
     def __init__(self, main_script_path):
         self._main_script_path = main_script_path
         self._main_script_hash = calc_md5(main_script_path)
-        self._version_manager = V1PagesManager(self)
+        self._version_manager = V2PagesManager(self)
 
     @property
     def main_script_hash(self):
