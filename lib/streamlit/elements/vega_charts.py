@@ -259,6 +259,11 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     This is temporary solution waiting for a fix for this issue:
     https://github.com/vega/altair/issues/3416
     """
+
+    # We only want to apply these replacements if it is really necessary
+    # since there is a risk that we replace names that where chosen by the user
+    # and thereby introduce unwanted side effects.
+
     # We only need to apply the param_ fix if there are actually parameters defined
     # somewhere in the spec. We can check for this by looking for the '"params"' key.
     # This isn't a perfect check, but good enough to prevent unnecessary executions
