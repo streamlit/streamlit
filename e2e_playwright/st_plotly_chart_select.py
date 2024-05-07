@@ -34,7 +34,10 @@ fig_bubble = px.scatter(
 )
 st.header("Bubble Chart with Box Select")
 st.plotly_chart(fig_bubble, on_select="rerun", key="bubble_chart", selection_mode="box")
-if len(st.session_state.bubble_chart.select["points"]) > 0:
+if (
+    st.session_state.get("bubble_chart")
+    and len(st.session_state.bubble_chart.select["points"]) > 0
+):
     st.write("The original df data selected:")
     points = st.session_state.bubble_chart.select["points"]
     # Extract x and y values directly into lists
@@ -55,7 +58,10 @@ fig_linechart = px.line(df, x="year", y="lifeExp", color="country", markers=True
 st.plotly_chart(
     fig_linechart, on_select="rerun", key="line_chart", selection_mode=["lasso"]
 )
-if len(st.session_state.line_chart.select["points"]) > 0:
+if (
+    st.session_state.get("line_chart")
+    and len(st.session_state.line_chart.select["points"]) > 0
+):
     st.write("The original df data selected:")
     points = st.session_state.line_chart.select["points"]
     # Extract x and y values directly into lists

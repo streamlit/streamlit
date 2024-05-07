@@ -88,3 +88,18 @@ with st.sidebar:
 
     if st.button("Open Sidebar-Dialog"):
         dialog_in_sidebar()
+
+
+@st.experimental_dialog("Level2 Dialog")
+def level2_dialog():
+    st.write("Second level dialog")
+
+
+@st.experimental_dialog("Level1 Dialog")
+def level1_dialog():
+    st.write("First level dialog")
+    level2_dialog()
+
+
+if st.button("Open Nested Dialogs"):
+    level1_dialog()
