@@ -1016,8 +1016,8 @@ class VegaUtilitiesTest(unittest.TestCase):
             ),  # Simple with nothing replaced
             (
                 '{"mark": "bar", "encoding": {"x": {"field": "data", "type": "ordinal"}, "y": {"field": "value", "type": "quantitative"}, "color": {"field": "category", "type": "nominal"}}, "name": "view_112"}',
-                '{"mark": "bar", "encoding": {"x": {"field": "data", "type": "ordinal"}, "y": {"field": "value", "type": "quantitative"}, "color": {"field": "category", "type": "nominal"}}, "name": "view_1"}',
-            ),  # A simple bar chart with a high view count needing reset
+                '{"mark": "bar", "encoding": {"x": {"field": "data", "type": "ordinal"}, "y": {"field": "value", "type": "quantitative"}, "color": {"field": "category", "type": "nominal"}}, "name": "view_112"}',
+            ),  # A simple bar chart will not have `view_` replaced, only composite charts
             (
                 '{"description": "This is a view_123 visualization of param_45 data points.", "mark": "point"}',
                 '{"description": "This is a view_123 visualization of param_45 data points.", "mark": "point"}',
@@ -1026,6 +1026,30 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"elements": [{"type": "parameter", "name": "param_5"}]}',
                 '{"elements": [{"type": "parameter", "name": "param_5"}]}',
             ),  # Do not replace params when there's no "params" key but similar naming exists
+            (
+                '{"layer": [{"mark": "line", "encoding": {"x": {"field": "year", "type": "temporal"}, "y": {"field": "growth", "type": "quantitative"}}, "name": "view_203"}]}',
+                '{"layer": [{"mark": "line", "encoding": {"x": {"field": "year", "type": "temporal"}, "y": {"field": "growth", "type": "quantitative"}}, "name": "view_1"}]}',
+            ),  # A layer spec with a single view needing reset
+            (
+                '{"repeat": {"layer": ["year_1", "year_2"]}, "spec": {"mark": "area", "encoding": {"y": {"field": {"repeat": "layer"}, "type": "quantitative"}}, "name": "view_15"}}',
+                '{"repeat": {"layer": ["year_1", "year_2"]}, "spec": {"mark": "area", "encoding": {"y": {"field": {"repeat": "layer"}, "type": "quantitative"}}, "name": "view_1"}}',
+            ),  # Nested structure using repeat and requiring name reset
+            (
+                '{"concat": [{"view": {"mark": "point", "name": "view_250"}}, {"view": {"mark": "point", "name": "view_251"}}]}',
+                '{"concat": [{"view": {"mark": "point", "name": "view_1"}}, {"view": {"mark": "point", "name": "view_2"}}]}',
+            ),  # Concatenated chart requiring name reset
+            (
+                '{"hconcat": [{"view": {"mark": "point", "name": "view_250"}}, {"view": {"mark": "point", "name": "view_251"}}]}',
+                '{"hconcat": [{"view": {"mark": "point", "name": "view_1"}}, {"view": {"mark": "point", "name": "view_2"}}]}',
+            ),  # hconcat chart requiring name reset
+            (
+                '{"vconcat": [{"view": {"mark": "point", "name": "view_250"}}, {"view": {"mark": "point", "name": "view_251"}}]}',
+                '{"vconcat": [{"view": {"mark": "point", "name": "view_1"}}, {"view": {"mark": "point", "name": "view_2"}}]}',
+            ),  # vconcat chart requiring name reset
+            (
+                '{"facet": {"field": "category", "type": "ordinal"}, "spec": {"mark": "tick", "encoding": {"x": {"field": "value", "type": "quantitative"}}, "name": "view_54"}}',
+                '{"facet": {"field": "category", "type": "ordinal"}, "spec": {"mark": "tick", "encoding": {"x": {"field": "value", "type": "quantitative"}}, "name": "view_1"}}',
+            ),  # Faceted chart requiring name reset
         ]
     )
     def test_stabilize_vega_json_spec(self, input_spec: str, expected: str):
