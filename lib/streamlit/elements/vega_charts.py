@@ -215,7 +215,7 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     spec stable across reruns and avoid changes to the element ID.
     """
     pattern = re.compile(rf'"{prefix}\d+"')
-    # Trick to get all matches without duplicates in order of appearance.
+    # Get all matches without duplicates in order of appearance.
     # Using a set here would not guarantee the order of appearance,
     # which might lead to different replacements on each run.
     if matches := list(dict.fromkeys(pattern.findall(vega_spec))):
