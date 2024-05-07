@@ -83,6 +83,7 @@ import {
   IAppPage,
   IGitInfo,
   Initialize,
+  Logo,
   NewSession,
   PageConfig,
   PageInfo,
@@ -150,6 +151,7 @@ interface State {
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
+  appLogo: Logo | null
   appPages: IAppPage[]
   currentPageScriptHash: string
   latestRunTime: number
@@ -257,6 +259,7 @@ export class App extends PureComponent<Props, State> {
       themeHash: this.createThemeHash(),
       gitInfo: null,
       formsData: createFormsData(),
+      appLogo: null,
       appPages: [],
       currentPageScriptHash: "",
       // We set hideTopBar to true by default because this information isn't
@@ -636,6 +639,7 @@ export class App extends PureComponent<Props, State> {
           this.uploadClient.onFileURLsResponse(fileURLsResponse),
         parentMessage: (parentMessage: ParentMessage) =>
           this.handleCustomParentMessage(parentMessage),
+        logo: (logo: Logo) => this.setState({ appLogo: logo }),
       })
     } catch (e) {
       const err = ensureError(e)
@@ -1093,35 +1097,34 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      const successful =
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-        status ===
-          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
-
       window.setTimeout(() => {
         // Notify any subscribers of this event (and do it on the next cycle of
         // the event loop)
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
-      if (successful) {
-        // Clear any stale elements left over from the previous run.
-        // (We don't do this if our script had a compilation error and didn't
-        // finish successfully.)
-        this.setState(
-          ({ scriptRunId, fragmentIdsThisRun }) => ({
-            // Apply any pending elements that haven't been applied.
-            elements: this.pendingElementsBuffer.clearStaleNodes(
-              scriptRunId,
-              fragmentIdsThisRun
-            ),
-          }),
-          () => {
-            // We now have no pending elements.
-            this.pendingElementsBuffer = this.state.elements
-          }
-        )
+      // Clear any stale elements left over from the previous run.
+      // (We don't do this if our script had a compilation error and didn't
+      // finish successfully.)
+      this.setState(
+        ({ scriptRunId, fragmentIdsThisRun }) => ({
+          // Apply any pending elements that haven't been applied.
+          elements: this.pendingElementsBuffer.clearStaleNodes(
+            scriptRunId,
+            fragmentIdsThisRun
+          ),
+        }),
+        () => {
+          // We now have no pending elements.
+          this.pendingElementsBuffer = this.state.elements
+        }
+      )
 
+      if (
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+        status ===
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+      ) {
         // Tell the WidgetManager which widgets still exist. It will remove
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
@@ -1324,6 +1327,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   onPageChange = (pageScriptHash: string): void => {
+    this.setState({ appLogo: null })
     this.sendRerunBackMsg(undefined, undefined, pageScriptHash)
   }
 
@@ -1835,6 +1839,7 @@ export class App extends PureComponent<Props, State> {
                 uploadClient={this.uploadClient}
                 componentRegistry={this.componentRegistry}
                 formsData={this.state.formsData}
+                appLogo={this.state.appLogo}
                 appPages={this.state.appPages}
                 onPageChange={this.onPageChange}
                 currentPageScriptHash={currentPageScriptHash}
