@@ -16,7 +16,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Final, Literal, Sequence, cast
 
@@ -32,6 +34,7 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
     ArrowVegaLiteChart as ArrowVegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.util import HASHLIB_KWARGS
 
 if TYPE_CHECKING:
     import altair as alt
@@ -128,13 +131,21 @@ def _marshall_chart_data(
     These operations will happen in-place."""
 
     # Pull data out of spec dict when it's in a 'datasets' key:
-    #   datasets: {foo: df1, bar: df2}, ...}
+    #   datasets: {foo: df1_bytes, bar: df2_bytes}, ...}
     if "datasets" in spec:
         for dataset_name, dataset_data in spec["datasets"].items():
             dataset = proto.datasets.add()
             dataset.name = str(dataset_name)
             dataset.has_name = True
-            dataset.data.data = _serialize_data(dataset_data)
+            # The ID transformer already serializes the data into Arrow IPC format (bytes)
+            # If its already in bytes, we don't need to serialize it again.
+
+            # TODO(lukasmasuch): Are there any other cases where we need to serialize the data?
+            dataset.data.data = (
+                dataset_data
+                if isinstance(dataset_data, bytes)
+                else _serialize_data(dataset_data)
+            )
         del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
@@ -169,11 +180,19 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
     datasets = {}
 
     def id_transform(data) -> dict[str, str]:
-        """Altair data transformer that returns a fake named dataset with the
-        object id.
+        """Altair data transformer that serializes the data and
+        returns a name based on the hash of the data.
         """
-        name = str(id(data))
-        datasets[name] = data
+
+        # Already serialize the data to be able to create a stable
+        # dataset name:
+        data_bytes = _serialize_data(data)
+        # Use the md5 hash of the data as the name:
+        h = hashlib.new("md5", **HASHLIB_KWARGS)
+        h.update(str(data_bytes).encode("utf-8"))
+        name = h.hexdigest()
+
+        datasets[name] = data_bytes
         return {"name": name}
 
     alt.data_transformers.register("id", id_transform)  # type: ignore[attr-defined,unused-ignore]
@@ -185,10 +204,46 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
         with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
             chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict but note how they weren't
-    # transformed.
+    # Put datasets back into the chart dict:
     chart_dict["datasets"] = datasets
     return chart_dict
+
+
+def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
+    """Altair uses a global counter for unnamed parameters and views.
+    We need to reset these counters on a spec-level to make the
+    spec stable across reruns and avoid changes to the element ID.
+    """
+    pattern = re.compile(rf'"{prefix}\d+"')
+    if matches := sorted(set(pattern.findall(vega_spec))):
+        # Replace all matches with a counter starting from 1
+        # We start from 1 to imitate the altair behavior.
+        for counter, match in enumerate(matches, start=1):
+            vega_spec = vega_spec.replace(match, f'"{prefix}{counter}"')
+    return vega_spec
+
+
+def _stabilize_vega_json_spec(vega_spec: str) -> str:
+    """Makes the chart spec stay stable across reruns.
+
+    Altair auto creates names for unnamed parameters & views. It uses a global counter
+    for the naming which will result in a different spec on every rerun.
+    In Streamlit, we need the spec to be stable across reruns to prevent the chart
+    from getting a new identity. So we need to replace the names with counter with a stable name.
+
+    Parameter counter:
+    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
+
+    View counter:
+    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
+
+    This is temporary solution waiting for a fix for this issue:
+    https://github.com/vega/altair/issues/3416
+    """
+    if '"params"' in vega_spec:
+        vega_spec = _reset_counter_pattern("param_", vega_spec)
+    vega_spec = _reset_counter_pattern("view_", vega_spec)
+    return vega_spec
 
 
 class VegaChartsMixin:
@@ -1020,7 +1075,8 @@ class VegaChartsMixin:
         spec = _prepare_vega_lite_spec(spec, use_container_width, **kwargs)
         _marshall_chart_data(proto, spec, data)
 
-        proto.spec = json.dumps(spec)
+        # Prevent the spec from changing across reruns:
+        proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
         proto.use_container_width = use_container_width
         proto.theme = theme or ""
 
