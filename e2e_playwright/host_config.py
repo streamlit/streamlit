@@ -24,5 +24,3 @@ st.image(np.repeat(0, 100).reshape(10, 10))
 st.dataframe(
     pd.DataFrame(np.random.randint(0, 100, size=(100, 4)), columns=list("ABCD"))
 )
-
-st.download_button("Download", "Hello" * 100, "text/plain", "hello.txt")
