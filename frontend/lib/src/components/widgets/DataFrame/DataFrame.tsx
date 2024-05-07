@@ -303,7 +303,7 @@ function DataFrame({
     })
   }, [gridSelection])
 
-  // This callback is used to refresh the rendering of selected cells
+  // This callback is used to refresh the rendering of specified cells
   const refreshCells = React.useCallback(
     (
       cells: {
