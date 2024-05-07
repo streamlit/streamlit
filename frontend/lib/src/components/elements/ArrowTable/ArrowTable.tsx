@@ -17,7 +17,6 @@
 import range from "lodash/range"
 import React, { ReactElement } from "react"
 
-import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import {
   StyledEmptyTableCell,
@@ -162,4 +161,4 @@ function generateTableCell(
   }
 }
 
-export default withFullScreenWrapper(ArrowTable)
+export default ArrowTable
