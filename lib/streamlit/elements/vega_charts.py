@@ -261,7 +261,8 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
 
     # Simple check if the spec contains a composite chart:
     # https://vega.github.io/vega-lite/docs/composition.html
-    # Other charts will not contain the `view_` name.
+    # Other charts will not contain the `view_` name,
+    # so its better to not replace this pattern.
     if re.search(r'"(vconcat|hconcat|facet|layer|concat|repeat)"', vega_spec):
         vega_spec = _reset_counter_pattern("view_", vega_spec)
     return vega_spec
