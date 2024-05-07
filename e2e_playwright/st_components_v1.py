@@ -14,7 +14,6 @@
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 html = r"<h1>Hello, Streamlit!</h1>"
 components.html(html, width=200, height=500, scrolling=False)
