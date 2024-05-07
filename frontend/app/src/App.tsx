@@ -1093,35 +1093,34 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      const successful =
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-        status ===
-          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
-
       window.setTimeout(() => {
         // Notify any subscribers of this event (and do it on the next cycle of
         // the event loop)
         this.state.scriptFinishedHandlers.map(handler => handler())
       }, 0)
 
-      if (successful) {
-        // Clear any stale elements left over from the previous run.
-        // (We don't do this if our script had a compilation error and didn't
-        // finish successfully.)
-        this.setState(
-          ({ scriptRunId, fragmentIdsThisRun }) => ({
-            // Apply any pending elements that haven't been applied.
-            elements: this.pendingElementsBuffer.clearStaleNodes(
-              scriptRunId,
-              fragmentIdsThisRun
-            ),
-          }),
-          () => {
-            // We now have no pending elements.
-            this.pendingElementsBuffer = this.state.elements
-          }
-        )
+      // Clear any stale elements left over from the previous run.
+      // (We don't do this if our script had a compilation error and didn't
+      // finish successfully.)
+      this.setState(
+        ({ scriptRunId, fragmentIdsThisRun }) => ({
+          // Apply any pending elements that haven't been applied.
+          elements: this.pendingElementsBuffer.clearStaleNodes(
+            scriptRunId,
+            fragmentIdsThisRun
+          ),
+        }),
+        () => {
+          // We now have no pending elements.
+          this.pendingElementsBuffer = this.state.elements
+        }
+      )
 
+      if (
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+        status ===
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+      ) {
         // Tell the WidgetManager which widgets still exist. It will remove
         // widget state for widgets that have been removed.
         const activeWidgetIds = new Set(
