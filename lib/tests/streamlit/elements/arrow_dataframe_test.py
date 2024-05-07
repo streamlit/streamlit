@@ -248,6 +248,26 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         plotly_proto = self.get_delta_from_queue(1).new_element.arrow_data_frame
         self.assertEqual(plotly_proto.form_id, form_proto.form.form_id)
 
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_selectable_df_disallows_callbacks_inside_form(self):
+        """Test that an exception is thrown if a callback is defined with a
+        selectable dataframe inside a form."""
+
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        with self.assertRaises(StreamlitAPIException):
+            with st.form("form"):
+                st.dataframe(df, on_select=lambda: None)
+
+    def test_selectable_df_throws_exception_with_modified_sessions_state(self):
+        """Test that an exception is thrown if the session state is modified."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        st.session_state.selectable_df = {
+            "select": {"rows": [1], "columns": ["col1"]},
+        }
+        with self.assertRaises(StreamlitAPIException):
+            st.dataframe(df, on_select="rerun", key="selectable_df")
+
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when selections are activated and
         it is used inside a cached function."""
