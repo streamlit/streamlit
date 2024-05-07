@@ -21,7 +21,6 @@ def handle_route_hostconfig_disable_fullscreen(route: Route) -> None:
     response = route.fetch()
     body = response.json()
     body["disableFullscreenMode"] = True
-    body["enforceDownloadInNewTab"] = True
     route.fulfill(
         # Pass all fields from the response.
         response=response,
