@@ -14,11 +14,14 @@
 
 """Collection of chart commands that are rendered via our vega-lite chart component."""
 
+
 from __future__ import annotations
 
+import hashlib
 import json
 import re
-from contextlib import nullcontext
+import threading
+from contextlib import nullcontext, suppress
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -49,7 +52,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
-from streamlit.util import replace_values_in_dict
+from streamlit.util import HASHLIB_KWARGS, replace_values_in_dict
 
 if TYPE_CHECKING:
     import altair as alt
@@ -87,6 +90,11 @@ _CHANNELS: Final = {
     "row",
     "column",
 }
+# The pattern used by altair to name unnamed parameters
+# Its using a global counter that we need to replace
+# with a stable id to avoid changes to the element ID.
+_ALTAIR_UNNAMED_PARAM_REGEX: Final = re.compile(r"^param_\d+$")
+_ALTAIR_SERIALIZATION_LOCK = threading.Lock()
 
 
 class VegaLiteState(TypedDict, total=False):
@@ -182,14 +190,26 @@ def _marshall_chart_data(
     These operations will happen in-place."""
 
     # Pull data out of spec dict when it's in a 'datasets' key:
-    #   datasets: {foo: df1, bar: df2}, ...}
+    #   datasets: {foo: df1_bytes, bar: df2_bytes}, ...}
     if "datasets" in spec:
         for dataset_name, dataset_data in spec["datasets"].items():
             dataset = proto.datasets.add()
             dataset.name = str(dataset_name)
             dataset.has_name = True
-            dataset.data.data = _serialize_data(dataset_data)
+            # The ID transformer already serializes the data into Arrow IPC format (bytes)
+            # If its already in bytes, we don't need to serialize it again.
+            dataset.data.data = (
+                dataset_data
+                if isinstance(dataset_data, bytes)
+                else _serialize_data(dataset_data)
+            )
         del spec["datasets"]
+
+    for i in proto.datasets:
+        if i.name in spec:
+            raise StreamlitAPIException(
+                f"Dataset '{i.name}' is defined in both datasets and spec."
+            )
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     #   {data: df}
@@ -226,8 +246,15 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
         """Altair data transformer that returns a fake named dataset with the
         object id.
         """
-        name = str(id(data))
-        datasets[name] = data
+        # Already serialized the data to be able to create a stable
+        # dataset name:
+        data_bytes = _serialize_data(data)
+        # Use the md5 hash of the data as the name:
+        h = hashlib.new("md5", **HASHLIB_KWARGS)
+        h.update(str(data_bytes).encode("utf-8"))
+        name = h.hexdigest()
+
+        datasets[name] = data_bytes
         return {"name": name}
 
     alt.data_transformers.register("id", id_transform)  # type: ignore[attr-defined,unused-ignore]
@@ -237,14 +264,27 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
     # "none" to avoid those defaults.
     with alt.themes.enable("none") if alt.themes.active == "default" else nullcontext():  # type: ignore[attr-defined,unused-ignore]
         with alt.data_transformers.enable("id"):  # type: ignore[attr-defined,unused-ignore]
+            # with suppress(AttributeError):
+            #     # Altair uses internal global counters for unnamed parameters and views.
+            #     # For Streamlit, we need a stable spec across reruns. Therefore, we reset
+            #     # the counters to 0. Unfortunately, we cannot fully rely on this since
+            #     # 1) these are internal variables that might change in the future
+            #     # 2) its possible that two chart serialization calls are happening
+            #     #   at the same time making the counters unstable.
+            #     # Therefore, we apply a backup method in _stabilize_spec to make sure
+            #     # the spec is stable.
+            #     alt.Chart._counter = 0
+            #     alt.Parameter._counter = 0
             chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict but note how they weren't
-    # transformed.
-    chart_dict["datasets"] = datasets
-    # TODO(lukasmasuch): Double check this:
-    _stabilize_spec(chart_dict)
+    # Option 1) Reset counters (+ lock?)
+    # Option 2) Replace within the dict spec
+    # Option 3) Replace within the json spec
 
+    # Put datasets back into the chart dict:
+    chart_dict["datasets"] = datasets
+    # Make sure the spec is stabled across reruns:
+    # _stabilize_spec(chart_dict)
     return chart_dict
 
 
@@ -268,59 +308,71 @@ def _check_spec_for_selections(spec: dict[str, Any]) -> None:
     )
 
 
+def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
+    pattern = re.compile(rf'"{prefix}\d+"')
+    if matches := sorted(set(pattern.findall(vega_spec))):
+        # Replace all matches with a counter starting from 1
+        # We start from 1 to imitate the altair behavior.
+        for counter, match in enumerate(matches, start=1):
+            vega_spec = vega_spec.replace(match, f'"{prefix}{counter}"')
+    return vega_spec
+
+
+def _stabilize_json_spec(vega_spec: str) -> str:
+    """Makes the chart spec stay stable across reruns."""
+    vega_spec = _reset_counter_pattern("param_", vega_spec)
+    vega_spec = _reset_counter_pattern("view_", vega_spec)
+    return vega_spec
+
+
 def _stabilize_spec(chart_dict: dict[str, Any]) -> None:
+    """Makes the chart spec stay stable across reruns.
+
+    Altair auto creates names for unnamed parameters & views. It uses a global counter
+    for the naming which will result in a different spec on every rerun.
+    In Streamlit, we need the spec to be stable across reruns to prevent the chart
+    from getting a new identity. So we need to replace the names with counter with a stable name.
+
+    Parameter counter:
+    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
+
+    View counter:
+    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
+    """
+    if "params" not in chart_dict:
+        # No parameters to stabilize
+        return
+
     stable_ids = {}
-    # Pull data out of chart_dict when it's in a 'datasets' key:
-    #   marshall(proto, {datasets: {foo: df1, bar: df2}, ...})
-    # TODO:
-    # data_id_counter = 0
-    # if "datasets" in chart_dict:
-    #     for k, v in chart_dict["datasets"].items():
-    #         dataset = vega_lite_chart.datasets.add()
-    #         if is_select_enabled:
-    #             # map data ids to our own stable ids to replace later
-    #             # otherwise the widget id will change and rerender a completely new chart
-    #             stable_ids[k] = str(data_id_counter)
-    #             dataset.name = str(data_id_counter)
-    #             data_id_counter += 1
-    #         else:
-    #             dataset.name = str(k)
-    #         dataset.has_name = True
-    #         arrow.marshall(dataset.data, v)
-    #     del chart_dict["datasets"]
-
-    get_script_run_ctx()
-
-    # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
-    # altair creates names for parameters when no name is created as it's required in vega
-    # streamlit reruns will increment this counter by 1 so we need a stable name
-    # otherwise the widget id will change and rerender a completely new chart
-    regex = re.compile(r"^param_\d+$")
     param_counter = 0
-
-    if "params" in chart_dict:
-        for param in chart_dict["params"]:
+    for param in chart_dict["params"]:
+        name = param["name"]
+        if _ALTAIR_UNNAMED_PARAM_REGEX.match(name):
+            # Start with selection_1 to imitate the altair behavior.
+            param_counter += 1
+            param["name"] = f"selection_{param_counter}"
+        if "views" in param:
             view_counter = 0
-            name = param["name"]
-            if regex.match(name):
-                param["name"] = f"selection_{param_counter}"
-                stable_ids[name] = f"selection_{param_counter}"
-                param_counter += 1
-            if "views" in param:
-                # https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
-                # altair creates auto generates names for views through a counter to map properties to each view
-                # streamlit reruns will increment this counter by 1 so we need a stable name
-                # otherwise the widget id will change and rerender a completely new chart
-                for view_index, view in enumerate(param["views"]):
-                    param["views"][view_index] = f"view_{view_counter}"
-                    stable_ids[view] = f"view_{view_counter}"
-                    view_counter += 1
+            for view_index, view in enumerate(param["views"]):
+                # Start with view_1 to imitate the altair behavior.
+                view_counter += 1
+                stable_view_name = f"view_{view_counter}"
+                if view != stable_view_name:
+                    # Only add to the stable_ids if the view name
+                    # is actually different. This is to avoid
+                    # running the replace_values_in_dict function
+                    # on the chart_dict if there are no changes.
+                    param["views"][view_index] = stable_view_name
+                    stable_ids[view] = stable_view_name
 
-        concat_keys = ["hconcat", "vconcat", "layer"]
-        special_keys = concat_keys + ["encoding", "data"]
-        for k in special_keys:
-            if k in chart_dict:
-                replace_values_in_dict(chart_dict[k], stable_ids)
+    if not stable_ids:
+        # No IDs to stabilize
+        return
+
+    # Replace the stable IDs in the chart spec for a selection of keys:
+    for k in ["hconcat", "vconcat", "layer", "encoding", "data"]:
+        if k in chart_dict:
+            replace_values_in_dict(chart_dict[k], stable_ids)
 
 
 class VegaChartsMixin:
@@ -1288,7 +1340,8 @@ class VegaChartsMixin:
         spec = _prepare_vega_lite_spec(spec, use_container_width, **kwargs)
         _marshall_chart_data(vega_lite_proto, spec, data)
 
-        vega_lite_proto.spec = json.dumps(spec)
+        vega_lite_proto.spec = _stabilize_json_spec(json.dumps(spec))
+        print(vega_lite_proto.spec)
         vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
@@ -1305,7 +1358,10 @@ class VegaChartsMixin:
                 user_key=key,
                 key=key,
                 vega_lite_spec=vega_lite_proto.spec,
+                # The data is either in vega_lite_proto.data.data
+                # or in a named dataset in vega_lite_proto.datasets
                 vega_lite_data=vega_lite_proto.data.data,
+                named_datasets=[dataset.name for dataset in vega_lite_proto.datasets],
                 theme=theme,
                 form_id=vega_lite_proto.form_id,
                 use_container_width=use_container_width,
