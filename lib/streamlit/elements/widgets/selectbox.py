@@ -113,8 +113,10 @@ class SelectboxMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -150,7 +152,7 @@ class SelectboxMixin:
             An optional dict of kwargs to pass to the callback.
         placeholder : str
             A string to display when no options are selected.
-            Defaults to 'Choose an option'.
+            Defaults to "Choose an option".
         disabled : bool
             An optional boolean, which disables the selectbox if set to True.
             The default is False.
@@ -170,10 +172,10 @@ class SelectboxMixin:
         >>> import streamlit as st
         >>>
         >>> option = st.selectbox(
-        ...     'How would you like to be contacted?',
-        ...     ('Email', 'Home phone', 'Mobile phone'))
+        ...     "How would you like to be contacted?",
+        ...     ("Email", "Home phone", "Mobile phone"))
         >>>
-        >>> st.write('You selected:', option)
+        >>> st.write("You selected:", option)
 
         .. output::
            https://doc-selectbox.streamlit.app/
@@ -190,7 +192,7 @@ class SelectboxMixin:
         ...    placeholder="Select contact method...",
         ... )
         >>>
-        >>> st.write('You selected:', option)
+        >>> st.write("You selected:", option)
 
         .. output::
            https://doc-selectbox-empty.streamlit.app/

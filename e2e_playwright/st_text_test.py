@@ -33,3 +33,19 @@ def test_st_text_doesnt_apply_formatting(
     assert_snapshot(
         app.get_by_test_id("stText").nth(2), name="st_text-no_formatting_applied"
     )
+
+
+def test_help_tooltip_works(app: Page):
+    """Test that the help tooltip is displayed on hover."""
+    text_with_help = app.get_by_test_id("stText").nth(3)
+
+    hover_target = text_with_help.get_by_test_id("stTooltipHoverTarget")
+    expect(hover_target).to_be_visible()
+
+    tooltip_content = app.get_by_test_id("stTooltipContent")
+    expect(tooltip_content).not_to_be_attached()
+
+    hover_target.hover()
+
+    expect(tooltip_content).to_be_visible()
+    expect(tooltip_content).to_have_text("This is a help tooltip!")

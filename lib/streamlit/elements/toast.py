@@ -69,13 +69,27 @@ class ToastMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
-        icon : str or None
-            An optional argument that specifies an emoji to use as
-            the icon for the toast. Shortcodes are not allowed, please use a
-            single character instead. E.g. "🚨", "🔥", "🤖", etc.
-            Defaults to None, which means no icon is displayed.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
+
+        icon : str, None
+            An optional emoji or icon to display next to the alert. If ``icon``
+            is ``None`` (default), no icon is displayed. If ``icon`` is a
+            string, the following options are valid:
+
+            * A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            * An icon from the Material Symbols library (outlined style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+              font library.
 
         Example
         -------

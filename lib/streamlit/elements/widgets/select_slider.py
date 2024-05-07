@@ -149,8 +149,10 @@ class SelectSliderMixin:
 
             * Colored text and background colors for text, using the syntax
               ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively — where ``color`` needs to be replaced with any of the following
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -207,19 +209,19 @@ class SelectSliderMixin:
         >>> import streamlit as st
         >>>
         >>> color = st.select_slider(
-        ...     'Select a color of the rainbow',
-        ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'])
-        >>> st.write('My favorite color is', color)
+        ...     "Select a color of the rainbow",
+        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"])
+        >>> st.write("My favorite color is", color)
 
         And here's an example of a range select slider:
 
         >>> import streamlit as st
         >>>
         >>> start_color, end_color = st.select_slider(
-        ...     'Select a range of color wavelength',
-        ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'],
-        ...     value=('red', 'blue'))
-        >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
+        ...     "Select a range of color wavelength",
+        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+        ...     value=("red", "blue"))
+        >>> st.write("You selected wavelengths between", start_color, "and", end_color)
 
         .. output::
            https://doc-select-slider.streamlit.app/

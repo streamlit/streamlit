@@ -76,7 +76,7 @@ import Metric from "@streamlit/lib/src/components/elements/Metric"
 import { Skeleton } from "@streamlit/lib/src/components/elements/Skeleton"
 import TextElement from "@streamlit/lib/src/components/elements/TextElement"
 import { ComponentInstance } from "@streamlit/lib/src/components/widgets/CustomComponent"
-import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart"
+import { VegaLiteChartElement } from "@streamlit/lib/src/components/elements/ArrowVegaLiteChart"
 import { getAlertElementKind } from "@streamlit/lib/src/components/elements/AlertElement/AlertElement"
 
 import Maybe from "@streamlit/lib/src/components/core/Maybe"
@@ -406,15 +406,6 @@ const RawElementNodeRenderer = (
       )
     }
 
-    case "plotlyChart":
-      return (
-        <PlotlyChart
-          element={node.element.plotlyChart as PlotlyChartProto}
-          height={undefined}
-          {...elementProps}
-        />
-      )
-
     case "progress":
       return (
         <Progress
@@ -634,6 +625,17 @@ const RawElementNodeRenderer = (
         <NumberInput
           key={numberInputProto.id}
           element={numberInputProto}
+          {...widgetProps}
+        />
+      )
+    }
+
+    case "plotlyChart": {
+      const plotlyProto = node.element.plotlyChart as PlotlyChartProto
+      return (
+        <PlotlyChart
+          key={plotlyProto.id}
+          element={plotlyProto}
           {...widgetProps}
         />
       )
