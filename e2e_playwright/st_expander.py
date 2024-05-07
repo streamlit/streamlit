@@ -39,10 +39,10 @@ def update_value():
 
 update_button = st.button("Update Num Input", on_click=update_value)
 
-st.text(st.session_state.number)
+st.text(st.session_state.get("number"))
 
 if st.button("Print State Value"):
-    st.text(st.session_state.number)
+    st.text(st.session_state.get("number"))
 
 expander_long = st.expander(
     "Expand me! "
