@@ -1,4 +1,4 @@
-black==22.6.0
+black==24.3.0
 pre-commit
 hypothesis>=6.17.4
 mypy>=1.4, <1.7
