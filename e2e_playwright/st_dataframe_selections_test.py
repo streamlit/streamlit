@@ -56,6 +56,10 @@ def _get_multi_row_and_column_select_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(4)
 
 
+def _get_in_form_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(5)
+
+
 def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
     # bounding_box = canvas.bounding_box()
@@ -193,6 +197,28 @@ def test_clear_selection_via_toolbar(app: Page):
     toolbar_buttons.nth(0).click()
     wait_for_app_run(app)
     expected = "Dataframe multi-row-multi-column selection: {'select': {'rows': [], 'columns': []}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_in_form_selection_and_session_state(app: Page):
+    canvas = _get_in_form_df(app)
+    _select_some_rows_and_columns(app, canvas)
+
+    # nothing should be shown yet because we did not submit the form
+    expected = "Dataframe-in-form selection: {'select': {'rows': [], 'columns': []}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+    # submit the form
+    app.get_by_test_id("baseButton-secondaryFormSubmit").click()
+    wait_for_app_run(app)
+
+    expected = "Dataframe-in-form selection: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+    expected = "Dataframe-in-form selection in session state: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 

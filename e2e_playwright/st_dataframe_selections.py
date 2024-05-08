@@ -29,6 +29,7 @@ df = pd.DataFrame(
     columns=("col_%d" % i for i in range(5)),
 )
 
+# set fixed column with so our pixel-clicks in the test are stable
 column_with_fixed_width = st.column_config.Column(width="small")
 column_config = {
     "col_0": column_with_fixed_width,
@@ -96,12 +97,16 @@ with st.form(key="my_form"):
         df,
         hide_index=True,
         on_select="rerun",
-        selection_mode=selection_mode,
+        selection_mode=["multi-row", "multi-column"],
         key="df_selection_in_form",
+        column_config=column_config,
     )
     st.form_submit_button("Submit")
 st.write("Dataframe-in-form selection:", str(selection))
-st.write("Dataframe selection in session state:", st.session_state.df_selection_in_form)
+st.write(
+    "Dataframe-in-form selection in session state:",
+    str(st.session_state.df_selection_in_form),
+)
 
 
 st.header("Selection callback:")
@@ -117,4 +122,5 @@ st.dataframe(
     on_select=on_selection,
     selection_mode=selection_mode,
     key="df_selection",
+    column_config=column_config,
 )
