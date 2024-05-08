@@ -251,19 +251,29 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
 def _stabilize_vega_json_spec(vega_spec: str) -> str:
     """Makes the chart spec stay stable across reruns and sessions.
 
-    Altair auto creates names for unnamed parameters & views. It uses a global counter
-    for the naming which will result in a different spec on every rerun.
-    In Streamlit, we need the spec to be stable across reruns and sessions to prevent the chart
-    from getting a new identity. So we need to replace the names with counter with a stable name.
+        Altair auto creates names for unnamed parameters & views. It uses a global counter
+        for the naming which will result in a different spec on every rerun.
+        In Streamlit, we need the spec to be stable across reruns and sessions to prevent the chart
+        from getting a new identity. So we need to replace the names with counter with a stable name.
 
-    Parameter counter:
-    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
+        Parameter counter:
+        https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
 
-    View counter:
-    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
+        View counter:
+        https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
 
-    This is temporary solution waiting for a fix for this issue:
-    https://github.com/vega/altair/issues/3416
+        This is temporary solution waiting for a fix for this issue:
+        https://github.com/vega/altair/issues/3416
+
+    Other solutions we considered:
+     - working on the dict object: this would require to iterate through the object and do the
+       same kind of replacement; though we would need to know the structure and since we need
+       the spec in String-format anyways, we deemed that executing the replacement on the
+       String is the better alternative
+     - resetting the counter: the counter is incremented already when the chart object is created
+       (see this GitHub issue comment https://github.com/vega/altair/issues/3416#issuecomment-2098530464),
+       so it would be too late here to reset the counter with a thread-lock to prevent interference
+       between sessions
     """
 
     # We only want to apply these replacements if it is really necessary
