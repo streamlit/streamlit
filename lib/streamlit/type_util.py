@@ -782,11 +782,15 @@ def is_pandas_version_less_than(v: str) -> bool:
     -------
     bool
 
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
     """
     import pandas as pd
-    from packaging import version
 
-    return version.parse(pd.__version__) < version.parse(v)
+    return is_version_less_than(pd.__version__, v)
 
 
 def is_pyarrow_version_less_than(v: str) -> bool:
@@ -801,11 +805,16 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     -------
     bool
 
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
     """
     import pyarrow as pa
-    from packaging import version
 
-    return version.parse(pa.__version__) < version.parse(v)
+    return is_version_less_than(pa.__version__, v)
 
 
 def is_altair_version_less_than(v: str) -> bool:
@@ -820,11 +829,30 @@ def is_altair_version_less_than(v: str) -> bool:
     -------
     bool
 
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+
     """
     import altair as alt
+
+    return is_version_less_than(alt.__version__, v)
+
+
+def is_version_less_than(v1: str, v2: str) -> bool:
+    """Return True if the v1 version string is less than the v2 version string
+    based on semantic versioning.
+
+    Raises
+    ------
+    InvalidVersion
+        If the version strings are not valid.
+    """
     from packaging import version
 
-    return version.parse(alt.__version__) < version.parse(v)
+    return version.parse(v1) < version.parse(v2)
 
 
 def _maybe_truncate_table(
