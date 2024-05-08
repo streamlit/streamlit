@@ -46,7 +46,7 @@ langchain==0.1.17
 langchain-community==0.0.37
 langchain-core==0.1.52
 langchain-text-splitters==0.0.1
-langsmith==0.1.54
+langsmith==0.1.55
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.2
@@ -131,7 +131,7 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==2.2.1
-uv==0.1.39
+uv==0.1.40
 virtualenv==20.26.1
 watchdog==4.0.0
 wheel==0.43.0
