@@ -14,7 +14,6 @@
 
 """Collection of chart commands that are rendered via our vega-lite chart component."""
 
-
 from __future__ import annotations
 
 import hashlib
@@ -204,12 +203,6 @@ def _marshall_chart_data(
                 else _serialize_data(dataset_data)
             )
         del spec["datasets"]
-
-    for i in proto.datasets:
-        if i.name in spec:
-            raise StreamlitAPIException(
-                f"Dataset '{i.name}' is defined in both datasets and spec."
-            )
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     #   {data: df}
