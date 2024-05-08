@@ -567,6 +567,10 @@ function DataFrame({
       >
         {((isRowSelectionActivated && isRowSelected) ||
           (isColumnSelectionActivated && isColumnSelected)) && (
+          // Add clear selection action if selections are active
+          // and a valid selections currently exists. Cell selections
+          // are not relevant since they are not synced to the backend
+          // at the moment.
           <ToolbarAction
             label={"Clear selection"}
             icon={Close}
