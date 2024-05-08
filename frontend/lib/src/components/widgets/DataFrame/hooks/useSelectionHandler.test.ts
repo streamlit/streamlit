@@ -15,10 +15,9 @@
  */
 
 import { renderHook, act } from "@testing-library/react-hooks"
-import { GridSelection, CompactSelection } from "@glideapps/glide-data-grid"
+import { CompactSelection } from "@glideapps/glide-data-grid"
 
 import { Arrow as ArrowProto } from "@streamlit/lib/src/proto"
-import { TEN_BY_TEN } from "@streamlit/lib/src/mocks/arrow"
 
 import useSelectionHandler from "./useSelectionHandler"
 
