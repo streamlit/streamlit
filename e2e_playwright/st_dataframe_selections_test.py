@@ -22,10 +22,16 @@ _column_width_px = 80
 _row_height_px = 35
 
 
-def _click_on_row_selector(canvas: Locator, row_number: int):
-    """Click on the middle of the row selector. row_number 0 would be the header row."""
+def _get_row_position(row_number: int):
+    """Get the x,y positions of a row for the very first column."""
     row_middle_height_px = row_number * _row_height_px + (_row_height_px / 2)
     row_middle_width_px = _first_column_width_px / 2
+    return row_middle_width_px, row_middle_height_px
+
+
+def _click_on_row_selector(canvas: Locator, row_number: int):
+    """Click on the middle of the row selector. row_number 0 would be the header row."""
+    row_middle_width_px, row_middle_height_px = _get_row_position(row_number)
     canvas.click(position={"x": row_middle_width_px, "y": row_middle_height_px})
 
 
@@ -130,15 +136,42 @@ def test_multi_row_select_all_at_once(app: Page):
     expect(selection_text).to_have_count(1)
 
 
+# def test_multi_row_by_keeping_mouse_pressed(app: Page):
+#     canvas = _get_multi_row_select_df(app)
+
+#     bounding_box = canvas.bounding_box()
+#     assert bounding_box is not None
+#     print(f"BOUNDING BOX: {bounding_box}")
+#     canvas_start_x_px = bounding_box.get("x", 0)
+#     canvas_start_y_px = bounding_box.get("y", 0)
+
+#     x, y = _get_row_position(2)
+#     row_x_px = canvas_start_x_px + x
+#     row_y_px = canvas_start_y_px + y
+#     print(f"CLICK: {row_x_px},{row_y_px}")
+#     app.mouse.move(row_x_px, row_y_px)
+#     app.mouse.down()
+#     x, y = _get_row_position(4)
+#     app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
+
+#     app.mouse.up()
+
+#     expected = (
+#         "Dataframe multi-row selection: {'select': {'rows': [1, 2, 3], 'columns': []}}"
+#     )
+#     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+#     expect(selection_text).to_have_count(1)
+
+
 def test_multi_column_select(app: Page):
     canvas = _get_multi_column_select_df(app)
 
     _click_on_column_selector(canvas, 1)
     # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-    app.keyboard.down("Meta")
+    app.keyboard.down("ControlOrMeta")
     _click_on_column_selector(canvas, 3)
     _click_on_column_selector(canvas, 4)
-    app.keyboard.up("Meta")
+    app.keyboard.up("ControlOrMeta")
     wait_for_app_run(app)
 
     expected = "Dataframe multi-column selection: {'select': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}"
@@ -150,10 +183,10 @@ def _select_some_rows_and_columns(app: Page, canvas: Locator):
     _click_on_row_selector(canvas, 1)
     _click_on_column_selector(canvas, 1)
     # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-    app.keyboard.down("Meta")
+    app.keyboard.down("ControlOrMeta")
     _click_on_column_selector(canvas, 3)
     _click_on_column_selector(canvas, 4)
-    app.keyboard.up("Meta")
+    app.keyboard.up("ControlOrMeta")
     _click_on_row_selector(canvas, 3)
     wait_for_app_run(app)
 
