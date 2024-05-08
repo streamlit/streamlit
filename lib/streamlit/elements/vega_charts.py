@@ -1373,9 +1373,9 @@ class VegaChartsMixin:
                 # to contain hashes based on the dataset data.
                 named_datasets=[dataset.name for dataset in vega_lite_proto.datasets],
                 theme=theme,
-                form_id=vega_lite_proto.form_id,
                 use_container_width=use_container_width,
                 is_selection_activated=is_selection_activated,
+                form_id=vega_lite_proto.form_id,
                 page=ctx.page_script_hash if ctx else None,
             )
 
