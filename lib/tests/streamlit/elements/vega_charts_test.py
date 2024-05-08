@@ -346,6 +346,16 @@ class AltairChartTest(DeltaGeneratorTestCase):
         plotly_proto = self.get_delta_from_queue(1).new_element.arrow_vega_lite_chart
         self.assertEqual(plotly_proto.form_id, "")
 
+    def test_throws_exception_if_no_selections_defined_in_spec(self):
+        """Test that an exception is thrown if no selections are defined in the spec
+        but `on_select` is activated.
+        """
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+
+        with self.assertRaises(StreamlitAPIException):
+            st.altair_chart(chart, on_select="rerun")
+
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
