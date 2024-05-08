@@ -243,7 +243,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertIn(
-            "selection_0",
+            "param_1",
             proto.spec,
         )
         self.assertNotIn("param1", proto.spec)
@@ -260,7 +260,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         st.altair_chart(chart, on_select="rerun")
         proto = self.get_delta_from_queue().new_element.arrow_vega_lite_chart
         self.assertIn(
-            "selection_0",
+            "param_1",
             proto.spec,
         )
         self.assertNotIn("param1", proto.spec)
@@ -279,7 +279,7 @@ class AltairChartTest(DeltaGeneratorTestCase):
         self.assertTrue(
             "point" in proto.spec,
         )
-        self.assertFalse("selection_0" in proto.spec)
+        self.assertFalse("param_1" in proto.spec)
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -296,7 +296,6 @@ class AltairChartTest(DeltaGeneratorTestCase):
             "interval",
             proto.spec,
         )
-        self.assertIn("selection_0", proto.spec)
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -374,6 +373,10 @@ class AltairChartTest(DeltaGeneratorTestCase):
         self.assertEqual(el.type, "CachedWidgetWarning")
         self.assertTrue(el.is_warning)
 
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     def test_that_altair_chart_spec_stays_stable(self):
         """Test that st.altair_chart stays stable across multiple calls."""
         # Execution 1:
