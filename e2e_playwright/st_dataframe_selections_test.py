@@ -52,6 +52,10 @@ def _get_multi_column_select_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(3)
 
 
+def _get_multi_row_and_column_select_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(4)
+
+
 def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
     # bounding_box = canvas.bounding_box()
@@ -74,7 +78,6 @@ def test_single_row_select(app: Page):
 def test_single_column_select(app: Page):
     canvas = _get_single_column_select_df(app)
 
-    # select first row
     _click_on_column_selector(canvas, 1)
     wait_for_app_run(app)
 
@@ -92,7 +95,6 @@ def test_single_column_select(app: Page):
 def test_multi_row_select(app: Page):
     canvas = _get_multi_row_select_df(app)
 
-    # select first and third row
     _click_on_row_selector(canvas, 1)
     _click_on_row_selector(canvas, 3)
     wait_for_app_run(app)
@@ -102,10 +104,23 @@ def test_multi_row_select(app: Page):
     expect(selection_text).to_have_count(1)
 
 
+def test_multi_row_select_all_at_once(app: Page):
+    """Test that all rows are selected when clicking on the top-row checkbox."""
+    canvas = _get_multi_row_select_df(app)
+
+    _click_on_row_selector(canvas, 0)
+    wait_for_app_run(app)
+
+    expected = (
+        "Dataframe selection: {'select': {'rows': [0, 1, 2, 3, 4], 'columns': []}}"
+    )
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
 def test_multi_column_select(app: Page):
     canvas = _get_multi_column_select_df(app)
 
-    # select first and third row
     _click_on_column_selector(canvas, 1)
     # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
     app.keyboard.down("Meta")
@@ -115,5 +130,23 @@ def test_multi_column_select(app: Page):
     wait_for_app_run(app)
 
     expected = "Dataframe selection: {'select': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_multi_row_and_multi_column_select(app: Page):
+    canvas = _get_multi_row_and_column_select_df(app)
+
+    _click_on_row_selector(canvas, 1)
+    _click_on_column_selector(canvas, 1)
+    # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
+    app.keyboard.down("Meta")
+    _click_on_column_selector(canvas, 3)
+    _click_on_column_selector(canvas, 4)
+    app.keyboard.up("Meta")
+    _click_on_row_selector(canvas, 3)
+    wait_for_app_run(app)
+
+    expected = "Dataframe selection: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)

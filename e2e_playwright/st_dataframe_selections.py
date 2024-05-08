@@ -79,6 +79,16 @@ selection = st.dataframe(
 )
 st.write("Dataframe selection:", str(selection))
 
+st.subheader("multi-row & multi-column select")
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode=["multi-row", "multi-column"],
+    column_config=column_config,
+)
+st.write("Dataframe selection:", str(selection))
+
 st.header("Selections in form:")
 
 with st.form(key="my_form"):
