@@ -33,6 +33,7 @@ from streamlit.type_util import to_bytes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import WidgetCallback
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -49,10 +50,17 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change_handler: WidgetCallback | None = None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
-        return self.create_instance(*args, default=default, key=key, **kwargs)
+        return self.create_instance(
+            *args,
+            default=default,
+            key=key,
+            on_change_handler=on_change_handler,
+            **kwargs,
+        )
 
     @gather_metrics("create_instance")
     def create_instance(
@@ -60,6 +68,7 @@ class CustomComponent(BaseCustomComponent):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change_handler: WidgetCallback | None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
@@ -195,6 +204,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt."""
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
                 ctx=ctx,
+                on_change_handler=on_change_handler,
             )
             widget_value = component_state.value
 

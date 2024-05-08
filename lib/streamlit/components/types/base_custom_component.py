@@ -16,10 +16,13 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.common import WidgetCallback
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -56,10 +59,17 @@ class BaseCustomComponent(ABC):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change_handler: WidgetCallback | None,
         **kwargs,
     ) -> Any:
         """An alias for create_instance."""
-        return self.create_instance(*args, default=default, key=key, **kwargs)
+        return self.create_instance(
+            *args,
+            default=default,
+            key=key,
+            on_change_handler=on_change_handler,
+            **kwargs,
+        )
 
     @property
     def abspath(self) -> str | None:
@@ -102,6 +112,7 @@ class BaseCustomComponent(ABC):
         *args,
         default: Any = None,
         key: str | None = None,
+        on_change_handler: WidgetCallback | None,
         **kwargs,
     ) -> Any:
         """Create a new instance of the component.
