@@ -920,6 +920,18 @@ export class App extends PureComponent<Props, State> {
     this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
     this.metricsMgr.setAppHash(newSessionHash)
 
+    // mainPage must be a string as we're guaranteed at this point that
+    // newSessionProto.appPages is nonempty and has a truthy pageName.
+    // Otherwise, we'd either have no main script or a nameless main script,
+    // neither of which can happen.
+    const mainPage = newSessionProto.appPages[0] as AppPage
+    // We're similarly guaranteed that newPageName will be found / truthy
+    // here.
+    const newPageName = newSessionProto.appPages.find(
+      p => p.pageScriptHash === newPageScriptHash
+    )?.pageName as string
+    const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
+
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
       this.state.autoReruns.forEach((value: NodeJS.Timer) => {
@@ -929,18 +941,6 @@ export class App extends PureComponent<Props, State> {
 
       const config = newSessionProto.config as Config
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
-
-      // mainPage must be a string as we're guaranteed at this point that
-      // newSessionProto.appPages is nonempty and has a truthy pageName.
-      // Otherwise, we'd either have no main script or a nameless main script,
-      // neither of which can happen.
-      const mainPage = newSessionProto.appPages[0] as AppPage
-      // We're similarly guaranteed that newPageName will be found / truthy
-      // here.
-      const newPageName = newSessionProto.appPages.find(
-        p => p.pageScriptHash === newPageScriptHash
-      )?.pageName as string
-      const viewingMainPage = newPageScriptHash === mainPage.pageScriptHash
 
       this.maybeUpdatePageUrl(mainPage.pageName, newPageName, viewingMainPage)
       this.processThemeInput(themeInput)
@@ -974,11 +974,6 @@ export class App extends PureComponent<Props, State> {
         }
       )
 
-      this.metricsMgr.enqueue("updateReport", {
-        numPages: newSessionProto.appPages.length,
-        isMainPage: viewingMainPage,
-      })
-
       // Set the title and favicon to their default values if we are not running
       // a fragment.
       document.title = `${newPageName} · Streamlit`
@@ -993,6 +988,11 @@ export class App extends PureComponent<Props, State> {
         latestRunTime: performance.now(),
       })
     }
+
+    this.metricsMgr.enqueue("updateReport", {
+      numPages: newSessionProto.appPages.length,
+      isMainPage: viewingMainPage,
+    })
 
     if (
       appHash === newSessionHash &&
