@@ -78,7 +78,7 @@ import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
 // Debounce time for triggering a widget state update
-// This prevents to rapid updates to the widget state.
+// This prevents rapid updates to the widget state.
 const DEBOUNCE_TIME_MS = 150
 // Number of rows that triggers some optimization features
 // for large tables.
