@@ -41,7 +41,7 @@ export type SelectionHandlerReturn = {
  * @param element - The Arrow proto message
  * @param isEmptyTable - Whether the table is empty
  * @param isDisabled - Whether the table is disabled
- * @param applySelections - The callback to apply selections
+ * @param syncSelectionState - The callback to sync the selection state
  *
  * @returns the selection handler return object
  */
@@ -49,7 +49,7 @@ function useSelectionHandler(
   element: ArrowProto,
   isEmptyTable: boolean,
   isDisabled: boolean,
-  applySelections: (newSelection: GridSelection) => void
+  syncSelectionState: (newSelection: GridSelection) => void
 ): SelectionHandlerReturn {
   const [gridSelection, setGridSelection] = React.useState<GridSelection>({
     columns: CompactSelection.empty(),
@@ -137,14 +137,14 @@ function useSelectionHandler(
         (isRowSelectionActivated && rowSelectionChanged) ||
         (isColumnSelectionActivated && columnSelectionChanged)
       ) {
-        applySelections(updatedSelection)
+        syncSelectionState(updatedSelection)
       }
     },
     [
       gridSelection,
       isRowSelectionActivated,
       isColumnSelectionActivated,
-      applySelections,
+      syncSelectionState,
     ]
   )
 
@@ -156,8 +156,10 @@ function useSelectionHandler(
       current: undefined,
     }
     setGridSelection(emptySelection)
-    applySelections(emptySelection)
-  }, [applySelections])
+    if (isRowSelectionActivated || isColumnSelectionActivated) {
+      syncSelectionState(emptySelection)
+    }
+  }, [isRowSelectionActivated, isColumnSelectionActivated, syncSelectionState])
 
   // This callback is used to clear only cell selections
   const clearCellSelection = React.useCallback(() => {

@@ -50,6 +50,7 @@ type DataEditorReturn = Pick<
  * @param getCellContent - Function to get a specific cell.
  * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
  *                           This mainly changed by sorting of columns.
+ * @param updateNumRows - Callback to sync the number of rows from editing state with the component state.
  * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
  * @param syncEditState - Callback that needs to be called on all edits. This will also trigger a rerun
  *                     and send widget state to the backend.
@@ -67,6 +68,7 @@ function useDataEditor(
       cell: [number, number]
     }[]
   ) => void,
+  updateNumRows: () => void,
   syncEditState: () => void,
   clearSelection: () => void
 ): DataEditorReturn {
@@ -131,7 +133,8 @@ function useDataEditor(
       newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
-  }, [columns, editingState, fixedNumRows])
+    updateNumRows()
+  }, [columns, editingState, fixedNumRows, updateNumRows])
 
   /**
    * Callback used by glide-data-grid when the user adds a new row in the table UI.
@@ -165,6 +168,7 @@ function useDataEditor(
         })
         // We need to delete all rows at once, so that the indexes work correct
         editingState.current.deleteRows(rowsToDelete)
+        updateNumRows()
         clearSelection()
         syncEditState()
         return false
@@ -214,6 +218,7 @@ function useDataEditor(
       syncEditState,
       onCellEdited,
       clearSelection,
+      updateNumRows,
     ]
   )
 

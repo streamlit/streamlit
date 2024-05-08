@@ -327,6 +327,18 @@ function DataFrame({
   )
 
   /**
+   * This callback is used to update the number of rows based
+   * on the latest editing state. This is required to keep the
+   * component state in sync with the editing state.
+   */
+  const updateNumRows = React.useCallback(() => {
+    if (numRows !== editingState.current.getNumRows()) {
+      // Reset the number of rows if it has been changed in the editing state
+      setNumRows(editingState.current.getNumRows())
+    }
+  }, [numRows])
+
+  /**
    * This callback is used to synchronize the editing state with
    * the widget state of the component. This might also send a rerun message
    * to the backend if the editing state has changed.
@@ -337,11 +349,6 @@ function DataFrame({
   const syncEditState = React.useCallback(
     // Use debounce to prevent rapid updates to the widget state.
     debounce(DEBOUNCE_TIME_MS, () => {
-      if (numRows !== editingState.current.getNumRows()) {
-        // Reset the number of rows if it has been changed in the editing state
-        setNumRows(editingState.current.getNumRows())
-      }
-
       const currentEditingState = editingState.current.toJson(columns)
       let currentWidgetState = widgetMgr.getStringValue({
         id: element.id,
@@ -376,6 +383,7 @@ function DataFrame({
       fragmentId,
       numRows,
       columns,
+      editingState.current,
     ]
   )
 
@@ -389,6 +397,7 @@ function DataFrame({
       getCellContent,
       getOriginalIndex,
       refreshCells,
+      updateNumRows,
       syncEditState,
       clearSelection
     )
@@ -721,7 +730,11 @@ function DataFrame({
               // when column selection is activated.
               return undefined
             }
-            clearSelection()
+            if (isRowSelectionActivated && isRowSelected) {
+              // Row selections and column sorting is not compatible.
+              // So we need to clear the selection before we do the sorting.
+              clearSelection()
+            }
             sortColumn(colIndex)
           }}
           gridSelection={gridSelection}
