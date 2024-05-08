@@ -64,13 +64,17 @@ def test_single_row_select(app: Page):
     _click_on_row_selector(canvas, 1)
     wait_for_app_run(app)
 
-    expected = "Dataframe selection: {'select': {'rows': [0], 'columns': []}}"
+    expected = (
+        "Dataframe single-row selection: {'select': {'rows': [0], 'columns': []}}"
+    )
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
     _click_on_row_selector(canvas, 2)
     wait_for_app_run(app)
-    expected = "Dataframe selection: {'select': {'rows': [1], 'columns': []}}"
+    expected = (
+        "Dataframe single-row selection: {'select': {'rows': [1], 'columns': []}}"
+    )
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -81,13 +85,13 @@ def test_single_column_select(app: Page):
     _click_on_column_selector(canvas, 1)
     wait_for_app_run(app)
 
-    expected = "Dataframe selection: {'select': {'rows': [], 'columns': ['col_1']}}"
+    expected = "Dataframe single-column selection: {'select': {'rows': [], 'columns': ['col_1']}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
     _click_on_column_selector(canvas, 2)
     wait_for_app_run(app)
-    expected = "Dataframe selection: {'select': {'rows': [], 'columns': ['col_2']}}"
+    expected = "Dataframe single-column selection: {'select': {'rows': [], 'columns': ['col_2']}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -99,7 +103,9 @@ def test_multi_row_select(app: Page):
     _click_on_row_selector(canvas, 3)
     wait_for_app_run(app)
 
-    expected = "Dataframe selection: {'select': {'rows': [0, 2], 'columns': []}}"
+    expected = (
+        "Dataframe multi-row selection: {'select': {'rows': [0, 2], 'columns': []}}"
+    )
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -111,9 +117,7 @@ def test_multi_row_select_all_at_once(app: Page):
     _click_on_row_selector(canvas, 0)
     wait_for_app_run(app)
 
-    expected = (
-        "Dataframe selection: {'select': {'rows': [0, 1, 2, 3, 4], 'columns': []}}"
-    )
+    expected = "Dataframe multi-row selection: {'select': {'rows': [0, 1, 2, 3, 4], 'columns': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
@@ -129,14 +133,12 @@ def test_multi_column_select(app: Page):
     app.keyboard.up("Meta")
     wait_for_app_run(app)
 
-    expected = "Dataframe selection: {'select': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}"
+    expected = "Dataframe multi-column selection: {'select': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
 
-def test_multi_row_and_multi_column_select(app: Page):
-    canvas = _get_multi_row_and_column_select_df(app)
-
+def _select_some_rows_and_columns(app: Page, canvas: Locator):
     _click_on_row_selector(canvas, 1)
     _click_on_column_selector(canvas, 1)
     # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
@@ -147,6 +149,49 @@ def test_multi_row_and_multi_column_select(app: Page):
     _click_on_row_selector(canvas, 3)
     wait_for_app_run(app)
 
-    expected = "Dataframe selection: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
+
+def _expect_multi_row_multi_column_selection(app: Page):
+    expected = "Dataframe multi-row-multi-column selection: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_multi_row_and_multi_column_select(app: Page):
+    canvas = _get_multi_row_and_column_select_df(app)
+    _select_some_rows_and_columns(app, canvas)
+    _expect_multi_row_multi_column_selection(app)
+
+
+def test_clear_selection_via_escape(app: Page):
+    canvas = _get_multi_row_and_column_select_df(app)
+    _select_some_rows_and_columns(app, canvas)
+
+    # make sure we have something selected before clearing it to avoid false-positives
+    _expect_multi_row_multi_column_selection(app)
+
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+    expected = "Dataframe multi-row-multi-column selection: {'select': {'rows': [], 'columns': []}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_clear_selection_via_toolbar(app: Page):
+    canvas = _get_multi_row_and_column_select_df(app)
+
+    # toolbar has three buttons: download, search, fullscreen
+    data_editor_toolbar = canvas.get_by_test_id("stElementToolbar")
+    toolbar_buttons = data_editor_toolbar.get_by_test_id("stElementToolbarButton")
+    expect(toolbar_buttons).to_have_count(3)
+
+    _select_some_rows_and_columns(app, canvas)
+    _expect_multi_row_multi_column_selection(app)
+    # toolbar has one more button now: clear selection
+    toolbar_buttons = data_editor_toolbar.get_by_test_id("stElementToolbarButton")
+    expect(toolbar_buttons).to_have_count(4)
+    # click on the clear-selection button which is the first in the toolbar
+    toolbar_buttons.nth(0).click()
+    wait_for_app_run(app)
+    expected = "Dataframe multi-row-multi-column selection: {'select': {'rows': [], 'columns': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)

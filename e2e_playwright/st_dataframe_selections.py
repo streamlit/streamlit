@@ -47,7 +47,7 @@ selection = st.dataframe(
     selection_mode="single-row",
     column_config=column_config,
 )
-st.write("Dataframe selection:", str(selection))
+st.write("Dataframe single-row selection:", str(selection))
 
 st.subheader("single-column select")
 selection = st.dataframe(
@@ -57,7 +57,7 @@ selection = st.dataframe(
     selection_mode="single-column",
     column_config=column_config,
 )
-st.write("Dataframe selection:", str(selection))
+st.write("Dataframe single-column selection:", str(selection))
 
 st.subheader("multi-row select")
 selection = st.dataframe(
@@ -67,7 +67,7 @@ selection = st.dataframe(
     selection_mode="multi-row",
     column_config=column_config,
 )
-st.write("Dataframe selection:", str(selection))
+st.write("Dataframe multi-row selection:", str(selection))
 
 st.subheader("multi-column select")
 selection = st.dataframe(
@@ -77,7 +77,7 @@ selection = st.dataframe(
     selection_mode="multi-column",
     column_config=column_config,
 )
-st.write("Dataframe selection:", str(selection))
+st.write("Dataframe multi-column selection:", str(selection))
 
 st.subheader("multi-row & multi-column select")
 selection = st.dataframe(
@@ -87,7 +87,7 @@ selection = st.dataframe(
     selection_mode=["multi-row", "multi-column"],
     column_config=column_config,
 )
-st.write("Dataframe selection:", str(selection))
+st.write("Dataframe multi-row-multi-column selection:", str(selection))
 
 st.header("Selections in form:")
 
