@@ -34,7 +34,6 @@ from typing import (
 
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import type_util
-from streamlit.elements.form import current_form_id
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartType,
@@ -1340,6 +1339,9 @@ class VegaChartsMixin:
         vega_lite_proto.theme = theme or ""
 
         if is_selection_activated:
+            # Import here to avoid circular imports
+            from streamlit.elements.form import current_form_id
+
             # Check if the processed spec has selections defined:
             _check_spec_for_selections(spec)
 
