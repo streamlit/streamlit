@@ -251,19 +251,21 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
 def _stabilize_vega_json_spec(vega_spec: str) -> str:
     """Makes the chart spec stay stable across reruns and sessions.
 
-        Altair auto creates names for unnamed parameters & views. It uses a global counter
-        for the naming which will result in a different spec on every rerun.
-        In Streamlit, we need the spec to be stable across reruns and sessions to prevent the chart
-        from getting a new identity. So we need to replace the names with counter with a stable name.
+    Altair auto creates names for unnamed parameters & views. It uses a global counter
+    for the naming which will result in a different spec on every rerun.
+    In Streamlit, we need the spec to be stable across reruns and sessions to prevent the chart
+    from getting a new identity. So we need to replace the names with counter with a stable name.
+    Having a stable chart spec is also important for features like forward message cache,
+    where we don't want to have changing messages on every rerun.
 
-        Parameter counter:
-        https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
+    Parameter counter:
+    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L196
 
-        View counter:
-        https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
+    View counter:
+    https://github.com/vega/altair/blob/f345cd9368ae2bbc98628e9245c93fa9fb582621/altair/vegalite/v5/api.py#L2885
 
-        This is temporary solution waiting for a fix for this issue:
-        https://github.com/vega/altair/issues/3416
+    This is temporary solution waiting for a fix for this issue:
+    https://github.com/vega/altair/issues/3416
 
     Other solutions we considered:
      - working on the dict object: this would require to iterate through the object and do the
