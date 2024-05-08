@@ -559,6 +559,9 @@ class AlternativeComponentRegistryTest(unittest.TestCase):
         def get_module_name(self, name: str) -> str | None:
             return None
 
+        def get_component(self, name: str) -> BaseCustomComponent | None:
+            return None
+
         def get_components(self) -> list[BaseCustomComponent]:
             return []
 
