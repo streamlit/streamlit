@@ -270,9 +270,9 @@ def _check_spec_for_selections(spec: dict[str, Any]) -> None:
 
     if spec and "params" in spec:
         for param in spec["params"]:
-            # TODO(lukasmasuch): The type in selection does not seem to be required in the spec?
+            # Check if it looks like a valid selection parameter:
             # https://vega.github.io/vega-lite/docs/selection.html
-            if "name" in param and "select" in param and "type" in param["select"]:
+            if "name" in param and "select" in param and param["select"]:
                 # Selection found, just return here to not show the exception.
                 return
 
