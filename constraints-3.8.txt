@@ -145,7 +145,7 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==1.26.18
-uv==0.1.40
+uv==0.1.41
 virtualenv==20.26.1
 watchdog==4.0.0
 yarl==1.9.4
