@@ -28,7 +28,6 @@ from streamlit.runtime.session_manager import (
     SessionStorage,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-from streamlit.watcher import LocalSourcesWatcher
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -100,7 +99,6 @@ class WebsocketSessionManager(SessionManager):
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._message_enqueued_callback,
-            local_sources_watcher=LocalSourcesWatcher(script_data.main_script_path),
             user_info=user_info,
             session_id_override=session_id_override,
         )

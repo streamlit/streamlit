@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+
+from PIL import Image
+
 import streamlit as st
 
+small_logo = Image.open(
+    str(pathlib.Path(__file__).parent.parent / "small-streamlit.png")
+)
 
-@st.experimental_dialog("Level2 Dialog")
-def level2_dialog():
-    st.write("Second level dialog")
+logo = Image.open(str(pathlib.Path(__file__).parent.parent / "full-streamlit.png"))
 
+st.header("Logo page")
+st.logo(logo, link="https://www.example.com", icon_image=small_logo)
 
-@st.experimental_dialog("Level1 Dialog")
-def level1_dialog():
-    st.write("First level dialog")
-    level2_dialog()
-
-
-level1_dialog()
+with st.sidebar:
+    st.radio("Example Sidebar Content", ["Home", "About", "Contact"])

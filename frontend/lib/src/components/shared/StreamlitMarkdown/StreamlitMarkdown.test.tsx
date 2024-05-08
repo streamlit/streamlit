@@ -30,7 +30,7 @@ import StreamlitMarkdown, {
   CustomCodeTag,
   CustomCodeTagProps,
 } from "./StreamlitMarkdown"
-import IsDialogContext from "src/components/core/IsDialogContext"
+import IsDialogContext from "@streamlit/lib/src/components/core/IsDialogContext"
 
 // Fixture Generator
 const getMarkdownElement = (body: string): ReactElement => {
@@ -115,7 +115,9 @@ describe("StreamlitMarkdown", () => {
         <StreamlitMarkdown source={source} allowHTML={false} />
       </IsSidebarContext.Provider>
     )
-    expect(screen.getByTestId("StyledLinkIconContainer")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stHeadingWithActionElements")
+    ).toBeInTheDocument()
   })
 
   it("renders header anchors when isInDialog is false", () => {
@@ -125,7 +127,9 @@ describe("StreamlitMarkdown", () => {
         <StreamlitMarkdown source={source} allowHTML={false} />
       </IsDialogContext.Provider>
     )
-    expect(screen.getByTestId("StyledLinkIconContainer")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("stHeadingWithActionElements")
+    ).toBeInTheDocument()
   })
 
   it("passes props properly", () => {
@@ -147,7 +151,7 @@ describe("StreamlitMarkdown", () => {
       </IsSidebarContext.Provider>
     )
     expect(
-      screen.queryByTestId("StyledLinkIconContainer")
+      screen.queryByTestId("stHeadingWithActionElements")
     ).not.toBeInTheDocument()
   })
 
@@ -159,7 +163,7 @@ describe("StreamlitMarkdown", () => {
       </IsDialogContext.Provider>
     )
     expect(
-      screen.queryByTestId("StyledLinkIconContainer")
+      screen.queryByTestId("stHeadingWithActionElements")
     ).not.toBeInTheDocument()
   })
 
