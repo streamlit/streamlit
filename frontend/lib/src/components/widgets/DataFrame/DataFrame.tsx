@@ -19,7 +19,6 @@ import {
   DataEditor as GlideDataEditor,
   DataEditorRef,
   GridSelection,
-  CompactSelection,
   GridMouseEventArgs,
   GridCell,
 } from "@glideapps/glide-data-grid"
@@ -31,7 +30,6 @@ import {
   Search,
   Close,
 } from "@emotion-icons/material-outlined"
-import isEqual from "lodash/isEqual"
 
 import { FormClearHelper } from "@streamlit/lib/src/components/widgets/Form"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
@@ -58,6 +56,7 @@ import {
   useTooltips,
   useCustomRenderer,
   useDataExporter,
+  useSelectionHandler,
 } from "./hooks"
 import {
   BORDER_THRESHOLD,
@@ -86,6 +85,16 @@ const DEBOUNCE_TIME_MS = 150
 const LARGE_TABLE_ROWS_THRESHOLD = 150000
 // The size in px of the customized webkit scrollbar (defined in globalStyles)
 const WEBKIT_SCROLLBAR_SIZE = 6
+
+// This is the state that is sent to the backend
+// This needs to be the same structure that is also defined
+// in the Python code.
+export interface DataframeState {
+  select: {
+    rows: number[]
+    columns: string[]
+  }
+}
 
 export interface DataFrameProps {
   element: ArrowProto
@@ -153,12 +162,6 @@ function DataFrame({
       window.navigator.userAgent.includes("Chrome"),
     []
   )
-
-  const [gridSelection, setGridSelection] = React.useState<GridSelection>({
-    columns: CompactSelection.empty(),
-    rows: CompactSelection.empty(),
-    current: undefined,
-  })
 
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
@@ -242,10 +245,7 @@ function DataFrame({
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
 
-      const selectionState = {
-        // We use snake case here since this is the widget state
-        // that is sent and used in the backend. Therefore, it should
-        // conform with the Python naming conventions.
+      const selectionState: DataframeState = {
         select: {
           rows: [] as number[],
           columns: [] as string[],
@@ -280,28 +280,22 @@ function DataFrame({
         )
       }
     }),
-    [widgetMgr, element]
+    [widgetMgr, element, fragmentId]
   )
 
-  // This callback is used to clear all selections (row/column/cell)
-  const clearSelection = React.useCallback(() => {
-    const emptySelection = {
-      columns: CompactSelection.empty(),
-      rows: CompactSelection.empty(),
-      current: undefined,
-    }
-    setGridSelection(emptySelection)
-    applySelections(emptySelection)
-  }, [applySelections])
-
-  // This callback is used to clear only cell selections
-  const clearCellSelection = React.useCallback(() => {
-    setGridSelection({
-      columns: gridSelection.columns,
-      rows: gridSelection.rows,
-      current: undefined,
-    })
-  }, [gridSelection])
+  const {
+    gridSelection,
+    isRowSelectionActivated,
+    isMultiRowSelectionActivated,
+    isColumnSelectionActivated,
+    isMultiColumnSelectionActivated,
+    isRowSelected,
+    isColumnSelected,
+    isCellSelected,
+    clearSelection,
+    clearCellSelection,
+    processSelectionChange,
+  } = useSelectionHandler(element, isEmptyTable, disabled, applySelections)
 
   // This callback is used to refresh the rendering of specified cells
   const refreshCells = React.useCallback(
@@ -314,6 +308,7 @@ function DataFrame({
     },
     []
   )
+
   /**
    * This callback should be called after any edits have been applied to the data.
    * It will finish up the editing by updating the number of rows, clearing the selection,
@@ -434,28 +429,6 @@ function DataFrame({
 
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
-
-  const isRowSelectionActivated =
-    !isEmptyTable &&
-    !disabled &&
-    (element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW) ||
-      element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_ROW))
-  const isMultiRowSelectionActivated =
-    isRowSelectionActivated &&
-    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_ROW)
-
-  const isColumnSelectionActivated =
-    !isEmptyTable &&
-    !disabled &&
-    (element.selectionMode.includes(ArrowProto.SelectionMode.SINGLE_COLUMN) ||
-      element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN))
-  const isMultiColumnSelectionActivated =
-    isColumnSelectionActivated &&
-    element.selectionMode.includes(ArrowProto.SelectionMode.MULTI_COLUMN)
-
-  const isRowSelected = gridSelection.rows.length > 0
-  const isColumnSelected = gridSelection.columns.length > 0
-  const isCellSelected = gridSelection.current !== undefined
 
   const freezeColumns = isEmptyTable
     ? 0
@@ -719,72 +692,14 @@ function DataFrame({
           // we already correctly process selections in
           // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
+            // Only allow selection changes if the grid is focused.
+            // This is mainly done because there is a bug when overlay click actions
+            // are outside of the bounds of the table (e.g. select dropdown or date picker).
+            // This results in the first cell being selected for a short period of time
+            // But for touch devices, preventing this can cause issues to select cells.
+            // So we allow selection changes for touch devices even when it is not focused.
             if (isFocused || isTouchDevice) {
-              // Only allow selection changes if the grid is focused.
-              // This is mainly done because there is a bug when overlay click actions
-              // are outside of the bounds of the table (e.g. select dropdown or date picker).
-              // This results in the first cell being selected for a short period of time
-              // But for touch devices, preventing this can cause issues to select cells.
-              // So we allow selection changes for touch devices even when it is not focused.
-              const rowSelectionChanged = !isEqual(
-                newSelection.rows.toArray(),
-                gridSelection.rows.toArray()
-              )
-
-              const columnSelectionChanged = !isEqual(
-                newSelection.columns.toArray(),
-                gridSelection.columns.toArray()
-              )
-
-              let updatedSelection = newSelection
-              if (
-                (isRowSelectionActivated || isColumnSelectionActivated) &&
-                newSelection.current !== undefined
-              ) {
-                // The default behavior is that row selections are cleared when a cell is selected.
-                // This is not desired when row selection is activated. Instead, we want to keep the
-                // row selection and only update the cell selection.
-                updatedSelection = {
-                  ...newSelection,
-                  rows: gridSelection.rows,
-                  columns: gridSelection.columns,
-                }
-              }
-
-              if (
-                rowSelectionChanged &&
-                newSelection.rows.length > 0 &&
-                columnSelectionChanged &&
-                newSelection.columns.length === 0
-              ) {
-                // Keep the column selection if row selection was changed
-                updatedSelection = {
-                  ...updatedSelection,
-                  columns: gridSelection.columns,
-                }
-              }
-              if (
-                columnSelectionChanged &&
-                newSelection.columns.length > 0 &&
-                rowSelectionChanged &&
-                newSelection.rows.length === 0
-              ) {
-                // Keep the row selection if column selection was changed
-                updatedSelection = {
-                  ...updatedSelection,
-                  rows: gridSelection.rows,
-                }
-              }
-
-              setGridSelection(updatedSelection)
-
-              if (
-                (isRowSelectionActivated && rowSelectionChanged) ||
-                (isColumnSelectionActivated && columnSelectionChanged)
-              ) {
-                applySelections(updatedSelection)
-              }
-
+              processSelectionChange(newSelection)
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
                 clearTooltip()
