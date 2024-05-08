@@ -137,11 +137,13 @@ def _marshall_chart_data(
             dataset = proto.datasets.add()
             dataset.name = str(dataset_name)
             dataset.has_name = True
-            # The ID transformer (id_transform function used above) already serializes
-            # the data into Arrow IPC format (bytes). If its already in bytes,
-            #  we don't need to serialize it again.
+            # The ID transformer (id_transform function registered before conversion to dict)
+            # already serializes the data into Arrow IPC format (bytes).
+            # If its already in bytes, we don't need to serialize it here again.
+            # We just need to pass the data information into the correct proto fields.
 
-            # TODO(lukasmasuch): Are there any other cases where we need to serialize the data?
+            # TODO(lukasmasuch): Are there any other cases where we need to serialize the data
+            #                    or can we remove the _serialize_data here?
             dataset.data.data = (
                 dataset_data
                 if isinstance(dataset_data, bytes)
