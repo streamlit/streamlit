@@ -69,7 +69,8 @@ const MOCK_COLUMNS: BaseColumn[] = [
 
 const INITIAL_NUM_ROWS = 3
 const refreshCellsMock = jest.fn()
-const applyEditsMock = jest.fn()
+const syncEditsMock = jest.fn()
+const updateNumRows = jest.fn()
 const clearSelectionMock = jest.fn()
 const getOriginalIndexMock = jest.fn().mockImplementation((index: number) => {
   return index
@@ -101,7 +102,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -115,7 +117,7 @@ describe("useDataEditor hook", () => {
       [1, 0],
       columnToEdit.getCell("bar") as TextCell
     )
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
     expect(getCellContentMock).toHaveBeenCalled()
     const editedCell = editingState.current.getCell(1, 0)
 
@@ -143,7 +145,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -157,7 +160,7 @@ describe("useDataEditor hook", () => {
       [1, 0],
       columnToEdit.getCell("bar") as TextCell
     )
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
     expect(getCellContentMock).toHaveBeenCalled()
     const editedCell = editingState.current.getCell(1, 0)
 
@@ -184,7 +187,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -196,7 +200,7 @@ describe("useDataEditor hook", () => {
     // Paste in some data into the second row:
     result.current.onPaste([0, 1], [["321", "bar", "baz"]])
 
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
     expect(getCellContentMock).toHaveBeenCalled()
 
     // Check edited data from first column
@@ -231,7 +235,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -252,7 +257,7 @@ describe("useDataEditor hook", () => {
     // This should have added one row:
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
 
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
     expect(getCellContentMock).toHaveBeenCalled()
 
     // Check with full editing state:
@@ -273,7 +278,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -294,7 +300,7 @@ describe("useDataEditor hook", () => {
     // This should not have added any rows since fixedNumRows is true
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
 
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
     expect(getCellContentMock).toHaveBeenCalled()
 
     // Check with full editing state:
@@ -315,7 +321,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -329,7 +336,7 @@ describe("useDataEditor hook", () => {
     // This should have added one row
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS + 1)
 
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
   })
 
   it("uses default values for new rows in onRowAppended", () => {
@@ -344,7 +351,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -373,7 +381,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -387,7 +396,7 @@ describe("useDataEditor hook", () => {
     // Row addition is deactivated, this should not add any rows
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
 
-    expect(applyEditsMock).toHaveBeenCalledTimes(0)
+    expect(syncEditsMock).toHaveBeenCalledTimes(0)
   })
 
   it("allows to delete cell content via onDelete", () => {
@@ -402,7 +411,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -423,7 +433,7 @@ describe("useDataEditor hook", () => {
     // Delete the cell content for 0,0 -> changes the value to null
     result.current.onDelete(deleteCellSelection)
 
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
     expect(refreshCellsMock).toHaveBeenCalledWith([{ cell: [0, 0] }])
 
     // The value of cell 0,0 should be null
@@ -452,7 +462,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -474,7 +485,7 @@ describe("useDataEditor hook", () => {
     // The number of rows should be one less
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS - 1)
 
-    expect(applyEditsMock).toHaveBeenCalled()
+    expect(syncEditsMock).toHaveBeenCalled()
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -494,7 +505,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -516,7 +528,7 @@ describe("useDataEditor hook", () => {
     // The number of rows should be same since row deletion is not allowed:
     expect(editingState.current.getNumRows()).toEqual(INITIAL_NUM_ROWS)
 
-    expect(applyEditsMock).toHaveBeenCalledTimes(0)
+    expect(syncEditsMock).toHaveBeenCalledTimes(0)
 
     // Check with full editing state
     expect(editingState.current.toJson(MOCK_COLUMNS)).toEqual(
@@ -537,7 +549,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -570,7 +583,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
@@ -602,7 +616,8 @@ describe("useDataEditor hook", () => {
         getCellContentMock,
         getOriginalIndexMock,
         refreshCellsMock,
-        applyEditsMock,
+        updateNumRows,
+        syncEditsMock,
         clearSelectionMock
       )
     })
