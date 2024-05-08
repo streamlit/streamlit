@@ -913,13 +913,6 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash: newPageScriptHash,
     } = newSessionProto
 
-    const newSessionHash = hashString(
-      this.sessionInfo.current.installationId + mainScriptPath
-    )
-
-    this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
-    this.metricsMgr.setAppHash(newSessionHash)
-
     // mainPage must be a string as we're guaranteed at this point that
     // newSessionProto.appPages is nonempty and has a truthy pageName.
     // Otherwise, we'd either have no main script or a nameless main script,
@@ -954,6 +947,9 @@ export class App extends PureComponent<Props, State> {
         fragmentIdsThisRun,
       })
 
+      // We separate the state of the navigation as we intend to perform
+      // this work through an abstraction of multipage apps in advance
+      // of supporting v2.
       this.setState(
         {
           hideSidebarNav: config.hideSidebarNav,
@@ -988,6 +984,13 @@ export class App extends PureComponent<Props, State> {
         latestRunTime: performance.now(),
       })
     }
+
+    const newSessionHash = hashString(
+      this.sessionInfo.current.installationId + mainScriptPath
+    )
+
+    this.metricsMgr.setMetadata(this.state.deployedAppMetadata)
+    this.metricsMgr.setAppHash(newSessionHash)
 
     this.metricsMgr.enqueue("updateReport", {
       numPages: newSessionProto.appPages.length,
