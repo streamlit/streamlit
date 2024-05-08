@@ -91,6 +91,11 @@ function useSelectionHandler(
         gridSelection.columns.toArray()
       )
 
+      // A flag to determine if the selection should be synced with the widget state
+      let syncSelection =
+        (isRowSelectionActivated && rowSelectionChanged) ||
+        (isColumnSelectionActivated && columnSelectionChanged)
+
       let updatedSelection = newSelection
       if (
         (isRowSelectionActivated || isColumnSelectionActivated) &&
@@ -104,6 +109,9 @@ function useSelectionHandler(
           rows: gridSelection.rows,
           columns: gridSelection.columns,
         }
+        // It should not sync the selection
+        // when only the cell selection changes
+        syncSelection = false
       }
 
       if (
@@ -117,6 +125,7 @@ function useSelectionHandler(
           ...updatedSelection,
           columns: gridSelection.columns,
         }
+        syncSelection = true
       }
       if (
         columnSelectionChanged &&
@@ -129,14 +138,12 @@ function useSelectionHandler(
           ...updatedSelection,
           rows: gridSelection.rows,
         }
+        syncSelection = true
       }
 
       setGridSelection(updatedSelection)
 
-      if (
-        (isRowSelectionActivated && rowSelectionChanged) ||
-        (isColumnSelectionActivated && columnSelectionChanged)
-      ) {
+      if (syncSelection) {
         syncSelectionState(updatedSelection)
       }
     },
