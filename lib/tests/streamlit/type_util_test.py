@@ -829,6 +829,24 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         self.assertIn("due to data size limitations", el.markdown.body)
         self.assertTrue(el.markdown.is_caption)
 
+    @parameterized.expand(
+        [
+            ("1.0.0", "2.0.0", True),  # Major version increase
+            ("2.0.0", "2.1.0", True),  # Minor version increase
+            ("2.1.0", "2.1.1", True),  # Patch version increase
+            ("2.0.0", "1.0.0", False),  # Major version decrease
+            ("2.1.0", "2.0.0", False),  # Minor version decrease
+            ("2.1.1", "2.1.0", False),  # Patch version decrease
+            ("1.0.0", "1.0.0", False),  # Same version
+            ("1.2.0", "1.10.0", True),  # Numerical order testing
+            ("1.2.0-alpha", "1.2.0", True),  # Prerelease vs release
+            ("1.2.0", "1.2.0-beta", False),  # Release vs prerelease
+        ]
+    )
+    def test_is_version_less_than(self, v1: str, v2: str, expected: bool):
+        """Test that `is_version_less_than` correctly compares two versions."""
+        self.assertEqual(type_util.is_version_less_than(v1, v2), expected)
+
 
 class TestEnumCoercion:
     """Test class for Enum Coercion feature."""
