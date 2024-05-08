@@ -26,8 +26,16 @@ from packaging import version
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.vega_charts import (
+    _reset_counter_pattern,
+    _stabilize_vega_json_spec,
+)
 from streamlit.errors import StreamlitAPIException
-from streamlit.type_util import bytes_to_data_frame, pyarrow_table_to_bytes
+from streamlit.type_util import (
+    bytes_to_data_frame,
+    is_altair_version_less_than,
+    pyarrow_table_to_bytes,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
@@ -39,6 +47,36 @@ def merge_dicts(x, y):
     z = x.copy()
     z.update(y)
     return z
+
+
+def create_advanced_altair_chart() -> alt.Chart:
+    """Create an advanced Altair chart based on concatenation and with parameters."""
+    iris = alt.UrlData(
+        "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json"
+    )
+
+    point = alt.selection_point()
+    interval = alt.selection_interval()
+
+    base = (
+        alt.Chart()
+        .mark_point()
+        .encode(
+            color="species:N",
+            tooltip=alt.value(None),
+        )
+        .properties(width=200, height=200)
+    )
+
+    chart = alt.vconcat(data=iris)
+    for y_encoding in ["petalLength:Q", "petalWidth:Q"]:
+        row = alt.hconcat()
+        for x_encoding in ["sepalLength:Q", "sepalWidth:Q"]:
+            row |= base.encode(x=x_encoding, y=y_encoding)
+        chart &= row
+    chart = chart.add_params(point)
+    chart = chart.add_params(interval)
+    return chart
 
 
 class AltairChartTest(DeltaGeneratorTestCase):
@@ -120,6 +158,58 @@ class AltairChartTest(DeltaGeneratorTestCase):
     def test_empty_altair_chart_throws_error(self):
         with self.assertRaises(TypeError):
             st.altair_chart(use_container_width=True)
+
+    def test_dataset_names_stay_stable(self):
+        """Test that dataset names stay stable across multiple calls
+        with new Pandas objects containing the same data.
+        """
+        # Execution 1:
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart)
+        chart_el_1 = self.get_delta_from_queue().new_element
+
+        # Execution 2 (recreate the same chart with new objects)
+        df = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart)
+
+        chart_el_2 = self.get_delta_from_queue().new_element
+
+        # Make sure that there is one named dataset:
+        self.assertEqual(len(chart_el_1.arrow_vega_lite_chart.datasets), 1)
+        # The names should not have changes
+        self.assertEqual(
+            [dataset.name for dataset in chart_el_1.arrow_vega_lite_chart.datasets],
+            [dataset.name for dataset in chart_el_2.arrow_vega_lite_chart.datasets],
+        )
+        # The specs should also be the same:
+        self.assertEqual(
+            chart_el_1.arrow_vega_lite_chart.spec,
+            chart_el_2.arrow_vega_lite_chart.spec,
+        )
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_that_altair_chart_spec_stays_stable(self):
+        """Test that st.altair_chart stays stable across multiple calls."""
+        # Execution 1:
+        chart = create_advanced_altair_chart()
+        st.altair_chart(chart)
+
+        initial_spec = (
+            self.get_delta_from_queue().new_element.arrow_vega_lite_chart.spec
+        )
+
+        # Create the same chart 100 times and check that the spec is the same:
+        for _ in range(100):
+            chart = create_advanced_altair_chart()
+            st.altair_chart(chart)
+
+            el = self.get_delta_from_queue().new_element
+            self.assertEqual(el.arrow_vega_lite_chart.spec, initial_spec)
 
 
 class VegaLiteChartTest(DeltaGeneratorTestCase):
@@ -873,3 +963,95 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         self.assertNotEqual(id(output_df), id(expected_df))
 
         pd.testing.assert_frame_equal(output_df, expected_df)
+
+
+class VegaUtilitiesTest(unittest.TestCase):
+    """Test vega chart utility methods."""
+
+    @parameterized.expand(
+        [
+            (
+                "param_",
+                '{"config": {"settings": ["param_1", "param_2"], "ignore": ["param_3"]}}',
+                '{"config": {"settings": ["param_1", "param_2"], "ignore": ["param_3"]}}',
+            ),  # Deep structure, but "ignore" should not be reset
+            (
+                "param_",
+                '{"data": {"options": ["param_20"], "params": ["param_20", "param_5"]}}',
+                '{"data": {"options": ["param_1"], "params": ["param_1", "param_2"]}}',
+            ),  # Nested with duplicates across sub-structures
+            (
+                "view_",
+                '{"views": {"list": ["view_10", "view_2"], "additional": "view_1"}}',
+                '{"views": {"list": ["view_1", "view_2"], "additional": "view_3"}}',
+            ),  # Deep structure, with single key being the same as others
+            (
+                "view_",
+                '{"layers": [{"id": "view_5"}, {"id": "view_5"}, {"id": "view_7"}]}',
+                '{"layers": [{"id": "view_1"}, {"id": "view_1"}, {"id": "view_2"}]}',
+            ),  # Objects in an array with duplicate IDs
+            (
+                "plot_",
+                '{"data": {"items": ["plot_3"], "descriptions": ["This plot_4 shows..."]}}',
+                '{"data": {"items": ["plot_1"], "descriptions": ["This plot_4 shows..."]}}',
+            ),  # Only replace actual IDs, not text content
+        ]
+    )
+    def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):
+        """Test that _reset_counter_pattern correctly replaces IDs."""
+        result = _reset_counter_pattern(prefix, vega_spec)
+        self.assertEqual(result, expected)
+
+    @parameterized.expand(
+        [
+            (
+                '{"vconcat": [{"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_33", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_34", "width": 200}]}, {"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_35", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_36", "width": 200}]}], "data": {"url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json"}, "params": [{"name": "param_17", "select": {"type": "point"}, "views": ["view_33", "view_34", "view_35", "view_36"]}, {"name": "param_18", "select": {"type": "interval"}, "views": ["view_33", "view_34", "view_35", "view_36"]}], "$schema": "https://vega.github.io/schema/vega-lite/v5.17.0.json", "autosize": {"type": "fit", "contains": "padding"}}',
+                '{"vconcat": [{"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_1", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalLength", "type": "quantitative"}}, "height": 200, "name": "view_2", "width": 200}]}, {"hconcat": [{"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalLength", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_3", "width": 200}, {"mark": {"type": "point"}, "encoding": {"color": {"field": "species", "type": "nominal"}, "tooltip": {"value": null}, "x": {"field": "sepalWidth", "type": "quantitative"}, "y": {"field": "petalWidth", "type": "quantitative"}}, "height": 200, "name": "view_4", "width": 200}]}], "data": {"url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/iris.json"}, "params": [{"name": "param_1", "select": {"type": "point"}, "views": ["view_1", "view_2", "view_3", "view_4"]}, {"name": "param_2", "select": {"type": "interval"}, "views": ["view_1", "view_2", "view_3", "view_4"]}], "$schema": "https://vega.github.io/schema/vega-lite/v5.17.0.json", "autosize": {"type": "fit", "contains": "padding"}}',
+            ),  # Advanced concatenated Vega-Lite spec with parameters
+            # Simpler cases:
+            (
+                "{ 'mark': 'point', 'encoding': { 'x': { 'field': 'a', 'type': 'quantitative' }, 'y': { 'field': 'b', 'type': 'quantitative' } } }",
+                "{ 'mark': 'point', 'encoding': { 'x': { 'field': 'a', 'type': 'quantitative' }, 'y': { 'field': 'b', 'type': 'quantitative' } } }",
+            ),  # Simple with nothing replaced
+            (
+                '{"mark": "bar", "encoding": {"x": {"field": "data", "type": "ordinal"}, "y": {"field": "value", "type": "quantitative"}, "color": {"field": "category", "type": "nominal"}}, "name": "view_112"}',
+                '{"mark": "bar", "encoding": {"x": {"field": "data", "type": "ordinal"}, "y": {"field": "value", "type": "quantitative"}, "color": {"field": "category", "type": "nominal"}}, "name": "view_112"}',
+            ),  # A simple bar chart will not have `view_` replaced, only composite charts
+            (
+                '{"description": "This is a view_123 visualization of param_45 data points.", "mark": "point"}',
+                '{"description": "This is a view_123 visualization of param_45 data points.", "mark": "point"}',
+            ),  # Ensure text containing prefix within descriptions or other properties is not changed
+            (
+                '{"elements": [{"type": "parameter", "name": "param_5"}]}',
+                '{"elements": [{"type": "parameter", "name": "param_5"}]}',
+            ),  # Do not replace params when there's no "params" key but similar naming exists
+            (
+                '{"layer": [{"mark": "line", "encoding": {"x": {"field": "year", "type": "temporal"}, "y": {"field": "growth", "type": "quantitative"}}, "name": "view_203"}]}',
+                '{"layer": [{"mark": "line", "encoding": {"x": {"field": "year", "type": "temporal"}, "y": {"field": "growth", "type": "quantitative"}}, "name": "view_1"}]}',
+            ),  # A layer spec with a single view needing reset
+            (
+                '{"repeat": {"layer": ["year_1", "year_2"]}, "spec": {"mark": "area", "encoding": {"y": {"field": {"repeat": "layer"}, "type": "quantitative"}}, "name": "view_15"}}',
+                '{"repeat": {"layer": ["year_1", "year_2"]}, "spec": {"mark": "area", "encoding": {"y": {"field": {"repeat": "layer"}, "type": "quantitative"}}, "name": "view_1"}}',
+            ),  # Nested structure using repeat and requiring name reset
+            (
+                '{"concat": [{"view": {"mark": "point", "name": "view_250"}}, {"view": {"mark": "point", "name": "view_251"}}]}',
+                '{"concat": [{"view": {"mark": "point", "name": "view_1"}}, {"view": {"mark": "point", "name": "view_2"}}]}',
+            ),  # Concatenated chart requiring name reset
+            (
+                '{"hconcat": [{"view": {"mark": "point", "name": "view_250"}}, {"view": {"mark": "point", "name": "view_251"}}]}',
+                '{"hconcat": [{"view": {"mark": "point", "name": "view_1"}}, {"view": {"mark": "point", "name": "view_2"}}]}',
+            ),  # hconcat chart requiring name reset
+            (
+                '{"vconcat": [{"view": {"mark": "point", "name": "view_250"}}, {"view": {"mark": "point", "name": "view_251"}}]}',
+                '{"vconcat": [{"view": {"mark": "point", "name": "view_1"}}, {"view": {"mark": "point", "name": "view_2"}}]}',
+            ),  # vconcat chart requiring name reset
+            (
+                '{"facet": {"field": "category", "type": "ordinal"}, "spec": {"mark": "tick", "encoding": {"x": {"field": "value", "type": "quantitative"}}, "name": "view_54"}}',
+                '{"facet": {"field": "category", "type": "ordinal"}, "spec": {"mark": "tick", "encoding": {"x": {"field": "value", "type": "quantitative"}}, "name": "view_1"}}',
+            ),  # Faceted chart requiring name reset
+        ]
+    )
+    def test_stabilize_vega_json_spec(self, input_spec: str, expected: str):
+        """Test that _stabilize_vega_json_spec correctly fixes the auto-generated names."""
+        result = _stabilize_vega_json_spec(input_spec)
+        self.assertEqual(result, expected)
