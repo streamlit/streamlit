@@ -46,7 +46,7 @@ from streamlit.proto.ArrowVegaLiteChart_pb2 import (
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import register_widget
 from streamlit.runtime.state.common import compute_widget_id
 from streamlit.type_util import Key, to_key
 from streamlit.util import HASHLIB_KWARGS
@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from streamlit.color_util import Color
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.arrow import Data
+    from streamlit.runtime.state import WidgetCallback
 
 # See https://vega.github.io/vega-lite/docs/encoding.html
 _CHANNELS: Final = {
@@ -107,7 +108,7 @@ class VegaLiteStateSerde:
 
     def deserialize(self, ui_value: str | None, widget_id: str = "") -> VegaLiteState:
         empty_selection_state: VegaLiteState = {
-            "select": {},
+            "select": AttributeDictionary(),
         }
 
         selection_state = (
@@ -529,11 +530,14 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-        return self._altair_chart(
-            chart,
-            use_container_width=use_container_width,
-            theme="streamlit",
-            add_rows_metadata=add_rows_metadata,
+        return cast(
+            DeltaGenerator,
+            self._altair_chart(
+                chart,
+                use_container_width=use_container_width,
+                theme="streamlit",
+                add_rows_metadata=add_rows_metadata,
+            ),
         )
 
     @gather_metrics("area_chart")
@@ -688,11 +692,14 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-        return self._altair_chart(
-            chart,
-            use_container_width=use_container_width,
-            theme="streamlit",
-            add_rows_metadata=add_rows_metadata,
+        return cast(
+            DeltaGenerator,
+            self._altair_chart(
+                chart,
+                use_container_width=use_container_width,
+                theme="streamlit",
+                add_rows_metadata=add_rows_metadata,
+            ),
         )
 
     @gather_metrics("bar_chart")
@@ -849,11 +856,14 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-        return self._altair_chart(
-            chart,
-            use_container_width=use_container_width,
-            theme="streamlit",
-            add_rows_metadata=add_rows_metadata,
+        return cast(
+            DeltaGenerator,
+            self._altair_chart(
+                chart,
+                use_container_width=use_container_width,
+                theme="streamlit",
+                add_rows_metadata=add_rows_metadata,
+            ),
         )
 
     @gather_metrics("scatter_chart")
@@ -1023,11 +1033,14 @@ class VegaChartsMixin:
             width=width,
             height=height,
         )
-        return self._altair_chart(
-            chart,
-            use_container_width=use_container_width,
-            theme="streamlit",
-            add_rows_metadata=add_rows_metadata,
+        return cast(
+            DeltaGenerator,
+            self._altair_chart(
+                chart,
+                use_container_width=use_container_width,
+                theme="streamlit",
+                add_rows_metadata=add_rows_metadata,
+            ),
         )
 
     @overload
@@ -1039,7 +1052,6 @@ class VegaChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         on_select: Literal["ignore"],  # No default value here to make it work with mypy
-        **kwargs: Any,
     ) -> DeltaGenerator:
         ...
 
@@ -1288,7 +1300,7 @@ class VegaChartsMixin:
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         add_rows_metadata: AddRowsMetadata | None = None,
         **kwargs: Any,
-    ) -> DeltaGenerator:
+    ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
 
         See the `vega_lite_chart` method docstring for more information.
