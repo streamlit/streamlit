@@ -51,7 +51,7 @@ type DataEditorReturn = Pick<
  * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
  *                           This mainly changed by sorting of columns.
  * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
- * @param applyEdits - Callback that needs to be called on all edits. This will also trigger a rerun
+ * @param syncEditState - Callback that needs to be called on all edits. This will also trigger a rerun
  *                     and send widget state to the backend.
  *
  * @returns Glide-data-grid compatible functions for editing capabilities.
@@ -67,7 +67,7 @@ function useDataEditor(
       cell: [number, number]
     }[]
   ) => void,
-  applyEdits: () => void,
+  syncEditState: () => void,
   clearSelection: () => void
 ): DataEditorReturn {
   const onCellEdited = React.useCallback(
@@ -105,14 +105,14 @@ function useDataEditor(
           lastUpdated: performance.now(),
         })
 
-        applyEdits()
+        syncEditState()
       } else {
         logWarning(
           `Not applying the cell edit since it causes this error:\n ${newCell.data}`
         )
       }
     },
-    [columns, editingState, getOriginalIndex, getCellContent, applyEdits]
+    [columns, editingState, getOriginalIndex, getCellContent, syncEditState]
   )
 
   /**
@@ -143,8 +143,8 @@ function useDataEditor(
     }
 
     appendEmptyRow()
-    applyEdits()
-  }, [appendEmptyRow, applyEdits, fixedNumRows])
+    syncEditState()
+  }, [appendEmptyRow, syncEditState, fixedNumRows])
 
   /**
    * Callback used by glide-data-grid when the user deletes a row or cell value in the table UI.
@@ -166,7 +166,7 @@ function useDataEditor(
         // We need to delete all rows at once, so that the indexes work correct
         editingState.current.deleteRows(rowsToDelete)
         clearSelection()
-        applyEdits()
+        syncEditState()
         return false
       }
       if (selection.current?.range) {
@@ -198,7 +198,7 @@ function useDataEditor(
         }
 
         if (updatedCells.length > 0) {
-          applyEdits()
+          syncEditState()
           refreshCells(updatedCells)
         }
         return false
@@ -211,7 +211,7 @@ function useDataEditor(
       fixedNumRows,
       refreshCells,
       getOriginalIndex,
-      applyEdits,
+      syncEditState,
       onCellEdited,
       clearSelection,
     ]
@@ -279,7 +279,7 @@ function useDataEditor(
         }
 
         if (updatedCells.length > 0) {
-          applyEdits()
+          syncEditState()
           refreshCells(updatedCells)
         }
       }
@@ -293,7 +293,7 @@ function useDataEditor(
       getOriginalIndex,
       getCellContent,
       appendEmptyRow,
-      applyEdits,
+      syncEditState,
       refreshCells,
     ]
   )

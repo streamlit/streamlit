@@ -214,7 +214,10 @@ function DataFrame({
   React.useEffect(
     () => {
       if (element.editingMode !== READ_ONLY) {
-        const initialWidgetValue = widgetMgr.getStringValue(element)
+        const initialWidgetValue = widgetMgr.getStringValue({
+          id: element.id,
+          formId: element.formId,
+        } as WidgetInfo)
         if (initialWidgetValue) {
           editingState.current.fromJson(initialWidgetValue, originalColumns)
           setNumRows(editingState.current.getNumRows())
@@ -223,7 +226,7 @@ function DataFrame({
     },
     // We only want to run this effect once during the initial component load
     // so we disable the eslint rule.
-    /* eslint-disable react-hooks/exhaustive-deps */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
@@ -237,11 +240,21 @@ function DataFrame({
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  const applySelections = React.useCallback(
+  /**
+   * This callback is used to synchronize the selection state with the state
+   * of the widget state of the component. This might also send a rerun message
+   * to the backend if the selection state has changed.
+   *
+   * @param newSelection - The new selection state
+   */
+  // The debounce method doesn't allow dependency inspection. Therefore, we
+  // need to disable the eslint rule for exhaustive-deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const syncSelectionState = React.useCallback(
     // Use debounce to prevent rapid updates to the widget state.
     debounce(DEBOUNCE_TIME_MS, (newSelection: GridSelection) => {
       // If we want to support selections also with in the editable mode,
-      // we would need to integrate the `applyEdits` and `applySelections` functions
+      // we would need to integrate the `applyEdits` and `syncSelections` functions
       // into a single function that updates the widget state with both the editing
       // state and the selection state.
 
@@ -261,9 +274,10 @@ function DataFrame({
           return getColumnName(originalColumns[columnIdx])
         })
       const newWidgetState = JSON.stringify(selectionState)
-      const currentWidgetState = widgetMgr.getStringValue(
-        element as WidgetInfo
-      )
+      const currentWidgetState = widgetMgr.getStringValue({
+        id: element.id,
+        formId: element.formId,
+      } as WidgetInfo)
 
       // Only update if there is actually a difference to the previous selection state
       if (
@@ -271,7 +285,10 @@ function DataFrame({
         currentWidgetState !== newWidgetState
       ) {
         widgetMgr.setStringValue(
-          element as WidgetInfo,
+          {
+            id: element.id,
+            formId: element.formId,
+          } as WidgetInfo,
           newWidgetState,
           {
             fromUi: true,
@@ -280,7 +297,7 @@ function DataFrame({
         )
       }
     }),
-    [widgetMgr, element, fragmentId]
+    [element.id, element.formId, widgetMgr, fragmentId]
   )
 
   const {
@@ -295,7 +312,7 @@ function DataFrame({
     clearSelection,
     clearCellSelection,
     processSelectionChange,
-  } = useSelectionHandler(element, isEmptyTable, disabled, applySelections)
+  } = useSelectionHandler(element, isEmptyTable, disabled, syncSelectionState)
 
   // This callback is used to refresh the rendering of specified cells
   const refreshCells = React.useCallback(
@@ -310,14 +327,14 @@ function DataFrame({
   )
 
   /**
-   * This callback should be called after any edits have been applied to the data.
-   * It will finish up the editing by updating the number of rows, clearing the selection,
-   * and triggering a rerun of the script.
-   *
-   * @param clearSelections - Whether to clear the selection. This is usually done after deleting rows.
-   * @param triggerRerun - Whether to trigger a rerun of the script after applying edits
+   * This callback is used to synchronize the editing state with
+   * the widget state of the component. This might also send a rerun message
+   * to the backend if the editing state has changed.
    */
-  const applyEdits = React.useCallback(
+  // The debounce method doesn't allow dependency inspection. Therefore, we
+  // need to disable the eslint rule for exhaustive-deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const syncEditState = React.useCallback(
     // Use debounce to prevent rapid updates to the widget state.
     debounce(DEBOUNCE_TIME_MS, () => {
       if (numRows !== editingState.current.getNumRows()) {
@@ -326,7 +343,10 @@ function DataFrame({
       }
 
       const currentEditingState = editingState.current.toJson(columns)
-      let currentWidgetState = widgetMgr.getStringValue(element as WidgetInfo)
+      let currentWidgetState = widgetMgr.getStringValue({
+        id: element.id,
+        formId: element.formId,
+      } as WidgetInfo)
 
       if (currentWidgetState === undefined) {
         // Create an empty widget state
@@ -336,7 +356,10 @@ function DataFrame({
       // Only update if there is actually a difference between editing and widget state
       if (currentEditingState !== currentWidgetState) {
         widgetMgr.setStringValue(
-          element as WidgetInfo,
+          {
+            id: element.id,
+            formId: element.formId,
+          } as WidgetInfo,
           currentEditingState,
           {
             fromUi: true,
@@ -345,7 +368,15 @@ function DataFrame({
         )
       }
     }),
-    [widgetMgr, element, numRows, clearSelection, columns]
+    [
+      element.id,
+      element.formId,
+      widgetMgr,
+      element,
+      fragmentId,
+      numRows,
+      columns,
+    ]
   )
 
   const { exportToCsv } = useDataExporter(getCellContent, columns, numRows)
@@ -358,7 +389,7 @@ function DataFrame({
       getCellContent,
       getOriginalIndex,
       refreshCells,
-      applyEdits,
+      syncEditState,
       clearSelection
     )
 
@@ -468,6 +499,8 @@ function DataFrame({
   React.useEffect(() => {
     // Clear cell selections if fullscreen mode changes
     clearCellSelection()
+    // Only run this on changes to the fullscreen mode:
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullScreen])
 
   return (
