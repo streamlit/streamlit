@@ -182,13 +182,6 @@ class AltairChartTest(DeltaGeneratorTestCase):
             expected_is_select_enabled,
         )
 
-    @parameterized.expand(
-        [
-            (True),
-            (False),
-            ("invalid"),
-        ]
-    )
     def test_dataset_names_stay_stable(self):
         """Test that dataset names stay stable across multiple calls
         with new Pandas objects containing the same data.
@@ -219,6 +212,13 @@ class AltairChartTest(DeltaGeneratorTestCase):
             chart_el_2.arrow_vega_lite_chart.spec,
         )
 
+    @parameterized.expand(
+        [
+            (True),
+            (False),
+            ("invalid"),
+        ]
+    )
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
