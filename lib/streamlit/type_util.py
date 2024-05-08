@@ -855,25 +855,6 @@ def is_version_less_than(v1: str, v2: str) -> bool:
     return version.parse(v1) < version.parse(v2)
 
 
-def is_altair_version_less_than(v: str) -> bool:
-    """Return True if the current Altair version is less than the input version.
-
-    Parameters
-    ----------
-    v : str
-        Version string, e.g. "0.25.0"
-
-    Returns
-    -------
-    bool
-
-    """
-    import altair as alt
-    from packaging import version
-
-    return version.parse(alt.__version__) < version.parse(v)
-
-
 def _maybe_truncate_table(
     table: pa.Table, truncated_rows: int | None = None
 ) -> pa.Table:
