@@ -531,7 +531,7 @@ class VegaChartsMixin:
             height=height,
         )
         return cast(
-            DeltaGenerator,
+            "DeltaGenerator",
             self._altair_chart(
                 chart,
                 use_container_width=use_container_width,
@@ -693,7 +693,7 @@ class VegaChartsMixin:
             height=height,
         )
         return cast(
-            DeltaGenerator,
+            "DeltaGenerator",
             self._altair_chart(
                 chart,
                 use_container_width=use_container_width,
@@ -857,7 +857,7 @@ class VegaChartsMixin:
             height=height,
         )
         return cast(
-            DeltaGenerator,
+            "DeltaGenerator",
             self._altair_chart(
                 chart,
                 use_container_width=use_container_width,
@@ -1034,7 +1034,7 @@ class VegaChartsMixin:
             height=height,
         )
         return cast(
-            DeltaGenerator,
+            "DeltaGenerator",
             self._altair_chart(
                 chart,
                 use_container_width=use_container_width,
