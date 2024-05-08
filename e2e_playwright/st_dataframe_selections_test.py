@@ -136,31 +136,26 @@ def test_multi_row_select_all_at_once(app: Page):
     expect(selection_text).to_have_count(1)
 
 
-# def test_multi_row_by_keeping_mouse_pressed(app: Page):
-#     canvas = _get_multi_row_select_df(app)
+def test_multi_row_by_keeping_mouse_pressed(app: Page):
+    canvas = _get_multi_row_select_df(app)
+    # we have to scroll into view, otherwise the bounding_box is not correct
+    canvas.scroll_into_view_if_needed()
+    bounding_box = canvas.bounding_box()
+    assert bounding_box is not None
+    canvas_start_x_px = bounding_box.get("x", 0)
+    canvas_start_y_px = bounding_box.get("y", 0)
+    x, y = _get_row_position(2)
+    app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
+    app.mouse.down()
+    x, y = _get_row_position(4)
+    app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
+    app.mouse.up()
 
-#     bounding_box = canvas.bounding_box()
-#     assert bounding_box is not None
-#     print(f"BOUNDING BOX: {bounding_box}")
-#     canvas_start_x_px = bounding_box.get("x", 0)
-#     canvas_start_y_px = bounding_box.get("y", 0)
-
-#     x, y = _get_row_position(2)
-#     row_x_px = canvas_start_x_px + x
-#     row_y_px = canvas_start_y_px + y
-#     print(f"CLICK: {row_x_px},{row_y_px}")
-#     app.mouse.move(row_x_px, row_y_px)
-#     app.mouse.down()
-#     x, y = _get_row_position(4)
-#     app.mouse.move(canvas_start_x_px + x, canvas_start_y_px + y)
-
-#     app.mouse.up()
-
-#     expected = (
-#         "Dataframe multi-row selection: {'select': {'rows': [1, 2, 3], 'columns': []}}"
-#     )
-#     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-#     expect(selection_text).to_have_count(1)
+    expected = (
+        "Dataframe multi-row selection: {'select': {'rows': [1, 2, 3], 'columns': []}}"
+    )
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
 
 
 def test_multi_column_select(app: Page):
