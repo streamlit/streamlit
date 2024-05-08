@@ -54,7 +54,7 @@ function PageLink(props: Props): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
   const isInSidebar = React.useContext(IsSidebarContext)
 
-  const theme: EmotionTheme = useTheme()
+  const { colors }: EmotionTheme = useTheme()
 
   const { disabled, element, width } = props
   const style = { width }
@@ -102,7 +102,7 @@ function PageLink(props: Props): ReactElement {
             {element.icon && (
               <DynamicIcon
                 size="lg"
-                color={theme.colors.bodyText}
+                color={colors.bodyText}
                 iconValue={element.icon}
               />
             )}
