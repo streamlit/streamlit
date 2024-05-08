@@ -1369,6 +1369,8 @@ class VegaChartsMixin:
                 # The data is either in vega_lite_proto.data.data
                 # or in a named dataset in vega_lite_proto.datasets
                 vega_lite_data=vega_lite_proto.data.data,
+                # Its enough to just use the names here since they are expected
+                # to contain hashes based on the dataset data.
                 named_datasets=[dataset.name for dataset in vega_lite_proto.datasets],
                 theme=theme,
                 form_id=vega_lite_proto.form_id,
