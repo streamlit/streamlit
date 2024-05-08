@@ -60,6 +60,10 @@ def _get_in_form_df(app: Page) -> Locator:
     return app.get_by_test_id("stDataFrame").nth(5)
 
 
+def _get_callback_df(app: Page) -> Locator:
+    return app.get_by_test_id("stDataFrame").nth(6)
+
+
 def test_single_row_select(app: Page):
     canvas = _get_single_row_select_df(app)
     # bounding_box = canvas.bounding_box()
@@ -219,6 +223,15 @@ def test_in_form_selection_and_session_state(app: Page):
     expect(selection_text).to_have_count(1)
 
     expected = "Dataframe-in-form selection in session state: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+    expect(selection_text).to_have_count(1)
+
+
+def test_multi_row_and_multi_column_selection_with_callback(app: Page):
+    canvas = _get_callback_df(app)
+    _select_some_rows_and_columns(app, canvas)
+
+    expected = "Dataframe selection callback: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 

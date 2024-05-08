@@ -113,14 +113,14 @@ st.header("Selection callback:")
 
 
 def on_selection():
-    st.write("Dataframe selection callback:", st.session_state.df_selection)
+    st.write("Dataframe selection callback:", str(st.session_state.df_selection))
 
 
 st.dataframe(
     df,
     hide_index=True,
     on_select=on_selection,
-    selection_mode=selection_mode,
+    selection_mode=["multi-row", "multi-column"],
     key="df_selection",
     column_config=column_config,
 )
