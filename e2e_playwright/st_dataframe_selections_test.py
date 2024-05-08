@@ -195,3 +195,14 @@ def test_clear_selection_via_toolbar(app: Page):
     expected = "Dataframe multi-row-multi-column selection: {'select': {'rows': [], 'columns': []}}"
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
+
+
+def test_multi_row_and_multi_column_select_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Take a snapshot of multi-select to ensure visual consistency."""
+    canvas = _get_multi_row_and_column_select_df(app)
+    _select_some_rows_and_columns(app, canvas)
+    _expect_multi_row_multi_column_selection(app)
+
+    assert_snapshot(canvas, name="st_data_editor-multi_row_multi_column_selection")
