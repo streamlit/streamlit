@@ -137,8 +137,9 @@ def _marshall_chart_data(
             dataset = proto.datasets.add()
             dataset.name = str(dataset_name)
             dataset.has_name = True
-            # The ID transformer already serializes the data into Arrow IPC format (bytes)
-            # If its already in bytes, we don't need to serialize it again.
+            # The ID transformer (id_transform function used above) already serializes
+            # the data into Arrow IPC format (bytes). If its already in bytes,
+            #  we don't need to serialize it again.
 
             # TODO(lukasmasuch): Are there any other cases where we need to serialize the data?
             dataset.data.data = (
@@ -180,8 +181,10 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
     datasets = {}
 
     def id_transform(data) -> dict[str, str]:
-        """Altair data transformer that serializes the data and
-        returns a name based on the hash of the data.
+        """Altair data transformer that serializes the data,
+        creates a stable name based on the hash of the data,
+        stores the bytes into the datasets mapping and
+        returns this name to have it be used in Altair.
         """
 
         # Already serialize the data to be able to create a stable
