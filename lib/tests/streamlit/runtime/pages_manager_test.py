@@ -64,6 +64,8 @@ class PagesManagerTest(unittest.TestCase):
     @patch.object(PagesManager, "invalidate_pages_cache", MagicMock())
     def test_install_pages_watcher(self, patched_watch_dir):
         """Test that the pages watcher is correctly installed and uninstalled"""
+        # Ensure V1PagesManager.is_watching_pages_dir is False to start
+        V1PagesManager.is_watching_pages_dir = False
         pages_manager = PagesManager(os.path.normpath("/foo/bar/streamlit_app.py"))
 
         patched_watch_dir.assert_called_once()
