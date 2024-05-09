@@ -1321,6 +1321,7 @@ def _get_x_encoding(
             title_x = ""
         else:
             title_x = x_column
+    # If the user has passed a title, use that instead of the column name.
     if x_title is not None:
         title_x = x_title
 
