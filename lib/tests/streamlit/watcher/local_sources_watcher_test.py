@@ -25,6 +25,7 @@ import tests.streamlit.watcher.test_data.misbehaved_module as MISBEHAVED_MODULE
 import tests.streamlit.watcher.test_data.nested_module_child as NESTED_MODULE_CHILD
 import tests.streamlit.watcher.test_data.nested_module_parent as NESTED_MODULE_PARENT
 from streamlit import config
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.watcher import local_sources_watcher
 from streamlit.watcher.path_watcher import NoOpPathWatcher, _is_watchdog_available
 
@@ -69,7 +70,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_just_script(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -89,12 +90,12 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_permission_error(self, fob):
         fob.side_effect = PermissionError("This error should be caught!")
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_script_and_2_modules_at_once(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -127,7 +128,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_script_and_2_modules_in_series(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -163,7 +164,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.local_sources_watcher._LOGGER")
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_misbehaved_module(self, fob, patched_logger):
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -180,7 +181,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_nested_module_parent_unloaded(self, fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -211,7 +212,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             "server.folderWatchBlacklist", [os.path.dirname(DUMMY_MODULE_1.__file__)]
         )
 
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -263,7 +264,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher", new=NoOpPathWatcher)
     def test_does_nothing_if_NoOpPathWatcher(self):
-        lsw = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lsw.register_file_change_callback(NOOP_CALLBACK)
         lsw.update_watched_modules()
         self.assertEqual(len(lsw._watched_modules), 0)
@@ -274,7 +275,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         pkg_path = os.path.abspath(pkg.__path__._path[0])
 
-        lsw = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lsw.register_file_change_callback(NOOP_CALLBACK)
 
         fob.assert_called_once()
@@ -292,7 +293,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_module_caching(self, _fob):
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(NOOP_CALLBACK)
 
         register = MagicMock()
@@ -319,7 +320,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         register.assert_not_called()
 
     @patch(
-        "streamlit.watcher.local_sources_watcher.get_pages",
+        "streamlit.runtime.pages_manager.PagesManager.get_pages",
         MagicMock(
             return_value={
                 "someHash1": {
@@ -335,7 +336,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     )
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_watches_all_page_scripts(self, fob):
-        lsw = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lsw.register_file_change_callback(NOOP_CALLBACK)
 
         args1, _ = fob.call_args_list[0]
@@ -345,7 +346,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         assert args2[0] == "streamlit_app2.py"
 
     @patch(
-        "streamlit.watcher.local_sources_watcher.get_pages",
+        "streamlit.runtime.pages_manager.PagesManager.get_pages",
         MagicMock(
             side_effect=[
                 {
@@ -373,7 +374,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     )
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_watches_new_page_scripts(self, fob):
-        lsw = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lsw.register_file_change_callback(NOOP_CALLBACK)
 
         args1, _ = fob.call_args_list[0]
@@ -387,7 +388,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         assert args3[0] == "streamlit_app3.py"
 
     @patch(
-        "streamlit.watcher.local_sources_watcher.get_pages",
+        "streamlit.runtime.pages_manager.PagesManager.get_pages",
         MagicMock(
             side_effect=[
                 {
@@ -415,7 +416,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     )
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher", MagicMock())
     def test_not_watches_removed_page_scripts(self):
-        lsw = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         assert lsw._watched_pages == {"page1.py", "page2.py"}
 
         lsw.update_watched_pages()
@@ -430,7 +431,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
             saved_filepath = filepath
 
-        lso = local_sources_watcher.LocalSourcesWatcher(SCRIPT_PATH)
+        lso = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lso.register_file_change_callback(callback)
 
         # Simulate a change to the report script

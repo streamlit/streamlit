@@ -18,6 +18,7 @@ from typing import Any, Callable, Optional
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext, add_script_run_ctx
 from streamlit.runtime.state import SafeSessionState, SessionState
 
@@ -66,9 +67,9 @@ def call_on_threads(
                 session_state=SafeSessionState(SessionState(), lambda: None),
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 main_script_path="",
-                page_script_hash="",
                 user_info={"email": "test@test.com"},
                 fragment_storage=MemoryFragmentStorage(),
+                pages_manager=PagesManager(""),
             )
             thread = threads[ii]
             add_script_run_ctx(thread, ctx)

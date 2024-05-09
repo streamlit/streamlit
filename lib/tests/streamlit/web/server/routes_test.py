@@ -135,9 +135,6 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         self._tmpfile.close()
         self._tmpdir.cleanup()
 
-    def get_pages(self):
-        return {"page1": "page_info1", "page2": "page_info2"}
-
     def get_app(self):
         return tornado.web.Application(
             [
@@ -147,7 +144,6 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
                     {
                         "path": self._tmpdir.name,
                         "default_filename": self._filename,
-                        "get_pages": self.get_pages,
                     },
                 )
             ]
@@ -166,7 +162,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         for r in responses:
             assert r.code == 200
 
-    def test_parse_url_path_404(self):
+    def test_parse_url_path_404_return_default(self):
         responses = [
             self.fetch("/nonexistent"),
             self.fetch("/page2/nonexistent"),
@@ -174,7 +170,7 @@ class StaticFileHandlerTest(tornado.testing.AsyncHTTPTestCase):
         ]
 
         for r in responses:
-            assert r.code == 404
+            assert r.code == 200
 
 
 class HostConfigHandlerTest(tornado.testing.AsyncHTTPTestCase):

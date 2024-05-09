@@ -30,6 +30,7 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -55,10 +56,10 @@ class DeltaGeneratorTestCase(unittest.TestCase):
             session_state=SafeSessionState(SessionState(), lambda: None),
             uploaded_file_mgr=MemoryUploadedFileManager(UPLOAD_FILE_ENDPOINT),
             main_script_path="",
-            page_script_hash="",
             user_info={"email": "test@test.com"},
             script_requests=ScriptRequests(),
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=PagesManager(""),
         )
         add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
 

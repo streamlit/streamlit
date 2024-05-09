@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 import time
 import types
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib import parse
 
 from streamlit import runtime
@@ -31,6 +31,9 @@ from streamlit.runtime.scriptrunner.script_run_context import ScriptRunContext
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
+if TYPE_CHECKING:
+    from streamlit.runtime.pages_manager import PagesManager
+
 
 class LocalScriptRunner(ScriptRunner):
     """Subclasses ScriptRunner to provide some testing features."""
@@ -39,6 +42,7 @@ class LocalScriptRunner(ScriptRunner):
         self,
         script_path: str,
         session_state: SafeSessionState,
+        pages_manager: "PagesManager",
         args=None,
         kwargs=None,
     ):
@@ -61,6 +65,7 @@ class LocalScriptRunner(ScriptRunner):
             initial_rerun_data=RerunData(),
             user_info={"email": "test@test.com"},
             fragment_storage=MemoryFragmentStorage(),
+            pages_manager=pages_manager,
         )
 
         # Accumulates all ScriptRunnerEvents emitted by us.
