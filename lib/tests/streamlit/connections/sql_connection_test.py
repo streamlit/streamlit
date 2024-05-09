@@ -75,13 +75,18 @@ class SQLConnectionTest(unittest.TestCase):
     )
     @patch("sqlalchemy.create_engine")
     def test_kwargs_overwrite_secrets_values(self, patched_create_engine):
-        SQLConnection("my_sql_connection", port=2345, username="DnomaidEruza")
+        SQLConnection(
+            "my_sql_connection",
+            port=2345,
+            username="DnomaidEruza",
+            query={"charset": "utf8mb4"},
+        )
 
         patched_create_engine.assert_called_once()
         args, _ = patched_create_engine.call_args_list[0]
         assert (
             str(args[0])
-            == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres"
+            == "postgres+psycopg2://DnomaidEruza:hunter2@localhost:2345/postgres?charset=utf8mb4"
         )
 
     def test_error_if_no_config(self):

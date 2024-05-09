@@ -26,7 +26,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.string_util import is_emoji
+from streamlit.string_util import is_emoji, validate_material_icon
 from streamlit.url_util import is_url
 from streamlit.util import lower_clean_dict_keys
 
@@ -94,6 +94,9 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
     if isinstance(page_icon, str) and is_emoji(page_icon):
         return page_icon
 
+    if isinstance(page_icon, str) and page_icon.startswith(":material"):
+        return validate_material_icon(page_icon)
+
     # Fall back to image_to_url.
     try:
         return image.image_to_url(
@@ -133,22 +136,50 @@ def set_page_config(
     page_title: str or None
         The page title, shown in the browser tab. If None, defaults to the
         filename of the script ("app.py" would show "app • Streamlit").
-    page_icon : Anything supported by st.image or str or None
-        The page favicon.
-        Besides the types supported by `st.image` (like URLs or numpy arrays),
-        you can pass in an emoji as a string ("🦈") or a shortcode (":shark:").
-        If you're feeling lucky, try "random" for a random emoji!
-        Emoji icons are courtesy of Twemoji and loaded from MaxCDN.
+
+    page_icon : Anything supported by st.image, str, or None
+        The page favicon. If ``page_icon`` is ``None`` (default), the favicon
+        will be a monochrome Streamlit logo.
+
+        In addition to the types supported by ``st.image`` (like URLs or numpy
+        arrays), the following strings are valid:
+
+        * A single-character emoji. For example, you can set ``page_icon="🦈"``.
+
+        * An emoji short code. For example, you can set ``page_icon=":shark:"``.
+          For a list of all supported codes, see
+          https://share.streamlit.io/streamlit/emoji-shortcodes.
+
+        * The string literal, ``"random"``. You can set ``page_icon="random"``
+          to set a random emoji from the supported list above. Emoji icons are
+          courtesy of Twemoji and loaded from MaxCDN.
+
+        * An icon from the Material Symbols library (outlined style) in the
+          format ``":material/icon_name:"`` where "icon_name" is the name
+          of the icon in snake case.
+
+          For example, ``icon=":material/thumb_up:"`` will display the
+          Thumb Up icon. Find additional icons in the `Material Symbols \
+          <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Outlined>`_
+          font library.
+
+        .. note::
+            Colors are not supported for Material icons. When you use a
+            Material icon for favicon, it will be black, regardless of browser
+            theme.
+
     layout: "centered" or "wide"
         How the page content should be laid out. Defaults to "centered",
         which constrains the elements into a centered column of fixed width;
         "wide" uses the entire screen.
+
     initial_sidebar_state: "auto", "expanded", or "collapsed"
         How the sidebar should start out. Defaults to "auto",
         which hides the sidebar on small devices and shows it otherwise.
         "expanded" shows the sidebar initially; "collapsed" hides it.
         In most cases, you should just use "auto", otherwise the app will
         look bad when embedded and viewed on mobile.
+
     menu_items: dict
         Configure the menu that appears on the top-right side of this app.
         The keys in this dict denote the menu item you'd like to configure:

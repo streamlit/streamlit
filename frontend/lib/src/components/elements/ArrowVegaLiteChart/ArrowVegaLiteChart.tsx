@@ -23,18 +23,22 @@ import { expressionInterpreter } from "vega-interpreter"
 import { logMessage } from "@streamlit/lib/src/util/log"
 import { withFullScreenWrapper } from "@streamlit/lib/src/components/shared/FullScreenWrapper"
 import { ensureError } from "@streamlit/lib/src/util/ErrorHandling"
-import { IndexTypeName, Quiver } from "@streamlit/lib/src/dataframes/Quiver"
+import { Quiver } from "@streamlit/lib/src/dataframes/Quiver"
 import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import "@streamlit/lib/src/assets/css/vega-embed.css"
 import "@streamlit/lib/src/assets/css/vega-tooltip.css"
 
+import {
+  getDataSets,
+  VegaLiteChartElement,
+  getDataArray,
+  dataIsAnAppendOfPrev,
+  getDataArrays,
+  getInlineData,
+} from "./arrowUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import { StyledVegaLiteChartContainer } from "./styled-components"
-
-const MagicFields = {
-  DATAFRAME_INDEX: "(index)",
-}
 
 const DEFAULT_DATA_NAME = "source"
 
@@ -44,70 +48,25 @@ const DEFAULT_DATA_NAME = "source"
  */
 const BOTTOM_PADDING = 20
 
-/** Types of dataframe-indices that are supported as x axis. */
-const SUPPORTED_INDEX_TYPES = new Set([
-  IndexTypeName.DatetimeIndex,
-  IndexTypeName.Float64Index,
-  IndexTypeName.Int64Index,
-  IndexTypeName.RangeIndex,
-  IndexTypeName.UInt64Index,
-])
-
 interface Props {
   element: VegaLiteChartElement
   theme: EmotionTheme
   width: number
 }
 
-/** All of the data that makes up a VegaLite chart. */
-export interface VegaLiteChartElement {
-  /**
-   * The dataframe that will be used as the chart's main data source, if
-   * specified using Vega-Lite's inline API.
-   *
-   * This is mutually exclusive with WrappedNamedDataset - if `data` is non-null,
-   * `datasets` will not be populated; if `datasets` is populated, then `data`
-   * will be null.
-   */
-  data: Quiver | null
-
-  /** The a JSON-formatted string with the Vega-Lite spec. */
-  spec: string
-
-  /**
-   * Dataframes associated with this chart using Vega-Lite's datasets API,
-   * if any.
-   */
-  datasets: WrappedNamedDataset[]
-
-  /** If True, will overwrite the chart width spec to fit to container. */
-  useContainerWidth: boolean
-
-  /** override the properties with a theme. Currently, only "streamlit" or None are accepted. */
-  vegaLiteTheme: string
-}
-
-/** A mapping of `ArrowNamedDataSet.proto`. */
-export interface WrappedNamedDataset {
-  /** The dataset's optional name. */
-  name: string | null
-
-  /** True if the name field (above) was manually set. */
-  hasName: boolean
-
-  /** The data itself, wrapped in a Quiver object. */
-  data: Quiver
-}
-
-export interface PropsWithHeight extends Props {
+export interface PropsWithFullScreen extends Props {
   height?: number
+  isFullScreen: boolean
 }
 
 interface State {
   error?: Error
 }
 
-export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
+export class ArrowVegaLiteChart extends PureComponent<
+  PropsWithFullScreen,
+  State
+> {
   /**
    * The Vega view object
    */
@@ -158,7 +117,9 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
     this.vegaView = undefined
   }
 
-  public async componentDidUpdate(prevProps: PropsWithHeight): Promise<void> {
+  public async componentDidUpdate(
+    prevProps: PropsWithFullScreen
+  ): Promise<void> {
     const { element: prevElement, theme: prevTheme } = prevProps
     const { element, theme } = this.props
 
@@ -212,7 +173,7 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
   }
 
   public generateSpec = (): any => {
-    const { element: el, theme } = this.props
+    const { element: el, theme, isFullScreen, width, height } = this.props
     const spec = JSON.parse(el.spec)
     const { useContainerWidth } = el
     if (el.vegaLiteTheme === "streamlit") {
@@ -226,12 +187,23 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       spec.config = applyThemeDefaults(spec.config, theme)
     }
 
-    if (this.props.height) {
-      // fullscreen
-      spec.width = this.props.width
-      spec.height = this.props.height
+    if (isFullScreen) {
+      spec.width = width
+      spec.height = height
+
+      if ("vconcat" in spec) {
+        spec.vconcat.forEach((child: any) => {
+          child.width = width
+        })
+      }
     } else if (useContainerWidth) {
-      spec.width = this.props.width
+      spec.width = width
+
+      if ("vconcat" in spec) {
+        spec.vconcat.forEach((child: any) => {
+          child.width = width
+        })
+      }
     }
 
     if (!spec.padding) {
@@ -383,158 +355,14 @@ export class ArrowVegaLiteChart extends PureComponent<PropsWithHeight, State> {
       // Create the container Vega draws inside.
       <StyledVegaLiteChartContainer
         data-testid="stArrowVegaLiteChart"
+        useContainerWidth={this.props.element.useContainerWidth}
+        isFullScreen={this.props.isFullScreen}
         ref={c => {
           this.element = c
         }}
       />
     )
   }
-}
-
-function getInlineData(
-  el: VegaLiteChartElement
-): { [field: string]: any }[] | null {
-  const dataProto = el.data
-
-  if (!dataProto || dataProto.data.numRows === 0) {
-    return null
-  }
-
-  return getDataArray(dataProto)
-}
-
-function getDataArrays(
-  el: VegaLiteChartElement
-): { [dataset: string]: any[] } | null {
-  const datasets = getDataSets(el)
-  if (datasets == null) {
-    return null
-  }
-
-  const datasetArrays: { [dataset: string]: any[] } = {}
-
-  for (const [name, dataset] of Object.entries(datasets)) {
-    datasetArrays[name] = getDataArray(dataset)
-  }
-
-  return datasetArrays
-}
-
-function getDataSets(
-  el: VegaLiteChartElement
-): { [dataset: string]: Quiver } | null {
-  if (el.datasets?.length === 0) {
-    return null
-  }
-
-  const datasets: { [dataset: string]: Quiver } = {}
-
-  el.datasets.forEach((x: WrappedNamedDataset) => {
-    if (!x) {
-      return
-    }
-    const name = x.hasName ? x.name : null
-    datasets[name as string] = x.data
-  })
-
-  return datasets
-}
-
-export function getDataArray(
-  dataProto: Quiver,
-  startIndex = 0
-): { [field: string]: any }[] {
-  if (dataProto.isEmpty()) {
-    return []
-  }
-
-  const dataArr = []
-  const { dataRows: rows, dataColumns: cols } = dataProto.dimensions
-
-  const indexType = Quiver.getTypeName(dataProto.types.index[0])
-  const hasSupportedIndex = SUPPORTED_INDEX_TYPES.has(
-    indexType as IndexTypeName
-  )
-
-  for (let rowIndex = startIndex; rowIndex < rows; rowIndex++) {
-    const row: { [field: string]: any } = {}
-
-    if (hasSupportedIndex) {
-      const indexValue = dataProto.getIndexValue(rowIndex, 0)
-      // VegaLite can't handle BigInts, so they have to be converted to Numbers first
-      row[MagicFields.DATAFRAME_INDEX] =
-        typeof indexValue === "bigint" ? Number(indexValue) : indexValue
-    }
-
-    for (let colIndex = 0; colIndex < cols; colIndex++) {
-      const dataValue = dataProto.getDataValue(rowIndex, colIndex)
-      const dataType = dataProto.types.data[colIndex]
-      const typeName = Quiver.getTypeName(dataType)
-
-      if (
-        typeName !== "datetimetz" &&
-        (dataValue instanceof Date || Number.isFinite(dataValue)) &&
-        (typeName.startsWith("datetime") || typeName === "date")
-      ) {
-        // For dates that do not contain timezone information.
-        // Vega JS assumes dates in the local timezone, so we need to convert
-        // UTC date to be the same date in the local timezone.
-        const offset = new Date(dataValue).getTimezoneOffset() * 60 * 1000 // minutes to milliseconds
-        row[dataProto.columns[0][colIndex]] = dataValue.valueOf() + offset
-      } else if (typeof dataValue === "bigint") {
-        row[dataProto.columns[0][colIndex]] = Number(dataValue)
-      } else {
-        row[dataProto.columns[0][colIndex]] = dataValue
-      }
-    }
-    dataArr.push(row)
-  }
-
-  return dataArr
-}
-
-/**
- * Checks if data looks like it's just prevData plus some appended rows.
- */
-function dataIsAnAppendOfPrev(
-  prevData: Quiver,
-  prevNumRows: number,
-  prevNumCols: number,
-  data: Quiver,
-  numRows: number,
-  numCols: number
-): boolean {
-  // Check whether dataframes have the same shape.
-
-  // not an append
-  if (prevNumCols !== numCols) {
-    return false
-  }
-
-  // Data can be updated, but still have the same number of rows.
-  // We consider the case an append only when the number of rows has increased
-  if (prevNumRows >= numRows) {
-    return false
-  }
-
-  // if no previous data, render from scratch
-  if (prevNumRows === 0) {
-    return false
-  }
-
-  const c = numCols - 1
-  const r = prevNumRows - 1
-
-  // Check if the new dataframe looks like it's a superset of the old one.
-  // (this is a very light check, and not guaranteed to be right!)
-  if (
-    prevData.getDataValue(0, c) !== data.getDataValue(0, c) ||
-    prevData.getDataValue(r, c) !== data.getDataValue(r, c)
-  ) {
-    return false
-  }
-
-  return true
 }
 
 export default withTheme(withFullScreenWrapper(ArrowVegaLiteChart))

@@ -101,6 +101,12 @@ function ChatInput({
   }
 
   const handleSubmit = (): void => {
+    // We want the chat input to always be in focus
+    // even if the user clicks the submit button
+    if (chatInputRef.current) {
+      chatInputRef.current.focus()
+    }
+
     if (!value) {
       return
     }

@@ -123,7 +123,7 @@ class FormMixin:
         Submit button is pressed, all widget values inside the form will be
         sent to Streamlit in a batch.
 
-        To add elements to a form object, you can use "with" notation
+        To add elements to a form object, you can use ``with`` notation
         (preferred) or just call methods directly on the form. See
         examples below.
 
@@ -157,7 +157,7 @@ class FormMixin:
 
         Examples
         --------
-        Inserting elements using "with" notation:
+        Inserting elements using ``with`` notation:
 
         >>> import streamlit as st
         >>>
@@ -194,11 +194,15 @@ class FormMixin:
 
         """
         # Import this here to avoid circular imports.
-        from streamlit.elements.utils import check_session_state_rules
+        from streamlit.elements.utils import (
+            check_cache_replay_rules,
+            check_session_state_rules,
+        )
 
         if is_in_form(self.dg):
             raise StreamlitAPIException("Forms cannot be nested in other forms.")
 
+        check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
 
         # A form is uniquely identified by its key.

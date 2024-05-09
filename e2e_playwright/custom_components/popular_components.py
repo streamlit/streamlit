@@ -127,8 +127,7 @@ def use_echarts():
 def use_extra_streamlit_components():
     from extra_streamlit_components import CookieManager
 
-    st.title("Cookies!")
-    st.help(CookieManager)
+    CookieManager()
 
 
 def use_folium():

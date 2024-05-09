@@ -13,6 +13,18 @@
 # limitations under the License.
 
 import streamlit as st
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+ctx = get_script_run_ctx()
+if ctx is None:
+    import sys
+
+    # This script is not compatible with running it in "bare" mode (e.g. `python script.py`)
+    # The reason is that the mutable container is not correctly returned if
+    # the runtime doesn't exist.
+    print("This test script does not support bare script execution.")
+    sys.exit(0)
+
 
 running_status = st.status("Running status", expanded=True)
 running_status.write("Doing some work...")

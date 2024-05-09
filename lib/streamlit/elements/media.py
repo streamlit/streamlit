@@ -30,6 +30,8 @@ from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.state.common import compute_widget_id
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -69,6 +71,7 @@ class MediaMixin:
         sample_rate: int | None = None,
         end_time: MediaTime | None = None,
         loop: bool = False,
+        autoplay: bool = False,
     ) -> DeltaGenerator:
         """Display an audio player.
 
@@ -118,6 +121,10 @@ class MediaMixin:
               e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the audio should loop playback.
+        autoplay: bool
+            Whether the audio file should start playing automatically. This is
+            ``False`` by default. Browsers will not autoplay audio files if the
+            user has not interacted with the page by clicking somewhere.
 
         Examples
         --------
@@ -183,6 +190,7 @@ class MediaMixin:
             sample_rate,
             end_time,
             loop,
+            autoplay,
         )
         return self.dg._enqueue("audio", audio_proto)
 
@@ -196,6 +204,8 @@ class MediaMixin:
         subtitles: SubtitleData = None,
         end_time: MediaTime | None = None,
         loop: bool = False,
+        autoplay: bool = False,
+        muted: bool = False,
     ) -> DeltaGenerator:
         """Display a video player.
 
@@ -216,7 +226,7 @@ class MediaMixin:
             one of the following:
 
             * ``None`` (default): The element plays from the beginning.
-            * An``int`` or ``float`` specifying the time in seconds. ``float``
+            * An ``int`` or ``float`` specifying the time in seconds. ``float``
               values are rounded down to whole seconds.
             * A string specifying the time in a format supported by `Pandas'
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
@@ -263,6 +273,16 @@ class MediaMixin:
               e.g. ``timedelta(seconds=70)``.
         loop: bool
             Whether the video should loop playback.
+        autoplay: bool
+            Whether the video should start playing automatically. This is
+            ``False`` by default. Browsers will not autoplay unmuted videos
+            if the user has not interacted with the page by clicking somewhere.
+            To enable autoplay without user interaction, you must also set
+            ``muted=True``.
+        muted: bool
+            Whether the video should play with the audio silenced. This is
+            ``False`` by default. Use this in conjunction with ``autoplay=True``
+            to enable autoplay without user interaction.
 
         Example
         -------
@@ -314,7 +334,6 @@ class MediaMixin:
            for more information.
 
         """
-
         start_time, end_time = _parse_start_time_end_time(start_time, end_time)
 
         video_proto = VideoProto()
@@ -328,6 +347,8 @@ class MediaMixin:
             subtitles,
             end_time,
             loop,
+            autoplay,
+            muted,
         )
         return self.dg._enqueue("video", video_proto)
 
@@ -434,6 +455,8 @@ def marshall_video(
     subtitles: SubtitleData = None,
     end_time: int | None = None,
     loop: bool = False,
+    autoplay: bool = False,
+    muted: bool = False,
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
 
@@ -467,12 +490,22 @@ def marshall_video(
             The time at which this element should stop playing
     loop: bool
         Whether the video should loop playback.
+    autoplay: bool
+        Whether the video should start playing automatically.
+        Browsers will not autoplay video files if the user has not interacted with
+        the page yet, for example by clicking on the page while it loads.
+        To enable autoplay without user interaction, you can set muted=True.
+        Defaults to False.
+    muted: bool
+        Whether the video should play with the audio silenced. This can be used to
+        enable autoplay without user interaction. Defaults to False.
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
         raise StreamlitAPIException("Invalid start_time and end_time combination.")
 
     proto.start_time = start_time
+    proto.muted = muted
 
     if end_time is not None:
         proto.end_time = end_time
@@ -530,6 +563,23 @@ def marshall_video(
                 raise StreamlitAPIException(
                     f"Failed to process the provided subtitle: {label}"
                 ) from original_err
+
+    if autoplay:
+        ctx = get_script_run_ctx()
+        proto.autoplay = autoplay
+        id = compute_widget_id(
+            "video",
+            url=proto.url,
+            mimetype=mimetype,
+            start_time=start_time,
+            end_time=end_time,
+            loop=loop,
+            autoplay=autoplay,
+            muted=muted,
+            page=ctx.page_script_hash if ctx else None,
+        )
+
+        proto.id = id
 
 
 def _parse_start_time_end_time(
@@ -647,6 +697,7 @@ def marshall_audio(
     sample_rate: int | None = None,
     end_time: int | None = None,
     loop: bool = False,
+    autoplay: bool = False,
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
 
@@ -670,6 +721,9 @@ def marshall_audio(
         The time at which this element should stop playing
     loop: bool
         Whether the audio should loop playback.
+    autoplay : bool
+        Whether the audio should start playing automatically.
+        Browsers will not autoplay audio files if the user has not interacted with the page yet.
     """
 
     proto.start_time = start_time
@@ -685,3 +739,19 @@ def marshall_audio(
     else:
         data = _maybe_convert_to_wav_bytes(data, sample_rate)
         _marshall_av_media(coordinates, proto, data, mimetype)
+
+    if autoplay:
+        ctx = get_script_run_ctx()
+        proto.autoplay = autoplay
+        id = compute_widget_id(
+            "audio",
+            url=proto.url,
+            mimetype=mimetype,
+            start_time=start_time,
+            sample_rate=sample_rate,
+            end_time=end_time,
+            loop=loop,
+            autoplay=autoplay,
+            page=ctx.page_script_hash if ctx else None,
+        )
+        proto.id = id

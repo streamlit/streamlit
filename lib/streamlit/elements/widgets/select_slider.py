@@ -22,6 +22,7 @@ from typing_extensions import TypeGuard
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
@@ -146,9 +147,12 @@ class SelectSliderMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -205,19 +209,19 @@ class SelectSliderMixin:
         >>> import streamlit as st
         >>>
         >>> color = st.select_slider(
-        ...     'Select a color of the rainbow',
-        ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'])
-        >>> st.write('My favorite color is', color)
+        ...     "Select a color of the rainbow",
+        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"])
+        >>> st.write("My favorite color is", color)
 
         And here's an example of a range select slider:
 
         >>> import streamlit as st
         >>>
         >>> start_color, end_color = st.select_slider(
-        ...     'Select a range of color wavelength',
-        ...     options=['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'],
-        ...     value=('red', 'blue'))
-        >>> st.write('You selected wavelengths between', start_color, 'and', end_color)
+        ...     "Select a range of color wavelength",
+        ...     options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+        ...     value=("red", "blue"))
+        >>> st.write("You selected wavelengths between", start_color, "and", end_color)
 
         .. output::
            https://doc-select-slider.streamlit.app/
@@ -256,9 +260,12 @@ class SelectSliderMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=value, key=key)
         maybe_raise_label_warnings(label, label_visibility)
+
         opt = ensure_indexable(options)
         check_python_comparable(opt)
 

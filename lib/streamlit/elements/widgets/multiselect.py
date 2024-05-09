@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, cast, overlo
 
 from streamlit.elements.form import current_form_id
 from streamlit.elements.utils import (
+    check_cache_replay_rules,
     check_callback_rules,
     check_session_state_rules,
     get_label_visibility_proto_value,
@@ -82,15 +83,19 @@ def _check_and_convert_to_indices(
             default_values, "pandas.core.series.Series"
         ):
             default_values = list(cast(Sequence[Any], default_values))
-        elif not default_values or default_values in opt:
-            default_values = [default_values]
-        else:
+        elif (
+            isinstance(default_values, (tuple, set))
+            or default_values
+            and default_values not in opt
+        ):
             default_values = list(default_values)
-
+        else:
+            default_values = [default_values]
     for value in default_values:
         if value not in opt:
             raise StreamlitAPIException(
-                "Every Multiselect default value must exist in options"
+                f"The default value '{value}' is part of the options. "
+                "Please make sure that every default values also exists in the options."
             )
 
     return [opt.index(value) for value in default_values]
@@ -174,9 +179,12 @@ class MultiSelectMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
             Unsupported elements are unwrapped so only their children (text contents) render.
             Display unsupported elements as literal characters by
@@ -234,11 +242,11 @@ class MultiSelectMixin:
         >>> import streamlit as st
         >>>
         >>> options = st.multiselect(
-        ...     'What are your favorite colors',
-        ...     ['Green', 'Yellow', 'Red', 'Blue'],
-        ...     ['Yellow', 'Red'])
+        ...     "What are your favorite colors",
+        ...     ["Green", "Yellow", "Red", "Blue"],
+        ...     ["Yellow", "Red"])
         >>>
-        >>> st.write('You selected:', options)
+        >>> st.write("You selected:", options)
 
         .. output::
            https://doc-multiselect.streamlit.app/
@@ -282,12 +290,14 @@ class MultiSelectMixin:
         ctx: ScriptRunContext | None = None,
     ) -> list[T]:
         key = to_key(key)
+
+        check_cache_replay_rules()
         check_callback_rules(self.dg, on_change)
         check_session_state_rules(default_value=default, key=key)
+        maybe_raise_label_warnings(label, label_visibility)
 
         opt = ensure_indexable(options)
         check_python_comparable(opt)
-        maybe_raise_label_warnings(label, label_visibility)
 
         indices = _check_and_convert_to_indices(opt, default)
 

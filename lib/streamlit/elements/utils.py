@@ -15,12 +15,12 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Sequence, cast, overload
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, overload
 
 import streamlit
 from streamlit import config, runtime, type_util
 from streamlit.elements.form import is_in_form
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitAPIWarning
 from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
 from streamlit.runtime.state import WidgetCallback, get_session_state
 from streamlit.runtime.state.common import RegisterWidgetResult
@@ -28,19 +28,6 @@ from streamlit.type_util import T
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import DataFrameCompatible
-
-
-def last_index_for_melted_dataframes(
-    data: DataFrameCompatible | Any,
-) -> Hashable | None:
-    if type_util.is_dataframe_compatible(data):
-        data = type_util.convert_anything_to_df(data)
-
-        if data.index.size > 0:
-            return cast(Hashable, data.index[-1])
-
-    return None
 
 
 def check_callback_rules(dg: DeltaGenerator, on_change: WidgetCallback | None) -> None:
@@ -84,6 +71,41 @@ def check_session_state_rules(
             " also had its value set via the Session State API."
         )
         _shown_default_value_warning = True
+
+
+class CachedWidgetWarning(StreamlitAPIWarning):
+    def __init__(self):
+        super().__init__(
+            """
+Your script uses a widget command in a cached function
+(function decorated with `@st.cache_data` or `@st.cache_resource`).
+This code will only be called when we detect a cache "miss",
+which can lead to unexpected results.
+
+How to fix this:
+* Move all widget commands outside the cached function.
+* Or, if you know what you're doing, use `experimental_allow_widgets=True`
+in the cache decorator to enable widget replay and suppress this warning.
+"""
+        )
+
+
+def check_cache_replay_rules() -> None:
+    """Check if a widget is allowed to be used in the current context.
+    More specifically, this checks if the current context is inside a
+    cached function that disallows widget usage. If so, it raises a warning.
+
+    If there are other similar checks in the future, we could extend this
+    function to check for those as well. And rename it to check_widget_usage_rules.
+    """
+    if runtime.exists():
+        from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+
+        ctx = get_script_run_ctx()
+        if ctx and ctx.disallow_cached_widget_usage:
+            # We use an exception here to show a proper stack trace
+            # that indicates to the user where the issue is.
+            streamlit.exception(CachedWidgetWarning())
 
 
 def get_label_visibility_proto_value(

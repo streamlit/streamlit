@@ -56,9 +56,12 @@ class MarkdownMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in the body will be escaped and
@@ -81,7 +84,7 @@ class MarkdownMixin:
         >>> st.markdown("*Streamlit* is **really** ***cool***.")
         >>> st.markdown('''
         ...     :red[Streamlit] :orange[can] :green[write] :blue[text] :violet[in]
-        ...     :gray[pretty] :rainbow[colors].''')
+        ...     :gray[pretty] :rainbow[colors] and :blue-background[highlight] text.''')
         >>> st.markdown("Here's a bouquet &mdash;\
         ...             :tulip::cherry_blossom::rose::hibiscus::sunflower::blossom:")
         >>>
@@ -94,7 +97,7 @@ class MarkdownMixin:
 
         .. output::
            https://doc-markdown.streamlit.app/
-           height: 260px
+           height: 350px
 
         """
         markdown_proto = MarkdownProto()
@@ -174,9 +177,12 @@ class MarkdownMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            * Colored text, using the syntax ``:color[text to be colored]``,
-              where ``color`` needs to be replaced with any of the following
+            * Colored text and background colors for text, using the syntax
+              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
+              respectively. ``color`` must be replaced with any of the following
               supported colors: blue, green, orange, red, violet, gray/grey, rainbow.
+              For example, you can use ``:orange[your text here]`` or
+              ``:blue-background[your text here]``.
 
         unsafe_allow_html : bool
             By default, any HTML tags found in strings will be escaped and

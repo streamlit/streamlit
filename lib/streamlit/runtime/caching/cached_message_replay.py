@@ -33,13 +33,9 @@ from google.protobuf.message import Message
 
 import streamlit as st
 from streamlit import runtime, util
-from streamlit.elements import NONWIDGET_ELEMENTS, WIDGETS
 from streamlit.logger import get_logger
 from streamlit.proto.Block_pb2 import Block
-from streamlit.runtime.caching.cache_errors import (
-    CachedStFunctionWarning,
-    CacheReplayClosureError,
-)
+from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import update_hash
 from streamlit.runtime.scriptrunner.script_run_context import (
@@ -120,10 +116,10 @@ cache keys act as one true cache key, just split up because the second part depe
 on the first.
 
 We need to treat widgets as implicit arguments of the cached function, because
-the behavior of the function, inluding what elements are created and what it
+the behavior of the function, including what elements are created and what it
 returns, can be and usually will be influenced by the values of those widgets.
 For example:
-> @st.memo
+> @st.cache_data
 > def example_fn(x):
 >     y = x + 1
 >     if st.checkbox("hi"):
@@ -239,15 +235,13 @@ class CachedMessageReplayContext(threading.local):
     """
 
     def __init__(self, cache_type: CacheType):
-        self._cached_func_stack: list[types.FunctionType] = []
-        self._suppress_st_function_warning = 0
         self._cached_message_stack: list[list[MsgData]] = []
         self._seen_dg_stack: list[set[str]] = []
         self._most_recent_messages: list[MsgData] = []
         self._registered_metadata: WidgetMetadata[Any] | None = None
         self._media_data: list[MediaMsgData] = []
         self._cache_type = cache_type
-        self._allow_widgets: int = 0
+        self._allow_widgets: bool = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -260,19 +254,36 @@ class CachedMessageReplayContext(threading.local):
         It allows us to track any `st.foo` messages that are generated from inside the function
         for playback during cache retrieval.
         """
-        self._cached_func_stack.append(func)
         self._cached_message_stack.append([])
         self._seen_dg_stack.append(set())
-        if allow_widgets:
-            self._allow_widgets += 1
+        self._allow_widgets = allow_widgets
+
+        nested_call = False
+        ctx = get_script_run_ctx()
+        if ctx:
+            if ctx.disallow_cached_widget_usage:
+                # The disallow_cached_widget_usage is already set to true.
+                # This indicates that this cached function run is called from another
+                # cached function that disallows widget usage.
+                # We need to deactivate the widget usage for this cached function run
+                # even if it was allowed.
+                self._allow_widgets = False
+                nested_call = True
+
+            if not self._allow_widgets:
+                # If we're in a cached function that disallows widget usage, we need to set
+                # the disallow_cached_widget_usage to true for this cached function run
+                # to prevent widget usage (triggers a warning).
+                ctx.disallow_cached_widget_usage = True
         try:
             yield
         finally:
-            self._cached_func_stack.pop()
             self._most_recent_messages = self._cached_message_stack.pop()
             self._seen_dg_stack.pop()
-            if allow_widgets:
-                self._allow_widgets -= 1
+            if ctx and not nested_call:
+                # Reset the disallow_cached_widget_usage flag. But only if this
+                # is not nested inside a cached function that disallows widget usage.
+                ctx.disallow_cached_widget_usage = False
 
     def save_element_message(
         self,
@@ -364,59 +375,6 @@ class CachedMessageReplayContext(threading.local):
         self, image_data: bytes | str, mimetype: str, image_id: str
     ) -> None:
         self._media_data.append(MediaMsgData(image_data, mimetype, image_id))
-
-    @contextlib.contextmanager
-    def suppress_cached_st_function_warning(self) -> Iterator[None]:
-        self._suppress_st_function_warning += 1
-        try:
-            yield
-        finally:
-            self._suppress_st_function_warning -= 1
-            assert self._suppress_st_function_warning >= 0
-
-    def maybe_show_cached_st_function_warning(
-        self,
-        dg: DeltaGenerator,
-        st_func_name: str,
-    ) -> None:
-        """If appropriate, warn about calling st.foo inside @memo.
-
-        DeltaGenerator's @_with_element and @_widget wrappers use this to warn
-        the user when they're calling st.foo() from within a function that is
-        wrapped in @st.cache.
-
-        Parameters
-        ----------
-        dg : DeltaGenerator
-            The DeltaGenerator to publish the warning to.
-
-        st_func_name : str
-            The name of the Streamlit function that was called.
-
-        """
-        # There are some elements not in either list, which we still want to warn about.
-        # Ideally we will fix this by either updating the lists or creating a better
-        # way of categorizing elements.
-        if st_func_name in NONWIDGET_ELEMENTS:
-            return
-        if st_func_name in WIDGETS and self._allow_widgets > 0:
-            return
-
-        if len(self._cached_func_stack) > 0 and self._suppress_st_function_warning <= 0:
-            cached_func = self._cached_func_stack[-1]
-            self._show_cached_st_function_warning(dg, st_func_name, cached_func)
-
-    def _show_cached_st_function_warning(
-        self,
-        dg: DeltaGenerator,
-        st_func_name: str,
-        cached_func: types.FunctionType,
-    ) -> None:
-        # Avoid infinite recursion by suppressing additional cached
-        # function warnings from within the cached function warning.
-        with self.suppress_cached_st_function_warning():
-            e = CachedStFunctionWarning(self._cache_type, st_func_name, cached_func)
-            dg.exception(e)
 
 
 def replay_cached_messages(
