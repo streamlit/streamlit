@@ -102,7 +102,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        title: str | alt.TitleParams | None = "",
+        title: str | None = "",
         x_title: str | None = None,
         y_title: str | None = None,
     ) -> DeltaGenerator:
@@ -179,11 +179,9 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-        title : str, alt.TitleParams, or None
-            The title of the chart. If a string, it will be used as the title text.
-            To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
-            <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
-            If None, no title will be displayed.
+        title : str or None
+            The title of the chart. If a string, it will be used as the descriptive title text.
+            If None (default), no title will be displayed.
         x_title: str or None
             The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
         y_title: str or None
@@ -276,7 +274,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        title: str | alt.TitleParams | None = "",
+        title: str | None = "",
         x_title: str | None = None,
         y_title: str | None = None,
     ) -> DeltaGenerator:
@@ -450,7 +448,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        title: str | alt.TitleParams | None = "",
+        title: str | None = "",
         x_title: str | None = None,
         y_title: str | None = None,
     ) -> DeltaGenerator:
@@ -527,11 +525,9 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-        title : str, alt.TitleParams, or None
-            The title of the chart. If a string, it will be used as the title text.
-            To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
-            <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
-            If None, no title will be displayed.
+        title : str or None
+            The title of the chart. If a string, it will be used as the descriptive title text.
+            If None (default), no title will be displayed.
         x_title: str or None
             The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
         y_title: str or None
@@ -628,7 +624,7 @@ class ArrowAltairMixin:
         width: int = 0,
         height: int = 0,
         use_container_width: bool = True,
-        title: str | alt.TitleParams | None = "",
+        title: str | None = "",
         x_title: str | None = None,
         y_title: str | None = None,
     ) -> DeltaGenerator:
@@ -714,11 +710,9 @@ class ArrowAltairMixin:
         use_container_width : bool
             If True, set the chart width to the column width. This takes
             precedence over the width argument.
-        title : str, alt.TitleParams, or None
-            The title of the chart. If a string, it will be used as the title text.
-            To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
-            <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
-            If None, no title will be displayed.
+        title : str or None
+            The title of the chart. If a string, it will be used as the descriptive title text.
+            If None (default), no title will be displayed.
         x_title: str or None
             The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
         y_title: str or None
@@ -995,7 +989,7 @@ def _generate_chart(
     size_from_user: str | float | None = None,
     width: int = 0,
     height: int = 0,
-    title: str | alt.TitleParams | None = "",
+    title: str | None = "",
     x_title: str | None = None,
     y_title: str | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
