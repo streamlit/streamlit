@@ -42,11 +42,11 @@ jsonschema==4.22.0
 jsonschema-specifications==2023.12.1
 keyring==25.2.0
 kiwisolver==1.4.5
-langchain==0.1.17
-langchain-community==0.0.37
+langchain==0.1.19
+langchain-community==0.0.38
 langchain-core==0.1.52
 langchain-text-splitters==0.0.1
-langsmith==0.1.55
+langsmith==0.1.56
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 marshmallow==3.21.2
@@ -131,7 +131,7 @@ typing_extensions==4.11.0
 tzdata==2024.1
 tzlocal==5.2
 urllib3==2.2.1
-uv==0.1.40
+uv==0.1.42
 virtualenv==20.26.1
 watchdog==4.0.0
 wheel==0.43.0
