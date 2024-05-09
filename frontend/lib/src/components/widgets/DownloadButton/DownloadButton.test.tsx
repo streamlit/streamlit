@@ -22,7 +22,7 @@ import { WidgetStateManager } from "@streamlit/lib/src/WidgetStateManager"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/lib/src/proto"
 import { mockEndpoints } from "@streamlit/lib/src/mocks/mocks"
-import DownloadButton, { Props } from "./DownloadButton"
+import DownloadButton, { Props, createDownloadLink } from "./DownloadButton"
 
 jest.mock("@streamlit/lib/src/WidgetStateManager")
 jest.mock("@streamlit/lib/src/StreamlitEndpoints")
@@ -96,6 +96,23 @@ describe("DownloadButton widget", () => {
       expect(props.endpoints.buildMediaURL).toHaveBeenCalledWith(
         "/media/mockDownloadURL"
       )
+    })
+
+    it("has a correct new tab behaviour download link", () => {
+      const props = getProps()
+      const sameTabLink = createDownloadLink(
+        props.endpoints,
+        props.element.url,
+        false
+      )
+      expect(sameTabLink.getAttribute("target")).toBe("_self")
+
+      const newTabLink = createDownloadLink(
+        props.endpoints,
+        props.element.url,
+        true
+      )
+      expect(newTabLink.getAttribute("target")).toBe("_blank")
     })
 
     it("can set fragmentId on click", () => {
