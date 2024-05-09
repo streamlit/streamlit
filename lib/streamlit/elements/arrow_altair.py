@@ -103,8 +103,8 @@ class ArrowAltairMixin:
         height: int = 0,
         use_container_width: bool = True,
         title: str | alt.TitleParams | None = "",
-        title_x: str | None = None,
-        title_y: str | None = None,
+        x_title: str | None = None,
+        y_title: str | None = None,
     ) -> DeltaGenerator:
         """Display a line chart.
 
@@ -184,9 +184,9 @@ class ArrowAltairMixin:
             To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
-        title_x: str or None
+        x_title: str or None
             The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
-        title_y: str or None
+        y_title: str or None
             The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
 
@@ -256,8 +256,8 @@ class ArrowAltairMixin:
             width=width,
             height=height,
             title=title,
-            title_x=title_x,
-            title_y=title_y,
+            x_title=x_title,
+            y_title=y_title,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -277,8 +277,8 @@ class ArrowAltairMixin:
         height: int = 0,
         use_container_width: bool = True,
         title: str | alt.TitleParams | None = "",
-        title_x: str | None = None,
-        title_y: str | None = None,
+        x_title: str | None = None,
+        y_title: str | None = None,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -358,9 +358,9 @@ class ArrowAltairMixin:
             To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
-        title_x: str or None
+        x_title: str or None
             The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
-        title_y: str or None
+        y_title: str or None
             The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
         Examples
@@ -430,8 +430,8 @@ class ArrowAltairMixin:
             width=width,
             height=height,
             title=title,
-            title_x=title_x,
-            title_y=title_y,
+            x_title=x_title,
+            y_title=y_title,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -451,8 +451,8 @@ class ArrowAltairMixin:
         height: int = 0,
         use_container_width: bool = True,
         title: str | alt.TitleParams | None = "",
-        title_x: str | None = None,
-        title_y: str | None = None,
+        x_title: str | None = None,
+        y_title: str | None = None,
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -532,9 +532,9 @@ class ArrowAltairMixin:
             To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
-        title_x: str or None
+        x_title: str or None
             The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
-        title_y: str or None
+        y_title: str or None
             The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
 
@@ -607,8 +607,8 @@ class ArrowAltairMixin:
             width=width,
             height=height,
             title=title,
-            title_x=title_x,
-            title_y=title_y,
+            x_title=x_title,
+            y_title=y_title,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -629,8 +629,8 @@ class ArrowAltairMixin:
         height: int = 0,
         use_container_width: bool = True,
         title: str | alt.TitleParams | None = "",
-        title_x: str | None = None,
-        title_y: str | None = None,
+        x_title: str | None = None,
+        y_title: str | None = None,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
 
@@ -719,9 +719,9 @@ class ArrowAltairMixin:
             To further customize the title (e.g. add a subtitle, change font size, etc.), pass an `alt.TitleParams
             <https://altair-viz.github.io/user_guide/generated/core/altair.TitleParams.html`_ object.
             If None, no title will be displayed.
-        title_x: str or None
+        x_title: str or None
             The title of the x-axis. If None, either the column name specified in ``x`` will be used, or no title will be displayed.
-        title_y: str or None
+        y_title: str or None
             The title of the y-axis. If None, either the column name specified in ``y`` will be used, or no title will be displayed.
 
         Examples
@@ -795,8 +795,8 @@ class ArrowAltairMixin:
             width=width,
             height=height,
             title=title,
-            title_x=title_x,
-            title_y=title_y,
+            x_title=x_title,
+            y_title=y_title,
         )
         marshall(proto, chart, use_container_width, theme="streamlit")
 
@@ -996,8 +996,8 @@ def _generate_chart(
     width: int = 0,
     height: int = 0,
     title: str | alt.TitleParams | None = "",
-    title_x: str | None = None,
-    title_y: str | None = None,
+    x_title: str | None = None,
+    y_title: str | None = None,
 ) -> tuple[alt.Chart, AddRowsMetadata]:
     """Function to use the chart's type, data columns and indices to figure out the chart's spec."""
     import altair as alt
@@ -1047,8 +1047,8 @@ def _generate_chart(
         height=height,
         title=title if title is not None else "",
     ).encode(
-        x=_get_x_encoding(df, x_column, x_from_user, chart_type, title_x),
-        y=_get_y_encoding(df, y_column, y_from_user, chart_type, title_y),
+        x=_get_x_encoding(df, x_column, x_from_user, chart_type, x_title),
+        y=_get_y_encoding(df, y_column, y_from_user, chart_type, y_title),
     )
 
     # Set up opacity encoding.
@@ -1241,14 +1241,14 @@ def _get_axis_config(
     df: pd.DataFrame,
     column_name: str | None,
     grid: bool,
-    title_x: str | None,
-    title_y: str | None,
+    x_title: str | None,
+    y_title: str | None,
 ) -> alt.Axis:
     import altair as alt
     from pandas.api.types import is_integer_dtype
 
     if column_name is not None and is_integer_dtype(df[column_name]):
-        title = title_x or title_y or None
+        title = x_title or y_title or None
         # Use a max tick size of 1 for integer columns (prevents zoom into float numbers)
         # and deactivate grid lines for x-axis
         return alt.Axis(tickMinStep=1, grid=grid, title=title)
@@ -1295,7 +1295,7 @@ def _get_x_encoding(
     x_column: str | None,
     x_from_user: str | None,
     chart_type: ChartType,
-    title_x: str | None,
+    x_title: str | None,
 ) -> alt.X:
     import altair as alt
 
@@ -1303,14 +1303,14 @@ def _get_x_encoding(
         # If no field is specified, the full axis disappears when no data is present.
         # Maybe a bug in vega-lite? So we pass a field that doesn't exist.
         x_field = NON_EXISTENT_COLUMN_NAME
-        x_title = ""
+        title_x = ""
     elif x_column == SEPARATED_INDEX_COLUMN_NAME:
         # If the x column name is the crazy anti-collision name we gave it, then need to set
         # up a title so we never show the crazy name to the user.
         x_field = x_column
         # Don't show a label in the x axis (not even a nice label like
         # SEPARATED_INDEX_COLUMN_TITLE) when we pull the x axis from the index.
-        x_title = ""
+        title_x = ""
     else:
         x_field = x_column
 
@@ -1318,18 +1318,18 @@ def _get_x_encoding(
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
         if x_from_user is None:
-            x_title = ""
+            title_x = ""
         else:
-            x_title = x_column
-    if title_x is not None:
-        x_title = title_x
+            title_x = x_column
+    if x_title is not None:
+        title_x = x_title
 
     return alt.X(
         x_field,
-        title=x_title,
+        title=title_x,
         type=_get_x_encoding_type(df, chart_type, x_column),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, x_column, grid=False, title_x=title_x, title_y=None),
+        axis=_get_axis_config(df, x_column, grid=False, x_title=x_title, y_title=None),
     )
 
 
@@ -1338,7 +1338,7 @@ def _get_y_encoding(
     y_column: str | None,
     y_from_user: str | Sequence[str] | None,
     chart_type: ChartType,
-    title_y: str | None,
+    y_title: str | None,
 ) -> alt.Y:
     import altair as alt
 
@@ -1346,14 +1346,12 @@ def _get_y_encoding(
         # If no field is specified, the full axis disappears when no data is present.
         # Maybe a bug in vega-lite? So we pass a field that doesn't exist.
         y_field = NON_EXISTENT_COLUMN_NAME
-        y_title = ""
     elif y_column == MELTED_Y_COLUMN_NAME:
         # If the y column name is the crazy anti-collision name we gave it, then need to set
         # up a title so we never show the crazy name to the user.
         y_field = y_column
         # Don't show a label in the y axis (not even a nice label like
         # MELTED_Y_COLUMN_TITLE) when we pull the x axis from the index.
-        y_title = ""
     else:
         y_field = y_column
 
@@ -1361,19 +1359,19 @@ def _get_y_encoding(
         # could go either way here, but I'm keeping this to avoid breaking the existing
         # behavior.
         if y_from_user is None:
-            y_title = ""
+            pass
         else:
-            y_title = y_column
+            pass
 
-    if title_y is not None:
-        y_title = title_y
+    if y_title is not None:
+        pass
 
     return alt.Y(
         field=y_field,
         title=y_title,
         type=_get_y_encoding_type(df, y_column),
         scale=alt.Scale(),
-        axis=_get_axis_config(df, y_column, grid=True, title_x=None, title_y=title_y),
+        axis=_get_axis_config(df, y_column, grid=True, x_title=None, y_title=y_title),
     )
 
 
