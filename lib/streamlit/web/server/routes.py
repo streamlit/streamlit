@@ -61,7 +61,7 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
             # If the file is not found, we try to serve the default file
             # and allow the frontend to handle the issue.
             if e.status_code == 404:
-                self.path = self.parse_url_path(self.default_filename)
+                self.path = self.parse_url_path(self.default_filename or "index.html")
                 absolute_path = self.get_absolute_path(self.root, self.path)
                 return super().validate_absolute_path(root, absolute_path)
 
