@@ -63,6 +63,7 @@ export interface ExpanderIconProps {
 export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon, iconCustom } = props
   const { activeTheme } = React.useContext(LibContext)
+  const { colors }: EmotionTheme = useTheme()
 
   const iconProps = {
     size: "lg" as IconSize,
@@ -102,7 +103,11 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 
   if (iconCustom) {
     return (
-      <DynamicIcon color={"inherit"} iconValue={iconCustom} {...iconProps} />
+      <DynamicIcon
+        color={colors.bodyText}
+        iconValue={iconCustom}
+        {...iconProps}
+      />
     )
   }
 
@@ -122,7 +127,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   children,
 }): ReactElement => {
   const { label, expanded: initialExpanded } = element
-  const { colors }: EmotionTheme = useTheme()
   const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const summaryRef = useRef<HTMLElement>(null)
