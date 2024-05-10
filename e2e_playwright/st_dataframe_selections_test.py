@@ -12,14 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import platform
+
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 
 # determined by measuring a screenshot
 _first_column_width_px = 30
 _column_width_px = 80
 _row_height_px = 35
+
+# Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
+_command_key = "Meta" if platform.system() == "Darwin" else "Alt"
 
 
 def _get_row_position(row_number: int):
@@ -162,11 +167,10 @@ def test_multi_column_select(app: Page):
     canvas = _get_multi_column_select_df(app)
 
     _click_on_column_selector(canvas, 1)
-    # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-    app.keyboard.down("ControlOrMeta")
+    app.keyboard.down(_command_key)
     _click_on_column_selector(canvas, 3)
     _click_on_column_selector(canvas, 4)
-    app.keyboard.up("ControlOrMeta")
+    app.keyboard.up(_command_key)
     wait_for_app_run(app)
 
     expected = "Dataframe multi-column selection: {'select': {'rows': [], 'columns': ['col_1', 'col_3', 'col_4']}}"
@@ -177,11 +181,10 @@ def test_multi_column_select(app: Page):
 def _select_some_rows_and_columns(app: Page, canvas: Locator):
     _click_on_row_selector(canvas, 1)
     _click_on_column_selector(canvas, 1)
-    # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-    app.keyboard.down("ControlOrMeta")
+    app.keyboard.down(_command_key)
     _click_on_column_selector(canvas, 3)
     _click_on_column_selector(canvas, 4)
-    app.keyboard.up("ControlOrMeta")
+    app.keyboard.up(_command_key)
     _click_on_row_selector(canvas, 3)
     wait_for_app_run(app)
 
@@ -233,6 +236,37 @@ def test_clear_selection_via_toolbar(app: Page):
     expect(selection_text).to_have_count(1)
 
 
+# def test_in_form_selection_and_session_state(app: Page):
+#     canvas = _get_in_form_df(app)
+#     _select_some_rows_and_columns(app, canvas)
+
+#     # nothing should be shown yet because we did not submit the form
+#     expected = "Dataframe-in-form selection in session state: {'select': {'rows': [], 'columns': []}}"
+#     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+#     expect(selection_text).to_have_count(1)
+
+#     app.wait_for_timeout(500)
+#     # submit the form
+#     app.get_by_test_id("stFormSubmitButton").first.locator("button").click()
+#     wait_for_app_run(app)
+#     # expected =  "Dataframe-in-form selection in session state: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}"
+#     expected = "Dataframe-in-form selection in session state:"
+#     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
+#     # wait_until(
+#     #     app,
+#     #     lambda: app.get_by_test_id("stMarkdownContainer")
+#     #     .filter(has_text=expected)
+#     #     .count()
+#     #     == 1,
+#     # )
+
+#     expect(selection_text).to_have_count(1)
+#     expect(app.get_by_test_id("stMarkdownContainer").nth(13)).to_have_text(
+#         "Dataframe-in-form selection in session state: {'select': {'rows': [0, 2], 'columns': ['col_1', 'col_3', 'col_4']}}",
+#         timeout=2000,
+#     )
+
+
 def test_in_form_selection_and_session_state(app: Page):
     canvas = _get_in_form_df(app)
     _select_some_rows_and_columns(app, canvas)
@@ -242,7 +276,8 @@ def test_in_form_selection_and_session_state(app: Page):
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
-    # submit the form
+    # submit the form. Without the timeout the test is flaky, presumably because the submit-button does not have an eventlistener on time :/
+    app.wait_for_timeout(100)
     app.get_by_test_id("baseButton-secondaryFormSubmit").click()
     wait_for_app_run(app)
 

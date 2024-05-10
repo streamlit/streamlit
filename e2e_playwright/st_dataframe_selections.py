@@ -102,12 +102,12 @@ with st.form(key="my_form"):
         column_config=column_config,
     )
     st.form_submit_button("Submit")
+
 st.write("Dataframe-in-form selection:", str(selection))
 st.write(
     "Dataframe-in-form selection in session state:",
     str(st.session_state.df_selection_in_form),
 )
-
 
 st.header("Selection callback:")
 
