@@ -817,13 +817,21 @@ function DataFrame({
               },
             },
             rowSelectionMode: isMultiRowSelectionActivated ? "multi" : "auto",
-            rowSelect: isMultiRowSelectionActivated ? "multi" : "single",
+            rowSelect: disabled
+              ? "none"
+              : isMultiRowSelectionActivated
+              ? "multi"
+              : "single",
             rowSelectionBlending: "mixed",
             rangeSelectionBlending: "mixed",
           })}
           // Activate features required for column selection:
           {...(isColumnSelectionActivated && {
-            columnSelect: isMultiColumnSelectionActivated ? "multi" : "single",
+            columnSelect: disabled
+              ? "none"
+              : isMultiColumnSelectionActivated
+              ? "multi"
+              : "single",
             columnSelectionBlending: "mixed",
             rangeSelectionBlending: "mixed",
           })}
@@ -857,18 +865,12 @@ function DataFrame({
                 },
               },
               rowSelectionMode: "multi",
-              rowSelect: "multi",
+              rowSelect: disabled ? "none" : "multi",
               // Support adding rows:
-              onRowAppended: onRowAppended,
+              onRowAppended: disabled ? undefined : onRowAppended,
               // Deactivate sorting, since it is not supported with dynamic editing:
               onHeaderClicked: undefined,
             })}
-          // Disable some features when the widget is disabled:
-          {...(disabled && {
-            rowSelect: "none",
-            columnSelect: "none",
-            onRowAppended: undefined,
-          })}
         />
       </Resizable>
       {tooltip && tooltip.content && (
