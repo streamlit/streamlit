@@ -455,16 +455,16 @@ function DataFrame({
     }
 
     const formClearHelper = new FormClearHelper()
-    formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      resetEditingState
-    )
+    formClearHelper.manageFormClearListener(widgetMgr, element.formId, () => {
+      // Clear the editing state and the selection state
+      resetEditingState()
+      clearSelection()
+    })
 
     return () => {
       formClearHelper.disconnect()
     }
-  }, [element.formId, resetEditingState, widgetMgr])
+  }, [element.formId, resetEditingState, clearSelection, widgetMgr])
 
   const isDynamicAndEditable =
     !isEmptyTable && element.editingMode === DYNAMIC && !disabled
