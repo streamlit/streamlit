@@ -250,15 +250,6 @@ def _print_url(is_running_hello: bool) -> None:
             ("Unix Socket", config.get_option("server.address")),
         ]
 
-    elif config.get_option("server.headless"):
-        internal_ip = net_util.get_internal_ip()
-        if internal_ip:
-            named_urls.append(("Network URL", server_util.get_url(internal_ip)))
-
-        external_ip = net_util.get_external_ip()
-        if external_ip:
-            named_urls.append(("External URL", server_util.get_url(external_ip)))
-
     else:
         named_urls = [
             ("Local URL", server_util.get_url("localhost")),
@@ -267,6 +258,11 @@ def _print_url(is_running_hello: bool) -> None:
         internal_ip = net_util.get_internal_ip()
         if internal_ip:
             named_urls.append(("Network URL", server_util.get_url(internal_ip)))
+
+        if config.get_option("server.headless"):
+            external_ip = net_util.get_external_ip()
+            if external_ip:
+                named_urls.append(("External URL", server_util.get_url(external_ip)))
 
     cli_util.print_to_cli("")
     cli_util.print_to_cli("  %s" % title_message, fg="blue", bold=True)
