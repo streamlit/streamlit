@@ -506,6 +506,9 @@ function DataFrame({
 
   React.useEffect(() => {
     // Clear cell selections if fullscreen mode changes
+    // In the past we saw some weird side-effects, so we decided to clean
+    // it when entering fullscreen-mode. If we decide to change this, we have
+    // to play around and get to the bottom of it.
     clearCellSelection()
     // Only run this on changes to the fullscreen mode:
     // eslint-disable-next-line react-hooks/exhaustive-deps
