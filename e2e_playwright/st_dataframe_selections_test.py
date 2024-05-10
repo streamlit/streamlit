@@ -276,3 +276,20 @@ def test_multi_row_and_multi_column_select_snapshot(
     _expect_multi_row_multi_column_selection(app)
 
     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
+
+
+def test_selection_state_remains_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the selection state remains after unmounting the component."""
+    canvas = _get_multi_row_and_column_select_df(app)
+    _select_some_rows_and_columns(app, canvas)
+    _expect_multi_row_multi_column_selection(app)
+
+    # Click button to unmount the component
+    app.get_by_test_id("stButton").locator("button").click()
+    wait_for_app_run(app, 4000)
+
+    expect(canvas).to_be_visible()
+    # Use the same snapshot name as the previous test to ensure visual consistency
+    assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")

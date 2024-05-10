@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import random
+import time
 
 import numpy as np
 import pandas as pd
@@ -78,6 +79,13 @@ selection = st.dataframe(
     column_config=column_config,
 )
 st.write("Dataframe multi-column selection:", str(selection))
+
+if st.button("Create some elements to unmount component"):
+    for _ in range(3):
+        # The sleep here is needed, because it won't unmount the
+        # component if this is too fast.
+        time.sleep(1)
+        st.write("Another element")
 
 st.subheader("multi-row & multi-column select")
 selection = st.dataframe(

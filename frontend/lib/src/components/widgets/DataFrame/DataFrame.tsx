@@ -22,6 +22,7 @@ import {
   GridMouseEventArgs,
   GridCell,
   Item as GridCellPosition,
+  CompactSelection,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import {
@@ -212,9 +213,11 @@ function DataFrame({
 
   const { columns: originalColumns } = useColumnLoader(element, data, disabled)
 
-  // On the first rendering, try to load initial widget state if
-  // it exist. This is required in the case that other elements
-  // are inserted before this widget.
+  /**
+   * On the first rendering, try to load the initial editing state
+   * from widget state if it exist. This is required in the case
+   * that other elements are inserted before this widget.
+   */
   React.useEffect(
     () => {
       if (element.editingMode !== READ_ONLY) {
@@ -317,6 +320,17 @@ function DataFrame({
     processSelectionChange,
   } = useSelectionHandler(element, isEmptyTable, disabled, syncSelectionState)
 
+  React.useEffect(() => {
+    // Clear cell selections if fullscreen mode changes
+    // but keep row & column selections.
+    // In the past we saw some weird side-effects, so we decided to clean
+    // it when entering fullscreen-mode. If we decide to change this, we have
+    // to play around and get to the bottom of it.
+    clearSelection(true, true)
+    // Only run this on changes to the fullscreen mode:
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFullScreen])
+
   // This callback is used to refresh the rendering of specified cells
   const refreshCells = React.useCallback(
     (
@@ -326,6 +340,58 @@ function DataFrame({
     ) => {
       dataEditorRef.current?.updateCells(cells)
     },
+    []
+  )
+
+  /**
+   * On the first rendering, try to load initial selection state
+   * from the widget state if it exist. This is required in the
+   * case that other elements are inserted before this widget.
+   *
+   * This effect needs to run after the fullscreen effect that
+   * clears cell selections, since both modify the same state object.
+   */
+  React.useEffect(
+    () => {
+      if (isRowSelectionActivated || isColumnSelectionActivated) {
+        const initialWidgetValue = widgetMgr.getStringValue({
+          id: element.id,
+          formId: element.formId,
+        } as WidgetInfo)
+
+        if (initialWidgetValue) {
+          const columnNames: string[] = columns.map(column => {
+            return getColumnName(column)
+          })
+
+          const selectionState: DataframeState = JSON.parse(initialWidgetValue)
+
+          let rowSelection = CompactSelection.empty()
+          let columnSelection = CompactSelection.empty()
+
+          selectionState.select?.rows?.forEach(row => {
+            rowSelection = rowSelection.add(row)
+          })
+
+          selectionState.select?.columns?.forEach(column => {
+            columnSelection = columnSelection.add(columnNames.indexOf(column))
+          })
+
+          if (rowSelection.length > 0 || columnSelection.length > 0) {
+            // Update the initial selection state if something was selected
+            const initialSelection: GridSelection = {
+              rows: rowSelection,
+              columns: columnSelection,
+              current: undefined,
+            }
+            processSelectionChange(initialSelection)
+          }
+        }
+      }
+    },
+    // We only want to run this effect once during the initial component load
+    // so we disable the eslint rule.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
@@ -505,17 +571,6 @@ function DataFrame({
       }
     }, 1)
   }, [resizableSize, numRows, glideColumns])
-
-  React.useEffect(() => {
-    // Clear cell selections if fullscreen mode changes
-    // but keep row & column selections.
-    // In the past we saw some weird side-effects, so we decided to clean
-    // it when entering fullscreen-mode. If we decide to change this, we have
-    // to play around and get to the bottom of it.
-    clearSelection(true, true)
-    // Only run this on changes to the fullscreen mode:
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFullScreen])
 
   return (
     <StyledResizableContainer
