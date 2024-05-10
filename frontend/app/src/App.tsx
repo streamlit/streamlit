@@ -409,6 +409,7 @@ export class App extends PureComponent<Props, State> {
           disableFullscreenMode,
           enableCustomParentMessages,
           mapboxToken,
+          enforceDownloadInNewTab,
         } = response
 
         const appConfig: AppConfig = {
@@ -416,7 +417,11 @@ export class App extends PureComponent<Props, State> {
           useExternalAuthToken,
           enableCustomParentMessages,
         }
-        const libConfig: LibConfig = { mapboxToken, disableFullscreenMode }
+        const libConfig: LibConfig = {
+          mapboxToken,
+          disableFullscreenMode,
+          enforceDownloadInNewTab,
+        }
 
         // Set the allowed origins configuration for the host communication:
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
