@@ -18,7 +18,7 @@ st.header("Page 4")
 
 with st.sidebar:
     st.page_link("mpa_configure_sidebar.py", label="Home", icon="🏠")
-    st.page_link("pages/02_page2.py", label="Page 2", icon="📄")
+    st.page_link("pages/02_page2.py", label="Page 2", icon=":material/article:")
     st.page_link("pages/03_page3.py", label="Page 3", icon="📈")
     st.page_link("pages/04_page_with_duplicate_name.py", label="Page 4", icon="🧪")
     st.page_link(

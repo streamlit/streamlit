@@ -15,11 +15,13 @@
  */
 
 import React, { ReactElement } from "react"
-import { EmojiIcon } from "@streamlit/lib/src/components/shared/Icon"
+import { useTheme } from "@emotion/react"
+import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
 import { Placement } from "@streamlit/lib/src/components/shared/Tooltip"
 import { PageLink as PageLinkProto } from "@streamlit/lib/src/proto"
 import { BaseButtonTooltip } from "@streamlit/lib/src/components/shared/BaseButton"
 import StreamlitMarkdown from "@streamlit/lib/src/components/shared/StreamlitMarkdown"
+import { EmotionTheme } from "@streamlit/lib/src/theme"
 
 import { LibContext } from "@streamlit/lib/src/components/core/LibContext"
 import IsSidebarContext from "@streamlit/lib/src/components/core/IsSidebarContext"
@@ -51,6 +53,8 @@ function shouldUseContainerWidth(
 function PageLink(props: Props): ReactElement {
   const { onPageChange, currentPageScriptHash } = React.useContext(LibContext)
   const isInSidebar = React.useContext(IsSidebarContext)
+
+  const { colors }: EmotionTheme = useTheme()
 
   const { disabled, element, width } = props
   const style = { width }
@@ -95,7 +99,13 @@ function PageLink(props: Props): ReactElement {
             rel="noreferrer"
             onClick={handleClick}
           >
-            {element.icon && <EmojiIcon size="lg">{element.icon}</EmojiIcon>}
+            {element.icon && (
+              <DynamicIcon
+                size="lg"
+                color={colors.bodyText}
+                iconValue={element.icon}
+              />
+            )}
             <StyledNavLinkText disabled={disabled}>
               <StreamlitMarkdown
                 source={element.label}
