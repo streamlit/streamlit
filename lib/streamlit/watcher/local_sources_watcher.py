@@ -74,11 +74,7 @@ class LocalSourcesWatcher:
 
         for old_page_path in old_watched_pages:
             if old_page_path not in new_pages_paths:
-                if _is_valid_path(old_page_path):
-                    # file still exists, so we will continue to watch it
-                    new_pages_paths.add(old_page_path)
-                else:
-                    self._deregister_watcher(old_page_path)
+                self._deregister_watcher(old_page_path)
 
         self._watched_pages = new_pages_paths
 
