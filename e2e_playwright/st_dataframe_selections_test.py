@@ -24,7 +24,7 @@ _column_width_px = 80
 _row_height_px = 35
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
-_command_key = "Meta" if platform.system() == "Darwin" else "Alt"
+_command_key = "Meta" if platform.system() == "Darwin" else "Control"
 
 
 def _get_row_position(row_number: int):
