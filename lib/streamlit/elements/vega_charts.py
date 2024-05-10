@@ -32,6 +32,8 @@ from typing import (
     overload,
 )
 
+from typing_extensions import TypeAlias
+
 import streamlit.elements.lib.dicttools as dicttools
 from streamlit import type_util
 from streamlit.elements.lib.built_in_chart_utils import (
@@ -89,6 +91,8 @@ _CHANNELS: Final = {
     "column",
 }
 
+VegaLiteSpec: TypeAlias = dict[str, Any]
+
 
 class VegaLiteState(TypedDict, total=False):
     """
@@ -127,15 +131,15 @@ class VegaLiteStateSerde:
 
 
 def _prepare_vega_lite_spec(
-    spec: dict[str, Any] | None = None,
+    spec: VegaLiteSpec | None = None,
     use_container_width: bool = False,
     **kwargs,
-) -> dict[str, Any]:
+) -> VegaLiteSpec:
     # Support passing no spec arg, but filling it with kwargs.
     # Example:
     #   marshall(proto, baz='boz')
     if spec is None:
-        spec = dict()
+        spec: VegaLiteSpec = {}
 
     if len(kwargs):
         # Support passing in kwargs. Example:
@@ -176,7 +180,7 @@ def _serialize_data(data: Any) -> bytes:
 
 def _marshall_chart_data(
     proto: ArrowVegaLiteChartProto,
-    spec: dict[str, Any],
+    spec: VegaLiteSpec,
     data: Data = None,
 ) -> None:
     """Adds the data to the proto and removes it from the spec dict.
@@ -224,7 +228,7 @@ def _marshall_chart_data(
         proto.data.data = _serialize_data(data)
 
 
-def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]:
+def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> VegaLiteSpec:
     """Convert an Altair chart object to a Vega-Lite chart spec."""
     import altair as alt
 
@@ -266,7 +270,7 @@ def _convert_altair_to_vega_lite_spec(altair_chart: alt.Chart) -> dict[str, Any]
     return chart_dict
 
 
-def _check_spec_for_selections(spec: dict[str, Any]) -> None:
+def _check_spec_for_selections(spec: VegaLiteSpec) -> None:
     """Check if the spec has any selections defined. If not, raise an exception."""
 
     if spec and "params" in spec:
@@ -1144,7 +1148,7 @@ class VegaChartsMixin:
     def vega_lite_chart(
         self,
         data: Data = None,
-        spec: dict[str, Any] | None = None,
+        spec: VegaLiteSpec | None = None,
         *,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
@@ -1158,7 +1162,7 @@ class VegaChartsMixin:
     def vega_lite_chart(
         self,
         data: Data = None,
-        spec: dict[str, Any] | None = None,
+        spec: VegaLiteSpec | None = None,
         *,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
@@ -1172,7 +1176,7 @@ class VegaChartsMixin:
     def vega_lite_chart(
         self,
         data: Data = None,
-        spec: dict[str, Any] | None = None,
+        spec: VegaLiteSpec | None = None,
         *,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
@@ -1293,7 +1297,7 @@ class VegaChartsMixin:
     def _vega_lite_chart(
         self,
         data: Data = None,
-        spec: dict[str, Any] | None = None,
+        spec: VegaLiteSpec | None = None,
         use_container_width: bool = False,
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
@@ -1347,6 +1351,7 @@ class VegaChartsMixin:
 
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
+        print(vega_lite_proto.spec)
         vega_lite_proto.use_container_width = use_container_width
         vega_lite_proto.theme = theme or ""
 
