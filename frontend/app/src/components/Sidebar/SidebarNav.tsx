@@ -21,26 +21,13 @@ import React, {
   useState,
   useEffect,
 } from "react"
-import { AppContext } from "@streamlit/app/src/components/AppContext"
-// We import react-device-detect in this way so that tests can mock its
-// isMobile field sanely.
-import * as reactDeviceDetect from "react-device-detect"
 
-import { DynamicIcon } from "@streamlit/lib/src/components/shared/Icon"
-import {
-  EmojiIcon,
-  useIsOverflowing,
-  StreamlitEndpoints,
-  IAppPage,
-} from "@streamlit/lib"
+import { useIsOverflowing, StreamlitEndpoints, IAppPage } from "@streamlit/lib"
 
+import NavSection from "./NavSection"
 import {
   StyledSidebarNavContainer,
   StyledSidebarNavItems,
-  StyledSidebarNavLink,
-  StyledSidebarLinkText,
-  StyledSidebarNavLinkContainer,
-  StyledSidebarNavSectionHeader,
   StyledViewButton,
   StyledSidebarNavSeparator,
 } from "./styled-components"
@@ -55,68 +42,6 @@ export interface Props {
   onPageChange: (pageName: string) => void
 }
 
-export interface NavSectionProps {
-  endpoints: StreamlitEndpoints
-  navSection: IAppPage[]
-  currentPageScriptHash: string
-  onPageChange: (pageName: string) => void
-  collapseSidebar: () => void
-  header?: string
-}
-
-const NavSection = ({
-  navSection,
-  header,
-  currentPageScriptHash,
-  onPageChange,
-  collapseSidebar,
-  endpoints,
-}: NavSectionProps): ReactElement | null => {
-  const { pageLinkBaseUrl } = React.useContext(AppContext)
-  const pages = navSection
-  return (
-    <>
-      <StyledSidebarNavSectionHeader>{header}</StyledSidebarNavSectionHeader>
-      {pages.map((page: IAppPage, pageIndex: number) => {
-        const pageUrl = endpoints.buildAppPageURL(
-          pageLinkBaseUrl,
-          page,
-          pageIndex
-        )
-        const pageName = page.pageName as string
-        const tooltipContent = pageName.replace(/_/g, " ")
-        const isActive = page.pageScriptHash === currentPageScriptHash
-
-        return (
-          <li key={pageName}>
-            <StyledSidebarNavLinkContainer>
-              <StyledSidebarNavLink
-                data-testid="stSidebarNavLink"
-                isActive={isActive}
-                href={pageUrl}
-                onClick={e => {
-                  e.preventDefault()
-                  onPageChange(page.pageScriptHash as string)
-                  if (reactDeviceDetect.isMobile) {
-                    collapseSidebar()
-                  }
-                }}
-              >
-                {page.icon && page.icon.length && (
-                  <DynamicIcon size="md" iconValue={page.icon} />
-                )}
-                <StyledSidebarLinkText isActive={isActive}>
-                  {tooltipContent}
-                </StyledSidebarLinkText>
-              </StyledSidebarNavLink>
-            </StyledSidebarNavLinkContainer>
-          </li>
-        )
-      })}
-    </>
-  )
-}
-
 /** Displays a list of navigable app page links for multi-page apps. */
 const SidebarNav = ({
   endpoints,
@@ -127,45 +52,53 @@ const SidebarNav = ({
   hasSidebarElements,
   onPageChange,
 }: Props): ReactElement | null => {
-  const { pageLinkBaseUrl } = React.useContext(AppContext)
   const [expanded, setExpanded] = useState(hasSidebarElements ? false : true)
+  const [userExpanded, setUserExpanded] = useState(false)
   const navItemsRef = useRef<HTMLUListElement>(null)
   const isOverflowing = useIsOverflowing(navItemsRef, expanded)
 
-  // TODO(kmcgrady / mayagbarnes): from v1 - should apply in v2?
-  // if (appPages.length < 2) {
-  //   return null
-  // }
+  const version1Pages = appPages.length
+  const version2Pages = Array.from(navPageSections.values()).flat().length
+
+  // Escape if MPA only has 1 page
+  if (version1Pages < 2 && version2Pages < 2) {
+    return null
+  }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const toggleExpanded = useCallback(() => {
     if (!expanded && isOverflowing) {
       setExpanded(true)
+      setUserExpanded(true)
     } else if (expanded) {
       setExpanded(false)
+      setUserExpanded(false)
     }
   }, [expanded, isOverflowing])
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    if (hasSidebarElements && expanded) {
+    // Keep user preference on page change, otherwise default behavior
+    if (userExpanded) {
+      setExpanded(true)
+    } else if (hasSidebarElements && expanded) {
       setExpanded(false)
-    }
-    if (!hasSidebarElements && !expanded) {
+    } else if (!hasSidebarElements && !expanded) {
       setExpanded(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPageScriptHash, hasSidebarElements])
 
-  const entries = Array.from(navPageSections.entries())
   let contents = null
-  if (entries.length > 0) {
+  if (version2Pages > 0) {
+    const entries = Array.from(navPageSections.entries())
+    // For MPAv2: renders each NavSection with its respective header
     contents = entries.map(([header, section]) => {
       return (
         <NavSection
           key={header}
-          navSection={section}
           header={header}
+          sectionPages={section}
           currentPageScriptHash={currentPageScriptHash}
           onPageChange={onPageChange}
           collapseSidebar={collapseSidebar}
@@ -174,43 +107,16 @@ const SidebarNav = ({
       )
     })
   } else {
-    contents = appPages.map((page: IAppPage, pageIndex: number) => {
-      const pageUrl = endpoints.buildAppPageURL(
-        pageLinkBaseUrl,
-        page,
-        pageIndex
-      )
-
-      const pageName = page.pageName as string
-      const tooltipContent = pageName.replace(/_/g, " ")
-      const isActive = page.pageScriptHash === currentPageScriptHash
-
-      return (
-        <li key={pageName}>
-          <StyledSidebarNavLinkContainer>
-            <StyledSidebarNavLink
-              data-testid="stSidebarNavLink"
-              isActive={isActive}
-              href={pageUrl}
-              onClick={e => {
-                e.preventDefault()
-                onPageChange(page.pageScriptHash as string)
-                if (reactDeviceDetect.isMobile) {
-                  collapseSidebar()
-                }
-              }}
-            >
-              {page.icon && page.icon.length && (
-                <EmojiIcon size="lg">{page.icon}</EmojiIcon>
-              )}
-              <StyledSidebarLinkText isActive={isActive}>
-                {tooltipContent}
-              </StyledSidebarLinkText>
-            </StyledSidebarNavLink>
-          </StyledSidebarNavLinkContainer>
-        </li>
-      )
-    })
+    // For MPAv1: single NavSection with all pages displayed
+    contents = (
+      <NavSection
+        sectionPages={appPages}
+        currentPageScriptHash={currentPageScriptHash}
+        onPageChange={onPageChange}
+        collapseSidebar={collapseSidebar}
+        endpoints={endpoints}
+      />
+    )
   }
 
   return (

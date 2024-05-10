@@ -267,8 +267,13 @@ class Sidebar extends PureComponent<SidebarProps, State> {
       navPageSections,
     } = this.props
 
-    // TODO(kmcgrady / mayagbarnes): make applicable for v1 & v2
-    const hasPageNavAbove = appPages.length > 1 && !hideSidebarNav
+    // Handle MPAv1 & v2 scenarios:
+    const version1Pages = appPages.length
+    const version2Pages = Array.from(navPageSections.values()).flat().length
+    const hasPageNavAbove =
+      (version1Pages > 1 && !hideSidebarNav) ||
+      (version2Pages > 1 && !hideSidebarNav)
+
     // Handles checking the URL params
     const isEmbedded = isEmbed() && !isColoredLineDisplayed()
     // If header decoration visible, move sidebar down so decoration doesn't go below it
