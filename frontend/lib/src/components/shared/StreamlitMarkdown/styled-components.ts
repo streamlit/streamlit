@@ -154,7 +154,7 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
 
 export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   "h1, h2, h3, h4, h5, h6, span": {
-    scrollMarginTop: theme.spacing.threeXL,
+    scrollMarginTop: theme.sizes.headerHeight,
   },
   ...sharedMarkdownStyle(theme),
 
