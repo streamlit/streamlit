@@ -21,7 +21,7 @@ import {
   GridSelection,
   GridMouseEventArgs,
   GridCell,
-  Item,
+  Item as GridCellPosition,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import {
@@ -319,7 +319,7 @@ function DataFrame({
   const refreshCells = React.useCallback(
     (
       cells: {
-        cell: Item
+        cell: GridCellPosition
       }[]
     ) => {
       dataEditorRef.current?.updateCells(cells)
