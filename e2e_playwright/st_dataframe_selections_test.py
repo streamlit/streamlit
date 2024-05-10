@@ -218,14 +218,14 @@ def test_clear_selection_via_toolbar(app: Page):
     canvas = _get_multi_row_and_column_select_df(app)
 
     # toolbar has three buttons: download, search, fullscreen
-    data_editor_toolbar = canvas.get_by_test_id("stElementToolbar")
-    toolbar_buttons = data_editor_toolbar.get_by_test_id("stElementToolbarButton")
+    dataframe_toolbar = canvas.get_by_test_id("stElementToolbar")
+    toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
     expect(toolbar_buttons).to_have_count(3)
 
     _select_some_rows_and_columns(app, canvas)
     _expect_multi_row_multi_column_selection(app)
     # toolbar has one more button now: clear selection
-    toolbar_buttons = data_editor_toolbar.get_by_test_id("stElementToolbarButton")
+    toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
     expect(toolbar_buttons).to_have_count(4)
     # click on the clear-selection button which is the first in the toolbar
     toolbar_buttons.nth(0).click()
