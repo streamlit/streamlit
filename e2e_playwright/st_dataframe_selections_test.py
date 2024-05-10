@@ -14,6 +14,7 @@
 
 import platform
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
@@ -279,6 +280,9 @@ def test_multi_row_and_multi_column_select_snapshot(
     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
 
 
+# Skip firefox since it takes a snapshot with a slightly different size
+# compared to the one in the test_multi_row_and_multi_column_select_snapshot test
+@pytest.mark.skip_browser("firefox")
 def test_selection_state_remains_after_unmounting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -292,6 +296,7 @@ def test_selection_state_remains_after_unmounting(
     wait_for_app_run(app, 4000)
 
     expect(canvas).to_be_visible()
+    _expect_multi_row_multi_column_selection(app)
 
     canvas.scroll_into_view_if_needed()
     # Use the same snapshot name as the previous test to ensure visual consistency
