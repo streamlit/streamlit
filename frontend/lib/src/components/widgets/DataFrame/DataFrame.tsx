@@ -93,6 +93,9 @@ const WEBKIT_SCROLLBAR_SIZE = 6
 export interface DataframeState {
   select: {
     rows: number[]
+    // We use column names instead of indices to make
+    // it easier to use and unify with how data editor edits
+    // are stored.
     columns: string[]
   }
 }
